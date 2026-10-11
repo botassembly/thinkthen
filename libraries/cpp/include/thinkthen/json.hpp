@@ -17,7 +17,7 @@
 namespace tt {
 class Json {
 public:
-    // Keep insertion order: JSON label maps carry prompt order into the C door.
+    // Keep insertion order: JSON label maps carry prompt order into the C interface.
     using Object = std::vector<std::pair<std::string, Json>>;
     using Array = std::vector<Json>;
 private:

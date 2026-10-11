@@ -139,9 +139,9 @@ Library examples assert the answer (Ian, 2026-10-01). The assert shows the reade
 | R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
 | Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
 | C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
-| Java | `assert Door.outcome(isRefund) == Outcome.YES;`, run with assertions on (`java -ea`) |
-| Kotlin | `check(Door.outcome(isRefund) == Outcome.YES)` |
-| Scala | `assert(Door.outcome(isRefund) == Outcome.YES)` |
+| Java | `assert Engine.outcome(isRefund) == Outcome.YES;`, run with assertions on (`java -ea`) |
+| Kotlin | `check(Engine.outcome(isRefund) == Outcome.YES)` |
+| Scala | `assert(Engine.outcome(isRefund) == Outcome.YES)` |
 | C# | `Trace.Assert(isRefund.OutcomeKind == Outcome.Yes);` after `using System.Diagnostics;`. Compare fields, never raw JSON text. |
 | C++ | `assert(is_refund.value.outcome == tt::Outcome::yes);` after `#include <cassert>` |
 | Go | `if isRefund.Value.Outcome != thinkthen.Yes {`, then `log.Fatal("expected yes")` in the block. Go has no assert, so `log.Fatal` ends the run |

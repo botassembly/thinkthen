@@ -1,6 +1,6 @@
 # Upgrade calls to development 0.2
 
-Public installation remains 0.1.2. Use these mappings with a matching reviewed development package. The [binding guide](BINDING-AUTHOR.md) links the generated contracts. Each package README owns its exact calls, input types, generated results and installation route. Installed routine checks establish the tested local packages; final distribution assembly, registry installation, full parity and platform qualification belong to the candidate.
+Public installation remains 0.1.2. Use these mappings with a matching reviewed development package. The [binding guide](BINDING-AUTHOR.md) links the generated contracts. Each package README owns its exact calls, input types, generated results and installation route.
 
 ## Replace removed calls
 
@@ -24,7 +24,7 @@ All judging surfaces expose the ten named functions: `decide`, `choose`, `tag`, 
 | Ada root judging APIs, handwritten C carriers and JSON `Plan` wrapper | `Thinkthen.Sessions.Calls` named procedures and generated native declarations. Direct ABI preview remains; the package claims no named typed Ada Plan result. [Ada](ada/README.md) |
 | COBOL `TT-DECIDE`, `TT-CALL`, descriptor calls and handwritten copybooks | Ten `TT_SESSION_*` functions with generated question/input records and owned session values. Platform layouts require their matching generated declarations. [COBOL](cobol/README.md) |
 
-The development JVM runtime requires stable JDK 22 or later and `--enable-native-access=ALL-UNNAMED`, without preview features or a manual library path. Its local package includes the selected native target; ordinary Maven distribution still needs final assembly. Objective-C uses Apple Foundation and ARC. Apple SDK compile checks exist, but matching installed Foundation execution remains unrun. Windows execution and registry installs remain candidate checks. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime floors; each package guide records narrower observed evidence.
+The development JVM runtime requires stable JDK 22 or later and `--enable-native-access=ALL-UNNAMED`, without preview features or a manual library path. Its package includes the selected native target. Objective-C uses Apple Foundation, ARC, generated results and cancellable `TTTask` calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines intended targets and runtime floors; each package guide describes its API and installation requirements.
 
 ## Files, questions and results
 

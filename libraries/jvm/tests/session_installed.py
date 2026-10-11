@@ -39,7 +39,7 @@ def main():
         assert (repository / (prefix + '.pom')).read_bytes() == (args.jars / 'pom.xml').read_bytes()
         for file in args.jars.glob('*.jar'):
             kind = file.stem.removeprefix('thinkthen-')
-            suffix = '' if kind == 'door' else '-' + kind
+            suffix = '' if kind == 'session' else '-' + kind
             source = repository / (prefix + suffix + '.jar')
             assert source.read_bytes() == file.read_bytes(),source
             shutil.copyfile(source,feed / file.name)
@@ -51,7 +51,7 @@ def main():
     shutil.copyfile(ROOT / "libraries/jvm/tests/JsonTest.java", work / "JsonTest.java")
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
-    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-door.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
+    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * The smallest JSON reader the door needs, since the JVM has no JSON library.
+ * The smallest JSON reader the interface needs, since the JVM has no JSON library.
  * A value reads as a Map in member order, a List, a String, a BigDecimal, a
  * Boolean or null. A reader ignores members it does not know.
  */

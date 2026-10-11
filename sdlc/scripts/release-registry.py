@@ -204,7 +204,7 @@ def pack(platform, out, sha):
     stem = f"{ARTIFACT}-{v}"
     (base / f"{stem}.pom").write_bytes(jvm["pom.xml"])
     for kind, filename in definition['jars'].items():
-        suffix = '' if kind == 'door' else '-' + kind
+        suffix = '' if kind == 'session' else '-' + kind
         (base / f"{stem}{suffix}.jar").write_bytes(jvm[filename])
     for classifier, asset in definition['native'].items():
         library = asset['files'][0].rsplit('/', 1)[-1]
@@ -215,7 +215,6 @@ def pack(platform, out, sha):
         deterministic_zip(base / f"{stem}-{classifier}.jar", [(name, native) for name in asset['files']])
     sources = sorted(p for p in (REPO / "libraries/jvm/session").rglob("*")
                      if p.suffix in (".java", ".kt", ".scala") and p.is_file())
-    sources.append(REPO / 'libraries/jvm/door/thinkthen/Json.java')
     require(sources, "no JVM sources to pack")
     deterministic_zip(base / f"{stem}-sources.jar",
                       [(p.relative_to(REPO / "libraries/jvm").as_posix(), p.read_bytes()) for p in sources])

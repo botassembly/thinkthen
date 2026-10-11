@@ -124,13 +124,13 @@ def fixture(base):
     managed = {"nupkg": sha(nupkg.read_bytes())}
     inventory_members = {}
     # Synthetic members exercise the archive boundary, not the public API inventory.
-    classes = {'door': ['Door'], 'kotlin': ['KotlinFacade'], 'scala': ['ScalaFacade']}
-    for kind in ("door", "kotlin", "scala"):
+    classes = {'session': ['Engine'], 'kotlin': ['KotlinEngine'], 'scala': ['ScalaEngine']}
+    for kind in ("session", "kotlin", "scala"):
         path = jars / f"thinkthen-{kind}.jar"
         files = {"META-INF/": b"", "META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n"}
-        if kind == "door":
+        if kind == "session":
             files["thinkthen/"] = b""
-        files.update({("thinkthen/" if kind == "door" else "") + name + ".class": b"class"
+        files.update({("thinkthen/" if kind == "session" else "") + name + ".class": b"class"
                       for name in classes[kind]})
         if kind == "kotlin":
             files["META-INF/main.kotlin_module"] = b"module"
@@ -142,12 +142,12 @@ def fixture(base):
         managed[kind] = sha(path.read_bytes())
     spec = importlib.machinery.SourceFileLoader('package_inventory', str(HELPER.with_name('package-inventory.py'))).load_module()
     definition = spec.jvm_inventory()
-    door = jars / 'thinkthen-door.jar'
-    files = read_zip(door.read_bytes())
+    session = jars / 'thinkthen-session.jar'
+    files = read_zip(session.read_bytes())
     files.pop('META-INF/MANIFEST.MF')
     files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
-    write_zip(door, files)
-    managed['door'] = sha(door.read_bytes())
+    write_zip(session, files)
+    managed['session'] = sha(session.read_bytes())
     classifier, asset = next((name, asset) for name, asset in definition['native'].items() if asset['target'] == TARGET)
     path = jars / asset['jar']
     write_zip(path, {name: b'fixture shared library' for name in asset['files']})
@@ -355,11 +355,11 @@ def main():
     case("changed inner DLL and outer hash", inner_attack)
     def jar_attack(base, source):
         def change(files):
-            members = read_zip(files["thinkthen-door.jar"])
-            members["thinkthen/Door.class"] = b"changed class"
+            members = read_zip(files["thinkthen-session.jar"])
+            members["thinkthen/Engine.class"] = b"changed class"
             buf = io.BytesIO()
             write_zip(buf, members)
-            files["thinkthen-door.jar"] = buf.getvalue()
+            files["thinkthen-session.jar"] = buf.getvalue()
         mutate_outer(base, "jvm", change)
     case("changed inner JAR and outer hash", jar_attack)
     case("changed POM and outer hash", lambda base, source: mutate_outer(
@@ -381,11 +381,11 @@ def main():
         inner_rejection(f"missing required {required}", "nupkg",
                         lambda data, required=required: changed_zip(data, remove=required),
                         "nupkg inventory differs")
-    for kind in ("nupkg", "door"):
+    for kind in ("nupkg", "session"):
         inner_rejection(f"unexpected {kind} directory", kind,
                         lambda data: changed_zip(data, extra_dir="surprise/"),
                         "directory")
-    for kind, name in (("nupkg", "README.md"), ("door", "thinkthen/Door.class")):
+    for kind, name in (("nupkg", "README.md"), ("session", "thinkthen/Engine.class")):
         inner_rejection(f"symlink typed {kind} {name}", kind,
                         lambda data, name=name: changed_zip(data, symlink=name),
                         "unsafe")

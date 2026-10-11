@@ -58,7 +58,7 @@ if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
 cases = json.loads((ROOT / 'specification/fixtures/types/corpus.json').read_text())['cases']
 # The shared public corpus owns expected answers; retain every successful named
 # function and each scalar presence reading. Envelope grammar cases exercise the
-# retired JSON door and do not belong to this named API.
+# retired JSON interface and do not belong to this named API.
 cases = [case for case in cases if 'request' in case and 'response' in case and
          not case.get('schema_only') and not case.get('expected_error') and case['name'] != '02-decide-details']
 with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:

@@ -1,6 +1,6 @@
 # Rust Polars
 
-Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The door is the `polars` feature of the `thinkthen` crate. It is off by default, so a build that does not ask for it compiles no Polars.
+Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The interface is the `polars` feature of the `thinkthen` crate. It is off by default, so a build that does not ask for it compiles no Polars.
 
 ```toml
 thinkthen = { version = "0.1", features = ["polars"] }
@@ -20,7 +20,7 @@ A file-backed Rust `Question` keeps its saved calibration profile when the engin
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine.
 
-The door takes Polars 0.55. Polars changes its Rust API between minor versions. `thinkthen::polars` re-exports the Polars the door was built with, so it names the version your `Series` must come from. The throttle is the most requests in flight at once. It holds per loaded copy of the library, so a program that loads two copies can run up to twice the throttle.
+The interface takes Polars 0.55. Polars changes its Rust API between minor versions. `thinkthen::polars` re-exports the Polars the interface was built with, so it names the version your `Series` must come from. The throttle is the most requests in flight at once. It holds per loaded copy of the library, so a program that loads two copies can run up to twice the throttle.
 
 Each asking method returns a `Call` containing the typed value in the table below. Read it with `call.value()` or take it with `call.into_value()`. `call.facts()` holds that completed invocation's record, request, cache, token, duration, and model facts, including when one column takes several requests. A started failure carries the same final account on its error. Caller-owned `Tally` joins completed call facts, including partial failures; absent token usage stays absent. Its seconds span the first start to the last finish, including concurrent calls. `Engine::usage()` remains a process total, and `Engine::details` still describes one asked text.
 
@@ -92,7 +92,7 @@ An empty row-wise or rank column returns a `Call` with an empty value of the met
 
 ## Checks
 
-The consumer under `consumer/` exercises actual frame associations through the public complete methods. The door lives in `crates/thinkthen/src/public/frame.rs` and its `frame/` modules, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the reviewed license exceptions for the locked tree.
+The consumer under `consumer/` exercises actual frame associations through the public complete methods. The interface lives in `crates/thinkthen/src/public/frame.rs` and its `frame/` modules, and its tests in `crates/thinkthen/tests/polars/`. `check.sh` is the one lane that compiles Polars. It runs from the repository root with its own target folder, a fake key, and a closed loopback address. It runs Clippy, the tests, and the rustdoc example with the feature on. It prints "not run" and exits 77 only when cargo's cache lacks the locked crates. The root `deny.toml` holds the reviewed license exceptions for the locked tree.
 
 ## Complete typed results
 

@@ -1,4 +1,4 @@
-//! Explicit file selections through the same located dispatch as the C door.
+//! Explicit file selections through the same located dispatch as the C interface.
 
 use crate::{guard, raised};
 use pyo3::prelude::*;

@@ -31,7 +31,7 @@ def maven_package(jars, inventory, classifier):
     prefix = artifact + '-' + version
     shutil.copyfile(jars / 'pom.xml', repository / (prefix + '.pom'))
     for kind, filename in inventory['jars'].items():
-        suffix = '' if kind == 'door' else '-' + kind
+        suffix = '' if kind == 'session' else '-' + kind
         shutil.copyfile(jars / filename, repository / (prefix + suffix + '.jar'))
     shutil.copyfile(jars / ('thinkthen-' + classifier + '.jar'), repository / (prefix + '-' + classifier + '.jar'))
 
@@ -60,17 +60,16 @@ def main():
     for kind, filename in inventory['jars'].items():
         classes = out / 'classes' / kind
         classes.mkdir(parents=True, exist_ok=True)
-        if kind == 'door':
+        if kind == 'session':
             sources = sorted((ROOT / 'libraries/jvm/session/thinkthen').glob('*.java'))
-            sources.append(ROOT / 'libraries/jvm/door/thinkthen/Json.java')
             command = [str(jdk / 'bin/javac'), '-J-Xmx1g', '--release', str(JDK_FLOOR), '-d', str(classes), *map(str,sources)]
         elif kind == 'kotlin':
-            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-jvm-target', str(JDK_FLOOR), '-classpath', str(jars / inventory['jars']['door']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), *map(str, sorted((ROOT / 'libraries/jvm/session/kotlin').glob('*.kt'))), '-d', str(classes)]
+            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-jvm-target', str(JDK_FLOOR), '-classpath', str(jars / inventory['jars']['session']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), *map(str, sorted((ROOT / 'libraries/jvm/session/kotlin').glob('*.kt'))), '-d', str(classes)]
         else:
-            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['door']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
+            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['session']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
         subprocess.run(command, check=True, env=env)
-        if kind != "door":
-            shutil.copytree(out / "classes" / "door", classes, dirs_exist_ok=True)
+        if kind != "session":
+            shutil.copytree(out / "classes" / "session", classes, dirs_exist_ok=True)
         with zipfile.ZipFile(jars / filename, 'w', zipfile.ZIP_DEFLATED) as jar:
             for file in sorted(classes.rglob('*')):
                 if file.is_file(): jar.write(file, file.relative_to(classes))

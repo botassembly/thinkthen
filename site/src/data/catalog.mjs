@@ -623,7 +623,7 @@ export const SURFACES = [
     settings: "`Engine` takes generated settings; Rust owns recording and replay.",
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target. Final Maven distribution and platform execution remain candidate work."],
   },
@@ -638,7 +638,7 @@ export const SURFACES = [
     settings: "`KotlinEngine` uses the generated JVM engine settings.",
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Kotlin JAR. Add the Java coordinate beside it.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Kotlin cancellation and cleanup follow the shared owned session."],
   },
@@ -653,7 +653,7 @@ export const SURFACES = [
     settings: "`ScalaEngine` uses the generated JVM engine settings.",
     install: [
       ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Scala JAR. Add the Java coordinate beside it.'],
-      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The door, Kotlin and Scala JARs, from each release.'],
+      ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Keep the normal Scala runtime libraries on the class path."],
   },

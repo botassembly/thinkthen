@@ -29,7 +29,7 @@ SECRETS = ("MAVEN_CENTRAL_GPG_PRIVATE_KEY", "MAVEN_CENTRAL_GPG_PASSPHRASE", "MAV
 TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "crates/thinkthen/Cargo.toml", "composer.json", "libraries/php/composer.json", "libraries/go/go.mod",
         "libraries/csharp/ThinkThen.csproj", "libraries/csharp/Botassembly.ThinkThen.nuspec",
         "libraries/jvm/pom.xml", "libraries/jvm/README.md", "libraries/jvm/session/thinkthen/Engine.java",
-        "libraries/jvm/door/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
+        "libraries/jvm/session/thinkthen/Json.java", "libraries/jvm/session/kotlin/KotlinEngine.kt",
         "libraries/jvm/session/scala/ScalaEngine.scala", "libraries/dart/pubspec.yaml", "libraries/dart/README.md",
         "libraries/dart/lib/thinkthen_dart.dart")
 
@@ -93,7 +93,7 @@ def tree(root, plant):
         "jvm": {"pom.xml": (root / "libraries/jvm/pom.xml").read_bytes(),
                 "README.md": (root / "libraries/jvm/README.md").read_bytes(),
                 "LICENSE": b"MIT\n", "product-inventory.json": b"{}\n",
-                **{f"thinkthen-{kind}.jar": jar(kind) for kind in ("door", "kotlin", "scala")}},
+                **{f"thinkthen-{kind}.jar": jar(kind) for kind in ("session", "kotlin", "scala")}},
         "dart": {"pubspec.yaml": (root / "libraries/dart/pubspec.yaml").read_bytes(), "pubspec.lock": b"lock",
                  "README.md": b"readme", "lib/thinkthen_dart.dart": b"library;"},
     }
@@ -440,7 +440,7 @@ def main():
             ("nuget-native-content-types", {node.get('Extension'): node.get('ContentType') for node in types},
              {'dll': 'application/octet', 'so': 'application/octet', 'dylib': 'application/octet'}),
             ("maven-layout", layout, sorted(f"{a}{s}" for a in artifacts for s in ("", ".md5", ".sha1"))),
-            ("maven-sources", source_names, sorted(["door/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
+            ("maven-sources", source_names, sorted(["session/thinkthen/Json.java", "session/thinkthen/Engine.java", "session/kotlin/KotlinEngine.kt", "session/scala/ScalaEngine.scala"])),
             ("nuget-file", [p.name for p in (root / "out/nuget").iterdir()], [f"Botassembly.ThinkThen.{v}.nupkg"]),
             ("pub-files", pub, expected_pub),
         ]
