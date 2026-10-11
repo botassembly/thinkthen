@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision f23c075965dc12a966847fee80c13bfab3b29385, accept
+
 ## Outcome
 
 One Rust constructor turns a function name, a question, an input and options into a `Request`. No binding or database extension has its own mapping from function names to calls or input kinds. No binding writes the request envelope by hand.
