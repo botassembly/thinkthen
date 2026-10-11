@@ -30,3 +30,7 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
   - Rust public cases and CLI cases pass.
   - The product line count in `crates/` falls, and `sdlc/ratchet.json` falls with it.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
