@@ -14,6 +14,8 @@ Reviews: revision 1268c1fe4bc523a39b1d9f6dbafcd0892de20a9d, accept
 
 Reviews: revision 2c2687276a7f29a9741d5acdfcd7b82b0dee6b16, accept
 
+Reviews: revision da353c648545024d2bd19d59649dd6530e5532ad, accept
+
 ## Outcome
 
 A binding waits for the next session result, or for room to push, through one native wait. The wait blocks for a caller-given timeout and wakes early on cancel. No binding sleeps or polls on a timer, and no binding blocks its host's scheduler.
