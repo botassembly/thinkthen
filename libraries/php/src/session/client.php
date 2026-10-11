@@ -27,8 +27,7 @@ final class Client
     public static function text(mixed $value): string { return is_string($value) ? $value : \FFI::string($value); }
     public static function json(mixed $value): string
     {
-        try { return json_encode($value, JSON_THROW_ON_ERROR | JSON_PRESERVE_ZERO_FRACTION); }
-        catch (\JsonException $error) { throw new UsageFailure('input cannot be converted to native JSON', previous: $error); }
+        return \ThinkThen\Inputs\Encoder::encode($value);
     }
     public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
     public static function questionJson(string $json): QuestionInput { return new QuestionInput(['kind' => 'definition'], $json); }

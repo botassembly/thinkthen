@@ -463,13 +463,18 @@ def main():
             output.write_text(result)
         return 0
     if args.target == "php":
-        if args.inputs or args.bridge:
-            parser.error("PHP target generates owned results only")
+        if args.bridge:
+            parser.error("PHP reads the generated C header directly")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import php
         definitions = prepare(graph(json.loads(args.schema.read_text()), php.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         outputs = php.outputs(definitions, version, (ROOT / "libraries/c/include/thinkthen.h").read_text())
+        schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
+        inputs = prepare(graph(schema, php.INPUT_ROOTS))
+        declarations = {'inputs_generated.php': php.inputs(inputs)}
+        outputs = declarations if args.inputs else {**outputs, **declarations}
         for filename, result in outputs.items():
             output = ROOT / "libraries/php/src/session" / filename
             if args.check:

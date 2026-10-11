@@ -62,3 +62,49 @@ def outputs(definitions, version, header):
             'graph_generated.json': json.dumps(graph, indent=2) + '\n',
             'ffi_generated.h': declarations.strip() + '\n',
             'constants_generated.php': '\n'.join(constants) + '\n'}
+
+
+INPUT_ROOTS = ('RequestInput', 'RequestQuestion', 'RequestReaderFailure',
+               'Request', 'RequestCall', 'RequestItem', 'RequestSource', 'RequestReader',
+               'RequestOptions', 'RequestSessionDescriptor')
+
+
+def inputs(definitions):
+    """Declare the input documents consumed by the PHP public adapter."""
+    selected = set(INPUT_ROOTS)
+    selected.update(child for child, _ in definitions['RequestCall']['variants'])
+    # The adapter accepts common records and preserves selector descriptors.
+    # Emit only the tagged constructors it instantiates.
+    selected.update(('RequestInput_records', 'RequestInput_source', 'RequestInput_feed',
+                     'RequestQuestion_text', 'RequestQuestion_definition',
+                     'RequestReaderFailure_invalid_input'))
+    lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
+             'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;']
+    for key, source in definitions.items():
+        if key not in selected:
+            continue
+        if 'properties' not in source:
+            if key == 'RequestQuestion':
+                lines += ['final class InputRequestQuestion extends Document', '{', '}']
+            continue
+        fields = source['properties']
+        defaults = {member: field['const'] for member, field in fields.items() if 'const' in field}
+        required = [member for member in source.get('required', []) if member not in defaults]
+        def parameter(member):
+            field = fields[member]
+            source = definitions[field['$ref'].removeprefix('#/$defs/')] if '$ref' in field else field
+            alternatives = source.get('oneOf', [])
+            if len(alternatives) == 1:
+                source = alternatives[0]
+            kind = source.get('type')
+            native = {'string': 'string', 'array': 'array', 'boolean': 'bool', 'integer': 'int', 'number': 'int|float'}
+            return native.get(kind, 'mixed') if isinstance(kind, str) else 'mixed'
+        parameters = ', '.join(parameter(member) + ' $' + member for member in required)
+        values = ', '.join(repr(member) + ' => $' + member for member in required)
+        tags = ', '.join(repr(k) + ' => ' + repr(v) for k, v in defaults.items())
+        lines += ['final class Input' + ''.join(part[:1].upper() + part[1:] for part in key.split('_')) + ' extends Document', '{',
+                  *(['    public const TAGS = [' + tags + '];'] if tags else []),
+                  '    public function __construct(' + parameters + (', ' if parameters else '') + 'array $fields = [])',
+                  '    {', '        parent::__construct([' + ', '.join(part for part in ('...self::TAGS' if tags else '', values) if part) + ', ...$fields]);' if tags or values else '        parent::__construct($fields);',
+                  '    }', '}']
+    return '\n'.join(lines) + '\n'

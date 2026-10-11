@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace ThinkThen;
+use ThinkThen\Inputs as Input;
 
 /** Own a native session. A client can close without depending on its batches. */
 final class Operation
@@ -18,20 +19,23 @@ final class Operation
         array $options, private readonly ?Cancellation $token)
     {
         if ($input instanceof FileInput) {
-            $source = ['kind' => 'source', 'source' => ['paths' => $input->paths, 'reading' => (object)$input->reading, ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]];
+            $source = new Input\InputRequestInputSource(new Input\InputRequestSource($input->paths,
+                ['reading' => new Input\InputRequestReader($input->reading), ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]));
         } elseif ($input instanceof \Traversable) {
             $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
-            $source = ['kind' => 'feed', 'name' => 'php'];
+            $source = new Input\InputRequestInputFeed('php');
         } else {
             $records = is_array($input) && array_is_list($input) ? $input : [$input];
-            $source = ['kind' => match ($function) { 'find' => 'units', 'relate' => 'entities', default => 'records' },
-                'items' => array_map(Client::descriptor(...), $records)];
+            $source = new Input\InputRequestInputRecords(array_map(fn($item) => new Input\InputRequestItem(Client::descriptor($item)), $records));
         }
-        $questionJson = $question instanceof QuestionInput && $question->definitionJson !== null
-            ? '{"kind":"definition","value":'.$question->definitionJson.'}'
-            : Client::json($question instanceof QuestionInput ? $question->descriptor : (is_string($question) ? ['kind' => 'text', 'text' => $question] : ['kind' => 'definition', 'value' => $question]));
-        $request = '{"schema":'.Client::json(\ThinkThen\Session\REQUEST_VERSION).',"call":{"function":'.Client::json($function).
-            ',"question":'.$questionJson.',"input":'.Client::json($source).',"options":'.Client::json((object)$options).'}}';
+        $question = $question instanceof QuestionInput
+            ? ($question->definitionJson === null ? new Input\InputRequestQuestion($question->descriptor) : new Input\InputRequestQuestionDefinition(new Input\RawJson($question->definitionJson)))
+            : (is_string($question) ? new Input\InputRequestQuestionText($question) : new Input\InputRequestQuestionDefinition($question));
+        $callClass = Input\Document::class;
+        $candidate = 'ThinkThen\\Inputs\\InputRequestCall'.ucfirst($function);
+        if (class_exists($candidate) && is_subclass_of($candidate, $callClass) && $candidate::TAGS['function'] === $function) $callClass = $candidate;
+        else throw new UsageFailure('unknown function');
+        $request = Client::json(new Input\InputRequest(\ThinkThen\Session\REQUEST_VERSION, new $callClass(question: $question, input: $source, fields: ['options' => new Input\InputRequestOptions($options)])));
         $owner = $ffi->new('struct thinkthen_session *');
         $this->check($ffi->thinkthen_session_new_with_surface($engine, $request, strlen($request), 'php', 3, \FFI::addr($owner)));
         $this->session = $owner;
@@ -98,10 +102,10 @@ final class Operation
                     $finished = true;
                 } else {
                     $finished = false;
-                    $this->pending = Client::json(['item' => Client::descriptor($this->producer->current())]);
+                    $this->pending = Client::json(new Input\InputRequestSessionDescriptor(new Input\InputRequestItem(Client::descriptor($this->producer->current()))));
                 }
             } catch (\Throwable) {
-                $failure = '{"kind":"invalid_input"}';
+                $failure = Client::json(new Input\InputRequestReaderFailureInvalidInput());
                 $this->check($this->ffi->thinkthen_session_finish($this->session, $failure, strlen($failure)));
                 $this->producer = null;
                 return;
