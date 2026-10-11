@@ -1,6 +1,8 @@
 # 0416: Move backend checking under the backend namespace
 
-Status: landed. `thinkthen backends check` is canonical, `thinkthen check` remains a hidden alias, and the proxy nouns are reserved.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. `thinkthen backends check` is canonical, `thinkthen check` remains a hidden alias, and the proxy nouns are reserved.
 
 Milestone: 0.2
 

@@ -1,6 +1,8 @@
 # 0428: Complete C++, Swift, Zig and Objective-C typed parity
 
-Status: COMPLETE. All ten typed functions and 247 applicable cases per family pass through retained runs and focused corrections. Whole-family and ownership/index reviews are accepted. Full tests, lint and executable docs pass; the compiler-environment review's helper-import finding is fixed and isolated normal-entrypoint checks pass.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All ten typed functions and 247 applicable cases per family pass through retained runs and focused corrections. Whole-family and ownership/index reviews are accepted. Full tests, lint and executable docs pass; the compiler-environment review's helper-import finding is fixed and isolated normal-entrypoint checks pass.
 Landed: 3fab8b824
 
 Milestone: 0.2

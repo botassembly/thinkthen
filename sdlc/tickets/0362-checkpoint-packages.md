@@ -1,6 +1,8 @@
 # 0362: Checkpoint publishing packs the 16 missing surface packages
 
-Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md` batch C4, lane claude-3. Issue: `sdlc/issues/closed/2026-09-30-checkpoints-publish-no-source-wrapper-packages.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/issue-priorities-2026-09-30.md` batch C4, lane claude-3. Issue: `sdlc/issues/closed/2026-09-30-checkpoints-publish-no-source-wrapper-packages.md`.
 
 ## Outcome
 

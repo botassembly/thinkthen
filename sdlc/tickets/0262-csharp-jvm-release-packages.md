@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-pac
 
 # 0262: Pack C# and JVM binaries with one matching C archive
 
-Status: complete. Fresh independent code review accepted `6b3c138a`; the coordinator integrated the bounded local package proof. Original C#/JVM release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent code review accepted `6b3c138a`; the coordinator integrated the bounded local package proof. Original C#/JVM release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

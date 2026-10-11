@@ -1,6 +1,8 @@
 # 0399: A backend sets its request path, Perplexity is built in, and OpenRouter gets both decide sides
 
-Status: landed at `4cf694673`: named posting paths, Perplexity/OpenRouter support and saved-response replay work, and both authorized provider checks passed once on 2026-10-04. The completed/expired authorization permits no repeat; other routes/models and general provider reliability remain unestablished.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. at `4cf694673`: named posting paths, Perplexity/OpenRouter support and saved-response replay work, and both authorized provider checks passed once on 2026-10-04. The completed/expired authorization permits no repeat; other routes/models and general provider reliability remain unestablished.
 
 Landed: ae0c78001
 

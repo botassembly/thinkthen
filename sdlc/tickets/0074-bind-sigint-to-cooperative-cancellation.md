@@ -6,7 +6,9 @@ opens: crates/thinkthen/Cargo.toml Cargo.lock sdlc/scripts/policy.py crates/thin
 
 # 0074: Bind SIGINT to cooperative cancellation
 
-Status: landed (`61957379`, record `sdlc/records/0074-bind-sigint-to-cooperative-cancellation.md`). Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. (`61957379`, record `sdlc/records/0074-bind-sigint-to-cooperative-cancellation.md`). Owner: Claude.
 
 ## Outcome and authority
 

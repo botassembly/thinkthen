@@ -6,7 +6,9 @@ opens: sdlc/planning/adr/0052-retries-back-off-at-the-provider.md sdlc/planning/
 
 # 0155: Retries back off at the provider and count apart
 
-Status: complete after independent code review and the related runtime batch validation on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. after independent code review and the related runtime batch validation on 2026-09-27. The coordinator accepted it on 2026-09-26 after a fresh read-only review. It carries ADR 0052. Tickets 0146 and 0148 have landed. The 2026-09-27 work plan adds review-register items 91, 92, 119 and the message half of 118 to this build.
 
 ## Current-main reproduction and added scope
 

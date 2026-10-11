@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-packa
 
 # 0266: Prove the private Linux Flutter app from matched release files
 
-Status: complete within the local installed Linux app scope after final fresh code review accepted `75150e84`. The same independent reviewer accepted host slice `99882da1` and the final packaging delta. Original outward release and other-host criteria remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. within the local installed Linux app scope after final fresh code review accepted `75150e84`. The same independent reviewer accepted host slice `99882da1` and the final packaging delta. Original outward release and other-host criteria remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-28-sql-interface-usability-before-0-1.md
 
 # 0259: Accept plain PostgreSQL judgment questions and add SQLite yes probability
 
-Status: complete after fresh independent code acceptance of `d01bc92b`. The coordinator integrated the reviewed PostgreSQL plain-question and SQLite yes-probability changes. The parent SQL usability issue retains its other criteria.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. after fresh independent code acceptance of `d01bc92b`. The coordinator integrated the reviewed PostgreSQL plain-question and SQLite yes-probability changes. The parent SQL usability issue retains its other criteria.
 
 ## Outcome and authority
 

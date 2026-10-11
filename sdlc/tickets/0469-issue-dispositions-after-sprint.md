@@ -1,6 +1,8 @@
 # 0469: Reconcile stale issue statuses with landed fixes
 
-Status: COMPLETE. The sweep found obsolete open statuses, duplicate headers and closed issues in the open folder.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The sweep found obsolete open statuses, duplicate headers and closed issues in the open folder.
 
 Milestone: 0.2
 

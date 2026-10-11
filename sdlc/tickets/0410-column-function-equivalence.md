@@ -1,6 +1,8 @@
 # 0410: Complete all ten dataframe functions and located files
 
-Status: COMPLETE. All three dataframe surfaces passed 248 required source and installed cases each, fresh whole-family review, and full test/lint/spec on 760b0f57b.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All three dataframe surfaces passed 248 required source and installed cases each, fresh whole-family review, and full test/lint/spec on 760b0f57b.
 
 Milestone: 0.2
 

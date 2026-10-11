@@ -1,6 +1,8 @@
 # 0382: Windows stage 1: the Python wheel ships for Windows x86-64
 
-Status: landed. The Windows wheel, import, actual installed calls and memory boundaries passed on c64b71859 in runs 37409599783 and 37409602101. The expanded final commit is requalified under 0425.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The Windows wheel, import, actual installed calls and memory boundaries passed on c64b71859 in runs 37409599783 and 37409602101. The expanded final commit is requalified under 0425.
 
 Milestone: 0.2
 

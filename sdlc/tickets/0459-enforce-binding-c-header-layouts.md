@@ -1,6 +1,8 @@
 # 0459: Fail binding checks when copied C declarations drift
 
-Status: COMPLETE. Copied binding declarations are checked against actual target-compiler C facts. Fresh review accepted the implementation and JVM correction; full tests, lint and specification checks passed on e5a0d1731. Final Windows/macOS and complete installed-package qualification remain with their owning tickets.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Copied binding declarations are checked against actual target-compiler C facts. Fresh review accepted the implementation and JVM correction; full tests, lint and specification checks passed on e5a0d1731. Final Windows/macOS and complete installed-package qualification remain with their owning tickets.
 
 Milestone: 0.2
 

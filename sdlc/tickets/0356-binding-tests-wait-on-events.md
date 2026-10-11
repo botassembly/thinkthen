@@ -1,6 +1,8 @@
 # 0356: Binding tests wait on events
 
-Status: landed. Lane claude-4. Pays Debt 029, `../issues/closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (pre-0.1 item 20). Also closes area 3 item 1 of `../planning/grading-2026-09-30/03-send-limits.md`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Pays Debt 029, `../issues/closed/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (pre-0.1 item 20). Also closes area 3 item 1 of `../planning/grading-2026-09-30/03-send-limits.md`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 

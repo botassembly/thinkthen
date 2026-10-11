@@ -6,7 +6,9 @@ opens: sdlc/tickets/0200-sql-row-errors-and-budgets.md sdlc/planning/adr/0080-sq
 
 # 0200: Keep good SQL rows and bound their calls
 
-Status: landed. Accepted 2026-09-27 by the Codex queue owner after fresh read-only review and its two corrections. The reviewed design is `e982bfec`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. Ian can overturn its routine choices. Closing note, 2026-10-01: the implementation is on main, and `sdlc/records/0200-sql-row-errors-and-budgets.md` records its verified landing on 2026-09-27.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Accepted 2026-09-27 by the Codex queue owner after fresh read-only review and its two corrections. The reviewed design is `e982bfec`; `sdlc/records/0200-0201-design-review.md` records the paired review. Owner: Codex. Ian can overturn its routine choices. Closing note, 2026-10-01: the implementation is on main, and `sdlc/records/0200-sql-row-errors-and-budgets.md` records its verified landing on 2026-09-27.
 
 ## Outcome and authority
 

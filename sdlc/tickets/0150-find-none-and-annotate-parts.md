@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/bulk.
 
 # 0150: Find's none option and annotate over record parts
 
-Status: landed 2026-09-26 (`sdlc/records/0150-build-find-none-and-annotate-parts.md`). A fresh read-only code review accepted it after its findings were fixed. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0150-build-find-none-and-annotate-parts.md`). A fresh read-only code review accepted it after its findings were fixed. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

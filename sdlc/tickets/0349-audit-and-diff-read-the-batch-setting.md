@@ -1,6 +1,8 @@
 # 0349: `audit` and `diff` see the batch setting again
 
-Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B2. Pays Debt 008, `sdlc/issues/closed/2026-09-30-audit-and-diff-lost-the-batch-setting.md`. Starts after ticket 0344 lands, because both edit `specification/result.schema.json`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B2. Pays Debt 008, `sdlc/issues/closed/2026-09-30-audit-and-diff-lost-the-batch-setting.md`. Starts after ticket 0344 lands, because both edit `specification/result.schema.json`.
 
 ## Outcome
 

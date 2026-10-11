@@ -1,6 +1,8 @@
 # 0439: Document Linux R installation
 
-Status: landed. Linux R installation guidance and installed replay passed review, full tests and lint at 20681a8a8. Typed result/2 and image adoption remain with 0431.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Linux R installation guidance and installed replay passed review, full tests and lint at 20681a8a8. Typed result/2 and image adoption remain with 0431.
 
 Milestone: 0.2
 

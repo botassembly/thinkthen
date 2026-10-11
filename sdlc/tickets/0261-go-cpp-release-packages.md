@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package
 
 # 0261: Pack Go and C++ source with one matching C archive
 
-Status: complete. Fresh independent code review accepted `0623703b`; the coordinator integrated the local pilot. The original Go/C++ release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent code review accepted `0623703b`; the coordinator integrated the local pilot. The original Go/C++ release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

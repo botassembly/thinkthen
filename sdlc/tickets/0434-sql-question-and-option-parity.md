@@ -1,6 +1,8 @@
 # 0434: Match SQL question inputs and descriptions
 
-Status: COMPLETE. All 248 required cases passed through each source and installed SQL extension. Reviewed fixes and final functional, lint and specification checks passed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All 248 required cases passed through each source and installed SQL extension. Reviewed fixes and final functional, lint and specification checks passed.
 
 Milestone: 0.2
 

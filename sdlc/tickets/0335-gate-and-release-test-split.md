@@ -1,6 +1,8 @@
 # 0335: Split tests between the gate and the release suite
 
-Status: landed. Slice 1 and slice 2 landed; slice 3 moved to ticket 0338, which landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue, closed into this ticket: `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Slice 1 and slice 2 landed; slice 3 moved to ticket 0338, which landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue, closed into this ticket: `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
 
 ## Outcome
 

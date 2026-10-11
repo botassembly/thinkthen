@@ -6,7 +6,9 @@ opens: Cargo.lock deny.toml crates/thinkthen/Cargo.toml crates/thinkthen/src/eng
 
 # 0096: Recover after fork
 
-Status: landed 2026-09-24 (`sdlc/records/0096-land-fork-recovery.md`). Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-24 (`sdlc/records/0096-land-fork-recovery.md`). Owner: Claude.
 
 Split from 0078 on 2026-09-24 ("0078b" in the spine review). 0078 keeps host signals. This ticket lands after 0085, which builds the retained engine state this ticket guards, and before 0086.
 

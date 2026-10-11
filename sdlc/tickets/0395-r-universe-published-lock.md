@@ -1,6 +1,8 @@
 # 0395: Fix the R package's published-shape lock update that failed on R-universe
 
-Status: landed. Lane claude-3. Branch `ticket/0395-r-universe-published-lock`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5, so the fix ships in 0.1.2.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0395-r-universe-published-lock`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5, so the fix ships in 0.1.2.
 
 Milestone: 0.1
 

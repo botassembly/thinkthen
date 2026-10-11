@@ -1,6 +1,8 @@
 # 0470: Bound DuckDB complete-file admission
 
-Status: COMPLETE. The review confirmed that file descriptors accumulate before native admission; memory exhaustion is a traced risk, not a reproduced crash.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The review confirmed that file descriptors accumulate before native admission; memory exhaustion is a traced risk, not a reproduced crash.
 
 Milestone: 0.2
 

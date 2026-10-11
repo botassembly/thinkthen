@@ -1,6 +1,8 @@
 # 0391: Fix the PyPI, npm and NuGet publish steps that failed in the 0.1.0 release
 
-Status: landed. Lane claude-3. Branch `ticket/0391-publish-step-fixes`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0391-publish-step-fixes`. Parent: ticket 0128 phase 4. Cherry-picked to `release/0.1` under ADR 0116 item 5.
 
 Milestone: 0.1
 

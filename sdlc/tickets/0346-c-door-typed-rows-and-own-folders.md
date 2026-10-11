@@ -1,6 +1,8 @@
 # 0346: The C door writes relate and annotate rows from the crate's types, and each door test builds in its own folder
 
-Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3, after ticket 0345 in the same lane. Pays Debt 012, `sdlc/issues/closed/2026-09-30-c-door-relate-rows-have-no-owner.md`, and Debt 025, `sdlc/issues/closed/2026-09-30-c-door-tests-race-under-nextest.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3, after ticket 0345 in the same lane. Pays Debt 012, `sdlc/issues/closed/2026-09-30-c-door-relate-rows-have-no-owner.md`, and Debt 025, `sdlc/issues/closed/2026-09-30-c-door-tests-race-under-nextest.md`.
 
 ## Outcome
 

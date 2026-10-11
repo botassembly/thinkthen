@@ -1,6 +1,8 @@
 # 0286 — DuckDB settings keyed forms and macros (T4)
 
-Status: Done for the scoped implementation after fresh High code review ACCEPT of `698c84354e26ecf155f7a057de385abacd6bc896`. The source and copied Linux extension passed the selected installed proofs. Other-platform and release-archive qualification remain in their existing issues; this ticket does not close those outcomes.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for the scoped implementation after fresh High code review ACCEPT of `698c84354e26ecf155f7a057de385abacd6bc896`. The source and copied Linux extension passed the selected installed proofs. Other-platform and release-archive qualification remain in their existing issues; this ticket does not close those outcomes.
 
 ## Outcome
 

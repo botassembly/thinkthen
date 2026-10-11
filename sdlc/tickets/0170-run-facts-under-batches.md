@@ -6,7 +6,9 @@ opens: sdlc/planning/adr/0048-records-batch-into-full-requests.md sdlc/planning/
 
 # 0170: Run facts under batches
 
-Status: complete. The coordinator accepted source `23418bb3` after fresh independent code review and combined focused validation with 0163 on 2026-09-27. Owner: Codex. See `sdlc/records/0170-code-review.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The coordinator accepted source `23418bb3` after fresh independent code review and combined focused validation with 0163 on 2026-09-27. Owner: Codex. See `sdlc/records/0170-code-review.md`.
 
 Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 

@@ -1,6 +1,8 @@
 # 0420: Read files and folders through all ten functions
 
-Status: complete. The whole text-file outcome passed source review, correction of six behavior defects and focused fix review. Full tests and lint run on the landing commit.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The whole text-file outcome passed source review, correction of six behavior defects and focused fix review. Full tests and lint run on the landing commit.
 Milestone: 0.2
 
 ## Outcome

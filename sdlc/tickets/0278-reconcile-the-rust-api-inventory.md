@@ -1,6 +1,8 @@
 # 0278 — Reconcile the frozen Rust API inventory
 
-Status: Complete. Fresh High code review accepted `05dc98da`; the reviewed checker and exact proof are integrated. The [issue](../issues/closed/2026-09-29-frozen-rust-api-inventory-lags-the-release-line.md) is closed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `05dc98da`; the reviewed checker and exact proof are integrated. The [issue](../issues/closed/2026-09-29-frozen-rust-api-inventory-lags-the-release-line.md) is closed.
 
 ## Outcome and scope
 

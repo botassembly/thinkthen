@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-e
 
 # 0230: Batch the C JSON door and return call facts
 
-Status: landed. Product implementation complete after fresh High code/API review accepted source `ed566d69`, integrated candidate `b5d61215`. Design acceptance is `23f905ad`; Ian approved both public choices. This landing closes B12b and provides the shared dynamic stopping-details bridge for 0214. Seven marketing-owned site C consumers still require the [recorded migration](../issues/closed/2026-09-28-site-c-examples-need-json-value-wrapper.md) before public 0.1; this completion does not claim those examples work. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Product implementation complete after fresh High code/API review accepted source `ed566d69`, integrated candidate `b5d61215`. Design acceptance is `23f905ad`; Ian approved both public choices. This landing closes B12b and provides the shared dynamic stopping-details bridge for 0214. Seven marketing-owned site C consumers still require the [recorded migration](../issues/closed/2026-09-28-site-c-examples-need-json-value-wrapper.md) before public 0.1; this completion does not claim those examples work. Owner: Codex.
 
 ## Outcome and retained contract
 

@@ -1,6 +1,8 @@
 # 0366: The x86 Linux release build keeps at least 3 GB of disk spare
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Parent: ticket 0128, phase 3b.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 

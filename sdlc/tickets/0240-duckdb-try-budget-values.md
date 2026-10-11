@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-28-duckdb-try-details-raises-on-a-spent-reques
 
 # 0240: Keep DuckDB try-details answers when its request total is spent
 
-Status: complete after fresh independent High code/artifact-review ACCEPT `706a133c`. The coordinator integrated the unchanged repair with cache 0238 and reran the affected native boundary and split-model checks. This restores the accepted ADR 0080/0149 try-value contract; other B13c platform gaps remain open. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. after fresh independent High code/artifact-review ACCEPT `706a133c`. The coordinator integrated the unchanged repair with cache 0238 and reran the affected native boundary and split-model checks. This restores the accepted ADR 0080/0149 try-value contract; other B13c platform gaps remain open. Owner: Codex.
 
 ## Outcome and retained behavior
 

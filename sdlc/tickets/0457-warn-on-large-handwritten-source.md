@@ -1,6 +1,8 @@
 # 0457: Warn on large hand-written source and retain a hard limit
 
-Status: COMPLETE. The permanent source rule warns at 500 and fails at 1,000. Reviewed C documentation and Swift carrier moves preserve declarations and behavior; full tests, lint and specification checks passed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The permanent source rule warns at 500 and fails at 1,000. Reviewed C documentation and Swift carrier moves preserve declarations and behavior; full tests, lint and specification checks passed.
 
 Milestone: 0.2
 

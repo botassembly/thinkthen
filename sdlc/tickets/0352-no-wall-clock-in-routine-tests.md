@@ -1,6 +1,8 @@
 # 0352: No wall-clock timing in routine tests
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
 
 ## Outcome
 

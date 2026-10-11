@@ -6,7 +6,9 @@ opens: sdlc/planning/adr crates/thinkthen/src/core/result.rs crates/thinkthen/sr
 
 # 0171: A tuned threshold warns at another batch setting
 
-Status: done. Fresh code review accepted d67506f2; the landing retains its focused checks. The coordinator accepted the design on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh code review accepted d67506f2; the landing retains its focused checks. The coordinator accepted the design on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
 
 Review route: a fresh read-only Codex session reviews the final diff.
 

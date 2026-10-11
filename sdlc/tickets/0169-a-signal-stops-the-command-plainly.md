@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/cli/interrupt.rs crates/thinkthen/src/cli/interrupt 
 
 # 0169: A signal stops the command plainly
 
-Status: complete. Fresh read-only Codex code review accepted corrected source `84de0a7d` on 2026-09-27. The coordinator accepted it on 2026-09-27 after a fresh read-only design review, with the fixes that review named. Owner: Codex in the retained command lane.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh read-only Codex code review accepted corrected source `84de0a7d` on 2026-09-27. The coordinator accepted it on 2026-09-27 after a fresh read-only design review, with the fixes that review named. Owner: Codex in the retained command lane.
 
 Review route: a fresh read-only Codex reviewer checks the final diff. Ian's handover routes the accepted Claude ticket to Codex. The accepted behavior stays fixed.
 

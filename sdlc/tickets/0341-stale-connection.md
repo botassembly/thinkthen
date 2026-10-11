@@ -1,6 +1,8 @@
 # 0341: A backend's keep-alive close no longer fails a send
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Asks whether the connection reuse that 0340 found in a DuckDB test can fail a real send.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Asks whether the connection reuse that 0340 found in a DuckDB test can fail a real send.
 
 ## Outcome
 

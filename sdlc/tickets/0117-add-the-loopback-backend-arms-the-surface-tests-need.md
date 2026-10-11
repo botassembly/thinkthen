@@ -6,7 +6,9 @@ opens: conformance/backend conformance/README.md sdlc/ratchet.json sdlc/issues/c
 
 # 0117: Add the loopback backend arms the surface tests need
 
-Status: landed 2026-09-24. The code review (`sdlc/records/0117-code-review.md`) accepted `816f253f` after four fixes. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-24. The code review (`sdlc/records/0117-code-review.md`) accepted `816f253f` after four fixes. Owner: Claude.
 
 ## Design and decisions
 

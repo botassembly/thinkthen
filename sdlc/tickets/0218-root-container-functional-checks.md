@@ -2,7 +2,9 @@ opens: sdlc/tickets/0218-root-container-functional-checks.md sdlc/records/0218-r
 
 # 0218: Make root-container functional checks honest
 
-Status: done. Owner: Codex. Fresh independent code review accepted `54e06a71`; focused root and nonroot fixture, early-refusal and interrupt checks passed. The correction is landed with its issue closure.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Owner: Codex. Fresh independent code review accepted `54e06a71`; focused root and nonroot fixture, early-refusal and interrupt checks passed. The correction is landed with its issue closure.
 
 ## Outcome and boundary
 

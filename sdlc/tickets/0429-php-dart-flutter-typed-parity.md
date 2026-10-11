@@ -1,6 +1,8 @@
 # 0429: Complete PHP, Dart and Flutter typed parity
 
-Status: complete. PHP, Dart and the separate Flutter facade each pass all 247 required cases and actual archive consumers. Whole-family and packaging reviews accepted the implementation; full integration tests, lint and executable documentation passed. Final global/platform qualification belongs to 0425.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. PHP, Dart and the separate Flutter facade each pass all 247 required cases and actual archive consumers. Whole-family and packaging reviews accepted the implementation; full integration tests, lint and executable documentation passed. Final global/platform qualification belongs to 0425.
 
 Milestone: 0.2
 

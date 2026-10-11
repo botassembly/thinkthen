@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/records/0249-r
 
 # 0267: Require the installed language files in one local Linux release bundle
 
-Status: landed. Closed 2026-10-01: ticket 0362 replaced the one-pin bundle. Presence code was accepted after fresh independent review of `3f22a71d`, and its focused refusal fixture runs in routine lint. See [the code review](../records/0267-local-bundle-code-review.md). The one-pin local pack produced 18 of 21 planned archives, and no `release-smoke --source-packages` run started. Ticket 0362 then made `surfaces --publish` pack every surface. Checkpoints `checkpoint/surfaces/2026-10-01-1` and `-2` packed and smoked those packages from one commit each; checkpoint 2's folder holds 22 files. The private Flutter app file moves to the 0.2 idea `sdlc/issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md`. The [preparation](../records/0267-release-bundle-preparation.md) and [build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Closed 2026-10-01: ticket 0362 replaced the one-pin bundle. Presence code was accepted after fresh independent review of `3f22a71d`, and its focused refusal fixture runs in routine lint. See [the code review](../records/0267-local-bundle-code-review.md). The one-pin local pack produced 18 of 21 planned archives, and no `release-smoke --source-packages` run started. Ticket 0362 then made `surfaces --publish` pack every surface. Checkpoints `checkpoint/surfaces/2026-10-01-1` and `-2` packed and smoked those packages from one commit each; checkpoint 2's folder holds 22 files. The private Flutter app file moves to the 0.2 idea `sdlc/issues/2026-10-01-a-flutter-app-file-in-the-release-bundle.md`. The [preparation](../records/0267-release-bundle-preparation.md) and [build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
 
 Landed: bb1155c71
 

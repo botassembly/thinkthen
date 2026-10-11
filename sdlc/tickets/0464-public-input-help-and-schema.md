@@ -1,6 +1,8 @@
 # 0464: Make input help and MCP schemas match admission
 
-Status: COMPLETE. The after-sprint review found unsupported image help for find and contradictory file-reader combinations in MCP's advertised schema. A caller also found that decide details can return an authored meaning where the help promises a boolean.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The after-sprint review found unsupported image help for find and contradictory file-reader combinations in MCP's advertised schema. A caller also found that decide details can return an authored meaning where the help promises a boolean.
 
 Milestone: 0.2
 

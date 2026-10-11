@@ -1,6 +1,8 @@
 # 0451: Create production Guides and a reusable lesson template
 
-Status: complete. Guides navigation, section and reusable lesson template are implemented and reviewed. Marketing owns actual lesson drafts and media.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Guides navigation, section and reusable lesson template are implemented and reviewed. Marketing owns actual lesson drafts and media.
 
 Milestone: 0.2
 Owner: builder.

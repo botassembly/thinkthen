@@ -1,6 +1,8 @@
 # 0322: Every surface adds to the usage totals
 
-Status: landed. Slice 1 landed in `c893b2e15`; slice 2, the cache-answer proof, landed after ADR 0111 slices 3 to 5 (ticket 0304). Record: `sdlc/records/0322-usage-totals-build.md`. Design: ADR 0113 (accepted). Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Slice 1 landed in `c893b2e15`; slice 2, the cache-answer proof, landed after ADR 0111 slices 3 to 5 (ticket 0304). Record: `sdlc/records/0322-usage-totals-build.md`. Design: ADR 0113 (accepted). Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1.
 
 ## Outcome
 

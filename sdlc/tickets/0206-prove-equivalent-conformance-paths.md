@@ -6,7 +6,9 @@ opens: sdlc/tickets/0206-prove-equivalent-conformance-paths.md sdlc/records/0206
 
 # 0206: Prove equivalent conformance paths
 
-Status: done on 2026-09-27. Fresh independent code review accepted `21564a96` with source `69664a05`; focused SQL/R boundary and affected policy/syntax checks passed. Owner: Codex. The broader issue and proposed 0207 remain open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on 2026-09-27. Fresh independent code review accepted `21564a96` with source `69664a05`; focused SQL/R boundary and affected policy/syntax checks passed. Owner: Codex. The broader issue and proposed 0207 remain open.
 
 ## Outcome
 

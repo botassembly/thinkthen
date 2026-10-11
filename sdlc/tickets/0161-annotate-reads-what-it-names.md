@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/cli/annotate.rs crates/thinkthen/src/cli/annotate/pl
 
 # 0161: `annotate` reads what its set names, and its plan shows what it sends
 
-Status: landed 2026-09-26 (`sdlc/records/0161-build-annotate-reads-what-it-names.md`). A fresh read-only code review found two fixes, both made. The coordinator accepted the ticket on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the document refusal line. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0161-build-annotate-reads-what-it-names.md`). A fresh read-only code review found two fixes, both made. The coordinator accepted the ticket on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the document refusal line. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

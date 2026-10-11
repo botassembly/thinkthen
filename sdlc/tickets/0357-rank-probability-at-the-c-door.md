@@ -1,6 +1,8 @@
 # 0357: `rank` returns each record's place and probability at the C door
 
-Status: landed. Lane claude-3. A fresh ticket review found four gaps, all fixed; the build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/closed/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. A fresh ticket review found four gaps, all fixed; the build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0357-rank-probability-at-the-c-door`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves `../issues/closed/2026-09-30-rank-returns-no-probability-at-the-c-door.md`. Mirrors ticket 0354 slice B, which did the same for `find` (landing `11294af2d`).
 
 ## Outcome
 

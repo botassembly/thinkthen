@@ -6,7 +6,9 @@ opens: crates/thinkthen/Cargo.toml crates/thinkthen/src/public/mod.rs crates/thi
 
 # 0130: Move the Rust Polars door into `thinkthen` behind a `polars` feature
 
-Status: landed 2026-09-25 (`sdlc/records/0130-build-polars-feature.md`). Design accepted 2026-09-25 by the coordinator after its review, with the text edits below. Code review accepted with three record fixes. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 (`sdlc/records/0130-build-polars-feature.md`). Design accepted 2026-09-25 by the coordinator after its review, with the text edits below. Code review accepted with three record fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. The change adds a dependency to `thinkthen` and widens its public surface under a feature, so the code review names what it checked (repo `CLAUDE.md`).
 

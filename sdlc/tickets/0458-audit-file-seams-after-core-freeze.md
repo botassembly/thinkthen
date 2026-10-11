@@ -1,6 +1,8 @@
 # 0458: Repair only flagged file seams after the core freezes
 
-Status: COMPLETE. The four flagged file families now follow semantic seams. Declarations, conversion behavior and substantive tests are unchanged; fresh review, full lint, actual package checks and integrated full tests passed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The four flagged file families now follow semantic seams. Declarations, conversion behavior and substantive tests are unchanged; fresh review, full lint, actual package checks and integrated full tests passed.
 
 Milestone: 0.2
 

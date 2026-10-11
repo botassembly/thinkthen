@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/public/options.rs crates/thinkthen/src/public/batch.
 
 # 0166: A cancelled call never succeeds
 
-Status: landed 2026-09-27. The coordinator accepted it after a fresh read-only review with four fixes, and a fresh read-only code review accepted the build (three small fixes made at landing). Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-27. The coordinator accepted it after a fresh read-only review with four fixes, and a fresh read-only code review accepted the build (three small fixes made at landing). Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

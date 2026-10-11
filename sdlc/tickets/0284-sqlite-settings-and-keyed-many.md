@@ -1,6 +1,8 @@
 # 0284 — SQLite settings and keyed many (T2)
 
-Status: Done. Fresh independent High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The coordinator landed the reviewed source, focused checks and selected unpacked-archive evidence. The SQL redesign and package umbrella issues retain their other criteria; final release-runner qualification remains open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The coordinator landed the reviewed source, focused checks and selected unpacked-archive evidence. The SQL redesign and package umbrella issues retain their other criteria; final release-runner qualification remains open.
 
 ## Outcome
 

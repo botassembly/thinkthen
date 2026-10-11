@@ -1,6 +1,8 @@
 # 0388: The macOS DuckDB extension exports no Rust names
 
-Status: landed. Lane claude-2. Branch `ticket/0388-macos-duckdb-exports`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0388-macos-duckdb-exports`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 

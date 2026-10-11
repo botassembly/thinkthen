@@ -6,7 +6,9 @@ opens: sdlc/planning/adr/0051-every-address-has-a-ceiling-and-a-refused-batch-ha
 
 # 0154: The request size is a setting with a default everywhere, and a refused batch halves once
 
-Status: done. Implemented and independently reviewed on 2026-09-27; focused source checks and the segmented command checkpoint passed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex, by Ian's later routing. It carries ADR 0051. Tickets 0146 (B4) and 0155 have landed on main. This ticket builds before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Implemented and independently reviewed on 2026-09-27; focused source checks and the segmented command checkpoint passed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex, by Ian's later routing. It carries ADR 0051. Tickets 0146 (B4) and 0155 have landed on main. This ticket builds before the batching design's ticket B5, by the coordinator's ruling of 2026-09-26.
 
 Review route: the accepted design and ADR 0051 retain their earlier review. A fresh read-only Codex reviewer checked the source checkpoint and measured caps. Its completion pass checks the final documentation, by Ian's later routing.
 

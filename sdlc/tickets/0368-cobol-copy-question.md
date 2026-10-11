@@ -1,6 +1,8 @@
 # 0368: COBOL calls never write into the caller's text
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Reported by the site owner.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-2. Reported by the site owner.
 
 ## Outcome
 

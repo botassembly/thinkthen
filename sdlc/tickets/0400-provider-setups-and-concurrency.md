@@ -1,6 +1,8 @@
 # 0400: One setup format per provider, local servers and Clef documented, and a default throttle of 8
 
-Status: complete. Provider setups, default-eight concurrency and measured setup guidance are landed through slices A–D.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Provider setups, default-eight concurrency and measured setup guidance are landed through slices A–D.
 
 Milestone: 0.2
 

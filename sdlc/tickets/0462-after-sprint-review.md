@@ -1,6 +1,8 @@
 # 0462: Review all 0.2 changes and sweep known bugs
 
-Status: COMPLETE. Fresh area reviews and the historical sweep produced owned fixes in 0463–0472. Their implementation and Ian’s release hold remain open; see the consolidated record for scope and limitations.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh area reviews and the historical sweep produced owned fixes in 0463–0472. Their implementation and Ian’s release hold remain open; see the consolidated record for scope and limitations.
 
 Milestone: 0.2
 

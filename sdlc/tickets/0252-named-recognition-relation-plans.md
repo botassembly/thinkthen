@@ -1,6 +1,8 @@
 # 0252: Load named recognition and relation plans in TypeScript and Ruby
 
-Status: landed. Implementation complete after fresh independent High code review accepted `58ed0e77541e3009182212f07ed3bc38e2a75345`. The coordinator integrated unchanged host source. Public documentation and the final shared-conformance criterion map remain separate. The [build record](../records/0252-named-plan-build.md) records exact artifacts, focused checks and profile-retention limits.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Implementation complete after fresh independent High code review accepted `58ed0e77541e3009182212f07ed3bc38e2a75345`. The coordinator integrated unchanged host source. Public documentation and the final shared-conformance criterion map remain separate. The [build record](../records/0252-named-plan-build.md) records exact artifacts, focused checks and profile-retention limits.
 
 ## Outcome
 

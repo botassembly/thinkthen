@@ -6,7 +6,9 @@ opens: sdlc/scripts/allow-list sdlc/scripts/heavy-lock sdlc/scripts/lint sdlc/sc
 
 # 0133: Keep the rungs' environment to an allow list and clear three harness leftovers
 
-Status: landed 2026-09-26 (`sdlc/records/0133-build-harness-leftovers.md`). Design accepted by the second fresh review. Code review took two passes; every finding was fixed. First pass: `lint` now sources the same allow list, and the row plants every allowed name. The record gives the deviations. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0133-build-harness-leftovers.md`). Design accepted by the second fresh review. Code review took two passes; every finding was fixed. First pass: `lint` now sources the same allow list, and the row plants every allowed name. The record gives the deviations. Owner: Claude.
 
 Lane: thinkthen-lane-1
 

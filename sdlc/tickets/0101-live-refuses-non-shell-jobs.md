@@ -6,7 +6,9 @@ opens: sdlc/scripts/live sdlc/scripts/README.md sdlc/live-test sdlc/issues/close
 
 # 0101: Refuse a non-shell live job before any charge
 
-Status: landed 2026-09-24 through a merge of `ticket/0101-live-refuses-non-shell-jobs`; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`, review `sdlc/records/0101-review.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-24 through a merge of `ticket/0101-live-refuses-non-shell-jobs`; record `sdlc/records/0101-live-refuses-non-shell-jobs.md`, review `sdlc/records/0101-review.md`. Owner: Claude.
 
 ## Problem
 

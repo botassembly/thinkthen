@@ -6,7 +6,9 @@ opens: sdlc/planning/adr
 
 # 0099: Port the branch ADRs to main
 
-Status: landed (`c1bf5b84`, record `sdlc/records/0099-build-port-branch-adrs.md`). Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. (`c1bf5b84`, record `sdlc/records/0099-build-port-branch-adrs.md`). Owner: Claude.
 
 ## Outcome and authority
 

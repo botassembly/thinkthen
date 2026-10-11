@@ -1,6 +1,8 @@
 # 0358: One rule for a row's usage
 
-Status: landed. Lane claude-1. Branch `ticket/0358-one-row-usage-rule`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves top-ten cleanup item 4 of `sdlc/planning/grading-2026-09-30/README.md` and cleanup item 3 of its batching report `01-batching.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-1. Branch `ticket/0358-one-row-usage-rule`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Serves top-ten cleanup item 4 of `sdlc/planning/grading-2026-09-30/README.md` and cleanup item 3 of its batching report `01-batching.md`.
 
 ## Outcome
 

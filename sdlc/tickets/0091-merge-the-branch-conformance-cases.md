@@ -6,7 +6,9 @@ opens: conformance crates/thinkthen/src/cli/conformance_tests crates/thinkthen/t
 
 # 0091: Merge the branch conformance cases
 
-Status: landed on main 2026-09-24. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on main 2026-09-24. Owner: Claude.
 
 ## Outcome and authority
 

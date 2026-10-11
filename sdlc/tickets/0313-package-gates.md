@@ -1,6 +1,8 @@
 # 0313: The four remaining package gates pass from a clean checkout
 
-Status: landed. Lane claude-3. Branch `ticket/0313-package-gates`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Issue: `2026-09-29-nine-package-gates-fail-from-clean-checkouts.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0313-package-gates`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Issue: `2026-09-29-nine-package-gates-fail-from-clean-checkouts.md`.
 
 ## Outcome
 

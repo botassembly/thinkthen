@@ -1,6 +1,8 @@
 # 0309: Docs and records hygiene
 
-Status: landed. Fresh code review found a blocking gap: `release-managed-pair.py` allowed only two source symlinks, so source capture refused the header links. Both links are now allowed, and its self-test runs `tar_files` on a real `git archive HEAD`. Lane claude-1. Branch `ticket/0309-docs-and-records-hygiene`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh code review found a blocking gap: `release-managed-pair.py` allowed only two source symlinks, so source capture refused the header links. Both links are now allowed, and its self-test runs `tar_files` on a real `git archive HEAD`. Lane claude-1. Branch `ticket/0309-docs-and-records-hygiene`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.
 
 ## Outcome
 

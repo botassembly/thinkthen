@@ -1,6 +1,8 @@
 # 0374: The installed-file checks prove panic isolation and the token cap
 
-Status: landed. Lane claude-1. Branch `ticket/0374-installed-panic-and-cap-checks`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-1. Branch `ticket/0374-installed-panic-and-cap-checks`. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 

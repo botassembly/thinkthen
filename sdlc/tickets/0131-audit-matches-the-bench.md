@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0131: Make audit give the numbers a benchmark needs
 
-Status: landed 2026-09-26 (`sdlc/records/0131-build-audit-matches-the-bench.md`). Code review accepted on two passes; production Rust re-scored to 425 by the coordinator. No open proof gap. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0131-build-audit-matches-the-bench.md`). Code review accepted on two passes; production Rust re-scored to 425 by the coordinator. No open proof gap. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review returned findings on 2026-09-25, and this page is rewritten whole after it.
 

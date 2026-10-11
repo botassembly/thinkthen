@@ -1,6 +1,8 @@
 # 0386: The macOS release smoke passes PostgreSQL find
 
-Status: landed. Lane claude-4. Branch `ticket/0386-macos-smoke`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0386-macos-smoke`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 

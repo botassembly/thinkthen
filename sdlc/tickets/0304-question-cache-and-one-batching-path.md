@@ -1,6 +1,8 @@
 # 0304: One question cache and one batching path
 
-Status: landed with slice 5. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. with slice 5. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 

@@ -1,6 +1,8 @@
 # 0397: Main moves to 0.2.0 and release/0.1 freezes
 
-Status: landed. Lane: claude-0, before the three 0.2 lanes start. Parent: Ian's ruling of 2026-10-04 on the 0.2 plan. It closes no issue. It narrows `sdlc/issues/2026-10-04-each-patch-release-costs-two-hand-passes.md` and `sdlc/issues/2026-10-04-a-release-needs-two-approvals.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane: claude-0, before the three 0.2 lanes start. Parent: Ian's ruling of 2026-10-04 on the 0.2 plan. It closes no issue. It narrows `sdlc/issues/2026-10-04-each-patch-release-costs-two-hand-passes.md` and `sdlc/issues/2026-10-04-a-release-needs-two-approvals.md`.
 Landed: 8bd84282b2d4218e64b07f471d3df75df699c203
 
 Milestone: 0.2

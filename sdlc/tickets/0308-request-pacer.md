@@ -1,6 +1,8 @@
 # 0308: A requests-per-minute pacer
 
-Status: landed. Lane claude-4. Branch `ticket/0308-request-pacer`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Design: ADR 0111 section 8. Issue: `sdlc/issues/closed/2026-09-26-no-requests-per-minute-pacer.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0308-request-pacer`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Design: ADR 0111 section 8. Issue: `sdlc/issues/closed/2026-09-26-no-requests-per-minute-pacer.md`.
 
 ## Outcome
 

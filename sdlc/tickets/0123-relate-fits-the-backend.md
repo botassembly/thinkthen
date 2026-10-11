@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/backend.rs crates/thinkthen/src/engine crates/t
 
 # 0123: Relate splits requests to fit the backend
 
-Status: landed 2026-09-25. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

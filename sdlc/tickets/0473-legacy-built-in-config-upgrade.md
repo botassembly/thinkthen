@@ -1,6 +1,8 @@
 # 0473: Give old built-in backend configuration an upgrade path
 
-Status: COMPLETE. Safe upgrade diagnostics and both repair paths pass focused checks, full tests, lint, specification checks and fresh code review.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Safe upgrade diagnostics and both repair paths pass focused checks, full tests, lint, specification checks and fresh code review.
 
 Milestone: 0.2
 

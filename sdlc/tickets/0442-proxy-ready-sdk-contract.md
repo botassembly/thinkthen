@@ -1,6 +1,8 @@
 # 0442: Settle SDK identity, provenance and cache compatibility
 
-Status: landed. The result/cache contract is reviewed; engine, C and host adoption remain in their own tickets.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The result/cache contract is reviewed; engine, C and host adoption remain in their own tickets.
 
 Milestone: 0.2
 

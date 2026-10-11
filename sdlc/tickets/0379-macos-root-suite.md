@@ -1,6 +1,8 @@
 # 0379: The root workspace tests pass on macOS
 
-Status: landed. Lane claude-3. Branch `ticket/0379-macos-root-suite`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian's coordinator on 2026-10-01. It changes tests only, so it may land before the `release/0.1` cut (ADR 0116). A product bug found on macOS stops that case and goes to the coordinator; this ticket does not fix product code.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0379-macos-root-suite`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian's coordinator on 2026-10-01. It changes tests only, so it may land before the `release/0.1` cut (ADR 0116). A product bug found on macOS stops that case and goes to the coordinator; this ticket does not fix product code.
 
 Milestone: 0.2
 

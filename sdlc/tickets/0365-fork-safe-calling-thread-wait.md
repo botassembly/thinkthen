@@ -1,6 +1,8 @@
 # 0365: A forked child on macOS answers on every surface that waits on the calling thread
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4. Issue: `sdlc/issues/closed/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4. Issue: `sdlc/issues/closed/2026-10-01-macos-forked-children-crash-on-a-channel-wait.md`.
 
 ## Outcome
 

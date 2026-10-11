@@ -1,6 +1,8 @@
 # 0310: PostgreSQL backend panics reach the client as fixed text
 
-Status: landed. Lane claude-3. Branch `ticket/0310-postgresql-panic-text`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Issue: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`. Follows 0306's deferred gap.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0310-postgresql-panic-text`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Issue: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`. Follows 0306's deferred gap.
 
 ## Outcome
 

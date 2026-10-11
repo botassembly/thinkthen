@@ -1,6 +1,8 @@
 # 0315: Usage lock wait and retry jitter
 
-Status: landed. Lane claude-4. Branch `ticket/0315-usage-lock-and-jitter`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order items 4 and 8. Issue: `sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md`, items 2 and 3.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0315-usage-lock-and-jitter`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order items 4 and 8. Issue: `sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md`, items 2 and 3.
 
 ## Outcome
 

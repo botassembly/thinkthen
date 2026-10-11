@@ -6,7 +6,9 @@ opens: sdlc/tickets/0212-rust-library-batching.md sdlc/records/0212-rust-batchin
 
 # 0212: Batch Rust library records and return run facts
 
-Status: complete. Owner: Codex. Fresh independent High code review accepted final source, contract and proof candidate `f9d9d128` after the terminal batch-one correction. Ian approved the synchronous caller-owned iterator exception on 2026-09-28. This landing closes B12a. Registers 19, 78 and 64 retain their cross-port remainders. The [build record](../records/0212-build.md) and [code review](../records/0212-code-review.md) preserve exact validation revisions; historical preparation below records earlier assumptions. The accepted contract is ADR 0089 with the ADR 0053 amendment.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Owner: Codex. Fresh independent High code review accepted final source, contract and proof candidate `f9d9d128` after the terminal batch-one correction. Ian approved the synchronous caller-owned iterator exception on 2026-09-28. This landing closes B12a. Registers 19, 78 and 64 retain their cross-port remainders. The [build record](../records/0212-build.md) and [code review](../records/0212-code-review.md) preserve exact validation revisions; historical preparation below records earlier assumptions. The accepted contract is ADR 0089 with the ADR 0053 amendment.
 
 ## Outcome and authority
 

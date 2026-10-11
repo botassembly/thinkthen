@@ -1,6 +1,8 @@
 # 0474: Share cache admission across one recognition call
 
-Status: COMPLETE. Source confirms repeated validation and write transactions on current-schema cache opens. The reported jobs-eight recording failure and forty-second startup timing remain unconfirmed locally.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Source confirms repeated validation and write transactions on current-schema cache opens. The reported jobs-eight recording failure and forty-second startup timing remain unconfirmed locally.
 
 Milestone: 0.2
 Owner: builder.

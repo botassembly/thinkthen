@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-29-lint-runs-the-full-package-validation.md
 
 # 0275: Separate package validation from routine lint
 
-Status: complete. Independent High design review accepted `ecf93511b`; fresh High code review accepted `e20119731`. The coordinator ran the integrated routine lint checkpoint; the existing private-name scan stopped it before later checks. That separate source-hygiene failure is filed, not a package-routing failure. Current package and Actions execution remain unqualified.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Independent High design review accepted `ecf93511b`; fresh High code review accepted `e20119731`. The coordinator ran the integrated routine lint checkpoint; the existing private-name scan stopped it before later checks. That separate source-hygiene failure is filed, not a package-routing failure. Current package and Actions execution remain unqualified.
 
 ## Outcome and scope
 

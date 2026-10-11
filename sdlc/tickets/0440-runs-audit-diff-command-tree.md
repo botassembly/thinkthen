@@ -1,6 +1,8 @@
 # 0440: Move audit and diff under runs
 
-Status: landed. Canonical commands and hidden aliases work; no ticket work remains.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Canonical commands and hidden aliases work; no ticket work remains.
 
 Milestone: 0.2
 

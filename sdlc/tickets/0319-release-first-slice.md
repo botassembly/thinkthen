@@ -1,6 +1,8 @@
 # 0319: Build and prove the command-line release on this host
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 8. Issue: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, items 1, 2, 11 and 13.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 8. Issue: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, items 1, 2, 11 and 13.
 
 ## Outcome
 

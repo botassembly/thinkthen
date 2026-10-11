@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0279: Return owned facts from C++ and Dart typed calls
 
-Status: complete. Fresh High code review accepted `9ff5c0e7c` after the measured Python fixture counter was corrected. The focused source and copied installed proof is recorded below. Root retains the every-call umbrella and final release qualification as open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `9ff5c0e7c` after the measured Python fixture counter was corrected. The focused source and copied installed proof is recorded below. Root retains the every-call umbrella and final release qualification as open.
 
 ## Outcome and exact routes
 

@@ -1,6 +1,8 @@
 # 0343: The requests-per-minute rate is set per backend in the configuration file, with no default
 
-Status: landed. Lane claude-4. Branch `ticket/0343-rate-in-backend-config`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 14, recorded with this ticket. Amends ticket 0308 and ADR 0114 section 2.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0343-rate-in-backend-config`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 14, recorded with this ticket. Amends ticket 0308 and ADR 0114 section 2.
 
 ## Ruling
 

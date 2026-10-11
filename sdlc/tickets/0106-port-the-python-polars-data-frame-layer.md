@@ -6,7 +6,9 @@ opens: libraries/python sdlc/planning/libraries/python.md sdlc/planning/adr/0047
 
 # 0106: Port the Python Polars data frame layer
 
-Status: landed 2026-09-25 on `ticket/surface-batch` after the seven-surface landing, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 on `ticket/surface-batch` after the seven-surface landing, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

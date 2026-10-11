@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/cli crates/thinkthen/transforms crates/thinkthen/tes
 
 # 0083: Add the read-only transform catalog
 
-Status: landed 2026-09-24. Build record `sdlc/records/0083-build-transform-catalog.md`; code review `sdlc/records/0083-code-review.md`, whose two findings the coordinator accepted as fixed without another review. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-24. Build record `sdlc/records/0083-build-transform-catalog.md`; code review `sdlc/records/0083-code-review.md`, whose two findings the coordinator accepted as fixed without another review. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket. Revised 2026-09-24 after `sdlc/records/0083-design-review.md`.
 

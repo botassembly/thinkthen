@@ -1,6 +1,8 @@
 # 0332: Copy the C header into the Swift and Objective-C packages at build time
 
-Status: landed 2026-09-30. A fresh read-only code review asked for the lessons and the macOS issue update; both are fixed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work".
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-30. A fresh read-only code review asked for the lessons and the macOS issue update; both are fixed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work".
 
 ## Outcome
 

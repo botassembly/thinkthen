@@ -1,6 +1,8 @@
 # 0403: Build the extension for DuckDB 1.5.4 and 1.5.5
 
-Status: landed. Both versions build, load and install from the versioned archive on Linux, and each rejects the other version’s binary. Other-platform qualification remains for rehearsal; dbt v1 stays the documented route.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Both versions build, load and install from the versioned archive on Linux, and each rejects the other version’s binary. Other-platform qualification remains for rehearsal; dbt v1 stays the documented route.
 
 Milestone: 0.2
 

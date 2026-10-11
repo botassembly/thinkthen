@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-27-php-consumer-proof-needs-a-supported-packag
 
 # 0264: Pack PHP and Dart source with one matching C archive
 
-Status: complete within the local PHP/Dart package scope after fresh code review accepted `7181d981`. The [build record](../records/0264-php-dart-release-build.md) distinguishes clean build pin `2fb1bb8e` from the later early-refusal correction. Original release criteria remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. within the local PHP/Dart package scope after fresh code review accepted `7181d981`. The [build record](../records/0264-php-dart-release-build.md) distinguishes clean build pin `2fb1bb8e` from the later early-refusal correction. Original release criteria remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

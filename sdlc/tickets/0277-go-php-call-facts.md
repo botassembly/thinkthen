@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0277: Return owned facts from Go and PHP typed calls
 
-Status: Complete. Fresh High code review accepted `0d714cfee`; the coordinator integrated the reviewed implementation and focused proof. Broader issue and release qualification remain open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `0d714cfee`; the coordinator integrated the reviewed implementation and focused proof. Broader issue and release qualification remain open.
 
 ## Outcome and retained behavior
 

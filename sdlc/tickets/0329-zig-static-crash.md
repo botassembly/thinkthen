@@ -1,6 +1,8 @@
 # 0329: Link the static Zig consumer with LLD
 
-Status: landed 2026-09-30. A fresh code review accepted it after one round of fixes. Owner: Claude. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 1.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-30. A fresh code review accepted it after one round of fixes. Owner: Claude. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 1.
 
 ## Outcome
 

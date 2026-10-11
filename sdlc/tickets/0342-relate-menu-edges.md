@@ -1,6 +1,8 @@
 # 0342: relate asks a single-answer relation as one menu with none
 
-Status: landed. A fresh ticket review accepted it after five rounds of fixes; a fresh code review accepted it after one. The menu is opt-in: "default" means the recommended form for a single-answer relation, and the bench run must write `single` into its file. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Serves issue priorities rank 9 and the coordinator's relate precision default of 2026-09-30, which Ian can overturn. It amends ADR 0057, which rests on Ian's ruling of 2026-09-26 that every relation asks yes/no pairs; see Design notes.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. A fresh ticket review accepted it after five rounds of fixes; a fresh code review accepted it after one. The menu is opt-in: "default" means the recommended form for a single-answer relation, and the bench run must write `single` into its file. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Serves issue priorities rank 9 and the coordinator's relate precision default of 2026-09-30, which Ian can overturn. It amends ADR 0057, which rests on Ian's ruling of 2026-09-26 that every relation asks yes/no pairs; see Design notes.
 
 ## Outcome
 

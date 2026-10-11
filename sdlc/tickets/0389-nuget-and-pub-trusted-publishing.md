@@ -1,6 +1,8 @@
 # 0389: NuGet and pub.dev publish by trusted publishing
 
-Status: landed. Lane claude-2. Branch `ticket/0389-trusted-publishing-nuget-pub`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, the two docs team asks of 2026-10-01 that its Phase 3 notes name.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0389-trusted-publishing-nuget-pub`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, the two docs team asks of 2026-10-01 that its Phase 3 notes name.
 
 Milestone: 0.1
 

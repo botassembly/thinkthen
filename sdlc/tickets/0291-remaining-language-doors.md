@@ -1,6 +1,8 @@
 # 0291 — Remaining language doors (T9)
 
-Status: landed with ticket 0314's port pass: the C bridge in slice 4a, then Go and C++ (4b), C#, JVM and Dart (4c), Swift, Objective-C, COBOL, Ada and Zig (4d), and Ruby, PHP and TypeScript (4e). The score and tag probability refusal is vacuous in all fourteen doors, because none offers a probability option. Built in the port pass of [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md) section 5. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. with ticket 0314's port pass: the C bridge in slice 4a, then Go and C++ (4b), C#, JVM and Dart (4c), Swift, Objective-C, COBOL, Ada and Zig (4d), and Ruby, PHP and TypeScript (4e). The score and tag probability refusal is vacuous in all fourteen doors, because none offers a probability option. Built in the port pass of [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md) section 5. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
 ## Outcome
 

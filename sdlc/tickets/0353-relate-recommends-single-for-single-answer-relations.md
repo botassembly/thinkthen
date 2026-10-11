@@ -1,6 +1,8 @@
 # 0353: relate recommends `single` for single-answer relations
 
-Status: landed. Lane claude-4. A fresh ticket review accepted it after one round of fixes; a fresh code review accepted it after two. Serves issue `../issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, whose decision run passed its bar on 2026-09-30. Plan: `sdlc/planning/cleanup-2026-09-30.md`. The decision run settled this default; Ian can overturn it.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. A fresh ticket review accepted it after one round of fixes; a fresh code review accepted it after two. Serves issue `../issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, whose decision run passed its bar on 2026-09-30. Plan: `sdlc/planning/cleanup-2026-09-30.md`. The decision run settled this default; Ian can overturn it.
 
 ## Outcome
 

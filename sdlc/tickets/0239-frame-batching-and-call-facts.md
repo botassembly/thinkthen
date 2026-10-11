@@ -6,7 +6,9 @@ opens: sdlc/tickets/0239-frame-batching-and-call-facts.md sdlc/records/0239-fram
 
 # 0239: Finish frame batching and call facts
 
-Status: **Complete for B13a and B13b.** Fresh Medium code/API review accepted corrected `0e150a2bd8ede4d4ccb07ce6ccbeb83237b9cb77`. The coordinator integrated the accepted source, preserving newer cache result guidance and rechecking the shared selector and optional-feature consumers. See the [build record](../records/0239-build.md) for platform limits.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for B13a and B13b.** Fresh Medium code/API review accepted corrected `0e150a2bd8ede4d4ccb07ce6ccbeb83237b9cb77`. The coordinator integrated the accepted source, preserving newer cache result guidance and rechecking the shared selector and optional-feature consumers. See the [build record](../records/0239-build.md) for platform limits.
 
 ## Starts from
 

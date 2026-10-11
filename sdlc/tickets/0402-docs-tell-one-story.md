@@ -1,6 +1,8 @@
 # 0402: The docs tell one story
 
-Status: complete for the 0.2 core: the documentation layout, glossary and three approved recipes have landed with reviewed examples. Link, qualify, transcript search and choose-none wording remain later.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for the 0.2 core: the documentation layout, glossary and three approved recipes have landed with reviewed examples. Link, qualify, transcript search and choose-none wording remain later.
 
 Milestone: 0.2
 

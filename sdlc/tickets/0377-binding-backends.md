@@ -1,6 +1,8 @@
 # 0377: Each language binding and SQL extension names a backend in code
 
-Status: landed. Bindings and SQL now select named backends in code while preserving captured keys, request counts and existing defaults. Release-platform qualification remains part of the combined release run.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Bindings and SQL now select named backends in code while preserving captured keys, request counts and existing defaults. Release-platform qualification remains part of the combined release run.
 
 Milestone: 0.2
 

@@ -1,6 +1,8 @@
 # 0296: Add the pandas Series accessor for all ten functions
 
-Status: COMPLETE. The complete pandas Series accessor passed all 248 source and installed cases, fresh family review, and full test/lint/spec with 0410.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The complete pandas Series accessor passed all 248 source and installed cases, fresh family review, and full test/lint/spec with 0410.
 Landed: 760b0f57b759dcf69af411efd56ef21201448bf3
 
 Milestone: 0.2

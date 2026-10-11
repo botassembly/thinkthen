@@ -6,7 +6,9 @@ opens: databases/sqlite/src/scalars.rs databases/sqlite/tests/test_files.py data
 
 # 0129: Warm takes the question file decide uses
 
-Status: landed 2026-09-25 (`sdlc/records/0129-build-warm-takes-decides-file.md`). Design accepted after two reviews; code review accepted. Open proof gap: the `'@~'` access case pins its sentence but does not count sends. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 (`sdlc/records/0129-build-warm-takes-decides-file.md`). Design accepted after two reviews; code review accepted. Open proof gap: the `'@~'` access case pins its sentence but does not count sends. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/measure crates/thinkthen/src/core/measure.rs cr
 
 # 0125: Complete audit
 
-Status: landed 2026-09-25 (`sdlc/records/0125-build-audit-complete.md`). Code review accepted after two rounds of fixes. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 (`sdlc/records/0125-build-audit-complete.md`). Code review accepted after two rounds of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it. The first design review returned findings on 2026-09-25, and this page is rewritten whole after it.
 

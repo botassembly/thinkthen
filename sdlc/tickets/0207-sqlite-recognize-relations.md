@@ -6,7 +6,9 @@ opens: sdlc/tickets/0207-sqlite-recognize-relations.md
 
 # 0207: Give SQLite the full recognize relation result
 
-Status: done on 2026-09-27 after fresh code review accepted `d74b5cdb` and the focused installed-extension proofs passed. The queue owner approved the additive SQL surface after independent review of `39b6dcbe`. Owner: Codex. Ian can overturn the SQL spelling and argument behavior.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on 2026-09-27 after fresh code review accepted `d74b5cdb` and the focused installed-extension proofs passed. The queue owner approved the additive SQL surface after independent review of `39b6dcbe`. Owner: Codex. Ian can overturn the SQL spelling and argument behavior.
 
 ## Outcome
 

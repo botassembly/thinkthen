@@ -1,6 +1,8 @@
 # 0380: Windows stage 1: the command line and the Rust crate ship for Windows x86-64
 
-Status: landed. Windows command/Rust source and native behavior passed on c64b71859 in runs 37409599783 and 37409602101. The expanded final commit is requalified after SDK work under 0425.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Windows command/Rust source and native behavior passed on c64b71859 in runs 37409599783 and 37409602101. The expanded final commit is requalified after SDK work under 0425.
 
 Milestone: 0.2
 

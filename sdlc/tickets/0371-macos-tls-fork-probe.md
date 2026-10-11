@@ -1,6 +1,8 @@
 # 0371: The TLS roots fork probe serves its own TLS and runs on macOS
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Issue: `sdlc/issues/closed/2026-10-01-macos-tls-roots-fork-probe-fails.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Issue: `sdlc/issues/closed/2026-10-01-macos-tls-roots-fork-probe-fails.md`.
 
 ## Outcome
 

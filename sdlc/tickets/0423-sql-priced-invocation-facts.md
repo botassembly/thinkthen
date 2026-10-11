@@ -1,6 +1,8 @@
 # 0423: State SQL pricing and timing limits accurately
 
-Status: complete. Source review accepted; public site build passed. Full tests and lint run on the landing commit.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Source review accepted; public site build passed. Full tests and lint run on the landing commit.
 Milestone: 0.2
 
 ## Outcome

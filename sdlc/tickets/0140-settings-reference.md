@@ -6,7 +6,9 @@ opens: specification/settings.md specification/README.md sdlc/scripts/settings s
 
 # 0140: every setting is explained in one place
 
-Status: landed 2026-09-26 (`sdlc/records/0140-build-settings-reference.md`). A fresh code review accepted it after one round of fixes. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0140-build-settings-reference.md`). A fresh code review accepted it after one round of fixes. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

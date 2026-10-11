@@ -1,6 +1,8 @@
 # 0311: The token cap on every surface
 
-Status: landed. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
 
 ## Outcome
 

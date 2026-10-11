@@ -6,7 +6,9 @@ opens: libraries/c probes/c-churn sdlc/planning/adr/0037-the-c-door-serves-every
 
 # 0094: Port the C interface
 
-Status: landed 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. The one-time C churn probe ran on 2026-09-25 with zero crashes and closed R7-1 under Ian's one-run ruling; see `sdlc/records/0094-build-c-interface.md`. Nothing is owed. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 in the surface batch, at batch head `03580733` on `ticket/surface-batch`. Integration record: `sdlc/records/surface-batch-integration.md`. The one-time C churn probe ran on 2026-09-25 with zero crashes and closed R7-1 under Ian's one-run ruling; see `sdlc/records/0094-build-c-interface.md`. Nothing is owed. Owner: Claude.
 
 ## Outcome and authority
 

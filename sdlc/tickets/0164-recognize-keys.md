@@ -6,7 +6,9 @@ opens: specification/fixtures/recognize sdlc/scripts/recognize-keys sdlc/scripts
 
 # 0164: The recognize keys live in the repository, and audit grades them
 
-Status: landed 2026-09-26 (`sdlc/records/2026-09-26-0164-recognize-keys.md`). A fresh read-only code review accepted it after one fix. The coordinator accepted the ticket on 2026-09-26 after two fresh read-only reviews. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/2026-09-26-0164-recognize-keys.md`). A fresh read-only code review accepted it after one fix. The coordinator accepted the ticket on 2026-09-26 after two fresh read-only reviews. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

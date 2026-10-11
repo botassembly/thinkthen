@@ -1,6 +1,8 @@
 # 0421: Add llama.cpp and MLX local backends
 
-Status: landed. Both real local runtime checks passed; Windows and final expanded release qualification remain.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Both real local runtime checks passed; Windows and final expanded release qualification remain.
 Milestone: 0.2
 
 ## Outcome

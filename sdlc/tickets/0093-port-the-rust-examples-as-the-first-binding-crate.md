@@ -6,7 +6,9 @@ opens: CLAUDE.md Cargo.toml Cargo.lock libraries/rust sdlc/scripts sdlc/ratchet.
 
 # 0093: Port the Rust examples as the first binding crate
 
-Status: landed on main 2026-09-24 after code review ACCEPT; the ladder passed on `3deda370`, and lint and surfaces passed again after merging onto 0098. See `sdlc/records/0093-build-first-binding-crate.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on main 2026-09-24 after code review ACCEPT; the ladder passed on `3deda370`, and lint and surfaces passed again after merging onto 0098. See `sdlc/records/0093-build-first-binding-crate.md`. Owner: Claude.
 
 ## Outcome and authority
 

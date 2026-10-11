@@ -6,7 +6,9 @@ opens: crates/thinkthen/Cargo.toml sdlc/scripts/policy.py crates/thinkthen/src/c
 
 # 0162: A record stream ends cleanly
 
-Status: done on 2026-09-27. Fresh code and independent ceiling/dependency/policy reviews accepted `66da9fb1`; focused checks passed. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on 2026-09-27. Fresh code and independent ceiling/dependency/policy reviews accepted `66da9fb1`; focused checks passed. Owner: Codex.
 
 2026-09-27 build amendment: The closed-pipe and blank-line compiled-binary regressions failed for the named behaviors before the fix and pass now. A third compiled-binary table pins the stop line after a skipped blank and the unchanged JSONL refusal. Fresh code review found that the batch reader waited forever for another record after the first kept row if standard input stayed open and the output reader closed. A fourth compiled-binary regression reproduced the hang with a two-second deadline before the correction. The coordinator authorized routine budget amendments within the accepted outcome. The measured file and total budgets below replace estimates that understated the command-side numbering and its shared adapter. The coordinator claimed `engine/annotate_schedule/tests.rs` for its obsolete `at` pattern. Ian's priority change keeps the proof focused on observable behavior; this build does not run a mutation or stress campaign.
 

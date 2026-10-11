@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/batch.rs crates/thinkthen/src/core/batch crates
 
 # 0146: The command batches decide, filter and rank
 
-Status: landed 2026-09-27. A fresh code review accepted the build. The build record is `sdlc/records/0146-build-command-batches-decide-filter-rank.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-27. A fresh code review accepted the build. The build record is `sdlc/records/0146-build-command-batches-decide-filter-rank.md`. Owner: Claude.
 
 ADR 0055 reopened it after acceptance, because a batch of `decide`, `filter` or `rank` now sends one fixed evidence sentence in place of the records list.
 

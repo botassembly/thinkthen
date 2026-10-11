@@ -1,6 +1,8 @@
 # 0316: Close the documentation issues
 
-Status: landed. Lane claude-4. Branch `ticket/0316-docs-issues`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0316-docs-issues`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8.
 
 ## Outcome
 

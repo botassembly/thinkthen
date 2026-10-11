@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0280: Return owned facts from C# and JVM typed calls
 
-Status: complete. Fresh High code review accepted `3b74fa121` after the required cache-answer and elapsed-facts proof correction. The implementation and focused source/copied-consumer evidence are recorded below. The broader every-call issue remains open for its other criteria.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `3b74fa121` after the required cache-answer and elapsed-facts proof correction. The implementation and focused source/copied-consumer evidence are recorded below. The broader every-call issue remains open for its other criteria.
 
 ## Outcome and public shape
 

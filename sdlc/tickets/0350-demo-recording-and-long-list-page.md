@@ -1,6 +1,8 @@
 # 0350: Demo record scripts write a clean fixture, and a demo shows a first cut before a long list
 
-Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B1. Pays Debt 024, `sdlc/issues/closed/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`, and page 11 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md`, which closes row 9 of `sdlc/issues/2026-09-20-new-user-stumble-register.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B1. Pays Debt 024, `sdlc/issues/closed/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`, and page 11 of `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md`, which closes row 9 of `sdlc/issues/2026-09-20-new-user-stumble-register.md`.
 
 ## Outcome
 

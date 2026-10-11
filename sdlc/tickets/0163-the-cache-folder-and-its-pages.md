@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine/cache_prune.rs crates/thinkthen/src/cli/statu
 
 # 0163: The cache folder survives a bad entry, and the pages say what it holds
 
-Status: complete. The coordinator accepted source `0292cba2` after fresh independent High code review and focused validation on 2026-09-27. The change lands with this record. Owner: Codex. See `sdlc/records/0163-code-review.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The coordinator accepted source `0292cba2` after fresh independent High code review and focused validation on 2026-09-27. The change lands with this record. Owner: Codex. See `sdlc/records/0163-code-review.md`.
 
 Review route: a fresh independent Codex reviewer checks the frozen final diff, including the measured source-ceiling amendment, before landing.
 

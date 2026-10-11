@@ -1,6 +1,8 @@
 # 0392: Move main's public install text to 0.1.1 and redeploy the site
 
-Status: landed. Lane claude-4. Branch `ticket/0392-main-install-text-0-1-1`. Parent: ticket 0391's deferred follow-up.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0392-main-install-text-0-1-1`. Parent: ticket 0391's deferred follow-up.
 
 Milestone: 0.1
 

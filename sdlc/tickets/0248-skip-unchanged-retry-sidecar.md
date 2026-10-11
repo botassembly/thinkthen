@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine/usage/storage.rs crates/thinkthen/src/engine/
 
 # 0248: Skip an unchanged retry-sidecar replacement
 
-Status: landed. **accepted and integrated after fresh High code review of `557d01a7`**. The [build record](../records/0248-build.md) gives focused proof and retained limits. The independently reviewed [timing record](../records/0248-timing.md) closes the original measurement and safe-skip request with explicit limits.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. **accepted and integrated after fresh High code review of `557d01a7`**. The [build record](../records/0248-build.md) gives focused proof and retained limits. The independently reviewed [timing record](../records/0248-timing.md) closes the original measurement and safe-skip request with explicit limits.
 
 ## Outcome and boundary
 

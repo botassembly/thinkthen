@@ -1,6 +1,8 @@
 # 0404: Remove the proof spiral
 
-Status: landed. Permanent lighter rules, machinery removal and consolidated behavior tests landed through 1bcc271fc with full tests and lint passing. Follow those rules for the expanded SDK scope.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Permanent lighter rules, machinery removal and consolidated behavior tests landed through 1bcc271fc with full tests and lint passing. Follow those rules for the expanded SDK scope.
 
 Milestone: 0.2
 

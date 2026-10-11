@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0282: Owned facts for Ada, Objective-C and COBOL typed calls
 
-Status: Complete. Fresh independent High code review accepted `3d04590de695f8ee7ccf8fb8a18b2e6ab61a2151` after the Ada error-mapping and conversion-proof corrections. Focused source and copied installed consumers pass; release archives and runners remain outside this ticket's proof.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent High code review accepted `3d04590de695f8ee7ccf8fb8a18b2e6ab61a2151` after the Ada error-mapping and conversion-proof corrections. Focused source and copied installed consumers pass; release archives and runners remain outside this ticket's proof.
 
 ## Outcome and exact host routes
 

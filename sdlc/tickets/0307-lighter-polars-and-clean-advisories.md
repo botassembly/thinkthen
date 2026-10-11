@@ -1,6 +1,8 @@
 # 0307: Lighter Polars and clean advisories
 
-Status: landed. Lane claude-3. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 6.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 6.
 
 ## Outcome
 

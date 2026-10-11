@@ -1,6 +1,8 @@
 # 0288 — R keywords and probability (T6)
 
-Status: Done, 2026-09-29. Fresh High code review accepted `edb144a32d82a247fb493cc872f83c116466113c` after the string-threshold correction. Accepted preparation was `8bf14799`; ADRs 0105 and 0107 govern the outcome. Installed local proof and limits are recorded below.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-29. Fresh High code review accepted `edb144a32d82a247fb493cc872f83c116466113c` after the string-threshold correction. Accepted preparation was `8bf14799`; ADRs 0105 and 0107 govern the outcome. Installed local proof and limits are recorded below.
 
 ## Outcome
 

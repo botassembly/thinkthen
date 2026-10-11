@@ -1,6 +1,8 @@
 # 0376: Prepare the release candidate cut
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-4.
 
 Milestone: 0.1
 

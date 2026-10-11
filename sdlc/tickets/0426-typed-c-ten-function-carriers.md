@@ -1,6 +1,8 @@
 # 0426: Expose typed C calls and complete result carriers
 
-Status: complete. All ten typed C functions and owned readers pass 247 applicable shared cases, installed sanitizer consumers and fresh review. Full integration tests, lint and executable documentation passed; final platform qualification belongs to 0425.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All ten typed C functions and owned readers pass 247 applicable shared cases, installed sanitizer consumers and fresh review. Full integration tests, lint and executable documentation passed; final platform qualification belongs to 0425.
 
 Milestone: 0.2
 

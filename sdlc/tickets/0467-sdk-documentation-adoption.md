@@ -1,6 +1,8 @@
 # 0467: Describe the final 0.2 surfaces across the shared documentation
 
-Status: COMPLETE. SDK module comments and install READMEs still describe complete execution as pending.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. SDK module comments and install READMEs still describe complete execution as pending.
 
 Milestone: 0.2
 

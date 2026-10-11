@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/recording.rs crates/thinkthen/src/engine crates
 
 # 0124: Fix the answer cache's three faults
 
-Status: landed 2026-09-25. Code review accepted it with one gap, now deferred below. Record: `sdlc/records/0124-build-answer-cache-fixes.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25. Code review accepted it with one gap, now deferred below. Record: `sdlc/records/0124-build-answer-cache-fixes.md`. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

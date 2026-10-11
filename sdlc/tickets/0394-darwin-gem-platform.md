@@ -1,6 +1,8 @@
 # 0394: macOS gems install on every macOS version
 
-Status: landed 2026-10-03 on main and cherry-picked to `release/0.1` under ADR 0116 item 5. A fresh ticket review returned four findings, all answered, then ACCEPT. A fresh code review returned ACCEPT on `0b3a4c148`. Users get the fix with 0.1.2.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-10-03 on main and cherry-picked to `release/0.1` under ADR 0116 item 5. A fresh ticket review returned four findings, all answered, then ACCEPT. A fresh code review returned ACCEPT on `0b3a4c148`. Users get the fix with 0.1.2.
 
 Milestone: 0.1
 

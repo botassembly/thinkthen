@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-e
 
 # 0237: Batch R calls and return their call facts
 
-Status: **Complete for B12f and the R half of J6.** Fresh High code review accepted corrected `96749c136b2975203ed4019cff540c35c83e2744`. The coordinator integrated unchanged R runtime and tests with current main. Installed Linux source proof is recorded; R site and package/platform release proof remain separate. See the [build record](../records/0237-r-batching-build.md) and [code review](../records/0237-code-review.md).
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for B12f and the R half of J6.** Fresh High code review accepted corrected `96749c136b2975203ed4019cff540c35c83e2744`. The coordinator integrated unchanged R runtime and tests with current main. Installed Linux source proof is recorded; R site and package/platform release proof remain separate. See the [build record](../records/0237-r-batching-build.md) and [code review](../records/0237-code-review.md).
 
 ## Outcome and retained behavior
 

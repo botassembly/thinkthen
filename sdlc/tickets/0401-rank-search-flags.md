@@ -1,6 +1,8 @@
 # 0401: Shared search intake and record display, with multiquestion rank
 
-Status: landed. All four slices landed through b39774cce. SQL and foreign rank question sets are required in 0.2 through 0417 and 0418.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All four slices landed through b39774cce. SQL and foreign rank question sets are required in 0.2 through 0417 and 0418.
 
 Landed: fb428165487488a9decbaf08c2269a64c2f57442
 

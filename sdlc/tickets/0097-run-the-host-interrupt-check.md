@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine crates/thinkthen/tests sdlc/ratchet.json
 
 # 0097: Run the host interrupt check
 
-Status: landed; record `0097-run-the-host-interrupt-check.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. record `0097-run-the-host-interrupt-check.md`. Owner: Claude.
 
 Split out of 0085 on 2026-09-24 (`sdlc/records/2026-09-24-spine-review-engine.md`, finding F1). It lands after 0085 and before 0086.
 

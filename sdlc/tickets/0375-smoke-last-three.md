@@ -1,6 +1,8 @@
 # 0375: The release smoke's last three failures pass
 
-Status: landed. Lane claude-2. Branch `ticket/0375-smoke-last-three`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0375-smoke-last-three`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Parent: ticket 0128, phase 3b.
 
 ## Outcome
 

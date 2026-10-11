@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core crates/thinkthen/src/engine crates/thinkthen/sr
 
 # 0081: Build the shared relation foundation
 
-Status: landed on remote main at merge `4229bbfa`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. on remote main at merge `4229bbfa`.
 
 ## Outcome
 

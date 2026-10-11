@@ -1,6 +1,8 @@
 # 0373: Windows stage 0: the root workspace and the C door compile and pass their tests on Windows
 
-Status: landed. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-10-01. It lands in two slices. Slice A lands the `windows` workflow file alone, so GitHub can dispatch it. Slice B lands the rest.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0373-windows-stage-0`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Asked by Ian on 2026-10-01. It lands in two slices. Slice A lands the `windows` workflow file alone, so GitHub can dispatch it. Slice B lands the rest.
 
 Milestone: 0.2
 

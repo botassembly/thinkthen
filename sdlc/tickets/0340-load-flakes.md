@@ -1,6 +1,8 @@
 # 0340: Load-sensitive test flakes
 
-Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Takes only the flakes below from ticket 0338's long waits; 0338 keeps the shared locks, `engine::deadline_tests`, `cli::schedule::width_tests` and merging binaries.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. Takes only the flakes below from ticket 0338's long waits; 0338 keeps the shared locks, `engine::deadline_tests`, `cli::schedule::width_tests` and merging binaries.
 
 ## Outcome
 

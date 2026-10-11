@@ -1,6 +1,8 @@
 # 0344: A both-ways relation edge says so
 
-Status: landed. Lane claude-2. Branch `ticket/0342-s2-both-ways-edges`: the coordinator named it as 0342's slice 2 before 0342's record showed the shape needed its own ticket, so this ticket keeps that branch. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Carries the both-ways edge shape that ticket 0342 deferred to "its own relate ticket after 0314 slice 4", issue priorities rank 9, and the second half of `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`. Amends ADR 0057 item 6. The shape is a coordinator default Ian can overturn.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0342-s2-both-ways-edges`: the coordinator named it as 0342's slice 2 before 0342's record showed the shape needed its own ticket, so this ticket keeps that branch. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Carries the both-ways edge shape that ticket 0342 deferred to "its own relate ticket after 0314 slice 4", issue priorities rank 9, and the second half of `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`. Amends ADR 0057 item 6. The shape is a coordinator default Ian can overturn.
 
 ## Outcome
 

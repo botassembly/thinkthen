@@ -1,6 +1,8 @@
 # 0433: Keep SQLite find’s selected model
 
-Status: landed. SQLite find preserves the caller’s model through requests, cache and replay; engine defaults remain unchanged.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. SQLite find preserves the caller’s model through requests, cache and replay; engine defaults remain unchanged.
 
 Milestone: 0.2
 

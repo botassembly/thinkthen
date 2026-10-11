@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/mod.rs cr
 
 # 0142: The pool keeps up to `--jobs` connections
 
-Status: landed 2026-09-26. A fresh code review accepted it with one minor finding, recorded as a deferred gap. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26. A fresh code review accepted it with one minor finding, recorded as a deferred gap. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

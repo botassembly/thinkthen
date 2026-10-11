@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-e
 
 # 0236: Batch TypeScript calls and preserve described labels
 
-Status: landed. Implemented and accepted after fresh High code review of `b84ff2de17b8d7d8cf40483d3fe5a3f3b1bffd83`. The coordinator lands B12d and J3 with the focused proof in the [build record](../records/0236-typescript-build.md) and [code review](../records/0236-code-review.md). High design review accepted `5283cfe3`; implementation preserves ADRs 0082 and 0089. The [preflight](../records/0236-typescript-batching-preflight.md) retains source and preparation evidence. Marketing-owned site consumers remain with their existing issue. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Implemented and accepted after fresh High code review of `b84ff2de17b8d7d8cf40483d3fe5a3f3b1bffd83`. The coordinator lands B12d and J3 with the focused proof in the [build record](../records/0236-typescript-build.md) and [code review](../records/0236-code-review.md). High design review accepted `5283cfe3`; implementation preserves ADRs 0082 and 0089. The [preflight](../records/0236-typescript-batching-preflight.md) retains source and preparation evidence. Marketing-owned site consumers remain with their existing issue. Owner: Codex.
 
 ## Outcome and retained behavior
 

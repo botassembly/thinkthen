@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/cli/asking.rs crates/thinkthen/src/cli/judge.rs crat
 
 # 0137: filter and rank read lines by default
 
-Status: landed 2026-09-26 (`sdlc/records/0137-build-lines-by-default.md`). The fresh code review found one low help-text finding, fixed before landing. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0137-build-lines-by-default.md`). The fresh code review found one low help-text finding, fixed before landing. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

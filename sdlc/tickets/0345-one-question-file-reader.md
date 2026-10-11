@@ -1,6 +1,8 @@
 # 0345: One capped question-file reader serves every surface
 
-Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3. Pays Debt 011, `sdlc/issues/closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md`. Starts after ticket 0344 lands, because 0344 edits `libraries/python/src/asked.rs`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3. Pays Debt 011, `sdlc/issues/closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md`. Starts after ticket 0344 lands, because 0344 edits `libraries/python/src/asked.rs`.
 
 ## Outcome
 

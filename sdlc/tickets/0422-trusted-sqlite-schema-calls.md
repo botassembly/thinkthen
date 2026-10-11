@@ -1,6 +1,8 @@
 # 0422: Allow SQLite calls from explicitly trusted schemas
 
-Status: complete. Source and trust-boundary fix reviews accepted; native tests and public site build passed. Full tests and lint run on the landing commit.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Source and trust-boundary fix reviews accepted; native tests and public site build passed. Full tests and lint run on the landing commit.
 Milestone: 0.2
 
 ## Outcome

@@ -1,6 +1,8 @@
 # Ticket 0244: Load one named question in C, TypeScript and Ruby
 
-Status: **Done.** Fresh High code review accepted `5b445004`. Fresh independent design review accepted `48ad825e`; the coordinator approved the reviewed design within the plan's file claims. This advances Q1–Q3 and the three remaining case-30 skips in the open shared-conformance issue. DuckDB Q5 and the equivalence study's broader E4 wording remain open. The [preflight](../records/0244-named-question-file-forms-preflight.md) pins the starting source, the [design review](../records/0244-named-question-file-forms-design-review.md) records acceptance, and the [build record](../records/0244-named-question-file-forms-build.md) records selected proof. The [code review](../records/0244-named-question-file-forms-code-review.md) records independent acceptance and retained proof.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. ** Fresh High code review accepted `5b445004`. Fresh independent design review accepted `48ad825e`; the coordinator approved the reviewed design within the plan's file claims. This advances Q1–Q3 and the three remaining case-30 skips in the open shared-conformance issue. DuckDB Q5 and the equivalence study's broader E4 wording remain open. The [preflight](../records/0244-named-question-file-forms-preflight.md) pins the starting source, the [design review](../records/0244-named-question-file-forms-design-review.md) records acceptance, and the [build record](../records/0244-named-question-file-forms-build.md) records selected proof. The [code review](../records/0244-named-question-file-forms-code-review.md) records independent acceptance and retained proof.
 
 ## Outcome
 

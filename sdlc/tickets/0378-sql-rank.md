@@ -1,6 +1,8 @@
 # 0378: Rank keyed records in all three SQL extensions
 
-Status: landed. Lane claude-2. Branch `ticket/0378-sql-rank`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Milestone 0.1.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0378-sql-rank`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Milestone 0.1.
 
 Ian approved this design for 0.1 on 2026-10-01 ("It's not too hard. We can get it done."). It replaces the first form of this ticket, which only retired DuckDB's `thinkthen_probability`. Ian can overturn any choice below.
 

@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine/usage.rs crates/thinkthen/src/engine/usage/te
 
 # 0141: Usage writes stop serializing requests
 
-Status: landed 2026-09-26. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

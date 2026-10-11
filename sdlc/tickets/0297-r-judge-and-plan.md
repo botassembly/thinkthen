@@ -1,6 +1,8 @@
 # 0297 — R judge and plan (F6)
 
-Status: Done, 2026-09-29. Final independent High code review accepted `16bc8009f7259190b1abee07738e6a4ef2c0f1c9` after the captured-state and nested-method corrections. Accepted preparation was `8bf14799`; ADR0107 governs the outcome. Installed Linux proof and remaining qualification limits follow.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-29. Final independent High code review accepted `16bc8009f7259190b1abee07738e6a4ef2c0f1c9` after the captured-state and nested-method corrections. Accepted preparation was `8bf14799`; ADR0107 governs the outcome. Installed Linux proof and remaining qualification limits follow.
 
 ## Outcome
 

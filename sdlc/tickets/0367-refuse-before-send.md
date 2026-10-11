@@ -1,6 +1,8 @@
 # 0367: Refuse before the first send when a count or an answer cannot be kept, and bound every retry wait
 
-Status: landed. Lane claude-1. Branch `ticket/0367-refuse-before-send`. Source: release QA round 2 (items 1 and 2) and the site owner (item 3). Ian can overturn the two coordinator decisions named below.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-1. Branch `ticket/0367-refuse-before-send`. Source: release QA round 2 (items 1 and 2) and the site owner (item 3). Ian can overturn the two coordinator decisions named below.
 
 ## Outcome
 

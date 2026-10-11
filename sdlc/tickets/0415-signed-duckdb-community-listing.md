@@ -1,6 +1,8 @@
 # 0415: Submit the ThinkThen DuckDB community extension
 
-Status: COMPLETE. The reviewed adapter landed and the approved community submission is open at https://github.com/duckdb/community-extensions/pull/2936. DuckDB acceptance, native CI, signing and publication remain external. See record 0415 for source and platform results.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. The reviewed adapter landed and the approved community submission is open at https://github.com/duckdb/community-extensions/pull/2936. DuckDB acceptance, native CI, signing and publication remain external. See record 0415 for source and platform results.
 
 Milestone: 0.2
 

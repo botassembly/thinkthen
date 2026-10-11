@@ -1,6 +1,8 @@
 # 0339: An `ollama` built-in backend, and descriptions each backend accepts
 
-Status: landed. Design: ADR 0115, which amends ADR 0114. Ian asked for it on 2026-09-30. Build after 0304 slice 4 lands, because the dialect reaches `cli/asking/judged.rs`, `engine/facade/recognize.rs` and `engine/prepared_request.rs`, which slice 4 edits.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Design: ADR 0115, which amends ADR 0114. Ian asked for it on 2026-09-30. Build after 0304 slice 4 lands, because the dialect reaches `cli/asking/judged.rs`, `engine/facade/recognize.rs` and `engine/prepared_request.rs`, which slice 4 edits.
 
 ## Outcome
 

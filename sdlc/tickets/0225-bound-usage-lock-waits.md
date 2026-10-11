@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lo
 
 # 0225: Bound the advisory usage-lock wait at exit
 
-Status: complete. Fresh independent code review accepted source `cebe945fc9f9a9f827a5c8b9affa91935d062a25`; this integration lands that source and closes register 31. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) fixes the advisory finalization policy, and the [build record](../records/0225-build.md) records the focused proof. The earlier 0163 page fix closed only the separate recording-page issue. The paid live ledger is unchanged.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent code review accepted source `cebe945fc9f9a9f827a5c8b9affa91935d062a25`; this integration lands that source and closes register 31. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) fixes the advisory finalization policy, and the [build record](../records/0225-build.md) records the focused proof. The earlier 0163 page fix closed only the separate recording-page issue. The paid live ledger is unchanged.
 
 ## Outcome and retained behavior
 

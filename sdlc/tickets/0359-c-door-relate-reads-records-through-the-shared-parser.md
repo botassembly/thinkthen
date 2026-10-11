@@ -1,6 +1,8 @@
 # 0359: the C door's `relate` reads records through the shared parser
 
-Status: landed. Lane claude-1. A fresh ticket review found three gaps, all fixed: the `call` path also reaches the reader, the finite change lacked a row, and the binding waiver lacked its reason. The build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/closed/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-1. A fresh ticket review found three gaps, all fixed: the `call` path also reaches the reader, the finite change lacked a row, and the binding waiver lacked its reason. The build began during that review, so the code review treated all of it as new. The code review found three gaps, all fixed, and then accepted. Branch `ticket/0359-c-door-relate-shared-reader`. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Pays Debt 031, `../issues/closed/2026-09-30-c-door-relate-parses-records-with-its-own-reader.md`, filed by ticket 0354.
 
 ## Outcome
 

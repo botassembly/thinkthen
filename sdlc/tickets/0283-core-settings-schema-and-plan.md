@@ -1,6 +1,8 @@
 # 0283 — Core settings schema and plan (T1)
 
-Status: COMPLETE. Fresh High code review accepted `9f6ae289676eabcf608af747449070a788c6513c` after the deadline and staged-plan corrections. The queue owner integrates the reviewed source with its focused checks and records below. Remaining SQL, frame and release criteria keep their own tickets.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `9f6ae289676eabcf608af747449070a788c6513c` after the deadline and staged-plan corrections. The queue owner integrates the reviewed source with its focused checks and records below. Remaining SQL, frame and release criteria keep their own tickets.
 
 ## Outcome
 

@@ -4,7 +4,9 @@ opens: sdlc/tickets/0232-macos-sqlite-checks.md sdlc/records/0226-macos-arm64-pa
 
 # 0232: Check installed SQLite packages on macOS ARM64
 
-Status: complete. Owner: Codex. Fresh independent design review accepted `ba45d60e`; fresh independent code review accepted corrected source `11f7d934`, with record-only final candidate `ffe2c5c0`. The portable checker and bounded installed M5 ARM64 proof are complete. Actual macOS 15, Intel macOS, Linux ARM64 and other 0226 platform remainders remain open. The unrelated site case collision remains visible and separately owned. No publication or universal loader guarantee follows from this ticket.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Owner: Codex. Fresh independent design review accepted `ba45d60e`; fresh independent code review accepted corrected source `11f7d934`, with record-only final candidate `ffe2c5c0`. The portable checker and bounded installed M5 ARM64 proof are complete. Actual macOS 15, Intel macOS, Linux ARM64 and other 0226 platform remainders remain open. The unrelated site case collision remains visible and separately owned. No publication or universal loader guarantee follows from this ticket.
 
 ## Outcome and retained behavior
 

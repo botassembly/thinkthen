@@ -1,6 +1,8 @@
 # 0460: Bound requests for repeated records when caching is disabled
 
-Status: COMPLETE. Repeated inputs and input pauses no longer make native or command-line request plans undercount initial sends. Reviewed source 607c3688b passed full tests and lint; valid specification and forwarded checks are retained.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Repeated inputs and input pauses no longer make native or command-line request plans undercount initial sends. Reviewed source 607c3688b passed full tests and lint; valid specification and forwarded checks are retained.
 
 Milestone: 0.2
 

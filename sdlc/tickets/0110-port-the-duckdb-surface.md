@@ -6,7 +6,9 @@ opens: databases/duckdb sdlc/scripts sdlc/issues sdlc/planning/databases/duckdb.
 
 # 0110: Port the DuckDB surface
 
-Status: landed 2026-09-25 on `ticket/surface-batch`, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 on `ticket/surface-batch`, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

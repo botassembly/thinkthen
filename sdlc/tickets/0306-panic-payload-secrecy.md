@@ -1,6 +1,8 @@
 # 0306: Panic payload secrecy through one shared guard
 
-Status: landed. Lane claude-4. Branch `ticket/0306-panic-payload-secrecy`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issues: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`, `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md`, `2026-09-28-r-worker-panic-can-copy-payload-text.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-4. Branch `ticket/0306-panic-payload-secrecy`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issues: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`, `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md`, `2026-09-28-r-worker-panic-can-copy-payload-text.md`.
 
 ## Outcome
 

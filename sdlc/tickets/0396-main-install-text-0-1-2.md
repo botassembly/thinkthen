@@ -1,6 +1,8 @@
 # 0396: Move main's public install text to 0.1.2
 
-Status: landed. Lane claude-0. Branch `ticket/0396-main-install-text-0-1-2`. Parent: release-process.md section 5, step 5 of the 0.1.x list.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-0. Branch `ticket/0396-main-install-text-0-1-2`. Parent: release-process.md section 5, step 5 of the 0.1.x list.
 
 Milestone: 0.1
 

@@ -1,6 +1,8 @@
 # 0444: Version cache keys and preserve offline replay
 
-Status: COMPLETE. Native identity, migration/replay and all four required library checks pass; fresh review and integrated full test, lint and specification checks passed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Native identity, migration/replay and all four required library checks pass; fresh review and integrated full test, lint and specification checks passed.
 
 Milestone: 0.2
 

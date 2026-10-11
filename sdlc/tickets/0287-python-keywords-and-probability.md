@@ -1,6 +1,8 @@
 # 0287 — Python keywords and probability (T5)
 
-Status: Done, 2026-09-29. Final independent High review accepted `0abad155052093940774a1dfd72d862de0a92287` after the null-input and malformed-offset corrections. Accepted preparation was `8bf14799`; ADR 0105 governs the outcome. The build record separates installed Linux proof from remaining package and platform qualification.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-29. Final independent High review accepted `0abad155052093940774a1dfd72d862de0a92287` after the null-input and malformed-offset corrections. Accepted preparation was `8bf14799`; ADR 0105 governs the outcome. The build record separates installed Linux proof from remaining package and platform qualification.
 
 ## Outcome
 

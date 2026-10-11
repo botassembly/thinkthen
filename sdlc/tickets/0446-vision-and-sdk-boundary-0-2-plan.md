@@ -1,6 +1,8 @@
 # 0446: Add vision and the SDK boundary to the 0.2 plan
 
-Status: landed. All five additional PM asks have reviewed owners in the 0.2 plan; product implementation remains open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. All five additional PM asks have reviewed owners in the 0.2 plan; product implementation remains open.
 
 Milestone: 0.2
 Owner: builder.

@@ -1,6 +1,8 @@
 # 0479: Let callers request recognition boundaries without classification
 
-Status: COMPLETE. Fresh ticket review accepted the design; implementation has not started.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh ticket review accepted the design; implementation has not started.
 
 Milestone: 0.2
 Owner: builder.

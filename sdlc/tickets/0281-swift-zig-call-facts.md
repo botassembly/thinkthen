@@ -6,7 +6,9 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0281: Owned call facts for Swift and Zig typed methods
 
-Status: Complete. Fresh High code review accepted `1ccf8776`; the coordinator integrated the focused source and copied-consumer proof.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code review accepted `1ccf8776`; the coordinator integrated the focused source and copied-consumer proof.
 
 ## Outcome and retained behavior
 

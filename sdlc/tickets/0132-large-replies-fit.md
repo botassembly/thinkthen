@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/error.rs 
 
 # 0132: Keep every reply the planner can ask for
 
-Status: landed 2026-09-26 (`sdlc/records/0132-build-large-replies-fit.md`). Code review accepted with three low findings, fixed at landing. The quadratic-decoder plant staying green is an accepted gap. Design accepted by the third fresh review on 2026-09-25, after two rounds of findings. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0132-build-large-replies-fit.md`). Code review accepted with three low findings, fixed at landing. The quadratic-decoder plant staying green is an accepted gap. Design accepted by the third fresh review on 2026-09-25, after two rounds of findings. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

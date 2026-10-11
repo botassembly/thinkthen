@@ -1,6 +1,8 @@
 # 0338: Test locks, long waits and test binaries
 
-Status: landed. Follows 0304 slice 3d, which settles the send-limit statics, and 0335 slice 2, whose merge rows edit `tests/public_batches/`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work", the cleanup ticket from record 0305. Takes over 0335 slice 3.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Follows 0304 slice 3d, which settles the send-limit statics, and 0335 slice 2, whose merge rows edit `tests/public_batches/`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work", the cleanup ticket from record 0305. Takes over 0335 slice 3.
 
 ## Outcome
 

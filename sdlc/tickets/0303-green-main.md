@@ -1,6 +1,8 @@
 # 0303: Green main
 
-Status: landed. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 

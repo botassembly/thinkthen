@@ -1,6 +1,8 @@
 # 0298 — Rust Polars lazy expressions (F7)
 
-Status: Done. Final High review accepted `365a7c92a4957ff7d2766c90ae00d67273710210`; selected source-consumer proof is complete. Full package and release qualification remain separate. ADR 0107 settles the outcome.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Final High review accepted `365a7c92a4957ff7d2766c90ae00d67273710210`; selected source-consumer proof is complete. Full package and release qualification remain separate. ADR 0107 settles the outcome.
 
 ## Outcome
 

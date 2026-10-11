@@ -6,7 +6,9 @@ opens: databases/duckdb sdlc/scripts/policy.py sdlc/scripts/surfaces sdlc/script
 
 # 0201: Move the DuckDB extension to the C++ API
 
-Status: landed. Closed 2026-10-01. The Linux x86_64 implementation landed after final High review at `493a1461`. Ticket 0231 then moved the other three targets to the C++ extension: Linux ARM64 accepted at `aab8baad`, macOS ARM64 at `a72e62a8`, and Intel macOS built at `c0b464b63` and accepted at `b7cfeca72`. Each target passed its own installed-package proof and fresh High review. The Intel proof ran under Rosetta on the M5. The only proof left is execution on the release runners, including native Intel and macOS 15. Ticket 0231 and the release rehearsal in ticket 0128 phase 3b own it, so this ticket holds nothing open. The accepted design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Closed 2026-10-01. The Linux x86_64 implementation landed after final High review at `493a1461`. Ticket 0231 then moved the other three targets to the C++ extension: Linux ARM64 accepted at `aab8baad`, macOS ARM64 at `a72e62a8`, and Intel macOS built at `c0b464b63` and accepted at `b7cfeca72`. Each target passed its own installed-package proof and fresh High review. The Intel proof ran under Rosetta on the M5. The only proof left is execution on the release runners, including native Intel and macOS 15. Ticket 0231 and the release rehearsal in ticket 0128 phase 3b own it, so this ticket holds nothing open. The accepted design is `c7000a4a`; `sdlc/records/0200-0201-design-review.md` records the paired review.
 
 Landed: 4935fb8c4
 

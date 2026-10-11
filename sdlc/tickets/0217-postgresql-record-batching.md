@@ -6,7 +6,9 @@ opens: sdlc/tickets/0217-postgresql-record-batching.md sdlc/records/0217-postgre
 
 # 0217: Batch PostgreSQL records and expose context
 
-Status: **Complete for B13d.** Fresh independent High code review accepted `3a73b7e413b1d9ef575e4461cc2b195940fe9229` after the settings documentation correction. The coordinator integrated unchanged PostgreSQL runtime/tests and verified the settings table with a current binary. Installed Linux proof is in the [build record](../records/0217-postgresql-batching-build.md); scalar register 73, SQL per-call facts and broader platform/release proof remain separate.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for B13d.** Fresh independent High code review accepted `3a73b7e413b1d9ef575e4461cc2b195940fe9229` after the settings documentation correction. The coordinator integrated unchanged PostgreSQL runtime/tests and verified the settings table with a current binary. Installed Linux proof is in the [build record](../records/0217-postgresql-batching-build.md); scalar register 73, SQL per-call facts and broader platform/release proof remain separate.
 
 ## Accepted outcome and retained behavior
 

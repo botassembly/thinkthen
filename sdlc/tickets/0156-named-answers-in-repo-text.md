@@ -6,7 +6,9 @@ opens: sdlc/scripts/named-answers.mjs sdlc/scripts/lint demos/01-refund-gate/REA
 
 # 0156: The named-answers rule reaches the queue's own pages
 
-Status: done. Fresh independent Codex review accepted `e2f9fa58`, and the merged focused checks passed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex in lane codex-5. The site module changes R0/R1/R2 and tickets 0151, 0152 Part B and 0153 are on main.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh independent Codex review accepted `e2f9fa58`, and the merged focused checks passed. The coordinator accepted it on 2026-09-26 after a fresh read-only review. Owner: Codex in lane codex-5. The site module changes R0/R1/R2 and tickets 0151, 0152 Part B and 0153 are on main.
 
 Review route: the coordinator assigns a fresh independent Codex reviewer to the frozen final diff. The accepted design review remains on record.
 

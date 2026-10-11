@@ -1,6 +1,8 @@
 # 0472: Match C batch metadata to the public constants
 
-Status: COMPLETE. C batch kinds match the public header, and saved-versus-running warnings preserve authored-threshold presence. C/Go checks, full tests, lint and fresh review pass.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. C batch kinds match the public header, and saved-versus-running warnings preserve authored-threshold presence. C/Go checks, full tests, lint and fresh review pass.
 
 Landed: 6acf7b3c4
 

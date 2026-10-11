@@ -6,7 +6,9 @@ opens: crates/thinkthen/src/core/adapters/systemone/response.rs crates/thinkthen
 
 # 0160: The answer contract holds at both ends
 
-Status: landed 2026-09-26 (`sdlc/records/0160-build-the-answer-contract-holds.md`). A fresh read-only code review accepted it with no defects. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the ratchet budget. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-26 (`sdlc/records/0160-build-the-answer-contract-holds.md`). A fresh read-only code review accepted it with no defects. The coordinator accepted it on 2026-09-26 after three fresh read-only reviews and a coordinator fix to the ratchet budget. Owner: Claude.
 
 Review route: a fresh read-only Claude session reviews this design and the final diff. Codex does not review this ticket unless Ian routes it.
 

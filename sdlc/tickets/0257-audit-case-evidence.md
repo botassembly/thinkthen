@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-27-audit-shows-group-counts-and-no-per-case-ev
 
 # 0257: Show the evidence behind each saved audit case
 
-Status: complete after fresh Medium code review accepted `5ce3d270`; the reviewed source lands with the original issue closure. Fresh Medium design review accepted `193fac57fe2d36e743bfa93d9ecaa3534adfc434`; the coordinator approved [ADR 0103](../planning/adr/0103-audit-case-evidence.md) and the exact implementation claim. The [build record](../records/0257-audit-case-build.md) gives checks and limits. The original per-case criterion is complete; the separate deferred outcomes below remain open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. after fresh Medium code review accepted `5ce3d270`; the reviewed source lands with the original issue closure. Fresh Medium design review accepted `193fac57fe2d36e743bfa93d9ecaa3534adfc434`; the coordinator approved [ADR 0103](../planning/adr/0103-audit-case-evidence.md) and the exact implementation claim. The [build record](../records/0257-audit-case-build.md) gives checks and limits. The original per-case criterion is complete; the separate deferred outcomes below remain open.
 
 ## Outcome
 

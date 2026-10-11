@@ -6,7 +6,9 @@ opens: sdlc/issues/closed/2026-09-29-systemone-adapter-sends-null-criteria-liqui
 
 # 0301: Omit null descriptions from System One noul criteria
 
-Status: landed. Implementation COMPLETE after fresh High code review accepted `8286b99d7d063ada9e7b0374ab80da1000a3f343`. The queue owner lands the reviewed wire correction and focused host proofs. The source issue remains open for its separately authorized hosted acceptance check; no remote result is claimed.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Implementation COMPLETE after fresh High code review accepted `8286b99d7d063ada9e7b0374ab80da1000a3f343`. The queue owner lands the reviewed wire correction and focused host proofs. The source issue remains open for its separately authorized hosted acceptance check; no remote result is claimed.
 
 ## Outcome and boundary
 

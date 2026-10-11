@@ -6,7 +6,9 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: landed. Closed 2026-10-01: the outcome is met. All eleven packages, covering thirteen languages, were reviewed and integrated; the [integration closure](../records/0249-integration-closure.md) records it. The release follow-ups are not this ticket's work. They are the same items as the "What every package still needs" list and the language table in `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, which ticket 0128 and the workflow tickets 0268 to 0273 own. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Closed 2026-10-01: the outcome is met. All eleven packages, covering thirteen languages, were reviewed and integrated; the [integration closure](../records/0249-integration-closure.md) records it. The release follow-ups are not this ticket's work. They are the same items as the "What every package still needs" list and the language table in `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, which ticket 0128 and the workflow tickets 0268 to 0273 own. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. The package build records under `sdlc/records/0249-*` hold current proof and remaining host criteria.
 
 Landed: 38b5e9fbc
 

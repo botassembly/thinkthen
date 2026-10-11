@@ -6,7 +6,9 @@ opens: databases/duckdb sdlc/planning/databases/duckdb.md sdlc/planning/adr/0038
 
 # 0118: Relate on the caller's DuckDB database
 
-Status: landed 2026-09-25 on `ticket/surface-batch`, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-25 on `ticket/surface-batch`, under Ian's ruling to land each surface when ready. Integration record: `sdlc/records/surface-batch-integration.md`. Owner: Claude.
 
 ## Outcome and authority
 

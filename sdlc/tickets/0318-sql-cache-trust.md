@@ -1,6 +1,8 @@
 # 0318: SQL cache trust
 
-Status: landed. Lane claude-3. Branch `ticket/0318-sql-cache-trust`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8, "the PostgreSQL shared cache".
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-3. Branch `ticket/0318-sql-cache-trust`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8, "the PostgreSQL shared cache".
 
 ## Outcome
 

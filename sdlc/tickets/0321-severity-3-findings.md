@@ -1,6 +1,8 @@
 # 0321: Refuse an API key that holds a control character
 
-Status: landed. Quick Fix. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 8. Issue: `sdlc/issues/closed/2026-09-26-architect-review-severity-3-findings.md`, report 12 finding 3.2.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Quick Fix. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 8. Issue: `sdlc/issues/closed/2026-09-26-architect-review-severity-3-findings.md`, report 12 finding 3.2.
 
 ## Outcome
 

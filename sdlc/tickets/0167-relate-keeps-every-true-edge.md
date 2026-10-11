@@ -6,7 +6,9 @@ opens: sdlc/planning/adr/0057-relate-asks-one-yes-no-question-per-pair.md sdlc/p
 
 # 0167: Relate keeps every true edge
 
-Status: complete after independent source, documentation and paid-completion review. The coordinator landed the reviewed pair planner and verified recordings. The coordinator accepted the outcome on 2026-09-27 after a fresh read-only design review. Ian's later handover routes build and review to Codex. Ian approved the bounded paid runs through the delegated budget ruling recorded on main `a2c9057a`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. after independent source, documentation and paid-completion review. The coordinator landed the reviewed pair planner and verified recordings. The coordinator accepted the outcome on 2026-09-27 after a fresh read-only design review. Ian's later handover routes build and review to Codex. Ian approved the bounded paid runs through the delegated budget ruling recorded on main `a2c9057a`.
 
 Review route: the accepted design was reviewed before the handover, and the source and synthetic proof were independently accepted at `7855f394`. A fresh read-only Codex reviewer checks the paid fixture, executable audit rows and completion lessons before landing.
 

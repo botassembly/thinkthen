@@ -1,6 +1,8 @@
 # 0276: isolate library port-check children
 
-Status: complete for the approved library-only batch. Fresh independent Medium code review accepted `9675d47f`. The 45 library findings are fixed with selected functional proof; the held DuckDB location and broader issue remain open.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. for the approved library-only batch. Fresh independent Medium code review accepted `9675d47f`. The 45 library findings are fixed with selected functional proof; the held DuckDB location and broader issue remain open.
 
 ## Outcome
 

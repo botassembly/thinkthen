@@ -6,7 +6,9 @@ opens: Cargo.toml Cargo.lock deny.toml conformance crates/thinkthen/Cargo.toml c
 
 # 0092: Serve the shared cases from a loopback backend
 
-Status: landed 2026-09-24. Code review (`sdlc/records/0092-code-review.md`) found two mechanical fixes, both applied and accepted without another review. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-24. Code review (`sdlc/records/0092-code-review.md`) found two mechanical fixes, both applied and accepted without another review. Owner: Claude.
 
 ## Outcome and authority
 

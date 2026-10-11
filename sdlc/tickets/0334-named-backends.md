@@ -1,6 +1,8 @@
 # 0334: Named backends on the command, the configuration, and the Rust builder
 
-Status: landed 2026-09-30. A fresh read-only code review accepted it after one round of fixes. ADR 0114's open questions are settled as coordinator defaults Ian can overturn. Design: ADR 0114, accepted.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-30. A fresh read-only code review accepted it after one round of fixes. ADR 0114's open questions are settled as coordinator defaults Ian can overturn. Design: ADR 0114, accepted.
 
 ## Outcome
 

@@ -1,6 +1,8 @@
 # 0323: Remove the hacks clear of running work
 
-Status: landed 2026-09-30. A fresh read-only code review accepted it. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-30. A fresh read-only code review accepted it. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
 
 ## Outcome
 

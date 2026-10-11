@@ -6,7 +6,9 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: done. 0.1.2 published on every registry from tag `v0.1.2` in run 37130570517, GitHub release v0.1.2 is public and Latest, and Pages deployed main's 0.1.2 install text. Phase 4 steps 1 to 9 are done. The public install checks passed on every live channel except the macOS gem, which passed with 0.1.2, and R-universe, which built 0.1.2 after the release. Ian left the retained history step to the agent, and the agent dropped it. Ian confirmed that no local registry tokens exist. The Linux R install line and the `ruby` placeholder gem are tracked in the release record `sdlc/records/0128-release-0-1.md`. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`). Phase3a landed after independent High ACCEPT at `3b540d19`. Phase 3b rehearsal runs 36945370940, 36998358908 and 37010060315 passed. Owner: the queue owner.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 0.1.2 published on every registry from tag `v0.1.2` in run 37130570517, GitHub release v0.1.2 is public and Latest, and Pages deployed main's 0.1.2 install text. Phase 4 steps 1 to 9 are done. The public install checks passed on every live channel except the macOS gem, which passed with 0.1.2, and R-universe, which built 0.1.2 after the release. Ian left the retained history step to the agent, and the agent dropped it. Ian confirmed that no local registry tokens exist. The Linux R install line and the `ruby` placeholder gem are tracked in the release record `sdlc/records/0128-release-0-1.md`. Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`). Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`). Phase3a landed after independent High ACCEPT at `3b540d19`. Phase 3b rehearsal runs 36945370940, 36998358908 and 37010060315 passed. Owner: the queue owner.
 
 Milestone: 0.1
 

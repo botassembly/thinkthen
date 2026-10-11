@@ -1,6 +1,8 @@
 # 0289 — Core cap plan tally and Rust Polars (T7)
 
-Status: Done. Fresh High code re-review accepted `df77e652681ff4980d034e325ab06f84cf2040ac`. Focused source and SQL compatibility proofs passed. Later host migrations, three older Polars package criteria and release qualification retain their own work.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh High code re-review accepted `df77e652681ff4980d034e325ab06f84cf2040ac`. Focused source and SQL compatibility proofs passed. Later host migrations, three older Polars package criteria and release qualification retain their own work.
 
 ## Outcome
 

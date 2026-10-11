@@ -1,6 +1,8 @@
 # Ticket 0242: Warn before trusting a writable named answer folder
 
-Status: **Complete.** Fresh independent Medium code review accepted `2e3e32c6`; the coordinator integrated unchanged runtime and the reviewed warning/limits additions in recording.md and SECURITY.md. The original issue and register 40 criteria are met. Optional signing and the stated platform/library limits remain future work, not a claim of authentication.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. ** Fresh independent Medium code review accepted `2e3e32c6`; the coordinator integrated unchanged runtime and the reviewed warning/limits additions in recording.md and SECURITY.md. The original issue and register 40 criteria are met. Optional signing and the stated platform/library limits remain future work, not a claim of authentication.
 
 ## Outcome
 

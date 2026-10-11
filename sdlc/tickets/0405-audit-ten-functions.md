@@ -1,6 +1,8 @@
 # 0405: Audit the ten functions across every surface before 0.2 hardens
 
-Status: landed. Complete audit accepted for landing at `33dc12e9a2d812055f99aac423010724756add08`. Read-only validation; no product behavior changes. Ian requested this audit on 2026-10-04. It precedes ticket 0401 implementation. Run it in physical lane claude-0 after the baseline package checkpoint.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Complete audit accepted for landing at `33dc12e9a2d812055f99aac423010724756add08`. Read-only validation; no product behavior changes. Ian requested this audit on 2026-10-04. It precedes ticket 0401 implementation. Run it in physical lane claude-0 after the baseline package checkpoint.
 
 Milestone: 0.2
 

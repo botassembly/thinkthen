@@ -1,6 +1,8 @@
 # 0348: Each SQL host proves its question store answers
 
-Status: landed 2026-09-30. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/closed/2026-09-30-sql-host-store-proofs-are-partial.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. 2026-09-30. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/closed/2026-09-30-sql-host-store-proofs-are-partial.md`.
 
 ## Outcome
 

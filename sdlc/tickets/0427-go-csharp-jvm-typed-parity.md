@@ -1,6 +1,8 @@
 # 0427: Complete Go, C# and JVM typed parity
 
-Status: complete. Go, C#, Java, Kotlin and Scala each pass all 247 required cases and actual installed archives. The fresh whole-family review and narrow packaging correction review accepted the implementation; combined full tests, lint and executable documentation passed. Final global/platform qualification belongs to 0432 and 0425.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Go, C#, Java, Kotlin and Scala each pass all 247 required cases and actual installed archives. The fresh whole-family review and narrow packaging correction review accepted the implementation; combined full tests, lint and executable documentation passed. Final global/platform qualification belongs to 0432 and 0425.
 
 Milestone: 0.2
 

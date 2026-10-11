@@ -1,6 +1,8 @@
 # 0364: Small command fixes from the mailroom triage
 
-Status: landed. Lane claude-2. Branch `ticket/0364-small-command-fixes`. Plan: batch C3 of `sdlc/planning/issue-priorities-2026-09-30.md`. Closes four issues in `sdlc/issues/closed/`: `2026-09-30-check-ignores-the-estimated-token-cap.md` (blocks 0.1), `2026-09-30-blank-max-request-bytes-exits-2.md`, `2026-09-30-transforms-score-the-band-low-edge-as-no.md` and `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md`.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Lane claude-2. Branch `ticket/0364-small-command-fixes`. Plan: batch C3 of `sdlc/planning/issue-priorities-2026-09-30.md`. Closes four issues in `sdlc/issues/closed/`: `2026-09-30-check-ignores-the-estimated-token-cap.md` (blocks 0.1), `2026-09-30-blank-max-request-bytes-exits-2.md`, `2026-09-30-transforms-score-the-band-low-edge-as-no.md` and `2026-09-30-cache-convert-quote-skips-questions-that-start-the-text-is.md`.
 
 ## Outcome
 

@@ -6,7 +6,9 @@ opens: sdlc/tickets/0084-freeze-the-public-rust-contract.md sdlc/planning/adr/00
 
 # 0084: Freeze the public Rust contract
 
-Status: landed; record `0084-build-contract.md`. Owner: Claude.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. record `0084-build-contract.md`. Owner: Claude.
 
 ## Outcome and authority
 

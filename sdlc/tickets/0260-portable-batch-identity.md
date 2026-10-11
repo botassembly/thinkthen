@@ -6,7 +6,9 @@ opens: sdlc/records/2026-09-28-content-batch-identity-preparation.md
 
 # 0260: Pin portable record spelling and content-batch identity
 
-Status: complete. Fresh code and closure review accepted the final managed-host candidate `2c92e3de`. The [22-group proof index](../records/0260-host-proof-index.md) maps every applicable public host route to accepted evidence. Register64 is done. The accepted design `f68d9496` retains existing runtime behavior; release and platform qualification remain separate.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Fresh code and closure review accepted the final managed-host candidate `2c92e3de`. The [22-group proof index](../records/0260-host-proof-index.md) maps every applicable public host route to accepted evidence. Register64 is done. The accepted design `f68d9496` retains existing runtime behavior; release and platform qualification remain separate.
 
 ## Outcome
 

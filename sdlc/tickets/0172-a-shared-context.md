@@ -6,7 +6,9 @@ opens: sdlc/planning/adr sdlc/planning/adr/0048-records-batch-into-full-requests
 
 # 0172: A shared context
 
-Status: landed. Product code, measured growth and helper/prose corrections accepted by fresh High review; the named 0170–0172 local checkpoint and authorized paid proof passed. Complete after the reviewed coordinator landing recorded in the build record. The coordinator accepted the design on 2026-09-27 after a fresh read-only review. Owner: Codex.
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Product code, measured growth and helper/prose corrections accepted by fresh High review; the named 0170–0172 local checkpoint and authorized paid proof passed. Complete after the reviewed coordinator landing recorded in the build record. The coordinator accepted the design on 2026-09-27 after a fresh read-only review. Owner: Codex.
 
 Review route: the builder follows the work plan: Claude now, or Codex after the handover. A fresh read-only session from the builder's vendor reviews the final diff.
 

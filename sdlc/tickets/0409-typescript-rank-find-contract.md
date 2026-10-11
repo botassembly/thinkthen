@@ -1,6 +1,8 @@
 # 0409: Match TypeScript rank and find types to runtime
 
-Status: landed. Supported rank/find declarations, strict positive/negative consumers and matching runtime calls are complete in 0431. See [0431 record](../records/0431-complete-existing-typed-sdks.md).
+Status: COMPLETE.
+
+Opened as: 2026-10-11. Supported rank/find declarations, strict positive/negative consumers and matching runtime calls are complete in 0431. See [0431 record](../records/0431-complete-existing-typed-sdks.md).
 
 Milestone: 0.2
 
