@@ -1,8 +1,14 @@
 //! Convert explicit caller controls; native admission owns their meaning.
 use crate::{inputs::decode, usage};
 use pyo3::prelude::*;
-use pyo3::types::PyDict;
+use pyo3::types::{PyBool, PyDict, PyInt};
 use thinkthen::RequestOptions;
+pub(crate) fn whole_number(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<()> {
+    if value.is_instance_of::<PyBool>() || !value.is_instance_of::<PyInt>() {
+        return Err(usage(py, "invalid canonical request"));
+    }
+    Ok(())
+}
 pub(crate) fn options(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<RequestOptions> {
     let values = value.cast::<PyDict>()?;
     let mut options = RequestOptions::default();
@@ -15,10 +21,22 @@ pub(crate) fn options(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<Requ
             "options_field" => options.options_field = Some(value.extract()?),
             "seed_spans_field" => options.seed_spans_field = Some(value.extract()?),
             "examples_field" => options.examples_field = Some(value.extract()?),
-            "snippet_pieces" => options.snippet_pieces = Some(value.extract()?),
-            "deadline_ms" => options.deadline_ms = Some(value.extract()?),
-            "max_requests_total" => options.max_requests_total = Some(value.extract()?),
-            "top" => options.top = Some(value.extract()?),
+            "snippet_pieces" => {
+                whole_number(py, &value)?;
+                options.snippet_pieces = Some(value.extract()?);
+            }
+            "deadline_ms" => {
+                whole_number(py, &value)?;
+                options.deadline_ms = Some(value.extract()?);
+            }
+            "max_requests_total" => {
+                whole_number(py, &value)?;
+                options.max_requests_total = Some(value.extract()?);
+            }
+            "top" => {
+                whole_number(py, &value)?;
+                options.top = Some(value.extract()?);
+            }
             "attempts" => options.attempts = value.extract()?,
             "details" => options.details = value.extract()?,
             "none" => options.none = value.extract()?,

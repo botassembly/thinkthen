@@ -136,8 +136,8 @@ class Engine:
         controls = dict(model=model, context=context, field=field, context_field=context_field, batch=batch, deadline_ms=deadline_ms, max_requests_total=max_requests_total, attempts=attempts, token=token, on=on, threshold=threshold, labels=labels, details=details)
         return self._named('tag', question, text, **{key: value for key, value in controls.items() if value is not _MISSING})
 
-    def filter(self, question, records, *, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, batch=_MISSING, deadline_ms=_MISSING, max_requests_total=_MISSING, attempts=_MISSING, token=_MISSING, on=_MISSING, threshold=_MISSING, true=_MISSING, false=_MISSING, files_only=_MISSING):
-        controls = dict(model=model, context=context, field=field, context_field=context_field, batch=batch, deadline_ms=deadline_ms, max_requests_total=max_requests_total, attempts=attempts, token=token, on=on, threshold=threshold, true=true, false=false, files_only=files_only)
+    def filter(self, question, records, *, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, batch=_MISSING, deadline_ms=_MISSING, max_requests_total=_MISSING, attempts=_MISSING, token=_MISSING, on=_MISSING, threshold=_MISSING, true=_MISSING, false=_MISSING, files_only=_MISSING, details=_MISSING):
+        controls = dict(model=model, context=context, field=field, context_field=context_field, batch=batch, deadline_ms=deadline_ms, max_requests_total=max_requests_total, attempts=attempts, token=token, on=on, threshold=threshold, true=true, false=false, files_only=files_only, details=details)
         return self._named('filter', question, records, **{key: value for key, value in controls.items() if value is not _MISSING})
 
     def iterate(self, function, question, records, **controls):
@@ -155,13 +155,14 @@ class Engine:
         return self._engine._plan(function, asked, source, fields)
 
     def rank(self, question, records, *, top=None, batch=None, context=None,
-             deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, threshold=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING):
+             deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, threshold=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING, details=False):
         """Records most likely first, as ``{"index", "record", "probability"}``.
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
         controls = {}
         controls['attempts'] = attempts
+        controls['details'] = details
         for key, value in dict(on=on, model=model, threshold=threshold, field=field, context_field=context_field, max_requests_total=max_requests_total).items():
             if value is not _MISSING: controls[key] = value
         for key, item in dict(top=top, batch=batch, context=context).items():
@@ -169,19 +170,20 @@ class Engine:
         if deadline_ms is not _MISSING: controls["deadline_ms"] = deadline_ms
         return self._named('rank', question, records, token=token, **controls)
 
-    def find(self, question, units, *, none=False, deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING, batch=_MISSING):
+    def find(self, question, units, *, none=False, deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING, batch=_MISSING, details=False):
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
         controls = dict(none=none, token=token)
         controls['attempts'] = attempts
+        controls['details'] = details
         for key, value in dict(on=on, batch=batch, model=model, context=context, field=field, context_field=context_field, max_requests_total=max_requests_total).items():
             if value is not _MISSING: controls[key] = value
         if deadline_ms is not _MISSING: controls['deadline_ms'] = deadline_ms
         return self._named('find', question, units, **controls)
 
     def annotate(self, questions, records, *, on=None, batch=None, context=None,
-                 deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING):
+                 deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, details=False):
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
@@ -199,6 +201,7 @@ class Engine:
                 raise UsageError('annotate with on= takes a Polars or pandas DataFrame; a list of str takes no on=')
         controls = dict(token=token)
         controls['attempts'] = attempts
+        controls['details'] = details
         for key, value in dict(model=model, field=field, context_field=context_field, max_requests_total=max_requests_total).items():
             if value is not _MISSING: controls[key] = value
         if on is not None: controls['on'] = on
@@ -209,7 +212,7 @@ class Engine:
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
                   threshold=None, relation_threshold=None, on=None, deadline_ms=_MISSING,
-                  token=None, descriptions=None, instructions=None, entity_definition=None, attempts=False, model=_MISSING, batch=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, mode=_MISSING, snippet_pieces=_MISSING, stage_context=_MISSING, seed_spans=_MISSING, examples=_MISSING, seed_spans_field=_MISSING, examples_field=_MISSING, max_requests_total=_MISSING):
+                  token=None, descriptions=None, instructions=None, entity_definition=None, attempts=False, model=_MISSING, batch=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, mode=_MISSING, snippet_pieces=_MISSING, stage_context=_MISSING, seed_spans=_MISSING, examples=_MISSING, seed_spans_field=_MISSING, examples_field=_MISSING, max_requests_total=_MISSING, details=False):
         """Find every name in a text and say what kind it is.
 
         ``kinds`` lists kind words, or maps each to a description.
@@ -229,6 +232,7 @@ class Engine:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
         controls = dict(token=token)
         controls['attempts'] = attempts
+        controls['details'] = details
         for key, value in dict(model=model, batch=batch, context=context, field=field, context_field=context_field, mode=mode, snippet_pieces=snippet_pieces, stage_context=stage_context, seed_spans=seed_spans, examples=examples, seed_spans_field=seed_spans_field, examples_field=examples_field, max_requests_total=max_requests_total).items():
             if value is not _MISSING: controls[key] = value
         if on is not None: controls['on'] = on
@@ -245,7 +249,7 @@ class Engine:
         return self._named('recognize', ask, text, **controls)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
-               deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING, batch=_MISSING):
+               deadline_ms=_MISSING, token=None, attempts=False, model=_MISSING, context=_MISSING, field=_MISSING, context_field=_MISSING, max_requests_total=_MISSING, on=_MISSING, batch=_MISSING, details=False):
         """Say how the entities relate: a list of ``Edge``.
 
         ``entities`` holds ``(name, kind)`` pairs, dicts with ``name`` and
@@ -256,6 +260,7 @@ class Engine:
         """
         controls = dict(token=token)
         controls['attempts'] = attempts
+        controls['details'] = details
         for key, value in dict(on=on, batch=batch, model=model, context=context, field=field, context_field=context_field, max_requests_total=max_requests_total).items():
             if value is not _MISSING: controls[key] = value
         if ask is None: controls.update(relations=relations, either=either)

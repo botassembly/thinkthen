@@ -53,3 +53,28 @@ pub(crate) fn _read_files(
         Ok(SourceIterator(std::sync::Mutex::new(records)))
     })
 }
+
+#[pyfunction]
+pub(crate) fn _validate_reading(
+    py: Python<'_>,
+    unit: &Bound<'_, PyAny>,
+    window: &Bound<'_, PyAny>,
+) -> PyResult<()> {
+    let invalid = || {
+        crate::usage(
+            py,
+            "reader window requires unit window and a positive whole number",
+        )
+    };
+    let unit: String = unit.extract().map_err(|_| invalid())?;
+    let window = if window.is_none() {
+        None
+    } else {
+        crate::controls::whole_number(py, window).map_err(|_| invalid())?;
+        Some(window.extract::<usize>().map_err(|_| invalid())?)
+    };
+    crate::inputs::reading(py, &unit, window)?
+        .validate()
+        .map(|_| ())
+        .map_err(|e| raised(py, &e))
+}

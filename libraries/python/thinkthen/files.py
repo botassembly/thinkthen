@@ -44,4 +44,5 @@ def read_files(path_or_paths, *, unit="line", window=None):
         paths = tuple(os.fspath(path) for path in path_or_paths)
     if any(not isinstance(path, str) for path in paths):
         raise _thinkthen.UsageError("source paths are text")
+    _thinkthen._validate_reading(unit, window)
     return FileSelection(paths, unit, window)

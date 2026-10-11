@@ -27,7 +27,17 @@ pub(crate) fn decode<T: serde::de::DeserializeOwned>(
     py: Python<'_>,
     value: &Bound<'_, PyAny>,
 ) -> PyResult<T> {
-    serde_json::from_str(&json(py, value)?).map_err(|_| usage(py, "invalid canonical request"))
+    serde_json::from_str(&json(py, value)?).map_err(|error| {
+        let unsupported = "the question declaration uses an unsupported feature";
+        usage(
+            py,
+            if error.to_string().starts_with(unsupported) {
+                unsupported
+            } else {
+                "invalid canonical request"
+            },
+        )
+    })
 }
 pub(crate) fn question(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<RequestQuestion> {
     let (kind, body): (String, Py<PyAny>) = value.extract()?;
@@ -221,6 +231,7 @@ fn input(
         let window = if window.is_none() || window.is(&inputs.getattr("ABSENT")?) {
             None
         } else {
+            crate::controls::whole_number(py, &window)?;
             Some(window.extract()?)
         };
         return Ok(RequestInput::Source {
