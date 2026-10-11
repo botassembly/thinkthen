@@ -54,3 +54,4 @@ The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 1
 
 - 2026-10-11 started
 - 2026-10-11 next: The accepted host and shared-helper cuts plus reviewed C projections are combined on the cleanup branch at 187998 lines, with further wrapper migrations and approved helper cuts needed before whole-ticket proof.
+- 2026-10-11 next: The host and shared-helper cuts plus reviewed C projections are combined at 187998 lines, with further wrapper migrations, approved helper cuts and a fresh whole-code review still required.
