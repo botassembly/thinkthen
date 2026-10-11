@@ -42,3 +42,4 @@ These accessors serialize the retained scalar Details result without introducing
 - 2026-10-11 started
 - 2026-10-11 next: Await the PM ruling on preserving DuckDB packed try-details recovery while migrating ordinary routes to owned requests.
 - 2026-10-11 next: Apply the approved packed try-details exception and existing Details serializer, migrate every other DuckDB route, and finish installed checks on both versions.
+- 2026-10-11 next: Installed checks exposed annotation neighbour-cache behavior that shared sessions cannot preserve without a pure admission helper; await a bounded API ruling while fixing quota and NULL-group validation.
