@@ -25,7 +25,8 @@ def run(command, cwd, env, expected=None, timeout=180):
         assert result.returncode != 0 and expected in result.stdout, result.stdout
     else:
         assert result.returncode == 0, result.stdout
-    print(result.stdout if timeout is None else result.stdout[-2000:])
+    output = result.stdout if timeout is None else result.stdout[-2000:]
+    print(output, end='' if output.endswith('\n') else '\n')
     return result
 
 
@@ -99,7 +100,7 @@ def main():
         run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
         run([str(dart), 'run', 'bin/main.dart', 'smoke'], consumer, env)
         return
-    run([str(dart), 'run', 'bin/parser_cases.dart' , str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
+    run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     has_flutter = (packages / 'flutter').is_dir()
     if has_flutter:
         projects = [packages / 'flutter']

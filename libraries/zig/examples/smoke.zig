@@ -25,7 +25,7 @@ pub fn main() !void {
                 const result = packet.view.data.decide_row[0].value[0].value;
                 const node = (tt.session.optional(result) orelse return error.MissingAnswer)[0].value[0];
                 const answer = if (node.kind == tt.c.THINKTHEN_COMPLETE_JSON_NULL_V1) "null" else if (node.kind == tt.c.THINKTHEN_COMPLETE_JSON_BOOLEAN_V1) (if (node.data.boolean == 1) "true" else "false") else return error.WrongAnswer;
-                var out = std.fs.File.stdout().writer(&.{});
+                var out = std.fs.File.stdout().writerStreaming(&.{});
                 try out.interface.print("smoke: {s}\n", .{answer});
             }
         },
