@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 No public Rust call drops a usage write failure. The CLI reader behaves the same as the library reader, or a test states each difference. Plain rank never returns an internal defect for a released unit, and a failed reader lock reports an error.
