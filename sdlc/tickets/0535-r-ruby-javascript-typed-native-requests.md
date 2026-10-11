@@ -36,6 +36,7 @@ Expose the existing authored-definition decoder so native host adapters preserve
 
 ```text
 fn RequestDefinition::from_authored_json(&str) -> Result<RequestDefinition, Error>
+fn RequestDefinition::from_request_json(&str) -> Result<RequestDefinition, Error>
 ```
 
 ## Progress
