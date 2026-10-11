@@ -54,7 +54,7 @@ Outcome: every SDK supports the same ten functions with the same admitted inputs
 Exit criteria, under [the done ruling](../decisions/2026-10-10-drive-0-2-to-done.md):
 
 1. Every 0.2 language migration and SQL ticket is closed: its new API passes routine installed checks, and its old public names are deleted.
-2. The gaps in [the 2026-10-11 closure review](../records/2026-10-11-0-2-closure-review.md) are closed through 0530 and 0534 to 0543.
+2. The gaps in [the 2026-10-11 closure review](../records/2026-10-11-0-2-closure-review.md) are closed through 0530 and 0534 to 0543. The gaps in [the 2026-10-11 adversarial review](../records/2026-10-11-0-2-adversarial-review.md) are closed through 0549 to 0554.
 3. 0530 assembles every final artifact, and each installs and runs cleanly.
 4. 0542's final code review accepts, and lint and test each pass once on the final commit.
 5. 0543's candidate passes the release suite and the hosted rehearsal on Linux, macOS and Windows. This ends the build side of 0.2.
