@@ -17,3 +17,7 @@ Every DuckDB function builds its call through the shared Request and owned sessi
 - Changes: route the scalar, portable, listed, image and complete-listed functions through the shared request. Delete the direct engine calls and their JSON assembly. Lower the DuckDB ceiling.
 - Proof: the routine installed DuckDB checks pass on both versions.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
