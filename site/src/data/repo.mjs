@@ -14,7 +14,7 @@ export function packageGuide(slug) {
 // These callers run through the package checks; the site keeps no second example.
 export function packageExample(slug) {
   const examples = {
-    shell: 'demos/01-refund-gate/demo.sh',
+    shell: 'demos/01-refund-gate/README.md',
     python: 'libraries/python/tests/test_named_calls.py',
     pandas: 'libraries/python/tests/test_named_calls.py',
     polars: 'libraries/python/tests/test_named_calls.py',
