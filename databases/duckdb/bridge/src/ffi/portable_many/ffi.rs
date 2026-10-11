@@ -236,6 +236,9 @@ fn run(
     let total = asked.max_requests_total;
     let context = call.context().map(str::to_owned);
     let texts: Vec<String> = input.0.iter().map(|(_, value)| value.clone()).collect();
+    if kind == RANK && texts.iter().any(|text| text.trim().is_empty()) {
+        return Err(RowError::usage("evidence is text, not white space").text);
+    }
     run_detached(stop, move |token| {
         if texts.is_empty() && matches!(kind, RANK | 9) {
             return Ok(b"[]".to_vec());
