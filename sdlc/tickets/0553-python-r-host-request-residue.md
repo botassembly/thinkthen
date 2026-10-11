@@ -10,6 +10,8 @@ Reviews: revision f23c075965dc12a966847fee80c13bfab3b29385, accept
 
 Reviews: revision 59bd6ddb93bd23234eb6e4b11c692b6ec5f90dc9, reject
 
+Reviews: revision 92301107709327a1ae85b4fe8453361af6dc8059, reject
+
 ## Outcome
 
 Python and R only convert host values and decode results. Rust decides the question shape, label rules, whether an input is a scalar or a collection, and the column view. The finish line that 0534 and 0535 set for these two languages is met.
