@@ -35,3 +35,4 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: The completed campaign at 60ba71846 failed after 4785 seconds with retained logs; source optimization and setup corrections need focused proof and fresh code review before the next full run.
