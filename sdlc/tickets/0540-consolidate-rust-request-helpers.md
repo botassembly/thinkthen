@@ -1,6 +1,6 @@
 # 0540: Remove repeated Rust request code
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Depends on: 0539
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision a7b88a615, accept
+
+Landed: 3787ac3
 
 ## Outcome
 
