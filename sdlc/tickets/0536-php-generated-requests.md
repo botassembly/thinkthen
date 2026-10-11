@@ -1,12 +1,14 @@
 # 0536: Build PHP requests from generated input types
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 2ac547e5100dc3e62511c298ddfa9fb512c490f0, accept
+
+Landed: 1b32424
 
 ## Outcome
 
