@@ -20,3 +20,7 @@ No public Rust call drops a usage write failure. The CLI reader behaves the same
   - Rank: plain rank at `cli/asking/native.rs:427,443` keeps the original it needs, or a test proves the released unit can never be a result.
 - Proof: CLI and Rust API tests for each kept branch, for the usage failure and for plain rank. Routine checks pass.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
