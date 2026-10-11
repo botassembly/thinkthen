@@ -21,3 +21,4 @@ Every DuckDB function builds its call through the shared Request and owned sessi
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Await the PM ruling on preserving DuckDB packed try-details recovery while migrating ordinary routes to owned requests.
