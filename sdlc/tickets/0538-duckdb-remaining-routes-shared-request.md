@@ -22,3 +22,11 @@ Every DuckDB function builds its call through the shared Request and owned sessi
 
 - 2026-10-11 started
 - 2026-10-11 next: Await the PM ruling on preserving DuckDB packed try-details recovery while migrating ordinary routes to owned requests.
+
+## PM amendment, 2026-10-11
+
+The packed try-details route keeps its direct engine call in 0.2. It returns answered rows beside rows that failed on backend or settings errors, and the owned session stops at the first atomic failure and has no failure value for each row. A recovery entry point and error value for each row would be new public design, so the idea "the shared request session recovers failures row by row" carries it after 0.2. This route stays the only direct engine call in DuckDB, and a code comment names that idea.
+
+Ordinary details may add one small native accessor that returns the existing Details serialization, so DuckDB keeps its JSON values. The accessor adds no new format.
+
+Migrate every other route as the Changes line says. The ticket closes when those routes use the shared request and the routine installed DuckDB checks pass on both versions.
