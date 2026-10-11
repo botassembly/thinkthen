@@ -28,3 +28,7 @@ Every C export that asks a question, frozen 0.1 exports included, admits and exe
   - A search finds no engine per-function call in `libraries/c/src`.
   - `policy.py` fails on "door" in shipped source, including the doc text in the generated `thinkthen.h`.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
