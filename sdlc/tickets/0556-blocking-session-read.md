@@ -72,3 +72,4 @@ A binding waits for the next session result, or for room to push, through one na
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Accepted native-wait code is being combined with the reviewed engine owner; PM cleared the abandoned CPU load and focused compilation and cancellation checks are authorized again.
