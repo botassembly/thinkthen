@@ -25,3 +25,7 @@ One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and 
   - Windows failures become new bug tickets. Other failures get a fix here, or a bug ticket when they need their own design. Batch fixes and cut the next candidate. 0543 closes when one candidate passes every platform, after the Windows bug tickets land.
 - Proof: the run identifiers and the commit, named once in this ticket's landing record.
 - Defers: release QA, publication and after-publication checks stay with 0425, 0393 and 0398.
+
+## Progress
+
+- 2026-10-11 started
