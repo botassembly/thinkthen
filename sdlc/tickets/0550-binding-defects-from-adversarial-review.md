@@ -41,3 +41,4 @@ A caller in every language sees its own producer's exception and Rust's admissio
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Session diagnostic accessors await a PM ABI ruling because constructor-slot reuse breaks the retained installed C lifetime contract; other binding repairs continue.
