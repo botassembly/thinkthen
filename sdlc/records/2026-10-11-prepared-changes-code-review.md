@@ -14,6 +14,8 @@ A separate fresh read-only review accepted the corrective source range `0a4e34b6
 
 Independent ratchet commands on that corrective revision both exited 1: core source measured 187,637 against the unchanged 187,611 ceiling, and PHP source measured 1,916 against its unchanged 1,902 ceiling. The dependent R decoder accounts for 16 added core lines; named construction adds a net 10 after reusing the existing argument accessor. These measurements do not establish passing closure gates or authorize a ceiling increase.
 
+The same product/test classifier used for the cleanup comparison measured 79,577 product lines and 103,127 test lines under `crates/` at the corrective revision. Against the identically classified baseline of 80,643 product lines, the reduction is 1,066. The retained classifier is `target/0558-count-comparison/split.sh` in the primary checkout; its product/test scope differs from the ratchet's combined `crates/` and `conformance/` scope.
+
 ## What the build taught us
 
 A passing installed behavior case can coexist with duplicated construction or diagnostic rules. Searches need to follow every production selector and materialized-input path, then distinguish generated codecs from handwritten semantic choices. Module guards also matter: a direct Engine call retained only as a test projection does not prove a shipped routing defect.
