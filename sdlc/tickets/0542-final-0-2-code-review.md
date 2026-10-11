@@ -1,6 +1,6 @@
 # 0542: Review all 0.2 code after the last migration lands
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -18,6 +18,8 @@ Depends on: 0541
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 0c38e41bca3e061f0fef438b89123b6048e7a62c, accept
+
+Landed: 5bc53db
 
 ## Outcome
 
