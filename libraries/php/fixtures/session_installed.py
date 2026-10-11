@@ -62,7 +62,7 @@ def main():
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),
                 THINKTHEN_TEST_PROFILE='full' if args.parity else 'routine')
-            subprocess.run([sys.executable, str(Path(__file__).with_name('complete_parity.py')), 'php'],
+            subprocess.run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'php'],
                 env=env, check=True)
         finally:
             for file in (work / 'barrier').glob('arrived-*'):

@@ -99,7 +99,7 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def end_headers(self):
         # ureq can reuse an HTTP/1.0 connection unless the reply closes it.
-        self.send_header('Connection', 'close')
+        self.send_header("Connection", "close")
         super().end_headers()
 
     def do_POST(self):

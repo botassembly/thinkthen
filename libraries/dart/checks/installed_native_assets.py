@@ -159,7 +159,7 @@ def main():
             THINKTHEN_DART_CONSUMER=str(consumer),
             THINKTHEN_DART_BINARY=str(scratch / 'parity-build/bundle/bin/parity_consumer'),
             THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
-        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
+        run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
     # Run the compiled bundle after the source packages and build cache move away.
     packages.rename(scratch / 'packages-held')
     consumer.rename(scratch / 'consumer-held')
@@ -193,7 +193,7 @@ def main():
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
     if full:
         parity_env.update(THINKTHEN_FLUTTER_CONSUMER=str(app))
-        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'flutter'], scratch, parity_env, timeout=None)
+        run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'flutter'], scratch, parity_env, timeout=None)
     run([str(flutter), 'build', 'linux', '--release', '--no-pub'], app, env)
     bundle = app / 'build/linux/x64/release/bundle'
     assert list((bundle / 'lib').glob('*thinkthen*')), 'FLUTTER_BUNDLED_NATIVE_ASSET'
