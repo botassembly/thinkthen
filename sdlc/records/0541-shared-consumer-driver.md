@@ -1,0 +1,21 @@
+# Shared installed consumer driver
+
+The installed consumers now share backend setup, authored question projection, native archive privacy checks and the usage-lock runner through `conformance/children`. Each language retains its package build and consumer program. Copied backend implementations and imports from another language's fixture folder were removed. The package inventory repair record now keeps the built behavior, proof and lessons, including the COBOL representation ruling and the original evidence paths.
+
+The fresh code reviewer accepted `361cb5097c26c1b26ca4446f9afea1e4a9955d97` without findings after reading projections, backend configuration, installed entry points, usage handshakes, request counts, cancellation cleanup and privacy normalization. Unique tracked Python source fell by 708 nonblank lines. Rust source did not change. Per-library ceiling reductions include relocated shared files and cannot be added together as deletions.
+
+Routine installed checks passed for C, C++, C#, Go, Java, Kotlin, Scala, Ada, COBOL, Ruby, Zig, Swift, PHP, Dart, Flutter, Python, pandas, Python Polars, R, JavaScript, TypeScript, Rust and Rust Polars. They covered the affected authored inputs, result conversion, request counts, held cancellation and applicable usage persistence modes. Rust Polars ran its 31 routine shared cases against the retained unchanged crate. The shared conformance fixture checks, child inventory, policy checks and affected source ceilings passed. The unchanged core routine suite from 0540 remains applicable. Objective-C execution belongs to the candidate macOS qualification under the package inventory amendment.
+
+`target/0541-shared-consumer-driver/` in the main checkout retains the original and corrected installed consumer logs, independent consumer receipts and closure lint log. Earlier package qualification evidence remains at the paths named in the package inventory repair record. Build outputs are not pushed.
+
+## What the build taught us
+
+The C# archive check exposed a copied privacy guard that treated the already remapped `/build/home/` prefix as a private home path. The coordinator initially read the substring as an unremapped path and requested a rebuild, then corrected that reading. The C# check now uses the existing shared normalization. Focused positive and negative path checks passed; actual `/home/`, `/Users/` and private canary markers still fail. The original refusal remains in the retained logs.
+
+The shared runner preserves each consumer's distinct checks instead of replacing them with one generic success assertion. Authored input bytes, provider send counts, incremental producers and usage settlement still have language-specific callers. Consolidating their setup removes drift without reducing their coverage.
+
+The first Go usage invocation passed the owned-call checks, then refused an unsupported `capture_output` keyword. The corrected usage invocation passed all three persistence modes. The first JVM invocation lacked the pinned JDK path; the corrected environment ran all three language consumers and their usage modes. Both original failures remain alongside the corrected logs.
+
+Closure lint found that the paired release archive helper still invoked the removed Zig privacy guard through `release-go-cpp-pair`. The helper now calls the shared native guard. A search checked callers of every removed helper; the remaining old reference belongs to a historical closed issue. A fresh code reviewer accepted this correction at `fd32fae09`, including the retained private-path, canary, sanitized-path and refusal behavior. Archive checks passed in an owned clean clone. The original lint failure and the corrected archive checks are retained with the consumer evidence.
+
+The corrected closure lint passed through documentation generation, then the API inventory refused a coordinator-authored declaration block with prose before its text fence. The coordinator corrected the block and kept future declarations planned until their implementation lands. The inventory was resumed after that metadata correction; earlier successful lint stages remain applicable. The final release review requires its own uninterrupted lint and routine test run.

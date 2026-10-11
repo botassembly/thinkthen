@@ -66,7 +66,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
     if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
@@ -165,7 +165,7 @@ public_types
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
     if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)

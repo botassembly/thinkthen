@@ -1,11 +1,13 @@
 """Install managed nupkg and native tar in unrelated bwrap roots; count replies outside namespace."""
-import collections,fcntl,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
-from backend import Backend
+import collections,json,os,pathlib,re,shutil,sys,zipfile,xml.etree.ElementTree as ET
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0,str(R.parents[1]/"conformance/children"))
+from backend import Backend
 from portable import one_portable_request
+from usage import run_usage
+from native_guard import normalized_bytes
 V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
@@ -22,7 +24,7 @@ if release_package:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
   assert 'runtimes/linux-x64/native/libthinkthen.so' in names,names
-  assert not any(token in bundle.read(name) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
+  assert not any(token in normalized_bytes(bundle.read(name)) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
   metadata=ET.fromstring(bundle.read('Botassembly.ThinkThen.nuspec'))
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
   assert fields['id']=='Botassembly.ThinkThen' and fields['version']==V,fields
@@ -31,21 +33,19 @@ home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget
 local=work/'feed';local.mkdir();shutil.copyfile(package,local/f'Botassembly.ThinkThen.{V}.nupkg')
 # Only consumer source and package feed are visible; compiler and original source are absent.
 shutil.copyfile(R/'tests/source/SessionChecks.cs',work/'SessionChecks.cs');shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs');shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
-barrier=work/'barrier';barrier.mkdir();server=Backend(barrier)
+barrier=work/'barrier';barrier.mkdir();server=Backend(barrier, arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
 cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet','run','--project','/work/Installed.csproj','--configuration','Release','-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true']
 env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
 if mode=='portable': env['TT_PORTABLE_BATCH']='1'
 if mode=='sessions': env['TT_SESSIONS']='1'
-usage_lock = None
 if mode.startswith('usage-'):
  env['TT_USAGE']=mode.removeprefix('usage-')
  env['XDG_STATE_HOME']='/work/state'
  if mode=='usage-disabled': env.update(HOME='relative', XDG_STATE_HOME='')
- if mode=='usage-failed':
-  state=work/'state/thinkthen';state.mkdir(parents=True,mode=0o700)
-  usage_lock=(state/'.lock').open('w');os.chmod(state/'.lock',0o600);fcntl.flock(usage_lock,fcntl.LOCK_EX)
 try:
- result=run(cmd,timeout=100,env=env)
+ result=(run_usage(cmd, state=work/'state/thinkthen', mode=mode.removeprefix('usage-'), env=env,
+                   execute=lambda command, *, env: run(command, timeout=100, env=env))
+         if mode.startswith('usage-') else run(cmd,timeout=100,env=env))
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
@@ -83,5 +83,4 @@ try:
   print('C# observed bodies:',json.dumps(parsed,sort_keys=True),flush=True)
   print('isolated installed consumer',mode,'PASS 2 exact arrivals',flush=True)
 finally:
- if usage_lock is not None: usage_lock.close()
  server.close()

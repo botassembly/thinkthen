@@ -64,7 +64,7 @@ fi
 "$python" - "$repo" "$scratch/tests/native_case.py" <<'PY'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);sys.path[:0]=[str(root/'libraries/python/tests'),str(root/'conformance/children')]
+root=Path(sys.argv[1]);sys.path[:0]=[str(root/'conformance/children')]
 from native_fixture import run
 failed=run('python',[sys.executable,sys.argv[2]],root)
 for consumer,library in [('pandas','pandas'),('python-polars','polars')]:

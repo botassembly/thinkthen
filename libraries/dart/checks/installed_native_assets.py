@@ -1,5 +1,4 @@
 """Install development packages and exercise SDK-owned Linux native assets offline."""
-import fcntl
 import base64
 import os
 import hashlib
@@ -15,6 +14,7 @@ import threading
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+from usage import run_usage
 from native_assets import configure, package_members
 
 
@@ -111,21 +111,12 @@ def main():
     # The same installed consumer owns tiny usage cases; it runs one local call.
     for mode in ('written', 'failed', 'disabled'):
         usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
-        lock = None
-        if mode == 'failed':
-            folder = Path(usage_env['XDG_STATE_HOME']) / 'thinkthen'
-            folder.mkdir(parents=True, mode=0o700)
-            lock = (folder / '.lock').open('w')
-            os.chmod(folder / '.lock', 0o600)
-            fcntl.flock(lock, fcntl.LOCK_EX)
         if mode == 'disabled':
             usage_env.pop('HOME', None)
             usage_env.pop('XDG_STATE_HOME', None)
-        try:
-            run([str(dart), 'run', 'bin/main.dart', 'usage-' + mode], consumer, usage_env)
-        finally:
-            if lock:
-                lock.close()
+        run_usage([str(dart), 'run', 'bin/main.dart', 'usage-' + mode],
+                  state=scratch / ('usage-' + mode) / 'thinkthen', mode=mode, env=usage_env,
+                  execute=lambda command, *, env: run(command, consumer, env))
     if supplied:
         run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
     else:
@@ -168,7 +159,7 @@ def main():
             THINKTHEN_DART_CONSUMER=str(consumer),
             THINKTHEN_DART_BINARY=str(scratch / 'parity-build/bundle/bin/parity_consumer'),
             THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
-        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
+        run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
     # Run the compiled bundle after the source packages and build cache move away.
     packages.rename(scratch / 'packages-held')
     consumer.rename(scratch / 'consumer-held')
@@ -176,7 +167,7 @@ def main():
     (scratch / 'packages-held').rename(packages)
     (scratch / 'consumer-held').rename(consumer)
     if not has_flutter:
-        run([sys.executable, str(ROOT / 'libraries/zig/Tests/guard.py'), str(native), *map(str, archives)], scratch, env)
+        run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
         print('PASS: supplied Dart and native archives, standalone typed bundle; no source build')
         return
     app = scratch / 'flutter-app'
@@ -202,7 +193,7 @@ def main():
     run([str(flutter), 'pub', 'get', '--offline'], app, env)
     if full:
         parity_env.update(THINKTHEN_FLUTTER_CONSUMER=str(app))
-        run([sys.executable, str(ROOT / 'libraries/php/fixtures/complete_parity.py'), 'flutter'], scratch, parity_env, timeout=None)
+        run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'flutter'], scratch, parity_env, timeout=None)
     run([str(flutter), 'build', 'linux', '--release', '--no-pub'], app, env)
     bundle = app / 'build/linux/x64/release/bundle'
     assert list((bundle / 'lib').glob('*thinkthen*')), 'FLUTTER_BUNDLED_NATIVE_ASSET'
@@ -212,7 +203,7 @@ def main():
     packages.rename(scratch / 'packages-held')
     run(['/usr/bin/xvfb-run', '-a', str(standalone / 'thinkthen_flutter_example')], standalone, env)
     (scratch / 'packages-held').rename(packages)
-    run([sys.executable, str(ROOT / 'libraries/zig/Tests/guard.py'), str(native), *map(str, archives)], scratch, env)
+    run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
     print('PASS: installed Dart bundle and Linux Flutter FFI app; supplied archives' if supplied else 'PASS: installed Dart bundle and Linux Flutter FFI app, cache miss, corrupt cache, loopback build fetch; no caller library path')
 
 

@@ -16,7 +16,7 @@ class InstalledProducts(unittest.TestCase):
             ('cobol/checks/native_parity.py', []),
             ('zig/Tests/complete_parity.py', []),
             ('objective-c/checks/foundation_installed.py', []),
-            ('php/fixtures/complete_parity.py', ['php']),
+            ('../conformance/children/complete_parity.py', ['php']),
         )
         with tempfile.TemporaryDirectory(prefix='thinkthen-missing-products-') as folder:
             missing = str(Path(folder) / 'absent-package')

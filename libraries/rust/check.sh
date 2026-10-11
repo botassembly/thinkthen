@@ -33,7 +33,7 @@ RUSTCONSUMER
     python3 - "$root" "$installed/consumer/Cargo.toml" <<'RUSTNATIVE'
 import os,sys
 from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target')))/'debug/thinkthen-rust-consumer'
 sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))

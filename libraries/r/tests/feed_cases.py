@@ -4,7 +4,7 @@ import os
 import sys
 
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / "libraries/python/tests"))
+sys.path.insert(0, str(ROOT / "conformance/children"))
 import native_fixture
 
 ordinary_request = native_fixture.native_request

@@ -4,7 +4,7 @@ from pathlib import Path
 import subprocess
 import sys
 ROOT = Path(__file__).resolve().parents[3]
-sys.path[:0] = [str(ROOT / 'libraries/cpp/fixtures'), str(ROOT / 'conformance/children')]
+sys.path[:0] = [str(ROOT / 'conformance/children')]
 from children import child_env
 import session_cases as shared_cases
 from session_views import render

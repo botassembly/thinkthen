@@ -39,7 +39,7 @@ def main():
             cwd=app, env=install_env, capture_output=True, timeout=5)
         assert installed.returncode == 0, (installed.stdout, installed.stderr)
         shutil.copyfile(Path(__file__).with_name('session_consumer.php'), work / 'consumer.php')
-        server = Backend(work / 'barrier')
+        server = Backend(work / 'barrier', key='tt-canary-291', hold_first=True)
         try:
             env = child_env(home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
@@ -62,7 +62,7 @@ def main():
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),
                 THINKTHEN_TEST_PROFILE='full' if args.parity else 'routine')
-            subprocess.run([sys.executable, str(Path(__file__).with_name('complete_parity.py')), 'php'],
+            subprocess.run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'php'],
                 env=env, check=True)
         finally:
             for file in (work / 'barrier').glob('arrived-*'):

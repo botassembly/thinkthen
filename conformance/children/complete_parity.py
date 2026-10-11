@@ -7,11 +7,11 @@ import subprocess
 import sys
 import tempfile
 import time
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[2] / "conformance/children"))
 from children import child_env
 from question_files import file_question_expectation
 
-ROOT=Path(__file__).resolve().parents[3]
+ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity
 from c_parity import document, Backend, prepare, assertions, compact

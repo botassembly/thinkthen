@@ -5,7 +5,7 @@ from pathlib import Path
 import subprocess
 import sys
 ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(ROOT / 'libraries/cpp/fixtures'))
+sys.path.insert(0, str(ROOT / 'conformance/children'))
 from session_cases import descriptor, native_cases
 RUBY = os.environ['RUBY']
 CONSUMER = Path(__file__).with_name('native_case.rb')

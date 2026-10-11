@@ -1,5 +1,4 @@
 """Focused installed named C++ calls, deriving questions from shared conformance."""
-import fcntl
 import json
 from pathlib import Path
 import subprocess
@@ -8,7 +7,8 @@ import time
 import tempfile
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
 from children import child_env
-from fixture import Backend
+from usage import run_usage
+from backend import Backend
 ROOT = Path(__file__).resolve().parents[3]
 prefix, binary, scratch_root = (path.resolve() for path in map(Path, sys.argv[1:4]))
 scratch_root.mkdir(parents=True, exist_ok=True)
@@ -23,7 +23,7 @@ else:
 # stays on the ordinary installed-package route with qualified artifacts.
 if len(sys.argv) <= 4 or sys.argv[4] != 'usage':
     subprocess.run([sys.executable,str(Path(__file__).with_name("guard.py")),prefix],env=child_env(),check=True)
-server = Backend(scratch)
+server = Backend(scratch, key='tt-canary-301', arrivals='named')
 cases = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
 try:
     env = child_env(home=str(scratch), XDG_CONFIG_HOME=str(scratch),
@@ -34,13 +34,10 @@ try:
         for mode in ('usage-written', 'usage-failed'):
             state = scratch / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
             before = len(server.requests)
-            with (state / '.lock').open('w') as lock:
-                (state / '.lock').chmod(0o600)
-                if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
-                usage_env = child_env(home=scratch / mode, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'],
-                                      THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
-                result = subprocess.run([binary, mode, scratch, scratch], env=usage_env, capture_output=True, text=True, timeout=5)
-                assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.returncode, result.stdout, result.stderr)
+            usage_env = child_env(home=scratch / mode, THINKTHEN_BASE_URL=env['THINKTHEN_BASE_URL'],
+                                  THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
+            result = run_usage([binary, mode, scratch, scratch], env=usage_env, state=state, mode=mode.removeprefix('usage-'), timeout=5)
+            assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.returncode, result.stdout, result.stderr)
             assert len(server.requests) == before + 1, server.requests
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)

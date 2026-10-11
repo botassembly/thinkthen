@@ -29,12 +29,12 @@ cmp "$work/native-expected.json" "$work/native-summary.json"
 
 # Reuse captured native questions for declarations, numeric batches and
 # structured readings; the report still depends on the replay's stored odds.
-jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+jq -c --slurpfile native ../../conformance/fixtures/complete.json '
   .answers.correct.question = $native[0].native_presentation.questions[4]
 ' "$work/native.jsonl" > "$work/presentation.jsonl"
 jq -n --argjson truth '{"correct":"/input/human_correct"}' \
   -f sweep.jq "$work/presentation.jsonl" > "$work/presentation-report.json"
-jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+jq -c --slurpfile native ../../conformance/fixtures/complete.json '
   .answers.correct.question = ($native[0].results[]
     | select(.type=="DecideResult") | .result.question)
 ' "$work/native.jsonl" > "$work/readings.jsonl"
@@ -44,7 +44,7 @@ jq -n --argjson truth '{"correct":"/input/human_correct"}' \
   -f sweep.jq "$work/native.jsonl" > "$work/native-report.json"
 cmp "$work/native-report.json" "$work/presentation-report.json"
 cmp "$work/native-report.json" "$work/readings-report.json"
-jq -c --slurpfile native ../../libraries/python/tests/fixtures/complete.json '
+jq -c --slurpfile native ../../conformance/fixtures/complete.json '
   $native[0].native_presentation.questions[0] as $authored
   | .answers.correct.question += {model:$authored.model,profile:$authored.profile,
                                   batch:$authored.batch,on:$authored.on}
