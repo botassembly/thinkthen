@@ -14,33 +14,6 @@ fn usage(error: impl std::fmt::Display) -> String {
     RowError::usage(&error.to_string()).text
 }
 
-/// Keep a validated JSON question's exact member order while adding fields
-/// validated and serialized by the shared settings parser. The original
-/// question is parsed first, so this assembly never substitutes for its
-/// duplicate-name, grammar, or file-origin checks.
-fn combined(argument: &str, settings: &Settings) -> Result<String, String> {
-    let source: serde_json::Value = serde_json::from_str(argument).map_err(usage)?;
-    let object = source
-        .as_object()
-        .ok_or_else(|| RowError::usage("a question is one JSON object").text)?;
-    let keys = object.keys().map(String::as_str).collect::<Vec<_>>();
-    settings.conflicts(&keys, false).map_err(usage)?;
-    let fields = settings
-        .question_json(For::Decide, "settings placeholder")
-        .map_err(usage)?;
-    let tail = fields
-        .strip_prefix("{\"decide\":\"settings placeholder\"")
-        .and_then(|rest| rest.strip_suffix('}'))
-        .ok_or_else(|| "thinkthen defect: the settings writer changed its shape".to_owned())?;
-    let end = argument
-        .rfind('}')
-        .ok_or_else(|| "thinkthen defect: a checked question lost its object".to_owned())?;
-    let mut joined = argument[..end].trim_end().to_owned();
-    joined.push_str(tail);
-    joined.push('}');
-    Ok(joined)
-}
-
 pub(super) fn decide(
     argument: &str,
     from_file: bool,
@@ -63,7 +36,8 @@ pub(super) fn decide(
     settings.check(For::Decide).map_err(usage)?;
     let written = if from_file || argument.trim_start().starts_with('{') {
         super::question_typed(argument, from_file).map_err(|error| error.text)?;
-        combined(argument, &settings)?
+        crate::complete_native::settings::merge(argument, &settings, For::Decide)
+            .map_err(|error| RowError::from(error).text)?
     } else {
         settings
             .question_json(For::Decide, argument)
@@ -151,20 +125,30 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_decide_group(
         let deadline = due(query_deadline_ms, call.deadline_ms());
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
-            let options = engines::options_for(
-                deadline,
-                &token,
-                total,
-                call_batch.as_deref().or(session_batch.as_deref()),
-                context.as_deref(),
-            )?;
-            let rows = engine
-                .decide_many_with(&question, copied, options)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| engines::call_error(error, total).text)?;
+            let result = super::request::run(
+                &engine,
+                question.into(),
+                super::request::texts(copied),
+                super::CallScope {
+                    due: deadline,
+                    token: &token,
+                    total,
+                    batch: call_batch.as_deref().or(session_batch.as_deref()),
+                    context: context.as_deref(),
+                },
+            )?
+            .success(total)?;
+            let rows = result
+                .rows
+                .into_iter()
+                .map(|row| match row {
+                    thinkthen::RequestSessionRow::Decision(row) => Ok(row),
+                    _ => Err("thinkthen defect: decision request returned another kind".to_owned()),
+                })
+                .collect::<Result<Vec<_>, _>>()?;
             Ok(rows
                 .into_iter()
-                .map(|row| match row.value() {
+                .map(|row| match row.result().value() {
                     thinkthen::Answer::No => 0,
                     thinkthen::Answer::Yes => 1,
                     thinkthen::Answer::Unsure => 2,

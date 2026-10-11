@@ -260,12 +260,40 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
         };
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
-            let options =
-                engines::options_for(due, &token, total, batch.as_deref(), context.as_deref())?;
-            let edges = engine
-                .relate_with(&ask, entities, options)
-                .map_err(|error| engines::call_error(error, total).text)?;
-            encoded_edges(edges.into_value(), &mapped)
+            let items = entities
+                .iter()
+                .map(|entity| {
+                    thinkthen::RawRecord::json(
+                        &serde_json::json!({"name":entity.name(),"kind":entity.kind()}).to_string(),
+                    )
+                    .map(|value| thinkthen::RequestItem {
+                        original: Some(thinkthen::RequestOriginal::Json { value }),
+                        context: None,
+                        options: None,
+                        examples: None,
+                        seed_spans: None,
+                        images: Vec::new(),
+                    })
+                    .map_err(|error| engines::call_error(error, total).text)
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let result = crate::ffi::request::run(
+                &engine,
+                ask.into(),
+                thinkthen::RequestInput::Entities { items },
+                crate::ffi::CallScope {
+                    due,
+                    token: &token,
+                    total,
+                    batch: batch.as_deref(),
+                    context: context.as_deref(),
+                },
+            )?
+            .success(total)?;
+            let Some(thinkthen::RequestValue::Related(edges)) = result.aggregate else {
+                return Err("thinkthen defect: relate returned another kind".to_owned());
+            };
+            encoded_edges(edges.result().value().to_vec(), &mapped)
         })
     })
 }

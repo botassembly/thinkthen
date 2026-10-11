@@ -1,8 +1,6 @@
 //! The listed-answer codec for complete choose, score and tag questions.
 
-use thinkthen::{Engine, Judgment, Question};
-
-use crate::engines;
+use thinkthen::{Engine, Question};
 
 fn string(bytes: &mut Vec<u8>, value: &str) -> Result<(), String> {
     let len = u32::try_from(value.len())
@@ -16,26 +14,35 @@ pub(super) fn run(
     engine: &Engine,
     question: &Question,
     texts: Vec<String>,
-    options: thinkthen::CallOptions<'_>,
-    total: Option<i64>,
+    scope: super::CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
-    let rows = engine
-        .details_many_with(question, texts, options)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| engines::call_error(error, total).text)?;
+    let result = super::request::run(
+        engine,
+        question.clone().into(),
+        super::request::texts(texts),
+        scope,
+    )?
+    .success(scope.total)?;
+    let rows = result.rows;
     let mut bytes = Vec::new();
     for row in rows {
-        match row.value().value() {
-            Judgment::Choice(Some(value)) => {
+        match row {
+            thinkthen::RequestSessionRow::Choice(row) if row.result().value().is_some() => {
                 bytes.push(1);
-                string(&mut bytes, value)?;
+                string(
+                    &mut bytes,
+                    row.result()
+                        .value()
+                        .ok_or("thinkthen defect: choice missing")?,
+                )?;
             }
-            Judgment::Choice(None) => bytes.push(0),
-            Judgment::Score(value) => {
+            thinkthen::RequestSessionRow::Choice(_) => bytes.push(0),
+            thinkthen::RequestSessionRow::Score(row) => {
                 bytes.push(2);
-                bytes.extend_from_slice(&value.to_ne_bytes());
+                bytes.extend_from_slice(&row.result().value().to_ne_bytes());
             }
-            Judgment::Tags(values) => {
+            thinkthen::RequestSessionRow::Tags(row) => {
+                let values = row.result().value();
                 bytes.push(3);
                 let count = u32::try_from(values.len())
                     .map_err(|_| "thinkthen defect: too many listed values".to_owned())?;
@@ -44,7 +51,7 @@ pub(super) fn run(
                     string(&mut bytes, value)?;
                 }
             }
-            Judgment::Decision(_) => {
+            _ => {
                 return Err("thinkthen defect: a listed question returned another kind".to_owned());
             }
         }

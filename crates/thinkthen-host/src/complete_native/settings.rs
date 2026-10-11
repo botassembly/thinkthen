@@ -18,7 +18,7 @@ pub fn prepare(verb: &str, source: &str, settings: &Settings) -> Result<Prepared
     };
     Prepared::parse(verb, &merged)?.configured(verb, settings)
 }
-fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Error> {
+pub fn merge(source: &str, settings: &Settings, role: For) -> Result<String, Error> {
     if !source.trim_start().starts_with('{') {
         return settings
             .question_json(role, source)

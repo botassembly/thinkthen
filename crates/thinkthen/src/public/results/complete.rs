@@ -129,6 +129,26 @@ complete!(
     bool
 );
 
+macro_rules! scalar_projection {
+    ($($name:ident),+ $(,)?) => { $(
+        impl $name {
+            /// Write the existing scalar result/1 details without its record original.
+            /// # Errors
+            /// Returns a defect if the retained result cannot be serialized.
+            pub fn to_scalar_json(&self) -> Result<String, Error> {
+                self.canonical.legacy.scalar_json()
+                    .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
+            }
+        }
+    )+ };
+}
+scalar_projection!(
+    CompleteDecision,
+    CompleteChoice,
+    CompleteTags,
+    CompleteScore
+);
+
 impl CompleteDecision {
     /// The yes, no or unsure reading.
     #[must_use]

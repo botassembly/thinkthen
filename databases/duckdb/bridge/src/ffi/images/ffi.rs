@@ -193,21 +193,45 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_images(
         };
         let context = call.context().map(str::to_owned);
         super::run_detached(stop, move |token| {
-            let options =
-                engines::options_for(due, &token, total, batch.as_deref(), context.as_deref())?;
-            let details = if context.is_some() {
-                engine
-                    .details_input_many_with(&question, [input], options)
-                    .next()
-                    .ok_or_else(|| RowError::usage("image details returned no row").text)?
-                    .map(|row| row.into_parts().1)
-            } else {
-                engine
-                    .details_input_with(&question, &input, options)
-                    .map(|call| call.into_value())
-            }
-            .map_err(|error| engines::call_error(error, total).text)?;
-            Ok(details.to_json().into_bytes())
+            let QuestionInput::Images(image) = input else {
+                return Err("thinkthen defect: image call lost its input".to_owned());
+            };
+            let item = thinkthen::RequestItem {
+                original: image.text().map(|text| thinkthen::RequestOriginal::Text {
+                    text: text.to_owned(),
+                }),
+                images: image
+                    .images()
+                    .iter()
+                    .map(|image| thinkthen::RequestImage::Bytes {
+                        media: image.media(),
+                        bytes: image.bytes().to_vec(),
+                    })
+                    .collect(),
+                context: None,
+                options: None,
+                examples: None,
+                seed_spans: None,
+            };
+            let result = super::request::run(
+                &engine,
+                question.into(),
+                thinkthen::RequestInput::Records { items: vec![item] },
+                super::CallScope {
+                    due,
+                    token: &token,
+                    total,
+                    batch: batch.as_deref(),
+                    context: context.as_deref(),
+                },
+            )?
+            .success(total)?;
+            let row = result
+                .rows
+                .into_iter()
+                .next()
+                .ok_or_else(|| RowError::usage("image details returned no row").text)?;
+            super::request::scalar_json(row).map(String::into_bytes)
         })
     })
 }

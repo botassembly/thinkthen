@@ -36,6 +36,7 @@ mod portable_listed;
 mod portable_many;
 #[path = "ffi/portable_scalar/ffi.rs"]
 mod portable_scalar;
+pub(crate) mod request;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;
 mod settings;
@@ -502,14 +503,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let options = engines::options_for(
-                deadline_ms,
-                &token,
-                total,
-                batch.as_deref(),
-                context.as_deref(),
+            let values = listed::run(
+                &engine,
+                &set,
+                texts,
+                CallScope {
+                    due: deadline_ms,
+                    token: &token,
+                    total,
+                    batch: batch.as_deref(),
+                    context: context.as_deref(),
+                },
             )?;
-            let values = listed::run(&engine, &set, texts, options, total)?;
             Ok(values)
         })
     })
