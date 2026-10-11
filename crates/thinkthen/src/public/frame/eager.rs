@@ -4,7 +4,7 @@ use super::{PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs
 use crate::public::{
     Annotated, Call, CallOptions, DecisionQuestion, Details, Edge, Engine, Error, Judgment,
     PlanEstimate, Probabilities, Question, QuestionKind, QuestionSet, Recognize, Recognized,
-    Relate, RequestCall, RequestValue,
+    Relate, RequestCall,
 };
 use polars::prelude::{
     BooleanChunkedBuilder, ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries,
@@ -149,23 +149,26 @@ impl PolarsEngine for Engine {
                 );
                 values.push_judgment(value)
             };
-            match value {
-                RequestValue::Decisions(records) => request::project(texts, &records, |row| {
-                    push(
-                        row.map(|row| Judgment::Decision(row.value())),
-                        row.map(|row| row.probabilities()),
-                    )
-                })?,
-                RequestValue::Choices(records) => request::project(texts, &records, |row| {
-                    push(
-                        row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
-                        row.map(|row| row.probabilities()),
-                    )
-                })?,
+            let mismatch = "a probability column received another result kind";
+            match kind {
+                QuestionKind::Decide => {
+                    request::project(texts, &value.decisions(mismatch)?, |row| {
+                        push(
+                            row.map(|row| Judgment::Decision(row.value())),
+                            row.map(|row| row.probabilities()),
+                        )
+                    })?
+                }
+                QuestionKind::Choose => {
+                    request::project(texts, &value.choices(mismatch)?, |row| {
+                        push(
+                            row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
+                            row.map(|row| row.probabilities()),
+                        )
+                    })?
+                }
                 _ => {
-                    return Err(Error::defect(
-                        "a probability column received another result kind",
-                    ));
+                    return Err(Error::defect(mismatch));
                 }
             }
             DataFrame::new(
@@ -365,26 +368,25 @@ fn single(
     };
     request::execute(engine, question, texts, named, options)?.try_map(|value| {
         let mut answers = Answers::new(texts.name().as_str(), wanted, texts.len())?;
-        match value {
-            RequestValue::Choices(rows) => request::project(texts, &rows, |row| {
+        let mismatch = "an atomic column received another result kind";
+        match wanted {
+            QuestionKind::Choose => request::project(texts, &value.choices(mismatch)?, |row| {
                 answers.push(
                     row.map(|row| Annotated::Choice(row.value().map(str::to_owned)))
                         .as_ref(),
                 )
             })?,
-            RequestValue::Scores(rows) => request::project(texts, &rows, |row| {
+            QuestionKind::Score => request::project(texts, &value.scores(mismatch)?, |row| {
                 answers.push(row.map(|row| Annotated::Score(row.value())).as_ref())
             })?,
-            RequestValue::Tags(rows) => request::project(texts, &rows, |row| {
+            QuestionKind::Tag => request::project(texts, &value.tags(mismatch)?, |row| {
                 answers.push(
                     row.map(|row| Annotated::Tags(row.value().to_vec()))
                         .as_ref(),
                 )
             })?,
             _ => {
-                return Err(Error::defect(
-                    "an atomic column received another result kind",
-                ));
+                return Err(Error::defect(mismatch));
             }
         }
         Ok(answers.finish())
