@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0530
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 Every language's installed checks use one shared fake backend, one case projection and one usage-lock runner. Each language keeps only its build command and its consumer program. The case projection passes authored question text through unchanged, so that bug cannot return in one language.
