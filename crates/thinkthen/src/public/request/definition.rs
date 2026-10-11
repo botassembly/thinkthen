@@ -101,6 +101,16 @@ impl RequestDefinition {
             .map_err(Error::refused)?;
         Self::parse(&value, text)
     }
+    /// Decode authored definition bytes with canonical request diagnostics.
+    /// Retains authored ordering; file selectors use `from_authored_json` instead.
+    /// # Errors
+    /// Returns usage for an unsupported feature or an invalid canonical request.
+    pub fn from_request_json(text: &str) -> Result<Self, Error> {
+        Self::from_authored_json(text).map_err(|error| match error.to_string().as_str() {
+            "the question declaration uses an unsupported feature" => error,
+            _ => Error::usage("invalid canonical request"),
+        })
+    }
     fn parse(value: &crate::core::Json, text: &str) -> Result<Self, Error> {
         let crate::core::Json::Object(members) = value else {
             return Err(Error::usage("a definition is an authored question object"));
@@ -325,12 +335,7 @@ pub(super) fn validate_wire_definition(text: &str) -> Result<(), Error> {
         .is_some_and(|raw| raw.get() == "\"definition\"")
         && let Some(value) = question.get("value")
     {
-        RequestDefinition::from_authored_json(value.get()).map_err(|error| {
-            match error.to_string().as_str() {
-                "the question declaration uses an unsupported feature" => error,
-                _ => Error::usage("invalid canonical request"),
-            }
-        })?;
+        RequestDefinition::from_request_json(value.get())?;
     }
     Ok(())
 }

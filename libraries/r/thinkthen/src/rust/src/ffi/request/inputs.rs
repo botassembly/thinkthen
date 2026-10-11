@@ -4,7 +4,8 @@ use extendr_api::prelude::*;
 use thinkthen::{Request, RequestArguments, RequestCall, RequestInput, RequestQuestion};
 fn decode<T: serde::de::DeserializeOwned>(text: &str) -> Crossed<T> {
     serde_json::from_str(text).map_err(|error| {
-        crate::usage(
+        crate::carry(&thinkthen::Error::new(
+            thinkthen::ErrorKind::Usage,
             if error
                 .to_string()
                 .starts_with("per-item context is text or an object")
@@ -13,7 +14,7 @@ fn decode<T: serde::de::DeserializeOwned>(text: &str) -> Crossed<T> {
             } else {
                 "invalid canonical request"
             },
-        )
+        ))
     })
 }
 fn flag(value: &Robj, name: &str) -> bool {
@@ -27,15 +28,18 @@ struct AuthoredSelector {
     kind: String,
     value: Box<serde_json::value::RawValue>,
 }
+fn authored(text: &str) -> Crossed<RequestQuestion> {
+    thinkthen::RequestDefinition::from_request_json(text)
+        .map(|value| RequestQuestion::Definition { value })
+        .map_err(|error| crate::carry(&error))
+}
 fn question(value: &Robj) -> Crossed<RequestQuestion> {
     let text = super::text_of(value, "question")?;
     if flag(value, "selector") {
         if let Ok(selector) = serde_json::from_str::<AuthoredSelector>(&text)
             && selector.kind == "definition"
         {
-            return thinkthen::RequestDefinition::from_authored_json(selector.value.get())
-                .map(|value| RequestQuestion::Definition { value })
-                .map_err(|e| crate::carry(&e));
+            return authored(selector.value.get());
         }
         decode(&text)
     } else if flag(value, "literal") {
@@ -43,9 +47,7 @@ fn question(value: &Robj) -> Crossed<RequestQuestion> {
             text: decode(&text)?,
         })
     } else {
-        thinkthen::RequestDefinition::from_authored_json(&text)
-            .map(|value| RequestQuestion::Definition { value })
-            .map_err(|e| crate::carry(&e))
+        authored(&text)
     }
 }
 fn original(value: &Robj) -> Crossed<thinkthen::RequestOriginal> {
