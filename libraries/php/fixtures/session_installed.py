@@ -39,7 +39,7 @@ def main():
             cwd=app, env=install_env, capture_output=True, timeout=5)
         assert installed.returncode == 0, (installed.stdout, installed.stderr)
         shutil.copyfile(Path(__file__).with_name('session_consumer.php'), work / 'consumer.php')
-        server = Backend(work / 'barrier')
+        server = Backend(work / 'barrier', key='tt-canary-291', hold_first=True)
         try:
             env = child_env(home=work / 'home', LANG='C.UTF-8', LC_ALL='C.UTF-8',
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),

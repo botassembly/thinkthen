@@ -63,5 +63,5 @@ done
 c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" fixtures/tests/json_test.cpp -o "$out/json-test"
 "$out/json-test"
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
-"$python_bin" fixtures/session_cases.py "$out/owned-shared/session_consumer"
+"$python_bin" "$repo/conformance/children/session_cases.py" "$out/owned-shared/session_consumer"
 echo 'cpp: pass'

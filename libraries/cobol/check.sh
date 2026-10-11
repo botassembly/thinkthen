@@ -45,5 +45,5 @@ THINKTHEN_SESSION_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LI
 THINKTHEN_PARITY_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LIBRARY="$library" \
   python3 "$ROOT/checks/native_parity.py"
 THINKTHEN_C_LIBRARY="$library" THINKTHEN_USAGE_COBOL_PACKAGE="$package" THINKTHEN_C_HEADER="$header" \
-  python3 "$REPO/libraries/ada/checks/usage_installed.py" --family cobol
+  python3 "$REPO/conformance/children/usage_installed.py" --family cobol
 printf '%s\n' 'COBOL generated installed session gate PASS'

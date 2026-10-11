@@ -6,10 +6,10 @@ import os
 import pathlib
 import signal
 import sys
-from backend import Backend
 from process_group import run
 from toolchains import dotnet as resolve_dotnet
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from backend import Backend
 from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent.parent
@@ -23,7 +23,7 @@ home = logs / 'home'
 (home / 'cache').mkdir(parents=True)
 for name in ('dotnet-home', 'nuget', 'dotnet-cache'):
     (root / 'target/scratch' / name).mkdir(parents=True, exist_ok=True)
-server = Backend(barrier)
+server = Backend(barrier, arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
 env = child_env(home=str(home),
                 PATH='/usr/bin:/bin',
                 XDG_CONFIG_HOME=str(home),

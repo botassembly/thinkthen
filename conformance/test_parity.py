@@ -18,7 +18,7 @@ from conformance import c_images
 
 class NativeFixtureEnvironment(unittest.TestCase):
     def test_compiler_child_owns_folders_and_preserves_explicit_settings(self):
-        sys.path.append(str(parity.ROOT / 'libraries/python/tests'))
+        sys.path.append(str(parity.ROOT / 'conformance/children'))
         sys.path.insert(0, str(parity.ROOT / 'conformance'))
         import parity as native_parity
         import native_fixture

@@ -10,7 +10,7 @@ import session_values
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 
-spec = importlib.util.spec_from_file_location('shared_session_inputs', ROOT / 'libraries/cpp/fixtures/session_cases.py')
+spec = importlib.util.spec_from_file_location('shared_session_inputs', ROOT / 'conformance/children/session_cases.py')
 inputs = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(inputs)
 package = Path(sys.argv[1])

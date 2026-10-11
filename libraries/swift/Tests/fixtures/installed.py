@@ -60,7 +60,7 @@ try:
     assert built.returncode == 0, (built.stdout + built.stderr)[-5000:]
     resolution = json.loads((work / 'consumer/Package.resolved').read_text())
     assert resolution['pins'][0]['state']['version'] == version, resolution
-    server = Backend(work / 'barrier')
+    server = Backend(work / 'barrier', key='tt-canary-294', packed_questions={'Is it?'}, hold_first=True)
     try:
         settings = json.dumps({'base_url': f'http://127.0.0.1:{server.server_port}/generic/v1', 'cache': False, 'max_retries': 0})
         result = subprocess.run(base + [location + '/consumer/.build/debug/Owned', settings, location + '/barrier'], env=env, capture_output=True, timeout=30)

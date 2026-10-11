@@ -7,26 +7,20 @@ import sqlite3
 import subprocess
 import sys
 import tempfile
-ROOT=Path(__file__).resolve().parents[3]
+ROOT=Path(__file__).resolve().parents[2]
 sys.path[:0]=[str(ROOT/'conformance/children'),str(ROOT/'conformance')]
 from children import child_env
 from cobol_limits import assert_scalar_boundary
 import parity
 import c_parity as shared
 from session_projection import project_session
+from question_files import question_selector
 CONSUMER='cpp'
 
 def descriptor(v,home):
     definition=dict(v['question'])
     if 'questions' not in definition:definition.update(v.get('metadata',{}))
-    loader=v.get('loader')
-    if loader:
-        kind={'file':'file','load':'file','named':'name','load_named':'name','reference':'reference','load_reference':'reference'}[loader]
-        question={'kind':kind,{'file':'path','name':'name','reference':'reference'}[kind]:v['reference']}
-    elif v.get('question_form')=='file':question={'kind':'file','path':'fixture-question.json'}
-    elif v.get('raw') is not None:
-        (home/'raw-question.json').write_text(v['raw']);question={'kind':'file','path':'raw-question.json'}
-    else:question={'kind':'definition','value':definition}
+    question = question_selector(v, home, definition, inline_raw=False)
     injection=(v.get('operation') or {}).get('injection')
     if v.get('paths') or injection=='recording_read_failure' or v.get('question_form')=='file':
         source={'paths':[path if v.get('owned_jsonl') else str(ROOT/path) for path in (v.get('paths') or ['target/missing-input'])],

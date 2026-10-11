@@ -1,19 +1,18 @@
 """Exercise installed Ada and COBOL persistence with real owned usage locks."""
 import argparse
-import fcntl
 import importlib.util
 import json
 import os
 from pathlib import Path
-import selectors
 import shutil
 import subprocess
 import sys
 import tempfile
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
+from usage import run_usage
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--family', choices=('ada', 'cobol'))
@@ -166,10 +165,8 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
                         '-o', str(work / 'cobol-consumer'), str(work / 'usage_status.cob'),
                         str(work / 'cobol/src/tt_session.c'), str(work / 'cobol/src/tt_requests_generated.c'),
                         '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True, timeout=30)
-    spec = importlib.util.spec_from_file_location('usage_backend', ROOT / 'libraries/csharp/tests/backend.py')
-    backend = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(backend)
-    server = backend.Backend(work)
+    from backend import Backend
+    server = Backend(work)
     expected = []
     try:
         if 'cobol' in families:
@@ -182,43 +179,24 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
         for family in families:
             for mode in ('written', 'failed', 'disabled'):
                 home = work / (family + '-' + mode)
-                usage = home / 'state/thinkthen'
-                usage.mkdir(parents=True, mode=0o700)
-                with (usage / '.lock').open('w') as lock:
-                    os.chmod(lock.name, 0o600)
-                    fcntl.flock(lock, fcntl.LOCK_EX)
-                    env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
-                                    THINKTHEN_API_KEY='tt-canary-290',
-                                    TT_USAGE_MODE=mode, TT_SESSION_QUESTION_FILE=str(question),
-                                    TT_SESSION_EVIDENCE='usage-' + family + '-' + mode, TT_SESSION_EXPECT_FAILURE='N')
-                    if mode == 'disabled':
-                        env.update(HOME='', XDG_STATE_HOME='', APPDATA='', LOCALAPPDATA='')
-                    command = [str(work / (family + '-consumer'))] + ([mode] if family == 'ada' else [])
-                    child = subprocess.Popen(command, cwd=work, env=env, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-                    try:
-                        prefix = ''
-                        if mode != 'disabled':
-                            with selectors.DefaultSelector() as ready:
-                                ready.register(child.stdout, selectors.EVENT_READ)
-                                assert ready.select(15), (family, mode, 'Pending not observed')
-                            prefix = child.stdout.readline()
-                            assert prefix.strip() == 'PENDING', (family, mode, prefix, child.poll(), child.stderr.read() if child.poll() is not None else '')
-                            if mode == 'written':
-                                fcntl.flock(lock, fcntl.LOCK_UN)
-                            child.stdin.write('continue\n')
-                            child.stdin.flush()
-                        stdout, stderr = child.communicate(timeout=15)
-                        assert child.returncode == 0, (family, mode, child.returncode, prefix + stdout, stderr)
-                        assert 'DISABLED_PASS' in stdout if mode == 'disabled' else ('ADA_USAGE_PASS' in stdout if family == 'ada' else 'SESSION_PASS' in stdout)
-                        if family == 'cobol' and mode != 'disabled':
-                            assert 'VALUE 0000000001' in stdout and 'REQUESTS 00000000000000000001' in stdout, stdout
-                        if mode != 'disabled':
-                            expected.append('usage-' + family + '-' + mode)
-                        assert server.arrivals == expected, server.arrivals
-                        print(family, mode, 'PASS')
-                    finally:
-                        if child.poll() is None:
-                            child.kill(); child.communicate()
+                env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
+                                THINKTHEN_API_KEY='tt-canary-290',
+                                TT_USAGE_MODE=mode, TT_SESSION_QUESTION_FILE=str(question),
+                                TT_SESSION_EVIDENCE='usage-' + family + '-' + mode, TT_SESSION_EXPECT_FAILURE='N')
+                if mode == 'disabled':
+                    env.update(HOME='', XDG_STATE_HOME='', APPDATA='', LOCALAPPDATA='')
+                command = [str(work / (family + '-consumer'))] + ([mode] if family == 'ada' else [])
+                result = run_usage(command, state=home / 'state/thinkthen', mode=mode,
+                                   env=env, cwd=work, pending='stdout')
+                stdout, stderr = result.stdout, result.stderr
+                assert result.returncode == 0, (family, mode, result.returncode, stdout, stderr)
+                assert 'DISABLED_PASS' in stdout if mode == 'disabled' else ('ADA_USAGE_PASS' in stdout if family == 'ada' else 'SESSION_PASS' in stdout)
+                if family == 'cobol' and mode != 'disabled':
+                    assert 'VALUE 0000000001' in stdout and 'REQUESTS 00000000000000000001' in stdout, stdout
+                if mode != 'disabled':
+                    expected.append('usage-' + family + '-' + mode)
+                assert server.arrivals == expected, server.arrivals
+                print(family, mode, 'PASS')
         assert server.attempts == server.connections == len(expected) == 2 * len(families)
         print('Installed persistence, retained answers/facts/advice and', len(expected), 'exact requests PASS')
     finally:

@@ -12,7 +12,7 @@ import tarfile
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
 sys.path.insert(0, str(REPO / "conformance/children"))
-sys.path.insert(0, str(REPO / "libraries/cpp/fixtures"))
+sys.path.insert(0, str(REPO / "conformance/children"))
 from children import child_env
 from backend import Backend
 from session_cases import native_cases
@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-foundation-results-") as temp
                     "-I" + str(source), str(source / "TTResult.m"), str(source / "TTResults.g.m"),
                     str(ROOT / "checks/FoundationResultsConsumer.m"), "-framework", "Foundation",
                     "-o", str(work / "results")], env=child_env(home=work), check=True, capture_output=True, timeout=30)
-    subprocess.run([str(work / "results"), str(REPO / "libraries/python/tests/fixtures/complete.json")],
+    subprocess.run([str(work / "results"), str(REPO / "conformance/fixtures/complete.json")],
                    env=child_env(home=work), check=True, timeout=3)
 with contextlib.ExitStack() as installed:
     package = Path(os.environ.get("THINKTHEN_APPLE_PACKAGE", ROOT))
@@ -64,7 +64,7 @@ with contextlib.ExitStack() as installed:
                        check=True, capture_output=True, timeout=60)
         barrier = work / "barrier"
         barrier.mkdir()
-        server = Backend(barrier)
+        server = Backend(barrier, key='tt-canary-295', packed_questions={'Is it?'}, canonical_packed=True, hold_first=True)
         try:
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
                        THINKTHEN_API_KEY="tt-canary-295", THINKTHEN_CACHE=str(work / "cache"))

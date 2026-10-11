@@ -2,6 +2,7 @@
 import base64
 import json
 from pathlib import Path
+from question_files import question_selector
 
 VERBS=('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')
 ERRORS={'usage':1,'backend':2,'deadline':3,'local':4,'cancelled':5,'defect':6}
@@ -9,13 +10,15 @@ ERRORS={'usage':1,'backend':2,'deadline':3,'local':4,'cancelled':5,'defect':6}
 def request(value, root, home, settings):
     verb=value['verb'];question=value.get('question',{})
     role='set' if 'questions' in question or verb=='annotate' else 'rank' if verb=='rank' else 'find' if verb=='find' else 'recognize' if verb=='recognize' else 'relate' if verb=='relate' else 'dynamic' if verb=='choose' and 'options' not in question else 'atomic'
-    q={'role':role,'raw':value['raw']} if value.get('raw') else {'role':role,'body':question}
-    if verb=='find' and question.get('none'):
-        q['body']={k:v for k,v in question.items() if k!='none'};q['none']=True
-    if value.get('question_form')=='file':q={'role':role,'path':str(home/'fixture-question.json')}
-    if value.get('loader'):
-        method={'load_named':'name','named':'name','load_reference':'reference','reference':'reference','load':'path','file':'path'}[value['loader']]
-        q={'role':role,method:value['reference']}
+    definition = {k: v for k, v in question.items() if k != 'none'} if verb == 'find' and question.get('none') else question
+    selector = question_selector(value, home, definition, inline_raw=True)
+    q = {'role': role}
+    if selector['kind'] == 'definition':
+        q.update({'raw': selector['raw']} if 'raw' in selector else {'body': selector['value']})
+    else:
+        key = {'file': 'path', 'name': 'name', 'reference': 'reference'}[selector['kind']]
+        q[key] = selector[key]
+    if verb == 'find' and question.get('none'): q['none'] = True
     operation=value.get('operation') or {}
     if value.get('paths') or operation.get('injection')=='recording_read_failure':
         paths=[str(home/'missing-input')] if operation.get('injection')=='recording_read_failure' else [str(home/p) if value.get('owned_jsonl') else str(root/p) for p in value['paths']]
@@ -366,13 +369,3 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
             print(row['id']+': '+repr(e)[:2200],file=sys.stderr,flush=True)
     return len(failures)
 
-if __name__=='__main__':
-    import os,sys
-    root=Path(__file__).resolve().parents[3]
-    library=os.environ.get('THINKTHEN_FRAME_LIBRARY')
-    if library is None:
-        failures=run('python',[sys.executable,str(root/'libraries/python/tests/native_case.py')],root,{'PYTHONPATH':str(root/'libraries/python')})
-    else:
-        consumer={'pandas':'pandas','polars':'python-polars'}[library]
-        failures=run(consumer,[sys.executable,str(root/'libraries/python/tests/native_frame_case.py')],root,{'PYTHONPATH':str(root/'libraries/python'),'THINKTHEN_FRAME_LIBRARY':library})
-    sys.exit(bool(failures))

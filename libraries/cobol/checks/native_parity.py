@@ -10,7 +10,7 @@ from session_records import ROOT, module
 
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
-shared = module('shared_session_cases', ROOT / 'libraries/cpp/fixtures/session_cases.py')
+shared = module('shared_session_cases', ROOT / 'conformance/children/session_cases.py')
 PACKAGE = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / 'libraries/cobol')).resolve(strict=True)
 HEADER = Path(os.environ.get('THINKTHEN_C_HEADER', ROOT / 'libraries/c/include/thinkthen.h')).resolve(strict=True)
 LIBRARY = Path(os.environ.get('THINKTHEN_C_LIBRARY', ROOT / 'libraries/c/target/debug/libthinkthen_c.so')).resolve(strict=True)

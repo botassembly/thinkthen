@@ -68,7 +68,7 @@ python3 - "$root" "$R_LIBS" <<'PY'
 import sys
 from pathlib import Path
 root = Path(sys.argv[1])
-sys.path.insert(0,str(root/'libraries/python/tests'))
+sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
 PY

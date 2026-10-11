@@ -8,7 +8,7 @@ import sys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
-spec = importlib.util.spec_from_file_location('shared_session_cases', ROOT / 'libraries/cpp/fixtures/session_cases.py')
+spec = importlib.util.spec_from_file_location('shared_session_cases', ROOT / 'conformance/children/session_cases.py')
 shared = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(shared)
 parser = argparse.ArgumentParser(description=__doc__)

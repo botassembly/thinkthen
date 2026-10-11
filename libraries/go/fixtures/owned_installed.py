@@ -1,5 +1,4 @@
 """Focused named Go calls through an external consumer of the staged module."""
-import fcntl
 import os
 from pathlib import Path
 import shutil
@@ -7,9 +6,10 @@ import subprocess
 import sys
 import tempfile
 import time
-from backend import Backend, Handler
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / 'conformance/children'))
+from backend import Backend
 from children import child_env
+from usage import run_usage
 
 module = Path(sys.argv[1]).resolve()
 plan_only = len(sys.argv) > 2 and sys.argv[2] == 'plan'
@@ -28,13 +28,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     assert 'libthinkthen' not in linked, linked
     barrier = home/'barrier'
     barrier.mkdir()
-    server = Backend(barrier)
-    user_agents = []
-    class AttributedHandler(Handler):
-        def do_POST(self):
-            user_agents.append(self.headers.get('User-Agent'))
-            super().do_POST()
-    server.RequestHandlerClass = AttributedHandler
+    server = Backend(barrier, key='tt-canary-274', packed_questions={'Is it?'}, distinct_packed=True)
+    user_agents = server.user_agents
     try:
         run_env=env|{'THINKTHEN_API_KEY':'tt-canary-274','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1'}
         if plan_only:
@@ -51,11 +46,8 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
             for mode in ('usage-written', 'usage-failed'):
                 state = home / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
                 before = server.attempts
-                with (state / '.lock').open('w') as lock:
-                    (state / '.lock').chmod(0o600)
-                    if mode == 'usage-failed': fcntl.flock(lock, fcntl.LOCK_EX)
-                    result = subprocess.run([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, text=True, capture_output=True, timeout=5)
-                    assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
+                result = run_usage([str(home/'consumer-bin'), mode], env=child_env(home=str(home / mode), THINKTHEN_API_KEY='tt-canary-274', THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1'), cwd=consumer, text=True, capture_output=True, timeout=5)
+                assert result.returncode == 0 and result.stdout.strip() == 'usage-status-pass requests=1', (mode, result.stdout, result.stderr)
                 assert server.attempts == before + 1, server.attempts
                 print('GO_USAGE_INSTALLED_PASS', mode, 'requests=1')
             sys.exit(0)

@@ -11,7 +11,7 @@ fn release_only_complete_native_calls_preserve_required_inputs_results_and_facts
 import os,subprocess,sys
 from pathlib import Path
 root=Path(sys.argv[1])
-sys.path.insert(0,str(root/'libraries/python/tests'))
+sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 target=root/'target/rust-consumer'
 subprocess.run(['cargo','build','--locked','--offline','--manifest-path',str(root/'libraries/rust/consumer/Cargo.toml'),'--target-dir',str(target)],check=True)

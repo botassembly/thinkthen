@@ -74,7 +74,7 @@ cargo build --locked --offline --manifest-path "$consumer"
 python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" <<'PYFRAME'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 sys.exit(bool(run('rust-polars',[str(Path(sys.argv[2]).resolve())],root)))
 PYFRAME

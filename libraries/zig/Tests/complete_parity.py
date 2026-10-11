@@ -10,7 +10,7 @@ PACKAGE = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / 'libraries/zig'
 NATIVE = Path(os.environ.get('THINKTHEN_NATIVE_ROOT', PACKAGE / 'native/x86_64-unknown-linux-gnu')).resolve(strict=True)
 if os.environ.get('THINKTHEN_ARTIFACT') and not os.environ.get('THINKTHEN_PARITY_PACKAGE'):
     raise ValueError('installed zig parity requires its extracted package')
-sys.path[:0] = [str(ROOT / 'libraries/cpp/fixtures'), str(ROOT / 'conformance/children')]
+sys.path[:0] = [str(ROOT / 'conformance/children')]
 from children import child_env
 import session_cases
 from view_contract import render

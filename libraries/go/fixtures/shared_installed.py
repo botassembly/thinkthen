@@ -18,7 +18,7 @@ spec = importlib.util.spec_from_file_location('type_checks', ROOT / 'specificati
 checks = importlib.util.module_from_spec(spec); spec.loader.exec_module(checks)
 module = Path(sys.argv[1]).resolve()
 if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
-    sys.path.insert(0, str(ROOT / 'libraries/cpp/fixtures'))
+    sys.path.insert(0, str(ROOT / 'conformance/children'))
     from session_cases import native_cases, descriptor
     with tempfile.TemporaryDirectory(prefix='thinkthen-go-full-') as folder:
         home = Path(folder)

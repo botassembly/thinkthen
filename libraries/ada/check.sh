@@ -49,7 +49,7 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   exit
 fi
 python3 "$ROOT/checks/native_session.py"
-python3 "$ROOT/checks/usage_installed.py" --family ada
+python3 "$ROOT/../../conformance/children/usage_installed.py" --family ada
 # Full generated shared cases belong to the release profile.
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
   python3 "$ROOT/checks/native_session.py" --full

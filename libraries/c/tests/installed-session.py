@@ -8,7 +8,6 @@ import tempfile
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / 'conformance/children'))
-sys.path.insert(0, str(REPO / 'libraries/zig/Tests'))
 from children import child_env
 from backend import Backend
 
@@ -23,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
     home.mkdir()
     barrier = root / 'barrier'
     barrier.mkdir()
-    backend = Backend(barrier)
+    backend = Backend(barrier, key='tt-canary-273', arrivals='wire', retry_ms=True, concurrent=True)
     try:
         env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.server_port}/generic/v1',
                         THINKTHEN_API_KEY='tt-canary-273', THINKTHEN_CACHE=str(root / 'cache'))
