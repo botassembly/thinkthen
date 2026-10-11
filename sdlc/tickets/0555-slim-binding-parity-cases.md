@@ -37,3 +37,4 @@ The cli, rust and c consumers run every case their contract requires today. Each
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Reviewed runner regression 391d562b proves a missing Python binding case fails while complete rows pass, and the reduced campaign comparison and exact-revision full test and lint await a passing 0549 baseline.
