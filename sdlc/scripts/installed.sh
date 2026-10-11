@@ -51,13 +51,23 @@ backend_count() {
 }
 
 # native_install REPO OUT: build the C door and lay it out in OUT as its release archive does,
-# with include/thinkthen.h, lib/libthinkthen.so and its soname link, and lib/pkgconfig/thinkthen.pc.
+# with its header, shared and localized static libraries, soname link, and pkg-config file.
 # The replay smokes of the C door hosts load it from there (ticket 0335).
 native_install() {
-	cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
-	# Query from the same directory as the build, so Cargo resolves relative environment
-	# paths and caller configuration itself, even when REPO is elsewhere.
-	native_metadata=$(cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
+	# Other checks may rebuild the shared C target with different flags while we copy it.
+	scratch_dir native_build
+	native_separator=$(printf '\037')
+	native_flags=${CARGO_ENCODED_RUSTFLAGS:-}
+	if [ -z "$native_flags" ]; then
+		for native_flag in ${RUSTFLAGS:-}; do native_flags="$native_flags${native_flags:+$native_separator}$native_flag"; done
+	fi
+	for native_flag in --remap-path-prefix=/home=/build/home --remap-path-prefix=/Users=/build/users "--remap-path-prefix=$1=/build/thinkthen"; do
+		native_flags="$native_flags${native_flags:+$native_separator}$native_flag"
+	done
+	CARGO_TARGET_DIR="$native_build" CARGO_ENCODED_RUSTFLAGS="$native_flags" \
+		CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=/home=/build/home -ffile-prefix-map=/Users=/build/users" \
+		cargo build --quiet --locked --offline --manifest-path "$1/libraries/c/Cargo.toml" --lib || return
+	native_metadata=$(CARGO_TARGET_DIR="$native_build" cargo metadata --quiet --locked --offline --no-deps --format-version 1 \
 		--manifest-path "$1/libraries/c/Cargo.toml") || return
 	native_target=$(printf '%s\n' "$native_metadata" | jq -er '.target_directory') || return
 	native_artifact=$native_target/debug/libthinkthen_c.so
@@ -68,6 +78,7 @@ native_install() {
 	mkdir -p "$2/include" "$2/lib/pkgconfig"
 	cp -- "$1/libraries/c/include/thinkthen.h" "$2/include/thinkthen.h"
 	cp -- "$native_artifact" "$2/lib/libthinkthen.so"
+	sh "$1/libraries/c/localize.sh" "$native_target/debug/libthinkthen_c.a" "$2/lib/libthinkthen.a" || return
 	ln -sfn libthinkthen.so "$2/lib/libthinkthen.so.0"
 	printf '%s\n' "prefix=$2" 'libdir=${prefix}/lib' 'includedir=${prefix}/include' 'Name: thinkthen' \
 		'Description: ThinkThen C door' 'Version: 0.0.1' 'Libs: -L${libdir} -lthinkthen' 'Cflags: -I${includedir}' \
