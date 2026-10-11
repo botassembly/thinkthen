@@ -41,6 +41,7 @@ code = start(ct.byref(owner),ct.byref(address),ct.byref(session))
 packets, owners = [], []
 try:
     if code:
+        assert not session, 'refused request created a session'
         print(json.dumps({'admission':{'code':code,'message':native.thinkthen_session_error_message().decode()}}))
     else:
         # Request records and caller buffers no longer own the admitted session.
