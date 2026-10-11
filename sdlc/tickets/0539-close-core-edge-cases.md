@@ -8,6 +8,8 @@ Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 264bddae19f7a273357c9c57747080d77755f095, accept
 
+Reviews: revision aca81be5007fb921018e432cdec0909639be8447, accept
+
 ## Outcome
 
 No public Rust call drops a usage write failure. The CLI reader behaves the same as the library reader, or a test states each difference. Plain rank never returns an internal defect for a released unit, and a failed reader lock reports an error.
