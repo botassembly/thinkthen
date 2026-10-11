@@ -81,3 +81,4 @@ A binding waits for the next session result, or for room to push, through one na
 - 2026-10-11 next: Accepted native-wait code is being combined with the reviewed engine owner; PM cleared the abandoned CPU load and focused compilation and cancellation checks are authorized again.
 - 2026-10-11 next: Combined native wait and engine code passed 34 session tests, three C checks, both Rust configurations and ABI checks; owned installed Python, Ruby, R and Node proofs are running before whole-ticket gates.
 - 2026-10-11 next: Installed Ruby and R including interrupts passed; Python exposed an extra backend send and Node failed package setup, so both retained failures require repair before acceptance.
+- 2026-10-11 next: Fresh review accepted the eager scheduling repair for duplicate rank requests; exact-source compilation and unchanged installed Python checks are running before the remaining language cancellation checks.
