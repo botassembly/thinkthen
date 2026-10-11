@@ -23,6 +23,18 @@ No public Rust call drops a usage write failure. The CLI reader behaves the same
 - Proof: CLI and Rust API tests for each kept branch, for the usage failure and for plain rank. Routine checks pass.
 - Defers: nothing.
 
+### Retired public declarations
+
+```text
+fn Engine::finish_usage(&self)
+```
+
+### Added public declarations
+
+```text
+fn Engine::finish_usage(&self) -> UsagePersistence
+```
+
 ## Progress
 
 - 2026-10-11 started
