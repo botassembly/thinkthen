@@ -100,8 +100,8 @@ impl TryGroup {
             }
             return Ok(());
         };
-        // 0.2 retains packed recovery; the after-0.2 recovering-session idea owns
-        // a native packet for row failures without changing batch send counts.
+        // 0.2 retains packed recovery. The after-0.2 idea "the shared request
+        // session recovers failures row by row" owns its replacement.
         let result = self
             .engine
             .details_many_recoverable_with(&self.question, valid, options);

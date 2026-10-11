@@ -29,7 +29,7 @@ def copy_packer(destination: Path) -> None:
              'crates/thinkthen/Cargo.toml', 'LICENSE', 'conformance/children/children.py']
     names += [str(p.relative_to(REPO)) for folder in ('databases/duckdb/tools', 'databases/duckdb/cpp')
               for p in (REPO / folder).iterdir() if p.is_file() and p.suffix in ('.py', '.sh', '.env', '.txt')]
-    for folder in ('crates/thinkthen', 'conformance/backend', 'databases/duckdb/bridge'):
+    for folder in ('crates/thinkthen', 'crates/thinkthen-host', 'conformance/backend', 'databases/duckdb/bridge'):
         for path in (REPO / folder).rglob('*'):
             if path.is_file() and 'target' not in path.relative_to(REPO / folder).parts:
                 names.append(str(path.relative_to(REPO)))
