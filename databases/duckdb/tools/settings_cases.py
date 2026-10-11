@@ -66,9 +66,9 @@ def shared_settings_corpus():
                 else:
                     expect(rows(got), [[step["value"]]], label)
                 if label == "max-requests-refuses-past-the-limit":
-                    # DuckDB may stop its concurrent row batch after the first
-                    # transport refusal. Two allowed records must still answer.
-                    expect(0 < backend.count() <= step["count"], True, f"{label} send ceiling")
+                    # The entire grouped input is admitted before any send.
+                    # Two allowed records must still answer in one packed call.
+                    expect(backend.count(), 0, f"{label} eager refusal sends nothing")
                     allowed = ", ".join("('" + value.replace("'", "''") + "')"
                                         for value in step["records"][:2])
                     with Backend() as allowance:
