@@ -17,6 +17,8 @@ Depends on: 0541
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
+Reviews: revision 0c38e41bca3e061f0fef438b89123b6048e7a62c, accept
+
 ## Outcome
 
 A fresh reviewer accepts every code change that landed after the 0508 review, and every finding is fixed or filed. On the final commit, `sdlc/scripts/lint` and `sdlc/scripts/test` each pass in one uninterrupted run.
