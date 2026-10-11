@@ -146,7 +146,7 @@ module ThinkThen
         @observations = []
         @closed = false
         @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
-        if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source)
+        if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source) && !input.is_a?(Item)
           @producer = input.to_enum
           @owner = input
         end

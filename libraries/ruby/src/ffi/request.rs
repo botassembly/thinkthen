@@ -87,6 +87,8 @@ fn decode<T: serde::de::DeserializeOwned>(ruby: &Ruby, value: Value) -> Result<T
             Fault::usage(
                 if message.starts_with("the question declaration uses an unsupported feature") {
                     "the question declaration uses an unsupported feature"
+                } else if message.starts_with("per-item context is text or an object") {
+                    "the per-item context does not match context_schema"
                 } else {
                     "invalid canonical request"
                 },
@@ -110,7 +112,11 @@ fn build(
         decode(ruby, question.funcall("selector", ())?)?
     } else if question.is_kind_of(ruby.class_string()) {
         RequestQuestion::Text {
-            text: String::try_convert(question)?,
+            text: checked(
+                ruby,
+                String::try_convert(question)
+                    .map_err(|_| Fault::usage("input cannot be converted to native JSON")),
+            )?,
         }
     } else {
         RequestQuestion::Definition {

@@ -163,7 +163,7 @@ class TestOwnedSession < Minitest::Test
     TestBackend.with(<<~RUBY) do |backend, child|
       retained = T::Client.open(cache: false) do |client|
         missing = client.decide({decide: "Question?", threshold: 0.95}, "text")
-        authored_null = client.decide({decide: "Question?", true: nil}, "text")
+        authored_null = client.decide({decide: "Question?", true: nil}, T::Client.item("text"))
         unresolved = client.decide({decide: "Question?", threshold: "0.2:0.95"}, "text")
         path = File.join(ENV.fetch("HOME"), "input.txt")
         File.write(path, "first\\n\\nthird\\n")
@@ -220,10 +220,13 @@ class TestOwnedSession < Minitest::Test
     TestBackend.with(<<~RUBY) do |backend, child|
       client = T::Client.new(cache: false)
       errors = []
-      begin
-        client.decide("Question?", "text", field: ["bad pointer"])
-      rescue T::Error => error
-        errors << [error.kind, error.message, error.facts]
+      [["Question?", "text", {field: ["bad pointer"]}], ["\\xFF".force_encoding("UTF-8"), "text", {}], ["Question?", T::Client.item("text", context: 1), {}]].each_with_index do |(question, input, options), index|
+        begin
+          client.decide(question, input, **options)
+          raise "invalid input accepted: " + index.to_s
+        rescue T::UsageError => error
+          errors << [error.kind, error.message, error.facts]
+        end
       end
       token = T::Cancel.new
       token.cancel
@@ -235,7 +238,7 @@ class TestOwnedSession < Minitest::Test
       client.close
       say errors
     RUBY
-      assert_equal [["usage", "invalid field pointer", nil], ["cancelled", nil]], child.hear
+      assert_equal [["usage", "invalid field pointer", nil], ["usage", "input cannot be converted to native JSON", nil], ["usage", "the per-item context does not match context_schema", nil], ["cancelled", nil]], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 0, backend.count
