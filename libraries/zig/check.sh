@@ -49,5 +49,5 @@ if [ "${THINKTHEN_TEST_PROFILE:-routine}" = smoke ]; then
     "$smoke/consumer"
     exit
 fi
-python3 "$here/Tests/guard.py" "$THINKTHEN_ARTIFACT"
+python3 "$root/conformance/children/native_guard.py" "$THINKTHEN_ARTIFACT"
 python3 "$here/Tests/installed.py"

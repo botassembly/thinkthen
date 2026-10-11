@@ -368,4 +368,3 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
             failures.append(row['id']);print('parity: '+json.dumps({'consumer':consumer,'case':row['id'],'checks':row.get('checks',['named','runtime']),'status':'fail'}),flush=True)
             print(row['id']+': '+repr(e)[:2200],file=sys.stderr,flush=True)
     return len(failures)
-
