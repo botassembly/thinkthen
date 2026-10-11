@@ -167,3 +167,4 @@ Do not rerun consumers that already pass. A fixture bug that blocks several lang
 - 2026-10-10 landed b2f134faa; next: Swift cases are reconciled and Foundation feed fixtures are reviewed; finish PHP, Dart, Flutter, Rust Polars, Zig, Ada and COBOL before closing the installed table.
 - 2026-10-10 landed bc17ec211; next: Ian requested wrap-up: active repairs are reviewed and pushed; complete installed runs remain for Dart, Flutter, Ada and COBOL, with Objective-C awaiting Apple execution.
 - 2026-10-11 next: Run the remaining five installed consumers under the 2026-10-11 amendment.
+- 2026-10-11 next: Finish Flutter and COBOL full runs and repair Ada long-string fixture compilation before its complete installed run.
