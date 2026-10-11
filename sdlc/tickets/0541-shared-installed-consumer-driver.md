@@ -1,6 +1,6 @@
 # 0541: Share one installed-consumer driver across languages
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Depends on: 0530
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 0713d988401457fa9b9425e7d9d3baee89042a66, accept
+
+Landed: afc9c44
 
 ## Outcome
 
