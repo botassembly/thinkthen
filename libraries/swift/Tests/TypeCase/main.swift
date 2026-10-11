@@ -12,28 +12,25 @@ import ThinkThen
         let preserved: [String: JSONValue]
         if case .orderedObject(let members) = originalJSON.kind { preserved = Dictionary(members.map { ($0.key, $0.value) }, uniquingKeysWith: { _, last in last }) }
         else { throw JSONConversionError("Fixture is not an object") }
-                let question: InputRequestQuestion
+        let question: InputRequestQuestion
         switch fixture["loader"] as? String {
         case "named", "load_named": question = .name(fixture["reference"] as! String)
         case "reference", "load_reference": question = .reference(fixture["reference"] as! String)
         case "file", "load": question = .file(fixture["reference"] as! String)
         default:
             if fixture["question_form"] as? String == "file" { question = .file("fixture-question.json") }
-            else if let raw = fixture["raw"] as? String {
-                try Data(raw.utf8).write(to: URL(fileURLWithPath: "raw-question.json"))
-                question = .file("raw-question.json")
-            } else {
-                var authored = preserved["question"]!
+            else {
+                var authored = try (fixture["raw"] as? String).map { try JSONValue.parse(Data($0.utf8)) } ?? preserved["question"]!
                 if case .orderedObject(let members) = authored.kind {
-                    var members = verb == "find" ? members.filter { $0.key != "none" } : members
-                    if let metadata = preserved["metadata"], case .orderedObject(let extra) = metadata.kind { members += extra }
-                    authored = .orderedObject(members)
+                    authored = .orderedObject(verb == "find" ? members.filter { $0.key != "none" } : members)
                 }
                 let role: QuestionGrammar = verb == "recognize" ? .recognize : verb == "relate" ? .relate : verb == "annotate" ? .set : verb == "rank" ? ((fixture["question"] as! [String: Any])["questions"] == nil ? .rank : .rankSet) : verb == "find" ? .find : .atomic
                 question = try client.parseQuestion(role, authored: authored)
             }
         }
         let injection = (fixture["operation"] as? [String: Any])?["injection"] as? String
+        let contexts = fixture["contexts"] as? [Any]
+        let projectContext = contexts?.contains { !($0 is String || $0 is [String: Any] || $0 is NSNull) } ?? false
         var input: InputRequestInput
         if let paths = fixture["paths"] as? [String], !paths.isEmpty {
             let unit = fixture["source_unit"] as? Int ?? 3
@@ -53,7 +50,9 @@ import ThinkThen
                     let original = fixture["caption_files"] as? Bool == true ? try String(contentsOfFile: "caption-\(index).txt", encoding: .utf8) : original
                     item["original"] = fixture["text"] as? Bool == true && original is String ? ["kind": "text", "text": original] : ["kind": "json", "value": original]
                 }
-                if let contexts = fixture["contexts"] as? [Any] { item["context"] = contexts[index] }
+                if projectContext, let contexts {
+                    item["original"] = ["kind": "json", "value": ["item": original, "context": contexts[index]]]
+                } else if let contexts { item["context"] = contexts[index] }
                 else if fixture["context_present"] as? Bool == true { item["context"] = fixture["context"] ?? NSNull() }
                 if let orders = fixture["candidate_orders"] as? [[String]] { item["options"] = orders[index].map { ["name": $0] } }
                 if !images.isEmpty { item["images"] = images }
@@ -62,6 +61,10 @@ import ThinkThen
             input = try InputRequestInput.read(value(["kind": verb == "find" ? "units" : verb == "relate" ? "entities" : "records", "items": records]))
         }
         var options: [String: Any] = ["attempts": true]
+        if projectContext {
+            options["field"] = ["/item"]
+            options["context_field"] = "/context"
+        }
         if let context = fixture["shared_context"] as? String { options["context"] = context }
         if verb == "find" { options["none"] = (fixture["question"] as? [String: Any])?["none"] as? Bool ?? false }
         if injection == "expired_deadline" { options["deadline_ms"] = 0 }
@@ -72,7 +75,16 @@ import ThinkThen
             options["context_field"] = "/context"
         }
         let typedOptions = Presence.value(try InputRequestOptions.read(value(options)))
+        let incremental = fixture["incremental"] as? Bool == true
         let worker = Task {
+            if incremental, case .records(let records) = input {
+                let feed = AsyncThrowingStream<InputRequestSessionDescriptor, any Error> { continuation in
+                    for item in records.items { continuation.yield(InputRequestSessionDescriptor(item: item)) }
+                    continuation.finish()
+                }
+                let call = InputRequestCall.decide(InputRequestCallDecide(input: .feed(InputRequestInputFeed(name: "records")), options: typedOptions, question: question))
+                return try await client.execute(InputRequest(call: call, schema: .thinkthenRequest_1), feed: feed)
+            }
             switch verb {
             case "decide": return try await client.decide(question, input: input, options: typedOptions)
             case "choose": return try await client.choose(question, input: input, options: typedOptions)
