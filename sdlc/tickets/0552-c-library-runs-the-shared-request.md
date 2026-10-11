@@ -22,12 +22,12 @@ Every C export that asks a question, frozen 0.1 exports included, admits and exe
   - `texts` (`ffi.rs:110`) and `records` (`ffi/typed_facts/ffi.rs:34`) duplicate each other.
   - In shipped code, "door" or "legacy" appears on 103 non-test lines of `crates/thinkthen/src`. Examples are the public `DoorReply` (`public/results/call.rs:235`), `public/results/legacy.rs` and the `Door` type.
 - Keeps: the frozen 0.1 C ABI symbols and their behavior, including `{"usage":true}` (`call.rs:93`, pinned by `tests/door/golden.rs:47`).
-- Changes:
+- Changes: the C library's routes and names.
   - Execute admitted requests through `execute_request` and convert the outcome to the reply.
   - Route the typed exports the same way.
   - Delete `records` in favor of `texts`.
   - Rename the remaining door and legacy types and modules after what they do, and remove "door" from the doc text that generates `thinkthen.h`.
-- Proof:
+- Proof: these checks.
   - The C installed checks and the 0.1 compatibility vectors pass.
   - A search finds no engine per-function call in `libraries/c/src`.
   - `policy.py` fails on "door" in shipped source, including the doc text in the generated `thinkthen.h`.

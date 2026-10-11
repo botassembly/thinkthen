@@ -16,7 +16,7 @@ A caller in every language sees its own producer's exception and Rust's admissio
 
 - Starts from: the [2026-10-11 adversarial review](../records/2026-10-11-0-2-adversarial-review.md), bindings section, defects B1 to B8.
 - Keeps: the session ABI, every installed case and its expected result.
-- Changes:
+- Changes: one fix for each binding defect below.
   - **Producer exceptions.** Add a reader-failure kind in Rust for a producer that raised. Python, Ruby, JavaScript, PHP and R raise the original exception as the cause of the terminal error. Today four report a generic invalid-input error and R reports an io failure (`python/thinkthen/_calls.py:220`, `ruby/lib/thinkthen/session.rb:216`, `typescript/native.js:85`, `php/src/session/operation.php:107`, `r/thinkthen/R/requests.R:117`).
   - **Admission messages.** Give request decoding a typed cause in Rust, and delete the message-prefix matching:
     - `crates/thinkthen/src/public/request.rs:107`
@@ -33,7 +33,7 @@ A caller in every language sees its own producer's exception and Rust's admissio
     - The methods `usage_persistence` and `finish_usage_status` take camelCase names. The PHP README maps the old names to the new ones.
   - **Dead code.** Delete `typescript/_requests.js` and `_requests.d.ts`. Nothing loads them.
   - **Usage counters.** A poisoned lock marks the usage as failed, and the held panic survives (`engine/usage.rs:219`, `public/options/observer.rs:57`, `public/options.rs:569`). Keep `Engine::finish_usage_status` and delete `finish_usage` (`public/engine.rs:236`).
-- Proof:
+- Proof: installed checks, as follows.
   - An installed regression in each affected language covers producer exceptions and admission messages.
   - Installed regressions cover the C++ closed push, the C# retry facts, the PHP operation lifetime and the PHP find and relate inputs.
   - Rust tests cover the usage counters.

@@ -28,12 +28,12 @@ Python and R only convert host values and decode results. Rust decides the quest
   - R grows feed results quadratically with `c(results, value)` (`R/feeds.R:29`).
   - R splits errors on `\x1f` and signals itself (`thinkthen.R:76-113`). JavaScript parses JSON out of error messages (`native.js:25`).
 - Keeps: every public Python and R call and its documented result.
-- Changes:
+- Changes: Python and R request logic moves into Rust.
   - Move question building, label checks and the column view behind the Rust request and column APIs.
   - Raise typed errors from the native glue, as Ruby does in `ruby/src/ffi.rs:54-97`.
   - Drop Python and R from the AGENTS.md line that keeps the handwritten complete readers.
   - Build feed results without quadratic growth.
-- Proof:
+- Proof: these checks.
   - The Python and R routine installed checks pass.
   - A search finds no function-name list in Python or R host code.
   - Each language's host source line count falls.

@@ -28,7 +28,7 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
     - The logs name what was missing: the Ruby 3.4.11 prefix, jsonlite 2.0.0, the SQLite amalgamation, the DuckDB v1.5.5 toolchain and the PostgreSQL server package. The python, typescript and dart logs are empty.
   - The other consumers took 87 minutes in series.
 - Keeps: every required cell, the fake backend, the heavy lock and the per-consumer logs.
-- Changes:
+- Changes: the campaign runner, in these steps.
   - Default those variables to this machine's real toolchain and cache locations, so a bare `test-full-cases --run` finds them.
   - Run consumers in parallel, four at a time. Rust and rust-polars share one lane. The campaign takes the heavy lock once, and children inherit `THINKTHEN_HEAVY_LOCK_HELD`, so consumers do not queue on the lock.
   - Build the Ada package and one Ada consumer program once per campaign, and run every case from that program. Today each case compiles and statically links a new program (`libraries/ada/checks/full_case.py:53-59`), which costs about 5 of every 7 seconds.

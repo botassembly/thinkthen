@@ -27,7 +27,7 @@ One Rust constructor turns a function name, a question, an input and options int
   - DuckDB picks the call from the kind of question (`databases/duckdb/bridge/src/ffi/request.rs:60-77`).
   - JVM (`Engine.java:134`) and C++ (`client.hpp:84`) write the envelope JSON themselves. The JVM also keeps a hand-written `Json.java`.
 - Keeps: the wire request format, every installed case, and every public call name in C# and the JVM.
-- Changes:
+- Changes: one Rust constructor replaces the copies.
   - Add `RequestFunction: FromStr` and one constructor that picks the input kind from the function.
   - Add a second constructor that takes a question kind, and route DuckDB through it.
   - Delete each copy of the mapping.

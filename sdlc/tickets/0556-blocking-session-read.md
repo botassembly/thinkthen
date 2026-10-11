@@ -51,11 +51,11 @@ A binding waits for the next session result, or for room to push, through one na
     | COBOL | `tt_session.c:12` |
 
   - The Rust session queue wakes every 10 ms (`public/request/session_queue.rs:110`). 0554 removes this timer, and 0556 builds on it.
-- Keeps:
+- Keeps: the existing session contract.
   - `try_read`, `try_push` and the frozen 0.1 C ABI.
   - Cancellation from a host interrupt in every binding.
   - Every installed case.
-- Changes:
+- Changes: a Rust wait replaces the binding poll loops.
   - Add a timed wait to the Rust session type, and export it as `thinkthen_session_wait` in the C API. Rust-native bindings call the Rust method.
   - The wait returns when one of these happens:
     - a result is ready;
@@ -74,7 +74,7 @@ A binding waits for the next session result, or for room to push, through one na
     - Go runs the wait inside the locked-thread goroutine and selects on the context.
     - PHP, C++, COBOL, Zig and Ada block directly with a short timeout.
   - Delete every binding's sleep or timer loop. Update the generated header and each binding's declarations.
-- Proof:
+- Proof: these checks.
   - A Rust test shows the wait returns on a result, on cancel and on timeout.
   - Each language's routine installed checks pass, including its cancellation case.
   - A search of each binding's session code finds none of these: sleep, `usleep`, `nanosleep`, `Task.Delay`, `Task.sleep`, `setTimeout`, `Future.delayed`, `time.NewTicker`, `scheduleWithFixedDelay` or a dispatch timer.

@@ -21,15 +21,15 @@ The cli, rust and c consumers run every case their contract requires today. Each
 - Starts from: [Ian's 2026-10-11 approval](../decisions/2026-10-11-efficiency-approvals.md) and the test section of the [adversarial review](../records/2026-10-11-0-2-adversarial-review.md).
   - Of the 258 required cases, 96 are named-input cases and 24 are image-admission cases.
   - Most of them test refusals and byte limits that Rust admission enforces. A binding only passes these cases through.
-- Keeps:
+- Keeps: the cases each consumer must run.
   - Every case that cli, rust and c resolve today.
   - In each binding, every case that exercises its own conversion or decoding: host value types, images, files, feeds, cancellation, errors, usage and each of the ten functions.
   - The routine profile.
-- Changes:
+- Changes: parity cases gain tiers.
   - Add a `tier` field, `core` or `binding`, to each entry in `parity.required_cases` in `conformance/cases.json`. `required_cases()` in `parity.py` filters by tier and by the consumer's sample. The reference consumers run both tiers.
   - The other consumers run the binding cases plus a fixed sample of the core cases. Each limit or refusal group in the sample has at least one case for each failure kind.
   - Update `parity.py` and its checks so that a binding missing a binding case still fails.
-- Proof:
+- Proof: these checks.
   - `parity.py` tests cover the tier rule.
   - One full campaign passes, and its summary shows the per-consumer durations next to those of the first 0549 run.
 - Defers: nothing.

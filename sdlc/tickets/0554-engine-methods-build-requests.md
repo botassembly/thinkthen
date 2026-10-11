@@ -27,12 +27,12 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
   - `CallOptions` carries a reader for the command line only (`public/options.rs:118`). `pull.rs:186,303,378` branch on it, and `request/cli_atomic.rs` plus `execute_cli_request` (`execution.rs:136`) live in the library.
   - The session queue wakes every 10 ms while the producer is idle (`request/session_queue.rs:110`).
 - Keeps: the public Rust API signatures, unless a deletion is reviewed, and every Rust public case.
-- Changes:
+- Changes: the Engine methods build Requests.
   - Have the text methods call the input methods.
   - Make the per-function methods build a `Request`, and delete the duplicated checks.
   - Replace the command-line reader with a readiness hook that the command line supplies, and move command-line preparation under `cli/`.
   - Have the session queue wait for a wake signal or the deadline.
-- Proof:
+- Proof: these checks.
   - Rust public cases and CLI cases pass.
   - The product line count in `crates/` falls, and `sdlc/ratchet.json` falls with it.
 - Defers: nothing.
