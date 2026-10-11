@@ -8,7 +8,7 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 
 ## 2. Checkpoints
 
-1. The required local checkpoint is the complete installed-package campaign, its generated support table and the applicable test, lint, specification and documentation checks. Every required public consumer runs without missing or skipped cells. Reuse passing checks while their relevant code, inputs, environment and assumptions remain unchanged; rerun affected checks after a fix. Do not repeat a complete source matrix to prepare a QA handoff.
+1. The required local checkpoint is the complete installed-package campaign, its generated support table and the applicable test, lint, specification and documentation checks, including `cd site && npm run test-docs`. Name its result in the checkpoint handoff. Every required public consumer runs without missing or skipped cells. Reuse passing checks while their relevant code, inputs, environment and assumptions remain unchanged; rerun affected checks after a fix. Do not repeat a complete source matrix to prepare a QA handoff.
 2. Send release QA the reviewed commit, qualified package locations, generated table, known rulings and outstanding platform checks through the mailroom. State which source and package revisions each check covers. A current table does not qualify an untested platform, and metadata changes do not manufacture a new product test result.
 3. The existing `surfaces --publish TAG` helper can archive a separate debug-build checkpoint under `THINKTHEN_PUBLISH_ROOT`. It runs on Linux x86_64 only, keeps its newest three checkpoint folders and removes no other folder. Its debug packages do not replace the release packages tested by the required installed campaign. This archive is optional; release QA does not require another debug-build sweep or an auxiliary checkpoint tag.
 4. If a surface checkpoint is tagged, follow [worktrees.md](worktrees.md): every named check must have passed on that exact commit. Release candidate tags follow section 5 and precede hosted rehearsal.
@@ -22,7 +22,7 @@ Status: accepted 2026-10-01 on Ian's direction. Ian can overturn any step. This 
 ## 4. Rehearsals
 
 1. Stage 1 dispatches the release workflow by hand on the reviewed candidate tag: `gh workflow run release.yml --ref rc/0.2.0-rc.N -f mode=rehearse`. Dispatch `windows.yml` on the same tag. Ian delegated these qualification runs on 2026-10-07. Hosted runs happen at this candidate checkpoint, or for a Windows-only fix that cannot be checked locally. Batch Windows fixes; do not dispatch workflows after each ticket. `release/0.1` is frozen.
-2. Rehearse mode builds, smokes and collects a draft. It publishes nothing.
+2. Rehearse mode checks the current binding sample inventory on the resolved tagged commit, builds, smokes and collects a draft. The crate job builds the R source tarball with `libraries/r/tools/make-tarball.sh` through `release-pack`; it vendors the published crate shape before the draft receives the tarball. It publishes nothing.
 3. Stage 1 passes through `draft` on all five targets: Linux x86_64 and ARM64, macOS ARM64 and Intel, and Windows. Required checks have zero "not run". A failed candidate is fixed on main and qualified under the next candidate tag. M5 is allowed for experiments and Mac-specific checks, including before the candidate; Beelink remains the primary build machine.
 4. Ticket 0128 records each attempt and its result.
 
@@ -76,3 +76,7 @@ Main's public install text names the latest published release until the next rel
 ## 7. Registries and the site
 
 The queue owner owns the code, the release workflow, the site (`site/`) and the registry setup steps since Ian's ruling of 2026-10-02. Ian holds the registry logins. The docs team owned the setup steps before that (ruling 15 of [the preserved release ruling](../decisions/2026-10-08-preserve-planning-rulings.md#cache-types-and-release-rulings)). The registries are PyPI, npm, crates.io, RubyGems, NuGet, Maven, pub.dev and the Homebrew tap. [ownership.md](ownership.md) names the folders.
+
+The milestone records existing setup for crates.io, PyPI, npm, RubyGems and NuGet, pub.dev automated publishing, the Maven namespace and signing key, and the tap deploy key. Those recorded setup facts do not establish current token validity, rotation dates or exact workflow registration. Before publication, confirm the Maven Central namespace and upload token, the matching signing key, pub.dev trusted publishing and each registry's trusted-publisher registration. Rehearsal does not establish those account settings. Ask Ian for account confirmation through the publication handoff; do not inspect credentials during rehearsal. Record only confirmed expiration and last rotation dates for the Maven token, signing key and `TAP_DEPLOY_KEY` in the existing 0425 release record. When metadata does not establish a date, report it as unconfirmed.
+
+The binding fingerprint receipts and `check-binding-proofs.mjs` were retired in `ee09afc73`. Current sample checks and direct documentation replay replace that evidence. Do not restore receipt fingerprints as a release gate.

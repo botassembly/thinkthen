@@ -238,6 +238,13 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with: {node-version: '22.22.3'}
+      - name: Check binding samples on the resolved tagged commit
+        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: |
+          test "$(git rev-parse HEAD)" = "$SHA"
+          node site/scripts/check-binding-samples.mjs
       - run: rustup toolchain install 1.95.0 --profile minimal
       - run: cargo fetch --locked
       - run: cargo fetch --locked --manifest-path conformance/consumer/Cargo.toml
@@ -245,6 +252,11 @@ jobs:
       - run: python3 -m pip install --disable-pip-version-check 'jsonschema==4.25.1'
       - run: sh sdlc/scripts/package
       - run: cargo publish --dry-run --locked --package thinkthen
+      - run: cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml
+      - name: Build the R source package from the published crate
+        run: CARGO_NET_OFFLINE=true sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu r-dist r
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: r-package, path: r-dist/, if-no-files-found: error, retention-days: 7}
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
 
@@ -442,6 +454,8 @@ jobs:
         with: {name: apple-packages-aarch64-apple-darwin, path: platform/platform-aarch64-apple-darwin}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: apple-packages-x86_64-apple-darwin, path: platform/platform-x86_64-apple-darwin}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with: {name: r-package, path: r-dist}
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
       - run: ruby -c thinkthen.rb
@@ -461,6 +475,7 @@ jobs:
             sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
+          cp r-dist/* all-files/
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 
   crates:
