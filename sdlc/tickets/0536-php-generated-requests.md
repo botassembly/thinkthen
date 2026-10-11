@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 PHP builds each request from generated input types and serializes it with one encoder. PHP code no longer concatenates request JSON or maps functions to input kinds by hand.
