@@ -151,6 +151,13 @@ pub enum RequestFunction {
     Relate,
 }
 impl RequestFunction {
+    pub(crate) const fn streams(self) -> bool {
+        matches!(
+            self,
+            Self::Decide | Self::Choose | Self::Tag | Self::Score | Self::Filter | Self::Annotate
+        )
+    }
+
     pub(crate) const fn from_input(function: super::InputFunction) -> Self {
         match function {
             super::InputFunction::Decide => Self::Decide,

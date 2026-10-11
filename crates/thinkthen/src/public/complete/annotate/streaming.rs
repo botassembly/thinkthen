@@ -34,11 +34,8 @@ impl Engine {
                 options,
                 crate::RequestCall::Annotate,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Annotations(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native annotate batch returned another result kind",
-                )),
+            .and_then(|rows| {
+                rows.annotations("a native annotate batch returned another result kind")
             }),
         )
     }

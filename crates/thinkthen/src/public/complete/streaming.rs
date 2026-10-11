@@ -38,12 +38,7 @@ impl Engine {
                 options,
                 crate::RequestCall::Decide,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Decisions(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native decide batch returned another result kind",
-                )),
-            }),
+            .and_then(|rows| rows.decisions("a native decide batch returned another result kind")),
         )
     }
 
@@ -69,12 +64,7 @@ impl Engine {
                 options,
                 crate::RequestCall::Choose,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Choices(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native choose batch returned another result kind",
-                )),
-            }),
+            .and_then(|rows| rows.choices("a native choose batch returned another result kind")),
         )
     }
 
@@ -100,12 +90,7 @@ impl Engine {
                 options,
                 crate::RequestCall::Tag,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Tags(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native tag batch returned another result kind",
-                )),
-            }),
+            .and_then(|rows| rows.tags("a native tag batch returned another result kind")),
         )
     }
 
@@ -130,12 +115,7 @@ impl Engine {
                 options,
                 crate::RequestCall::Score,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Scores(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native score batch returned another result kind",
-                )),
-            }),
+            .and_then(|rows| rows.scores("a native score batch returned another result kind")),
         )
     }
 
@@ -160,12 +140,7 @@ impl Engine {
                 options,
                 crate::RequestCall::Filter,
             )
-            .and_then(|rows| match rows {
-                crate::public::request::pull::Rows::Filtered(batch) => Ok(batch),
-                _ => Err(Error::defect(
-                    "a native filter batch returned another result kind",
-                )),
-            }),
+            .and_then(|rows| rows.filtered("a native filter batch returned another result kind")),
         )
     }
 

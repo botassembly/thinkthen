@@ -166,6 +166,18 @@ impl<R: Read> Rows<R> {
         }
     }
 
+    fn reset(&mut self, reader: R) {
+        self.reader = reader;
+        self.start = 0;
+        self.end = 0;
+        self.eof = false;
+        self.parser.reset();
+        if self.header.is_some() {
+            // Skip the parser's initial BOM handling for a subsequent data row.
+            self.parser.read_field(b"\n", &mut [0; 1]);
+        }
+    }
+
     fn parsed_row(&mut self) -> Result<Option<Vec<Vec<u8>>>, ReadError> {
         let mut fields = Vec::new();
         let mut field = Vec::new();

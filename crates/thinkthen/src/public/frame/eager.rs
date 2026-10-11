@@ -193,11 +193,7 @@ impl PolarsEngine for Engine {
             options,
         )?;
         call.try_map(|value| {
-            let RequestValue::Decisions(rows) = value else {
-                return Err(Error::defect(
-                    "a decide column received another result kind",
-                ));
-            };
+            let rows = value.decisions("a decide column received another result kind")?;
             let mut answers = BooleanChunkedBuilder::new(texts.name().clone(), texts.len());
             request::project(texts, &rows, |row| {
                 answers.append_option(row.and_then(|row| decided(row.value())));
@@ -277,11 +273,7 @@ impl PolarsEngine for Engine {
             options,
         )?;
         call.try_map(|value| {
-            let RequestValue::Annotations(rows) = value else {
-                return Err(Error::defect(
-                    "an annotation frame received another result kind",
-                ));
-            };
+            let rows = value.annotations("an annotation frame received another result kind")?;
             request::project(held.as_materialized_series(), &rows, |record| {
                 annotated(&mut columns, &mut failures, record)
             })?;

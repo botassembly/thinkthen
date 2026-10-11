@@ -5,7 +5,6 @@ use crate::public::{
     CompleteFound, CompleteRank, CompleteRecognized, CompleteRecord, CompleteRelated,
     CompleteScore, CompleteSetRank, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error,
     InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate, RequestCall,
-    RequestValue,
 };
 use polars::prelude::Series;
 
@@ -78,12 +77,7 @@ impl Engine {
             records,
             options,
             RequestCall::Decide,
-            |value| match value {
-                RequestValue::Decisions(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a decide column returned another result kind",
-                )),
-            },
+            |value| value.decisions("a decide column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -111,12 +105,7 @@ impl Engine {
             records,
             options,
             RequestCall::Choose,
-            |value| match value {
-                RequestValue::Choices(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a choose column returned another result kind",
-                )),
-            },
+            |value| value.choices("a choose column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -144,10 +133,7 @@ impl Engine {
             records,
             options,
             RequestCall::Tag,
-            |value| match value {
-                RequestValue::Tags(rows) => Ok(rows),
-                _ => Err(Error::defect("a tag column returned another result kind")),
-            },
+            |value| value.tags("a tag column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -175,10 +161,7 @@ impl Engine {
             records,
             options,
             RequestCall::Score,
-            |value| match value {
-                RequestValue::Scores(rows) => Ok(rows),
-                _ => Err(Error::defect("a score column returned another result kind")),
-            },
+            |value| value.scores("a score column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -206,12 +189,7 @@ impl Engine {
             records,
             options,
             RequestCall::Filter,
-            |value| match value {
-                RequestValue::Filtered(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a filter column returned another result kind",
-                )),
-            },
+            |value| value.filtered("a filter column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -239,10 +217,7 @@ impl Engine {
             records,
             options,
             RequestCall::Rank,
-            |value| match value {
-                RequestValue::Ranked(rows) => Ok(rows),
-                _ => Err(Error::defect("a rank column returned another result kind")),
-            },
+            |value| value.ranked("a rank column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -270,12 +245,7 @@ impl Engine {
             records,
             options,
             RequestCall::Rank,
-            |value| match value {
-                RequestValue::SetRanked(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a rank_set column returned another result kind",
-                )),
-            },
+            |value| value.setranked("a rank_set column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -303,12 +273,7 @@ impl Engine {
             records,
             options,
             RequestCall::Annotate,
-            |value| match value {
-                RequestValue::Annotations(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a annotate column returned another result kind",
-                )),
-            },
+            |value| value.annotations("a annotate column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -336,12 +301,7 @@ impl Engine {
             records,
             options,
             RequestCall::Recognize,
-            |value| match value {
-                RequestValue::Recognized(rows) => Ok(rows),
-                _ => Err(Error::defect(
-                    "a recognize column returned another result kind",
-                )),
-            },
+            |value| value.recognized("a recognize column returned another result kind"),
         )?;
         Ok((call, positions))
     }
@@ -370,11 +330,7 @@ impl Engine {
             options,
             RequestCall::Relate,
             |value, originals| {
-                let RequestValue::Related(row) = value else {
-                    return Err(Error::defect(
-                        "a relate column returned another result kind",
-                    ));
-                };
+                let row = value.related("a relate column returned another result kind")?;
                 if row.original().len() != originals.len() || row.ordinal() != 0 {
                     return Err(Error::defect("a relate column changed its original set"));
                 }
@@ -412,9 +368,7 @@ impl Engine {
             options,
             RequestCall::Find,
             |value, mut originals| {
-                let RequestValue::Found(found) = value else {
-                    return Err(Error::defect("a find column returned another result kind"));
-                };
+                let found = value.found("a find column returned another result kind")?;
                 if found
                     .candidates()
                     .iter()

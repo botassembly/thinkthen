@@ -37,11 +37,7 @@ pub(super) fn records(
     let limited = configuration.keeping == Keeping::Ordered && configuration.common.located();
     let mut remaining = crate::core::MAX_RECORD_BYTES;
     let mut source = source.enumerate();
-    let mut stopped = false;
-    Ok(Box::new(std::iter::from_fn(move || {
-        if stopped {
-            return None;
-        }
+    Ok(Box::new(crate::fallible::until_error(move || {
         let (ordinal, item) = source.next()?;
         let held = item.and_then(|item| {
             let (record, arrived, images) = match item.data {
@@ -88,7 +84,6 @@ pub(super) fn records(
             }
             Ok(held)
         });
-        stopped = held.is_err();
         Some(held)
     })))
 }

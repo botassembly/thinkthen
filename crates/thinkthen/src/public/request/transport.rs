@@ -136,11 +136,7 @@ pub(crate) fn source_records<'a>(
     annotate: bool,
     mut budget: Option<crate::public::SourceBudget>,
 ) -> super::composition::Inputs<'a> {
-    let mut stopped = false;
-    Box::new(std::iter::from_fn(move || {
-        if stopped {
-            return None;
-        }
+    Box::new(crate::fallible::until_error(move || {
         let result = match controls
             .admission()
             .and_then(|()| source.next().transpose())
@@ -156,7 +152,6 @@ pub(crate) fn source_records<'a>(
             })(),
             Err(error) => Err(error),
         };
-        stopped = result.is_err();
         Some(result)
     }))
 }

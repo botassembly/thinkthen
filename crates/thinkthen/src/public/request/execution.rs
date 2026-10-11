@@ -546,17 +546,7 @@ fn dispatch<'a>(
     release: Option<&dyn Fn(usize)>,
     recover: crate::public::options::AnnotationRecovery<'a>,
 ) -> Result<RequestOutcome, Error> {
-    if !eager
-        && matches!(
-            function,
-            Function::Decide
-                | Function::Choose
-                | Function::Tag
-                | Function::Score
-                | Function::Filter
-                | Function::Annotate
-        )
-    {
+    if !eager && function.streams() {
         let rows = super::pull::dispatch(
             engine,
             function,

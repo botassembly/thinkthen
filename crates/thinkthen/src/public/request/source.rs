@@ -1,32 +1,10 @@
 //! Logical framing over authorized handles and the native explicit path manifest.
 use super::{RequestFraming, RequestSource};
 use crate::{
-    Error, FileReader, RawRecord, ReaderMedia, ReaderOptions, SourceRecord, SourceUnit,
-    TableFormat, TableReader,
+    Error, FileReader, RawRecord, ReaderMedia, ReaderOptions, SourceRecord, TableFormat,
+    TableReader,
 };
 use std::io::BufRead;
-
-pub(super) fn validate(
-    framing: Option<RequestFraming>,
-    reading: ReaderOptions,
-    media: ReaderMedia,
-) -> Result<(), Error> {
-    reading.validate()?;
-    let Some(framing) = framing else {
-        return Ok(());
-    };
-    let unit = if matches!(framing, RequestFraming::Document) {
-        SourceUnit::File
-    } else {
-        SourceUnit::Line
-    };
-    if media != ReaderMedia::Text || reading.unit != unit || reading.window.is_some() {
-        return Err(Error::usage(
-            "explicit source framing requires text and matching file or line units without a window",
-        ));
-    }
-    Ok(())
-}
 
 /// Decode one authorized text handle with explicit logical framing and physical locations.
 /// This reader opens no path and retains only the current record and any table header.
@@ -54,7 +32,7 @@ impl<R: BufRead> RequestSourceReader<R> {
         framing: RequestFraming,
         reading: ReaderOptions,
     ) -> Result<Self, Error> {
-        validate(Some(framing), reading, ReaderMedia::Text)?;
+        super::framing::validate(Some(framing), reading, ReaderMedia::Text, true)?;
         let file = file.into();
         let mode = match framing {
             RequestFraming::Csv => {
@@ -75,15 +53,10 @@ impl<R: BufRead> RequestSourceReader<R> {
 impl<R: BufRead> Iterator for RequestSourceReader<R> {
     type Item = Result<SourceRecord<RawRecord>, Error>;
     fn next(&mut self) -> Option<Self::Item> {
-        if self.stopped {
-            return None;
-        }
-        let row = match &mut self.mode {
-            Mode::Table(reader) => reader.next()?,
-            Mode::Text(reader) => text_record(reader, self.framing)?,
-        };
-        self.stopped = row.is_err();
-        Some(row)
+        crate::fallible::next(&mut self.stopped, || match &mut self.mode {
+            Mode::Table(reader) => reader.next(),
+            Mode::Text(reader) => text_record(reader, self.framing),
+        })
     }
 }
 
@@ -96,13 +69,10 @@ fn text_record<R: BufRead>(
             Ok(source) => source,
             Err(error) => return Some(Err(error)),
         };
-        if !matches!(framing, RequestFraming::Document) && source.record.trim().is_empty() {
-            continue;
-        }
-        let original = if matches!(framing, RequestFraming::Jsonl) {
-            RawRecord::json(&source.record)
-        } else {
-            RawRecord::text(&source.record)
+        let original = match super::framing::text(&source.record, framing, false) {
+            Ok(None) => continue,
+            Ok(Some(record)) => Ok(record),
+            Err(error) => Err(error),
         };
         return Some(original.map(|record| SourceRecord {
             record,
@@ -129,15 +99,10 @@ pub(super) fn records<'a>(
     };
     let mut originals = source.read_framed(controls)?;
     let mut budget = budget;
-    let mut stopped = false;
-    Ok(Box::new(std::iter::from_fn(move || {
-        if stopped {
-            return None;
-        }
+    Ok(Box::new(crate::fallible::until_error(move || {
         let result = originals
             .next()?
             .and_then(|source| compose(source, &reading, annotate, &mut budget));
-        stopped = result.is_err();
         Some(result)
     })))
 }
@@ -147,7 +112,7 @@ impl RequestSource {
     /// # Errors
     /// Retains shared reader-option and explicit-framing refusals.
     pub fn validate_reading(&self) -> Result<(), Error> {
-        validate(self.framing, self.reading, self.media)
+        super::framing::validate(self.framing, self.reading, self.media, true)
     }
     /// Read explicit logical framing through the native ordered path authority.
     /// Validation precedes enumeration; content opens lazily and errors terminate intake.
@@ -170,13 +135,8 @@ impl RequestSource {
         let mut paths = crate::enumerate_files(&self.paths)?.into_iter();
         let options = self.reading;
         let mut current = None;
-        let mut stopped = false;
-        Ok(Box::new(std::iter::from_fn(move || {
-            if stopped {
-                return None;
-            }
+        Ok(Box::new(crate::fallible::until_error(move || {
             let result = next_source(&mut paths, &mut current, framing, options, controls);
-            stopped = result.is_err();
             result.transpose()
         })))
     }

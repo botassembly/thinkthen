@@ -25,6 +25,8 @@ mod core;
 
 mod chunks;
 
+mod fallible;
+
 mod table;
 
 mod config;

@@ -23,16 +23,7 @@ impl Framed {
             return Err(self.rows.too_large().native());
         }
         let header = self.needs_header();
-        self.rows.reader = Cursor::new(text);
-        self.rows.start = 0;
-        self.rows.end = 0;
-        self.rows.eof = false;
-        self.rows.parser.reset();
-        if !header {
-            // reset restores csv-core's initial BOM handling. Consume an ignored
-            // blank line before real input so a data-cell BOM remains data.
-            self.rows.parser.read_field(b"\n", &mut [0; 1]);
-        }
+        self.rows.reset(Cursor::new(text));
         let row = self.rows.parsed_row().map_err(ReadError::native)?;
         if self.rows.parsed_row().map_err(ReadError::native)?.is_some() {
             return Err(crate::Error::usage(
@@ -40,7 +31,7 @@ impl Framed {
             ));
         }
         // Release the current encoded row before yielding its decoded original.
-        self.rows.reader = Cursor::new(String::new());
+        self.rows.reset(Cursor::new(String::new()));
         if header {
             let row = row.ok_or_else(|| ReadError::Table(Error::Empty(self.rows.kind)).native())?;
             self.rows.read_header(row).map_err(ReadError::native)?;
