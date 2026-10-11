@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 from session_values import ROOT, construct, definitions, ada_text
+import session_values
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 
@@ -15,6 +16,16 @@ spec.loader.exec_module(inputs)
 package = Path(sys.argv[1])
 fixture = json.loads(Path(sys.argv[2]).read_text())
 home = Path.cwd()
+text_count = 0
+def fixture_text(value):
+    global text_count
+    if len(value.encode()) <= 4096:
+        return ada_text(value)
+    path = home / f'authored-text-{text_count}.bin'
+    text_count += 1
+    path.write_bytes(value.encode())
+    return 'Fixture_Text (' + session_values.template.ada_string(str(path)) + ')'
+session_values.ada_text = fixture_text
 descriptor = inputs.descriptor(fixture, home)
 verb = descriptor.pop('verb')
 cancel = descriptor.pop('cancel')

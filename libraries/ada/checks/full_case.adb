@@ -1,4 +1,5 @@
 with Ada.Exceptions;
+with Ada.Streams.Stream_IO;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 with Interfaces; use type Interfaces.Unsigned_32;
@@ -45,6 +46,28 @@ procedure Thinkthen.Sessions.Parity_Case is
             end;
       end case;
    end Drain_One;
+   function Fixture_Text (Path : String) return Unbounded_String is
+      use Ada.Streams;
+      File : Ada.Streams.Stream_IO.File_Type;
+      Bytes : Stream_Element_Array (1 .. 8192);
+      Last : Stream_Element_Offset;
+      Value : Unbounded_String;
+   begin
+      Ada.Streams.Stream_IO.Open (File, Ada.Streams.Stream_IO.In_File, Path);
+      while not Ada.Streams.Stream_IO.End_Of_File (File) loop
+         Ada.Streams.Stream_IO.Read (File, Bytes, Last);
+         declare
+            Chunk : String (1 .. Integer (Last));
+         begin
+            for Index in Chunk'Range loop
+               Chunk (Index) := Character'Val (Bytes (Stream_Element_Offset (Index)));
+            end loop;
+            Append (Value, Chunk);
+         end;
+      end loop;
+      Ada.Streams.Stream_IO.Close (File);
+      return Value;
+   end Fixture_Text;
    -- REQUEST
 begin
    Configure (Client, -- SETTINGS
