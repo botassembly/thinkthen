@@ -19,3 +19,7 @@ Every language's installed checks use one shared fake backend, one case projecti
 - Changes: move the fake backend, the case projection and one usage-lock runner into `conformance/children/`. Point every language's check at them and delete the copies. Cut `sdlc/records/0530-source-package-inventory-repair.md` down to what was built and the lessons; pm holds the status.
 - Proof: the routine installed checks pass for every language. A search finds no fixture loaded from another language's folder.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
