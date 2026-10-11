@@ -68,3 +68,4 @@ PM amendment, 2026-10-11, third. This rules on `rank_set_complete_with` and `rel
 - 2026-10-11 started
 - 2026-10-11 next: The accepted host and shared-helper cuts plus reviewed C projections are combined on the cleanup branch at 187998 lines, with further wrapper migrations and approved helper cuts needed before whole-ticket proof.
 - 2026-10-11 next: The host and shared-helper cuts plus reviewed C projections are combined at 187998 lines, with further wrapper migrations, approved helper cuts and a fresh whole-code review still required.
+- 2026-10-11 next: PM approved the moved Relate test using the existing public Request error sentence while retaining its error kind, refusal, zero-send and facts assertions, with no shared routing or diagnostic change.
