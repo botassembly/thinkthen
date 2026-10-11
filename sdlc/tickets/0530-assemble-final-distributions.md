@@ -1,6 +1,6 @@
 # 0530: Assemble final distributions from the package inventory
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -110,6 +110,8 @@ Reviews: revision 1a4b68b02897db83c6388802f99d96285cf30ec7, accept
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 76dbc071982cebcee61e9707d9da3144224dbf38, accept
+
+Landed: bc8f017
 
 ## Outcome
 
