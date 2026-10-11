@@ -130,6 +130,15 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
             check(!str_contains($error->getMessage(), 'secret-') && !str_contains($error->getMessage(), 'injected'), 'raw refusal exposed input');
         }
     }
+    foreach (['DECIDE', 'Decide', 'missing'] as $function) {
+        try { $client->start($function, 'Is it?', 'invalid-function'); throw new RuntimeException('unknown function admitted'); }
+        catch (ThinkThen\UsageFailure) {}
+    }
+    $cycle = new stdClass(); $cycle->self = $cycle;
+    foreach ([$cycle, INF, NAN] as $invalid) {
+        try { $client->decide('Is it?', $invalid); throw new RuntimeException('non-JSON input admitted'); }
+        catch (ThinkThen\UsageFailure) {}
+    }
     $token = new ThinkThen\Cancellation(); $token->cancel();
     try { $client->decide('Is it?', 'precancel', cancel: $token); throw new RuntimeException('cancel admitted'); }
     catch (ThinkThen\CancelledFailure) {}
