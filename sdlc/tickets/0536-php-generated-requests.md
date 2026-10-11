@@ -17,3 +17,7 @@ PHP builds each request from generated input types and serializes it with one en
 - Changes: generate the PHP request input types from the same graph the other C-interface hosts use. `libraries/csharp/src/RequestInputs.g.cs` and `libraries/dart/lib/src/session/inputs_generated.dart` are the models. Replace the concatenation and the kind mapping with them. Lower the PHP ceiling.
 - Proof: the routine installed PHP checks pass.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
