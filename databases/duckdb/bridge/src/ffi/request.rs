@@ -44,14 +44,10 @@ pub(crate) fn build(
             batch: scope
                 .batch
                 .map(|value| {
-                    if value == "max" {
-                        Ok(RequestBatch::Named(value.to_owned()))
-                    } else {
-                        value
-                            .parse()
-                            .map(RequestBatch::Count)
-                            .map_err(|_| "thinkthen usage: invalid batch".to_owned())
-                    }
+                    crate::engines::batch_setting(value).map(|setting| match setting {
+                        thinkthen::BatchSetting::Max => RequestBatch::Named("max".to_owned()),
+                        thinkthen::BatchSetting::Records(count) => RequestBatch::Count(count.get()),
+                    })
                 })
                 .transpose()?,
             deadline_ms: Some(scope.due),

@@ -31,6 +31,23 @@ case(shared_settings_corpus)
 
 
 @case
+def session_batch_keeps_digit_grammar_and_exact_refusal():
+    error = "thinkthen usage: batch takes max or a whole number of at least 1 (retryable: no)"
+    with Backend() as backend:
+        for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
+            got = run([f"SET thinkthen_batch = '{value}'", ASK,
+                       "SELECT thinkthen_details('Is it a refund?', 'refund now')"], backend.base())
+            expect([said(result) for result in got[1:]], [error, error], 'retained session batch refusal')
+        expect(backend.count(), 0, 'invalid session batches send nothing')
+    for value, count in (('max', 1), ('1', 2), ('01', 2)):
+        with Backend() as backend:
+            got = run([f"SET thinkthen_batch = '{value}'",
+                       "SELECT thinkthen_decide('Is it a refund?', x) FROM (VALUES ('refund one'), ('refund two')) t(x)"], backend.base())
+            expect(rows(got[-1]), [[True], [True]], 'retained digit batch values')
+            expect(backend.count(), count, 'retained valid packed batch count')
+
+
+@case
 def portable_decide_zero_budget():
     """The portable vector reads the caller's already spent query budget."""
     with Backend() as backend:

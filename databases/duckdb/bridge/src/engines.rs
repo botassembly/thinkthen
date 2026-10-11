@@ -83,6 +83,22 @@ pub(crate) fn options<'a>(
     Ok(options.cancel(token).max_requests_total(limit))
 }
 
+pub(crate) fn batch_setting(batch: &str) -> Result<BatchSetting, String> {
+    let setting = if batch == "max" {
+        BatchSetting::Max
+    } else if !batch.is_empty() && batch.bytes().all(|byte| byte.is_ascii_digit()) {
+        let count = batch
+            .parse::<usize>()
+            .ok()
+            .and_then(NonZeroUsize::new)
+            .ok_or_else(|| usage("batch takes max or a whole number of at least 1"))?;
+        BatchSetting::Records(count)
+    } else {
+        return Err(usage("batch takes max or a whole number of at least 1"));
+    };
+    Ok(setting)
+}
+
 /// C++ scalar and warm calls read this session's batch cap and literal context.
 pub(crate) fn options_for<'a>(
     deadline_ms: i64,
@@ -93,18 +109,7 @@ pub(crate) fn options_for<'a>(
 ) -> Result<CallOptions<'a>, String> {
     let mut options = options(deadline_ms, token, total)?;
     if let Some(batch) = batch {
-        let setting = if batch == "max" {
-            BatchSetting::Max
-        } else if !batch.is_empty() && batch.bytes().all(|byte| byte.is_ascii_digit()) {
-            let count = batch
-                .parse::<usize>()
-                .ok()
-                .and_then(NonZeroUsize::new)
-                .ok_or_else(|| usage("batch takes max or a whole number of at least 1"))?;
-            BatchSetting::Records(count)
-        } else {
-            return Err(usage("batch takes max or a whole number of at least 1"));
-        };
+        let setting = batch_setting(batch)?;
         options = options.batch(setting);
     }
     if let Some(context) = context {
