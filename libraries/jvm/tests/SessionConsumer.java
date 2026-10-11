@@ -37,7 +37,9 @@ public final class SessionConsumer {
                     new Inputs.RequestInputText().text(System.getenv("THINKTHEN_TEST_SMOKE_TEXT")), new Inputs.RequestOptions()));
                 var row = (Results.SessionPacketDecideRow)call.packets().stream()
                     .filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
-                System.out.println("smoke: " + row.value().value().value());
+                var answer = row.value().value().value();
+                check(answer instanceof Boolean, "smoke answer is not boolean");
+                System.out.println("smoke: " + answer);
             }
             return;
         }

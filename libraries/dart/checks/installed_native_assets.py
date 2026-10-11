@@ -93,7 +93,13 @@ def main():
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
     (consumer / 'pubspec.yaml').write_text(spec)
     run([str(dart), 'pub', 'get', '--offline'], consumer, env)
-    run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
+    if os.environ.get('THINKTHEN_TEST_PROFILE') == 'smoke':
+        env.update({name: os.environ[name] for name in ('THINKTHEN_BASE_URL', 'THINKTHEN_API_KEY',
+            'THINKTHEN_CACHE', 'THINKTHEN_TEST_SMOKE_QUESTION', 'THINKTHEN_TEST_SMOKE_TEXT')})
+        run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
+        run([str(dart), 'run', 'bin/main.dart', 'smoke'], consumer, env)
+        return
+    run([str(dart), 'run', 'bin/parser_cases.dart' , str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     has_flutter = (packages / 'flutter').is_dir()
     if has_flutter:
         projects = [packages / 'flutter']
