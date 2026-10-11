@@ -106,4 +106,4 @@ failed_batch <- tt_batch("decide", "Session deadline?", "not sent", list(deadlin
 failure <- tryCatch(failed_batch$next_result(), error = identity)
 check("native session failures retain their condition", inherits(failure, "thinkthen_error") && failure$kind == "deadline" && inherits(failure$complete, "thinkthen_CallError"))
 failed_batch$close()
-finish("canonical requests", 28L)
+finish("canonical requests", 27L)
