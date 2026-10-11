@@ -38,7 +38,7 @@ The commit that passed the 0543 candidate also passes release QA by a fresh agen
   - 0398 keeps the exact-commit rehearsal guard and the after-publication install-check workflow.
   - The M5 runs bounded Mac checks only and never stands in for hosted macOS. Yellow stays excluded. No paid diagnostic runs.
   - A candidate or archive check never stands in for a published-package check.
-- Changes:
+- Changes: finish release QA and publication after candidate qualification.
   - Release preparation moved to 0543. Ian confirms or rotates the secrets before publication.
   - Release QA. A fresh docs-only agent installs the candidate artifacts, then asks questions including an admitted image question and a real MCP tool call. 0.1 question files load unchanged. 0.1 caches read through the compatibility path or refuse with one clear message before sending. Record docs failures with their owning tickets. `CHANGELOG.md`, the release notes and a written known-gaps list describe the final behavior, including images, MCP, the additive question format and 0.1 compatibility.
   - Publication, on Ian's explicit go. Tag the same commit `v0.2.0` and dispatch release mode. Move the public install text to 0.2.0 once and re-prove the site pages. With Ian's authorization, replace the RubyGems `ruby` platform 0.0.1 placeholder with the diagnostic gem.

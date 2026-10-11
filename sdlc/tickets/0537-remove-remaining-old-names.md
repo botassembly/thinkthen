@@ -14,7 +14,7 @@ No shipped package, script or document uses the retired "door" names. The JVM ja
 
 - Starts from: gap 3 of [the 0.2 closure review](../records/2026-10-11-0-2-closure-review.md) and the done rule in [the 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md).
 - Keeps: the frozen 0.1 C exports and their documentation. Every current public call.
-- Changes:
+- Changes: remove old package names and update the shipped migration wording.
   - JVM: rename the `door` module and `thinkthen-door.jar`. Delete `jvm/door/thinkthen/Json.java` if the generated readers cover it, or move it under the session package. Update `jvm/pom.xml`, `jvm/ratchet.java.json` and `sdlc/scripts/release-managed-pair-self-test.py:127` to the current classes.
   - COBOL: add an old-to-new table to `libraries/cobol/README.md` for the removed calls and carriers, and remove "in this slice".
   - Wording: replace "door" in `swift/Sources/CThinkThen/include/thinkthen.h`, `go/thinkthen.go`, `cpp/include/thinkthen/json.hpp` and any other shipped file a search finds.

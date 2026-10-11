@@ -17,7 +17,7 @@ Each request rule has one owner in Rust. Results unpack through one accessor per
 - Starts from: gap 7 of [the 0.2 closure review](../records/2026-10-11-0-2-closure-review.md).
 - Why 0.2: Ian's 2026-10-09 ruling asks for the least code, with every rule in one place in Rust. Each repeat is a second place a rule can drift.
 - Keeps: every public behavior, error message and exit code. This ticket changes structure only.
-- Changes:
+- Changes: consolidate result access, framing and request execution helpers.
   - Add one accessor per result kind on `RequestValue` and on `pull::Rows`. Replace the 27 hand-written "returned another result kind" checks, starting with `public/frame/typed.rs:84-416`.
   - Merge `public/request/source.rs:90-114` and `public/request/framing.rs:53-85` into one framing decoder with one admission validator and one wording.
   - Give `table::Rows` a reset method, and stop `table/framed.rs:26-30` from writing its fields.
