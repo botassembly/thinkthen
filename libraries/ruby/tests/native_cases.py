@@ -1,4 +1,5 @@
 """Shared routine cases through an installed Ruby gem's named typed calls."""
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -10,7 +11,9 @@ RUBY = os.environ['RUBY']
 CONSUMER = Path(__file__).with_name('native_case.rb')
 def invoke(step, settings, child, home, backend):
     child.update(GEM_PATH=os.environ['GEM_PATH'], LD_LIBRARY_PATH=os.environ.get('LD_LIBRARY_PATH', ''))
-    args = [RUBY, str(CONSUMER), str(home / 'consumer-input.json'), __import__('json').dumps(settings)]
+    input_file = home / 'consumer-input.json'
+    input_file.write_text(json.dumps({**descriptor(step, home), 'incremental': step.get('incremental', False)}))
+    args = [RUBY, str(CONSUMER), str(input_file), json.dumps(settings)]
     if step.get('held_cancel'):
         process = subprocess.Popen(args, env=child, cwd=home, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         try:
