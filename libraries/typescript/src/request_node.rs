@@ -5,7 +5,7 @@ use crate::node::NativeEngine;
 use napi::Result;
 use napi_derive::napi;
 use thinkthen::{
-    Request, RequestReaderFailure, RequestSession, RequestSessionPush, RequestSessionRead,
+    Request, RequestReaderFailure, RequestSession, RequestSessionPushStatus, RequestSessionRead,
 };
 fn failure(error: thinkthen::Error) -> napi::Error {
     napi::Error::from_reason(serde_json::json!({"err":{"kind":error.kind().name(),"message":error.to_string(),"retryable":error.retryable()}}).to_string())
@@ -135,15 +135,12 @@ impl NativeSession {
             return Ok("closed".into());
         };
         session
-            .try_push(thinkthen::RequestSessionDescriptor {
-                item: serde_json::from_str(&descriptor).map_err(malformed)?,
-                location: None,
-            })
+            .try_push_json(&descriptor)
             .map(|s| {
                 match s {
-                    RequestSessionPush::Accepted => "accepted",
-                    RequestSessionPush::Full(_) => "full",
-                    RequestSessionPush::Closed(_) => "closed",
+                    RequestSessionPushStatus::Accepted => "accepted",
+                    RequestSessionPushStatus::Full => "full",
+                    RequestSessionPushStatus::Closed => "closed",
                 }
                 .into()
             })

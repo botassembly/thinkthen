@@ -81,7 +81,7 @@ class Operation {
     this.#pending=Promise.resolve().then(()=>iterator.next()).then(value=>{
       if(this.#closed) return;
       if(value.done){this.#native.finish(null);this.#iterator=undefined;}
-      else this.#pending={text:dump(descriptor(value.value))};
+      else this.#pending={text:dump({item:descriptor(value.value)})};
     }).catch(()=>{if(!this.#closed){this.#native.finish(true);this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
   }
   async next() {

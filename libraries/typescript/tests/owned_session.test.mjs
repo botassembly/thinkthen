@@ -138,13 +138,13 @@ test('Client reports native deadline settlement and invalid admission sends noth
   const {value}=await ask(backend,`
     const client=new tt.Client({cache:false});const seen=[];
     try{await client.decide('Question?','text',{deadline_ms:0});}catch(error){if(!(error instanceof tt.ClientError))throw Error('untyped error');seen.push([error.kind,error.complete.constructor.name,error.complete.has('value'),error.terminal.kind,error.results,error.facts.requests_sent]);}
-    for(const controls of [{field:['bad pointer']},{context:null},{signal:AbortSignal.abort()}]) {
-      try{await client.decide('Question?','text',controls);}catch(error){seen.push([error.kind,error.message,error.facts??null]);}
+    for(const [controls,input] of [[{field:['bad pointer']},'text'],[{context:null},'text'],[{},(function*(){yield tt.Client.item('text',{context:null});})()],[{signal:AbortSignal.abort()},'text']]) {
+      try{await client.decide('Question?',input,controls);}catch(error){seen.push([error.kind,error.message,error.facts??null]);}
     }
     client.close();return seen;
   `);
   assert.equal(value[0][0],'deadline');assert.equal(value[0][1],'NativeCallError');assert.deepEqual(value[0].slice(2),[false,'terminal',[],0]);
-  assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['cancelled','the call was cancelled',null]]);assert.equal(await backend.count(),0);
+  assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['usage','invalid session descriptor',null],['cancelled','the call was cancelled',null]]);assert.equal(await backend.count(),0);
 });
 
 test('Client cancellation closes its feed and settles while provider replies remain held',async t=>{
@@ -191,7 +191,7 @@ test('Client releases a rejected feed while retaining a held request and failure
         reads++;yield {body:'first'};
         await new Promise(resolve=>process.stdin.once('data',resolve));
         reads++;yield {};
-        for(let later=0;later<2;later++){reads++;if(reads===3)line({pending:true});yield {body:'later'};}
+        for(let later=0;later<2;later++){reads++;if(reads===3)line({pending:true});yield tt.Client.item({body:'later'},{context:null});}
       } finally {closed++;line({closed,reads});throw Error('producer cleanup failed');}
     }
     try{await client.decide('Question?',inputs(),{batch:2,field:['/body']});throw Error('failure became value');}
