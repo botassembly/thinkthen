@@ -108,7 +108,12 @@ pub(crate) fn run(
             RequestSessionRead::End => break,
             RequestSessionRead::Result(packet) => match packet {
                 RequestSessionResult::Row(row) => result.rows.push(row),
-                RequestSessionResult::Aggregate(value) => result.aggregate = Some(value),
+                RequestSessionResult::Aggregate(value) => match (&mut result.aggregate, value) {
+                    (Some(RequestValue::Recognized(rows)), RequestValue::Recognized(mut next)) => {
+                        rows.append(&mut next);
+                    }
+                    (slot, value) => *slot = Some(value),
+                },
                 RequestSessionResult::Terminal(value) => {
                     result.facts = value.facts;
                     result.error = value.error;
