@@ -1,10 +1,12 @@
 """Compile a generated named Ada caller against an installed release package."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 from session_values import ROOT, construct, definitions, ada_text
+import session_values
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 
@@ -14,6 +16,16 @@ spec.loader.exec_module(inputs)
 package = Path(sys.argv[1])
 fixture = json.loads(Path(sys.argv[2]).read_text())
 home = Path.cwd()
+text_count = 0
+def fixture_text(value):
+    global text_count
+    if len(value.encode()) <= 4096:
+        return ada_text(value)
+    path = home / f'authored-text-{text_count}.bin'
+    text_count += 1
+    path.write_bytes(value.encode())
+    return 'Fixture_Text (' + session_values.template.ada_string(str(path)) + ')'
+session_values.ada_text = fixture_text
 descriptor = inputs.descriptor(fixture, home)
 verb = descriptor.pop('verb')
 cancel = descriptor.pop('cancel')
@@ -36,7 +48,10 @@ source = source.replace('-- CANCEL', 'Cancel (Owner);' if cancel else '')
 source = source.replace('HELD_CANCEL', "Standard.Boolean'(" + str(bool(held)) + ')')
 path = home / 'thinkthen-sessions-parity_case.adb'
 path.write_text(source)
-objects = home / 'ada-objects'
+objects = Path(os.environ.get('THINKTHEN_ADA_OBJECTS', str(home / 'ada-objects')))
+# Reuse only unchanged installed package units; each authored caller is rebuilt.
+for suffix in ('.o', '.ali'):
+    (objects / (path.stem + suffix)).unlink(missing_ok=True)
 objects.mkdir(exist_ok=True)
 binary = home / 'ada-consumer'
 build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(path),

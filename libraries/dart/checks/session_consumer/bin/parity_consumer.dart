@@ -45,7 +45,8 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   final root = Platform.environment['TT_REPO']!;
   final loader = fixture['loader'];
   final definition = Map<String, Object?>.from(fixture['question']);
-  if (fixture['metadata'] != null)
+  final none = verb == 'find' && definition.remove('none') == true;
+  if (fixture['metadata'] != null && !definition.containsKey('questions'))
     definition.addAll(Map<String, Object?>.from(fixture['metadata']));
   final question = loader != null
       ? switch (loader) {
@@ -71,6 +72,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
                   value: InputRequestDefinition.read(definition));
   final injection = fixture['operation']?['injection'];
   InputRequestInput input;
+  Stream<InputRequestSessionDescriptor>? feed;
   if (fixture['paths'] != null || injection == 'recording_read_failure') {
     final unit = switch (fixture['source_unit'] ?? 3) {
       1 => 'line',
@@ -88,7 +90,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
                 fixture['owned_jsonl'] == true || fixture['source_unit'] == 5
                     ? const Presence.present('jsonl')
                     : const Presence.absent(),
-            media: fixture['image_reader'] == true
+            media: fixture['image_reader'] == true || fixture['source_unit'] == 4
                 ? const Presence.present('image')
                 : const Presence.absent(),
             reading: Presence.present(InputRequestReader(
@@ -132,7 +134,14 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
                   ])
                 : const Presence.absent())
     ];
-    input = verb == 'find'
+    if (fixture['incremental'] == true) {
+      feed = Stream.fromIterable([
+        for (final record in records) InputRequestSessionDescriptor(item: record)
+      ]);
+    }
+    input = feed != null
+        ? InputRequestInputFeed(name: 'owned')
+        : verb == 'find'
         ? InputRequestInputUnits(items: records)
         : verb == 'relate'
             ? InputRequestInputEntities(items: records)
@@ -140,6 +149,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   }
   final options = InputRequestOptions(
       attempts: const Presence.present(true),
+      none: verb == 'find' ? Presence.present(none) : const Presence.absent(),
       deadlineMs: injection == 'expired_deadline'
           ? Presence.present(BigInt.zero)
           : const Presence.absent(),
@@ -182,7 +192,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
     };
     try {
       packets = (await method(question, input,
-              options: options, cancellation: cancellation))
+              options: options, cancellation: cancellation, feed: feed))
           .packets;
     } on SessionFailure catch (error) {
       packets = error.call.packets;

@@ -9,6 +9,7 @@ import tempfile
 import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
+from question_files import file_question_expectation
 
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'conformance'))
@@ -131,7 +132,8 @@ def main():
                             if value.get('image_variants'):
                                 from c_images import assert_images
                                 assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
-                            assertions(row,step,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                            expected = file_question_expectation(step) if consumer in ('dart', 'flutter') else step
+                            assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                             if row['kind'] in ('images','image-location'):
                                 before=int(backend.read('count'))
                                 replay={k:v for k,v in settings.items() if k!='record'};replay['replay']=str(home/'recorded')

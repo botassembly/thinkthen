@@ -10,6 +10,7 @@ import tempfile
 ROOT=Path(__file__).resolve().parents[3]
 sys.path[:0]=[str(ROOT/'conformance/children'),str(ROOT/'conformance')]
 from children import child_env
+from cobol_limits import assert_scalar_boundary
 import parity
 import c_parity as shared
 from session_projection import project_session
@@ -157,7 +158,8 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             path=home/'saved/thinkthen.sqlite'
                             if path.exists():
                                 with sqlite3.connect(path) as db:assert db.execute('SELECT count(*) FROM answers').fetchone()[0]==0
-                        if value.get('image_variants'):
+                        scalar_boundary = CONSUMER == 'cobol' and assert_scalar_boundary(row, got, int(backend.read('count')))
+                        if value.get('image_variants') and not scalar_boundary:
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         expected=step
@@ -165,7 +167,8 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             # Authored bytes use the public file selector: question-file.md
                             # assigns Local here, retaining the message and request count.
                             expected={**step,'expect':{**step['expect'],'error':'local'}}
-                        shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
+                        if not scalar_boundary:
+                            shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['id']=='native-filter-first-excluded':
                             assert [r['index'] for r in got['rows']]==[1,2] and [r['value'] for r in got['rows']]==[True,True],got
                             assert int(backend.read('count'))==3,got

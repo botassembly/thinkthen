@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('shared_session_cases', ROOT / 'libraries/cpp/fixtures/session_cases.py')
@@ -21,6 +22,7 @@ if args.case:
 
 
 def invoke(step, settings, env, home, backend):
+    env = dict(env, THINKTHEN_ADA_OBJECTS=str(objects))
     fixture = home / 'fixture.json'
     fixture.write_text(shared.shared.compact(step))
     command = [sys.executable, str(Path(__file__).with_name('full_case.py')),
@@ -42,4 +44,6 @@ def invoke(step, settings, env, home, backend):
             child.kill(); child.wait()
 
 
-shared.native_cases(Path(__file__).with_name('full_case.py'), consumer='ada', invoke=invoke)
+with tempfile.TemporaryDirectory(prefix='thinkthen-ada-objects-') as temporary:
+    objects = Path(temporary)
+    shared.native_cases(Path(__file__).with_name('full_case.py'), consumer='ada', invoke=invoke)
