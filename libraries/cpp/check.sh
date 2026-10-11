@@ -7,7 +7,6 @@ case "${THINKTHEN_TEST_PROFILE:-routine}" in
  routine|full|smoke) ;; stress) echo 'cpp: not run: no stress gate'; exit 77 ;;
  *) echo 'cpp: unknown profile' >&2; exit 2 ;;
 esac
-caller_home=$(CDPATH= cd -- "$repo/../../.." && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
@@ -38,14 +37,11 @@ else
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
  for kind in cpp hpp py; do node "$repo/sdlc/scripts/ratchet.mjs" "ratchet.$kind.json"; done
- export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$caller_home=/build"
- export CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$caller_home=/build"
- export CARGO_TARGET_DIR="$out/native-build"
- cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
- header=$repo/libraries/c/include/thinkthen.h
- shared=$repo/libraries/c/target/debug/libthinkthen_c.so
- static=$out/libthinkthen.a
- sh "$repo/libraries/c/localize.sh" "$CARGO_TARGET_DIR/debug/libthinkthen_c.a" "$static"
+ . "$repo/sdlc/scripts/installed.sh"
+ native_install "$repo" "$out/native"
+ header=$out/native/include/thinkthen.h
+ shared=$out/native/lib/libthinkthen.so
+ static=$out/native/lib/libthinkthen.a
 fi
 THINKTHEN_NATIVE_HEADER="$header" THINKTHEN_NATIVE_SHARED="$shared" "$python_bin" fixtures/exports.py
 "$cmake_bin" -S "$wrapper" -B "$out/package-build" -DCMAKE_BUILD_TYPE=Release \
