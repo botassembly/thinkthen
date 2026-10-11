@@ -65,6 +65,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
+	ValidateRequestTotal(*context);
 	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<Group> groups;

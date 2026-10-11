@@ -89,6 +89,13 @@ pub(crate) fn run(
     input: RequestInput,
     scope: CallScope<'_>,
 ) -> Result<ResultSet, String> {
+    if let RequestInput::Records { items } = &input
+        && let Some(at) = items.len().checked_sub(1)
+    {
+        engine
+            .check_record_limit(at)
+            .map_err(|e| crate::engines::call_error(e, scope.total).text)?;
+    }
     let request = build(definition, input, scope)?;
     let session = engine
         .request_session_with_surface(request, Surface::Duckdb)
