@@ -139,12 +139,12 @@ test('Client reports native deadline settlement and invalid admission sends noth
     const client=new tt.Client({cache:false});const seen=[];
     try{await client.decide('Question?','text',{deadline_ms:0});}catch(error){if(!(error instanceof tt.ClientError))throw Error('untyped error');seen.push([error.kind,error.complete.constructor.name,error.complete.has('value'),error.terminal.kind,error.results,error.facts.requests_sent]);}
     for(const controls of [{field:['bad pointer']},{context:null},{signal:AbortSignal.abort()}]) {
-      try{await client.decide('Question?','text',controls);}catch(error){seen.push([error.kind,error.facts??null]);}
+      try{await client.decide('Question?','text',controls);}catch(error){seen.push([error.kind,error.message,error.facts??null]);}
     }
     client.close();return seen;
   `);
   assert.equal(value[0][0],'deadline');assert.equal(value[0][1],'NativeCallError');assert.deepEqual(value[0].slice(2),[false,'terminal',[],0]);
-  assert.deepEqual(value.slice(1),[['usage',null],['usage',null],['cancelled',null]]);assert.equal(await backend.count(),0);
+  assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['cancelled','the call was cancelled',null]]);assert.equal(await backend.count(),0);
 });
 
 test('Client cancellation closes its feed and settles while provider replies remain held',async t=>{

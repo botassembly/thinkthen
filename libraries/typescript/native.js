@@ -65,14 +65,12 @@ class Operation {
     const {signal,...options}=controls;this.#signal=signal;
     if(signal && !(signal instanceof AbortSignal)) throw new ClientError('usage','signal is an AbortSignal');
     if(signal?.aborted) throw new ClientError('cancelled','the call was cancelled');
-    let selected;
-    if(input?.[sourceTag]) selected={kind:'source',source:input[sourceTag]};
-    else if(Array.isArray(input)) selected={kind:verb==='find'?'units':verb==='relate'?'entities':'records',items:input.map(descriptor)};
-    else if(typeof input!=='string' && (input?.[Symbol.asyncIterator] || input?.[Symbol.iterator])) {
-      this.#iterator=input[Symbol.asyncIterator]?.() || input[Symbol.iterator]();selected={kind:'feed',name:'javascript'};
-    } else selected={kind:'records',items:[descriptor(input)]};
-    const asked=question?.[questionTag] || (typeof question==='string'?{kind:'text',text:question}:{kind:'definition',value:question});
-    try {this.#native=crossing(()=>addon.requestSession(engine,dump({schema:Results.REQUEST_VERSION,call:{function:verb,question:asked,input:selected,options}})));}
+    try {
+      dump(verb);if(typeof verb!=='string')throw new ClientError('usage','invalid canonical request');
+      if(!input?.[sourceTag] && !Array.isArray(input) && typeof input!=='string' && (input?.[Symbol.asyncIterator] || input?.[Symbol.iterator])) this.#iterator=input[Symbol.asyncIterator]?.() || input[Symbol.iterator]();
+      const values={question:dump(question?.[questionTag] || question),selector:!!question?.[questionTag],literal:typeof question==='string',source:input?.[sourceTag]?dump(input[sourceTag]):undefined,items:this.#iterator || input?.[sourceTag]?[]:(Array.isArray(input)?input:[input]).map(v=>dump(descriptor(v))),feed:!!this.#iterator};
+      this.#native=crossing(()=>addon.requestSession(engine,verb,values,dump(options)));
+    }
     catch(error){this.close();throw error;}
     this.#abort=()=>this.cancel();signal?.addEventListener('abort',this.#abort,{once:true});
   }
@@ -83,8 +81,8 @@ class Operation {
     this.#pending=Promise.resolve().then(()=>iterator.next()).then(value=>{
       if(this.#closed) return;
       if(value.done){this.#native.finish(null);this.#iterator=undefined;}
-      else this.#pending={text:dump({item:descriptor(value.value)})};
-    }).catch(()=>{if(!this.#closed){this.#native.finish('{"kind":"invalid_input"}');this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
+      else this.#pending={text:dump(descriptor(value.value))};
+    }).catch(()=>{if(!this.#closed){this.#native.finish(true);this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
   }
   async next() {
     if(this.#done) return {done:true,value:undefined};

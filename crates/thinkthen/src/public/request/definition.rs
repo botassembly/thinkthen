@@ -91,7 +91,11 @@ impl<'de> Deserialize<'de> for RequestDefinition {
     }
 }
 impl RequestDefinition {
-    pub(crate) fn from_authored_json(text: &str) -> Result<Self, Error> {
+    /// Decode authored question bytes through the shared native grammar.
+    /// Retains authored ordering, invalid forms and their exact admission diagnostics.
+    /// # Errors
+    /// Returns the native question-file error for malformed or unsupported definitions.
+    pub fn from_authored_json(text: &str) -> Result<Self, Error> {
         let value = crate::core::Json::parse(text)
             .map_err(crate::core::QuestionFileError::NotJson)
             .map_err(Error::refused)?;
