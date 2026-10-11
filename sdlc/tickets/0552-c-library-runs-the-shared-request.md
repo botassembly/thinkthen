@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision f23c075965dc12a966847fee80c13bfab3b29385, accept
+
 ## Outcome
 
 Every C export that asks a question, frozen 0.1 exports included, admits and executes through `Engine::execute_request`. The C library keeps one helper for reading caller arrays. No shipped Rust type or module is named for the old "door" or "legacy" API.
