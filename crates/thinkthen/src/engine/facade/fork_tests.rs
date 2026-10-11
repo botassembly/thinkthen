@@ -251,7 +251,6 @@ fn finish_usage_child() {
     let worker = thread::spawn(move || {
         assert_eq!(engine.usage_persistence(), UsagePersistence::Written);
         assert_eq!(engine.finish_usage_status(), UsagePersistence::Written);
-        engine.finish_usage();
         finished.send(())
     });
     assert_eq!(
@@ -274,7 +273,6 @@ fn finish_usage_child() {
     assert_eq!(own.usage_persistence(), UsagePersistence::Pending);
     drop(held);
     assert_eq!(own.finish_usage_status(), UsagePersistence::Written);
-    own.finish_usage();
     assert_eq!(own.usage_persistence(), UsagePersistence::Written);
     assert_eq!(
         durable().total.requests_sent,

@@ -116,6 +116,24 @@ fn duplicates_consume_visits_without_refill_and_top_follows_the_merge() -> io::R
 }
 
 #[test]
+fn plain_top_keeps_originals_after_member_evictions() -> io::Result<()> {
+    let question = saved("rank-set-plain-retention", SET)?;
+    for (top, expected) in [("1", "a\n"), ("2", "a\nb\n"), ("3", "a\nb\nc\n")] {
+        let listener = Listener::answering(answer)?;
+        let output = call(
+            &listener,
+            &question,
+            &["--batch", "1", "--top", top],
+            b"c\nb\na\n",
+        )?;
+        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        assert_eq!(output.stdout, expected.as_bytes());
+        assert_eq!(listener.count(), 3);
+    }
+    Ok(())
+}
+
+#[test]
 fn common_jsonl_field_and_named_windows_use_shared_intake_display() -> io::Result<()> {
     let question = saved("rank-set-intake", SET)?;
     let listener = Listener::answering(answer)?;

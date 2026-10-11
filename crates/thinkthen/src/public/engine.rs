@@ -231,8 +231,10 @@ impl Engine {
     /// for a host that never drops its engine. Dropping the last clone does
     /// the same. Only the wait for the usage lock is bounded, by one second.
     /// A forked child that never called the engine writes nothing.
-    pub fn finish_usage(&self) {
-        self.inner.finish_usage();
+    /// Return persistence failure with the shared advice; the answer stays valid.
+    #[must_use]
+    pub fn finish_usage(&self) -> crate::public::UsagePersistence {
+        self.inner.finish_usage_status()
     }
 
     /// This engine's totals: the sends, cache answers and tokens of calls

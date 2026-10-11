@@ -89,27 +89,6 @@ pub(crate) fn call(
     {
         return canonical::call(engine, text, door::options(deadline_ms, token)?);
     }
-    for key in ["usage_status", "finish_usage_status"] {
-        if let Some(raw) = members.get(key) {
-            if raw.get() != "true" {
-                return Err(Failure::usage(format!("the {key} key takes true")));
-            }
-            if members.len() != 1 {
-                return Err(Failure::usage(format!(
-                    "a {key} request holds no other key"
-                )));
-            }
-            let state = if key == "usage_status" {
-                engine.usage_persistence()
-            } else {
-                engine.finish_usage_status()
-            };
-            return written(serde_json::to_string(&PersistenceStatus {
-                state,
-                advice: state.advice(),
-            }));
-        }
-    }
     members.remove("schema");
     if flag(&members, "usage")? {
         if members.len() > 1 {
@@ -146,13 +125,6 @@ pub(crate) fn call(
     written(serde_json::to_string(&DoorReply::new(
         value, facts, attempts,
     )?))
-}
-
-#[derive(serde::Serialize)]
-struct PersistenceStatus {
-    state: thinkthen::UsagePersistence,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    advice: Option<&'static str>,
 }
 
 fn controls<'a>(

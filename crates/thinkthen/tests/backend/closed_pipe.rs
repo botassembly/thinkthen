@@ -132,3 +132,89 @@ fn a_closed_reader_ends_filter_while_its_input_remains_open() {
     assert_eq!(listener.count(), 1);
     drop(input);
 }
+
+#[cfg(unix)]
+#[test]
+fn native_readiness_emits_a_row_and_cancels_without_waiting_for_input_eof() {
+    use std::os::unix::process::ExitStatusExt as _;
+    let questions = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("reader-questions-{}.json", std::process::id()));
+    std::fs::write(
+        &questions,
+        r#"{"version":1,"questions":{"keep":{"decide":"Keep?"}}}"#,
+    )
+    .expect("questions");
+    for verb in ["decide", "annotate", "recognize"] {
+        let listener = Listener::answering(move |body| {
+            if verb == "recognize" {
+                super::recognize::automatic(body)
+            } else {
+                reply(body)
+            }
+        })
+        .expect("loopback listener");
+        let question = match verb {
+            "annotate" => questions.to_str().expect("question path"),
+            "recognize" => "person,organization",
+            _ => "Keep?",
+        };
+        let mut child = crate::harness::command(
+            &[
+                verb,
+                question,
+                "--lines",
+                "--jobs",
+                "1",
+                "--no-cache",
+                "--url",
+                listener.base(),
+                "--model",
+                "jev-1.13.0",
+            ],
+            &[("THINKTHEN_API_KEY", "sk-reader-loopback")],
+        )
+        .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "1")
+        .stdin(Stdio::piped())
+        .spawn()
+        .expect("command");
+        let mut input = child.stdin.take().expect("stdin");
+        input.write_all(b"Ada met Acme.\n").expect("first record");
+        input.flush().expect("flush");
+        let stdout = child.stdout.take().expect("stdout");
+        let (sent, received) = std::sync::mpsc::channel();
+        let reader = std::thread::spawn(move || {
+            let mut row = String::new();
+            let mut stdout = BufReader::new(stdout);
+            let result = stdout.read_line(&mut row);
+            let _sent = sent.send((result, row, stdout));
+        });
+        let first = received.recv_timeout(Duration::from_secs(5));
+        if first.is_ok() {
+            assert!(
+                crate::child::command("kill", &[])
+                    .args(["-INT", &child.id().to_string()])
+                    .status()
+                    .expect("signal")
+                    .success()
+            );
+        } else {
+            child.kill().expect("stop hung reader");
+        }
+        let output = finish(child, "cancel input reader").expect("command ends with input open");
+        reader.join().expect("stdout reader");
+        drop(input);
+        let (result, row, _stdout) = first.expect("a row arrives before input EOF");
+        assert!(result.expect("read row") > 0, "{verb}");
+        let row: Value = serde_json::from_str(&row).expect("native row");
+        assert_eq!(row["input"], "Ada met Acme.", "{verb}");
+        assert_eq!(
+            output.status.signal(),
+            Some(signal_hook::consts::signal::SIGINT),
+            "{verb}: {:?}",
+            output.stderr
+        );
+        assert!(listener.count() > 0, "{verb}");
+        assert!(!String::from_utf8_lossy(&output.stderr).contains("sk-reader-loopback"));
+    }
+    std::fs::remove_file(questions).expect("remove questions");
+}

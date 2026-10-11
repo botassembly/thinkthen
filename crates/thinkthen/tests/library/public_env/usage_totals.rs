@@ -76,7 +76,6 @@ fn assert_usage_persistence(
         );
         assert!(!failed.to_string().contains(argument));
         assert_eq!(engine.usage().requests_sent(), 2);
-        assert_eq!(engine.finish_usage_status(), status);
     } else {
         assert_eq!(
             status,
@@ -88,7 +87,7 @@ fn assert_usage_persistence(
         );
         assert!(status.advice().is_none());
     }
-    engine.finish_usage();
+    assert_eq!(engine.finish_usage(), status);
 }
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
