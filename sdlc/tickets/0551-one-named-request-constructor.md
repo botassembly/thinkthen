@@ -37,3 +37,4 @@ One Rust constructor turns a function name, a question, an input and options int
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Request constructor mappings are migrated, while the PM must reconcile the literal search proof with retained question-kind mappings used only for settings selection and ABI tags.
