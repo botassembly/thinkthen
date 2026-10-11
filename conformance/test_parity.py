@@ -550,7 +550,10 @@ esac
                             ('test-full-cases', ['--run', '--artifacts', '.']),
                             ('surfaces', ['--full-functional', '--artifacts', '.'])]:
             installed = '--artifacts' in args
-            for failed in [None, 'safety', 'parity'] + ([] if installed else ['smoke']):
+            failures = [None, 'safety', 'parity'] + ([] if installed else ['smoke'])
+            if '--publish' in args:
+                failures.append('docs')
+            for failed in failures:
                 with self.subTest(entry=entry, failed=failed), tempfile.TemporaryDirectory() as folder:
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
@@ -575,6 +578,13 @@ esac
                         'sdlc/scripts/publish-builds': 'if [ "$1" = --check ]; then printf "stage-check\\n" >> calls; else printf "stage\\n" >> calls; fi\n',
                         'bin/git': '#!/bin/sh\nif [ "$1" = rev-parse ]; then printf "source-hash\\n"; fi\n',
                         'bin/rustc': '#!/bin/sh\nprintf "host: x86_64-unknown-linux-gnu\\n"\n',
+                        'site/package.json': '{}\n',
+                        'bin/npm': (
+                            '#!/bin/sh\nset -eu\n'
+                            'test "$PWD" = "$FIXTURE_ROOT/site"\n'
+                            'test "$*" = "run test-docs"\n'
+                            'printf "docs\\n" >> "$FIXTURE_ROOT/calls"\n'
+                            'exit "$DOCS_CODE"\n'),
                         'bin/cargo': (
                             '#!/bin/sh\nset -eu\n'
                             'test "$XDG_CONFIG_HOME" = "$PWD/config"\n'
@@ -601,10 +611,13 @@ esac
                     (root / 'bin/rustc').chmod(0o755)
                     (root / 'bin/git').chmod(0o755)
                     (root / 'bin/cargo').chmod(0o755)
+                    (root / 'bin/npm').chmod(0o755)
                     env = {'PATH': str(root / 'bin') + ':' + os.defpath,
                            'HOME': str(root / 'home'), 'SAFETY_CODE': '77' if failed == 'safety' else '0',
                            'PARITY_CODE': '1' if failed == 'parity' else '0',
                            'SMOKE_CODE': '77' if failed == 'smoke' else '0',
+                           'DOCS_CODE': '1' if failed == 'docs' else '0',
+                           'FIXTURE_ROOT': str(root),
                            'INSTALLED': 'yes' if installed else '',
                            'THINKTHEN_CONFORMANCE_IDS': '/unwanted-selector'}
                     result = subprocess.run(['sh', str(scripts / entry), *args], cwd=root,
@@ -616,12 +629,16 @@ esac
                         expected[:0] = ['workspace', 'release-workspace', 'release-consumer']
                     if '--publish' in args:
                         expected.insert(0, 'stage-check')
+                        if failed in (None, 'docs'):
+                            expected += ['extra-pack', 'docs']
                         if failed is None:
-                            expected += ['extra-pack', 'stage']
+                            expected += ['stage']
                     calls = (root / 'calls').read_text().splitlines()
                     self.assertEqual(calls.count('binding-smoke'), int(entry == 'test-full-cases'))
                     self.assertEqual([call for call in calls if call != 'binding-smoke'], expected, result.stderr)
                     self.assertEqual(result.returncode == 0, failed is None, result.stdout + result.stderr)
+                    if failed == 'docs':
+                        self.assertIn('documentation replay did not pass', result.stdout)
 
 
 if __name__ == '__main__':
