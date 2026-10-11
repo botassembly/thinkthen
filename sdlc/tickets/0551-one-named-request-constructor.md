@@ -46,3 +46,4 @@ PM amendment, 2026-10-11. The proof bans duplicated named-request construction. 
 
 - 2026-10-11 started
 - 2026-10-11 next: Request constructor mappings are migrated, while the PM must reconcile the literal search proof with retained question-kind mappings used only for settings selection and ABI tags.
+- 2026-10-11 next: Final request construction code passed fresh review under the approved mapping exceptions and awaits the 0549 landing before its accepted core slice and whole-ticket checks.
