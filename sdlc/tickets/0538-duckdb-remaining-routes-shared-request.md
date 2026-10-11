@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 Every DuckDB function builds its call through the shared Request and owned session. No DuckDB route calls the engine directly or writes request JSON by hand.
