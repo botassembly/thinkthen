@@ -2,8 +2,15 @@
 #include "session_views.c"
 #include <string.h>
 #include <sched.h>
+static int read_packet(thinkthen_session *session, thinkthen_session_result ***results, size_t *count, uint32_t *status) {
+    thinkthen_session_result *result=NULL;
+    if(thinkthen_session_try_read(session,status,&result)) return 1;
+    if(*status!=THINKTHEN_SESSION_RESULT_V1) return 0;
+    thinkthen_session_result **grown=realloc(*results,(*count+1)*sizeof(*grown));if(!grown)return 1;
+    *results=grown;(*results)[(*count)++]=result;return 0;
+}
 int main(int argc, char **argv) {
-    if(argc!=5) return 2;
+    if(argc<5) return 2;
     FILE *input=fopen(argv[1],"rb"); if(!input) return 2;
     if(fseek(input,0,SEEK_END)) return 2;
     long size=ftell(input); if(size<0||fseek(input,0,SEEK_SET)) return 2;
@@ -21,20 +28,27 @@ int main(int argc, char **argv) {
         thinkthen_engine_free(engine);return 0;
     }
     if(strcmp(argv[3],"cancel")==0) thinkthen_session_cancel(session);
+    thinkthen_session_result **results=NULL;size_t count=0;
+    for(int i=5;i<argc;++i) {
+        for(;;) {
+            uint32_t pushed,status;
+            if(thinkthen_session_try_push(session,argv[i],strlen(argv[i]),&pushed))return 1;
+            if(pushed!=THINKTHEN_SESSION_FULL_V1)break;
+            if(read_packet(session,&results,&count,&status))return 1;
+            if(status==THINKTHEN_SESSION_PENDING_V1)sched_yield();
+        }
+    }
     if(thinkthen_session_finish(session,NULL,0)) return 1;
     if(strcmp(argv[4],"held")==0) {
         if(getchar()!='!')return 3;
         thinkthen_session_cancel(session);puts("cancel-fired");fflush(stdout);
     }
     thinkthen_engine_free(engine);
-    thinkthen_session_result **results=NULL;size_t count=0;
     for(;;) {
-        uint32_t status;thinkthen_session_result *result=NULL;
-        if(thinkthen_session_try_read(session,&status,&result)) return 1;
+        uint32_t status;
+        if(read_packet(session,&results,&count,&status)) return 1;
         if(status==THINKTHEN_SESSION_END_V1)break;
         if(status==THINKTHEN_SESSION_PENDING_V1){sched_yield();continue;}
-        thinkthen_session_result **grown=realloc(results,(count+1)*sizeof(*results));if(!grown)return 1;
-        results=grown;results[count++]=result;
     }
     thinkthen_session_free(session);
     fputs("{\"packets\":[",stdout);

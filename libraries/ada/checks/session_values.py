@@ -99,7 +99,10 @@ def construct(key, source, value):
     if source.get('type') == 'boolean':
         return f"{typ}'(" + str(value) + ')'
     if source.get('type') in ('number', 'integer'):
-        return f"{typ}'(" + str(value) + ')'
+        literal = str(value)
+        if source['type'] == 'number' and '.' not in literal:
+            literal = literal.replace('e', '.0e') if 'e' in literal else literal + '.0'
+        return f"{typ}'(" + literal + ')'
     return f'{typ} (' + ada_text(json.dumps(value, ensure_ascii=False)) + ')'
 
 
