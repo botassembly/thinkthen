@@ -63,6 +63,11 @@ PM amendment, 2026-10-11, third. This rules on `rank_set_complete_with` and `rel
   - `relate_records_complete_with` and `try_relate_records_complete_with` are deleted. The `Request` relate path calls the private `execute_relate_records_complete_with`, and the relate ownership test moves there unchanged.
   - These two ownership tests are the only exception to moving the affected integration tests onto public `Request`. They may use a library-test loopback backend inside the crate, which code review checks.
 
+PM amendment, 2026-10-11, fourth. The third amendment's rule now covers every wrapper whose ownership test cannot move intact to `Request` or to a 0.1.2 method. The first such test found after that amendment was `complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_legacy_call` on `decide_many_complete_with`. The second was `complete_find_serialization_retains_the_original_payload_selected_by_native_execution` on `find_complete_with`.
+- If crate code outside tests calls the private implementation under the wrapper, the test moves unchanged onto that implementation as a library-only test inside the crate, and the public wrapper is deleted. `find_complete_with` takes this rule, because `try_find_with` calls the private fallible complete primitive.
+- If nothing outside tests reaches the implementation, the wrapper stays public with its test unchanged. `decide_many_complete_with` takes this rule unless the developer finds a production caller of its implementation.
+- No test assertion changes. No fake `Call`, new collector or `RequestRows` variant is added. A Progress line names each wrapper, the rule it took and the production caller when there is one.
+
 ## Progress
 
 - 2026-10-11 started
