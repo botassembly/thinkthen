@@ -68,7 +68,7 @@ ORDER BY refund.rank;
 
 `thinkthen_plan` accepts a keyed JSON object of text values and the same question and settings grammar as `_many`. Its `estimated_input_tokens` struct has `lower` and `upper` members; `first_body` holds the exact first prepared request or SQL NULL for empty input. Counts describe preparation before cache answers, retries or refusals. Planning needs no API key and sends no request; its token band is an estimate, not a provider bill. A positive `thinkthen_max_requests_total` still limits later actual sends.
 
-A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
+A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. An invalid annotation row, such as one missing its declared `/body` part, stops the call before any send and returns that row's error. Valid neighbouring rows are no longer sent and cached before the query fails. Valid input keeps the selected packed batch counts. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';

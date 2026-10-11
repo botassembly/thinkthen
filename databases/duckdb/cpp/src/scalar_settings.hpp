@@ -44,6 +44,7 @@ struct SessionSettings {
 	}
 };
 
+void ValidateRequestTotal(ClientContext &context);
 SessionSettings Settings(ClientContext &context);
 
 } // namespace duckdb

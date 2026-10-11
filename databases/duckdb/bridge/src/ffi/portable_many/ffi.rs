@@ -10,9 +10,8 @@ use std::fmt;
 use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::json;
-use serde_json::value::RawValue;
 use thinkthen::{
-    Answer, For, Judgment, LoadedQuestion, Probabilities, Question, QuestionKind, RankSet, Settings,
+    Answer, For, LoadedQuestion, Probabilities, Question, QuestionKind, RankSet, Settings,
 };
 
 use crate::engines;
@@ -28,30 +27,6 @@ pub(super) fn keyed_texts(source: &str) -> Result<Vec<String>, String> {
     let keyed = serde_json::from_str::<Keyed>(source)
         .map_err(|error| RowError::usage(&error.to_string()).text)?;
     Ok(keyed.0.into_iter().map(|(_, text)| text).collect())
-}
-
-struct Fields(Vec<(String, Box<RawValue>)>);
-
-struct Ordered;
-
-impl<'de> Visitor<'de> for Ordered {
-    type Value = Fields;
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("one JSON object")
-    }
-    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Fields, M::Error> {
-        let mut fields = Vec::new();
-        while let Some(field) = map.next_entry()? {
-            fields.push(field);
-        }
-        Ok(Fields(fields))
-    }
-}
-
-impl<'de> Deserialize<'de> for Fields {
-    fn deserialize<D: Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {
-        decoder.deserialize_map(Ordered)
-    }
 }
 
 struct Entries;
@@ -119,26 +94,8 @@ pub(super) fn parse(
                 RowError::usage("the settings key `none` does not belong to this verb").text,
             );
         }
-        let Fields(fields) = serde_json::from_str::<Fields>(settings)
-            .map_err(|error| RowError::usage(&error.to_string()).text)?;
-        let end = question
-            .rfind('}')
-            .ok_or_else(|| "thinkthen defect: a checked question lost its object".to_owned())?;
-        let mut joined = question[..end].trim_end().to_owned();
-        for (key, value) in fields {
-            if matches!(key.as_str(), "context" | "batch" | "deadline_ms" | "none") {
-                continue;
-            }
-            joined.push(',');
-            joined.push_str(
-                &serde_json::to_string(&key)
-                    .map_err(|_| "thinkthen defect: a settings key could not be written")?,
-            );
-            joined.push(':');
-            joined.push_str(value.get());
-        }
-        joined.push('}');
-        joined
+        crate::complete_native::settings::merge(question, &settings_value, verb)
+            .map_err(|error| RowError::from(error).text)?
     } else {
         settings_value
             .question_json(verb, question)
@@ -238,18 +195,27 @@ fn choice_probability(chosen: Option<&str>, probabilities: &Probabilities) -> Op
 }
 
 fn row_value(
-    value: &Judgment,
-    probabilities: &Probabilities,
+    row: thinkthen::RequestSessionRow,
 ) -> Result<(serde_json::Value, Option<f64>), String> {
-    match value {
-        Judgment::Choice(chosen) => Ok((
-            json!(chosen),
-            choice_probability(chosen.as_deref(), probabilities),
-        )),
-        Judgment::Score(score) => Ok((json!(score), None)),
-        Judgment::Tags(labels) => Ok((json!(labels), None)),
-        _ => Err("thinkthen defect: a keyed call returned another kind".into()),
-    }
+    Ok(match row {
+        thinkthen::RequestSessionRow::Decision(row) => (
+            json!(match row.result().value() {
+                Answer::Yes => Some(true),
+                Answer::No => Some(false),
+                Answer::Unsure => None,
+            }),
+            super::request::probability(row.result().probabilities()),
+        ),
+        thinkthen::RequestSessionRow::Choice(row) => (
+            json!(row.result().value()),
+            choice_probability(row.result().value(), &row.result().probabilities()),
+        ),
+        thinkthen::RequestSessionRow::Tags(row) => (json!(row.result().value()), None),
+        thinkthen::RequestSessionRow::Score(row) => (json!(row.result().value()), None),
+        _ => {
+            return Err("thinkthen defect: a keyed call returned another kind".into());
+        }
+    })
 }
 
 fn run(
@@ -270,73 +236,62 @@ fn run(
     let total = asked.max_requests_total;
     let context = call.context().map(str::to_owned);
     let texts: Vec<String> = input.0.iter().map(|(_, value)| value.clone()).collect();
+    if kind == RANK && texts.iter().any(|text| text.trim().is_empty()) {
+        return Err(RowError::usage("evidence is text, not white space").text);
+    }
     run_detached(stop, move |token| {
-        let options = engines::options_for(
-            super::portable::due(query, call.deadline_ms()),
-            &token,
-            total,
-            batch_word.as_deref().or(session_batch.as_deref()),
-            context.as_deref(),
-        )?;
-        let mut rows = Vec::new();
-        if let KeyedQuestion::Set(set) = &question {
-            if texts.is_empty() {
-                return Ok(b"[]".to_vec());
-            }
-            let call = engine
-                .rank_set_with(set, texts, options)
-                .map_err(|error| engines::call_error(error, total).text)?;
-            for (place, row) in call.value().iter().enumerate() {
-                let (key, _) = input
-                    .0
-                    .get(row.index())
-                    .ok_or("thinkthen defect: a ranked row lost its record")?;
-                rows.push(json!({"key":key,"rank":place + 1,"probability":row.probability(),"question_name":row.question_name(),"facts":call.facts()}));
-            }
-            return serde_json::to_vec(&rows)
-                .map_err(|_| "thinkthen defect: keyed rows could not be written".into());
+        if texts.is_empty() && matches!(kind, RANK | 9) {
+            return Ok(b"[]".to_vec());
         }
-        let KeyedQuestion::Ordinary(question) = &question else {
-            return Err("thinkthen defect: a keyed question was lost".into());
+        let definition = match question {
+            KeyedQuestion::Set(set) => set.into(),
+            KeyedQuestion::Ordinary(question) => match *question {
+                LoadedQuestion::Question(q) if kind == RANK => q.into(),
+                q => q.into(),
+            },
         };
-        let question = question.as_ref();
-        if kind == RANK {
-            let LoadedQuestion::Question(question) = question else {
-                return Err("thinkthen defect: a rank question was banded".into());
-            };
-            if texts.is_empty() {
-                return Ok(b"[]".to_vec());
+        let result = super::request::run(
+            &engine,
+            definition,
+            super::request::texts(texts),
+            super::CallScope {
+                due: super::portable::due(query, call.deadline_ms()),
+                token: &token,
+                total,
+                batch: batch_word.as_deref().or(session_batch.as_deref()),
+                context: context.as_deref(),
+            },
+        )?
+        .success(total)?;
+        let mut rows = Vec::new();
+        match result.aggregate {
+            Some(thinkthen::RequestValue::SetRanked(ranked)) => {
+                for (place, row) in ranked.iter().enumerate() {
+                    let (key, _) = input
+                        .0
+                        .get(row.ordinal())
+                        .ok_or("thinkthen defect: a ranked row lost its record")?;
+                    let probability =
+                        super::request::probability(row.result().result().probabilities());
+                    rows.push(json!({"key":key,"rank":place + 1,"probability":probability,"question_name":row.result().question_name(),"facts":result.facts}));
+                }
             }
-            let ranked = engine
-                .rank_with(question, texts, options)
-                .map_err(|error| engines::call_error(error, total).text)?;
-            for (place, row) in ranked.value().iter().enumerate() {
-                let (key, _) = input
-                    .0
-                    .get(row.index())
-                    .ok_or("thinkthen defect: a ranked row lost its record")?;
-                rows.push(json!({"key":key,"rank":place + 1,"probability":row.probability()}));
+            Some(thinkthen::RequestValue::Ranked(ranked)) => {
+                for (place, row) in ranked.iter().enumerate() {
+                    let (key, _) = input
+                        .0
+                        .get(row.ordinal())
+                        .ok_or("thinkthen defect: a ranked row lost its record")?;
+                    rows.push(json!({"key":key,"rank":place + 1,"probability":super::request::probability(row.result().probabilities())}));
+                }
             }
-        } else if kind == 0 {
-            let decided = engine
-                .decide_many_with(question, texts, options)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| engines::call_error(error, total).text)?;
-            for ((key, _), value) in input.0.iter().zip(decided) {
-                rows.push(json!({"key":key,"value":match value.value() {
-                    Answer::Yes => Some(true), Answer::No => Some(false), Answer::Unsure => None,
-                },"probability":value.probability()}));
+            None => {
+                for ((key, _), row) in input.0.iter().zip(result.rows) {
+                    let (value, probability) = row_value(row)?;
+                    rows.push(json!({"key":key,"value":value,"probability":probability}));
+                }
             }
-        } else {
-            let answered = engine
-                .details_many_with(question, texts, options)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|error| engines::call_error(error, total).text)?;
-            for ((key, _), value) in input.0.iter().zip(answered) {
-                let details = value.value();
-                let (value, probability) = row_value(details.value(), details.probabilities())?;
-                rows.push(json!({"key":key,"value":value,"probability":probability}));
-            }
+            _ => return Err("thinkthen defect: a keyed aggregate returned another kind".into()),
         }
         serde_json::to_vec(&rows)
             .map_err(|_| "thinkthen defect: keyed rows could not be written".into())

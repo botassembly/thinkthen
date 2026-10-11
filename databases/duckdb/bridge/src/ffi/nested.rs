@@ -63,17 +63,21 @@ pub(super) fn run(
 ) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     for text in texts {
-        let options = crate::engines::options_for(
-            scope.due,
-            scope.token,
-            scope.total,
-            scope.batch,
-            scope.context,
-        )?;
-        let found = engine
-            .recognize_with(ask, &text, options)
-            .map_err(|error| crate::engines::call_error(error, scope.total).text)?;
-        let found = found.into_value();
+        let result = super::request::run(
+            engine,
+            ask.clone().into(),
+            super::request::texts(vec![text]),
+            scope,
+        )?
+        .success(scope.total)?;
+        let Some(thinkthen::RequestValue::Recognized(rows)) = result.aggregate else {
+            return Err("thinkthen defect: recognition returned another kind".to_owned());
+        };
+        let found = rows
+            .first()
+            .ok_or("thinkthen defect: recognition missing")?
+            .result()
+            .value();
         if kind == 8 {
             count(&mut bytes, found.entities().len())?;
             for entity in found.entities() {

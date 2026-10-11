@@ -31,6 +31,23 @@ case(shared_settings_corpus)
 
 
 @case
+def session_batch_keeps_digit_grammar_and_exact_refusal():
+    error = "thinkthen usage: batch takes max or a whole number of at least 1 (retryable: no)"
+    with Backend() as backend:
+        for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
+            got = run([f"SET thinkthen_batch = '{value}'", ASK,
+                       "SELECT thinkthen_details('Is it a refund?', 'refund now')"], backend.base())
+            expect([said(result) for result in got[1:]], [error, error], 'retained session batch refusal')
+        expect(backend.count(), 0, 'invalid session batches send nothing')
+    for value, count in (('max', 1), ('1', 2), ('01', 2)):
+        with Backend() as backend:
+            got = run([f"SET thinkthen_batch = '{value}'",
+                       "SELECT thinkthen_decide('Is it a refund?', x) FROM (VALUES ('refund one'), ('refund two')) t(x)"], backend.base())
+            expect(rows(got[-1]), [[True], [True]], 'retained digit batch values')
+            expect(backend.count(), count, 'retained valid packed batch count')
+
+
+@case
 def portable_decide_zero_budget():
     """The portable vector reads the caller's already spent query budget."""
     with Backend() as backend:
@@ -406,10 +423,9 @@ def an_annotate_set_packs_compatible_texts():
 
 
 @case
-def an_annotate_row_missing_its_part_fails_alone():
-    """ADR 0111 slice 3: a first record missing its `on` part fails alone.
-    At one record a request, each neighbour still sends into the named
-    cache, so the statement that leaves the bad row out sends nothing."""
+def an_annotate_row_missing_its_part_stops_before_any_send():
+    """Shared Request admission preserves the bad-row error before any send.
+    Valid neighbours are asked only when the next statement omits that row."""
     with Backend() as backend:
         parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
         records = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(2, 7)])
@@ -418,10 +434,10 @@ def an_annotate_row_missing_its_part_fails_alone():
         got = run([f"SELECT {ask} FROM {table} ORDER BY i", "SELECT metric, value FROM thinkthen_usage()",
                    f"SELECT i, {ask} FROM {table} WHERE i > 1 ORDER BY i"], backend.base())
         expect(said(got[0]), MISSING_PART, "the record missing /body")
-        expect(dict(rows(got[1]))["requests_sent"], 5, "one request for each neighbour")
+        expect(dict(rows(got[1]))["requests_sent"], 0, "invalid annotation sends no neighbours")
         expect([[at, json.loads(value)] for at, value in rows(got[2])],
                [[at, {"refund": True}] for at in range(2, 7)], "the neighbours' answers")
-        expect(backend.count(), 5, "one request for each neighbour, and none for the rerun")
+        expect(backend.count(), 5, "only the valid rerun sends one request for each neighbour")
 
 
 @case

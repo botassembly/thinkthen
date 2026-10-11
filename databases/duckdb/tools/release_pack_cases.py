@@ -29,7 +29,7 @@ def copy_packer(destination: Path) -> None:
              'crates/thinkthen/Cargo.toml', 'LICENSE', 'conformance/children/children.py']
     names += [str(p.relative_to(REPO)) for folder in ('databases/duckdb/tools', 'databases/duckdb/cpp')
               for p in (REPO / folder).iterdir() if p.is_file() and p.suffix in ('.py', '.sh', '.env', '.txt')]
-    for folder in ('crates/thinkthen', 'conformance/backend', 'databases/duckdb/bridge'):
+    for folder in ('crates/thinkthen', 'crates/thinkthen-host', 'conformance/backend', 'databases/duckdb/bridge'):
         for path in (REPO / folder).rglob('*'):
             if path.is_file() and 'target' not in path.relative_to(REPO / folder).parts:
                 names.append(str(path.relative_to(REPO)))
@@ -51,7 +51,7 @@ def pack(tree: Path, target: str, out: Path, env: dict[str, str]) -> subprocess.
                           cwd=tree, capture_output=True, text=True, check=False, env=env, timeout=90)
 
 
-def published_consumer(archive: Path, target: str, release: str, root: Path) -> None:
+def published_consumer(archive: Path, target: str, release: str, root: Path, toolchains: Path) -> None:
     import tarfile
     sys.path.insert(0, str(REPO / 'sdlc/scripts'))
     from install_check import Check, Failure, QUESTION, check_result
@@ -69,7 +69,7 @@ def published_consumer(archive: Path, target: str, release: str, root: Path) -> 
             shutil.copytree(sample / 'recording', check.sample / 'recording')
             shutil.copyfile(sample / 'report.txt', check.sample / 'report.txt')
             (check.sample / 'question.txt').write_text(QUESTION)
-            tools = Path(os.environ['THINKTHEN_TOOLCHAINS']) / 'duckdb' / versions()[0]
+            tools = toolchains / 'duckdb' / versions()[0]
             check.env['PATH'] = str(tools) + os.pathsep + check.env['PATH']
             check.env.update(THINKTHEN_BASE_URL=backend.base(), THINKTHEN_API_KEY='sk-loopback-package-consumer')
             recording = check.sample / 'recording/thinkthen.jsonl'
@@ -175,7 +175,7 @@ def main(target: str) -> None:
         from verify_repository import verify_repository
         release = next(line.split('"')[1] for line in (REPO / 'crates/thinkthen/Cargo.toml').read_text().splitlines() if line.startswith('version = '))
         verify_repository(archive, target, release)
-        published_consumer(archive, target, release, root)
+        published_consumer(archive, target, release, root, Path(env['THINKTHEN_TOOLCHAINS']))
         print('ok   reuse packs both real versions and their legal inventories')
         obsolete = tree / 'databases/duckdb/build/artifacts/cpp' / target / 'thinkthen.duckdb_extension'
         obsolete.parent.mkdir(parents=True)

@@ -1,6 +1,6 @@
 //! The three SQL list-member verbs share one question-set and result codec.
 
-use thinkthen::{Annotated, CallOptions, Engine, FailureCause, Question, QuestionSet};
+use thinkthen::{Engine, FailureCause, Question, QuestionSet};
 
 use crate::errors::RowError;
 
@@ -68,40 +68,47 @@ pub(super) fn run(
     engine: &Engine,
     set: &QuestionSet,
     texts: Vec<String>,
-    options: CallOptions<'_>,
-    total: Option<i64>,
+    scope: super::CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
-    let rows = engine
-        .annotate_with(set, texts, options)
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| crate::engines::call_error(error, total).text)?;
+    let result = super::request::run(
+        engine,
+        set.clone().into(),
+        super::request::texts(texts),
+        scope,
+    )?
+    .success(scope.total)?;
+    let rows = result.rows;
     let mut bytes = Vec::new();
     for row in rows {
-        match row.values().first().map(thinkthen::NamedAnnotation::value) {
-            Some(Annotated::Choice(Some(value))) => {
+        let thinkthen::RequestSessionRow::Annotation(row) = row else {
+            return Err("thinkthen defect: listed annotation returned another kind".to_owned());
+        };
+        let member = row.result().members().next();
+        if let Some(failure) = member.as_ref().and_then(|v| v.failure()) {
+            return Err(format!(
+                "thinkthen backend: the backend's answer could not be read: {}",
+                cause(failure)
+            ));
+        }
+        match member.and_then(|member| member.value()) {
+            Some(thinkthen::Judgment::Choice(Some(value))) => {
                 bytes.push(1);
-                string(&mut bytes, value)?;
+                string(&mut bytes, &value)?;
             }
-            Some(Annotated::Score(value)) => {
+            Some(thinkthen::Judgment::Score(value)) => {
                 bytes.push(2);
                 bytes.extend_from_slice(&value.to_ne_bytes());
             }
-            Some(Annotated::Tags(values)) => {
+            Some(thinkthen::Judgment::Tags(values)) => {
                 bytes.push(3);
                 let count = u32::try_from(values.len())
                     .map_err(|_| "thinkthen defect: too many listed values".to_owned())?;
                 bytes.extend_from_slice(&count.to_ne_bytes());
                 for value in values {
-                    string(&mut bytes, value)?;
+                    string(&mut bytes, &value)?;
                 }
             }
-            Some(Annotated::Failed(failed)) => {
-                return Err(format!(
-                    "thinkthen backend: the backend's answer could not be read: {}",
-                    cause(failed.cause())
-                ));
-            }
-            Some(Annotated::Choice(None)) | None => bytes.push(0),
+            Some(thinkthen::Judgment::Choice(None)) | None => bytes.push(0),
             _ => return Err("thinkthen defect: a listed question returned another kind".to_owned()),
         }
     }

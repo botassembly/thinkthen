@@ -38,6 +38,13 @@ bool FolderAllowed(ClientContext &context, const std::optional<string> &folder) 
 
 } // namespace
 
+void ValidateRequestTotal(ClientContext &context) {
+    const auto total = NumericSetting(context, "thinkthen_max_requests_total");
+    if (total != std::numeric_limits<int64_t>::min() && total < 0) {
+        throw OrdinaryError("thinkthen usage: a request total is a whole number of 0 or more");
+    }
+}
+
 SessionSettings Settings(ClientContext &context) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY)->AdmitBudget(context);
 	SessionSettings settings {TextSetting(context, "thinkthen_batch"),
@@ -53,10 +60,7 @@ SessionSettings Settings(ClientContext &context) {
 	                          TextSetting(context, "thinkthen_profile"),
 	                          TextSetting(context, "thinkthen_record"),
 	                          TextSetting(context, "thinkthen_replay")};
-	if (settings.max_requests_total != std::numeric_limits<int64_t>::min() &&
-	    settings.max_requests_total < 0) {
-		throw OrdinaryError("thinkthen usage: a request total is a whole number of 0 or more");
-	}
+	ValidateRequestTotal(context);
 	settings.base_url = TextSetting(context,"thinkthen_base_url");
     settings.input_price = TextSetting(context,"thinkthen_usd_per_million_input");
     settings.output_price = TextSetting(context,"thinkthen_usd_per_million_output");

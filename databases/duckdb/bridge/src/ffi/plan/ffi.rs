@@ -62,8 +62,27 @@ fn plan(
         call_batch.as_deref().or(session_batch.as_deref()),
         context.as_deref(),
     )?;
+    let request = super::request::build(
+        question.into(),
+        super::request::texts(texts),
+        super::CallScope {
+            due: super::portable::due(-1, call.deadline_ms()),
+            token: &token,
+            total: asked.max_requests_total,
+            batch: call_batch.as_deref().or(session_batch.as_deref()),
+            context: context.as_deref(),
+        },
+    )?
+    .admit()
+    .map_err(|error| RowError::from(error).text)?;
     let estimate = engine
-        .plan_with(&question, texts, options)
+        .plan_request(
+            &request,
+            thinkthen::RequestEnvironment {
+                controls: options,
+                feed: None,
+            },
+        )
         .map_err(|error| RowError::from(error).text)?;
     let (lower, upper) = estimate.estimated_input_tokens();
     let body = estimate.first_body();

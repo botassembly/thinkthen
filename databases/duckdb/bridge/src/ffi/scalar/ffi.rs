@@ -100,6 +100,8 @@ impl TryGroup {
             }
             return Ok(());
         };
+        // 0.2 retains packed recovery. The after-0.2 idea "the shared request
+        // session recovers failures row by row" owns its replacement.
         let result = self
             .engine
             .details_many_recoverable_with(&self.question, valid, options);
@@ -214,25 +216,25 @@ fn annotate(
     texts: Vec<String>,
     scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
-    let options = engines::options_for(
-        scope.due,
-        scope.token,
-        scope.total,
-        scope.batch,
-        scope.context,
-    )?;
-    // A row refused before its request, such as one missing an `on` part,
-    // fails alone: its neighbours are still asked and stored, and the vector
-    // then raises that row's error. A rerun that leaves the bad row out
-    // answers its neighbours from the store.
-    let rows = engine
-        .annotate_each_with(set, &texts, options)
-        .map_err(|error| engines::call_error(error, scope.total).text)?
-        .into_value();
+    let result = super::request::run(
+        engine,
+        set.clone().into(),
+        super::request::texts(texts),
+        scope,
+    )?
+    .success(scope.total)?;
+    let rows = result.rows;
     let mut bytes = Vec::new();
     for row in rows {
-        let row = row.map_err(|error| engines::call_error(error, scope.total).text)?;
-        frame(&mut bytes, &row.value_json())?;
+        let thinkthen::RequestSessionRow::Annotation(row) = row else {
+            return Err("thinkthen defect: annotation returned another kind".to_owned());
+        };
+        frame(
+            &mut bytes,
+            &row.result()
+                .value_json()
+                .map_err(|e| engines::call_error(e, scope.total).text)?,
+        )?;
     }
     Ok(bytes)
 }
@@ -243,18 +245,18 @@ fn details(
     texts: Vec<String>,
     scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
-    let options = engines::options_for(
-        scope.due,
-        scope.token,
-        scope.total,
-        scope.batch,
-        scope.context,
-    )?;
-    let rows = engine
-        .details_many_with(question, texts, options)
-        .map(|row| row.map(|row| row.value().to_scalar_json()))
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| engines::call_error(error, scope.total).text)?;
+    let result = super::request::run(
+        engine,
+        question.clone().into(),
+        super::request::texts(texts),
+        scope,
+    )?
+    .success(scope.total)?;
+    let rows = result
+        .rows
+        .into_iter()
+        .map(super::request::scalar_json)
+        .collect::<Result<Vec<_>, _>>()?;
     let mut bytes = Vec::new();
     for json in rows {
         frame(&mut bytes, &json)?;
@@ -337,17 +339,29 @@ fn try_answer(
     cut: Option<errors::RowError>,
     scope: CallScope<'_>,
 ) -> Result<String, errors::RowError> {
-    let options = engines::options(scope.due, scope.token, scope.total)
-        .map_err(|_| errors::RowError::usage("the deadline is outside the supported range"))?;
-    let details = engine
-        .details_with(question, evidence, options)
-        .map_err(|error| engines::call_error(error, scope.total))?;
+    let result = super::request::run(
+        engine,
+        question.clone().into(),
+        super::request::texts(vec![evidence.to_owned()]),
+        scope,
+    )
+    .map_err(|text| errors::RowError::usage(&text))?;
+    if let Some(error) = result.error {
+        return Err(engines::call_error(error, scope.total));
+    }
+    let row = result
+        .rows
+        .into_iter()
+        .next()
+        .ok_or_else(|| errors::RowError::usage("the details row was lost"))?;
+    let details =
+        super::request::scalar_json(row).map_err(|text| errors::RowError::usage(&text))?;
     if let Some(error) = cut {
         return Err(error);
     }
     Ok(format!(
         "{{\"status\":\"answered\",\"details\":{}}}",
-        details.into_value().to_json()
+        details
     ))
 }
 

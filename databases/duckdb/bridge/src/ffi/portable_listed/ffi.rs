@@ -112,14 +112,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_listed_group(
         let total = asked.max_requests_total;
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
-            let options = engines::options_for(
-                super::portable::due(query_deadline_ms, call.deadline_ms()),
-                &token,
-                total,
-                batch.as_deref().or(session_batch.as_deref()),
-                context.as_deref(),
-            )?;
-            super::complete_listed::run(&engine, &question, texts, options, total)
+            super::complete_listed::run(
+                &engine,
+                &question,
+                texts,
+                super::CallScope {
+                    due: super::portable::due(query_deadline_ms, call.deadline_ms()),
+                    token: &token,
+                    total,
+                    batch: batch.as_deref().or(session_batch.as_deref()),
+                    context: context.as_deref(),
+                },
+            )
         })
     })
 }
