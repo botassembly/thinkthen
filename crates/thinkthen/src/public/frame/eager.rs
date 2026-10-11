@@ -149,26 +149,22 @@ impl PolarsEngine for Engine {
                 );
                 values.push_judgment(value)
             };
-            let mismatch = "a probability column received another result kind";
+            let bad = "a probability column received another result kind";
             match kind {
-                QuestionKind::Decide => {
-                    request::project(texts, &value.decisions(mismatch)?, |row| {
-                        push(
-                            row.map(|row| Judgment::Decision(row.value())),
-                            row.map(|row| row.probabilities()),
-                        )
-                    })?
-                }
-                QuestionKind::Choose => {
-                    request::project(texts, &value.choices(mismatch)?, |row| {
-                        push(
-                            row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
-                            row.map(|row| row.probabilities()),
-                        )
-                    })?
-                }
+                QuestionKind::Decide => request::project(texts, &value.decisions(bad)?, |row| {
+                    push(
+                        row.map(|row| Judgment::Decision(row.value())),
+                        row.map(|row| row.probabilities()),
+                    )
+                })?,
+                QuestionKind::Choose => request::project(texts, &value.choices(bad)?, |row| {
+                    push(
+                        row.map(|row| Judgment::Choice(row.value().map(str::to_owned))),
+                        row.map(|row| row.probabilities()),
+                    )
+                })?,
                 _ => {
-                    return Err(Error::defect(mismatch));
+                    return Err(Error::defect(bad));
                 }
             }
             DataFrame::new(
