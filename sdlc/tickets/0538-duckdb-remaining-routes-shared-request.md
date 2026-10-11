@@ -28,14 +28,14 @@ Migrate every other route as the Changes line says. The ticket closes when those
 
 ### Added public declarations
 
-These accessors serialize the retained scalar Details result without introducing a new format or copying its metadata rules into DuckDB.
-
 ```text
 fn CompleteDecision::to_scalar_json(&self) -> Result<String, Error>
 fn CompleteChoice::to_scalar_json(&self) -> Result<String, Error>
 fn CompleteTags::to_scalar_json(&self) -> Result<String, Error>
 fn CompleteScore::to_scalar_json(&self) -> Result<String, Error>
 ```
+
+These accessors serialize the retained scalar Details result without introducing a new format or copying its metadata rules into DuckDB.
 
 ## Progress
 
