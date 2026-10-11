@@ -30,12 +30,17 @@ The generated declarations support the Linux x86_64 layout measured by its C com
 
 | Removed call or carrier | Replacement |
 | --- | --- |
-| `TT-DECIDE`, `TT-CALL` and descriptor-based decisions | `TT_SESSION_DECIDE` with generated question and input records |
-| Generic JSON or descriptor calls for choose, tag, score, filter, rank, find, annotate, recognize and relate | The corresponding named `TT_SESSION_*` function |
-| `TT-FILES` with question/source JSON buffers | Generated file input selectors in the named request record |
-| Hand-written question, input and label copybooks | Generated `tt-n-cobol-RequestCall-*` records and selector constants |
-| Copied JSON result buffers and handwritten readers | Owned session packets and the complete graph borrowed through `thinkthen_session_result_view` |
-| Hand-written label validation | Native Rust admission of generated question records |
+| `TT-ENGINE-NEW` | `thinkthen_engine_new_with` and the matching native engine declarations |
+| `TT-DECIDE`, `TT-CALL` and `TT_DECIDE` | `TT_SESSION_DECIDE` with generated question and input records |
+| `TT_CHOOSE`, `TT_TAG`, `TT_SCORE`, `TT_FILTER`, `TT_RANK`, `TT_FIND`, `TT_ANNOTATE`, `TT_RECOGNIZE`, `TT_RELATE` | The corresponding named `TT_SESSION_*` function |
+| `TT_QUESTION_NEW`, `TT_QUESTION_NEW_AUTHORED`, `TT_QUESTION_PARSE`, `TT_QUESTION_LOAD`, `TT_QUESTION_LOAD_NAMED`, `TT_QUESTION_LOAD_REFERENCE` | Generated question records with text, authored definition, file, name or reference selectors |
+| `TT-FILES`, `TT_SOURCE_FILES`, `TT_SOURCE_IMAGE_FILES`, `TT_SOURCE_RECORDS`, `TT_IMAGE_CLONE` | Generated record, file and image input selectors in the named request record |
+| `TT_*_BATCH_START` and copied batch carriers | Generated session feed descriptors, `TT_SESSION_PUSH`, `thinkthen_session_finish` and `TT_SESSION_NEXT` |
+| `TT-CAPTURE-ERROR`, `TT-PARSE-FIELD`, `TT-JSON-MEMBER` and copied JSON result buffers | Generated admission diagnostics, terminal failures and complete graphs borrowed through `thinkthen_session_result_view`; `TT_SESSION_TEXT` copies counted strings |
+| `TT-PLAN` | Direct native C preview remains available; the COBOL package has no named typed plan wrapper |
+| `thinkthen.cpy`, `thinkthen-typed.cpy` and hand-written `tt-*.cpy` carriers | Generated `tt-native-generated.cpy`, `tt-n-cobol-RequestCall-*` records and selector constants |
+| `TT-VALIDATE-LABELS` and hand-written label validation | Native Rust admission of generated question records |
+
 
 Compile the new caller with the matching installed C header and library, plus `src/tt_session.c`, `src/tt_requests_generated.c` and `src/tt_session.h`. Supply `-I copybooks` and the native include directory, and use `-fstatic-call -fno-gen-c-decl-static-call -A '-include src/tt_session.h -Wno-incompatible-pointer-types'`. Install the executable beside its packaged `native/lib` directory. The focused consumer stages these package files and proves all ten named calls, primitive false and unresolved null, retained values and failure facts, feed cancellation and counted zero-send refusals. Routine checks unpack the native-bearing archive and run generated consumers against a local backend. Full shared selectors remain release-only.
 
