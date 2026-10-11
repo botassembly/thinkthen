@@ -34,3 +34,4 @@ One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and 
 
 - 2026-10-11 started
 - 2026-10-11 landed b118ee482; next: Finish code tickets and final review before running the candidate suites and nonpublishing platform workflows.
+- 2026-10-11 landed fa49e95b9; next: The checkpoint fixture now proves documentation replay precedes staging and replay failure prevents staging; finish code tickets before candidate qualification.
