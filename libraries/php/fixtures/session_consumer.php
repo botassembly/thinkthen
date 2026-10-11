@@ -81,6 +81,12 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($terminal->facts instanceof ThinkThen\Results\NativeFacts && $terminal->facts->requests_sent === 3 && !$terminal->has('failure'), 'poll typed terminal/count');
     foreach ($rows as $row) check($row instanceof ThinkThen\Results\NativeAtomicDecideValue && is_string($row->answer_id), 'poll retained typed answer');
 } elseif ($mode === 'presence') {
+    $serialized = new class implements JsonSerializable {
+        public int $calls = 0;
+        public function jsonSerialize(): mixed { return ++$this->calls === 1 ? 'serializer-first' : 'serializer-second'; }
+    };
+    $once = $client->decide('Is it?', $serialized);
+    check($serialized->calls === 1 && $once->results[0]->input === 'serializer-first', 'serializer must run once and retain its first value');
     $annotated = $client->annotate(['version' => 1, 'questions' => [
         'ok' => ['decide' => 'Is it urgent?'], 'tags' => ['tag' => 'Which?', 'labels' => ['first', 'second']],
     ]], ['map-record']);
@@ -135,10 +141,20 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         catch (ThinkThen\UsageFailure) {}
     }
     $cycle = new stdClass(); $cycle->self = $cycle;
-    foreach ([$cycle, INF, NAN] as $invalid) {
+    $arrayCycle = []; $arrayCycle['self'] = &$arrayCycle;
+    $serializedCycle = new class implements JsonSerializable {
+        public int $calls = 0;
+        public function jsonSerialize(): mixed {
+            ++$this->calls;
+            $cycle = new stdClass(); $cycle->self = $cycle;
+            return $cycle;
+        }
+    };
+    foreach ([$cycle, $arrayCycle, $serializedCycle, INF, NAN] as $invalid) {
         try { $client->decide('Is it?', $invalid); throw new RuntimeException('non-JSON input admitted'); }
         catch (ThinkThen\UsageFailure) {}
     }
+    check($serializedCycle->calls === 1, 'cyclic serializer must run once');
     $token = new ThinkThen\Cancellation(); $token->cancel();
     try { $client->decide('Is it?', 'precancel', cancel: $token); throw new RuntimeException('cancel admitted'); }
     catch (ThinkThen\CancelledFailure) {}
