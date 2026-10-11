@@ -54,3 +54,4 @@ After the 0508 final review, one reviewed commit passes a hosted release candida
 - 2026-10-10 next: Await the 0530 fixture repair and complete installed qualification; Windows, Apple and fresh release QA remain unverified. No candidate or hosted workflow starts during Ian’s requested wrap-up; publication requires his go.
 - 2026-10-10 next: Add the missing Windows public-channel install checks in lane 1 while 0530 finishes; then run the authorized nonpublishing candidate and fresh QA, with publication awaiting Ian.
 - 2026-10-10 landed 973edbc28; next: Windows public-channel checks are reviewed and landed; await 0530 installed qualification, then run the authorized candidate and platform QA before asking Ian to publish.
+- 2026-10-10 next: Stopped at Ian’s wrap-up request; after 0530 finishes, candidate/platform runs and fresh QA remain authorized but unstarted, and publication still requires Ian’s explicit go.
