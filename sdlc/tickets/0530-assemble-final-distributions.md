@@ -171,3 +171,4 @@ Do not rerun consumers that already pass. A fixture bug that blocks several lang
 - 2026-10-11 next: Run the remaining five installed consumers under the 2026-10-11 amendment.
 - 2026-10-11 next: Finish Flutter and COBOL full runs and repair Ada long-string fixture compilation before its complete installed run.
 - 2026-10-11 next: Await the PM ruling on COBOL scalar applicability while Ada and Flutter qualification continue.
+- 2026-10-11 next: Apply the approved COBOL overflow and zero-send expectations, then finish the remaining full installed runs.
