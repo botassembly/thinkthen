@@ -33,3 +33,7 @@ One Rust constructor turns a function name, a question, an input and options int
   - Collapse the 20 near-identical call methods in C# `OwnedCall.cs:83` and JVM `Engine.java:114` where the language allows it.
 - Proof: a search finds no function-name or question-kind match outside the Rust core. Routine installed checks pass for every touched language.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
