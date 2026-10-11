@@ -27,3 +27,4 @@ R, Ruby and JavaScript calls hand native Rust request values to the engine. None
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 landed 9dcdcc5c7; next: Ruby native requests and reviewed error corrections are landed; convert JavaScript next, then R.
