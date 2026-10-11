@@ -46,3 +46,4 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
 - 2026-10-11 next: Broader public checks exposed a preserved-message mismatch and a repeated control callback during a held send; both are being repaired in the combined core before cleanup and whole-ticket acceptance.
 - 2026-10-11 next: The combined core repair passed fresh review and both preserved-message and held-send regressions alongside the native and installed Python checks; whole-ticket gates await the approved landing order.
 - 2026-10-11 next: Exact existing recognition tests reproduced missing pre-send native error facts on the accepted combined core; the shared native route needs repair without changing public Request semantics.
+- 2026-10-11 next: Accepted focused runs covered native complete calls, request contracts, sessions and Python but omitted the CLI backend recognition cases; both unchanged regressions require repair and the routine suite before acceptance.
