@@ -37,7 +37,11 @@ else
  "$python_bin" fixtures/package.py --library "$library" --out "$output/package"
  archive=$output/package.tar.gz
 fi
-if [ "$profile" = full ]; then
+if [ "$profile" = smoke ]; then
+ smoke_guard
+ "$python_bin" fixtures/session_installed.py --archive "$archive" --composer "$composer" --smoke
+ exit
+elif [ "$profile" = full ]; then
  # The shared suite consumes the installed package and its bundled native library.
  THINKTHEN_TEST_PROFILE=full "$python_bin" fixtures/session_installed.py --archive "$archive" --composer "$composer" --parity
 else

@@ -41,7 +41,9 @@ if [ "$profile" = smoke ]; then
     smoke_guard
     THINKTHEN_API_KEY=sk-smoke-loopback "$python" - <<'PY'
 import os, thinkthen as tt
-print(f"smoke: {tt.decide(os.environ['THINKTHEN_TEST_SMOKE_QUESTION'], os.environ['THINKTHEN_TEST_SMOKE_TEXT']).value}")
+value = tt.decide(os.environ['THINKTHEN_TEST_SMOKE_QUESTION'], os.environ['THINKTHEN_TEST_SMOKE_TEXT']).value
+assert isinstance(value, bool), value
+print(f"smoke: {str(value).lower()}")
 PY
     exit
 fi

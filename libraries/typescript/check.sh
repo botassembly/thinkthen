@@ -95,8 +95,12 @@ if [ "$profile" = smoke ]; then
     THINKTHEN_API_KEY=sk-smoke-loopback node -e '
         const tt = require("thinkthen");
         if (!require.resolve("thinkthen").startsWith(process.argv[1])) throw new Error("thinkthen loaded from outside the project");
-        new tt.Client({cache:false}).decide(process.env.THINKTHEN_TEST_SMOKE_QUESTION, process.env.THINKTHEN_TEST_SMOKE_TEXT)
-            .then((call) => console.log(`smoke: ${call.results[0].value}`));
+        new tt.Client().decide(process.env.THINKTHEN_TEST_SMOKE_QUESTION, process.env.THINKTHEN_TEST_SMOKE_TEXT)
+            .then((call) => {
+                const value = call.results[0].value;
+                if (typeof value !== "boolean") throw new Error("expected a boolean");
+                console.log(`smoke: ${value}`);
+            });
     ' "$project/node_modules/"
     exit
 fi
