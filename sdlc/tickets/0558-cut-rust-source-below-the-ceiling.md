@@ -72,6 +72,15 @@ PM amendment, 2026-10-11, fourth. The third amendment's rule now covers every wr
 
 PM amendment, 2026-10-11, fifth. The fourth amendment's rule applies only when a test cannot move intact. `complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_legacy_call` passes unchanged through the existing public `RequestRows::Decisions(batch).into_call()`, so it moves there. `decide_many_complete_with` is then deleted under the original Changes rule. The fourth amendment's keep ruling for it no longer applies.
 
+PM amendment, 2026-10-11, sixth. Target ruling. The cleanup closes at 187,611, measured at `f3ab2eb93`. That is 2,806 lines below the combined 190,417 start. No further cuts are required to meet the outcome. The ceiling stays at 187,611 and does not rise.
+- The 0551 and 0553 corrective fixes pay for their own lines. Read `Request`, `RequestInput`, `RequestItem`, `RequestQuestion` and the options through one private decode helper that takes the classifier. Report one sentence for an unknown function: "unknown function" or "invalid request function", whichever the existing tests already pin. Stop generating the PHP envelope classes and `REQUEST_VERSION` that nothing calls since `fa83d9035`. The core and PHP ratchets then pass at or under their unchanged ceilings.
+- Close four gaps found by a fresh review of the cleanup:
+  - Give the internal `native == true` branch of `validate` in `src/public/request/native_feed.rs` one test for each sentence it reports. These are the find and relate per-record control sentences and "record seed spans are admitted only for recognize". The shipped 0.1.2 methods and the C library still reach that branch.
+  - Restore a check that each filtered row was kept in `tests/public_batches/interactive.rs`, for example `result().value() == true`.
+  - Keep one direct test on public `try_find_with` for the count cap, the unread tail and the 16 MiB limit, matching `try_rank_with` in the same loop.
+  - Remove the repeated door-loop calls that run the same call under labels naming deleted wrappers. Use `expect_err` for those calls.
+- No other test or assertion changes.
+
 ## Progress
 
 - 2026-10-11 started

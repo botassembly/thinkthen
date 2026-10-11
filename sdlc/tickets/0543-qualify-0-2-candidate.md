@@ -50,6 +50,13 @@ One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and 
 
 PM amendment, 2026-10-11. The [adversarial review](../records/2026-10-11-0-2-adversarial-review.md) found defects and gaps after 0542 closed. Stop qualifying rc.11 when its current run exits. Land 0549 first, then 0550 to 0554, and cut the next candidate after they land. Before cutting it, a fresh reviewer searches the code for every item in the Changes lines of 0549 to 0554 and confirms each one is gone or done. The candidate's local campaign uses the 0549 runner. Ian approved 0555 and 0556 the same day, and the same rules cover them: they land before the candidate, and the pre-candidate search covers 0549 to 0556.
 
+PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
+- Combine 0549, 0555 and the 0550 to 0558 stack onto current `origin/main` as one revision. The campaign running on `ad4b49b4a` contains none of the 0550 to 0558 product code, so its result only checks the runner.
+- On that combined revision, run routine `test` and `lint`, then the Polars nextest and clippy lane and the C library checks. Record a review accept only after those pass on the same SHA. A source-only review is evidence, not acceptance.
+- Run the full campaign once on that SHA. A candidate run fails on exit 77 and on platform-pending rows. Linux may skip only Objective-C and Swift, and the M5 run covers them.
+- Install the Apple packages that the Swift and Objective-C `check.sh` scripts need on the M5, then rerun both. If they need full Xcode or an Apple account, tell the PM, who will raise it with Ian. 0556 does not close on exit 77.
+- Land from the tested SHA.
+
 ## Progress
 
 - 2026-10-11 started
