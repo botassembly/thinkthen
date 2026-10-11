@@ -64,3 +64,7 @@ A binding waits for the next session result, or for room to push, through one na
   - A search of each binding's session code finds none of these: sleep, `usleep`, `nanosleep`, `Task.Delay`, `Task.sleep`, `setTimeout`, `Future.delayed`, `time.NewTicker`, `scheduleWithFixedDelay` or a dispatch timer.
   - A JavaScript check shows a `setImmediate` callback runs while `next()` waits.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
