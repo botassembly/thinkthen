@@ -24,6 +24,16 @@ R, Ruby and JavaScript calls hand native Rust request values to the engine. None
 - Proof: each language's routine installed checks pass. One installed case per language shows that an invalid input raises the typed error with the message Rust admission gives.
 - Defers: nothing.
 
+## Native authored-definition API
+
+Expose the existing authored-definition decoder so native host adapters preserve authored bytes and exact Rust admission errors without constructing a whole JSON request or duplicating the parser.
+
+Added:
+
+```text
+fn RequestDefinition::from_authored_json(text: &str) -> Result<Self, Error>
+```
+
 ## Progress
 
 - 2026-10-11 started
