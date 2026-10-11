@@ -40,3 +40,4 @@ Python and R only convert host values and decode results. Rust decides the quest
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Final Python, R and JavaScript clippy passed, installed Python and R routine checks passed, and the owned JavaScript archive run is still awaiting exit before its results are read.
