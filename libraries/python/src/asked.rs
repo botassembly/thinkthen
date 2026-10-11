@@ -36,12 +36,19 @@ impl QuestionSet {
     }
 
     #[staticmethod]
-    fn _resolve(py: Python<'_>, request: &str) -> PyResult<Self> {
+    fn _resolve(py: Python<'_>, question: &Bound<'_, PyAny>) -> PyResult<Self> {
         crate::guard(py, || {
-            let definition = thinkthen::Request::from_json(request)
-                .and_then(thinkthen::Request::admit)
-                .and_then(|admitted| admitted.resolve_question())
-                .map_err(|error| raised(py, &error))?;
+            let definition = crate::inputs::request(
+                py,
+                "annotate",
+                question,
+                pyo3::types::PyList::empty(py).as_any(),
+                pyo3::types::PyDict::new(py).as_any(),
+                false,
+            )?
+            .admit()
+            .and_then(|admitted| admitted.resolve_question())
+            .map_err(|error| raised(py, &error))?;
             match definition {
                 thinkthen::RequestDefinition::Annotate(set) => Ok(Self(set)),
                 _ => Err(usage(py, "frame annotation requires a question set")),

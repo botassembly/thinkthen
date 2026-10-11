@@ -2,7 +2,7 @@
 use crate::{guard, raised, usage};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
-use thinkthen::{EngineBuilder, Request, RequestEnvironment, Surface};
+use thinkthen::{EngineBuilder, RequestEnvironment, Surface};
 
 #[pyclass(frozen, name = "_Engine", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
@@ -21,11 +21,15 @@ impl Engine {
         })
     }
 
-    #[pyo3(signature = (request, surface=None))]
+    #[pyo3(signature = (function, question, source, options, feed=false, surface=None))]
     fn _request_session(
         &self,
         py: Python<'_>,
-        request: &str,
+        function: &str,
+        question: &Bound<'_, PyAny>,
+        source: &Bound<'_, PyAny>,
+        options: &Bound<'_, PyAny>,
+        feed: bool,
         surface: Option<&str>,
     ) -> PyResult<crate::request::Session> {
         let selected = surface.unwrap_or("python").parse::<Surface>().ok();
@@ -33,13 +37,21 @@ impl Engine {
             Some(value @ (Surface::Python | Surface::Pandas | Surface::PythonPolars)) => value,
             _ => return Err(usage(py, "surface must be python, pandas or python-polars")),
         };
+        let request = crate::inputs::request(py, function, question, source, options, feed)?;
         crate::request::Session::start(py, &self.0, request, selected)
     }
 
-    fn _plan<'py>(&self, py: Python<'py>, request: &str) -> PyResult<Bound<'py, PyDict>> {
+    fn _plan<'py>(
+        &self,
+        py: Python<'py>,
+        function: &str,
+        question: &Bound<'_, PyAny>,
+        source: &Bound<'_, PyAny>,
+        options: &Bound<'_, PyAny>,
+    ) -> PyResult<Bound<'py, PyDict>> {
         guard(py, || {
-            let admitted = Request::from_json(request)
-                .and_then(Request::admit)
+            let admitted = crate::inputs::request(py, function, question, source, options, false)?
+                .admit()
                 .map_err(|e| raised(py, &e))?;
             let plan = py
                 .detach(|| {

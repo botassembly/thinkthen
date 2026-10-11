@@ -50,6 +50,7 @@ All ten namespace methods retain original row positions and null masks. Filter r
 | `complete.Files` | `tt.Files` or `tt.read_files` |
 | Complete dataframe engine/accessor | Ordinary engine or `series.tt` |
 | Legacy batch methods | `engine.iterate(function, question, rows)` |
+| `ask_model`, `task_model`, `relation_model`, `context_fields`, `item_schema`, `context_schema`, `options_schema` through extra keywords | Use an authored question declaration and the explicit `model`, `field` and `context_field` controls; unknown keywords raise `TypeError` |
 | Judge preview | `engine.plan(function, question, rows)` |
 
 Build a wheel with `sh build-wheel.sh`. `check.sh` installs a wheel outside the source package and runs routine behavior and shared cases; `THINKTHEN_ARTIFACT` selects an existing wheel. `THINKTHEN_TEST_PROFILE=full` selects the entire shared inventory at a candidate. Windows and Apple package qualification run at the candidate.

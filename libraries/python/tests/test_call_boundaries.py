@@ -68,3 +68,21 @@ def test_installed_recognize_keeps_nonempty_aggregate_before_empty_final(backend
         print('kept')
     """,child_env(backend,tmp_path,'case/44-recognize-C12-relations'))
     assert output.splitlines()==['kept']
+
+
+def test_native_admission_and_removed_keywords(backend, tmp_path):
+    output = run('''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        try: engine.plan('decide', 'Late?', ['note'], batch=0)
+        except tt.UsageError as error:
+            assert str(error) == 'batch requires a positive whole number or max'
+            assert error.kind == 'usage'
+        else: raise AssertionError('zero batch admitted')
+        try: engine.rank('Late?', ['note'], ask_model='removed')
+        except TypeError: pass
+        else: raise AssertionError('removed keyword accepted')
+        print('native admission')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['native admission']
+    assert backend.count() == 0

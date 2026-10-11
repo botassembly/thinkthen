@@ -176,7 +176,7 @@ def test_named_calls_refuse_invalid_headers_without_sending(backend, tmp_path):
     output = run('''
         import thinkthen as tt
         engine = tt.Engine(cache=False, max_retries=0)
-        for controls in ({'unknown': True}, {'deadline_ms': None}, {'batch': 0}, {'threshold': 3}):
+        for controls in ({'deadline_ms': None}, {'batch': 0}, {'threshold': 3}):
             try: engine.decide('Late?', 'private note', **controls)
             except tt.UsageError: pass
             else: raise AssertionError('malformed header admitted')

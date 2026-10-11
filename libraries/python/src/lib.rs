@@ -1,8 +1,10 @@
 //! Typed Python calls own native engines, sessions, results and exceptions.
 
 mod asked;
+mod controls;
 mod engine;
 mod files;
+mod inputs;
 mod native_result;
 mod request;
 mod results_generated;
@@ -159,6 +161,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_class::<files::SourceIterator>()?;
     module.add_function(wrap_pyfunction!(files::_read_files, module)?)?;
     module.add_class::<request::Session>()?;
+    module.add_class::<request::Item>()?;
     module.add_class::<native_result::NativeResult>()?;
     module.add_function(wrap_pyfunction!(
         native_result::_restore_native_result,
