@@ -8,7 +8,7 @@
   <properties>
     <thinkthen.session.jdk>22</thinkthen.session.jdk>
     <thinkthen.kotlin.coroutines.version>1.8.0</thinkthen.kotlin.coroutines.version>
-    <thinkthen.packages>door kotlin scala</thinkthen.packages>
+    <thinkthen.packages>session kotlin scala</thinkthen.packages>
     <thinkthen.package.files>pom.xml LICENSE README.md product-inventory.json</thinkthen.package.files>
     <thinkthen.package.exclude>*Caller*.class *Caller*.tasty</thinkthen.package.exclude>
     <thinkthen.native.targets>release</thinkthen.native.targets>

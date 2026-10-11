@@ -6,21 +6,7 @@ Select paths explicitly. A text argument is always evidence; it never becomes a 
 
 Python uses `read_files(path_or_paths, *, unit="line", window=None)`. Iteration yields immutable `SourceRecord` values with `record`, `file`, `first_line`, and `last_line`. Passing the selection to any of the ten existing engine functions returns a `Result`. Its `.value` presents the ordinary answer; `.details` retains typed result rows with provenance. Each row's `to_dict()` converts it to JSON-compatible data. Find retains original input and physical sources on its candidates; relate returns typed edges whose source and target retain their coordinates. Recognize keeps local Unicode scalar offsets and adds physical line coordinates to its spans. `on=` frame recognition is refused for a source selection because decoded fields have no physical source map.
 
-```python
-import thinkthen as tt
-engine = tt.Engine()
-documents = tt.read_files("documents", unit="file")
-engine.decide("Does this require attention today?", documents)
-engine.choose("Which document is this?", documents, options=["policy", "contract"])
-engine.tag("Which topics appear?", documents, labels=["refund", "support"])
-engine.score("How urgent?", documents, levels=["low", "high"])
-engine.filter("Does this contain a support contract?", documents)
-engine.rank("Which needs attention first?", documents)
-engine.find("Which contains a refund policy?", documents)
-engine.annotate("questions.json", documents)
-engine.recognize(documents, kinds=["person"])
-engine.relate(documents, relations={"supports": ("*", "*")})
-```
+Use `Item`, `Image`, `Files` and `QuestionSource` with Python's named `Engine` calls. The [Python package guide](python/README.md) owns current examples and argument order.
 
 The C JSON door accepts a `source` envelope in place of `evidence`, `records`, or `units`. Mixtures and invalid options fail before reading. Keep the existing question grammar:
 
@@ -38,24 +24,6 @@ The planning door also accepts `source` in place of `input`, for its four existi
 {"verb":"decide","question":"Does this require attention?","source":{"paths":["documents"],"unit":"file"}}
 ```
 
-Other SDKs expose an explicit envelope helper; their existing typed text/record methods keep their original arguments. The helper takes the same ten-function question object and explicit paths/reader options, then uses the native source dispatch. It returns located JSON values and facts rather than the old scalar result type.
+Each host supplies generated file input selectors to its named function. The [upgrade guide](UPGRADING-0.2.md#replace-removed-calls) links every package README and its current calls, including JVM `Engine`, Dart `Engine`, COBOL `TT_SESSION_*` and Apple Foundation `TTFoundationClient`. Generated request records replace the removed JSON/file helper APIs. Rust callers use `thinkthen::read_files` and retain source records when judging selected evidence.
 
-| SDK | Explicit entry point |
-| --- | --- |
-| TypeScript | `engine.files(questionObject, paths, readerOptions, callOptions)` |
-| Ruby | `engine.files(questionHash, paths, unit: "file")` |
-| R | `tt_files(questionList, paths, unit = "file")` |
-| C++ | `tt::files(engine, questionJson, paths, "file")` |
-| C# | `engine.Files(questionDictionary, paths, unit: "file")` |
-| Go | `engine.Files(ctx, questionMap, paths, ReaderOptions{Unit: "file"})` |
-| Java | `door.files(questionJson, paths, "file", null, -1, null)` |
-| Kotlin / Scala | Their caller adapters expose `files(questionJson, paths)`; Java's door supplies reader options. |
-| Swift | `engine.files(questionDictionary, paths: paths, unit: "file")` |
-| PHP | `$engine->files($question, $paths, 'file')` |
-| Dart | `door.files(engine, questionMap, paths, unit: 'file')` |
-| Zig | `engine.files(questionJson, paths, .{ .unit = "file" }, .{})` |
-| Ada | `Files(Client, Question_JSON, Source_JSON, Result, Error)` |
-| Objective-C | `[client files:questionJSON source:sourceJSON deadline:-1 token:nil failure:&failure]` |
-| COBOL | `TT-FILES`, with question/source JSON buffers and byte lengths, then the existing deadline/result/failure arguments |
-
-C callers can use `thinkthen_call_opts` with the complete source envelope. Ada, Objective-C and COBOL accept the reader selection as a JSON object containing `paths`, `unit`, and optional `window`. Their adapters compose JSON only; they do not open or parse source files. COBOL's existing 8192-byte request/result limits still apply. Rust callers use `thinkthen::read_files` and retain source records when judging their selected evidence.
+COBOL request text and authored JSON scalars have a per-scalar representation limit; the [COBOL guide](cobol/README.md) describes overflow and borrowed native views. C callers retain `thinkthen_call_opts` and the frozen 0.1 source envelope described above.

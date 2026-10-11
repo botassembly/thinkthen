@@ -1,4 +1,4 @@
-// Package thinkthen is a Go 1.22 cgo wrapper for the ThinkThen C door.
+// Package thinkthen is a Go 1.22 cgo wrapper for the ThinkThen C interface.
 // The native engine owns all
 // judgment and scheduling rules; this package owns only argument and result memory.
 package thinkthen
@@ -28,7 +28,7 @@ import (
 var errEmbeddedNUL = errors.New("NUL in a C-string argument")
 var ErrClosed = errors.New("ThinkThen engine is closed")
 
-// ErrorKind names a failure with the C door's codes 1 to 6.
+// ErrorKind names a failure with the C interface's codes 1 to 6.
 type ErrorKind int
 
 const (

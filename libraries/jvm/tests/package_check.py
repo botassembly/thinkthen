@@ -169,7 +169,7 @@ def main():
     native = os.environ.get('THINKTHEN_RELEASE_C_DIR')
     header = Path(native) / 'include/thinkthen.h' if native else ROOT.parents[1] / 'libraries/c/include/thinkthen.h'
     library = Path(native) / 'lib/libthinkthen.so' if native else ROOT.parents[1] / 'libraries/c/target/debug/libthinkthen_c.so'
-    session_abi_check(header, TARGET / 'jars/thinkthen-door.jar', library)
+    session_abi_check(header, TARGET / 'jars/thinkthen-session.jar', library)
 
 
 if __name__ == '__main__':

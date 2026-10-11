@@ -187,22 +187,22 @@ function selfTest() {
     if (lines.length !== (prefix ? 1 : 0) || (prefix && !(expected[0] === 'generic' ? lines[0].startsWith(prefix) && lines[0].length > prefix.length : lines[0] === prefix))) throw new Error(`${name}: ${lines}`);
   }
   const dartRows = [
-    ['direct', 'print(door.ask(engine, {}));', 'direct'],
-    ['generic', 'final result = door.ask(engine, {});', 'generic'],
-    ['typed generic', 'final Map<String, dynamic> result = door.ask(engine, {});', 'generic'],
-    ['nested typed generic', 'final Map<String, List<int>> result = door.ask(engine, {});', 'generic'],
-    ['typed declaration', 'Map<String, dynamic> answer = door.ask(engine, {});', 'generic'],
-    ['late typed generic', 'late final Map<String, dynamic> result = door.ask(engine, {});', 'generic'],
-    ['var generic', 'var result = door.ask(engine, {});', 'generic'],
-    ['typed named', 'final Map<String, dynamic> refundDecision = door.ask(engine, {});', null],
-    ['multiline generic', 'final result = door\n  .ask(engine, {});', 'generic'],
-    ['multiline direct', 'print(door\n  .ask(engine, {}));', 'direct'],
-    ['typed direct', 'if (door.decide(engine, "Q?", "text")) {}', 'direct'],
-    ['named', 'final refundDecision = door.ask(engine, {});\nprint(refundDecision);', null],
-    ['string', 'final note = "final result = door.ask(engine, {})";', null],
-    ['line comment', '// final result = door.ask(engine, {});', null],
-    ['block comment', '/* final result = door.ask(engine, {}); */', null],
-    ['interpolation', 'print("${door.ask(engine, {})}");', 'unsupported'],
+    ['direct', 'print(client.decide(engine, {}));', 'direct'],
+    ['generic', 'final result = client.decide(engine, {});', 'generic'],
+    ['typed generic', 'final Map<String, dynamic> result = client.decide(engine, {});', 'generic'],
+    ['nested typed generic', 'final Map<String, List<int>> result = client.decide(engine, {});', 'generic'],
+    ['typed declaration', 'Map<String, dynamic> answer = client.decide(engine, {});', 'generic'],
+    ['late typed generic', 'late final Map<String, dynamic> result = client.decide(engine, {});', 'generic'],
+    ['var generic', 'var result = client.decide(engine, {});', 'generic'],
+    ['typed named', 'final Map<String, dynamic> refundDecision = client.decide(engine, {});', null],
+    ['multiline generic', 'final result = client\n  .ask(engine, {});', 'generic'],
+    ['multiline direct', 'print(client\n  .ask(engine, {}));', 'direct'],
+    ['typed direct', 'if (client.decide(engine, "Q?", "text")) {}', 'direct'],
+    ['named', 'final refundDecision = client.decide(engine, {});\nprint(refundDecision);', null],
+    ['string', 'final note = "final result = client.decide(engine, {})";', null],
+    ['line comment', '// final result = client.decide(engine, {});', null],
+    ['block comment', '/* final result = client.decide(engine, {}); */', null],
+    ['interpolation', 'print("${client.decide(engine, {})}");', 'unsupported'],
   ];
   for (const [name, code, rule] of dartRows) {
     const lines = scan('plant.md', `\`\`\`dart\n${code}\n\`\`\``).problems;
@@ -213,7 +213,7 @@ function selfTest() {
   const config = 'dependencies:\n  thinkthen_dart:\n    path: /source/libraries/dart';
   if (scan('libraries/dart/README.md', `\`\`\`yaml\n${config}\n\`\`\``).problems.length ||
       scan('plant.md', `\`\`\`yaml\n${config}\n\`\`\``).problems.length !== 1 ||
-      scan('libraries/dart/README.md', `\`\`\`yaml\n${config}\n  run: door.ask()\n\`\`\``).problems.length !== 1) {
+      scan('libraries/dart/README.md', `\`\`\`yaml\n${config}\n  run: client.decide()\n\`\`\``).problems.length !== 1) {
     throw new Error('pubspec YAML boundary changed');
   }
   const dartReadme = real.find(([path]) => path === 'libraries/dart/README.md');

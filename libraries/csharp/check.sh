@@ -25,7 +25,7 @@ python3 "$root/sdlc/generators/results/generate.py" --bridge --check
 python3 "$root/sdlc/generators/results/generate.py" --check
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     smoke_guard
-    # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C door.
+    # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C interface.
     . "$root/sdlc/scripts/installed.sh"
     scratch_dir smoke
     native_install "$root" "$smoke/native"

@@ -138,7 +138,7 @@ def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
-    if kind == "door":
+    if kind == "session":
         embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
         require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
     expected = set(inventory['members'][kind])

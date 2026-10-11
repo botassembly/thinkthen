@@ -1,7 +1,7 @@
 ---
 // Goal: show one surface's install line and a first call, and say what is
 // different there.
-import { packageGuide } from '../../data/repo.mjs';
+import { packageGuide, packageExample } from '../../data/repo.mjs';
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
@@ -65,7 +65,7 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
   <h1>{headline}</h1>
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
-  <p>Public installation remains 0.1.2 with its released API and dependencies. Development 0.2 uses the sole named API described above. For a matching package, current examples and observed platform limits, read the <a href={packageGuide(surface.slug)}>{surface.name} package guide</a> and the <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/UPGRADING-0.2.md">upgrade guide</a>.</p>
+  <p>Public installation remains 0.1.2 with its released API and dependencies. Development 0.2 uses the sole named API described above. For a matching package, current examples and observed platform limits, read the <a href={packageGuide(surface.slug)}>{surface.name} package guide</a>, its <a href={packageExample(surface.slug)}>package consumer example</a> and the <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/UPGRADING-0.2.md">upgrade guide</a>.</p>
 
   <h2>Install</h2>
   <table class="install">
