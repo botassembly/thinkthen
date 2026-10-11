@@ -54,6 +54,11 @@ PM amendment, 2026-10-11. `rank_set_complete_with` and `relate_records_complete_
 
 PM amendment, 2026-10-11, second. `find_complete_with` joins the kept set, for `find_snapshots_each_caller_evidence_once_and_restores_originals` (`native_complete/find_admission.rs:195`). The developer may instead move each ownership test to a documented 0.1.2 find, rank or relate method and then delete the unpublished wrapper. A move counts only if the 0.1.2 method takes the same caller-owned, non-Clone, non-Serialize originals and the moved test keeps every ownership assertion: the `Rc` strong count, the marker, and exactly one engine snapshot of the evidence. The `Request` cases keep the facts and value assertions. A wrapper stays when its test cannot move intact.
 
+PM amendment, 2026-10-11, third. This rules on `rank_set_complete_with` and `relate_records_complete_with` only.
+- If crate code outside tests calls a method's implementation, make that implementation `pub(crate)`. Move its exact ownership test, with every assertion, into a library-only test inside the crate. Then delete the public method.
+- If only tests call it, the method stays public with its test, as the first amendment says.
+- A Progress line names which rule each method took and the production caller that justified the first rule.
+
 ## Progress
 
 - 2026-10-11 started
