@@ -30,3 +30,7 @@ Python and R only convert host values and decode results. Rust decides the quest
   - A search finds no function-name list in Python or R host code.
   - Each language's host source line count falls.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
