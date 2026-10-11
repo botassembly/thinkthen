@@ -12,8 +12,9 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
     for (TTSessionPacket *packet in packets) {
         if ([packet isKindOfClass:TTSessionPacketDecideRow.class]) {
             TTAtomicDecideValue *value = ((TTSessionPacketDecideRow *)packet).value.value;
-            require(value.value.state == TTPresenceValue);
-            require([value.value.value isEqual:value.rawFields[@"value"]]);
+            id raw = value.rawFields[@"value"];
+            require(value.value.state == (raw == NSNull.null ? TTPresenceNull : TTPresenceValue));
+            if (value.value.state == TTPresenceValue) require([value.value.value isEqual:raw]);
         }
         if ([packet isKindOfClass:TTSessionPacketRecognizeAggregate.class]) {
             NSArray<TTRecognition *> *values = ((TTSessionPacketRecognizeAggregate *)packet).value.value;

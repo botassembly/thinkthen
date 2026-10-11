@@ -565,6 +565,7 @@ esac
                         'sdlc/scripts/scratch.sh': (
                             'usage_guard() { :; }\n'
                             'config_home() { XDG_CONFIG_HOME=$PWD/config; export XDG_CONFIG_HOME; }\n'
+                            'temp_home() { :; }\n'
                             'scratch_dir() { eval "$1=\\\"$PWD/$1\\\""; mkdir -p "$PWD/$1"; }\n'
                             'scratch_clean() { :; }\n'),
                         'sdlc/scripts/installed.sh': 'backend_start() { port=12345; }\n',
