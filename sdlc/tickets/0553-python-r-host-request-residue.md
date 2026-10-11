@@ -44,3 +44,4 @@ Python and R only convert host values and decode results. Rust decides the quest
 - 2026-10-11 started
 - 2026-10-11 next: Final Python, R and JavaScript clippy passed, installed Python and R routine checks passed, and the owned JavaScript archive run is still awaiting exit before its results are read.
 - 2026-10-11 next: Final Python, R and JavaScript clippy and installed routine checks passed; whole-ticket checks and landing await the approved dependency order.
+- 2026-10-11 next: Fresh source search found R explicit selectors still interpreting serde diagnostic text; pushed checkpoint 8cf307a87 uses the shared typed decoder and adds exact context refusal and zero-send checks, with core measured 187627 against unchanged 187611 and compiler plus installed proof held behind the canonical campaign.
