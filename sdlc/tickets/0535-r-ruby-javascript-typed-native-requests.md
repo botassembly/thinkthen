@@ -1,6 +1,6 @@
 # 0535: Give R, Ruby and JavaScript typed native requests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -17,6 +17,8 @@ Reviews: revision e89362a8bb5a0e4dd07c6350639e6e89d1e6dfd3, reject
 Reviews: revision ceb3389a0637a555507a6f8a25fce4b47c399e2f, accept
 
 Reviews: revision 401c7164b, accept
+
+Landed: 0d29d7e
 
 ## Outcome
 
