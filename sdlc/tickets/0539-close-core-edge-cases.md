@@ -38,3 +38,4 @@ fn Engine::finish_usage(&self) -> UsagePersistence
 ## Progress
 
 - 2026-10-11 started
+- 2026-10-11 next: Repair the speed check canonical status parser, complete isolated routine cases and remaining suite steps, then land the accepted core fixes.
