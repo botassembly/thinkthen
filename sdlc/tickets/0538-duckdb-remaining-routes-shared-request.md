@@ -45,3 +45,4 @@ Annotate ruling. DuckDB annotate takes the shared Request behavior: an invalid r
 - 2026-10-11 next: Await the PM ruling on preserving DuckDB packed try-details recovery while migrating ordinary routes to owned requests.
 - 2026-10-11 next: Apply the approved packed try-details exception and existing Details serializer, migrate every other DuckDB route, and finish installed checks on both versions.
 - 2026-10-11 next: Installed checks exposed annotation neighbour-cache behavior that shared sessions cannot preserve without a pure admission helper; await a bounded API ruling while fixing quota and NULL-group validation.
+- 2026-10-11 next: Apply the approved zero-send annotation behavior, preserve eager quotas and valid packed counts, and finish routine installed checks on both DuckDB versions.
