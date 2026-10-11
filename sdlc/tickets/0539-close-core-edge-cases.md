@@ -1,6 +1,6 @@
 # 0539: Close the remaining core edge cases
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -9,6 +9,8 @@ Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 Reviews: revision 264bddae19f7a273357c9c57747080d77755f095, accept
 
 Reviews: revision aca81be5007fb921018e432cdec0909639be8447, accept
+
+Landed: 602231a
 
 ## Outcome
 
