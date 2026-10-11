@@ -1,6 +1,7 @@
 """Compile a generated named Ada caller against an installed release package."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
@@ -36,7 +37,10 @@ source = source.replace('-- CANCEL', 'Cancel (Owner);' if cancel else '')
 source = source.replace('HELD_CANCEL', "Standard.Boolean'(" + str(bool(held)) + ')')
 path = home / 'thinkthen-sessions-parity_case.adb'
 path.write_text(source)
-objects = home / 'ada-objects'
+objects = Path(os.environ.get('THINKTHEN_ADA_OBJECTS', str(home / 'ada-objects')))
+# Reuse only unchanged installed package units; each authored caller is rebuilt.
+for suffix in ('.o', '.ali'):
+    (objects / (path.stem + suffix)).unlink(missing_ok=True)
 objects.mkdir(exist_ok=True)
 binary = home / 'ada-consumer'
 build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), str(path),
