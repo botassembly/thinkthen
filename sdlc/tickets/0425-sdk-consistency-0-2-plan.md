@@ -24,6 +24,8 @@ Reviews: revision 045dfb5b1f0f99b6477aa5446345e9ffb81ef6ef, reject
 
 Reviews: revision 5d9860455, accept
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 The commit that passed the 0543 candidate also passes release QA by a fresh agent with only the public docs. On Ian's explicit go, that same commit is released as 0.2.0. Every published package then installs and runs from its public channel on a clean machine. This ticket owns release preparation, release QA, publication and the after-publication checks. 0543 owns the candidate.
