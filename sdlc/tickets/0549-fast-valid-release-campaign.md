@@ -49,3 +49,4 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
 - 2026-10-11 next: The corrected campaign at 8c09ffdab failed after 5569 seconds; retained logs show grouped consumer budgets, duplicate setup work and three specific fixture or privacy failures that require focused repairs before another run.
 - 2026-10-11 next: Family and database focused repairs passed on c68d38b815, including actual installed setup and retained unique checks; a fresh code reviewer is checking the slice before another full campaign.
 - 2026-10-11 next: Fresh review found unstable DuckDB full-build flags and timeout escalation that can leave descendants alive; both are being repaired with focused checks before another full campaign.
+- 2026-10-11 next: The reviewed source passed its preamble but the retry stopped before consumers on a missing parity destination; retained logs precede a new owned canonical run with the actual directory created.
