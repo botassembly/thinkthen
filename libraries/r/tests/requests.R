@@ -10,6 +10,8 @@ for (call in list(
   function() tt_decide("Q?", tt_input("records", items = list(), paths = list("missing"))),
   function() tt_decide(list(decide = "Q?", item_schema = list(type = "string")), list(n = 1))
 )) check("canonical admission refuses invalid values", identical(kind_of(call()), "usage"))
+refused <- tryCatch(tt_decide("Q?", "x", list(field = list("bad pointer"))), thinkthen_error = identity)
+check("invalid field retains exact Rust admission", inherits(refused, "thinkthen_usage") && identical(conditionMessage(refused), "invalid field pointer"))
 check("invalid request sends nothing", backend_count() == arrivals)
 empty <- tt_decide("No records?", NULL)
 check("ordinary NULL supplies no records and sends nothing", length(empty$results) == 0L &&
@@ -104,4 +106,4 @@ failed_batch <- tt_batch("decide", "Session deadline?", "not sent", list(deadlin
 failure <- tryCatch(failed_batch$next_result(), error = identity)
 check("native session failures retain their condition", inherits(failure, "thinkthen_error") && failure$kind == "deadline" && inherits(failure$complete, "thinkthen_CallError"))
 failed_batch$close()
-finish("canonical requests", 27L)
+finish("canonical requests", 28L)
