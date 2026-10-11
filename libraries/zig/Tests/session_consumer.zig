@@ -12,7 +12,8 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(a);
     defer std.process.argsFree(a, args);
     if (args.len != 3) return error.Arguments;
-    const input = try std.fs.cwd().readFileAlloc(a, args[1], 32 * 1024 * 1024);
+    // Fixture envelopes include base64 images and captions; native admission owns limits.
+    const input = try std.fs.cwd().readFileAlloc(a, args[1], std.math.maxInt(usize));
     defer a.free(input);
     const fixture = try std.json.parseFromSlice(std.json.Value, a, input, .{});
     defer fixture.deinit();

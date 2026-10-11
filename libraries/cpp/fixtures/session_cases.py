@@ -86,10 +86,10 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
         try:
             original={'native-filter-first-excluded':'15-rank-records','native-duplicate-row-indices':'complete-decide'}.get(row['id'],row['id'])
             value=shared.document({**row,'id':original},cases,named)
-            # Go's sealed generated definition types cannot carry arbitrary authored
-            # JSON. Its public file selector preserves those bytes and reports Local
+            # Generated definition types cannot carry arbitrary authored JSON.
+            # The public file selector preserves those bytes and reports Local
             # (question-file.md); keep the diagnostic and zero-send assertions.
-            if CONSUMER == 'go' and original in (
+            if CONSUMER in ('go','zig','ada','cobol') and original in (
                 '29-usage-json-text', '31-usage-rank-blank-question',
                 'declaration-shorthand', 'declaration-null', 'declaration-empty',
                 'declaration-nested', 'declaration-unknown-keyword',
@@ -98,6 +98,8 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                 'wording-version-boolean', 'wording-version-null',
                 'author-name-blank', 'author-name-uppercase', 'author-name-leading-digit',
                 'author-name-control', 'author-name-nonascii'):
+                if CONSUMER != 'go' and value.get('raw') is None:
+                    value['raw']=shared.compact({**value['question'],**value.get('metadata',{})})
                 value['expect']={**value['expect'],'error':'local','requests_sent':0}
             if row['id']=='native-filter-first-excluded':
                 value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
