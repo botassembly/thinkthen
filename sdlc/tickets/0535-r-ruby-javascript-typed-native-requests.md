@@ -28,10 +28,10 @@ R, Ruby and JavaScript calls hand native Rust request values to the engine. None
 
 Expose the existing authored-definition decoder so native host adapters preserve authored bytes and exact Rust admission errors without constructing a whole JSON request or duplicating the parser.
 
-Added:
+### Added public declarations
 
 ```text
-fn RequestDefinition::from_authored_json(text: &str) -> Result<Self, Error>
+fn RequestDefinition::from_authored_json(&str) -> Result<RequestDefinition, Error>
 ```
 
 ## Progress
