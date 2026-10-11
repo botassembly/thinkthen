@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0534
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 R, Ruby and JavaScript calls hand native Rust request values to the engine. None of the three writes the request grammar in host code.
