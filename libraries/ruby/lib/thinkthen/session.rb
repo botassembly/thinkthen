@@ -89,14 +89,9 @@ module ThinkThen
     def self.descriptor(value)
       value.is_a?(Item) ? value.descriptor : {original: original(value)}
     end
-    def self.request(verb, question, input, options)
-      asked = question.is_a?(Question) ? question.selector : question.is_a?(String) ? {kind: "text", text: question} : {kind: "definition", value: question}
-      {schema: REQUEST_VERSION, call: {function: verb, question: asked, input: input, options: options}}
-    end
     def plan(verb, question, input, **options)
       raise UsageError.new("client is closed", "usage") if @closed
-      source = input.is_a?(Source) ? {kind: "source", source: input.source} : {kind: "records", items: (input.is_a?(Array) ? input : [input]).map { |value| Client.descriptor(value) }}
-      @native.plan(Client.dump(Client.request(verb, question, source, options)))
+      @native.plan(verb, question, input, [options, false])
     end
     FUNCTIONS.each do |verb|
       define_method(verb) do |question, input, cancel: nil, **options|
@@ -151,23 +146,15 @@ module ThinkThen
         @observations = []
         @closed = false
         @scalar = %w[find relate].include?(verb) || (!input.is_a?(Array) && !input.is_a?(Source) && !input.is_a?(Enumerable))
-        source = if input.is_a?(Source)
-          {kind: "source", source: input.source}
-        elsif input.is_a?(Array)
-          {kind: verb == "find" ? "units" : verb == "relate" ? "entities" : "records", items: input.map { |v| Client.descriptor(v) }}
-        elsif input.is_a?(Enumerable) && !input.is_a?(Hash)
+        if input.is_a?(Enumerable) && !input.is_a?(Array) && !input.is_a?(Hash) && !input.is_a?(Source)
           @producer = input.to_enum
           @owner = input
-          {kind: "feed", name: "ruby"}
-        else
-          @scalar = true
-          {kind: "records", items: [Client.descriptor(input)]}
         end
-        request = Client.request(verb, question, source, options)
+        @scalar = true unless input.is_a?(Array) || input.is_a?(Source) || @producer
         if token&.cancelled?
           raise CancelledError.new("the call was cancelled", "cancelled")
         end
-        @session = engine.request_session(Client.dump(request))
+        @session = engine.request_session(verb, question, input, [options, !@producer.nil?])
       rescue Exception => error
         begin
           close_producer
@@ -221,13 +208,13 @@ module ThinkThen
       def feed
         unless @pending
           begin
-            @pending = Client.dump(item: Client.descriptor(@producer.next))
+            @pending = @session.item(Client.descriptor(@producer.next))
           rescue StopIteration
             @session.finish(nil)
             close_producer
             return
           rescue StandardError
-            @session.finish(JSON.generate(kind: "invalid_input"))
+            @session.finish(true)
             close_producer
             return
           end

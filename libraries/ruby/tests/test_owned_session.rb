@@ -223,7 +223,7 @@ class TestOwnedSession < Minitest::Test
       begin
         client.decide("Question?", "text", field: ["bad pointer"])
       rescue T::Error => error
-        errors << [error.kind, error.facts]
+        errors << [error.kind, error.message, error.facts]
       end
       token = T::Cancel.new
       token.cancel
@@ -235,7 +235,7 @@ class TestOwnedSession < Minitest::Test
       client.close
       say errors
     RUBY
-      assert_equal [["usage", nil], ["cancelled", nil]], child.hear
+      assert_equal [["usage", "invalid field pointer", nil], ["cancelled", nil]], child.hear
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 0, backend.count
