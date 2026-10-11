@@ -44,3 +44,4 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
 - 2026-10-11 next: Final engine repairs at 018d71671 passed both library clippy configurations, all 130 routine native-completion tests and policy; fresh delta review and the unmet combined source ceiling still block closure.
 - 2026-10-11 next: Final code passed fresh review and all 130 routine native-completion tests, but the combined 0556 integration measures 190417 Rust lines before 0549 and still needs substantive cleanup before a candidate.
 - 2026-10-11 next: Broader public checks exposed a preserved-message mismatch and a repeated control callback during a held send; both are being repaired in the combined core before cleanup and whole-ticket acceptance.
+- 2026-10-11 next: The combined core repair passed fresh review and both preserved-message and held-send regressions alongside the native and installed Python checks; whole-ticket gates await the approved landing order.
