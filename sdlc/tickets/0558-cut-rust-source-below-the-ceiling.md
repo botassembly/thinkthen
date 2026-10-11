@@ -50,6 +50,8 @@ The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 1
   - The refusal and secrecy tables hold every row that the deleted edge tests checked.
 - Defers: removing the twelve wrapper methods that shipped in 0.1.2, and DuckDB's `details_many_recoverable_with` path, which needs DuckDB on a `Request` session first. Idea 0545 keeps the remaining test cuts after 0.2.
 
+PM amendment, 2026-10-11. `rank_set_complete_with` and `relate_records_complete_with` stay public, with their tests. A find wrapper stays too if `find_admission.rs` checks the same contract through it. These wrappers are the only API that hands a caller's own non-Clone, non-Serialize originals back unchanged. Two tests check that: `complete_set_rank_keeps_all_members_originals_partial_usage_and_independent_turns_order` in `native_complete/set_rank.rs`, and `source_relations_keep_nonserializable_nonclone_originals_and_refuse_mixed_sources_before_sending` in `source_relations.rs`. Request feeds expose `QuestionInput` originals. `RequestRows` has no rank, rank-set, find or relate variant. So these wrappers carry a contract that `Request` lacks. They are not duplicates. Every other wrapper follows the Changes rule. This ticket adds no `RequestRows` variants and no whole-set execution support. Idea 0559 carries that API work after 0.2. The 187,000 target stands, and the named fallback cuts cover the lines these wrappers keep.
+
 ## Progress
 
 - 2026-10-11 started
