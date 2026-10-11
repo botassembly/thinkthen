@@ -68,6 +68,8 @@ PM amendment, 2026-10-11, fourth. The third amendment's rule now covers every wr
 - If nothing outside tests reaches the implementation, the wrapper stays public with its test unchanged. `decide_many_complete_with` takes this rule unless the developer finds a production caller of its implementation.
 - No test assertion changes. No fake `Call`, new collector or `RequestRows` variant is added. A Progress line names each wrapper, the rule it took and the production caller when there is one.
 
+PM amendment, 2026-10-11, fifth. The fourth amendment's rule applies only when a test cannot move intact. `complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_legacy_call` passes unchanged through the existing public `RequestRows::Decisions(batch).into_call()`, so it moves there. `decide_many_complete_with` is then deleted under the original Changes rule. The fourth amendment's keep ruling for it no longer applies.
+
 ## Progress
 
 - 2026-10-11 started
