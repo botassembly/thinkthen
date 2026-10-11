@@ -18,11 +18,20 @@ descriptor = inputs.descriptor(fixture, home)
 verb = descriptor.pop('verb')
 cancel = descriptor.pop('cancel')
 held = descriptor.pop('held_cancel')
+feed = []
+if fixture.get('incremental') and descriptor['input']['kind'] != 'source':
+    feed = descriptor['input']['items']
+    descriptor['input'] = {'kind': 'feed', 'name': 'records'}
 expression = construct('RequestCall_' + verb, definitions['RequestCall_' + verb], {'function': verb, **descriptor})
 source = (Path(__file__).with_name('full_case.adb')).read_text()
 source = source.replace('-- REQUEST', f'Request : constant T_RequestCall_{verb} := {expression};')
 source = source.replace('-- SETTINGS', 'Ada.Strings.Unbounded.To_String (' + ada_text(sys.argv[3]) + '),')
 source = source.replace('CALL_NAME', verb.title())
+pushes = []
+for item in feed:
+    value = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item': item})
+    pushes.append(f'declare Item : constant T_RequestSessionDescriptor := {value}; Status : Push_Status; begin loop Push (Owner, Item, Status); exit when Status /= Full; Drain_One; end loop; end;')
+source = source.replace('-- FEED', '\n'.join(pushes))
 source = source.replace('-- CANCEL', 'Cancel (Owner);' if cancel else '')
 source = source.replace('HELD_CANCEL', "Standard.Boolean'(" + str(bool(held)) + ')')
 path = home / 'thinkthen-sessions-parity_case.adb'

@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 from session_records import Records, definitions
 
 native = ct.CDLL(os.environ['TT_SESSION_NATIVE'], mode=ct.RTLD_GLOBAL)
@@ -15,6 +16,8 @@ native.thinkthen_engine_new_with.argtypes = [ct.c_char_p]
 native.thinkthen_engine_new_with.restype = ct.c_void_p
 for name in ('thinkthen_session_cancel','thinkthen_session_free','thinkthen_engine_free','thinkthen_session_result_free'):
     function = getattr(native, name); function.argtypes = [ct.c_void_p]; function.restype = None
+bridge.COBOL_PUSH.argtypes = [ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_uint32)]
+native.thinkthen_session_try_read.argtypes = [ct.c_void_p,ct.POINTER(ct.c_uint32),ct.POINTER(ct.c_void_p)]
 native.thinkthen_session_finish.argtypes = [ct.c_void_p,ct.c_void_p,ct.c_size_t]
 native.thinkthen_session_result_json.argtypes = [ct.c_void_p,ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_size_t)]
 native.thinkthen_session_error_message.restype = ct.c_char_p
@@ -40,6 +43,16 @@ try:
         # Request records and caller buffers no longer own the admitted session.
         records.owners.clear()
         if value['cancel']: native.thinkthen_session_cancel(session)
+        for item in value.get('feed_items', []):
+            address = ct.c_void_p(records.construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':item}))
+            while True:
+                state = ct.c_uint32()
+                assert bridge.COBOL_PUSH(ct.byref(session),ct.byref(address),ct.byref(state)) == 0
+                if state.value != 1: break
+                status, packet = ct.c_uint32(), ct.c_void_p()
+                assert native.thinkthen_session_try_read(session,ct.byref(status),ct.byref(packet)) == 0
+                if packet.value: owners.append(packet.value)
+                else: time.sleep(0.001)
         assert native.thinkthen_session_finish(session,None,0) == 0
         if value['held_cancel']:
             assert sys.stdin.read(1) == '!'

@@ -13,6 +13,7 @@ static RequestQuestion question(const Json& v) {
 }
 static RequestInput input(const Json& v) {
     auto kind=text(v.at("kind"));
+    if(kind=="feed") return RequestInputFeed().set_name(text(v.at("name")));
     if(kind=="source") {
         auto source=v.at("source"); std::vector<std::string> paths;
         for(const auto& path:source.at("paths")) paths.push_back(text(path));
@@ -78,10 +79,20 @@ int main(int argc,char** argv) {
         };
         auto call=start();
         if(v.at("cancel").get<bool>()) call.cancel();
-        call.finish();
-        if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }
         Json::Array packets;
-        try { for(const auto& packet:call.collect()) packets.push_back(packet.document()); }
+        try {
+            if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
+                auto next=RequestSessionDescriptor().set_item(RequestItem::from_document(item));
+                while(!call.try_push(next)) {
+                    auto packet=call.poll();
+                    if(packet.packet) packets.push_back(packet.packet->document());
+                    else std::this_thread::yield();
+                }
+            }
+            call.finish();
+            if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }
+            for(const auto& packet:call.collect()) packets.push_back(packet.document());
+        }
         catch(const SessionFailure& error) {
             for(const auto& packet:error.packets) packets.push_back(packet.document());
             packets.push_back(error.terminal.document());

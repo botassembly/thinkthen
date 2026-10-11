@@ -41,6 +41,23 @@ procedure division using engine input-record session-owner.
  goback.
 end program COBOL_{verb.upper()}.
 ''')
+    programs.append('''identification division.
+program-id. COBOL_PUSH.
+data division.
+working-storage section.
+copy "tt-native-generated.cpy".
+linkage section.
+01 session-owner usage pointer.
+01 input-record usage pointer.
+01 push-status binary-long unsigned.
+procedure division using session-owner input-record push-status.
+ set address of tt-n-cobol-RequestSessionDescriptor to input-record
+ call "TT_SESSION_PUSH" using by value session-owner
+    by reference tt-n-cobol-RequestSessionDescriptor push-status
+    returning return-code
+ goback.
+end program COBOL_PUSH.
+''')
     source = work / 'consumer.cob'; source.write_text('\n'.join(programs))
     bridge = work / 'consumer.so'
     subprocess.run(['cobc','-b','-free','-fstatic-call','-fno-gen-c-decl-static-call',
@@ -49,7 +66,11 @@ end program COBOL_{verb.upper()}.
                     str(installed / 'src/tt_requests_generated.c'),'-Q',str(native)+' -Wl,-rpath,'+str(work)],
                    env=child_env(LC_ALL='C.UTF-8'),check=True,timeout=60)
     def invoke(step, settings, env, home, backend):
-        given = home / 'session-request.json'; given.write_text(shared.shared.compact(shared.descriptor(step,home)))
+        fixture = shared.descriptor(step,home)
+        if step.get('incremental') and fixture['input']['kind'] != 'source':
+            fixture['feed_items'] = fixture['input']['items']
+            fixture['input'] = {'kind':'feed','name':'records'}
+        given = home / 'session-request.json'; given.write_text(shared.shared.compact(fixture))
         command = [sys.executable,str(ROOT / 'libraries/cobol/checks/session_consumer.py'),str(given),shared.shared.compact(settings)]
         child = dict(env, TT_SESSION_BRIDGE=str(bridge), TT_SESSION_NATIVE=str(native), TT_SESSION_PACKAGE=str(installed))
         if not step.get('held_cancel'):

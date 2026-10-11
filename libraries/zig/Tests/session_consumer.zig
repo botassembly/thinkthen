@@ -61,6 +61,23 @@ pub fn main() !void {
         return error.UnknownFunction;
     };
     if (doc.get("cancel").?.bool) session.cancel();
+    var packets: std.ArrayList(tt.session.Packet) = .empty;
+    defer {
+        for (packets.items) |*packet| packet.deinit();
+        packets.deinit(a);
+    }
+    if (doc.get("feed_items")) |items| {
+        var arena = std.heap.ArenaAllocator.init(a);
+        defer arena.deinit();
+        for (items.array.items) |item| {
+            const next: tt.inputs.RequestSessionDescriptor = .{ .item = try request_fixture.decode(tt.inputs.RequestItem, arena.allocator(), item) };
+            while (try session.push(a, next) == .full) switch (try session.read()) {
+                .pending => std.Thread.yield() catch {},
+                .end => break,
+                .packet => |packet| try packets.append(a, packet),
+            };
+        }
+    }
     try session.finish();
     if (doc.get("held_cancel").?.bool) {
         if (io.getchar() != '!') return error.CancelHandshake;
@@ -69,11 +86,6 @@ pub fn main() !void {
         _ = io.fflush(io.stdout);
     }
     engine.deinit();
-    var packets: std.ArrayList(tt.session.Packet) = .empty;
-    defer {
-        for (packets.items) |*packet| packet.deinit();
-        packets.deinit(a);
-    }
     while (true) switch (try session.read()) {
         .pending => std.Thread.yield() catch {},
         .end => break,

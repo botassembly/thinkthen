@@ -95,11 +95,9 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                 'declaration-nested', 'declaration-unknown-keyword',
                 'declaration-required-unknown', 'declaration-duplicate-required',
                 'wording-version-zero', 'wording-version-overflow', 'wording-version-string',
-                'wording-version-boolean', 'wording-version-null', 'wording-version-fraction',
-                'wording-version-integral-float', 'wording-version-exponent',
+                'wording-version-boolean', 'wording-version-null',
                 'author-name-blank', 'author-name-uppercase', 'author-name-leading-digit',
-                'author-name-control', 'author-name-nonascii', 'duplicate-metadata',
-                'duplicate-schema', 'single-format-version'):
+                'author-name-control', 'author-name-nonascii'):
                 value['expect']={**value['expect'],'error':'local','requests_sent':0}
             if row['id']=='native-filter-first-excluded':
                 value.update(verb='filter',question={**value['question'],'threshold':0.5},expect={'success':{'operation':{'indexes':[1,2]}}})
@@ -126,7 +124,11 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
                         settings={k:replacements.get(v,v) if isinstance(v,str) else v for k,v in settings.items()}
                         if row['kind'] in ('images','image-location'):settings['record']=str(home/'recorded')
-                        input_file=home/'consumer-input.json';input_file.write_text(shared.compact(descriptor(step,home)))
+                        request=descriptor(step,home)
+                        fixture=dict(request)
+                        if CONSUMER in ('cpp','zig') and step.get('incremental') and request['input']['kind']!='source':
+                            fixture={**request,'input':{'kind':'feed','name':'records'},'feed_items':request['input']['items']}
+                        input_file=home/'consumer-input.json';input_file.write_text(shared.compact(fixture))
                         before=int(backend.read('count'));args=[str(binary),str(input_file),shared.compact(settings)]
                         if invoke is not None:
                             output=invoke(step,settings,child,home,backend)
@@ -157,8 +159,9 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                             from c_images import assert_images
                             assert_images(step,got,json.loads(backend.read('capture'))['bodies'])
                         expected=step
-                        if CONSUMER == 'ruby' and step.get('raw') is not None and step['expect'].get('error') == 'usage':
-                            # Ruby preserves authored bytes through question_file; malformed files report Local.
+                        if step.get('raw') is not None and request['question']['kind']=='file' and step['expect'].get('error')=='usage':
+                            # Authored bytes use the public file selector: question-file.md
+                            # assigns Local here, retaining the message and request count.
                             expected={**step,'expect':{**step['expect'],'error':'local'}}
                         shared.assertions(row,expected,got,int(backend.read('count'))-(before if step.get('count_delta') else 0))
                         if row['id']=='native-filter-first-excluded':

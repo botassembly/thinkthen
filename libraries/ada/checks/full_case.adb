@@ -23,6 +23,28 @@ procedure Thinkthen.Sessions.Parity_Case is
    begin
       Put_Line ("{""admission"":{""code"":" & Natural'Image (Code) & ",""message"":" & Quoted (Message) & "}}");
    end Admission;
+   procedure Drain_One is
+   begin
+      Try_Read (Owner, Value, Read);
+      case Read is
+         when Pending => delay 0.001;
+         when Finished => null;
+         when Result =>
+            declare
+               Bytes : aliased chars_ptr := Null_Ptr;
+               Count : aliased size_t := 0;
+               Code : constant int := thinkthen_session_result_json (Value.Handle, Bytes'Address, Count'Access);
+            begin
+               if Code /= 0 then raise Program_Error with "packet serialization refused"; end if;
+               if not First then Append (Packets, ','); end if;
+               First := False;
+               Append (Packets, Text ((data => Bytes, len => Count)));
+               if View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
+                  Close (Owner);
+               end if;
+            end;
+      end case;
+   end Drain_One;
    -- REQUEST
 begin
    Configure (Client, -- SETTINGS
@@ -30,6 +52,7 @@ begin
    if Error.Kind /= None then Admission (Error_Kind'Pos (Error.Kind), Message (Error)); return; end if;
    Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);
    -- CANCEL
+   -- FEED
    Finish (Owner);
    declare
       task Canceller;
@@ -42,26 +65,9 @@ begin
       end Canceller;
    begin
       loop
-         Try_Read (Owner, Value, Read);
-         case Read is
-            when Pending => delay 0.001;
-            when Finished => exit;
-            when Result =>
-               declare
-                  Bytes : aliased chars_ptr := Null_Ptr;
-                  Count : aliased size_t := 0;
-                  Code : constant int := thinkthen_session_result_json (Value.Handle, Bytes'Address, Count'Access);
-               begin
-                  if Code /= 0 then raise Program_Error with "packet serialization refused"; end if;
-                  if not First then Append (Packets, ','); end if;
-                  First := False;
-                  Append (Packets, Text ((data => Bytes, len => Count)));
-                  if View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then
-                     Close (Owner);
-                     exit;
-                  end if;
-               end;
-         end case;
+         Drain_One;
+         exit when Read = Finished or else
+           (Read = Result and then View (Value).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1);
       end loop;
    end;
    Append (Packets, "]}"); Put_Line (Ada.Strings.Unbounded.To_String (Packets));

@@ -25,11 +25,15 @@ def run(native, scratch):
         return output
     def invoke(step, settings, env, home, backend):
         source = shared_cases.descriptor(step, home)
+        feed = []
+        if step.get('incremental') and source['input']['kind'] != 'source':
+            feed = [json.dumps({'item':item}) for item in source['input']['items']]
+            source['input'] = {'kind':'feed','name':'records'}
         source['call'] = {key: source[key] for key in ('question', 'input', 'options')}
         source['call']['function'] = source['verb']
         path = home / 'session-request.json'
         path.write_text(json.dumps({'schema': 'thinkthen.request/1', 'call': source['call']}))
-        args = [str(binary), str(path), json.dumps(settings), 'cancel' if source['cancel'] else '-', 'held' if source['held_cancel'] else '-']
+        args = [str(binary), str(path), json.dumps(settings), 'cancel' if source['cancel'] else '-', 'held' if source['held_cancel'] else '-'] + feed
         if not source['held_cancel']:
             return checked(subprocess.run(args, env=env, cwd=home, capture_output=True, text=True, timeout=120))
         process = subprocess.Popen(args, env=env, cwd=home, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
