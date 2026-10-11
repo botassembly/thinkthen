@@ -8,6 +8,7 @@ cd -- "$REPO"
 # ADR 0113: a test that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard
+temp_home
 
 cargo build --locked --offline --package thinkthen --lib --no-default-features --features bundled-sqlite
 # Ticket 0086: the library graph carries no command-only crate, and on Unix it
@@ -85,7 +86,7 @@ CARGO_TARGET_DIR="$REPO/target" cargo build --quiet --locked --offline --package
 python3 - "$REPO" "$built/debug/thinkthen-rust-consumer" "$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml)" >"$isolated/native-source.log" <<'RUSTPACKAGE'
 import sys
 from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'libraries/python/tests'))
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 sys.exit(bool(run('rust',[sys.argv[2]],root,extra_env={'RUSTUP_TOOLCHAIN':sys.argv[3]})))
 RUSTPACKAGE
