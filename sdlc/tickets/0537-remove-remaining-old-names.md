@@ -21,3 +21,7 @@ No shipped package, script or document uses the retired "door" names. The JVM ja
   - Docs: rewrite the Foundation sentence in `libraries/UPGRADING-0.2.md` to describe the API and drop its test status. Each language entry on the site links its package README, which holds the checked example. This replaces the 15 site examples that 0467 deleted.
 - Proof: a search of shipped source, package metadata and docs finds no retired name outside the frozen C section. The routine installed JVM checks and the release script self-tests pass. The site build and its link check pass.
 - Defers: nothing.
+
+## Progress
+
+- 2026-10-11 started
