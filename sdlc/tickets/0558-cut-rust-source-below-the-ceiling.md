@@ -47,3 +47,7 @@ The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 1
   - A search finds none of the deleted public wrapper names in public signatures outside `sdlc/`.
   - The refusal and secrecy tables hold every row that the deleted edge tests checked.
 - Defers: removing the twelve wrapper methods that shipped in 0.1.2, and DuckDB's `details_many_recoverable_with` path, which needs DuckDB on a `Request` session first. Idea 0545 keeps the remaining test cuts after 0.2.
+
+## Progress
+
+- 2026-10-11 started
