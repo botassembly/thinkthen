@@ -17,3 +17,7 @@ Python calls hand native Rust request values to the engine. Python code no longe
 - Changes: The PyO3 layer in `libraries/python/src/` converts Python values into the public Rust Request types. Delete the host request assembly and the host admission checks that Rust repeats. Remove `**legacy` and list each removed keyword in the README's old-to-new table. Pass paths, unit and window as typed arguments to `thinkthen::read_files`, and delete the JSON parse in `src/files.rs`. Lower the Python ceiling.
 - Proof: the routine installed Python checks pass. One installed case shows that an invalid input raises the same typed error with the same message that Rust admission gives. One case shows that a removed keyword raises `TypeError`.
 - Defers: nothing. The C library keeps the `thinkthen_host::source` parser.
+
+## Progress
+
+- 2026-10-11 started
