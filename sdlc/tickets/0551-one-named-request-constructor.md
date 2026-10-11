@@ -43,10 +43,10 @@ PM amendment, 2026-10-11. The proof bans duplicated named-request construction. 
 ### Added public declarations
 
 ```text
-fn Request::named(&str, RequestArguments) -> Result<Self, Error>
-fn Request::for_function(RequestFunction, RequestArguments) -> Self
-fn Request::for_definition(RequestDefinition, RequestInput, RequestOptions) -> Self
-fn RequestFunction::for_definition(&RequestDefinition) -> Self
+fn Request::named(&str, RequestArguments) -> Result<Request, Error>
+fn Request::for_function(RequestFunction, RequestArguments) -> Request
+fn Request::for_definition(RequestDefinition, RequestInput, RequestOptions) -> Request
+fn RequestFunction::for_definition(&RequestDefinition) -> RequestFunction
 impl FromStr for RequestFunction
 type RequestFunction::Err = Error
 ```
