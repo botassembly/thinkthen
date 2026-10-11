@@ -24,6 +24,7 @@ fn flag(value: &Robj, name: &str) -> bool {
         .unwrap_or(false)
 }
 #[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
 struct AuthoredSelector {
     kind: String,
     value: Box<serde_json::value::RawValue>,
