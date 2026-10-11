@@ -42,3 +42,4 @@ fn RequestDefinition::from_authored_json(&str) -> Result<RequestDefinition, Erro
 
 - 2026-10-11 started
 - 2026-10-11 landed 9dcdcc5c7; next: Ruby native requests and reviewed error corrections are landed; convert JavaScript next, then R.
+- 2026-10-11 landed b071e50bc; next: Ruby and JavaScript native requests and reviewed error and feed corrections are landed; convert R to complete the ticket.
