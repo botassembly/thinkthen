@@ -21,10 +21,11 @@ def test_named_calls_use_owned_typed_results_for_the_ten_functions(backend, tmp_
                 ('relate', {'version': 1, 'relate': {'relations': [{'name': 'knows', 'source': 'person', 'target': 'person'}]}}, [('A', 'person'), ('B', 'person')], {}),
             ]
             for verb, question, evidence, options in calls:
+                options['details'] = True
                 if verb == 'recognize': done = engine.recognize(evidence, question, **options)
                 elif verb == 'relate': done = engine.relate(evidence, question, **options)
                 else: done = getattr(engine, verb)(question, evidence, **options)
-                done.value
+                assert done.value == (done.results[0] if isinstance(evidence, str) else list(done.results)), verb
                 assert len(done.facts.call_id) == 64, verb
                 assert done.facts.requests_sent >= 0, verb
                 for row in done.results:
@@ -176,7 +177,7 @@ def test_named_calls_refuse_invalid_headers_without_sending(backend, tmp_path):
     output = run('''
         import thinkthen as tt
         engine = tt.Engine(cache=False, max_retries=0)
-        for controls in ({'unknown': True}, {'deadline_ms': None}, {'batch': 0}, {'threshold': 3}):
+        for controls in ({'deadline_ms': None}, {'batch': 0}, {'threshold': 3}):
             try: engine.decide('Late?', 'private note', **controls)
             except tt.UsageError: pass
             else: raise AssertionError('malformed header admitted')

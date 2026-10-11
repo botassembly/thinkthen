@@ -7,12 +7,8 @@ def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path)
         from thinkthen import _thinkthen as native
         from thinkthen._native_results import NativeSessionPacketDecideRow, NativeAtomicDecideValue
         engine = native._Engine('{"cache":false,"max_retries":0}')
-        request = {'schema': 'thinkthen.request/1', 'call': {
-            'function': 'decide', 'question': {'kind': 'text', 'text': 'Late?'},
-            'input': {'kind': 'feed', 'name': 'python'},
-        }}
-        session = engine._request_session(json.dumps(request))
-        assert session._push(json.dumps({'item': {'original': {'kind': 'text', 'text': 'note'}}})) == 'accepted'
+        session = engine._request_session('decide', ('text', 'Late?'), None, {}, True)
+        assert session._push(native._RequestItem('note', 'decide')) == 'accepted'
         session._finish()
         rows = []
         while True:

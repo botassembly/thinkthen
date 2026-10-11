@@ -3,7 +3,7 @@
 use crate::{guard, raised};
 use pyo3::prelude::*;
 
-use thinkthen_host::source;
+use std::path::PathBuf;
 
 #[pyclass(name = "_SourceIterator", module = "thinkthen._thinkthen")]
 pub(crate) struct SourceIterator(std::sync::Mutex<thinkthen::SourceRecords>);
@@ -39,10 +39,42 @@ impl SourceIterator {
 }
 
 #[pyfunction]
-pub(crate) fn _read_files(py: Python<'_>, selection: &str) -> PyResult<SourceIterator> {
+pub(crate) fn _read_files(
+    py: Python<'_>,
+    paths: Vec<PathBuf>,
+    unit: &str,
+    window: Option<usize>,
+) -> PyResult<SourceIterator> {
     guard(py, || {
-        let selection = source::parse(selection).map_err(|e| raised(py, &e))?;
-        let records = py.detach(|| selection.read()).map_err(|e| raised(py, &e))?;
+        let reading = crate::inputs::reading(py, unit, window)?;
+        let records = py
+            .detach(|| thinkthen::read_files(paths, reading))
+            .map_err(|e| raised(py, &e))?;
         Ok(SourceIterator(std::sync::Mutex::new(records)))
     })
+}
+
+#[pyfunction]
+pub(crate) fn _validate_reading(
+    py: Python<'_>,
+    unit: &Bound<'_, PyAny>,
+    window: &Bound<'_, PyAny>,
+) -> PyResult<()> {
+    let invalid = || {
+        crate::usage(
+            py,
+            "reader window requires unit window and a positive whole number",
+        )
+    };
+    let unit: String = unit.extract().map_err(|_| invalid())?;
+    let window = if window.is_none() {
+        None
+    } else {
+        crate::controls::whole_number(py, window).map_err(|_| invalid())?;
+        Some(window.extract::<usize>().map_err(|_| invalid())?)
+    };
+    crate::inputs::reading(py, &unit, window)?
+        .validate()
+        .map(|_| ())
+        .map_err(|e| raised(py, &e))
 }

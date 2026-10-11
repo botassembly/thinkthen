@@ -68,3 +68,34 @@ def test_installed_recognize_keeps_nonempty_aggregate_before_empty_final(backend
         print('kept')
     """,child_env(backend,tmp_path,'case/44-recognize-C12-relations'))
     assert output.splitlines()==['kept']
+
+
+def test_native_admission_and_removed_keywords(backend, tmp_path):
+    output = run('''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        try: engine.plan('decide', 'Late?', ['note'], batch=0)
+        except tt.UsageError as error:
+            assert str(error) == 'batch requires a positive whole number or max'
+            assert error.kind == 'usage'
+        else: raise AssertionError('zero batch admitted')
+        try: engine.rank('Late?', ['note'], ask_model='removed')
+        except TypeError: pass
+        else: raise AssertionError('removed keyword accepted')
+        try: engine.plan('decide', {'decide': 'Late?', 'item_schema': 'string'}, ['note'])
+        except tt.UsageError as error:
+            assert str(error) == 'the question declaration uses an unsupported feature'
+        else: raise AssertionError('unsupported declaration admitted')
+        for field in ['snippet_pieces', 'deadline_ms', 'max_requests_total', 'top']:
+            try: engine.plan('recognize', {'version': 1, 'recognize': {'kinds': {}}}, ['note'], **{field: True})
+            except tt.UsageError as error: assert str(error) == 'invalid canonical request'
+            else: raise AssertionError('boolean integer admitted')
+        for unit, window in [('bad', None), ('line', 2), ('window', 0), ('window', True), ('window', -1)]:
+            try: tt.read_files('unread-private-path', unit=unit, window=window)
+            except tt.UsageError as error:
+                assert str(error) == 'reader window requires unit window and a positive whole number'
+            else: raise AssertionError('invalid reading deferred until consumption')
+        print('native admission')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['native admission']
+    assert backend.count() == 0

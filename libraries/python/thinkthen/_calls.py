@@ -1,10 +1,8 @@
 """Host naming, conversion and scheduling over the canonical native session."""
 from __future__ import annotations
 import asyncio
-import base64
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-import json
 import os
 import sys
 import time
@@ -28,52 +26,14 @@ def _json(value):
     return value
 
 
-def _dump(value):
-    try:
-        return json.dumps(_json(value), ensure_ascii=False, allow_nan=False)
-    except (TypeError, ValueError) as error:
-        raise native.UsageError('input cannot be converted to native JSON') from error
-
-
-def _original(value):
-    return {'kind': 'text', 'text': value} if isinstance(value, str) else {'kind': 'json', 'value': _json(value)}
-
-
-def _item(value, verb=None):
-    from ._inputs import Item
-    if isinstance(value, Item):
-        out = {'images': [{'kind': 'bytes', 'media': image.media,
-                           'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]}
-        if not value.image_only:
-            out['original'] = {'kind': 'text', 'text': value.value} if value.text else {'kind': 'json', 'value': _json(value.value)}
-        if value.context is not c.ABSENT:
-            out['context'] = _json(value.context)
-        if value.options is not c.ABSENT:
-            out['options'] = [{'name': name, **({} if description is c.ABSENT else {'description': _json(description)})}
-                              for name, description in value.options]
-        return out
-    if verb == 'relate' and isinstance(value, native._NativeResult):
-        value = {'name': value.text, 'kind': value.kind}
-    if verb == 'relate' and isinstance(value, tuple):
-        value = {'name': value[0], 'kind': value[1]}
-    return {'original': _original(value)}
-
-
 def _question(verb, question, controls):
     from ._inputs import QuestionSource
     if verb == 'annotate' and isinstance(question, type):
         from .pydantic import question_set
         question = question_set(question)
     if isinstance(question, QuestionSource):
-        selectors = {}
-        for key in ('path', 'name', 'reference'):
-            value = getattr(question, key)
-            if value is not None: selectors[key] = os.fspath(value) if key == 'path' else value
-        if question.body is not None: selectors['value'] = _json(question.body)
-        if question.raw is not None: selectors['value'] = json.loads(native._RequestSession._definition(question.raw))
         if question.none: controls['none'] = True
-        kind = 'file' if 'path' in selectors else 'name' if 'name' in selectors else 'reference' if 'reference' in selectors else 'definition'
-        return {'kind': kind, **selectors}
+        return 'selector', question
     if question is None and verb in ('recognize', 'relate'):
         from . import _rules
         plan = {}
@@ -86,42 +46,30 @@ def _question(verb, question, controls):
         rules = _rules(controls.pop('relations', None), controls.pop('either', None))
         if rules or verb == 'relate':
             plan['relations'] = [dict(name=n, source=s, target=t, either=e) for n,s,t,e in rules]
-        return {'kind': 'definition', 'value': {'version': 1, verb: plan}}
+        return 'definition', {'version': 1, verb: plan}
     if isinstance(question, os.PathLike):
-        return {'kind': 'file', 'path': os.fspath(question)}
+        return 'file', os.fspath(question)
     if isinstance(question, Mapping):
-        return {'kind': 'definition', 'value': _json(question)}
+        return 'definition', _json(question)
     if verb in ('annotate', 'recognize', 'relate'):
-        return {'kind': 'file', 'path': question}
+        return 'file', question
     if not any(key in controls for key in ('options', 'labels', 'levels', 'true', 'false')):
-        return {'kind': 'text', 'text': question}
+        return 'text', question
     body = {'decide' if verb in ('filter', 'rank') else verb: question}
     from ._labels import normalize
     for key in ('options', 'labels', 'levels', 'true', 'false'):
         if key in controls:
             value = controls.pop(key)
             body[key] = normalize(value, bare_level_names=key == 'levels') if key in ('options', 'labels', 'levels') else value
-    return {'kind': 'definition', 'value': body}
+    return 'definition', body
 
 
 def _source(verb, value):
-    from ._inputs import Files, Records
-    if isinstance(value, (FileSelection, Files)):
-        reading = {'unit': value.unit}
-        if value.window is not None and value.window is not c.ABSENT:
-            reading['window'] = value.window
-        media = getattr(value, 'media', c.ABSENT)
-        source = {'paths': list(value.paths), 'reading': reading, 'media': 'text' if media is c.ABSENT else media}
-        if getattr(value, 'jsonl', False): source['framing'] = 'jsonl'
-        return {'kind': 'source', 'source': source}, None, False
-    if isinstance(value, Records): value = value.items
-    if isinstance(value, Iterator):
-        return {'kind': 'feed', 'name': 'python'}, value, False
-    if isinstance(value, (list, tuple)):
-        kind = 'units' if verb == 'find' else 'entities' if verb == 'relate' else 'records'
-        return {'kind': kind, 'items': [_item(item, verb) for item in value]}, None, False
-    item = _item(value)
-    return {'kind': 'records', 'items': [item]}, None, True
+    if isinstance(value, (FileSelection, c.Files)):
+        return value, None, False
+    if isinstance(value, c.Records): value = value.items
+    if isinstance(value, Iterator): return None, value, False
+    return value, None, not isinstance(value, (list, tuple))
 
 
 @dataclass(frozen=True, repr=False)
@@ -207,12 +155,11 @@ class Operation:
             on = fields.pop('on')
             fields['field'] = [on] if isinstance(on, str) else list(on)
         source, self.producer, self.scalar = _source(verb, value)
-        request = {'schema': 'thinkthen.request/1', 'call': {'function': verb, 'question': asked, 'input': source, 'options': fields}}
         if self.token is not None and self.token.cancelled:
             self._close_producer(preserve_failure=True)
             raise _cancelled()
         try:
-            self.session = engine._engine._request_session(_dump(request), self.surface)
+            self.session = engine._engine._request_session(verb, asked, source, fields, self.producer is not None, self.surface)
         except native.ThinkThenError as error:
             self._close_producer()
             raise
@@ -266,12 +213,12 @@ class Operation:
         if self.producer is not None:
             if self.pending is None:
                 try:
-                    self.pending = _dump({'item': _item(next(self.producer), self.verb)})
+                    self.pending = native._RequestItem(next(self.producer), self.verb)
                 except StopIteration:
                     self.session._finish()
                     self._close_producer()
                 except Exception:
-                    self.session._finish(_dump({'kind': 'invalid_input'}))
+                    self.session._finish(True)
                     self._close_producer()
             if self.pending is not None:
                 status = self.session._push(self.pending)
@@ -339,6 +286,9 @@ class AsyncCalls:
         return named
 
     async def _run(self, verb, question, value, controls):
+        import inspect
+        arguments = (value, question) if verb in ('recognize', 'relate') else (question, value)
+        inspect.signature(getattr(self._engine, verb)).bind(*arguments, **controls)
         operation = Operation(self._engine, verb, question, value, controls)
         try:
             while not operation.step(): await asyncio.sleep(.001)

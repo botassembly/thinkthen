@@ -1,6 +1,6 @@
 //! Private canonical execution edge for the named Python family.
 //!
-//! Start transfers the decoded Request to its native worker. Poll never waits:
+//! Start transfers the constructed Request to its native worker. Poll never waits:
 //! None means pending, a packet owns its output, and `end` means exhaustion.
 //! Push transfers one descriptor only on `accepted`; `full` retains caller
 //! ownership and `closed` stops the producer. Finish fixes EOF or a native
@@ -12,11 +12,21 @@ use std::sync::Mutex;
 
 use pyo3::prelude::*;
 use thinkthen::{
-    Request, RequestReaderFailure, RequestSession, RequestSessionPushStatus, RequestSessionRead,
-    Surface,
+    Request, RequestReaderFailure, RequestSession, RequestSessionPush, RequestSessionRead, Surface,
 };
 
 use crate::{guard, raised, usage};
+
+#[pyclass(frozen, name = "_RequestItem", module = "thinkthen._thinkthen")]
+#[derive(Debug)]
+pub(crate) struct Item(thinkthen::RequestItem);
+#[pymethods]
+impl Item {
+    #[new]
+    fn new(py: Python<'_>, value: &Bound<'_, PyAny>, verb: &str) -> PyResult<Self> {
+        crate::inputs::item(py, value, verb).map(Self)
+    }
+}
 
 #[pyclass(frozen, name = "_RequestSession", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
@@ -26,11 +36,10 @@ impl Session {
     pub(crate) fn start(
         py: Python<'_>,
         engine: &thinkthen::Engine,
-        request: &str,
+        request: Request,
         surface: Surface,
     ) -> PyResult<Self> {
         guard(py, || {
-            let request = Request::from_json(request).map_err(|e| raised(py, &e))?;
             let session = engine
                 .request_session_with_surface(request, surface)
                 .map_err(|e| raised(py, &e))?;
@@ -41,16 +50,6 @@ impl Session {
 
 #[pymethods]
 impl Session {
-    #[staticmethod]
-    fn _definition(py: Python<'_>, raw: &str) -> PyResult<String> {
-        guard(py, || {
-            let definition: thinkthen::RequestDefinition = serde_json::from_str(raw)
-                .map_err(|_| usage(py, "invalid authored question definition"))?;
-            serde_json::to_string(&definition)
-                .map_err(|_| crate::defect(py, "native question could not be serialized"))
-        })
-    }
-
     fn _poll(&self, py: Python<'_>) -> PyResult<Option<String>> {
         guard(py, || {
             let held = self
@@ -80,7 +79,7 @@ impl Session {
             .transpose()
     }
 
-    fn _push(&self, py: Python<'_>, descriptor: &str) -> PyResult<&'static str> {
+    fn _push(&self, py: Python<'_>, value: &Item) -> PyResult<&'static str> {
         guard(py, || {
             let held = self
                 .0
@@ -90,18 +89,21 @@ impl Session {
                 return Ok("closed");
             };
             session
-                .try_push_json(descriptor)
+                .try_push(thinkthen::RequestSessionDescriptor {
+                    item: value.0.clone(),
+                    location: None,
+                })
                 .map(|status| match status {
-                    RequestSessionPushStatus::Accepted => "accepted",
-                    RequestSessionPushStatus::Full => "full",
-                    RequestSessionPushStatus::Closed => "closed",
+                    RequestSessionPush::Accepted => "accepted",
+                    RequestSessionPush::Full(_) => "full",
+                    RequestSessionPush::Closed(_) => "closed",
                 })
                 .map_err(|e| raised(py, &e))
         })
     }
 
     #[pyo3(signature = (failure=None))]
-    fn _finish(&self, py: Python<'_>, failure: Option<&str>) -> PyResult<()> {
+    fn _finish(&self, py: Python<'_>, failure: Option<bool>) -> PyResult<()> {
         guard(py, || {
             let held = self
                 .0
@@ -111,9 +113,8 @@ impl Session {
                 .as_ref()
                 .ok_or_else(|| usage(py, "request session is closed"))?;
             let failure = failure
-                .map(RequestReaderFailure::from_json)
-                .transpose()
-                .map_err(|e| raised(py, &e))?;
+                .filter(|v| *v)
+                .map(|_| RequestReaderFailure::InvalidInput { location: None });
             session.finish(failure).map_err(|e| raised(py, &e))
         })
     }

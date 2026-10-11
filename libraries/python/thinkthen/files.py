@@ -23,11 +23,8 @@ class FileSelection:
     unit: str = "line"
     window: int | None = None
 
-    def _json(self):
-        return json.dumps(dict(paths=self.paths, unit=self.unit, window=self.window))
-
     def __iter__(self):
-        return (SourceRecord(**json.loads(row)) for row in _thinkthen._read_files(self._json()))
+        return (SourceRecord(**json.loads(row)) for row in _thinkthen._read_files(self.paths, self.unit, self.window))
 
     def __repr__(self):
         return f"FileSelection(unit={self.unit!r}, window={self.window!r}, paths=<withheld>)"
@@ -47,7 +44,5 @@ def read_files(path_or_paths, *, unit="line", window=None):
         paths = tuple(os.fspath(path) for path in path_or_paths)
     if any(not isinstance(path, str) for path in paths):
         raise _thinkthen.UsageError("source paths are text")
-    if unit not in ("line", "window", "file") or (unit == "window" and
-            (type(window) is not int or window <= 0)) or (unit != "window" and window is not None):
-        raise _thinkthen.UsageError("reader window requires unit window and a positive whole number")
+    _thinkthen._validate_reading(unit, window)
     return FileSelection(paths, unit, window)

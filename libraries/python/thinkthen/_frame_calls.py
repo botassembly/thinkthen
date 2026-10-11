@@ -15,10 +15,7 @@ def library(value):
 
 def members(question):
     from . import _thinkthen as native
-    from ._calls import _dump
-    request = {'schema': 'thinkthen.request/1', 'call': {'function': 'annotate',
-               'question': question, 'input': {'kind': 'records', 'items': []}, 'options': {}}}
-    spec = native._QuestionSet._resolve(_dump(request))
+    spec = native._QuestionSet._resolve(question)
     return tuple(spec._members())
 
 
