@@ -28,3 +28,7 @@ A fresh reviewer accepts every code change that landed after the 0508 review, an
 - Changes: review the diff from 38fa0cdfa to the final commit by area: Rust core, each language family, databases, release scripts. Fix confirmed defects in this ticket. File a new ticket only for a defect that needs its own design.
 - Proof: one accept per area on the final commit, and the lint and test logs of the single runs.
 - Defers: the candidate runs belong to 0543.
+
+## Progress
+
+- 2026-10-11 started
