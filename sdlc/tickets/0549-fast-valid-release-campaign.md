@@ -14,6 +14,8 @@ Reviews: revision c68d38b815f5dd54cd5fd4045f44753f37ac463e, reject
 
 Reviews: revision 95fb7fe8811154bfbd00b8a98a3655d99c85eb0d, accept
 
+Reviews: revision e90429a, accept
+
 ## Outcome
 
 One `test-full-cases --run` on the Beelink runs every consumer, and no consumer fails for setup reasons. Each consumer finishes in under 900 seconds. Each consumer's duration appears in the summary.
