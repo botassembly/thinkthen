@@ -10,6 +10,30 @@ void check(bool value, String message) {
 }
 
 Future<void> main(List<String> args) async {
+  if (args.contains('smoke')) {
+    final engine = Engine.open();
+    try {
+      final call = await engine.decide(
+        InputRequestQuestionText(
+          text: Platform.environment['THINKTHEN_TEST_SMOKE_QUESTION']!,
+        ),
+        InputRequestInputText(
+          text: Platform.environment['THINKTHEN_TEST_SMOKE_TEXT']!,
+        ),
+      );
+      final answer = call.packets
+          .whereType<SessionPacketDecideRow>()
+          .single
+          .value
+          .value
+          .value;
+      check(answer is bool, 'smoke answer is not boolean');
+      print('\nsmoke: $answer');
+    } finally {
+      engine.close();
+    }
+    return;
+  }
   final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
   var sends = 0;
   final arrived = Completer<void>(), release = Completer<void>();

@@ -1,5 +1,6 @@
 with Ada.Environment_Variables; use Ada.Environment_Variables;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
+with Interfaces; use type Interfaces.Unsigned_32;
 with Ada.Text_IO; use Ada.Text_IO;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;

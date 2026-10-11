@@ -31,6 +31,13 @@ THINKTHEN_SCALA_HOME=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); 
 export THINKTHEN_JDK_HOME THINKTHEN_KOTLIN_HOME THINKTHEN_SCALA_HOME
 jars=$package/jars
 [ -d "$jars" ] || jars=$package
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    smoke_guard
+    floor=$(python3 -c 'import sys; sys.path.insert(0, sys.argv[1]); from toolchains import JDK_FLOOR; print(JDK_FLOOR)' "$here/tests")
+    "$THINKTHEN_JDK_HOME/bin/javac" --release "$floor" -cp "$jars/thinkthen-session.jar" -d "$consumer" "$here/tests/SessionConsumer.java"
+    "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SessionConsumer smoke
+    exit
+fi
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
 python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ] || [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then

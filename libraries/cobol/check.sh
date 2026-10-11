@@ -35,6 +35,12 @@ else
     header=$evidence/native/include/thinkthen.h
   fi
 fi
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+  smoke_guard
+  THINKTHEN_SESSION_PACKAGE="$package" THINKTHEN_C_HEADER="$header" THINKTHEN_C_LIBRARY="$library" \
+    python3 "$ROOT/checks/smoke.py"
+  exit
+fi
 if [ ! -x "$REPO/target/debug/conformance-backend" ]; then
   CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline \
     --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2

@@ -18,6 +18,7 @@ fi
 . "$ROOT/../../sdlc/scripts/scratch.sh"
 . "$ROOT/../../sdlc/scripts/installed.sh"
 usage_home
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then smoke_guard; fi
 scratch_dir installed
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Dart installed: package or C archive missing' >&2; exit 1; }
