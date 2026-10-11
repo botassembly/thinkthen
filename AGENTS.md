@@ -5,6 +5,7 @@ Read `README.md`, `specification/README.md` and `sdlc/planning/rust-standards.md
 ## Build and review
 
 - Gates: `sdlc/scripts/{install,lint,test,spec,surfaces}`, offline. Run focused checks per change, `spec` and affected surfaces as needed, and `lint` and `test` once at closure. Large-input cases, full parity and load are release-only: `sdlc/decisions/2026-10-09-two-test-suites.md`.
+- Run the release suite (`test-full-cases`, `package`, `test-stress`) locally on the candidate before asking anyone to bless a release. Start each long run in the background with its output in a log file, and do other work while it runs. Do not watch or poll it. Read the log once it exits.
 - Tests are outside-in through the Rust API, the CLI and each installed library. Red, green, remove: delete scaffolding unit tests before landing.
 - `policy.py` enforces source file limits; `sdlc/ratchet.json` holds the measured source ceiling. Explain warnings and growth in the commit; avoid mechanical splits.
 - Require explicit reviewer acceptance for a source-ceiling increase before landing, and lower the ceiling when deleting source.
