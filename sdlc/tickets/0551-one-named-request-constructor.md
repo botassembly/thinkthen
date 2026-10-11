@@ -34,6 +34,12 @@ One Rust constructor turns a function name, a question, an input and options int
 - Proof: a search finds no function-name or question-kind match outside the Rust core. Routine installed checks pass for every touched language.
 - Defers: nothing.
 
+PM amendment, 2026-10-11. The proof bans duplicated named-request construction. No code outside the Rust core maps a function name or question kind to a `RequestCall`, `RequestInput` or input kind, or builds either type by hand. Three kinds of mapping may stay:
+
+- DuckDB's mappings to its compact ABI tags.
+- The SQLite and PostgreSQL mappings that select settings or check a question's kind, such as `databases/postgresql/src/forms.rs`. Idea "SQL extensions take settings selection and question-kind checks from the core" carries them.
+- `Json.java`, as the generic byte and value codec that the generated JVM inputs and results use. It holds no request shape. Its deletion clause in Changes no longer applies.
+
 ## Progress
 
 - 2026-10-11 started
