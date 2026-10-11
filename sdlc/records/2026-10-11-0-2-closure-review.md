@@ -20,7 +20,7 @@ The 2,429-line raise of the Rust source ceiling at 5c9a07a2a is a recount. Share
 8. The installed-consumer drivers copy each other. The usage-lock test exists with two handshakes (`ada/checks/usage_installed.py:180-221`, `jvm/tests/usage_installed.py:40-75`) and six more copies. Languages load each other's fixtures by path (`csharp/tests/backend.py`, `cpp/fixtures/session_cases.py`). 0530 fixed one authored-input bug five times, once per language (slices Y, Z, AB, AJ, AL). The 0530 record reads as a status log.
 9. 0508 landed before 19 of its 25 dependencies closed. No fresh review covers the later migration landings. Ruby's last five code commits (`2c71db0db` to `d97af8365`, 5,139 lines removed) and six 0529 release-script commits have no review on their tickets.
 10. 0518 closed without its installed Foundation consumer compiling or running anywhere. 0474 and 0480 left Windows cache checks that no open ticket names.
-11. Stale text: the Status lines of 0461, 0467, 0468 and 0425, the evidence of 0474 and 0480, and "remains" lines in the 0496, 0504, 0524 and 0529 records. `pm ticket land --tidy-status` retires the closed Status lines. 0543 owns the Windows checks those lines mention.
+11. Stale text: the Status lines of 0461, 0467, 0468 and 0425, the evidence of 0474 and 0480, and "remains" lines in the 0496, 0504, 0524 and 0529 records. `pm ticket land --tidy-status` retires the closed Status lines. 0543 owns the Windows checks those lines mention. The closed tickets' evidence and the records' "remains" lines stay as history and need no ticket.
 
 ## Kept for after 0.2
 
