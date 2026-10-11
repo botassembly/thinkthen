@@ -72,8 +72,12 @@ INPUT_ROOTS = ('RequestInput', 'RequestQuestion', 'RequestReaderFailure',
 def inputs(definitions):
     """Declare the input documents consumed by the PHP public adapter."""
     selected = set(INPUT_ROOTS)
-    for key in INPUT_ROOTS:
-        selected.update(child for child, _ in definitions[key].get('variants', []))
+    selected.update(child for child, _ in definitions['RequestCall']['variants'])
+    # The adapter accepts common records and preserves selector descriptors.
+    # Emit only the tagged constructors it instantiates.
+    selected.update(('RequestInput_records', 'RequestInput_source', 'RequestInput_feed',
+                     'RequestQuestion_text', 'RequestQuestion_definition',
+                     'RequestReaderFailure_invalid_input'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
              'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;']
     for key, source in definitions.items():

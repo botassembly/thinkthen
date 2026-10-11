@@ -89,28 +89,12 @@ final class InputRequestCallTag extends Document
         parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
     }
 }
-final class InputRequestInputEntities extends Document
-{
-    public const TAGS = ['kind' => 'entities'];
-    public function __construct(array $items, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
-    }
-}
 final class InputRequestInputFeed extends Document
 {
     public const TAGS = ['kind' => 'feed'];
     public function __construct(string $name, array $fields = [])
     {
         parent::__construct([...self::TAGS, 'name' => $name, ...$fields]);
-    }
-}
-final class InputRequestInputJson extends Document
-{
-    public const TAGS = ['kind' => 'json'];
-    public function __construct(mixed $value, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'value' => $value, ...$fields]);
     }
 }
 final class InputRequestInputRecords extends Document
@@ -127,22 +111,6 @@ final class InputRequestInputSource extends Document
     public function __construct(mixed $source, array $fields = [])
     {
         parent::__construct([...self::TAGS, 'source' => $source, ...$fields]);
-    }
-}
-final class InputRequestInputText extends Document
-{
-    public const TAGS = ['kind' => 'text'];
-    public function __construct(string $text, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'text' => $text, ...$fields]);
-    }
-}
-final class InputRequestInputUnits extends Document
-{
-    public const TAGS = ['kind' => 'units'];
-    public function __construct(array $items, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
 final class InputRequestItem extends Document
@@ -170,30 +138,6 @@ final class InputRequestQuestionDefinition extends Document
         parent::__construct([...self::TAGS, 'value' => $value, ...$fields]);
     }
 }
-final class InputRequestQuestionFile extends Document
-{
-    public const TAGS = ['kind' => 'file'];
-    public function __construct(string $path, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'path' => $path, ...$fields]);
-    }
-}
-final class InputRequestQuestionName extends Document
-{
-    public const TAGS = ['kind' => 'name'];
-    public function __construct(string $name, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'name' => $name, ...$fields]);
-    }
-}
-final class InputRequestQuestionReference extends Document
-{
-    public const TAGS = ['kind' => 'reference'];
-    public function __construct(string $reference, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'reference' => $reference, ...$fields]);
-    }
-}
 final class InputRequestQuestionText extends Document
 {
     public const TAGS = ['kind' => 'text'];
@@ -212,22 +156,6 @@ final class InputRequestReader extends Document
 final class InputRequestReaderFailureInvalidInput extends Document
 {
     public const TAGS = ['kind' => 'invalid_input'];
-    public function __construct(array $fields = [])
-    {
-        parent::__construct([...self::TAGS, ...$fields]);
-    }
-}
-final class InputRequestReaderFailureIo extends Document
-{
-    public const TAGS = ['kind' => 'io'];
-    public function __construct(array $fields = [])
-    {
-        parent::__construct([...self::TAGS, ...$fields]);
-    }
-}
-final class InputRequestReaderFailureUtf8 extends Document
-{
-    public const TAGS = ['kind' => 'utf8'];
     public function __construct(array $fields = [])
     {
         parent::__construct([...self::TAGS, ...$fields]);
