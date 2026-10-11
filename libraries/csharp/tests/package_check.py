@@ -15,6 +15,7 @@ import zipfile
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
+from native_guard import normalized_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
 MAJOR, MINOR, PATCH = VERSION.split(".")
 HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
@@ -29,7 +30,7 @@ def digest(data):
 
 
 def safe(label, data):
-    assert not any(token in data for token in BAD), f"private pattern in {label}"
+    assert not any(token in normalized_bytes(data) for token in BAD), f"private pattern in {label}"
 
 
 def inspect(header, package, native, expected=None):
@@ -244,6 +245,7 @@ def main():
     tampered = rewrite_tar(native)
     fail("tampered-native-member", lambda: inspect(header, package, tampered))
     fail("tampered-native-hash", lambda: inspect(header, package, tampered, receipt))
+    safe("remapped-native", b"/build/home/workspace/source.rs")
     fail("private-byte", lambda: safe("plant", b"/home/private/file"))
     secret_zip = rewrite_zip(package, "README.md", b"tt-canary-290")
     fail("compressed-private-byte", lambda: inspect(header, secret_zip, native))

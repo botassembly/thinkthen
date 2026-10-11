@@ -7,6 +7,7 @@ sys.path.insert(0,str(R.parents[1]/"conformance/children"))
 from backend import Backend
 from portable import one_portable_request
 from usage import run_usage
+from native_guard import normalized_bytes
 V=re.search(r'<Version>([^<]+)</Version>',(R/'ThinkThen.csproj').read_text())[1]
 dotnet=resolve_dotnet()
 mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
@@ -23,7 +24,7 @@ if release_package:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
   assert 'runtimes/linux-x64/native/libthinkthen.so' in names,names
-  assert not any(token in bundle.read(name) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
+  assert not any(token in normalized_bytes(bundle.read(name)) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
   metadata=ET.fromstring(bundle.read('Botassembly.ThinkThen.nuspec'))
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
   assert fields['id']=='Botassembly.ThinkThen' and fields['version']==V,fields
