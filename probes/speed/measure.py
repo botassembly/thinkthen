@@ -72,8 +72,9 @@ def prose(text):
 
 def landed(number):
     for path in glob.glob(str(ROOT / "sdlc" / "tickets" / f"{number}-*.md")):
-        status = next((l for l in prose(Path(path).read_text(encoding="utf-8")) if l.startswith("Status:")), "")
-        if status.startswith("Status: landed"):
+        status = next((l for l in prose(Path(path).read_text(encoding="utf-8")) if l.casefold().startswith("status:")), "")
+        tokens = status.partition(":")[2].split()
+        if tokens and tokens[0].rstrip(".").casefold() in {"complete", "landed"}:
             return True
     return False
 
