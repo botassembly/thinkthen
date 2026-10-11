@@ -15,13 +15,14 @@ case ${1:-} in
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
+# The lock reexecutes this script with "$@"; preserve the complete invocation.
+. "$(dirname -- "$0")/heavy-lock"
 shift
 artifact_dir=
 if [ "$#" -gt 0 ]; then
     [ "$#" -eq 2 ] && [ "$1" = --artifacts ] && [ -d "$2" ] || { echo 'test-full-cases: expected --artifacts DIR' >&2; exit 2; }
     artifact_dir=$(CDPATH= cd -- "$2" && pwd)
 fi
-. "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 sh "$REPO/sdlc/scripts/test"
 cd -- "$REPO"
