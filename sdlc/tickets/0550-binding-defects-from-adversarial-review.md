@@ -42,26 +42,6 @@ A caller in every language sees its own producer's exception and Rust's admissio
 
 PM amendment, 2026-10-11. The C# fix may add two C exports: `thinkthen_session_error_retryable()` and `thinkthen_session_error_facts_json()`. They read the calling thread's last immediate session failure, the same failure that `thinkthen_session_error_message()` reports, and reuse the existing facts JSON. The borrowed facts stay valid until the next immediate session failure on that thread, and successful calls leave them in place. The constructor and session error slots stay independent, as the installed `session.c:205,236` checks pin. The header documents both exports, and an installed C check covers them. Ian's [efficiency approvals](../decisions/2026-10-11-efficiency-approvals.md) cover additive exports before publication.
 
-### Added public declarations
-
-```text
-enum RequestDecodeCause
-RequestDecodeCause::Malformed
-RequestDecodeCause::PerItemContext
-RequestDecodeCause::UnsupportedDeclaration
-impl Debug for RequestDecodeCause
-fn Error::request_decode_cause(&self) -> Option<RequestDecodeCause>
-fn RequestItem::from_json(&str) -> Result<RequestItem, Error>
-fn RequestQuestion::from_json(&str) -> Result<RequestQuestion, Error>
-RequestReaderFailure::Producer
-```
-
-### Retired public declarations
-
-```text
-fn Engine::finish_usage(&self) -> UsagePersistence
-```
-
 ## Progress
 
 - 2026-10-11 started
