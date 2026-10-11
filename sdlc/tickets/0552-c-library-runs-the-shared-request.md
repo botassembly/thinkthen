@@ -37,3 +37,4 @@ Every C export that asks a question, frozen 0.1 exports included, admits and exe
 
 - 2026-10-11 started
 - 2026-10-11 next: Combined constructor review found frozen C input-kind selection still duplicated, so the developer is replacing it with neutral records and shared named inference before final acceptance.
+- 2026-10-11 next: The final C input-kind correction passed fresh review and all focused checks; whole-ticket checks and landing await 0549 and the accepted 0551 core slice.
