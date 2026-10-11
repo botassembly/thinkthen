@@ -73,6 +73,16 @@ config_home() {
 	export XDG_CONFIG_HOME="$config_scratch"
 }
 
+# temp_home: give PID-named fixtures a fresh root on Unix and Windows.
+temp_home() {
+	scratch_dir temp_scratch
+	temp_native=$temp_scratch
+	if command -v cygpath >/dev/null 2>&1; then
+		temp_native=$(cygpath -w "$temp_scratch") || exit 1
+	fi
+	export TMPDIR="$temp_scratch" TMP="$temp_native" TEMP="$temp_native"
+}
+
 # usage_guard: take usage_home as a decoy. Each check takes its own usage_home, so only a run
 # that bypassed one writes the decoy, and scratch_clean then fails the run.
 usage_guard() {

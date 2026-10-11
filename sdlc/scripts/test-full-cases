@@ -28,6 +28,7 @@ cd -- "$REPO"
 . sdlc/scripts/scratch.sh
 usage_guard
 config_home
+temp_home
 # One replay smoke per binding, four at a time beside the release boundary tests.
 # It runs in its own process group, so a failed step here stops every smoke before the lock frees.
 scratch_dir smoke_log

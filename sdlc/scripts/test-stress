@@ -22,6 +22,7 @@ cd -- "$REPO"
 # ADR 0113: a step that bypasses its scratch usage folder writes this decoy and fails the run.
 . sdlc/scripts/scratch.sh
 usage_guard
+temp_home
 
 ignored_case() {
     package=$1 target=$2 filter=$3

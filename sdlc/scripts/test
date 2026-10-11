@@ -47,6 +47,7 @@ cd -- "$REPO"
 . sdlc/scripts/scratch.sh
 usage_guard
 config_home
+temp_home
 
 cargo nextest run --profile default --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
