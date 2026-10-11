@@ -1,12 +1,14 @@
 # 0538: Move the remaining DuckDB routes to the shared request
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
 Reviews: revision 65f4eaa53698d9c931fd69f2f2d56b79c3d6ce13, accept
+
+Landed: 40afea2
 
 ## Outcome
 
