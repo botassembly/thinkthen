@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
+
 ## Outcome
 
 Python calls hand native Rust request values to the engine. Python code no longer writes the request grammar, no longer checks rules that Rust admission owns, and no longer accepts untyped extra keyword arguments. Python file reading passes typed arguments to the native reader.
