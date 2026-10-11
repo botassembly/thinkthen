@@ -16,16 +16,18 @@ One Rust constructor turns a function name, a question, an input and options int
     - `typescript/src/request_node.rs:102`
     - `python/src/inputs.rs:290`
     - `ruby/src/ffi/request.rs:159`
-    - `r/.../ffi/request/inputs.rs:118`
+    - `libraries/r/thinkthen/src/rust/src/ffi/request/inputs.rs:118`
     - `c/src/call/legacy.rs:83`
-    - `databases/duckdb/bridge/src/ffi/request.rs:60`
-    - the SQLite and PostgreSQL bridges
+    - `databases/sqlite/src/complete/selector.rs:30`
+    - the PostgreSQL bridge
+  - DuckDB picks the call from the kind of question (`databases/duckdb/bridge/src/ffi/request.rs:60-77`).
   - JVM (`Engine.java:134`) and C++ (`client.hpp:84`) write the envelope JSON themselves. The JVM also keeps a hand-written `Json.java`.
-- Keeps: the wire request format and every installed case.
+- Keeps: the wire request format, every installed case, and every public call name in C# and the JVM.
 - Changes:
   - Add `RequestFunction: FromStr` and one constructor that picks the input kind from the function.
+  - Add a second constructor that takes a question kind, and route DuckDB through it.
   - Delete each copy of the mapping.
-  - Have JVM and C++ use the generated input types, as C# does (`csharp/src/OwnedCall.cs:82`). Delete `Json.java` once the generated readers cover it.
+  - Have the JVM build the envelope with the generated `Inputs.Request` (`Inputs.java:327`). C++ uses its generated input types, as C# does (`csharp/src/OwnedCall.cs:82`). Delete `Json.java` once the generated readers cover it.
   - Collapse the 20 near-identical call methods in C# `OwnedCall.cs:83` and JVM `Engine.java:114` where the language allows it.
-- Proof: a search finds no function-name match outside the Rust core. Routine installed checks pass for every touched language.
+- Proof: a search finds no function-name or question-kind match outside the Rust core. Routine installed checks pass for every touched language.
 - Defers: nothing.

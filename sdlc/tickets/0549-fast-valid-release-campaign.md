@@ -6,19 +6,22 @@ Milestone: 0.2
 
 ## Outcome
 
-One `test-full-cases --run` on the Beelink runs every consumer, and no consumer fails for setup reasons. The campaign finishes well inside the per-consumer time limit. Each consumer's duration appears in the summary.
+One `test-full-cases --run` on the Beelink runs every consumer, and no consumer fails for setup reasons. Each consumer finishes in under 900 seconds. Each consumer's duration appears in the summary.
 
 ## Evidence
 
 - Starts from: the [2026-10-11 adversarial review](../records/2026-10-11-0-2-adversarial-review.md), test section.
   - In the rc.11 run, the time limit at `conformance/parity.py:444` killed Ada at 30:00 after 254 cases, so every Ada cell failed.
-  - Nine consumers never ran because `consumer_environment` (`parity.py:246`) drops the toolchain and cache paths. Those consumers are python, typescript, ruby, r, dart, sqlite, duckdb and postgresql.
+  - Eight consumer groups never ran. They are python, typescript, ruby, r, dart, sqlite, duckdb and postgresql.
+    - The rc.11 command left `THINKTHEN_TOOLCHAINS`, `UV_CACHE_DIR`, `PUB_CACHE` and `R_LIBS_USER` unset.
+    - `consumer_environment` (`parity.py:246-272`) passes those variables only when they are set. Otherwise each consumer looks in its empty scratch home.
+    - The logs name what was missing: the Ruby 3.4.11 prefix, jsonlite 2.0.0, the SQLite amalgamation, the DuckDB v1.5.5 toolchain and the PostgreSQL server package. The python, typescript and dart logs are empty.
   - The other consumers took 87 minutes in series.
 - Keeps: every required cell, the fake backend, the heavy lock and the per-consumer logs.
 - Changes:
-  - Pass the toolchain and cache locations through to each consumer's scratch home.
-  - Run consumers in parallel, four at a time. Rust and rust-polars share one lane.
-  - Build the Ada consumer once and run all its cases from that build. Today each case compiles and statically links a new program (`libraries/ada/checks/full_case.py:53-59`), which costs about 5 of every 7 seconds. Build the Ada package once per campaign.
+  - Default those variables to this machine's real toolchain and cache locations, so a bare `test-full-cases --run` finds them.
+  - Run consumers in parallel, four at a time. Rust and rust-polars share one lane. The campaign takes the heavy lock once, and children inherit `THINKTHEN_HEAVY_LOCK_HELD`, so consumers do not queue on the lock.
+  - Build the Ada package and one Ada consumer program once per campaign, and run every case from that program. Today each case compiles and statically links a new program (`libraries/ada/checks/full_case.py:53-59`), which costs about 5 of every 7 seconds.
   - Run each JVM language's cases in one JVM, and run the three JVM languages in parallel.
   - Raise `CARGO_BUILD_JOBS` for parity.
   - Drop the routine suite rerun and the duplicate Rust public-case pass from the `test-full-cases` preamble. The installed `rust` consumer keeps those cases.
