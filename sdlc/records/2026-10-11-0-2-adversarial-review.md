@@ -76,3 +76,5 @@ Product code in `crates/` grew from 41,939 lines on 2026-10-01 to 80,544 at HEAD
 
 1. Slim the required parity cases for the bindings, as described above.
 2. Add a timed blocking read to the C session API before 0.2 publishes.
+
+Ian approved both on 2026-10-11: [efficiency approvals](../decisions/2026-10-11-efficiency-approvals.md). Tickets 0555 and 0556 carry them.

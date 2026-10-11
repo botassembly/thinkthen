@@ -30,7 +30,7 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
   - Print each consumer's duration in the summary.
   - Remove the harness name from the lock path in `libraries/ada/check.sh:10`.
 - Proof: one full run on the Beelink passes every consumer. Its summary shows the durations.
-- Defers: slimming the required case list waits on Ian's ruling, named in the review record.
+- Defers: 0555 slims the required case list.
 
 ## Progress
 
