@@ -6,7 +6,7 @@ Date: 2026-10-11
 
 Ian approved both proposals in the [0.2 adversarial review](../records/2026-10-11-0-2-adversarial-review.md): "Yes, to both of your things. Whatever we have to do to make everything more efficient and better, I approve."
 
-1. **Slim the binding parity cases.** Core limit and refusal cases run in full on cli, rust and c. Each binding runs a representative subset. This replaces the rule that every consumer runs every required case. Ticket 0555 carries it.
+1. **Slim the binding parity cases.** Core limit and refusal cases run on cli, rust and c, as each consumer's contract resolves them. Each binding runs a representative subset. This replaces the rule that every consumer runs every required case. Ticket 0555 carries it.
 2. **Add a blocking session read to the C API before 0.2 publishes.** Every binding deletes its sleep-and-poll loop. Ticket 0556 carries it.
 
 ## Standing approval
