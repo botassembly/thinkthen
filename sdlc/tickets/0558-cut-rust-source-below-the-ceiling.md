@@ -58,6 +58,10 @@ PM amendment, 2026-10-11, third. This rules on `rank_set_complete_with` and `rel
 - If crate code outside tests calls a method's implementation, make that implementation `pub(crate)`. Move its exact ownership test, with every assertion, into a library-only test inside the crate. Then delete the public method.
 - If only tests call it, the method stays public with its test, as the first amendment says.
 - A Progress line names which rule each method took and the production caller that justified the first rule.
+- Applied after the caller audit:
+  - `rank_set_complete_with` becomes private. `Engine::rank_set_with` calls it.
+  - `relate_records_complete_with` and `try_relate_records_complete_with` are deleted. The `Request` relate path calls the private `execute_relate_records_complete_with`, and the relate ownership test moves there unchanged.
+  - These two ownership tests are the only exception to moving the affected integration tests onto public `Request`. They may use a library-test loopback backend inside the crate, which code review checks.
 
 ## Progress
 
