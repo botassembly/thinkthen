@@ -5,6 +5,11 @@ from pathlib import Path
 import shutil
 import sys
 
+COLLECTIONS = tuple(
+    "installed-" + language + suffix
+    for language in ("java", "kotlin", "scala") for suffix in ("", "-usage")
+)
+
 
 def prepare(context):
     root, run = context['root'], context['run']
@@ -38,18 +43,18 @@ def prepare(context):
     command(['sh', str(root / 'libraries/jvm/build.sh')], root, env, owned / 'build.log', timeout=300)
     jars = owned / 'package/jars'
     collections = []
-    for language in ('java', 'kotlin', 'scala'):
-        for kind, module in (('session', 'session_installed'), ('usage', 'usage_installed')):
-            name = 'installed-' + language + ('-usage' if kind == 'usage' else '')
-            def runner(folder, *, language=language, module=module):
-                # Runtime children set the profile explicitly after clearing their environment.
-                source = (
-                    'import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); '
-                    f'from {module} import run; '
-                    'run(Path(sys.argv[2]),Path(sys.argv[3]),language=sys.argv[4],profiles=Path(sys.argv[5]))'
-                )
-                command([sys.executable, '-c', source, str(root / 'libraries/jvm/tests'),
-                         str(jars), str(folder / 'consumer'), language, str(run / 'active')],
-                        root, env, folder / 'runner.log', timeout=180)
-            collections.append({'name': name, 'objects': [context['c_shared']], 'runner': runner})
+    for name in COLLECTIONS:
+        language = name.removeprefix('installed-').removesuffix('-usage')
+        module = 'usage_installed' if name.endswith('-usage') else 'session_installed'
+        def runner(folder, *, language=language, module=module):
+            # Runtime children set the profile explicitly after clearing their environment.
+            source = (
+                'import sys; from pathlib import Path; sys.path.insert(0,sys.argv[1]); '
+                f'from {module} import run; '
+                'run(Path(sys.argv[2]),Path(sys.argv[3]),language=sys.argv[4],profiles=Path(sys.argv[5]))'
+            )
+            command([sys.executable, '-c', source, str(root / 'libraries/jvm/tests'),
+                     str(jars), str(folder / 'consumer'), language, str(run / 'active')],
+                    root, env, folder / 'runner.log', timeout=180)
+        collections.append({'name': name, 'objects': [context['c_shared']], 'runner': runner})
     return collections
