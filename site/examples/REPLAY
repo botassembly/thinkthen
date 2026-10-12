@@ -4,6 +4,7 @@
 # check-binding-samples.mjs checks coverage and install package names.
 functions/annotate/ada.adb
 functions/annotate/cobol.cob
+functions/annotate/csharp.cs
 functions/annotate/dart.dart
 functions/annotate/duckdb.sql
 functions/annotate/more/duckdb.sql
@@ -20,6 +21,7 @@ functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/ada.adb
 functions/choose/cobol.cob
+functions/choose/csharp.cs
 functions/choose/dart.dart
 functions/choose/duckdb.sql
 functions/choose/more/duckdb.sql
@@ -36,6 +38,7 @@ functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/ada.adb
 functions/decide/cobol.cob
+functions/decide/csharp.cs
 functions/decide/dart.dart
 functions/decide/duckdb.sql
 functions/decide/pandas.py
@@ -50,6 +53,7 @@ functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/ada.adb
 functions/filter/cobol.cob
+functions/filter/csharp.cs
 functions/filter/dart.dart
 functions/filter/duckdb.sql
 functions/filter/pandas.py
@@ -64,6 +68,7 @@ functions/filter/sqlite.sql
 functions/filter/typescript.ts
 functions/find/ada.adb
 functions/find/cobol.cob
+functions/find/csharp.cs
 functions/find/dart.dart
 functions/find/duckdb.sql
 functions/find/pandas.py
@@ -88,6 +93,7 @@ functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/ada.adb
 functions/rank/cobol.cob
+functions/rank/csharp.cs
 functions/rank/dart.dart
 functions/rank/duckdb.sql
 functions/rank/pandas.py
@@ -102,6 +108,7 @@ functions/rank/sqlite.sql
 functions/rank/typescript.ts
 functions/recognize/ada.adb
 functions/recognize/cobol.cob
+functions/recognize/csharp.cs
 functions/recognize/dart.dart
 functions/recognize/duckdb.sql
 functions/recognize/more/duckdb.sql
@@ -117,6 +124,7 @@ functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/ada.adb
+functions/relate/csharp.cs
 functions/relate/dart.dart
 functions/relate/duckdb.sql
 functions/relate/more/duckdb.sql
@@ -132,6 +140,7 @@ functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/ada.adb
 functions/score/cobol.cob
+functions/score/csharp.cs
 functions/score/dart.dart
 functions/score/duckdb.sql
 functions/score/more/duckdb.sql
@@ -148,6 +157,7 @@ functions/score/sqlite.sql
 functions/score/typescript.ts
 functions/tag/ada.adb
 functions/tag/cobol.cob
+functions/tag/csharp.cs
 functions/tag/dart.dart
 functions/tag/duckdb.sql
 functions/tag/pandas.py
