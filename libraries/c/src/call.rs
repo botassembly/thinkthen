@@ -11,7 +11,7 @@ use std::sync::Mutex;
 use serde_json::value::RawValue;
 use thinkthen::{
     AttemptObservation, BatchSetting, CallOptions, CallReply, CancelToken, Engine,
-    RequestEnvironment, RequestOutcome,
+    RequestEnvironment,
 };
 
 use crate::failures::Failure;
@@ -110,19 +110,15 @@ pub(crate) fn call(
     } else {
         options
     };
-    let call = match engine
-        .execute_request(
-            &admitted,
-            RequestEnvironment {
-                controls: options,
-                feed: None,
-            },
-        )
-        .map_err(|error| frozen_failure(error, &request))?
-    {
-        RequestOutcome::Complete(call) => call,
-        RequestOutcome::Failed { error, .. } => return Err(frozen_failure(error, &request)),
-    };
+    let call = typed::executed(
+        engine,
+        &admitted,
+        RequestEnvironment {
+            controls: options,
+            feed: None,
+        },
+    )
+    .map_err(|error| frozen_failure(error, &request))?;
     let value = projection::value(call.value(), &request)
         .map_err(|failure| failure.completed(Some(call.facts())))?;
     let facts = call.facts().clone();

@@ -947,7 +947,7 @@ fn recognize<'a>(
     eager: bool,
     sink: Option<&dyn Fn(RequestValue)>,
 ) -> Result<RequestOutcome, Error> {
-    let call = if sink.is_some() {
+    let call = if sink.is_some() || !eager {
         engine.request_recognize_stream(ask, rows, controls, eager, sink)?
     } else {
         engine.execute_recognize_records_complete_with(ask, rows, controls)?

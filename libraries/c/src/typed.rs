@@ -82,6 +82,9 @@ pub(crate) fn decide_with_facts(
     completed: Option<&mut Option<Facts>>,
 ) -> Result<Reply, Failure> {
     let definition = decide_definition(question)?;
+    if text.trim().is_empty() {
+        return Err(Failure::usage("evidence is text, not white space"));
+    }
     let call = execute(
         engine,
         definition,
@@ -90,6 +93,7 @@ pub(crate) fn decide_with_facts(
             images: Vec::new(),
         },
         options,
+        None,
     )?;
     let thinkthen::RequestValue::Decisions(rows) = call.value() else {
         return Err(Failure::defect(
@@ -132,17 +136,21 @@ pub(crate) fn decide_many_with_facts(
     let call = execute(
         engine,
         definition,
-        thinkthen::RequestInput::Records {
-            items: texts
-                .iter()
-                .map(|text| {
-                    item(thinkthen::RequestOriginal::Text {
-                        text: (*text).to_owned(),
-                    })
-                })
-                .collect(),
+        thinkthen::RequestInput::Feed {
+            name: "c-array".into(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
         },
         options,
+        Some(thinkthen::RequestFeed::new(
+            "c-array",
+            texts.iter().map(|text| {
+                Ok(item(thinkthen::RequestOriginal::Text {
+                    text: (*text).to_owned(),
+                }))
+            }),
+        )),
     )?;
     if let Some(completed) = completed {
         *completed = Some(call.facts().clone());
@@ -201,6 +209,7 @@ pub(crate) fn recognize_with_facts(
             images: Vec::new(),
         },
         options,
+        None,
     )?;
     *completed = Some(call.facts().clone());
     let thinkthen::RequestValue::Recognized(rows) = call.value() else {
@@ -276,6 +285,7 @@ pub(crate) fn relate_with_facts(
         thinkthen::RequestDefinition::Relate(ask),
         thinkthen::RequestInput::Records { items },
         options,
+        None,
     )?;
     *completed = Some(call.facts().clone());
     let thinkthen::RequestValue::Related(row) = call.value() else {
@@ -309,19 +319,27 @@ pub(crate) fn execute(
     definition: thinkthen::RequestDefinition,
     input: thinkthen::RequestInput,
     controls: CallOptions<'_>,
+    feed: Option<thinkthen::RequestFeed<'_>>,
 ) -> Result<thinkthen::Call<thinkthen::RequestValue>, Failure> {
     let request =
         thinkthen::Request::for_definition(definition, input, thinkthen::RequestOptions::default())
             .admit()?;
-    match engine.execute_request(
+    Ok(executed(
+        engine,
         &request,
-        thinkthen::RequestEnvironment {
-            controls,
-            feed: None,
-        },
-    )? {
+        thinkthen::RequestEnvironment { controls, feed },
+    )?)
+}
+
+/// Project shared execution without losing native failure facts.
+pub(crate) fn executed(
+    engine: &Engine,
+    request: &thinkthen::AdmittedRequest,
+    environment: thinkthen::RequestEnvironment<'_>,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
+    match engine.execute_request(request, environment)? {
         thinkthen::RequestOutcome::Complete(call) => Ok(call),
-        thinkthen::RequestOutcome::Failed { error, .. } => Err(error.into()),
+        thinkthen::RequestOutcome::Failed { error, .. } => Err(error),
     }
 }
 pub(crate) fn item(original: thinkthen::RequestOriginal) -> thinkthen::RequestItem {

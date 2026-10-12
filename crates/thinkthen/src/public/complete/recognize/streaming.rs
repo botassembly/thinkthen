@@ -5,8 +5,8 @@ use super::{
     rendered,
 };
 use crate::public::{
-    Call, CallOptions, CompleteRecognized, CompleteRecord, Engine, Error, Recognize, Recognized,
-    RecordInput, RequestValue, options::Stop,
+    Call, CallOptions, CompleteRecognized, CompleteRecord, Engine, Error, QuestionInput, Recognize,
+    Recognized, RecordInput, RequestValue, options::Stop,
 };
 use std::{cell::RefCell, collections::BTreeMap};
 
@@ -30,9 +30,9 @@ impl Engine {
         options: CallOptions<'a>,
         eager: bool,
         sink: Option<&dyn Fn(RequestValue)>,
-    ) -> Result<Call<Vec<CompleteRecord<crate::QuestionInput, CompleteRecognized>>>, Error>
+    ) -> Result<Call<Vec<CompleteRecord<QuestionInput, CompleteRecognized>>>, Error>
     where
-        I: IntoIterator<Item = Result<RecordInput<crate::QuestionInput>, Error>> + 'a,
+        I: IntoIterator<Item = Result<RecordInput<QuestionInput>, Error>> + 'a,
     {
         ask.0.validate_mode().map_err(Error::refused)?;
         let options = options.started()?;
@@ -43,18 +43,15 @@ impl Engine {
             .cli_text_limit
             .unwrap_or(crate::engine::facade::MAX_TEXT_BYTES);
         let units = records.into_iter().enumerate().map(|(at, record)| {
-            options.admission()?;
-            self.check_record_limit(at)?;
             record
                 .and_then(|record| prepare(&engine, ask, record, options.context_text()))
                 .map_err(|error| error.at_record(at))
         });
-        let units: Box<dyn Iterator<Item = Result<Unit<crate::QuestionInput>, Error>> + '_> =
-            if eager {
-                Box::new(units.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
-            } else {
-                Box::new(units)
-            };
+        let units: Box<dyn Iterator<Item = Result<Unit<QuestionInput>, Error>> + '_> = if eager {
+            Box::new(units.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+        } else {
+            Box::new(units)
+        };
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let requested_attempts = stop.facts().attempts().is_some();
         stop.run_call(0, |cancel| {
@@ -65,12 +62,11 @@ impl Engine {
                     .map_err(|error| error.at_record(at))?;
                 Ok(unit)
             });
-            let mut units: Box<dyn Iterator<Item = Result<Unit<crate::QuestionInput>, Error>>> =
-                if eager {
-                    Box::new(admitted.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
-                } else {
-                    Box::new(admitted)
-                };
+            let mut units: Box<dyn Iterator<Item = Result<Unit<QuestionInput>, Error>>> = if eager {
+                Box::new(admitted.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+            } else {
+                Box::new(admitted)
+            };
             let cancel = cancel.with_storage_scope();
             let originals = RefCell::new(BTreeMap::new());
             let mut count = 0;
@@ -86,7 +82,11 @@ impl Engine {
             };
             let mut rows = Vec::new();
             let outcome = ordered::run(
-                engine.width(&cancel).map_err(Error::from)?,
+                if !eager && sink.is_none() {
+                    1
+                } else {
+                    engine.width(&cancel).map_err(Error::from)?
+                },
                 &cancel,
                 options.readiness,
                 read,
