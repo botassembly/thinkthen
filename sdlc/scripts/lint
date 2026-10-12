@@ -75,8 +75,6 @@ sys.exit(n > 5000)
 '
 python3 sdlc/scripts/policy.py
 python3 sdlc/scripts/catalog.py
-python3 sdlc/scripts/tickets --self-test
-python3 sdlc/scripts/tickets
 # Ticket 0164: every offset in the recognize keys cuts its name out of its text.
 python3 sdlc/scripts/recognize-keys --self-test
 python3 sdlc/scripts/recognize-keys

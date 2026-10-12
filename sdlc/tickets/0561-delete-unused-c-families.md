@@ -24,11 +24,11 @@ The C library exports only what the 0.2 session interface and the language libra
 - Keeps: everything the 0.2 libraries call, their installed checks, the session interface, and the generated header and views, regenerated afterward.
 - Changes: these deletions.
   - Delete the complete, carrier, current and batch families, apart from what question parse and free use. Delete their C tests and door tests too, about 4,000 lines.
-  - Delete the frozen 0.1 C exports under the 0.2 rule that old public names are deleted ([drive to done](../decisions/2026-10-10-drive-0-2-to-done.md)). Add their 0.2 replacements to `libraries/UPGRADING-0.2.md`. If a 0.2 document or library still needs one of them, keep it and say why in Progress.
+  - Delete the frozen 0.1 C exports under the 0.2 rule that old public names are deleted ([drive to done](../decisions/2026-10-10-drive-0-2-to-done.md)). Write no upgrade notes, under the [no-compatibility ruling](../decisions/2026-10-12-no-compatibility-before-1-0.md).
   - Merge `plan.rs` into the request plan export.
   - Fold `session/errors.rs` into `failures.rs` where the two repeat each other.
   - Regenerate the header, the Swift bridge, the PHP, Ada and COBOL declarations and the Zig checks.
-  - After the deletions, delete each public `Engine` wrapper that is left with no caller outside tests and did not ship in 0.1.2. Check `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` first, and move their tests to `Request` under the 0558 amendments. Idea 0559 holds whatever remains.
+  - After the deletions, delete each public `Engine` wrapper that is left with no caller outside tests. Check `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` first, and move their tests to `Request` under the 0558 amendments. 0565 removes whatever remains.
   - Lower each changed ratchet to its measured value.
 - Proof: these checks.
   - Every language library's routine installed checks pass.

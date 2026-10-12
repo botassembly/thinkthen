@@ -1,6 +1,6 @@
 # RequestRows serves rank, rank-set, find and relate with caller-owned originals, and the whole-set records wrappers retire
 
-Status: open.
+Status: closed. Folded into ticket 0565 on 2026-10-12.
 
 Kind: idea
 When: after 0.2.0 ships

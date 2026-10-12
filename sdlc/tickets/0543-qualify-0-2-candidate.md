@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564
+Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
@@ -100,3 +100,4 @@ PM amendment, 2026-10-12, fourth. Order after the [2026-10-12 ruling](../decisio
 - 2026-10-12 next: Third amendment is applied and cold C nextest timeouts reproduce on unchanged main before either C caller launches; frozen 243d59647 passed routine tests, Polars and installed C, but complete C exposed a repaired fixture include dependency and lint exposed stale public API declarations, so the API provenance repair precedes a new frozen revision and its required gates before acceptance.
 - 2026-10-12 next: Frozen 6712593f6 passes routine test and lint, Polars nextest and both Clippy configurations, complete C and installed C, and both fresh reviewers accept every assigned change and limit; rc.12 is pushed and its background local full-case, package and stress sequence precedes nonpublishing macOS and Windows qualification.
 - 2026-10-12 next: Rc.12 at 6712593f6 exited 1 with 24 local consumer rows passing, C selected-object-false-unicode refusing item_schema, and Dart plus Flutter preparation failing on the missing Flutter Isolate import; all children exited, package and stress were unrun, and two fresh developers own the retained-assertion repairs before new exact-revision gates and qualification.
+- 2026-10-12 next: The fourth amendment moves the next full campaign to the final candidate; exact-source gates passed on 48b22e71f, fresh review found Go request duplication and JVM/Dart immediate metadata loss, and targeted repairs passed before integration and new same-revision gates.
