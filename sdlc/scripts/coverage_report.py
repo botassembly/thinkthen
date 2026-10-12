@@ -73,7 +73,7 @@ def report(root, run, revision, production, collections, elapsed):
              'The JSON measurement contains the per-file counts and missing-profile observations. Build output is temporary and is not durable evidence.', '']
     for label, key in [('Most lines observed only in source-unit profiles', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:
-        rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: | ---: |']
+        rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: |']
         for path, values in sorted(file_totals.items(), key=lambda item: (-item[1][key], item[0]))[:30]:
             rows.append(f'| {path} | {values[key]} |')
         rows.append('')
@@ -94,4 +94,5 @@ def report(root, run, revision, production, collections, elapsed):
     summary = root / 'sdlc/records/coverage' / f'{datetime.date.today()}-{revision[:9]}-native.md'
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text('\n'.join(rows))
+    summary.with_suffix('.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     print(summary)
