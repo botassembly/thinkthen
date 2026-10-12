@@ -35,7 +35,7 @@ class ManagedToolAvailability(unittest.TestCase):
                    'THINKTHEN_DOTNET': str(tools / 'configured-dotnet'),
                    'TT_DART': str(tools / 'configured-dart'), 'TT_FLUTTER': str(tools / 'configured-flutter'),
                    'THINKTHEN_SWIFT': str(tools / 'configured-swift')}
-            cases = {'csharp': ('bwrap', 'dotnet'), 'dart': ('node', 'dart'),
+            cases = {'csharp': ('/usr/bin/bwrap', 'dotnet'), 'dart': ('node', 'dart'),
                      'flutter': ('node', '/usr/bin/xvfb-run', 'dart', 'flutter'),
                      'swift': ('node', 'bwrap', 'flock', 'swift')}
             def command(*args, **kwargs):
@@ -49,7 +49,7 @@ class ManagedToolAvailability(unittest.TestCase):
                         def which(tool, path=None):
                             if tool == absent or Path(tool).name.removeprefix('configured-') == absent:
                                 return None
-                            if tool == '/usr/bin/xvfb-run':
+                            if tool in ('/usr/bin/bwrap', '/usr/bin/xvfb-run'):
                                 return tool
                             return real_which(tool, path=path)
                         with patch.dict(os.environ, env, clear=True), patch.object(
@@ -61,6 +61,28 @@ class ManagedToolAvailability(unittest.TestCase):
                             collection = next(c for c in collections if c['name'] == 'installed-' + language)
                             with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
                                 collection['runner'](run)
+
+    def test_csharp_requires_executable_bwrap_at_the_consumer_path(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            for tool in ('bwrap', 'dotnet'):
+                binary = root / tool
+                binary.write_text('#!/bin/sh\nexit 0\n')
+                binary.chmod(0o700)
+            env = {'HOME': str(root), 'PATH': str(root)}
+            fixed = root / 'fixed-bwrap'
+            real_which = coverage_installed_managed.shutil.which
+            self.assertIsNotNone(real_which('bwrap', path=env['PATH']))
+            def which(tool, path=None):
+                return real_which(str(fixed) if tool == '/usr/bin/bwrap' else tool, path=path)
+            for available in (False, True):
+                with self.subTest(fixed_path_exists=available):
+                    if available:
+                        fixed.write_text('#!/bin/sh\nexit 0\n')
+                        fixed.chmod(0o600)
+                    with patch.object(coverage_installed_managed.shutil, 'which', side_effect=which):
+                        with self.assertRaisesRegex(DRIVER['MissingTool'], '/usr/bin/bwrap'):
+                            coverage_installed_managed.require_tools('csharp', env, DRIVER['MissingTool'])
 
 
 class ProcessOwnership(unittest.TestCase):
