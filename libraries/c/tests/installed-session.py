@@ -1,5 +1,6 @@
 """Run the existing typed owner case against an extracted prebuilt C archive."""
 from pathlib import Path
+import os
 import shutil
 import subprocess
 import sys
@@ -14,7 +15,8 @@ from backend import Backend
 archive = Path(sys.argv[1]).resolve()
 (REPO / 'libraries/c/target').mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/target') as temporary:
-    root = Path(temporary)
+    root = Path(os.environ.get('THINKTHEN_COVERAGE_STAGE', temporary))
+    root.mkdir(parents=True, exist_ok=True)
     native = root / 'native'
     native.mkdir()
     with tarfile.open(archive) as package:
@@ -32,7 +34,7 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
         # Select the archive explicitly so the proof needs no runtime library path.
         flags = [str(native / 'lib/libthinkthen.a') if flag == '-lthinkthen' else flag for flag in flags]
         for source in ('tests/c/session.c', 'examples/session.c'):
-            binary = root / Path(source).stem
+            binary = root / ('owner-session' if source.startswith('tests/') else 'example-session')
             subprocess.run([shutil.which('cc'), '-std=c11', '-D_GNU_SOURCE', '-Wall', '-Wextra', '-Werror',
                             '-pthread', '-I', str(REPO / 'libraries/c/tests/c'),
                             str(REPO / 'libraries/c' / source), *flags, '-o', str(binary)],

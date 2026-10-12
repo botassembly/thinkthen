@@ -16,14 +16,18 @@ command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
-if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
+    [ "$profile" = routine ] || exit 2
+    scratch=$THINKTHEN_COVERAGE_STAGE
+elif [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     scratch=$THINKTHEN_PARITY_PREPARED
 elif [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
     scratch=$THINKTHEN_PARITY_PREPARE
 else
     scratch_dir scratch
 fi
-if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ] && [ "${THINKTHEN_COVERAGE_PHASE:-prepare}" = prepare ]; then
+mkdir -p "$scratch"
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     artifact=$(realpath "$THINKTHEN_ARTIFACT")
 elif [ "$profile" = full ]; then
@@ -41,6 +45,7 @@ uv pip install --quiet --offline --require-hashes --python "$scratch/venv/bin/py
 uv pip install --quiet --offline --no-deps --python "$scratch/venv/bin/python" "$artifact"
 cp -R tests "$scratch/tests"
 fi
+[ "${THINKTHEN_COVERAGE_PHASE:-}" != prepare ] || exit 0
 venv=$scratch/venv
 python=$venv/bin/python
 if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
@@ -71,10 +76,11 @@ PY
     exit
 fi
 export THINKTHEN_TEST_REPO="$repo"
-if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ] && [ "${THINKTHEN_COVERAGE_PHASE:-shared}" = shared ]; then
     CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
     "$python" -m mypy --strict tests/native_types.py
 fi
+[ "${THINKTHEN_COVERAGE_PHASE:-}" != shared ] || exit 0
 [ -z "${THINKTHEN_PARITY_PREPARE:-}" ] || exit 0
 if [ "$profile" = routine ]; then
     "$python" - "$repo" "$scratch/ids" <<'PY'
