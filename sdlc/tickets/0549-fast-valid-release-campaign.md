@@ -1,6 +1,6 @@
 # 0549: Make the release campaign valid and fast
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -23,6 +23,8 @@ Reviews: revision cca27bf, reject
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6
 
 ## Outcome
 
