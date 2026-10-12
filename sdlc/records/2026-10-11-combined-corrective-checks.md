@@ -34,7 +34,7 @@ The generator repair at `d9c6a7887524296b6d2ba2b40dbc6e31bb4df6cd` adds the appr
 
 ## Binding and database limits against main
 
-The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prepared `e52ac9593` configuration raised binding limits by 1,634 lines and lowered them by 214. The third 0543 amendment adds six allowances totalling 163 lines after the C shared helper removes 23 measured lines. That intermediate comparison is +1,797 and −214. The subsequent C fixture include repair removes two Rust lines and lowers its matching limit, so the final increases total 1,795 and reductions remain 214. Core is separate: its matching ceiling is 187,606. The table lists every changed binding and database limit, including both prior changes and the newly approved allowances. Unlisted limits match main. Each positive change requires the fresh review specified by the amendment.
+The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prepared `e52ac9593` configuration raised binding limits by 1,634 lines and lowered them by 214. The third 0543 amendment adds six allowances totalling 163 lines after the C shared helper removes 23 measured lines. That intermediate comparison is +1,797 and −214. The C fixture include repair removes two Rust lines and lowers its matching limit, giving rc.12 increases of 1,795 and reductions of 214. The subsequent selected-record composition repair removes another two Rust lines and lowers its matching C limit again, so the revised increases total 1,793 and reductions remain 214. Core is separate: its matching ceiling is 187,606. The table lists every changed binding and database limit, including both prior changes and the newly approved allowances. Unlisted limits match main. Each positive change requires the fresh review specified by the amendment.
 
 | Limit file | Main | Prepared limit | Change | Cause |
 | --- | ---: | ---: | ---: | --- |
@@ -45,7 +45,7 @@ The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prep
 | `libraries/ada/ratchet.ads.json` | 8601 | 8653 | +52 | Generated canonical wait declarations and the approved named C export; the last 15 lines are the third-amendment allowance. |
 | `libraries/ada/ratchet.py.json` | 455 | 551 | +96 | Shared installed parity fixture preparation and child isolation; the last line imports the child-environment helper. |
 | `libraries/c/ratchet.c.json` | 3299 | 3395 | +96 | Immediate diagnostics and direct named-export checks; six shared assertion helpers remove 23 lines before the last 55-line allowance. |
-| `libraries/c/ratchet.json` | 31742 | 32159 | +417 | Shared Request execution, named constructor, immediate diagnostics, native wait and retained C regressions; shared fixture include paths remove two further lines. |
+| `libraries/c/ratchet.json` | 31742 | 32157 | +415 | Shared Request execution, named constructor, immediate diagnostics, native wait and retained C regressions; fixture include and selected-record composition repairs each remove two Rust lines. |
 | `libraries/cobol/ratchet.cpy.json` | 5719 | 5728 | +9 | Generated native session wait and ABI declarations. |
 | `libraries/cobol/ratchet.py.json` | 565 | 568 | +3 | Generated constants and installed fixture preparation. |
 | `libraries/cpp/ratchet.cpp.json` | 314 | 344 | +30 | Installed session and cancellation regression fixtures. |
@@ -128,6 +128,14 @@ The measured consumer durations include preparation and execution. Dart and Flut
 | DuckDB | 221.76 | Pass |
 | PostgreSQL | 510.35 | Pass |
 | MCP | 133.13 | Pass |
+
+## Repairs after rc.12
+
+Flutter repair `5642ca25f3d227d701b4df5be60744a3b99559b1` imports `dart:isolate` in the handwritten Flutter library entrypoint. Removing the redundant cancellation before `OwnedSession.close()`, which already cancels before release, keeps Dart at 6,280 lines. Fresh source packages passed the installed Dart and Flutter check, including Linux release compilation, standalone execution, native waits, host responsiveness, cancellation, stream cleanup and the retained negative asset checks. Its native library came from rc.12, whose Rust source this fix leaves unchanged. Privacy and policy passed. The standalone Dart formatter reported existing differences on both the frozen base and repaired source; formatting was not changed. Earlier acceptance missed the compile path because smoke mode executes Dart and returns before compiling Flutter.
+
+C repair `ebe76a0586bada88c77c8166dd8c905da985d303` composes collecting and streaming records with the admitted Request's existing record reading when no specialized question reading exists. `RequestFeed::from_records` takes already composed records, as the public contract requires; the C path had supplied an unselected atomic record. Selection now precedes declaration validation without changing shared Request admission. The duplicate question-kind checks are already owned by request preparation. The original focused C fixture failed with the exact rc.12 refusal; the repaired product passed that fixture and all 255 C parity cases. The canonical full C check passed 25 unit, 82 integration and two release-only tests, plus formatting, Clippy, header and slide checks. Its legacy shared door passed 55 cases with one internal-injection case explicitly unrun.
+
+The authored-declaration consumer now checks selected object composition, false and null values, Unicode, retained original ownership, position and zero-send refusals. Follow-up `3b1b432fb103dd8ccd3074b9377237b54199545b` retains the original invalid boolean-property refusal and adds the invalid null-property refusal separately. Removing its redundant integer-header include retains the 3,395-line C fixture limit. The product source is unchanged by that follow-up. Its declaration consumer and policy exited 0; the consumer passed its zero-send checks and the measured C, C Rust and root totals matched 3,395, 32,157 and 187,606. Every supervised child exited and was reaped. An interrupted handoff had retained printed pass output but not an explicit final exit report, so the new owner repeated only the targeted declaration and policy checks; the complete C and 255-case parity results were retained. The routine consumer previously used a flat object without selection, so its earlier pass did not cover the failed full-parity path.
 
 ## What the build taught us
 
