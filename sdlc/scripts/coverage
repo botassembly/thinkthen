@@ -241,14 +241,20 @@ def main():
     (run / 'OWNER').write_text(f'coverage collection\nsource {revision}\n')
     activate(run, 'build')
     initializer = run / 'profile.o'
+    continuous = sys.platform == 'linux'
+    pattern = '%p-%m%c.profraw' if continuous else '%m.profraw'
+    flags = ['-C', 'instrument-coverage',
+             f'--remap-path-prefix={Path.home()}=/build/home',
+             f'--remap-path-prefix={ROOT}=/build/source',
+             f'--remap-path-prefix={Path(os.environ.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()}=/build/cargo',
+             '-C', f'link-arg={initializer}']
+    if continuous:
+        flags += ['-C', 'llvm-args=-runtime-counter-relocation']
     subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
-                    '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%m.profraw')), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
+                    '-DPROFILE_PATH=' + json.dumps(str(run / 'active' / pattern)), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
-    env.update(LLVM_PROFILE_FILE=str(run / 'active/%m.profraw'), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
-               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '--remap-path-prefix=/home=/build/home',
-                    f'--remap-path-prefix={ROOT}=/build/source',
-                    f'--remap-path-prefix={Path(os.environ.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()}=/build/cargo',
-                    '-C', f'link-arg={initializer}']),
+    env.update(LLVM_PROFILE_FILE=str(run / 'active' / pattern), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(flags),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
     artifacts = build(run, env)
@@ -274,7 +280,7 @@ def main():
     for collection in installed:
         collections[collection['name']] = export(run, llvm,
                 list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
-    report(ROOT, run, revision, production, collections, time.monotonic() - started)
+    report(ROOT, run, revision, production, collections, time.monotonic() - started, continuous=continuous)
     print(f'Partial native measurement: {run}; installed surfaces remain unmeasured' if args.native
           else f'Native and installed library measurement: {run}')
 
