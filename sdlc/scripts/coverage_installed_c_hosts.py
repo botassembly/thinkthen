@@ -106,7 +106,7 @@ def prepare(context):
         if language in ('php', 'cobol'):
             objects = [native / 'lib/libthinkthen.so']
         def runner(folder, language=language, retained=retained):
-            command(['sh', 'check.sh'], root / 'libraries' / language,
+            command(['sh', './check.sh'], root / 'libraries' / language,
                     {**env, **settings[language], 'THINKTHEN_COVERAGE_STAGE': str(retained)},
                     folder / 'check.log', timeout=1800)
         collections.append({'name': name, 'objects': objects, 'runner': runner})

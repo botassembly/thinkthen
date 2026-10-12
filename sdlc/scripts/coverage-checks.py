@@ -1,6 +1,7 @@
 """Focused regressions for coverage process ownership and missing profiles."""
 import json
 import os
+import platform
 import plistlib
 from pathlib import Path
 import runpy
@@ -14,8 +15,52 @@ import unittest
 from unittest.mock import patch
 
 import coverage_installed_managed
+import coverage_installed_c_hosts
 
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
+
+
+class InstalledScriptInvocation(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux' and platform.machine() == 'x86_64',
+                         'Ada routine gate requires Linux x86_64')
+    def test_ada_collector_reexecutes_with_clean_path_and_owns_its_lock(self):
+        checkout = Path(__file__).resolve().parents[2]
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary)
+            tools = run / 'tools'
+            tools.mkdir()
+            for name in ('gprbuild', 'gnatmake', 'gcc', 'python3', 'nm', 'node'):
+                (tools / name).symlink_to('/bin/true')
+            for name in ('uname', 'dirname', 'flock', 'env', 'sh'):
+                (tools / name).symlink_to(shutil.which(name))
+            library = run / 'libthinkthen.so'
+            library.touch()
+            script_dir = run / 'ada'
+            script_dir.mkdir()
+            # Keep the real gate through its tool checks and lock-owning re-exec.
+            source = (checkout / 'libraries/ada/check.sh').read_text()
+            prefix = source.split('. "$REPO/sdlc/scripts/scratch.sh"')[0]
+            script = script_dir / 'check.sh'
+            script.write_text(prefix + 'flock -n "$lock" /bin/true && exit 42\nexit 23\n')
+            script.chmod(0o700)
+            env = {'PATH': str(tools), 'THINKTHEN_HEAVY_LOCK': str(run / 'heavy.lock')}
+            invoked = []
+            def command(args, cwd, settings, log, **kwargs):
+                if 'package_owned.py' in ' '.join(args):
+                    Path(args[-1]).mkdir()
+                if cwd == checkout / 'libraries/ada':
+                    self.assertNotIn('THINKTHEN_HEAVY_LOCK_HELD', settings)
+                    self.assertNotIn('TT_ADA_LOCKED', settings)
+                    invoked.append(args)
+                    result = subprocess.run(args, cwd=script_dir, env=env, capture_output=True)
+                    self.assertEqual(result.returncode, 23, result.stderr.decode())
+            with patch.object(coverage_installed_c_hosts.shutil, 'which', return_value='/bin/true'):
+                collections = coverage_installed_c_hosts.prepare(dict(
+                    root=checkout, run=run, env=env, command=command,
+                    missing_tool=DRIVER['MissingTool'], c_shared=library,
+                    c_target=run, initializer=run / 'profile.o'))
+                next(c for c in collections if c['name'] == 'installed-ada')['runner'](run)
+            self.assertEqual(len(invoked), 1)
 
 
 class ManagedToolAvailability(unittest.TestCase):
@@ -83,7 +128,7 @@ class ManagedToolAvailability(unittest.TestCase):
             (slice.parent / 'Info.plist').write_bytes(plistlib.dumps(metadata))
             env = {'PATH': '/usr/bin:/bin'}
             def command(args, cwd, settings, log, **kwargs):
-                self.assertEqual(args, ['sh', 'check.sh'])
+                self.assertEqual(args, ['sh', './check.sh'])
                 self.assertEqual(settings['THINKTHEN_COVERAGE_INITIALIZER'], str(root / 'profile.o'))
                 retained = Path(settings['THINKTHEN_COVERAGE_STAGE'])
                 (retained / 'installed').mkdir(parents=True)

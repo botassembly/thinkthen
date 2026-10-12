@@ -71,6 +71,14 @@ Lint returned 0 at `2ec16c646` under corrected supervision. All size limits, tim
 
 The shared collector's process owner received a separate repair for the same delayed-reaping cause. It checks adopted children between communication waits of at most 50 milliseconds, excludes its command leader and pre-existing children, and reaps only its owned process group. Twelve focused checks passed, covering removal before harness exit, exact captured output, nonzero direct exits, foreign-child status, unchanged signals and timeout cleanup. The original implementation failed the orphan-removal regression in both captured and streamed modes. Fresh source review accepted the repair. No product source or source ceiling changed.
 
+## Installed baseline launch failures
+
+The first installed baseline stopped during preparation because its launch omitted the Composer path. The corrected launch built the Python package but stopped when its isolated cache lacked a Python dependency. Neither attempt produced a baseline report. Explicit Composer and offline cache paths corrected those setup failures.
+
+The next attempt used a detached checkout at `d53df9d2a`. Native collections and the installed C++, Go and Zig checks passed, then Ada returned 127: its lock re-execution could not locate bare `check.sh` on the clean PATH. The collector now supplies `./check.sh` at thirteen invocation sites while preserving each working directory. Its regression uses Ada's actual startup code without either lock bypass marker; the competing lock attempt fails and the fixture returns 23. The former invocation returns 127. The regression is restricted to Ada's supported Linux x86_64 platform; simulated Linux ARM and macOS skip it.
+
+An earlier focused Ada proof supplied the lock-held marker. Its retained launcher does not establish prior lock acquisition, so it does not prove the normal lock acquisition or re-execution path. All failed baseline processes exited and their children were reaped. No failed attempt established complete installed coverage or repeatability.
+
 ## Compiler-backed classification probe
 
 A disposable source revision, `f07ba9714`, added two real C-library functions without changing existing tests. The production shared library retained three mapped nonblank lines for each function. The unused function had zero hits in both source-unit and external C collections. The other function had one hit per line only from its source-unit caller. That caller's three mapped test lines were absent from the production denominator. All 25 existing C source-unit cases and the added case passed. Real LLVM export and the normal reporter classified six production lines as three unobserved and three observed only by unit tests. All probe children exited and were reaped. The planted functions are experiment code and are absent from the integration branch; this probe does not establish the installed baseline or its repeatability.
