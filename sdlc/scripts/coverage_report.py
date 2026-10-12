@@ -71,16 +71,19 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     zero_key = 'unobserved'
     unit_key = 'observed_unit_only'
     file_totals = {}
+    line_sets = {}
     for path, numbers in sorted(denominator.items()):
-        reached = {name: {number for number in numbers if files.get(path, {}).get(number, 0) > 0}
-                   for name, files in hits.items()}
+        retained = line_sets[path] = {
+            'mapped_nonblank': sorted(numbers),
+            **{name: sorted(number for number in numbers if files.get(path, {}).get(number, 0) > 0)
+               for name, files in hits.items()}}
+        reached = {name: set(retained[name]) for name in collections}
         outside = set().union(*(value for name, value in reached.items()
                                     if name not in UNIT_COLLECTIONS))
         units = set().union(*(value for name, value in reached.items() if name in UNIT_COLLECTIONS))
-        file_totals[path] = {'mapped_nonblank': len(numbers),
-                            **{name: len(value) for name, value in reached.items()},
-                            unit_key: len(units - outside),
-                            zero_key: len(numbers - outside - units)}
+        file_totals[path] = {key: len(value) for key, value in retained.items()}
+        file_totals[path].update({unit_key: len(units - outside),
+                                 zero_key: len(set(retained['mapped_nonblank']) - outside - units)})
     totals = {key: sum(values[key] for values in file_totals.values())
               for key in ('mapped_nonblank', *collections, unit_key, zero_key)}
     partial = not any(name.startswith('installed-') for name in collections) or bool(missing)
@@ -89,7 +92,8 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
                'unmeasured_reasons': dict(missing_reasons or {}),
                'denominator': 'nonblank lines mapped by all retained production native objects',
                'profile_mode': 'continuous' if continuous else 'normal-exit',
-               'totals': totals, 'files': file_totals, 'missing_child_profiles': limitations}
+               'totals': totals, 'files': file_totals, 'line_sets': line_sets,
+               'missing_child_profiles': limitations}
     (run / 'totals.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     rows = [f'# Coverage at {revision}', '', f'Elapsed: {elapsed:.1f} seconds.', '',
             scope + '.', '',
@@ -104,7 +108,7 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     for name, observations in limitations.items():
         rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
     rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining root source units; `c-source-unit` runs only the C workspace library source-unit harness. Unit-only comparisons use the union of these source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
-             'The JSON measurement contains the per-file counts and missing-profile observations. Build output is temporary and is not durable evidence.', '']
+             'The JSON measurement contains the per-file counts, exact denominator and per-collection reached line-number sets, and missing-profile observations. Build output is temporary and is not durable evidence.', '']
     for label, key in [('Most lines observed only in source-unit profiles', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:
         rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: |']

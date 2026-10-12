@@ -20,6 +20,45 @@ import coverage_installed_c_hosts
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
+class RetainedLineEvidence(unittest.TestCase):
+    def test_equal_totals_retain_distinct_lines_and_production_denominator(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            prefix = 'crates/thinkthen/src/'
+            source = root / prefix / 'probe.rs'
+            source.parent.mkdir(parents=True)
+            source.write_text('first\n\nthird\nfourth\nfifth\ntest only\n')
+            zero = source.with_name('zero.rs')
+            zero.write_text('zero hit\n')
+            test_only = source.with_name('test_only.rs')
+            test_only.write_text('test mapping\n')
+            production = f'SF:{source}\nDA:1,0\nDA:2,0\nDA:3,0\nDA:4,0\nDA:5,0\nSF:{zero}\nDA:1,0\n'
+            results = []
+            for index, (outside, unit) in enumerate(((1, 3), (3, 1))):
+                run = root / f'run-{index}'
+                run.mkdir()
+                collections = {
+                    'rust-integration': f'SF:{source}\nDA:{outside},1\nDA:2,1\nDA:6,1\nSF:{test_only}\nDA:1,1\n',
+                    'source-unit': f'SF:{source}\nDA:{unit},1\n',
+                    'installed-c': f'SF:{source}\nDA:4,1\n'}
+                DRIVER['report'](root, run, f'lines-{index}', production, collections, 0)
+                payload = json.loads((run / 'totals.json').read_text())
+                record = next((root / 'sdlc/records/coverage').glob(f'*-lines-{index}-installed.json'))
+                self.assertEqual(payload, json.loads(record.read_text()))
+                self.assertEqual(payload['line_sets'], {
+                    prefix + 'probe.rs': {'mapped_nonblank': [1, 3, 4, 5],
+                                         'rust-integration': [outside], 'source-unit': [unit], 'installed-c': [4]},
+                    prefix + 'zero.rs': {'mapped_nonblank': [1],
+                                        'rust-integration': [], 'source-unit': [], 'installed-c': []}})
+                self.assertEqual(payload['totals'], {'mapped_nonblank': 5, 'rust-integration': 1,
+                                                    'source-unit': 1, 'installed-c': 1,
+                                                    'observed_unit_only': 1, 'unobserved': 2})
+                results.append(payload)
+            self.assertEqual(results[0]['totals'], results[1]['totals'])
+            self.assertEqual(results[0]['files'], results[1]['files'])
+            self.assertNotEqual(results[0]['line_sets'], results[1]['line_sets'])
+
+
 class InstalledScriptInvocation(unittest.TestCase):
     @unittest.skipUnless(sys.platform == 'linux' and platform.machine() == 'x86_64',
                          'Ada routine gate requires Linux x86_64')
