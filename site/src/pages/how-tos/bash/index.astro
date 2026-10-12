@@ -1,25 +1,18 @@
 ---
-// Goal: show that ThinkThen reads like shell, and list the techniques and
-// recipes that teach it one form at a time.
+// Goal: list the shell jobs that put ThinkThen to work with the tools a
+// shell already has.
 import SidePage from '../../../layouts/SidePage.astro';
-import { BASH, BASH_FIRST, TECHNIQUES, SHELL_JOBS } from '../../../data/catalog.mjs';
+import { SHELL_JOB_PAGES, SHELL_JOBS_FIRST, SHELL_JOBS } from '../../../data/catalog.mjs';
 
 const plain = (text) => text.replaceAll('`', '');
 const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
 ---
-<SidePage pages={BASH} page={{ ...BASH_FIRST, description: 'ThinkThen in the shell: if, case, loops, pipes, and exit codes.' }} name="Bash techniques">
+<SidePage pages={SHELL_JOB_PAGES} page={{ ...SHELL_JOBS_FIRST, description: 'Shell jobs with ThinkThen: label a file, review a diff, lint prose, fill a form.' }} name="Shell jobs">
   <div class="eyebrow">How-tos</div>
-  <h1>Bash techniques</h1>
-  <p class="lede">A ThinkThen function is a shell command. It reads standard input, prints an answer, and sets an exit code. Each page here teaches one shell form with one real run.</p>
+  <h1>Shell jobs</h1>
+  <p class="lede">Each page does one job with ThinkThen and the tools a shell already has. The <a href="/languages/bash/#techniques">Bash techniques</a> teach the forms these jobs use.</p>
 
-  <h2>Techniques</h2>
-  <ul>
-    {TECHNIQUES.map((t) => (
-      <li><a href={`/how-tos/bash/${t.slug}/`}>{t.title}</a> — {first(t.said)}</li>
-    ))}
-  </ul>
-
-  <h2>Shell jobs</h2>
+  <h2 id="shell-jobs">Shell jobs</h2>
   <ul>
     {SHELL_JOBS.map((r) => (
       <li><a href={`/how-tos/bash/${r.slug}/`}>{r.title}</a> — {first(r.said)}</li>

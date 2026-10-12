@@ -1,14 +1,14 @@
 ---
-// Goal: teach one shell form or one small job with ThinkThen, in one short
-// real run a reader can copy. Each page's own goal sits in catalog.mjs.
+// Goal: do one small shell job with ThinkThen, in one short real run a
+// reader can copy. Each page's own goal sits in catalog.mjs.
 import SidePage from '../../../../layouts/SidePage.astro';
 import Terminal from '../../../../components/Terminal.astro';
 import Code from '../../../../components/Code.astro';
-import { BASH } from '../../../../data/catalog.mjs';
+import { SHELL_JOB_PAGES } from '../../../../data/catalog.mjs';
 import { captioned, files } from '../../../../data/samples.mjs';
 
 export function getStaticPaths() {
-  return BASH.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
+  return SHELL_JOB_PAGES.filter((p) => p.slug).map((page) => ({ params: { slug: page.slug }, props: { page } }));
 }
 
 const { page } = Astro.props;
@@ -18,7 +18,7 @@ const runs = captioned(dir, page.see);
 const inputs = files(dir);
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
 ---
-<SidePage pages={BASH} page={{ ...page, description: page.said.replaceAll('`', '') }} name="Bash techniques">
+<SidePage pages={SHELL_JOB_PAGES} page={{ ...page, description: page.said.replaceAll('`', '') }} name="Shell jobs">
   <div class="eyebrow">Bash · {page.group}</div>
   <h1>{page.title}</h1>
   <p class="lede">{parts(page.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>

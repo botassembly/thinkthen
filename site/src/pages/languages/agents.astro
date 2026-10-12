@@ -1,0 +1,36 @@
+---
+// Goal: show an agent builder how an agent calls the ten functions as tools
+// through the local MCP server, and how the agent skill helps it pick one.
+import Base from '../../layouts/Base.astro';
+import Code from '../../components/Code.astro';
+import { CODE_FUNCTIONS, REPO } from '../../data/catalog.mjs';
+
+const mcpGuide = `${REPO}/blob/main/libraries/mcp/README.md`;
+const mcpSpec = `${REPO}/blob/main/specification/mcp.md`;
+const skill = `${REPO}/blob/main/skills/thinkthen/SKILL.md`;
+const launch = '{"command": "thinkthen", "args": ["mcp"]}';
+const call = `{
+  "question": "Does the writer request a refund?",
+  "evidence": "Please refund my order."
+}`;
+---
+<Base title="Agents" description="Give an agent the ten ThinkThen functions as tools through the local MCP server, and load the agent skill so it picks the right one.">
+  <div class="eyebrow"><a href="/languages/">Languages</a></div>
+  <h1>Agents</h1>
+  <p class="lede">An agent calls the ten functions as tools. The local MCP server runs them through the same engine and cache as the command line. The agent skill tells the agent which function fits a job.</p>
+
+  <h2 id="mcp">The MCP server</h2>
+  <p><code>thinkthen mcp</code> serves exactly ten tools over local stdio: {CODE_FUNCTIONS.map((fn, i) => <>{i > 0 && ', '}<a href={`/functions/${fn.name}/`}><code>{fn.name}</code></a></>)}. It starts no shell and no process per call. Each tool returns a typed answer, and a failed call never looks like an answer.</p>
+  <p>Install the <a href="/languages/bash/">command</a>, put it on <code>PATH</code>, and set its backend in the environment as you would for the command line. Then tell your MCP client to launch it:</p>
+  <Code code={launch} lang="json" caption="The MCP client's launch entry" label="Copy the launch entry" />
+  <p>The server reads the key from the environment, and a tool cannot change the backend or the key. Start options such as <code>--backend</code>, <code>--model</code>, <code>--replay</code> and <code>--no-cache</code> work as they do on the command line. A <code>--replay</code> folder lets an agent's tests run with no key and no network.</p>
+
+  <h2 id="tool-calls">A tool call</h2>
+  <p>A <code>decide</code> call takes a question and its evidence:</p>
+  <Code code={call} lang="json" caption="The arguments of one decide tool call" label="Copy the decide arguments" />
+  <p>A question can also come from a saved <a href="/functions/question-file/">question file</a> through <code>question_file</code>, or by name through <code>question_name</code>. A literal question that starts with <code>@</code> stays text and never names a file. The server creates no question files. <code>decide</code>, <code>choose</code> and <code>score</code> also take ordered PNG and JPEG images.</p>
+  <p>The <a href={mcpGuide}>MCP guide</a> gives every input and a client with one method for each function. The <a href={mcpSpec}>MCP specification</a> gives the framing and size limits.</p>
+
+  <h2 id="skill">The agent skill</h2>
+  <p>The <a href={skill}>ThinkThen skill</a> tells an agent which function fits a job, how to frame evidence, how to read exit codes and not sure, and how to bound requests. Copy the <code>skills/thinkthen/</code> folder into the skills folder your agent reads.</p>
+</Base>
