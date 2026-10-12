@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::{Canned, Listener};
 use serde_json::Value;
-use thinkthen::{AttemptOutcome, CallOptions, Engine, Entity, ErrorKind, Question, Relate};
+use thinkthen::{AttemptOutcome, CallOptions, Entity, ErrorKind, Question, Relate};
 
 fn relation_listener() -> Listener {
     Listener::answering(|body| {
@@ -41,14 +41,7 @@ fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
         r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]},"model":"size-override"}"#,
     )
     .expect("relation");
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .expect("base")
-            .api_key("sk-size-local")
-            .expect("key")
-            .no_cache()
-    };
+    let build = || crate::api::builder(listener.base(), "sk-size-local").no_cache();
 
     let default = build()
         .prices_usd_per_million("0.25", "0.25")
@@ -92,11 +85,7 @@ fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
 fn priced_relate_failure_keeps_complete_started_facts() {
     let reply = r#"{"model":"jev-1.13.0","answers":{"other":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
     let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-size-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-size-local")
         .prices_usd_per_million("0.25", "0.25")
         .expect("prices")
         .no_cache()
@@ -136,11 +125,7 @@ fn retry_attempts_use_send_ordinals_and_reject_duplicate_headers() {
         _ => Canned::ok(ANSWER),
     })
     .expect("loopback");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-attempt-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-attempt-local")
         .max_retries(1)
         .no_cache()
         .build()
@@ -214,11 +199,7 @@ fn separate_calls_reset_ordinals_and_screen_reflected_ids() {
             .asking("x-typesafe-request-id", "bad id"),
     })
     .expect("loopback");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-attempt-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-attempt-local")
         .no_cache()
         .build()
         .expect("engine");
@@ -286,11 +267,7 @@ fn terminal_status_and_transport_failures_keep_one_truthful_attempt() {
         ),
     ] {
         let listener = Listener::serving(vec![reply]).expect("loopback");
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .expect("base")
-            .api_key("sk-attempt-failure-local")
-            .expect("key")
+        let engine = crate::api::builder(listener.base(), "sk-attempt-failure-local")
             .max_retries(0)
             .no_cache()
             .build()
@@ -337,11 +314,7 @@ fn a_cached_second_call_has_no_current_attempt() {
     let folder =
         std::env::temp_dir().join(format!("thinkthen-attempt-cache-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-attempt-cache-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-attempt-cache-local")
         .cache_at(&folder)
         .expect("cache")
         .build()

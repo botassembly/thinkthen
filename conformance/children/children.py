@@ -38,3 +38,16 @@ def child_env(keep=(), *, home=None, **values):
                    APPDATA=str(home / "config"), LOCALAPPDATA=str(home / "local"))
     env.update(values)
     return env
+
+
+def read_process_line(stream):
+    """Read one acknowledgement without buffering a later communicate payload."""
+    line = bytearray()
+    while True:
+        byte = os.read(stream.fileno(), 1)
+        if not byte:
+            break
+        line.extend(byte)
+        if byte == b"\n":
+            break
+    return line.decode(stream.encoding or "utf-8", stream.errors or "strict").replace("\r\n", "\n")

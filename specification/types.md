@@ -21,6 +21,11 @@ Every surface that accepts a description string also accepts its structured form
 
 Rust adapters construct `Request` from native arguments. `RequestDefinition::from_authored_json(text: &str) -> Result<Self, Error>` decodes authored definitions through the shared question-file grammar and retains their original ordering and admission errors. `RequestDefinition::from_request_json(text: &str) -> Result<Self, Error>` retains the same authored bytes with canonical request diagnostics: invalid definitions report “invalid canonical request”, while unsupported features retain their native message. Adapters use this method for authored definitions in native requests; file selectors retain the detailed authored decoder. They do not wrap those bytes in a serialized request.
 
+`Request::named_from_json(function, question, input, options)` constructs one named call from the existing canonical question, input and options component grammars. It decodes every materialized descriptor before creating a session. Shared Rust turns materialized Records into Units for find and Entities for relate; explicit source and feed selectors retain their meaning. Components retain duplicate-member refusal, typed declaration and per-item-context diagnostics, and closed option admission.
+
+The C session entrypoint `thinkthen_session_new_named_with_surface` accepts a `thinkthen_named_request_v1` containing counted UTF-8 views for the function and three canonical components, a counted surface view and an output owner slot. It copies admitted values before return. The caller may release every input buffer and its engine after construction. An immediate failure leaves the output unchanged and updates only the calling thread's session diagnostic; success preserves that diagnostic. Unknown function names report “unknown function”. Existing complete-envelope session entrypoints keep their behavior.
+
+
 ## Answers and failures
 
 | Function | Successful answer | Not sure form |

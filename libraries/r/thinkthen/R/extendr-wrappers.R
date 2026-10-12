@@ -14,6 +14,8 @@ NULL
 #' @useDynLib thinkthen, .registration = TRUE
 NULL
 
+tt_error_native <- function(kind, message) .Call(wrap__tt_error_native, kind, message)
+
 #' Convert host character values with the one native encoding crossing.
 tt_text_utf8 <- function(value) .Call(wrap__tt_text_utf8, value)
 
@@ -37,7 +39,7 @@ tt_completion_read_native <- function(value) .Call(wrap__tt_completion_read_nati
 
 tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_settle_early, value, kind)
 
-tt_request_column <- function(values, function_name) .Call(wrap__tt_request_column, values, function_name)
+tt_request_error_native <- function(failure, completed, positions, length, parent) .Call(wrap__tt_request_error_native, failure, completed, positions, length, parent)
 
 tt_request_build <- function(function_name, question, input, options) .Call(wrap__tt_request_build, function_name, question, input, options)
 
@@ -46,6 +48,8 @@ tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_requ
 tt_request_plan <- function(request) .Call(wrap__tt_request_plan, request)
 
 tt_request_batch_start <- function(request) .Call(wrap__tt_request_batch_start, request)
+
+tt_request_batch_wait <- function(batch, input) .Call(wrap__tt_request_batch_wait, batch, input)
 
 tt_request_batch_poll <- function(batch) .Call(wrap__tt_request_batch_poll, batch)
 

@@ -954,6 +954,10 @@ public InputPresence<InputSessionSourceLocation> Location { get; init; }
 public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } writer.WriteStartObject(); writer.WritePropertyName("kind"); WriteText(writer, "io"); if (Location.IsPresent) { writer.WritePropertyName("location"); if (Location.Value is null) writer.WriteNullValue(); else Location.Value.Write(writer); } writer.WriteEndObject(); }
 }
 
+public sealed class InputRequestReaderFailureProducer : InputRequestReaderFailure {
+public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } writer.WriteStartObject(); writer.WritePropertyName("kind"); WriteText(writer, "producer"); writer.WriteEndObject(); }
+}
+
 public sealed class InputRequestReaderFailureUtf8 : InputRequestReaderFailure {
 public InputPresence<InputSessionSourceLocation> Location { get; init; }
 public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } writer.WriteStartObject(); writer.WritePropertyName("kind"); WriteText(writer, "utf8"); if (Location.IsPresent) { writer.WritePropertyName("location"); if (Location.Value is null) writer.WriteNullValue(); else Location.Value.Write(writer); } writer.WriteEndObject(); }

@@ -28,7 +28,11 @@ procedure Thinkthen.Sessions.Parity_Case is
    begin
       Try_Read (Owner, Value, Read);
       case Read is
-         when Pending => delay 0.001;
+         when Pending => declare
+               Ready : Interfaces.Unsigned_32;
+            begin
+               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
+            end;
          when Finished => null;
          when Result =>
             declare

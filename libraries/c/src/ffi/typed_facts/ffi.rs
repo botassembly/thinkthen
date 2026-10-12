@@ -1,6 +1,6 @@
 //! Owned facts beside the typed C results. All pointer reads and writes stay
 //! at this guarded FFI edge; a failure publishes neither result nor facts.
-#![allow(unsafe_code, reason = "the C door reads and writes host pointers")]
+#![allow(unsafe_code, reason = "the C interface reads and writes host pointers")]
 
 use std::ffi::{CString, c_char};
 use std::mem::size_of;
@@ -8,7 +8,7 @@ use std::mem::size_of;
 use thinkthen::{CancelToken, Facts};
 
 use crate::failures::{self, DEFECT, Failure, Held, OK, USAGE};
-use crate::{Door, Judgment, door};
+use crate::{EngineHandle, Judgment, typed};
 
 use super::{extent, held, string, text, text_extent};
 
@@ -31,40 +31,13 @@ fn facts_string(completed: &Option<Facts>) -> Result<CString, Failure> {
     CString::new(failures::facts_json(facts)).map_err(|_| Failure::defect("the facts held a NUL"))
 }
 
-unsafe fn records<'a>(
-    texts: *const *const c_char,
-    lengths: *const usize,
-    count: usize,
-) -> Result<Vec<&'a str>, Failure> {
-    extent(count, size_of::<*const c_char>())?;
-    extent(count, size_of::<usize>())?;
-    if count == 0 {
-        return Ok(Vec::new());
-    }
-    if texts.is_null() || lengths.is_null() {
-        return Err(Failure::usage("a null input array with a nonzero count"));
-    }
-    // SAFETY: the caller supplies live, aligned arrays with count entries.
-    let texts = unsafe { std::slice::from_raw_parts(texts, count) };
-    let lengths = unsafe { std::slice::from_raw_parts(lengths, count) };
-    texts
-        .iter()
-        .zip(lengths)
-        .map(|(value, len)| {
-            text_extent(*len)?;
-            // SAFETY: each text follows the documented input-array contract.
-            unsafe { text(*value, *len) }
-        })
-        .collect()
-}
-
 unsafe fn token<'a>(token: *mut CancelToken) -> Option<&'a CancelToken> {
     // SAFETY: a nonnull token stays live for the duration of the call.
     unsafe { token.as_ref() }
 }
 
 unsafe fn run<T>(
-    engine: *const Door,
+    engine: *const EngineHandle,
     ask: impl FnOnce(&Held, &mut Option<Facts>) -> Result<T, Failure>,
     publish: impl FnOnce((T, CString)) -> i32,
 ) -> i32 {
@@ -101,7 +74,7 @@ unsafe fn run<T>(
 /// aligned, adequately sized, nonoverlapping input and output storage.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     evidence: *const c_char,
     evidence_len: usize,
@@ -131,7 +104,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts(
 /// Pointers and output storage obey the C header's rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     evidence: *const c_char,
     evidence_len: usize,
@@ -148,10 +121,16 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts_opts(
             |held, completed| {
                 slots(&[out.cast(), facts_json.cast(), facts_len.cast()])?;
                 text_extent(evidence_len)?;
-                let options = door::options(deadline_ms, token(cancel))?;
-                let question = door::question(string(question_json, "question")?)?;
+                let options = typed::options(deadline_ms, token(cancel))?;
+                let question = typed::question(string(question_json, "question")?)?;
                 let evidence = text(evidence, evidence_len)?;
-                door::decide_with_facts(&held.engine, &question, evidence, options, Some(completed))
+                typed::decide_with_facts(
+                    &held.engine,
+                    &question,
+                    evidence,
+                    options,
+                    Some(completed),
+                )
             },
             |(answer, facts)| {
                 *out = answer;
@@ -168,7 +147,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_with_facts_opts(
 /// All pointers obey the corresponding options form's contract.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -200,7 +179,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts(
 /// Pointers and output storage obey the C header's rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -227,10 +206,10 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts_opts(
                     outputs.push(out.cast());
                 }
                 slots(&outputs)?;
-                let records = records(texts, lengths, count)?;
-                let options = door::options(deadline_ms, token(cancel))?;
-                let question = door::question(string(question_json, "question")?)?;
-                door::decide_many_with_facts(
+                let records = super::texts(texts, lengths, count)?;
+                let options = typed::options(deadline_ms, token(cancel))?;
+                let question = typed::question(string(question_json, "question")?)?;
+                typed::decide_many_with_facts(
                     &held.engine,
                     &question,
                     &records,
@@ -255,7 +234,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_many_with_facts_opts(
 /// All pointers obey the corresponding options form's contract.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     evidence: *const c_char,
     evidence_len: usize,
@@ -287,7 +266,7 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts(
 /// Pointers and output storage obey the C header's rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     evidence: *const c_char,
     evidence_len: usize,
@@ -310,11 +289,11 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts_opts(
                     facts_len.cast(),
                 ])?;
                 text_extent(evidence_len)?;
-                let options = door::options(deadline_ms, token(cancel))?;
+                let options = typed::options(deadline_ms, token(cancel))?;
                 let spec = string(spec_json, "spec")?;
                 let evidence = text(evidence, evidence_len)?;
                 let json =
-                    door::recognize_with_facts(&held.engine, spec, evidence, options, completed)?;
+                    typed::recognize_with_facts(&held.engine, spec, evidence, options, completed)?;
                 CString::new(json).map_err(|_| Failure::defect("the answer held a NUL"))
             },
             |(json, facts)| {
@@ -333,7 +312,7 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_with_facts_opts(
 /// All pointers obey the corresponding options form's contract.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -367,7 +346,7 @@ pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts(
 /// Pointers and output storage obey the C header's rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -384,7 +363,7 @@ pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts_opts(
         run(
             engine,
             |held, completed| {
-                door::capped(count)?;
+                typed::capped(count)?;
                 extent(count, size_of::<*const c_char>())?;
                 extent(count, size_of::<usize>())?;
                 slots(&[
@@ -393,12 +372,12 @@ pub(crate) unsafe extern "C" fn thinkthen_relate_with_facts_opts(
                     facts_json.cast(),
                     facts_len.cast(),
                 ])?;
-                let records = records(texts, lengths, count)?;
-                let options = door::options(deadline_ms, token(cancel))?;
+                let records = super::texts(texts, lengths, count)?;
+                let options = typed::options(deadline_ms, token(cancel))?;
                 let spec = string(spec_json, "spec")?;
-                let entities = door::entities(&records)?;
+                let entities = typed::entities(&records)?;
                 let json =
-                    door::relate_with_facts(&held.engine, spec, entities, options, completed)?;
+                    typed::relate_with_facts(&held.engine, spec, entities, options, completed)?;
                 CString::new(json).map_err(|_| Failure::defect("the answer held a NUL"))
             },
             |(json, facts)| {

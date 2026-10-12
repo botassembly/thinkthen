@@ -13,14 +13,8 @@
 
 #include <thinkthen.h>
 
-static int failed;
 
-static void check(int holds, const char *what) {
-    if (!holds) {
-        fprintf(stderr, "FAIL %s\n", what);
-        failed = 1;
-    }
-}
+#include "check.c"
 
 static int said(const thinkthen_engine *tt, int code, const char *message) {
     return thinkthen_error_code(tt) == code && strcmp(thinkthen_error_message(tt), message) == 0;

@@ -5,11 +5,17 @@ import java.lang.foreign.*;
 /** An owned native session with one producer and one reader. Cancel permits a drain. */
 public final class OwnedSession implements AutoCloseable {
     private MemorySegment pointer;
+    private int waiters;
+    private boolean closed;
+    private java.util.concurrent.CompletableFuture<Void> inputWait, resultWait;
+    private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(2, task -> {
+        var worker = new Thread(task, "thinkthen-session-wait"); worker.setDaemon(true); return worker;
+    });
     private final Arena arena = Arena.ofShared();
     private final MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
     private final MemorySegment output = arena.allocate(ValueLayout.ADDRESS);
     OwnedSession(MemorySegment pointer) { this.pointer = pointer; }
-    private void live() { if (pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Session is closed"); }
+    private void live() { if (closed || pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Session is closed"); }
     public synchronized void cancel() {
         if (!pointer.equals(MemorySegment.NULL)) NativeSession.free("thinkthen_session_cancel", pointer);
     }
@@ -51,11 +57,46 @@ public final class OwnedSession implements AutoCloseable {
             return new Read(Results.SessionPacket.read(NativeSession.copied(json.get(ValueLayout.ADDRESS, 0), length.get(NativeSession.SIZE, 0))), false);
         } finally { NativeSession.free("thinkthen_session_result_free", packet); }
     }
-    @Override public synchronized void close() {
-        if (pointer.equals(MemorySegment.NULL)) return;
-        cancel();
+    /** Wait consumes nothing and runs on a dedicated platform thread. Close defers free until it returns. */
+    public synchronized java.util.concurrent.CompletableFuture<Void> waitReady(boolean input) {
+        live();
+        var pending = input ? inputWait : resultWait;
+        if (pending != null) return pending;
+        var result = new java.util.concurrent.CompletableFuture<Void>();
+        if (input) inputWait = result; else resultWait = result;
+        result.whenComplete((value, error) -> { if (result.isCancelled()) cancel(); });
+        workers.execute(() -> {
+            RuntimeException failure = null;
+            try { waitNative(input); }
+            catch (RuntimeException error) { failure = error; }
+            finally {
+                synchronized (this) {
+                    if (input && inputWait == result) inputWait = null;
+                    if (!input && resultWait == result) resultWait = null;
+                }
+                if (failure == null) result.complete(null); else result.completeExceptionally(failure);
+            }
+        });
+        return result;
+    }
+    void waitNative(boolean input) {
+        final MemorySegment retained;
+        synchronized (this) { live(); retained = pointer; waiters++; }
+        try (Arena outputs = Arena.ofConfined()) {
+            var ready = outputs.allocate(ValueLayout.JAVA_INT);
+            NativeSession.check(NativeWait.waitReady(retained, input ? NativeWait.INPUT : NativeWait.SETTLEMENT, 50, ready));
+        } finally {
+            synchronized (this) { waiters--; if (closed && waiters == 0) release(); }
+        }
+    }
+    private void release() {
         NativeSession.free("thinkthen_session_free", pointer);
         pointer = MemorySegment.NULL;
         arena.close();
+    }
+    @Override public synchronized void close() {
+        if (closed) return;
+        cancel(); closed = true; workers.shutdown();
+        if (waiters == 0) release();
     }
 }

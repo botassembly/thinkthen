@@ -30,9 +30,11 @@ case $CARGO_OUT in /*) ;; *) CARGO_OUT=$REPO/$CARGO_OUT ;; esac
 CMAKE=$(command -v cmake || true)
 case $HOST_TARGET in *-apple-darwin) CMAKE=$TOOLS/venv/bin/cmake ;; esac
 [ -x "$CMAKE" ] || { echo "duckdb: project-local CMake is missing; run tools/setup.sh --fetch" >&2; exit 77; }
+if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-ffile-prefix-map=$HOME=/build"
+fi
 export RUSTFLAGS CFLAGS CXXFLAGS
 case $HOST_TARGET in *-apple-darwin)
 	MACOSX_DEPLOYMENT_TARGET=15.0

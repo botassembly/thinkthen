@@ -11,10 +11,16 @@ child= watcher=
 # KILL 2 seconds later for anything that ignored it. The traps come first, so no signal
 # lands between the start and the trap.
 stop() {
-	[ -z "$watcher" ] || kill "$watcher" 2>/dev/null
+	trap '' HUP INT TERM
+	if [ -n "$watcher" ]; then
+		kill "$watcher" 2>/dev/null
+		wait "$watcher" 2>/dev/null
+	fi
 	if [ -n "$child" ]; then
-		perl -e 'kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' "$child" </dev/null >/dev/null 2>&1 &
-		wait "$child"
+		if [ ! -e "$mark/timed-out" ]; then
+			perl -e 'kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' "$child" </dev/null >/dev/null 2>&1
+		fi
+		wait "$child" 2>/dev/null
 	fi
 	exit "$1"
 }
@@ -28,11 +34,12 @@ perl -e '$SIG{INT} = $SIG{QUIT} = "DEFAULT"; setpgrp(0, 0); exec { $ARGV[0] } @A
 child=$!
 exec 3<&-
 # The watcher holds no output open, so a reader of the command's output never waits on it.
-perl -e 'sleep $ARGV[1]; kill 0, $ARGV[0] or exit; open my $f, ">", $ARGV[2]; kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' \
+perl -e '$SIG{TERM} = sub { exit }; sleep $ARGV[1]; $SIG{TERM} = "IGNORE"; kill 0, -$ARGV[0] or exit; open my $f, ">", $ARGV[2] or die $!; close $f; kill "TERM", -$ARGV[0]; sleep 2; kill "KILL", -$ARGV[0]' \
 	"$child" "$limit" "$mark/timed-out" </dev/null >/dev/null 2>&1 &
 watcher=$!
 wait "$child"
 code=$?
 kill "$watcher" 2>/dev/null
+wait "$watcher" 2>/dev/null
 [ ! -e "$mark/timed-out" ] || code=124
 exit "$code"

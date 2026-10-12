@@ -34,7 +34,7 @@ fn quoted(record: &str, question: Question) -> Plan {
     .expect("a quoted plan")
 }
 
-/// Both expected hashes were computed independently: legacy LF parts and
+/// Both expected hashes were computed independently: compatibility LF parts and
 /// question-key/2 tagged NUL/u64-BE framing, with both model constituents.
 #[test]
 fn versioned_keys_frame_both_models_and_legacy_keys_keep_original_lf_bytes() {

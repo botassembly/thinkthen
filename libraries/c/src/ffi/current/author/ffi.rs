@@ -13,7 +13,7 @@ use crate::ffi::values::{
     THINKTHEN_FUNCTION_RANK_V1 as RANK, THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE,
 };
 use crate::{
-    Door,
+    EngineHandle,
     current::{self, QuestionHandle},
     failures::{DEFECT, Failure, OK, USAGE, guard},
 };
@@ -80,7 +80,7 @@ unsafe fn author(value: Option<&QuestionAuthorV1>) -> Result<Author, Failure> {
     }
 }
 pub(super) unsafe fn new(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const QuestionSpecV1,
     metadata: *const QuestionAuthorV1,
     out: *mut *mut QuestionHandle,
@@ -89,7 +89,7 @@ pub(super) unsafe fn new(
     unsafe { new_with_task(engine, spec, metadata, None, out) }
 }
 pub(super) unsafe fn new_with_task(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const QuestionSpecV1,
     metadata: *const QuestionAuthorV1,
     task: Option<crate::ffi::carriers::RecognitionTaskV1>,
@@ -97,7 +97,7 @@ pub(super) unsafe fn new_with_task(
 ) -> i32 {
     // SAFETY: descriptors are live counted storage; publication occurs only on success.
     unsafe {
-        crate::ffi::typed(
+        crate::ffi::run_typed(
             engine,
             |_| {
                 read::required(out)?;
@@ -139,7 +139,7 @@ pub(super) unsafe fn new_with_task(
 /// metadata. author=NULL means no author metadata. All inputs are cloned.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_new_authored(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const QuestionSpecV1,
     author: *const QuestionAuthorV1,
     out: *mut *mut QuestionHandle,
@@ -172,7 +172,7 @@ pub(crate) unsafe extern "C" fn thinkthen_question_author(
     })
 }
 unsafe fn load(
-    engine: *const Door,
+    engine: *const EngineHandle,
     role: u32,
     value: StringV1,
     reference: bool,
@@ -180,7 +180,7 @@ unsafe fn load(
 ) -> i32 {
     // SAFETY: counted UTF-8 and output follow the header's checked storage contract.
     unsafe {
-        crate::ffi::typed(
+        crate::ffi::run_typed(
             engine,
             |_| {
                 read::required(out)?;
@@ -198,7 +198,7 @@ unsafe fn load(
 /// All pointers follow include/thinkthen.h's storage and lifetime contract.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_load_named(
-    engine: *const Door,
+    engine: *const EngineHandle,
     role: u32,
     name: StringV1,
     out: *mut *mut QuestionHandle,
@@ -211,7 +211,7 @@ pub(crate) unsafe extern "C" fn thinkthen_question_load_named(
 /// All pointers follow include/thinkthen.h's storage and lifetime contract.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_load_reference(
-    engine: *const Door,
+    engine: *const EngineHandle,
     role: u32,
     reference: StringV1,
     out: *mut *mut QuestionHandle,
@@ -238,14 +238,14 @@ unsafe impl Sync for crate::current::author::AuthorOwner {}
 /// The immutable handle owns every byte independently of json's lifetime.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_question_parse(
-    engine: *const Door,
+    engine: *const EngineHandle,
     role: u32,
     json: StringV1,
     out: *mut *mut QuestionHandle,
 ) -> std::ffi::c_int {
     // SAFETY: common edge validates live engine/output and counted UTF-8 storage.
     unsafe {
-        crate::ffi::typed(
+        crate::ffi::run_typed(
             engine,
             |_| {
                 read::required(out)?;

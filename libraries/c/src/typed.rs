@@ -1,10 +1,10 @@
-//! The typed doors' bodies on the Rust side: every argument arrives checked
+//! The typed interfaces' bodies on the Rust side: every argument arrives checked
 //! and borrowed, and every answer leaves as a value the FFI edge writes.
 
 use crate::ffi::values as abi;
 use thinkthen::{
-    Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
-    Probabilities, Question, QuestionFileError, Recognize, Relate,
+    Answer, CallOptions, CancelToken, Engine, Entity, Facts, LoadedQuestion, Probabilities,
+    Question, QuestionFileError, Recognize, Relate,
 };
 
 use crate::Judgment as Reply;
@@ -81,19 +81,31 @@ pub(crate) fn decide_with_facts(
     options: CallOptions<'_>,
     completed: Option<&mut Option<Facts>>,
 ) -> Result<Reply, Failure> {
-    let details = match question {
-        LoadedQuestion::Question(asked) if asked.kind() != thinkthen::QuestionKind::Decide => {
-            return Err(Failure::usage("decide takes a decide question"));
-        }
-        LoadedQuestion::Question(asked) => engine.details_with(asked, text, options)?,
-        LoadedQuestion::Banded(asked) => engine.details_with(asked, text, options)?,
-    };
-    if let Some(completed) = completed {
-        *completed = Some(details.facts().clone());
+    let definition = decide_definition(question)?;
+    if text.trim().is_empty() {
+        return Err(Failure::usage("evidence is text, not white space"));
     }
-    let details = details.into_value();
-    match (details.value(), details.probabilities()) {
-        (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok(reply(*answer, *yes)),
+    let call = execute(
+        engine,
+        definition,
+        text_input(text.to_owned()),
+        options,
+        None,
+    )?;
+    let thinkthen::RequestValue::Decisions(rows) = call.value() else {
+        return Err(Failure::defect(
+            "a decide request returned another answer kind",
+        ));
+    };
+    let details = rows
+        .first()
+        .ok_or_else(|| Failure::defect("a decide request held no answer"))?
+        .result();
+    if let Some(completed) = completed {
+        *completed = Some(call.facts().clone());
+    }
+    match details.probabilities() {
+        Probabilities::YesNo { yes } => Ok(reply(details.value(), yes)),
         _ => Err(Failure::defect(
             "a decide answer held no probability of yes",
         )),
@@ -117,31 +129,43 @@ pub(crate) fn decide_many_with_facts(
     options: CallOptions<'_>,
     completed: Option<&mut Option<Facts>>,
 ) -> Result<Vec<Reply>, Failure> {
-    let rows: Result<Vec<_>, _> = match question {
-        LoadedQuestion::Question(asked) => {
-            let mut batch = engine.decide_many_with(asked, texts.iter().copied(), options);
-            let rows = batch
-                .by_ref()
-                .map(|row| row.map(|row| reply(*row.value(), row.probability())))
-                .collect();
-            if let Some(completed) = completed {
-                *completed = batch.facts().cloned();
-            }
-            rows
-        }
-        LoadedQuestion::Banded(asked) => {
-            let mut batch = engine.decide_many_with(asked, texts.iter().copied(), options);
-            let rows = batch
-                .by_ref()
-                .map(|row| row.map(|row| reply(*row.value(), row.probability())))
-                .collect();
-            if let Some(completed) = completed {
-                *completed = batch.facts().cloned();
-            }
-            rows
-        }
+    let definition = decide_definition(question)?;
+    let call = execute(
+        engine,
+        definition,
+        thinkthen::RequestInput::Feed {
+            name: "c-array".into(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
+        },
+        options,
+        Some(thinkthen::RequestFeed::new(
+            "c-array",
+            texts.iter().map(|text| {
+                Ok(item(thinkthen::RequestOriginal::Text {
+                    text: (*text).to_owned(),
+                }))
+            }),
+        )),
+    )?;
+    if let Some(completed) = completed {
+        *completed = Some(call.facts().clone());
+    }
+    let thinkthen::RequestValue::Decisions(values) = call.value() else {
+        return Err(Failure::defect(
+            "a decide request returned another answer kind",
+        ));
     };
-    let rows = rows?;
+    let rows = values
+        .iter()
+        .map(|row| match row.result().probabilities() {
+            Probabilities::YesNo { yes } => Ok(reply(row.result().value(), yes)),
+            _ => Err(Failure::defect(
+                "a decide answer held no probability of yes",
+            )),
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
     if rows.len() == texts.len() {
         Ok(rows)
     } else {
@@ -174,9 +198,25 @@ pub(crate) fn recognize_with_facts(
     completed: &mut Option<Facts>,
 ) -> Result<String, Failure> {
     let ask = Recognize::from_json(spec)?;
-    let call = engine.recognize_with(&ask, text, options)?;
+    let call = execute(
+        engine,
+        thinkthen::RequestDefinition::Recognition(ask),
+        text_input(text.to_owned()),
+        options,
+        None,
+    )?;
     *completed = Some(call.facts().clone());
-    Ok(call.value().to_json())
+    let thinkthen::RequestValue::Recognized(rows) = call.value() else {
+        return Err(Failure::defect(
+            "a recognition request returned another answer kind",
+        ));
+    };
+    Ok(rows
+        .first()
+        .ok_or_else(|| Failure::defect("a recognition request held no answer"))?
+        .result()
+        .value()
+        .to_json())
 }
 
 /// Refuse a relate call past [`MOST_RELATED`] records.
@@ -210,7 +250,7 @@ pub(crate) fn relate(
     ))
 }
 
-/// The door's relate value: each edge as the crate writes it.
+/// The interface's relate value: each edge as the crate writes it.
 #[derive(serde::Serialize)]
 pub(crate) struct Edges {
     pub(crate) edges: Vec<Box<serde_json::value::RawValue>>,
@@ -224,9 +264,31 @@ pub(crate) fn relate_with_facts(
     completed: &mut Option<Facts>,
 ) -> Result<String, Failure> {
     let ask = Relate::from_json(spec)?;
-    let call = engine.relate_with(&ask, entities, options)?;
+    let items = entities
+        .iter()
+        .map(|entity| {
+            Ok(item(thinkthen::RequestOriginal::Json {
+                value: thinkthen::RawRecord::json(&crate::call::written(serde_json::to_string(
+                    &serde_json::json!({"name":entity.name(),"kind":entity.kind()}),
+                ))?)?,
+            }))
+        })
+        .collect::<Result<Vec<_>, Failure>>()?;
+    let call = execute(
+        engine,
+        thinkthen::RequestDefinition::Relate(ask),
+        thinkthen::RequestInput::Records { items },
+        options,
+        None,
+    )?;
     *completed = Some(call.facts().clone());
-    let edges = call
+    let thinkthen::RequestValue::Related(row) = call.value() else {
+        return Err(Failure::defect(
+            "a relation request returned another answer kind",
+        ));
+    };
+    let edges = row
+        .result()
         .value()
         .iter()
         .map(|edge| crate::call::raw(edge.to_json()))
@@ -243,4 +305,59 @@ pub(crate) fn outs(out: *mut *mut std::ffi::c_char, out_len: *mut usize) -> Resu
         return Err(Failure::usage("a null out_len pointer"));
     }
     Ok(())
+}
+
+/// Execute one prepared question through shared admission and execution.
+pub(crate) fn execute(
+    engine: &Engine,
+    definition: thinkthen::RequestDefinition,
+    input: thinkthen::RequestInput,
+    controls: CallOptions<'_>,
+    feed: Option<thinkthen::RequestFeed<'_>>,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, Failure> {
+    let request =
+        thinkthen::Request::for_definition(definition, input, thinkthen::RequestOptions::default())
+            .admit()?;
+    Ok(executed(
+        engine,
+        &request,
+        thinkthen::RequestEnvironment { controls, feed },
+    )?)
+}
+
+/// Project shared execution without losing native failure facts.
+pub(crate) fn executed(
+    engine: &Engine,
+    request: &thinkthen::AdmittedRequest,
+    environment: thinkthen::RequestEnvironment<'_>,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
+    match engine.execute_request(request, environment)? {
+        thinkthen::RequestOutcome::Complete(call) => Ok(call),
+        thinkthen::RequestOutcome::Failed { error, .. } => Err(error),
+    }
+}
+/// Materialize one C text without inventing image attachments.
+pub(crate) fn text_input(text: String) -> thinkthen::RequestInput {
+    thinkthen::RequestInput::Text {
+        text,
+        images: Vec::new(),
+    }
+}
+pub(crate) fn item(original: thinkthen::RequestOriginal) -> thinkthen::RequestItem {
+    thinkthen::RequestItem {
+        original: Some(original),
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+        images: Vec::new(),
+    }
+}
+
+fn decide_definition(question: &LoadedQuestion) -> Result<thinkthen::RequestDefinition, Failure> {
+    if matches!(question, LoadedQuestion::Question(asked) if asked.kind() != thinkthen::QuestionKind::Decide)
+    {
+        return Err(Failure::usage("decide takes a decide question"));
+    }
+    Ok(question.clone().into())
 }

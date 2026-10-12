@@ -5,10 +5,10 @@
     reason = "a failed fixture setup should stop the boundary test"
 )]
 
+use crate::harness::{Canned, Listener, spawn, spawn_local, stderr_is};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::encoded_decide;
 
 const ANSWER: &str = concat!(
@@ -50,6 +50,24 @@ fn profile(name: &str, body: &str) -> PathBuf {
     )
 }
 
+fn plan(limit: &Path, evidence: &[u8]) -> std::io::Result<std::process::Output> {
+    spawn(
+        &[
+            "decide",
+            "Is this relevant?",
+            "--plan",
+            "--profile",
+            &limit.to_string_lossy(),
+        ],
+        &[],
+        evidence,
+    )
+}
+
+fn calibrated(name: &str) -> PathBuf {
+    file(name, r#"{"decide":"Is this relevant?","profile":"old"}"#)
+}
+
 #[test]
 fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
     // A profile's evidence limit bounds each record and the request's state.
@@ -72,26 +90,15 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
             Some("43 evidence bytes; this request has 44"),
         ),
     ] {
-        let output = spawn(
-            &[
-                "decide",
-                "Is this relevant?",
-                "--plan",
-                "--profile",
-                &limit.to_string_lossy(),
-            ],
-            &[],
-            record.as_bytes(),
-        )
-        .expect("command");
+        let output = plan(limit, record.as_bytes()).expect("command");
         let Some(refusal) = refusal else {
             assert_eq!(output.status.code(), Some(0), "{record}");
             continue;
         };
         assert_eq!(output.status.code(), Some(2), "{record}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            format!("thinkthen: profile edge-evidence allows at most {refusal}\n")
+        stderr_is(
+            &output,
+            format!("thinkthen: profile edge-evidence allows at most {refusal}\n"),
         );
         assert!(output.stdout.is_empty());
     }
@@ -101,43 +108,21 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
         "edge-request",
         &format!(r#""max_request_bytes":{}"#, body.len()),
     );
-    let passed = spawn(
-        &[
-            "decide",
-            "Is this relevant?",
-            "--plan",
-            "--profile",
-            &exact_request.to_string_lossy(),
-        ],
-        &[],
-        b"four",
-    )
-    .expect("command");
+    let passed = plan(&exact_request, b"four").expect("command");
     assert_eq!(passed.status.code(), Some(0));
     let too_small = profile(
         "small-request",
         &format!(r#""max_request_bytes":{}"#, body.len() - 1),
     );
-    let failed = spawn(
-        &[
-            "decide",
-            "Is this relevant?",
-            "--plan",
-            "--profile",
-            &too_small.to_string_lossy(),
-        ],
-        &[],
-        b"four",
-    )
-    .expect("command");
+    let failed = plan(&too_small, b"four").expect("command");
     assert_eq!(failed.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&failed.stderr),
+    stderr_is(
+        &failed,
         format!(
             "thinkthen: profile small-request allows at most {} request bytes; this request has {}\n",
             body.len() - 1,
             body.len()
-        )
+        ),
     );
 }
 
@@ -158,9 +143,9 @@ fn every_record_framing_preflights_before_a_key_or_request() {
         let output = spawn(&arguments, &[], input).expect("command");
         assert_eq!(output.status.code(), Some(2), "{framing:?}");
         assert!(
-            String::from_utf8_lossy(&output.stderr).contains("evidence bytes"),
+            crate::harness::said(&output).contains("evidence bytes"),
             "{framing:?}: {}",
-            String::from_utf8_lossy(&output.stderr)
+            crate::harness::said(&output)
         );
     }
 }
@@ -184,7 +169,7 @@ fn find_preflights_its_complete_request_before_key_or_network() {
     .expect("command");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(listener.connections(), 0);
-    let error = String::from_utf8_lossy(&output.stderr);
+    let error = crate::harness::said(&output);
     assert!(
         error.starts_with(
             "thinkthen: profile tiny-find allows at most 1 evidence bytes; this request has "
@@ -196,32 +181,26 @@ fn find_preflights_its_complete_request_before_key_or_network() {
 
 #[test]
 fn a_profile_mismatch_warns_once_and_reaches_detailed_metadata() {
-    let question = file(
-        "calibrated-question.json",
-        r#"{"decide":"Is this relevant?","profile":"old"}"#,
-    );
+    let question = calibrated("calibrated-question.json");
     let running = profile("new", r#""max_evidence_bytes":100"#);
     let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("listener");
-    let output = spawn(
+    let output = spawn_local(
         &[
             "decide",
             &format!("@{}", question.to_string_lossy()),
             "--details",
             "--profile",
             &running.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "key")],
         b"four",
     )
     .expect("command");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: warning: threshold tuned for profile old is running under profile new\n"
+    stderr_is(
+        &output,
+        "thinkthen: warning: threshold tuned for profile old is running under profile new\n",
     );
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result JSON");
     assert_eq!(
@@ -258,7 +237,7 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
     assert_eq!(listener.connections(), 0);
     assert!(output.stdout.is_empty());
     let limit = "profile tiny-groups allows at most 1 evidence bytes";
-    assert!(String::from_utf8_lossy(&output.stderr).contains(limit));
+    assert!(crate::harness::said(&output).contains(limit));
 
     let dry = spawn(
         &[
@@ -274,7 +253,7 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
     .expect("dry command");
     assert_eq!(dry.status.code(), Some(2));
     assert!(dry.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&dry.stderr).contains(limit));
+    assert!(crate::harness::said(&dry).contains(limit));
 }
 
 #[test]
@@ -295,7 +274,7 @@ fn invalid_profile_text_is_a_safe_local_file_failure() {
     )
     .expect("command");
     assert_eq!(output.status.code(), Some(5));
-    let error = String::from_utf8_lossy(&output.stderr);
+    let error = crate::harness::said(&output);
     assert!(error.contains("the profile file"));
     assert!(!error.contains("PRIVATE-MARKER"));
     assert!(!error.contains("EVIDENCE-MARKER"));
@@ -303,16 +282,13 @@ fn invalid_profile_text_is_a_safe_local_file_failure() {
 
 #[test]
 fn replay_warns_once_without_a_key_and_keeps_request_identity() {
-    let question = file(
-        "replay-question.json",
-        r#"{"decide":"Is this relevant?","profile":"old"}"#,
-    );
+    let question = calibrated("replay-question.json");
     let running = profile("replay-new", r#""max_request_bytes":1000"#);
     let recordings = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("profile-replay");
     let _removed = fs::remove_dir_all(&recordings);
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
     let run = |store: &str, environment: &[(&str, &str)]| {
-        spawn(
+        spawn_local(
             &[
                 "decide",
                 &format!("@{}", question.to_string_lossy()),
@@ -321,35 +297,22 @@ fn replay_warns_once_without_a_key_and_keeps_request_identity() {
                 &running.to_string_lossy(),
                 store,
                 &recordings.to_string_lossy(),
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
             ],
+            listener.base(),
             environment,
             b"four",
         )
         .expect("command")
     };
     let recorded = run("--record", &[("THINKTHEN_API_KEY", "secret-key")]);
-    assert_eq!(
-        recorded.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&recorded.stderr)
-    );
+    crate::harness::exits(&recorded, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     let output = run("--replay", &[]);
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.count(), 1, "a replay sends nothing");
     assert_eq!(
-        String::from_utf8_lossy(&output.stderr)
+        crate::harness::said(&output)
             .matches("warning: threshold tuned for")
             .count(),
         1
@@ -383,12 +346,7 @@ fn over_limit_precedes_replay_and_cache_answers() {
         b"four",
     )
     .expect("command");
-    assert_eq!(
-        stored.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&stored.stderr)
-    );
+    crate::harness::exits(&stored, 0);
     for option in ["--replay", "--cache"] {
         let profile = tiny.to_string_lossy();
         let output = spawn(
@@ -399,7 +357,7 @@ fn over_limit_precedes_replay_and_cache_answers() {
         .expect("command");
         assert_eq!(output.status.code(), Some(2), "{option}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: profile stored-tiny allows at most 1 evidence bytes; this request has 4\n",
             "{option}"
         );

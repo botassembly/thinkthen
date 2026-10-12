@@ -9,8 +9,8 @@ use thiserror::Error;
 pub(crate) mod answer;
 mod trace;
 pub(crate) use trace::LogicalTrace;
+pub(crate) mod compatibility;
 pub(crate) mod framing;
-pub(crate) mod legacy;
 
 /// Why a correlation identity is invalid; the supplied bytes are withheld.
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]

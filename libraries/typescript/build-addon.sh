@@ -5,7 +5,9 @@
 set -eu
 cd -- "$(dirname -- "$0")"
 python3 ../../sdlc/scripts/package-inventory.py npm --write >/dev/null
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" \
+build_flags=${RUSTFLAGS:-}
+[ "${THINKTHEN_TEST_PROFILE:-routine}" = full ] || [ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || build_flags="${build_flags:+$build_flags }--remap-path-prefix=$HOME=/build"
+RUSTFLAGS="$build_flags" \
     cargo build --quiet --release --locked --offline
 case $(node -p 'process.platform') in darwin) library=libthinkthen_typescript.dylib ;; win32) library=thinkthen_typescript.dll ;; linux) library=libthinkthen_typescript.so ;; *) echo 'unsupported addon platform' >&2; exit 1 ;; esac
 cp -- "${CARGO_TARGET_DIR:-target}/release/$library" "$(node -p 'require("./native-platforms.json")[process.platform + "-" + process.arch]')"

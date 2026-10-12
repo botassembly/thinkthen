@@ -1,169 +1,29 @@
 use super::child;
 use super::*;
-use thinkthen::{
-    BatchSetting, InputEvidence, QuestionInput, RankSet, RecordInput, RecordObservation,
-};
-const SET: &str =
-    r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#;
-const SIX: &str = r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":1.0},"q3":{"type":"noul","noul":0.6},"q4":{"type":"noul","noul":0.98},"q5":{"type":"noul","noul":0.5},"q6":{"type":"noul","noul":0.99}},"usage":{"input_tokens":12}}"#;
-#[cfg(test)]
-fn assert_actual_metadata(result: &thinkthen::CompleteSetRank) {
-    let identity = result.result().identity();
-    assert_eq!(identity.observations().len(), 2);
-    assert!(
-        identity
-            .question_sources()
-            .iter()
-            .all(|source| source.batch_size() == Some(6))
-    );
-    assert_eq!(
-        result.result().reported_usage().unwrap().input_tokens(),
-        Some(4)
-    );
-    assert_eq!(
-        result.result().reported_usage().unwrap().output_tokens(),
-        None
-    );
-    assert_eq!(result.result().meta().attempts().unwrap().len(), 1);
-    assert!(!format!("{result:?}").contains(result.question_name()));
-}
-#[cfg(test)]
-fn assert_serialized_members(result: &thinkthen::CompleteSetRank, ordinal: usize) {
-    let document: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
-    assert!(document.get("input").is_none());
-    assert!(document.get("index").is_none());
-    assert_eq!(document["members"].as_array().unwrap().len(), 2);
-    for ((member, child), probability) in result
-        .members()
-        .iter()
-        .zip(document["members"].as_array().unwrap())
-        .zip([[0.7, 1.0], [0.6, 0.98], [0.5, 0.99]][ordinal])
-    {
-        assert_eq!(child["name"], member.name());
-        assert_eq!(
-            child["result"],
-            serde_json::to_value(member.result()).unwrap()
-        );
-        assert_eq!(child["result"]["value"], member.result().value());
-        assert_eq!(child["result"]["answer"]["probability"], probability);
-        assert_eq!(
-            child["result"]["answer_id"],
-            member.result().answer_id().as_str()
-        );
-        assert_eq!(child["result"]["meta"]["usage"], json!({"input_tokens":2}));
-        assert_eq!(
-            child["result"]["meta"]["question_sources"][0]["batch_size"],
-            6
-        );
-        assert_eq!(child["result"]["meta"]["model"], "fixed");
-        assert_eq!(
-            child["result"]["meta"]["context_sha256"],
-            document["meta"]["context_sha256"]
-        );
-    }
-}
-#[test]
-fn complete_set_rank_keeps_all_members_originals_partial_usage_and_independent_turns_order() {
-    // An original has no Clone, Serialize or Send requirement.
-    struct Original {
-        id: usize,
-        text: &'static str,
-        local: std::rc::Rc<()>,
-    }
-    impl InputEvidence for Original {
-        fn question_input(&self) -> QuestionInput {
-            QuestionInput::Text(self.text.to_owned())
-        }
-    }
-    let listener = Listener::answering(|_| Canned::ok(SIX)).unwrap();
-    let engine = engine(&listener);
-    let set = RankSet::from_json(SET).unwrap();
-    let observed = std::sync::Mutex::new(Vec::new());
-    let observer = |event: RecordObservation<'_>| observed.lock().unwrap().push(event.to_owned());
-    let call = engine
-        .rank_set_complete_with(
-            &set,
-            ["a", "b", "c"]
-                .into_iter()
-                .enumerate()
-                .map(|(id, text)| Original {
-                    id,
-                    text,
-                    local: std::rc::Rc::new(()),
-                }),
-            CallOptions::new().attempts(true).observe(&observer),
-        )
-        .unwrap();
-    assert_eq!(call.facts().records(), 3);
-    assert_eq!(call.facts().requests_sent(), 1);
-    assert_eq!(call.facts().input_tokens(), Some(12));
-    assert_eq!(call.facts().output_tokens(), None);
-    for (row, (ordinal, winner, first, second)) in
-        call.value()
-            .iter()
-            .zip([(0, "first", 1, 1), (1, "first", 2, 3), (2, "second", 3, 2)])
-    {
-        assert_eq!(row.ordinal(), ordinal);
-        assert_eq!(row.original().id, ordinal);
-        assert_eq!(std::rc::Rc::strong_count(&row.original().local), 1);
-        let result = row.result();
-        assert_eq!(result.question_name(), winner);
-        assert_eq!(
-            result
-                .members()
-                .iter()
-                .map(|member| (member.name(), member.result().value()))
-                .collect::<Vec<_>>(),
-            vec![("first", first), ("second", second)]
-        );
-        assert_actual_metadata(result);
-        assert_serialized_members(result, ordinal);
-    }
-    assert_eq!(
-        call.value()
-            .iter()
-            .map(|row| row.result().value())
-            .collect::<Vec<_>>(),
-        vec![1, 2, 3]
-    );
-    assert_eq!(observed.lock().unwrap().len(), 9);
-    assert_eq!(listener.count(), 1);
-    assert_eq!(
-        serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
-        json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{
-            "q1":{"type":"noul","instructions":"The text is \"a\". First?"},"q2":{"type":"noul","instructions":"The text is \"a\". Second?"},
-            "q3":{"type":"noul","instructions":"The text is \"b\". First?"},"q4":{"type":"noul","instructions":"The text is \"b\". Second?"},
-            "q5":{"type":"noul","instructions":"The text is \"c\". First?"},"q6":{"type":"noul","instructions":"The text is \"c\". Second?"}
-        }})
-    );
-    let json: Value = serde_json::from_str(&call.value()[2].result().to_json().unwrap()).unwrap();
-    assert_eq!(json["schema"], "thinkthen.result/2");
-    assert_eq!(json["value"], 3);
-    assert_eq!(json["question_name"], "second");
-    assert_eq!(json["answer"]["probability"], 0.99);
-    assert_eq!(json["meta"]["usage"], json!({"input_tokens":4}));
-}
+use thinkthen::{BatchSetting, QuestionInput, RankSet, RecordObservation};
+#[path = "../support/set_rank.rs"]
+mod set_fixture;
+use set_fixture::SET;
 #[test]
 fn complete_set_rank_duplicate_occurrences_keep_observations_and_replay_ids_across_batch_sizes() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7},"q2":{"type":"noul","noul":0.9},"q3":{"type":"noul","noul":0.4},"q4":{"type":"noul","noul":0.8}}}"#)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let set = RankSet::from_json(SET).unwrap();
-    let call = engine
-        .rank_set_complete_with(&set, ["a", "a", "b"], CallOptions::new())
-        .unwrap();
+    let call = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        (["a", "a", "b"])
+            .into_iter()
+            .map(crate::api::record)
+            .map(Ok),
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(listener.count(), 1);
-    let rows = call.value();
+    let rows = crate::api::set_ranked(&call).unwrap();
     assert_eq!(
         rows.iter().map(|row| row.ordinal()).collect::<Vec<_>>(),
         vec![0, 1, 2]
@@ -190,17 +50,21 @@ fn complete_set_rank_duplicate_occurrences_keep_observations_and_replay_ids_acro
             .all(|source| source.batch_size() == Some(4))
     );
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let held = replay
-        .rank_set_complete_with(
-            &set,
-            ["a", "a", "b"],
-            CallOptions::new().batch(BatchSetting::Records(
-                std::num::NonZeroUsize::new(1).unwrap(),
-            )),
-        )
-        .unwrap();
+    let held = crate::api::whole(
+        &replay,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        (["a", "a", "b"])
+            .into_iter()
+            .map(crate::api::record)
+            .map(Ok),
+        CallOptions::new().batch(BatchSetting::Records(
+            std::num::NonZeroUsize::new(1).unwrap(),
+        )),
+    )
+    .unwrap();
     assert_ne!(call.facts().call_id(), held.facts().call_id());
-    for (one, other) in rows.iter().zip(held.value()) {
+    for (one, other) in rows.iter().zip(crate::api::set_ranked(&held).unwrap()) {
         assert_eq!(
             one.result().result().answer_id(),
             other.result().result().answer_id()
@@ -235,40 +99,54 @@ fn complete_set_rank_admits_every_member_and_empty_input_without_inventing_obser
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener);
     let set = RankSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?","context_schema":{"type":"string"}},"second":{"decide":"Second?","name":"authored_second","item_schema":{"type":"object","properties":{}}}}}"#).unwrap();
-    let error = engine
-        .rank_set_complete_with(&set, ["a", "b"], CallOptions::new())
-        .unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        (["a", "b"]).into_iter().map(crate::api::record).map(Ok),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
         error.detail().message(),
         "the item does not match item_schema"
     );
     assert!(error.facts().is_none());
-    let reader_error = engine
-        .try_rank_set_records_complete_with(
-            &set,
-            [
-                Ok(RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: "a",
-                    context: None,
-                    options: None,
-                }),
-                Err(thinkthen::Error::new(
-                    ErrorKind::Local,
-                    "the input could not be read",
-                )),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let reader_error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        [
+            Ok(thinkthen::RecordInput {
+                context: Some("Ready.".into()),
+                ..thinkthen::RecordReading::new(&[""], None, None)
+                    .unwrap()
+                    .compose(thinkthen::RawRecord::json("{}").unwrap())
+                    .unwrap()
+            }),
+            Err(thinkthen::Error::new(
+                ErrorKind::Local,
+                "the input could not be read",
+            )),
+        ],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(reader_error.kind(), ErrorKind::Local);
     assert!(reader_error.facts().is_none());
-    let empty = engine
-        .rank_set_complete_with(&set, Vec::<&str>::new(), CallOptions::new())
-        .unwrap();
-    assert!(empty.value().is_empty());
+    let empty = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        (Vec::<&str>::new())
+            .into_iter()
+            .map(crate::api::record)
+            .map(Ok),
+        CallOptions::new(),
+    )
+    .unwrap();
+    assert!(crate::api::set_ranked(&empty).unwrap().is_empty());
     assert_eq!(empty.facts().records(), 0);
     assert_eq!(empty.facts().requests_sent(), 0);
     assert_eq!(empty.facts().model(), None);
@@ -281,13 +159,17 @@ fn complete_set_rank_started_member_failure_retains_actual_observer_identity_and
     let set = RankSet::from_json(SET).unwrap();
     let observed = std::sync::Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| observed.lock().unwrap().push(event.to_owned());
-    let error = engine
-        .rank_set_complete_with(
-            &set,
-            ["private-input"],
-            CallOptions::new().attempts(true).observe(&observer),
-        )
-        .unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        (["private-input"])
+            .into_iter()
+            .map(crate::api::record)
+            .map(Ok),
+        CallOptions::new().attempts(true).observe(&observer),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(error.facts().unwrap().requests_sent(), 1);
     assert_eq!(error.facts().unwrap().input_tokens(), Some(887));
@@ -343,17 +225,19 @@ fn complete_set_rank_preserves_selected_objects_typed_context_and_actual_source_
         .unwrap();
     let events = std::sync::Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| events.lock().unwrap().push(event.to_owned());
-    let call = engine
-        .rank_set_records_complete_with(
-            &set,
-            [record, second],
-            CallOptions::new()
-                .context("Unused shared text.")
-                .observe(&observer),
-        )
-        .unwrap();
-    assert_eq!(call.value()[0].result().value(), 1);
-    assert_eq!(call.value()[0].result().members().len(), 2);
+    let call = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        set.clone().into(),
+        ([record, second]).into_iter().map(Ok),
+        CallOptions::new()
+            .context("Unused shared text.")
+            .observe(&observer),
+    )
+    .unwrap();
+    let rows = crate::api::set_ranked(&call).unwrap();
+    assert_eq!(rows[0].result().value(), 1);
+    assert_eq!(rows[0].result().members().len(), 2);
     let document = serde_json::to_value(call.complete().unwrap()).unwrap();
     assert_located_documents(&document);
     assert_rank_schema(&document);

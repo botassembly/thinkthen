@@ -1,5 +1,6 @@
 //! Relate question-file grammar, precedence, and exit classes.
 
+use crate::harness::stderr_is;
 use serde_json::Value;
 
 use super::harness::{CLOSED, run, written};
@@ -28,12 +29,7 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
         br#"[{"name":"Ada","type":"person"},{"name":"Acme","type":"organization"}]"#,
     )
     .expect("binary runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let plan: Value = serde_json::from_slice(
         output
             .stdout
@@ -77,12 +73,7 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
         br#"[{"title":"Ada","type":"person"},{"title":"Acme","type":"organization"}]"#,
     )
     .expect("binary runs");
-    assert_eq!(
-        profiled.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&profiled.stderr)
-    );
+    crate::harness::exits(&profiled, 0);
     let profiled: Value = serde_json::from_slice(
         profiled
             .stdout
@@ -176,26 +167,11 @@ fn named_recognize_and_relate_keep_saved_fields_and_refuse_bad_records_before_se
         };
         let direct = run(&file, valid);
         let lookup = run(&named, valid);
-        assert_eq!(
-            direct.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&direct.stderr)
-        );
-        assert_eq!(
-            lookup.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&lookup.stderr)
-        );
+        crate::harness::exits(&direct, 0);
+        crate::harness::exits(&lookup, 0);
         assert_eq!(lookup.stdout, direct.stdout);
         let rejected = run(&named, invalid);
-        assert_eq!(
-            rejected.status.code(),
-            Some(2),
-            "{}",
-            String::from_utf8_lossy(&rejected.stderr)
-        );
+        crate::harness::exits(&rejected, 2);
         assert!(rejected.stdout.is_empty());
         assert_eq!(listener.connections(), 0);
     }
@@ -220,11 +196,10 @@ fn native_relation_admission_keeps_the_cli_complete_set_count_sentence() {
         entities.as_bytes(),
     )
     .expect("command");
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n"
+    crate::harness::refuses(
+        &output,
+        2,
+        "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n",
     );
     let empty = crate::harness::spawn(
         &[
@@ -240,9 +215,9 @@ fn native_relation_admission_keeps_the_cli_complete_set_count_sentence() {
     )
     .expect("command");
     assert_eq!(empty.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&empty.stderr),
-        "thinkthen: --lines takes only bare relation names or NAME=*:*\n"
+    stderr_is(
+        &empty,
+        "thinkthen: --lines takes only bare relation names or NAME=*:*\n",
     );
     assert!(empty.stdout.is_empty());
     assert_eq!(listener.connections(), 0);

@@ -3,10 +3,6 @@
 use super::{Canned, Listener, Value, json, set, spawn};
 
 #[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "the tier case checks each source and its no-send refusal in one listener"
-)]
 fn top_level_batch_uses_flag_environment_and_file_tiers() {
     let file = set(
         "batch-tier-set",
@@ -51,12 +47,7 @@ fn top_level_batch_uses_flag_environment_and_file_tiers() {
         &[("THINKTHEN_API_KEY", "key"), ("THINKTHEN_BATCH", "1")],
     );
     for result in [&file_result, &environment_result, &flag_result] {
-        assert_eq!(
-            result.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&result.stderr)
-        );
+        crate::harness::exits(result, 0);
         assert_eq!(
             result.stdout.iter().filter(|&&byte| byte == b'\n').count(),
             3
@@ -68,32 +59,19 @@ fn top_level_batch_uses_flag_environment_and_file_tiers() {
         "batch-tier-invalid",
         r#"{"version":1,"batch":0,"questions":{"ready":{"decide":"Ready?"}}}"#,
     );
-    let refused = spawn(
-        &[
-            "annotate",
-            &invalid.to_string_lossy(),
-            "--lines",
-            "--url",
-            listener.base(),
-        ],
+    let refused = crate::harness::annotate(
+        &invalid,
+        &["--lines", "--url", listener.base()],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\n",
     )
     .expect("invalid batch");
     assert_eq!(refused.status.code(), Some(5));
     assert_eq!(listener.requests().len(), 0);
-    let overruled = spawn(
-        &[
-            "annotate",
-            &invalid.to_string_lossy(),
-            "--lines",
-            "--batch",
-            "1",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let overruled = crate::harness::annotate_at(
+        &invalid,
+        listener.base(),
+        &["--lines", "--batch", "1"],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\n",
     )
@@ -117,20 +95,10 @@ fn top_level_batch_does_not_change_the_resolved_set_digest() {
     })
     .expect("listener");
     let run = |file: &std::path::Path| {
-        spawn(
-            &[
-                "annotate",
-                &file.to_string_lossy(),
-                "--lines",
-                "--batch",
-                "1",
-                "--details",
-                "--no-cache",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
+        crate::harness::annotate_at(
+            file,
+            listener.base(),
+            &["--lines", "--batch", "1", "--details", "--no-cache"],
             &[("THINKTHEN_API_KEY", "key")],
             b"one\n",
         )
@@ -186,12 +154,7 @@ fn request_size_flag_overrides_the_environment_close_limit() {
         ("THINKTHEN_MAX_REQUEST_BYTES", "1"),
     ];
     let tight = spawn(&base, &env, b"one\ntwo\nthree\n").expect("tight request size");
-    assert_eq!(
-        tight.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&tight.stderr)
-    );
+    crate::harness::exits(&tight, 0);
     assert_eq!(listener.requests().len(), 3);
     let override_size = spawn(
         &[&base[..], &["--max-request-bytes", "96000"]].concat(),
@@ -199,12 +162,7 @@ fn request_size_flag_overrides_the_environment_close_limit() {
         b"one\ntwo\nthree\n",
     )
     .expect("flag request size");
-    assert_eq!(
-        override_size.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&override_size.stderr)
-    );
+    crate::harness::exits(&override_size, 0);
     assert_eq!(listener.requests().len(), 1);
 }
 
@@ -216,10 +174,9 @@ fn annotate_plan_bounds_wire_occurrences_and_keeps_packed_group_counts() {
     );
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let output = spawn(
+    let output = crate::harness::annotate(
+        &file,
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--batch",
             "2",
@@ -231,12 +188,7 @@ fn annotate_plan_bounds_wire_occurrences_and_keeps_packed_group_counts() {
         b"{\"left\":\"same\",\"right\":\"same\"}\n{\"left\":\"same\",\"right\":\"same\"}\n",
     )
     .expect("annotate plan");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let lines: Vec<Value> = String::from_utf8(output.stdout)
         .expect("UTF-8")
         .lines()

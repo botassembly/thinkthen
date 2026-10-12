@@ -29,11 +29,13 @@ FOUNDATION_EXPORT NSDictionary<NSString *, id> *TTImageBytes(NSData *bytes, NSSt
 - (BOOL)tryPush:(NSDictionary<NSString *, id> *)descriptor accepted:(BOOL *)accepted closed:(BOOL *)closed error:(NSError * _Nullable * _Nullable)error;
 - (BOOL)finish:(nullable NSDictionary<NSString *, id> *)readerFailure error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTSessionPacket *)tryReadEnded:(BOOL *)ended error:(NSError * _Nullable * _Nullable)error;
+/** Consumes nothing and waits at most 50 ms. YES observes input room; NO waits for final output or end after cancellation. The owner remains live through concurrent close. */
+- (BOOL)waitInput:(BOOL)input error:(NSError * _Nullable * _Nullable)error;
 /** Both return before a held provider releases. Cancellation leaves final facts pending. */
 - (void)cancel;
 - (void)close;
 @end
-/** Polls the native queues using one timer; buffers no feed or result queue. */
+/** Waits on native queues from a private dispatch queue; buffers no feed or result queue. */
 @interface TTTask : NSObject
 - (void)cancel;
 @end

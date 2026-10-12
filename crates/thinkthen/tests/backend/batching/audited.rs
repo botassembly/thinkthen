@@ -5,7 +5,7 @@ use std::fs;
 
 use serde_json::{Value, json};
 
-use super::{KEY, QUESTION, answering, details, folder, lines, text};
+use super::{KEY, QUESTION, answering, details, folder, lines};
 use crate::harness::{Listener, spawn};
 use crate::measure_support::measure;
 
@@ -30,7 +30,7 @@ fn saved(
         listener.base(),
     ];
     let output = spawn(&arguments, &[KEY], lines(first..=first + 3).as_bytes()).expect("command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let path = format!("{place}/{name}.jsonl");
     fs::write(&path, &output.stdout).expect("saved results");
     (path, listener.count(), details(&output))

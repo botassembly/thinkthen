@@ -79,17 +79,22 @@ fn shared_state_case() {
     assert_request_counts(&revised, body.len(), revised_high);
     let cap = ordinary.estimated_input_tokens().1 as u64 + 1;
     assert!(cap < revised_high);
-    let denial = build("perplexity", Some(cap))
-        .tag_many_complete_with(&question, ["parcel"], CallOptions::new().context(&evidence))
-        .expect_err("repeated-state estimate exceeds cap");
+    let execute = |name, cap| {
+        crate::api::whole(
+            &build(name, cap),
+            thinkthen::RequestFunction::Tag,
+            question.clone().into(),
+            [Ok(crate::api::record("parcel"))],
+            CallOptions::new().context(&evidence),
+        )
+    };
+    let denial = execute("perplexity", Some(cap)).expect_err("repeated-state estimate exceeds cap");
     assert_eq!(
         denial.estimated_input_denial(),
         Some(EstimatedInputDenial::InitialRequest { limit: cap })
     );
     assert_eq!(listener.count(), 0, "revised admission sends nothing");
-    let ordinary_call = build("typesafe", Some(cap))
-        .tag_many_complete_with(&question, ["parcel"], CallOptions::new().context(&evidence))
-        .expect("ordinary estimate remains admitted");
+    let ordinary_call = execute("typesafe", Some(cap)).expect("ordinary estimate remains admitted");
     assert_eq!(listener.count(), 1);
     assert_request_counts(
         ordinary_call.facts(),
@@ -98,13 +103,7 @@ fn shared_state_case() {
     );
     let tally = thinkthen::Tally::new();
     let revised_call = tally
-        .run(|| {
-            build("perplexity", Some(revised_high + cap)).tag_many_complete_with(
-                &question,
-                ["parcel"],
-                CallOptions::new().context(&evidence),
-            )
-        })
+        .run(|| execute("perplexity", Some(revised_high + cap)))
         .expect("revised estimate admits a raised cap");
     assert_request_counts(revised_call.facts(), body.len(), revised_high);
     assert_request_counts(&tally.facts(), body.len(), revised_high);
@@ -151,11 +150,7 @@ fn final_body_charge_selects_each_limit_and_distinguishes_later_and_retry_denial
         .expect("question")
         .cut();
     let build = |limit| {
-        Engine::builder()
-            .base_url(listener.base())
-            .expect("base")
-            .api_key("sk-test")
-            .expect("fake key")
+        crate::api::builder(listener.base(), "sk-test")
             .no_cache()
             .max_retries(0)
             .max_estimated_input_tokens_total(limit)
@@ -243,11 +238,7 @@ fn retry_refusal(charge: u64, first: u64, question: &Question) {
     let retry_listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("retry listener");
-    let retry = Engine::builder()
-        .base_url(retry_listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("fake key")
+    let retry = crate::api::builder(retry_listener.base(), "sk-test")
         .no_cache()
         .max_retries(1)
         .max_estimated_input_tokens_total(Some(charge * 4))
@@ -289,11 +280,7 @@ fn held_race(charge: u64, first: u64, question: &Question) {
         })
         .collect();
     let build = |base: &str| {
-        Engine::builder()
-            .base_url(base)
-            .expect("base")
-            .api_key("sk-test")
-            .expect("fake key")
+        crate::api::builder(base, "sk-test")
             .no_cache()
             .max_retries(0)
             .max_estimated_input_tokens_total(Some(charge * 5))
@@ -359,11 +346,7 @@ fn cached_answer(charge: u64, first: u64, question: &Question) {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("cache listener");
     let folder = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("estimated-cache-{}", std::process::id()));
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("fake key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .cache_at(&folder)
         .expect("cache folder")
         .max_retries(0)
@@ -406,11 +389,7 @@ fn replayed_answer(charge: u64, first: u64, question: &Question) {
     let folder = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("estimated-replay-{}", std::process::id()));
     let base = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .expect("base")
-            .api_key("sk-test")
-            .expect("fake key")
+        crate::api::builder(listener.base(), "sk-test")
             .no_cache()
             .max_retries(0)
             .max_estimated_input_tokens_total(Some(charge * 7))
@@ -454,11 +433,7 @@ fn mixed_settings(charge: u64, first: u64, question: &Question) {
             .expect("A listener");
     let b_listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("B listener");
     let build = |base: &str, limit| {
-        Engine::builder()
-            .base_url(base)
-            .expect("base")
-            .api_key("sk-test")
-            .expect("fake key")
+        crate::api::builder(base, "sk-test")
             .no_cache()
             .max_retries(0)
             .max_estimated_input_tokens_total(limit)
@@ -539,11 +514,7 @@ fn absent_usage_still_charges(charge: u64, first: u64, question: &Question) {
         })
         .expect("listener");
         let limit = charge * number;
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .expect("base")
-            .api_key("sk-test")
-            .expect("fake key")
+        let engine = crate::api::builder(listener.base(), "sk-test")
             .no_cache()
             .max_retries(0)
             .max_estimated_input_tokens_total(Some(limit))
@@ -582,3 +553,6 @@ fn absent_usage_still_charges(charge: u64, first: u64, question: &Question) {
         assert_eq!(listener.count(), 1, "denial sent nothing");
     }
 }
+
+#[path = "support/api.rs"]
+mod api;

@@ -1,11 +1,11 @@
 //! The compiled binary over many records: the framing, the order, and the stop.
 
+use crate::harness::{Canned, Listener, spawn_one as spawn, spawn_one_local};
+pub(crate) use crate::harness::{printed, said};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 mod record_rows;
 
@@ -88,11 +88,6 @@ fn quoted(listener: &Listener) -> Vec<String> {
         .collect()
 }
 
-/// What the run printed on standard output.
-fn printed(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
 fn value_row(input: &str, value: &str) -> String {
     format!("{{\"input\":{input},\"value\":{value}}}\n")
 }
@@ -103,11 +98,6 @@ fn record_values(values: &[bool]) -> String {
         .zip(values)
         .map(|(record, value)| value_row(record, &value.to_string()))
         .collect()
-}
-
-/// What the run said on standard error.
-fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 /// A file under the test's own temporary folder, holding this text.
@@ -222,18 +212,9 @@ fn a_record_that_is_not_text_stops_the_run_at_exit_five() {
     let mut input = b"{\"body\":\"The payout failed again.\"}\n{\"body\":\"".to_vec();
     input.extend_from_slice(&[0xff, 0xfe]);
     input.extend_from_slice(b"\"}\n");
-    let output = spawn(
-        &[
-            "decide",
-            QUESTION,
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--jsonl",
-            "--field",
-            "/body",
-        ],
+    let output = spawn_one_local(
+        &["decide", QUESTION, "--jsonl", "--field", "/body"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         &input,
     )
@@ -493,16 +474,12 @@ fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
     );
     let listener =
         Listener::serving(vec![Canned::ok(PICKED), Canned::ok(CLOSE)]).expect("a listener");
-    let output = spawn(
+    let output = spawn_one_local(
         &[
             "choose",
             "Which team owns this?",
             "billing",
             "shipping",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--threshold",
             "0.8",
             "--raw",
@@ -510,6 +487,7 @@ fn choose_raw_prints_an_empty_line_for_an_unresolved_record() {
             "--jobs",
             "1",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"first line\nsecond line\n",
     )

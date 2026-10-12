@@ -32,12 +32,7 @@ fn one_member_matches_plain_rank_bytes_requests_keys_and_detailed_answer() -> io
             &[&["--batch", "1"][..], &view].concat(),
             b"a\nb\nc\n",
         )?;
-        assert_eq!(
-            multiple.status.code(),
-            Some(0),
-            "{}",
-            text(&multiple.stderr)
-        );
+        crate::harness::exits(&multiple, 0);
         assert_eq!(ordinary.stdout, multiple.stdout);
         assert_eq!(
             listener
@@ -170,7 +165,7 @@ fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -
             &[&["--replay", record.to_str().expect("record")][..], &view].concat(),
             b"a\nb\nc\n",
         )?;
-        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+        crate::harness::exits(&result, 0);
         assert_eq!(result.stdout, expected.as_bytes());
         assert_eq!(listener.connections(), count);
     }
@@ -184,7 +179,7 @@ fn individual_member_recordings_replay_sets_and_rename_reorder_without_sends() -
         &["--replay", record.to_str().expect("record")],
         b"a\nb\nc\n",
     )?;
-    assert_eq!(result.status.code(), Some(5), "{}", text(&result.stderr));
+    crate::harness::exits(&result, 5);
     assert!(result.stdout.is_empty());
     assert_eq!(listener.connections(), count);
     Ok(())
@@ -198,7 +193,7 @@ fn normal_cache_reuses_members_and_sends_only_missing_questions() -> io::Result<
     let set = saved("rank-set-cache", SET)?;
     let fixed = ["--cache", cache.to_str().expect("cache")];
     let first = call(&listener, &set, &fixed, b"a\nb\nc\n")?;
-    assert_eq!(first.status.code(), Some(0), "{}", text(&first.stderr));
+    crate::harness::exits(&first, 0);
     let count = listener.connections();
     let second = call(
         &listener,
@@ -214,7 +209,7 @@ fn normal_cache_reuses_members_and_sends_only_missing_questions() -> io::Result<
     )?;
     listener.requests();
     let result = call(&listener, &extended, &fixed, b"a\nb\nc\n")?;
-    assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    crate::harness::exits(&result, 0);
     let bodies = listener.requests();
     assert!(!bodies.is_empty());
     for request in bodies {
@@ -242,7 +237,7 @@ fn mixed_structured_and_text_members_keep_individual_wire_identity_in_any_order(
             &["--batch", "1", "--record", record.to_str().expect("record")],
             b"alpha\nbeta\n",
         )?;
-        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+        crate::harness::exits(&result, 0);
     }
     assert_eq!(stored(&record)?.len(), 4);
     let count = listener.connections();
@@ -263,7 +258,7 @@ fn mixed_structured_and_text_members_keep_individual_wire_identity_in_any_order(
             &["--details", "--replay", record.to_str().expect("record")],
             b"alpha\nbeta\n",
         )?;
-        assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+        crate::harness::exits(&result, 0);
         let rows: Vec<Value> = text(&result.stdout)
             .lines()
             .map(|line| serde_json::from_str(line).expect("detail"))
@@ -328,7 +323,7 @@ fn first_structured_member_does_not_change_selecting_text_members_batch_metadata
         )
     })?;
     let result = call(&listener, &question, &["--details"], b"alpha\nbeta\n")?;
-    assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    crate::harness::exits(&result, 0);
     let rows: Vec<Value> = text(&result.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).expect("detail"))
@@ -378,7 +373,7 @@ fn selecting_member_details_have_own_probability_with_complete_set_digest_and_re
         &["--batch", "1", "--details"],
         b"a\nb\nc\n",
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let rows: Vec<Value> = text(&output.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).expect("details"))
@@ -423,7 +418,7 @@ fn equal_text_positions_and_repeated_sources_survive_stable_member_ties() -> io:
     let file = file.to_str().expect("path");
     let listener = Listener::answering(crate::input_sources::answer)?;
     let output = call(&listener, &question, &["-n", file, file], b"")?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(
         output.stdout,
         format!("{file}:1:same\n{file}:3:same\n{file}:1:same\n{file}:3:same\n").as_bytes()

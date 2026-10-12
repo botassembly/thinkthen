@@ -286,12 +286,7 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
             "--no-cache",
         ];
         let output = super::spawn(&[&options[..], &["--plan"]].concat(), &[], b"Ada").unwrap();
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, 0);
         let stdout = String::from_utf8(output.stdout).unwrap();
         let rows = stdout
             .lines()
@@ -318,7 +313,7 @@ fn contextual_probe_admits_complete_menu_and_plan_maxima_exclude_probe() {
             assert_eq!(output.status.code(), Some(2));
             assert_eq!(listener.count(), 2);
             assert!(output.stdout.is_empty());
-            assert!(!String::from_utf8_lossy(&output.stderr).contains("context\""));
+            assert!(!crate::harness::said(&output).contains("context\""));
         }
         let engine = builder(&listener, backend)
             .profile_json(

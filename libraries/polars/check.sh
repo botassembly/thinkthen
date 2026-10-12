@@ -55,21 +55,25 @@ RUSTFRAME
     consumer="$installed/consumer/Cargo.toml"
 else
 set -- --locked --offline --package thinkthen --features polars
-cargo clippy "$@" --lib --bins --test polars -- -D warnings
-cargo clippy "$@" --no-default-features --lib -- -D warnings
+if [ "$profile" != full ]; then
+    cargo clippy "$@" --lib --bins --test polars -- -D warnings
+    cargo clippy "$@" --no-default-features --lib -- -D warnings
+fi
 if [ "$profile" = stress ]; then
     cargo test "$@" --test polars throttle_equality::two_hundred_series_records_match_the_slice -- --ignored --exact
     exit 0
 fi
-cargo test "$@" --test polars
+if [ "$profile" != full ]; then cargo test "$@" --test polars; fi
 if [ "$profile" = full ]; then
     cargo test "$@" --test polars release_only_ -- --ignored
 fi
-cargo test "$@" --doc PolarsEngine
+if [ "$profile" != full ]; then cargo test "$@" --doc PolarsEngine; fi
 fi
 
 # Actual frame consumers reuse the same native corpus, framing and projectors.
-cargo clippy --locked --offline --manifest-path "$consumer" --all-targets -- -D warnings
+if [ "$profile" != full ]; then
+    cargo clippy --locked --offline --manifest-path "$consumer" --all-targets -- -D warnings
+fi
 cargo build --locked --offline --manifest-path "$consumer"
 python3 - "$PWD" "$CARGO_TARGET_DIR/debug/thinkthen-polars-consumer" <<'PYFRAME'
 import sys

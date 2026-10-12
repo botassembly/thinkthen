@@ -7,7 +7,6 @@
 #![cfg(feature = "cli")]
 
 mod harness;
-use crate::wait;
 
 mod corpus;
 mod grammar;

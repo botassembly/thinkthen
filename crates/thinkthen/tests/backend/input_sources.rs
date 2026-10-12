@@ -1,6 +1,7 @@
 //! Shared seven-command file intake, document run exits and text windows.
 
-use crate::harness::{Canned, Listener, spawn};
+pub(crate) use crate::harness::text;
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use serde_json::{Value, json};
 use std::fs;
 use std::io;
@@ -13,9 +14,6 @@ pub(super) fn folder(name: &str) -> io::Result<PathBuf> {
     Ok(path)
 }
 
-pub(super) fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
-}
 fn rows(output: &Output) -> Vec<Value> {
     text(&output.stdout)
         .lines()
@@ -91,12 +89,7 @@ fn seven_commands_read_files_in_order_and_restart_positions() -> io::Result<()> 
             ]
             .concat(),
         )?;
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
         assert_eq!(listener.requests().len(), 4, "{verb}");
         let rows = rows(&output);
         assert_eq!(rows.len(), 4, "{verb}");
@@ -151,7 +144,7 @@ fn documents_keep_single_exits_and_complete_multiple_answers_as_a_run() -> io::R
             &multi,
             &["decide", "Clear?", "--threshold", threshold, one, two],
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        exits(&output, 0);
         assert_eq!(
             rows(&output),
             [
@@ -175,7 +168,7 @@ fn later_document_failure_keeps_the_completed_prefix_and_actual_error() -> io::R
     let two = two.to_str().expect("path");
     let listener = Listener::answering(answer)?;
     let output = call(&listener, &["decide", "Clear?", one, two])?;
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(rows(&output), [json!({"input_file":one,"value":true})]);
     fs::write(two, "two")?;
@@ -187,7 +180,7 @@ fn later_document_failure_keeps_the_completed_prefix_and_actual_error() -> io::R
         }
     })?;
     let output = call(&listener, &["decide", "Clear?", one, two])?;
-    assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+    exits(&output, 4);
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(rows(&output), [json!({"input_file":one,"value":true})]);
     Ok(())
@@ -242,12 +235,7 @@ fn windows_preserve_blanks_final_lines_and_file_edges() -> io::Result<()> {
             ]
             .concat(),
         )?;
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
         let rows = rows(&output);
         assert_eq!(
             rows.iter().map(|r| r["input"].clone()).collect::<Vec<_>>(),
@@ -331,7 +319,7 @@ fn each_table_file_has_a_header_and_no_position() -> io::Result<()> {
                 two.to_str().expect("path"),
             ],
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        exits(&output, 0);
         let rows = rows(&output);
         assert_eq!(rows.len(), 2);
         assert_eq!(rows[1]["input"], json!({"id":"2","text":"second"}));
@@ -363,7 +351,7 @@ fn empty_and_blank_windows_advance_positions_without_sends() -> io::Result<()> {
             blank.to_str().expect("path"),
         ],
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert_eq!(listener.requests().len(), 1);
     let rows = rows(&output);
     assert_eq!(rows.len(), 1);
@@ -403,12 +391,9 @@ fn release_only_joined_window_size_is_checked_before_admission() -> io::Result<(
                 file.to_str().expect("path"),
             ],
         )?;
-        assert_eq!(
-            output.status.code(),
-            Some(if extra == 0 { 0 } else { 2 }),
-            "ending {ending:?}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, if extra == 0 { 0 } else { 2 }, || {
+            format!("ending {ending:?}: {}", text(&output.stderr))
+        });
     }
     assert_eq!(listener.connections(), 0);
     Ok(())
@@ -452,7 +437,7 @@ fn batches_and_splits_preserve_global_labels_and_file_positions() -> io::Result<
             ]
             .concat(),
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        exits(&output, 0);
         let rows = rows(&output);
         assert_eq!(rows.len(), 4);
         assert_eq!(

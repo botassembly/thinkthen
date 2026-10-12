@@ -12,7 +12,7 @@ use crate::ffi::values::{
 };
 use crate::ffi::{carriers::ControlsV1, current::read};
 use crate::{
-    Door,
+    EngineHandle,
     complete::{self, ResultHandle, streaming},
     current::{Content, QuestionHandle, SourceHandle},
 };
@@ -87,7 +87,7 @@ fn backing(
 }
 
 unsafe fn start(
-    engine: *const Door,
+    engine: *const EngineHandle,
     kind: u32,
     question: *const QuestionHandle,
     source: *const SourceHandle,
@@ -207,7 +207,7 @@ unsafe fn start(
 /// through the complete calls; they have no invented lazy batch interface.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -221,7 +221,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_batch_start(
 /// The installed header specifies counted storage, engine and same-thread lifetimes.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_choose_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -235,7 +235,7 @@ pub(crate) unsafe extern "C" fn thinkthen_choose_batch_start(
 /// The installed header specifies counted storage, engine and same-thread lifetimes.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_tag_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -249,7 +249,7 @@ pub(crate) unsafe extern "C" fn thinkthen_tag_batch_start(
 /// The installed header specifies counted storage, engine and same-thread lifetimes.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_score_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -263,7 +263,7 @@ pub(crate) unsafe extern "C" fn thinkthen_score_batch_start(
 /// The installed header specifies counted storage, engine and same-thread lifetimes.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_filter_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -277,7 +277,7 @@ pub(crate) unsafe extern "C" fn thinkthen_filter_batch_start(
 /// The installed header specifies counted storage, engine and same-thread lifetimes.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_annotate_batch_start(
-    e: *const Door,
+    e: *const EngineHandle,
     q: *const QuestionHandle,
     s: *const SourceHandle,
     c: *const ControlsV1,
@@ -309,7 +309,11 @@ pub(crate) unsafe extern "C" fn thinkthen_batch_next(
                     .as_mut()
                     .and_then(|native| native.next(&batch.events))
             })
-            .unwrap_or_else(|| Some(Err(Failure::defect("a panic crossed the C batch door"))));
+            .unwrap_or_else(|| {
+                Some(Err(Failure::defect(
+                    "a panic crossed the C batch interface",
+                )))
+            });
             if let Some(native) = &batch.native {
                 batch.facts = native.facts().cloned();
             }

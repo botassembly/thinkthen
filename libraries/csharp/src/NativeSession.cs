@@ -13,5 +13,7 @@ internal static class NativeSession
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern void thinkthen_session_result_free(IntPtr packet);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_result_json(PacketHandle packet, out IntPtr json, out nuint length);
     [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_session_error_message();
-    internal static void Check(int code) { if (code != 0) throw new Failure(code, false, Marshal.PtrToStringUTF8(thinkthen_session_error_message()) ?? "Native session failure.", null); }
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_error_retryable();
+    [DllImport(Library, CallingConvention=CallingConvention.Cdecl)] internal static extern IntPtr thinkthen_session_error_facts_json();
+    internal static void Check(int code) { if (code != 0) throw new Failure(code, thinkthen_session_error_retryable() != 0, Marshal.PtrToStringUTF8(thinkthen_session_error_message()) ?? "Native session failure.", Marshal.PtrToStringUTF8(thinkthen_session_error_facts_json())); }
 }

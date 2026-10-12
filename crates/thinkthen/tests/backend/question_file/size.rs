@@ -54,12 +54,7 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
         let fits = written(&format!("size-{verb}-fits"), &padded(text, LIMIT));
         let output = run(&[verb, &fits, "--plan", "--url", &url], evidence.as_bytes())
             .expect("the compiled binary runs");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits_because(&output, 0, || verb.to_owned());
 
         let over = written(&format!("size-{verb}-over"), &padded(text, LIMIT + 1));
         let mut files = vec![(over.as_str(), "the question file is too large")];
@@ -81,7 +76,7 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
             .expect("the compiled binary runs");
             assert_eq!(output.status.code(), Some(5), "{verb} {file}");
             assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
+                crate::harness::said(&output),
                 format!("thinkthen: {sentence}\n"),
                 "{verb} {file}"
             );
@@ -106,10 +101,7 @@ fn a_broken_question_set_beside_an_endless_input_fails_without_reading_it_all() 
     )
     .expect("the compiled binary runs");
     assert_eq!(
-        (
-            output.status.code(),
-            String::from_utf8_lossy(&output.stderr)
-        ),
+        (output.status.code(), crate::harness::said(&output)),
         (
             Some(5),
             "thinkthen: `questions` holds at least one named question\n".into()

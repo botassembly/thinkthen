@@ -90,5 +90,5 @@ fn a_cache_mixes_a_hit_and_a_miss() {
     .expect("mixed run");
     assert_eq!(second.status.code(), Some(0));
     assert_eq!(listener.requests().len(), 2);
-    assert_eq!(String::from_utf8_lossy(&second.stdout).lines().count(), 2);
+    assert_eq!(crate::harness::printed(&second).lines().count(), 2);
 }

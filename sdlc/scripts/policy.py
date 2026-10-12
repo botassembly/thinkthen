@@ -2648,6 +2648,28 @@ def marker_failures(hits: list[str]) -> list[str]:
     return found
 
 
+def obsolete_interface_failures(sources: dict[str, str]) -> list[str]:
+    """Reject obsolete API terminology in shipped source and header documentation."""
+    return [f"{path}:{number} names the obsolete C interface"
+            for path, text in sources.items() for number, line in enumerate(text.splitlines(), 1)
+            if re.search(r"\bdoor\b|\bDoor(?:[A-Z]\w*)?\b|\bdoor_\w+", line)]
+
+
+def check_interface_names() -> None:
+    for planted in ("pub struct Door;", "pub struct DoorReply;", "mod door;",
+                    "/// The C door.", 'const MESSAGE: &str = "a door failed";'):
+        if not obsolete_interface_failures({"src/planted.rs": planted}):
+            fail("interface", "obsolete terminology must fail in identifiers, docs and diagnostics")
+    roots = (REPO / "crates/thinkthen/src", REPO / "libraries/c/src")
+    sources = {str(path.relative_to(REPO)): path.read_text(encoding="utf-8")
+               for root in roots for path in root.rglob("*.rs")
+               if not is_test_source(str(path.relative_to(REPO)))}
+    header = "libraries/c/include/thinkthen.h"
+    sources[header] = (REPO / header).read_text(encoding="utf-8")
+    for failure in obsolete_interface_failures(sources):
+        fail("interface", failure)
+
+
 def check_markers() -> None:
     prefixes = ("#", "//", "//!", "--", "/*", " *", "*>", "<!--")
     if not all(marker_failures([f"src/planted:1:{prefix} {MARKERS[0]}: planted"]) for prefix in prefixes):
@@ -2708,6 +2730,7 @@ def main() -> int:
     check_facade()
     check_sources()
     check_seam()
+    check_interface_names()
     check_license_grammar()
     check_dependencies()
     check_recordings()

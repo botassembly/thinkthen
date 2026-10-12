@@ -1,11 +1,10 @@
 //! The size one record may reach before the tool refuses to judge it.
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::io;
 use std::process::Output;
 
 use crate::support::MAX_RECORD_BYTES;
-
-use crate::harness::{Canned, Listener, spawn};
 
 /// The sentence a record past the limit is refused with.
 const REFUSED: &str =
@@ -61,16 +60,16 @@ fn release_only_a_record_over_the_limit_stops_the_run_and_sends_nothing_for_itse
 
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!(
             r#"{"input":{"id":"R-1","body":"The payout failed again."},"value":true}"#,
             "\n",
         )
     );
     assert_eq!(listener.requests().len(), 1);
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        format!("{REFUSED}thinkthen: stopped at record 2; 1 record finished\n")
+    stderr_is(
+        &output,
+        format!("{REFUSED}thinkthen: stopped at record 2; 1 record finished\n"),
     );
 }
 
@@ -83,9 +82,7 @@ fn release_only_a_document_over_the_limit_is_refused_before_any_request() {
     let output = decide(listener.base(), &[], &wide(MAX_RECORD_BYTES + 1))
         .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED);
+    crate::harness::refuses(&output, 2, REFUSED);
     assert!(listener.requests().is_empty());
 }
 
@@ -107,9 +104,9 @@ fn release_only_the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record(
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
     assert!(listener.requests().is_empty(), "the tail was sent");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished\n")
+    stderr_is(
+        &output,
+        format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished\n"),
     );
 }
 
@@ -134,15 +131,15 @@ fn the_estimated_input_variable_refuses_before_any_send_and_the_flag_outranks_it
         .expect("the compiled binary runs")
     };
     let capped = run("10", &[]);
-    assert_eq!(
-        String::from_utf8_lossy(&capped.stderr),
-        "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"
+    stderr_is(
+        &capped,
+        "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n",
     );
     assert_eq!(capped.status.code(), Some(2));
     let malformed = run("1.5", &[]);
-    assert_eq!(
-        String::from_utf8_lossy(&malformed.stderr),
-        "thinkthen: THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more\n"
+    stderr_is(
+        &malformed,
+        "thinkthen: THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more\n",
     );
     assert_eq!(malformed.status.code(), Some(2));
     assert!(listener.requests().is_empty());

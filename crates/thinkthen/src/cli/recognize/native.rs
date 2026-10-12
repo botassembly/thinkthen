@@ -112,7 +112,7 @@ pub(super) fn run(
             .is_none_or(crate::asking::native_reader::Reader::ready)
     };
     let readiness =
-        crate::public::cli_reader::CliReader::new(&ready, running.environment.input_pause());
+        crate::public::readiness::Readiness::new(&ready, running.environment.input_pause());
     if let Some(reader) = &reader {
         reader.wake(readiness.wake());
     }
@@ -143,7 +143,7 @@ pub(super) fn run(
         .interrupt(&signal)
         .surface(crate::Surface::Cli)
         .attempts(running.common.details)
-        .cli_reader(&readiness)
+        .readiness(&readiness)
         .cli_text_limit(running.max_text_bytes);
     if let Some(context) = running.context.as_deref() {
         controls = controls.context(context);

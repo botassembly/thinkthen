@@ -10,7 +10,7 @@ use std::fs;
 use std::process::Command;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Engine, EngineBuilder, ErrorKind, Question};
+use thinkthen::{EngineBuilder, ErrorKind, Question};
 
 const REFUSAL: &str = "the backend address contains the API key; keep the key out of the address";
 
@@ -21,12 +21,7 @@ fn public_builder_checks_the_final_effective_key_before_local_effects() {
         ("systemone", "http://localhost"),
         ("秘密", "http://localhost/秘密"),
     ] {
-        let builder = Engine::builder()
-            .base_url(base)
-            .expect("safe loopback base")
-            .api_key(key)
-            .expect("synthetic key")
-            .no_cache();
+        let builder = crate::api::builder(base, key).no_cache();
         let debug = format!("{builder:?}");
         assert!(!debug.contains(base));
         assert!(!debug.contains(key));
@@ -37,11 +32,7 @@ fn public_builder_checks_the_final_effective_key_before_local_effects() {
     }
 
     // The URL is compared literally. Its percent-encoded path is not decoded.
-    Engine::builder()
-        .base_url("http://localhost/%E7%A7%98%E5%AF%86")
-        .expect("safe base")
-        .api_key("秘密")
-        .expect("synthetic key")
+    crate::api::builder("http://localhost/%E7%A7%98%E5%AF%86", "秘密")
         .no_cache()
         .build()
         .expect("a different byte spelling is safe");
@@ -104,11 +95,7 @@ fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
     })
     .expect("loopback listener");
     let base = format!("{}/gateway-marker-0210", listener.base());
-    let engine = Engine::builder()
-        .base_url(&base)
-        .expect("base")
-        .api_key("different-key-0210")
-        .expect("key")
+    let engine = crate::api::builder(&base, "different-key-0210")
         .no_cache()
         .build()
         .expect("safe gateway");

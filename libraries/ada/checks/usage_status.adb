@@ -43,7 +43,11 @@ begin
       Finish (Owner);
       loop
          Try_Read (Owner, Output, Read);
-         if Read = Pending then delay 0.001;
+         if Read = Pending then declare
+               Ready : Interfaces.Unsigned_32;
+            begin
+               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
+            end;
          elsif Read = Result then
             if View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1 then exit; end if;
          else raise Program_Error with "missing owned answer";
@@ -52,7 +56,11 @@ begin
       Require (View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1);
       loop
          Try_Read (Owner, Terminal, Read);
-         if Read = Pending then delay 0.001;
+         if Read = Pending then declare
+               Ready : Interfaces.Unsigned_32;
+            begin
+               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
+            end;
          elsif Read = Result then
             if View (Terminal).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then exit; end if;
          else raise Program_Error with "missing terminal facts";

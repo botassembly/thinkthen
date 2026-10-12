@@ -1,8 +1,9 @@
-//! Additive concrete complete calls retain the existing transport and scalar doors.
+//! Additive concrete complete calls retain the existing transport and scalar interfaces.
 mod annotate;
 mod dynamic_choose;
 mod find;
-mod many;
+#[cfg(test)]
+mod ownership_tests;
 mod rank;
 mod rank_set;
 pub(crate) mod recognize;
@@ -10,8 +11,7 @@ pub(in crate::public) mod records;
 pub(crate) mod relate;
 mod streaming;
 use crate::core::{self, Value};
-use crate::public::engine::only;
-use crate::public::question::{Kind, Question};
+use crate::public::question::Question;
 use crate::public::{
     self, Call, CallOptions, CompleteChoice, CompleteDecision, CompleteScore, CompleteTags,
     DecisionQuestion, DetailQuestion, Engine, Error, InputFunction, QuestionInput,
@@ -43,24 +43,11 @@ pub(in crate::public) fn preview_asks(
 }
 
 impl Engine {
-    /// Complete yes/no result with identity and every probability.
-    ///
-    /// # Errors
-    /// Uses the same admission, cancellation and backend failures as decide_with.
-    pub fn decide_complete_with<Q: DecisionQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteDecision>, Error> {
-        self.decide_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
-    }
-
     /// Complete decision for explicitly typed text or ordered images.
     ///
     /// # Errors
     /// Refuses unsupported image routes before sending, otherwise as decide_with.
-    pub fn decide_input_complete_with<Q: DecisionQuestion + ?Sized>(
+    pub(crate) fn decide_input_complete_with<Q: DecisionQuestion + ?Sized>(
         &self,
         question: &Q,
         input: &QuestionInput,
@@ -70,24 +57,11 @@ impl Engine {
             .try_map(decision)
     }
 
-    /// Complete choice retains every ordered declared option's probability.
-    ///
-    /// # Errors
-    /// Uses the same admission and call errors as choose_with.
-    pub fn choose_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteChoice>, Error> {
-        self.choose_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
-    }
-
     /// Complete choice for explicitly typed text or ordered images.
     ///
     /// # Errors
     /// Refuses unsupported images and non-choice questions before sending.
-    pub fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
+    pub(crate) fn choose_input_complete_with<Q: DetailQuestion + ?Sized>(
         &self,
         question: &Q,
         input: &QuestionInput,
@@ -97,43 +71,11 @@ impl Engine {
             .try_map(choice)
     }
 
-    /// Complete tag result retains selected and rejected labels' probabilities.
-    ///
-    /// # Errors
-    /// Refuses non-tag questions; otherwise uses the existing tag call failures.
-    pub fn tag_complete_with<Q: DetailQuestion + ?Sized>(
-        &self,
-        question: &Q,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteTags>, Error> {
-        self.atomic_complete(
-            InputFunction::Tag,
-            question.question(),
-            &QuestionInput::Text(text.to_owned()),
-            options,
-        )?
-        .try_map(tags)
-    }
-
-    /// Complete score retains the weighted reading and the full distribution.
-    ///
-    /// # Errors
-    /// Uses the same admission and call errors as score_with.
-    pub fn score_complete_with(
-        &self,
-        question: &Question,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteScore>, Error> {
-        self.score_input_complete_with(question, &QuestionInput::Text(text.to_owned()), options)
-    }
-
     /// Complete score for explicitly typed text or ordered images.
     ///
     /// # Errors
     /// Refuses unsupported images and non-score questions before sending.
-    pub fn score_input_complete_with(
+    pub(crate) fn score_input_complete_with(
         &self,
         question: &Question,
         input: &QuestionInput,
@@ -143,53 +85,15 @@ impl Engine {
             .try_map(score)
     }
 
-    fn atomic_complete(
+    pub(in crate::public) fn atomic_complete(
         &self,
         function: InputFunction,
         question: &Question,
         input: &QuestionInput,
         options: CallOptions<'_>,
     ) -> Result<Call<core::CompleteAtomic>, Error> {
-        admitted(function, question)?;
-        let call = self.keyed_input(question, input, options)?;
-        let attempts = call.facts().attempts().map(<[_]>::to_vec);
-        let engine = self.asking(question)?;
-        call.try_map(|(judged, keys)| {
-            let mut result = atomic(
-                run(&engine, question, self.profile.as_ref()),
-                &judged,
-                spec(function, question, judged.value.clone(), 0),
-                keys,
-                None,
-                attempts,
-            )
-            .map_err(|_| Error::defect("a complete result could not be constructed"))?;
-            result.source = physical_source(input);
-            result.images = ancillary_images(input);
-            Ok(result)
-        })
+        crate::public::request::scalar(self, function, question, input, options)
     }
-}
-
-fn admitted(function: InputFunction, question: &Question) -> Result<(), Error> {
-    let kinds: &[Kind] = match function {
-        InputFunction::Decide => &[Kind::Decide, Kind::Banded],
-        InputFunction::Choose => &[Kind::Choose],
-        InputFunction::Tag => &[Kind::Tag],
-        InputFunction::Score => &[Kind::Score],
-        InputFunction::Filter => &[Kind::Decide],
-        InputFunction::Rank => &[Kind::Rank, Kind::Score],
-        _ => return Err(Error::defect("a set function entered atomic admission")),
-    };
-    if function == InputFunction::Rank
-        && (question.threshold.is_some_and(|rule| !rule.is_cut())
-            || (question.kind == Kind::Score && question.threshold.is_some()))
-    {
-        return Err(Error::usage(
-            "rank cutoff requires a decide probability and never a band",
-        ));
-    }
-    only(question, kinds, function.name())
 }
 
 fn run<'a>(
@@ -233,7 +137,12 @@ fn batch_run<'a>(
     result
 }
 
-fn spec(function: InputFunction, question: &Question, shown: Value, record: usize) -> AtomicSpec {
+pub(in crate::public) fn spec(
+    function: InputFunction,
+    question: &Question,
+    shown: Value,
+    record: usize,
+) -> AtomicSpec {
     AtomicSpec {
         declarations: question.reading_metadata(),
         function,

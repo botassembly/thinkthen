@@ -6,21 +6,25 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":0.2,"u002":0.3,"none":0.5},"confidence":0.6}},"usage":{"input_tokens":887}}"#)).unwrap();
     let engine = engine(&listener);
     let question = Question::find("Where?").unwrap().offering_none().unwrap();
-    let found = engine
-        .find_complete_with(
-            &question,
-            ["first", "second"],
-            CallOptions::new().context("  context\n").attempts(true),
-        )
-        .unwrap();
+    let found = crate::api::find(
+        &engine,
+        &question,
+        crate::api::plain_records(["first", "second"]),
+        CallOptions::new().context("  context\n").attempts(true),
+    )
+    .unwrap();
     schema::call(&found, "completeFind");
-    assert_eq!(found.value().selected(), None);
-    assert_eq!(found.value().raw_pick(), "none");
-    assert!(found.value().question().offers_none());
-    assert_eq!(found.value().candidates()[0].input(), Some(&"first"));
-    assert_eq!(found.value().candidates()[2].probability(), 0.5);
-    assert!(found.value().candidates()[2].is_none());
-    let row: Value = serde_json::from_str(&found.value().to_json().unwrap()).unwrap();
+    let result = crate::api::found(&found).unwrap();
+    assert_eq!(result.selected(), None);
+    assert_eq!(result.raw_pick(), "none");
+    assert!(result.question().offers_none());
+    assert_eq!(
+        result.candidates()[0].input(),
+        Some(&thinkthen::QuestionInput::Text("first".into()))
+    );
+    assert_eq!(result.candidates()[2].probability(), 0.5);
+    assert!(result.candidates()[2].is_none());
+    let row: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
     assert_eq!(row["schema"], "thinkthen.result/2");
     assert_eq!(row["value"], Value::Null);
     assert_eq!(
@@ -29,7 +33,7 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
     );
     assert_eq!(row["meta"]["usage"], json!({"input_tokens":887}));
     assert_eq!(row["meta"]["attempts"].as_array().unwrap().len(), 1);
-    find_metadata(found.value().meta());
+    find_metadata(result.meta());
     let request: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(
         request["state"],
@@ -52,13 +56,13 @@ fn native_annotation_keeps_member_null_failure_order_and_actual_batch_sources() 
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}},"q3":{"type":"noul","noul":0.5}},"usage":{"input_tokens":9}}"#)).unwrap();
     let engine = engine(&listener);
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
-    let rows = engine
-        .annotate_complete_with(
-            &set,
-            ["Original."],
-            CallOptions::new().context("Separate.").attempts(true),
-        )
-        .unwrap();
+    let rows = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Original."]),
+        CallOptions::new().context("Separate.").attempts(true),
+    )
+    .unwrap();
     schema::call(&rows, "completeAnnotation");
     assert_eq!(rows.value()[0].original(), &"Original.");
     let result = rows.value()[0].result();
@@ -196,13 +200,7 @@ pub(super) fn recognized_response(body: &[u8]) -> Canned {
 fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_usage() {
     let listener = Listener::answering(recognized_response).unwrap();
     let folder = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .cache_at(&folder)
         .unwrap()
         .max_retries(0)
@@ -217,18 +215,19 @@ fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_
         .unwrap()
         .build()
         .unwrap();
-    let found = engine
-        .recognize_complete_with(
-            &ask,
-            "Ada met Acme.",
-            CallOptions::new()
-                .context("Original names only.")
-                .attempts(true),
-        )
-        .unwrap();
+    let found = crate::api::recognize(
+        &engine,
+        &ask,
+        "Ada met Acme.",
+        CallOptions::new()
+            .context("Original names only.")
+            .attempts(true),
+    )
+    .unwrap();
     schema::call(&found, "completeRecognition");
-    recognition_reading(found.value());
-    let entities = found.value().value().entities();
+    let result = crate::api::recognition(&found).unwrap();
+    recognition_reading(result);
+    let entities = result.value().entities();
     assert_eq!(
         (entities[0].text(), entities[0].start(), entities[0].end()),
         ("Ada", 0, 3)
@@ -237,38 +236,41 @@ fn all_recognition_stages_keep_context_separate_and_original_spans_with_partial_
         (entities[1].text(), entities[1].start(), entities[1].end()),
         ("Acme", 8, 12)
     );
-    assert_eq!(found.value().probabilities().pieces().len(), 4);
-    assert_eq!(found.value().probabilities().names().len(), 2);
-    assert_eq!(found.value().probabilities().pairs().len(), 1);
-    assert_eq!(found.value().identity().observations().len(), 8);
-    assert_eq!(
-        found.value().reported_usage().unwrap().input_tokens(),
-        Some(2661)
-    );
-    assert_eq!(
-        found.value().reported_usage().unwrap().output_tokens(),
-        None
-    );
+    assert_eq!(result.probabilities().pieces().len(), 4);
+    assert_eq!(result.probabilities().names().len(), 2);
+    assert_eq!(result.probabilities().pairs().len(), 1);
+    assert_eq!(result.identity().observations().len(), 8);
+    assert_eq!(result.reported_usage().unwrap().input_tokens(), Some(2661));
+    assert_eq!(result.reported_usage().unwrap().output_tokens(), None);
     assert_eq!(listener.count(), 3);
     for request in listener.requests() {
         let body: Value = serde_json::from_slice(&request.body).unwrap();
         assert_eq!(body["state"]["context"], "Original names only.");
         assert!(body["state"].get("evidence").is_some());
     }
-    let cached = engine
-        .recognize_complete_with(
-            &ask,
-            "Ada met Acme.",
-            CallOptions::new().context("Original names only."),
-        )
-        .unwrap();
-    assert_eq!(cached.value().answer_id(), found.value().answer_id());
-    assert_eq!(cached.value().identity().origin(), Some(Origin::Cache));
-    let empty = engine
-        .recognize_complete_with(&ask, "", CallOptions::new().attempts(true))
-        .unwrap();
+    let cached = crate::api::recognize(
+        &engine,
+        &ask,
+        "Ada met Acme.",
+        CallOptions::new().context("Original names only."),
+    )
+    .unwrap();
+    assert_eq!(
+        crate::api::recognition(&cached).unwrap().answer_id(),
+        result.answer_id()
+    );
+    assert_eq!(
+        crate::api::recognition(&cached)
+            .unwrap()
+            .identity()
+            .origin(),
+        Some(Origin::Cache)
+    );
+    let empty =
+        crate::api::recognize(&engine, &ask, "", CallOptions::new().attempts(true)).unwrap();
     schema::call(&empty, "completeRecognition");
-    let document: Value = serde_json::from_str(&empty.value().to_json().unwrap()).unwrap();
+    let document: Value =
+        serde_json::from_str(&crate::api::recognition(&empty).unwrap().to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["origin"], Value::Null);
     assert_eq!(document["meta"]["cached"], false);
     assert_eq!(document["meta"]["question_sources"], json!([]));

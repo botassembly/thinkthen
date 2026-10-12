@@ -43,15 +43,7 @@ fn typed_column_refuses_different_counts_or_null_positions_before_sending() {
     let engine = common::engine(listener.base());
     let question = Question::decide("Relevant?").expect("question").cut();
     let column = Series::new("body".into(), [Some("a"), None]);
-    let record = || {
-        Some(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "a".to_owned(),
-            context: None,
-            options: None,
-        })
-    };
+    let record = || Some(crate::api::record("a".to_owned()));
     for (records, want) in [
         (
             vec![record()],
@@ -92,15 +84,7 @@ fn complete_score_keeps_owned_nontext_originals_and_nullable_positions() {
     let column = Series::new("original".into(), [Some(7u32), None, Some(7)]);
     let records = [Some(7), None, Some(7)]
         .into_iter()
-        .map(|value| {
-            value.map(|value| RecordInput {
-                original: Original(value),
-                context: None,
-                options: None,
-                seed_spans: None,
-                examples: None,
-            })
-        })
+        .map(|value| value.map(|value| crate::api::record(Original(value))))
         .collect();
     let (call, positions) = engine
         .score_input_column_complete(&question, &column, records, CallOptions::new())
@@ -194,11 +178,10 @@ fn choices_and_tags_records(
         .into_iter()
         .map(|n| {
             n.map(|n| RecordInput {
-                original: TypedOriginal(n),
                 context: Some("row guide".into()),
                 options: options.clone(),
-                examples: None,
-                seed_spans: None,
+
+                ..crate::api::record(TypedOriginal(n))
             })
         })
         .collect())

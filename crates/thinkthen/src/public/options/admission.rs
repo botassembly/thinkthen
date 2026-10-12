@@ -4,11 +4,13 @@ use crate::public::{Engine, Error};
 type PreparedStream<'a, T> = Box<dyn Iterator<Item = Result<T, Error>> + 'a>;
 impl CallOptions<'_> {
     pub(crate) fn reader_admission(&self) -> Result<(), Error> {
+        self.reader_remaining().map(|_| ())
+    }
+    pub(crate) fn reader_remaining(&self) -> Result<Option<std::time::Duration>, Error> {
         self.admission()?;
         crate::engine::Cancel::default()
             .with_deadline(self.deadline()?)
             .remaining_without_check()
-            .map(|_| ())
             .map_err(Error::from)
     }
     pub(crate) fn admission(&self) -> Result<(), Error> {
@@ -38,13 +40,6 @@ impl Engine {
         }
     }
 
-    pub(in crate::public) fn within_admission<I: IntoIterator>(
-        &self,
-        records: I,
-        options: &CallOptions<'_>,
-    ) -> Result<std::vec::IntoIter<I::Item>, Error> {
-        self.try_within_admission(records.into_iter().map(Ok), options)
-    }
     pub(in crate::public) fn try_within_admission<I, T>(
         &self,
         records: I,

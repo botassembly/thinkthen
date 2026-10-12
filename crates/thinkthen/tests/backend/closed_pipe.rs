@@ -1,7 +1,6 @@
 //! The compiled filter stops asking after its output reader closes.
-use crate::child::ChildEnvironment as _;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
@@ -67,12 +66,7 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
         assert_eq!(first, "keep first\n");
         drop(reader);
         let output = finish(child, "filter after reader closes").expect("the command ends");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "batch {batch}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits_because(&output, 0, || format!("batch {batch}"));
         let sent = listener.count();
         assert!(sent <= 12, "batch {batch} kept scheduling: {sent}");
     }
@@ -81,9 +75,7 @@ fn a_reader_that_closes_the_pipe_stops_filter_between_dispatches() {
 #[test]
 fn a_closed_reader_ends_filter_while_its_input_remains_open() {
     let listener = Listener::answering(reply).expect("a loopback listener");
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::piped(env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "filter",
@@ -98,9 +90,6 @@ fn a_closed_reader_ends_filter_while_its_input_remains_open() {
             "--model",
             "jev-1.13.0",
         ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .expect("filter starts");
     let mut input = child.stdin.take().expect("stdin pipe");
@@ -214,7 +203,7 @@ fn native_readiness_emits_a_row_and_cancels_without_waiting_for_input_eof() {
             output.stderr
         );
         assert!(listener.count() > 0, "{verb}");
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("sk-reader-loopback"));
+        assert!(!crate::harness::said(&output).contains("sk-reader-loopback"));
     }
     std::fs::remove_file(questions).expect("remove questions");
 }

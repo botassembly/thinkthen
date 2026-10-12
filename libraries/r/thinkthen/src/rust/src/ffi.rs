@@ -264,7 +264,20 @@ fn tt_interrupt_pending() -> bool {
     interrupt_pending()
 }
 
+#[extendr]
+fn tt_error_native(kind: Robj, message: Robj) -> Crossed<()> {
+    let kind = text_of(&kind, "kind")?;
+    let message = text_of(&message, "message")?;
+    Err(crate::NativeError {
+        kind,
+        message,
+        retryable: false,
+        complete: None,
+    })
+}
+
 extendr_module! {
+    fn tt_error_native;
     mod thinkthen;
     use request;
     fn tt_text_utf8;

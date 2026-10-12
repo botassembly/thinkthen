@@ -1,4 +1,4 @@
-//! Private CLI readiness and wake registration for the native pull host.
+//! Private input readiness and wake registration for the native pull host.
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
@@ -26,12 +26,12 @@ impl Wake {
     }
 }
 
-pub(crate) struct CliReader<'a> {
+pub(crate) struct Readiness<'a> {
     ready: &'a (dyn Fn() -> bool + Sync),
     pub(crate) pause: Option<Duration>,
     wake: Wake,
 }
-impl<'a> CliReader<'a> {
+impl<'a> Readiness<'a> {
     pub(crate) fn new(ready: &'a (dyn Fn() -> bool + Sync), pause: Option<Duration>) -> Self {
         Self {
             ready,

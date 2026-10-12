@@ -12,7 +12,7 @@ scratch_dir out
 
 builder_home=$HOME
 case $(uname -s) in MINGW*|MSYS*) builder_home=$(cygpath -m "$HOME") ;; esac
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$builder_home=/build"
+[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$builder_home=/build"
 export RUSTFLAGS
 maturin build --quiet --locked --offline --release -o "$out"
 
@@ -45,4 +45,6 @@ print(f"{wheel.rsplit('/', 1)[-1]}: stub, marker, license, no home path, no test
 PY
 # release-pack takes the wheel from here (ticket 0128). maturin writes its own builds and editable
 # wheels to target/wheels, so this checked wheel gets a folder nothing else writes.
-mkdir -p target/release-wheel && cp -- "$out"/thinkthen-*.whl target/release-wheel/
+mkdir -p target/release-wheel
+rm -f -- target/release-wheel/thinkthen-*.whl
+cp -- "$out"/thinkthen-*.whl target/release-wheel/

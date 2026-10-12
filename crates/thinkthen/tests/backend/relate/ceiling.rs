@@ -1,10 +1,9 @@
 //! Shared pair plans obey 400 questions and the request-size limit at every address.
 
+use crate::harness::spawn;
 use std::{fs, path::PathBuf};
 
 use serde_json::Value;
-
-use crate::harness::spawn;
 
 const ELSEWHERE: &str = "http://127.0.0.1:9/v1";
 const BEATLES: [&str; 2] = ["sung_by=song:person", "appears_on=song:album"];
@@ -51,12 +50,7 @@ fn plan(options: &[&str], input: &[u8]) -> Value {
     let mut arguments = vec!["relate", "--plan", "--no-cache"];
     arguments.extend_from_slice(options);
     let output = spawn(&arguments, &[], input).expect("command");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     super::plan_json(&output)
 }
 
@@ -192,9 +186,7 @@ fn oversized_sets_name_the_complete_count_and_hypothetical_pairs_exactly() {
             &input,
         )
         .expect("command");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+        crate::harness::refuses(&output, 2, expected);
     }
 }
 
@@ -269,12 +261,7 @@ fn one_job_sends_the_planned_requests_past_the_pipeline_window() {
     );
     assert_eq!(super::plan_json(&planned)["request_count"], 25);
     let output = super::run(&listener, &[rule, "--jobs", "1"], input.as_bytes());
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let sizes: Vec<usize> = listener
         .requests()
         .iter()

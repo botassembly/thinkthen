@@ -50,5 +50,15 @@ def outputs(root):
              'object UsagePersistence {', 'enum State { case ' + ', '.join(name for name, _ in states) + ' }',
              'private[scala] def read(value: thinkthen.UsagePersistence): UsagePersistence =',
              'UsagePersistence(State.valueOf(value.state().name()), Option(value.advice()))', '}']
-    return {'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+    waits = ['// Generated from the canonical C header ABI. Do not edit.',
+             'package thinkthen;', 'import java.lang.foreign.*;', 'final class NativeWait {', 'private NativeWait() {}']
+    for name, value in native['constants'].items():
+        if name.startswith('THINKTHEN_SESSION_WAIT_'):
+            waits += ['static final int ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1') + ' = ' + str(value) + ';']
+    layouts_by_type = {'const thinkthen_session *': 'ValueLayout.ADDRESS', 'uint32_t': 'ValueLayout.JAVA_INT', 'uint32_t *': 'ValueLayout.ADDRESS'}
+    prototype = native['functions']['thinkthen_session_wait']
+    carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
+    waits += ['static int waitReady(MemorySegment session, int interest, int timeout, MemorySegment ready) {',
+              'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}', '}']
+    return {'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}

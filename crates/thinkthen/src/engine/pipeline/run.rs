@@ -48,6 +48,7 @@ pub(super) struct Bounds {
     pub(super) continues: bool,
     /// How long input may pause before the open request goes out.
     pub(super) pause: Duration,
+    pub(super) pending_inputs: bool,
 }
 
 pub(super) struct Run<'a, A: Asker> {
@@ -61,6 +62,7 @@ pub(super) struct Run<'a, A: Asker> {
     jobs: usize,
     continues: bool,
     pause: Duration,
+    pending_inputs: bool,
     slots: VecDeque<Slot<A>>,
     /// The place of the window's first input.
     first: usize,
@@ -101,6 +103,7 @@ impl<'a, A: Asker> Run<'a, A> {
             jobs: bounds.jobs,
             continues: bounds.continues,
             pause: bounds.pause,
+            pending_inputs: bounds.pending_inputs,
             slots: VecDeque::new(),
             first: 0,
             waiting: HashMap::new(),
@@ -175,6 +178,7 @@ impl<'a, A: Asker> Run<'a, A> {
             self.close();
         }
         while self.busy < self.jobs
+            && (!self.pending_inputs || self.exhausted || self.slots.len() + staged >= self.window)
             && let Some(job) = self.closed.pop_front()
         {
             if work.send(job).is_err() {

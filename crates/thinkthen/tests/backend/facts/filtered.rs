@@ -69,7 +69,7 @@ fn the_facts_line_counts_filtered_records_and_matches_status() {
             "token_estimate_method":"encoded-body-bytes-908-v1",
             "model":"jev-1.13.0"})
     );
-    assert_eq!(String::from_utf8_lossy(&output.stderr).lines().count(), 1);
+    assert_eq!(crate::harness::said(&output).lines().count(), 1);
     let status =
         spawn(&["status", "--json"], &[(state.0, &state.1)], b"").expect("compiled status");
     let status: Value = serde_json::from_slice(&status.stdout).expect("status JSON");

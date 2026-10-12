@@ -3,6 +3,34 @@ require "minitest/autorun"
 require_relative "backend"
 
 class TestOwnedSession < Minitest::Test
+  def test_producer_exception_and_native_admission_message_survive
+    script = <<~RUBY
+      marker = RuntimeError.new("private producer marker")
+      input = Enumerator.new { raise marker }
+      client = T::Client.new(cache: false)
+      begin
+        client.decide("Is it?", input)
+        raise "producer answered"
+      rescue T::LocalError => error
+        raise "cause lost" unless error.cause.equal?(marker)
+        raise "native message changed" unless error.message == "session producer raised an exception"
+        raise "producer sent" unless error.facts.requests_sent == 0
+      end
+      begin
+        client.decide({decide: "Is it?", item_schema: {type: "array"}}, "unreachable")
+        raise "unsupported declaration admitted"
+      rescue T::UsageError => error
+        raise "native admission changed" unless error.message == "the question declaration uses an unsupported feature"
+      end
+      client.close
+      say true
+    RUBY
+    TestBackend.with(script) do |backend, child|
+      assert_equal true, child.hear
+      assert_equal 0, backend.count
+    end
+  end
+
   def test_named_calls_return_owned_typed_results_after_block_cleanup
     script = <<~RUBY
       retained = T::Client.open(cache: false) do |client|

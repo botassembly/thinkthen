@@ -81,13 +81,7 @@ Run `sdlc/scripts/surfaces --parity-baseline` for phase A: only actual CLI,
 Rust and C consumers run; other rows remain missing/not checked. This bounded
 run also exits nonzero and cannot qualify full parity.
 
-The existing final checkpoint, `sdlc/scripts/test-full-cases --run`, runs the
-full test gate and `surfaces --full-functional`. The surface step requires the
-complete public suite and generates the current table in `target/parity/`.
-Each shared consumer command executes once, including each distinct public
-variant. Missing or failed required cells, skipped cases and exit 77 fail the
-checkpoint. It also retains the C crate's private safety checks and the
-release-pack/release-smoke tail. `surfaces --parity` uses the same strict path.
+The final checkpoint, `sdlc/scripts/test-full-cases --run`, runs distinct ignored release boundary tests and installed binding replay smokes before `surfaces --full-functional`. The surface step requires the complete public suite and generates the current table in `target/parity/`. Each public variant executes its complete required suite once. Missing or failed required cells, skipped cases and exit 77 fail the checkpoint. It also retains the C crate's private safety checks and the release-pack/release-smoke tail. `surfaces --parity` uses the same strict path.
 For final installed parity, pass `--artifacts DIR` to either entry point. This
 mode selects each release package before starting consumers, extracts the
 command and C boundary once, then runs C safety and the strict installed
@@ -99,7 +93,7 @@ Rust-only hosted gate does not qualify the complete support table. The overall
 ticket stays open until the required final checkpoint passes.
 
 Consumers receive owned HOME/XDG directories. Explicit `THINKTHEN_TOOLCHAINS`,
-`R_LIBS_USER`, `PUB_CACHE`, `UV_CACHE_DIR` and `UV_PYTHON_INSTALL_DIR` paths supply build dependencies
+`R_LIBS_USER`, `PUB_CACHE`, `UV_CACHE_DIR`, `UV_PYTHON_INSTALL_DIR` and `npm_config_cache` paths supply build dependencies
 without copying user configuration. Use owned writable pub and uv caches
 seeded from available offline dependencies; do not write a shared cache while
 holding its read lock.
@@ -151,6 +145,8 @@ It requires one completed row in order, one request, no suffix output, final
 cancelled facts, the actual signal exit and secrecy. Signal-delivery coordination
 never counts as a passing assertion.
 SDK cases and expectations retain their full compile/runtime requirements.
+
+Each entry in `parity.required_cases` declares `tier: "binding"` or `tier: "core"`. The cli, rust and c reference consumers retain every applicable case and their existing boundary rulings. Other consumers require every binding case and the fixed `CORE_SAMPLE` in [parity.py](parity.py). Host value conversion, typed and complete results, all ten functions, files, feeds, ordered images and declared media, cancellation, errors and usage remain binding cases. Native image dimensions, counts, body limits, malformed or truncated decoding, packing limits and large valid inputs share the existing scenario groups. Native declaration grammar, authored name syntax, version bounds, raw question JSON grammar and named lookup syntax use representatives of their existing fixture families. Each group keeps every failure kind, including Local file-loader and Usage builder refusals. Every scenario inside a selected image case still runs. Consumers assert the same reference expectations and checks for each selected case. Missing binding or sampled core cells fail; unsampled core cases produce no cells. The routine profile retains its existing cases.
 
 SDK-only CLI rulings never become cells. Emitting a cell for one fails the
 runner. The matrix stores `case_rulings` separately from executed `cells`;
@@ -206,7 +202,7 @@ red/blue/red files and remain dependent on the native image wire oracle.
 
 The shared runner supplies an owned HOME, platform config/cache/state folders,
 an explicit loopback URL and fake loopback key, full profile, offline Cargo and
-two build jobs. Tool locations are preserved separately from the scratch home.
+four build jobs by default. Tool locations are preserved separately from the scratch home.
 Consumers must explicitly pass the served URL/key to engines they construct;
 ambient settings, a hostname inferred from a fixture's historical digest URL,
 and remote calls are forbidden. Existing `cases.json.backend_url` is only the
@@ -215,8 +211,7 @@ historical saved request-identity oracle; it is never a runtime destination.
 MCP is an additional required row in `parity.pending_consumers`. Its actual
 consumer is `libraries/mcp/check.sh`, from the saved 0455 branch. The explicit
 MCP cases check inline `@refund`, `question_name`, and conflicting question
-arguments at the installed stdio tool door. All other shared cases apply to
-MCP too. The MCP-specific cases' `consumers` list limits them to that actual
+arguments at the installed stdio tool door. MCP requires the same binding tier and core sample as other nonreference consumers. The MCP-specific cases' `consumers` list limits them to that actual
 door; shared cases cannot exclude any public variant. Native/MCP owners must
 land the closed `mcp` surface token, generated complete schema, installed
 command and runner together. Then move the row into the settled consumers and
@@ -224,7 +219,7 @@ register its surface. Until that integration, even reported MCP assertions
 cannot qualify support. No second result schema is introduced here.
 
 `target/parity/matrix.md` is the plain current support table: functions out of
-ten, files, images and remaining assertions/owners. Counts come only from
+ten, files, images, remaining assertions/owners and elapsed seconds. Consumers run four at a time; Rust and rust-polars share one serial lane. Python, Node, JVM and Dart families prepare their source-built or supplied installed packages once, then share immutable assets with separate HOME, config, state, cache and fixture scratch for each member. Each member receives only the remainder of its 900-second budget after family preparation. A failed or exhausted preparation fails every affected member. The matrix records shared setup time, member runtime and their total qualification duration. Default dependency paths resolve under the caller’s home before isolation, and explicit paths remain authoritative. Counts come only from
 executed typed cells in successful consumers. Written language/input rulings
 are printed alongside their required boundary assertions and never count as
 passes. Missing output, malformed/unknown/duplicate cells, skipped statuses,
@@ -240,8 +235,11 @@ required before 0432 can close.
 
 The public parity suite requires only inputs admitted by a real public call. The internal `25-defect-fault` and its `boundary-defect` reference remain in `parity.private_cases` for native/C panic containment and safe Defect error mapping. They do not require a caller-injectable crash or a public fault bridge. Existing secrecy, panic containment and all six C error mappings remain mandatory in the ordinary native/C tests.
 
-`parity.schema_cases` retains every distinct result-envelope, legacy JSON-door, usage and plan example without a public typed call fixture. These run at their actual schema/decoder boundary through `specification/fixtures/types/self-test`, which the existing full test rung already executes, and the existing generic-door tests. C owned-result accessors cannot accept an arbitrary malformed result envelope. Their parity proof executes actual named calls and reads known fields through typed getters. The described-choice fixture and every corpus entry with a real call case remain required public cells. All 24 image admission cells remain required.
+`parity.schema_cases` retains every distinct result-envelope, legacy JSON-door, usage and plan example without a public typed call fixture. These run at their actual schema/decoder boundary through `specification/fixtures/types/self-test`, which the existing routine test rung already executes, and the existing generic-door tests. C owned-result accessors cannot accept an arbitrary malformed result envelope. Their parity proof executes actual named calls and reads known fields through typed getters. The described-choice fixture and every corpus entry with a real call case remain required public cells. The reference consumers require every applicable image admission cell; other consumers require the binding tier and the fixed core sample.
+
 
 `rank-set-ordered-members` extends the existing named-input inventory with one independently captured six-answer rank set. The saved member keys differ from authored names; unequal probabilities distinguish member positions from the final turns winner. Consumers use public typed rank-set calls and retain ordered child identities, partial usage and source batch sizes. Child and parent usage overlap; final call facts report twelve input tokens, one request and three records. The capture arm checks the exact independent request body.
 
 Ticket 0461 refreshes recognition cases 41–50 and 53 as `synthetic_contract` exchanges. Their controlled replies retain the prior captured probabilities and expected spans while the native request now carries label descriptions through every entity stage. Original captured recordings remain unchanged at their committed paths. These refreshed cases establish transport and decoding, not predictions under new wording. Case 56 independently freezes the literal amount `42.75` past a Unicode prefix and exercises both authored task fields.
+
+Full parity fails platform-pending rows and exit 77. The Linux campaign may explicitly delegate Objective-C and Swift with `THINKTHEN_MACOS_APPLE_CHECKS=required` after both pass on the same revision on macOS. Delegated rows remain pending in the table; they are never counted as local passes. A run with no executed consumer fails.

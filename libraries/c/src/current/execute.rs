@@ -1,4 +1,4 @@
-//! Run existing native doors with owned inputs; no parser, reader or scheduler here.
+//! Run existing native interfaces with owned inputs; no parser, reader or scheduler here.
 use super::private::CurrentSummaryV1;
 use super::{
     Input, QuestionHandle, ResultHandle, SourceHandle, Storage,
@@ -13,7 +13,10 @@ use std::sync::{
     Mutex, PoisonError,
     atomic::{AtomicUsize, Ordering},
 };
-use thinkthen::{CallOptions, Engine, Evidence, Facts, LoadedQuestion, RecordObservation, Tally};
+use thinkthen::{
+    CallOptions, Engine, Evidence, Facts, LoadedQuestion, RecordInput, RecordObservation,
+    RequestInput, RequestRows, Tally,
+};
 
 pub(crate) fn ask(
     engine: &Engine,
@@ -140,14 +143,7 @@ fn execute(
     }
     let records = source.read()?;
     match &question.native {
-        Native::Atomic(loaded) => match loaded {
-            LoadedQuestion::Question(q) => {
-                atomic(engine, q, records, options, storage, (kind, question))
-            }
-            LoadedQuestion::Banded(q) => {
-                atomic(engine, q, records, options, storage, (kind, question))
-            }
-        },
+        Native::Atomic(_) => atomic(engine, records, options, storage, (kind, question)),
         Native::DynamicChoose(_) => Err(Failure::usage(
             "private legacy projections take fixed choose questions",
         )),
@@ -205,49 +201,90 @@ fn execute(
         }
     }
 }
-fn atomic<'a, Q: thinkthen::DetailQuestion + ?Sized>(
+fn atomic<'a>(
     engine: &'a Engine,
-    question: &'a Q,
     records: Box<dyn Iterator<Item = Result<Input, thinkthen::Error>> + 'a>,
     options: CallOptions<'a>,
     storage: &mut Storage,
     selection: (u32, &QuestionHandle),
 ) -> Result<(Vec<Row>, Facts), Failure> {
-    if selection.0 == 5 {
-        // Native filter admits only a single cut; use its actual admission.
-        let Native::Atomic(LoadedQuestion::Question(q)) = &selection.1.native else {
-            return Err(Failure::usage("filter keeps a record at a cut, not a band"));
-        };
-        let mut batch = engine.try_filter_with(q, records, options);
-        let rows = batch
-            .by_ref()
-            .map(|r| {
-                let r = r?;
-                Ok(Row::Original(views::row(storage, Some(&r))))
-            })
-            .collect::<Result<Vec<_>, thinkthen::Error>>()?;
-        let facts = batch
-            .facts()
-            .cloned()
-            .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
-        return Ok((rows, facts));
+    let Native::Atomic(loaded) = &selection.1.native else {
+        return Err(Failure::defect("atomic projection lost its question"));
+    };
+    if selection.0 == 5 && !matches!(loaded, LoadedQuestion::Question(_)) {
+        return Err(Failure::usage("filter keeps a record at a cut, not a band"));
     }
-    let mut batch = engine.try_details_many_with(question, records, options);
-    let rows = batch
-        .by_ref()
-        .map(|r| {
-            let r = r?;
-            let mut view = views::atomic(storage, r.input(), r.value());
-            let meaning = meaning(&selection.1.json, r.value().value())?;
-            views::authored(storage, &mut view.value, meaning.as_ref());
-            Ok(Row::Atomic(Box::new(view)))
-        })
-        .collect::<Result<Vec<_>, Failure>>()?;
-    let facts = batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Failure::defect("completed typed details have no facts"))?;
-    Ok((rows, facts))
+    let request = crate::complete::request::prepare(
+        selection.0,
+        selection.1,
+        RequestInput::Feed {
+            name: "projection".to_owned(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
+        },
+    )?
+    .admit()?;
+    let batch = engine.execute_request_rows(
+        &request,
+        records.map(|row| {
+            row.map(|original| RecordInput {
+                original,
+                context: None,
+                options: None,
+                examples: None,
+                seed_spans: None,
+            })
+        }),
+        options,
+    )?;
+    macro_rules! atomic_rows {
+        ($batch:expr) => {{
+            let mut batch = $batch;
+            let rows = batch
+                .by_ref()
+                .map(|r| {
+                    let r = r?;
+                    let details = r.compatibility_details()?;
+                    let mut view = views::atomic(storage, r.original(), &details);
+                    let meaning = meaning(&selection.1.json, details.value())?;
+                    views::authored(storage, &mut view.value, meaning.as_ref());
+                    Ok(Row::Atomic(Box::new(view)))
+                })
+                .collect::<Result<Vec<_>, Failure>>()?;
+            let facts = batch
+                .facts()
+                .cloned()
+                .ok_or_else(|| Failure::defect("completed typed details have no facts"))?;
+            Ok((rows, facts))
+        }};
+    }
+    match batch {
+        RequestRows::Filtered(mut batch) => {
+            let rows = batch
+                .by_ref()
+                .filter_map(|r| match r {
+                    Ok(r) if r.result().value() => {
+                        Some(Ok(Row::Original(views::row(storage, Some(r.original())))))
+                    }
+                    Ok(_) => None,
+                    Err(error) => Some(Err(error)),
+                })
+                .collect::<Result<Vec<_>, thinkthen::Error>>()?;
+            let facts = batch
+                .facts()
+                .cloned()
+                .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
+            Ok((rows, facts))
+        }
+        RequestRows::Decisions(batch) => atomic_rows!(batch),
+        RequestRows::Choices(batch) => atomic_rows!(batch),
+        RequestRows::Tags(batch) => atomic_rows!(batch),
+        RequestRows::Scores(batch) => atomic_rows!(batch),
+        RequestRows::Annotations(_) => {
+            Err(Failure::defect("atomic projection returned annotation"))
+        }
+    }
 }
 pub(super) fn meaning(
     json: &str,

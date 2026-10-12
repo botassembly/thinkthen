@@ -1,6 +1,6 @@
 //! Immutable source bytes, wire/cache/replay parity and saved score labels.
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn, spawn_local};
 use crate::input_sources::{answer, folder, text};
 use crate::record_display::call;
 use crate::support::stored;
@@ -27,14 +27,10 @@ fn file_mutation_changes_neither_later_requests_nor_neighbors_and_never_spools()
         }
         answer(body)
     })?;
-    let output = spawn(
+    let output = spawn_local(
         &[
             "filter",
             "Is it clear?",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--no-cache",
             "--batch",
             "1",
@@ -45,10 +41,11 @@ fn file_mutation_changes_neither_later_requests_nor_neighbors_and_never_spools()
             "1",
             file.to_str().expect("path"),
         ],
+        listener.base(),
         &[("TMPDIR", scratch.to_str().expect("scratch"))],
         b"",
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(
         output.stdout,
         b"--\n1:first\n2-second\n--\n1-first\n2:second\n3-last\n--\n2-second\n3:last\n"
@@ -107,7 +104,7 @@ fn display_changes_neither_request_bytes_nor_stored_keys_and_replay_sends_nothin
             &[],
             input,
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         let requests = listener.requests();
         assert_eq!(requests.len(), before.len());
         assert_eq!(
@@ -135,7 +132,7 @@ fn display_changes_neither_request_bytes_nor_stored_keys_and_replay_sends_nothin
             &[],
             input,
         )?;
-        assert_eq!(replay.status.code(), Some(0), "{}", text(&replay.stderr));
+        crate::harness::exits(&replay, 0);
         assert_eq!(replay.stdout, output.stdout);
         assert_eq!(listener.connections(), count);
     }
@@ -182,7 +179,7 @@ fn saved_score_labels_use_weighted_levels_and_cache_hits_without_sends() -> io::
         &[],
         b"a\nb\n",
     )?;
-    assert_eq!(shown.status.code(), Some(0), "{}", text(&shown.stderr));
+    crate::harness::exits(&shown, 0);
     assert_eq!(shown.stdout, b"-- 1.5\n1:a\n");
     assert!(listener.requests().is_empty());
     assert_eq!(listener.connections(), count);
@@ -308,7 +305,7 @@ fn saved_score_backend_failure_keeps_rank_empty_under_every_text_view() -> io::R
             &[],
             b"first\nfail\n",
         )?;
-        assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 4);
         assert!(output.stdout.is_empty());
         assert_eq!(listener.requests().len(), 2, "{}", text(&output.stderr));
         assert!(!text(&output.stderr).contains("secret response"));

@@ -53,7 +53,7 @@ impl<T> Ranked<T> {
 }
 
 impl<T: Evidence> Ranked<T> {
-    /// The record's place, text and probability. The C door writes one of
+    /// The record's place, text and probability. The C interface writes one of
     /// these for each record as its `rank` value.
     #[must_use]
     pub fn row(&self) -> RankedRow<'_> {

@@ -2,7 +2,6 @@
 #include <thinkthen.h>
 #include <stdio.h>
 #include <string.h>
-#include <threads.h>
 
 int main(void) {
     const char request[] = "{\"schema\":\"thinkthen.request/1\",\"call\":{\"function\":\"decide\",\"question\":{\"kind\":\"text\",\"text\":\"Does it pass?\"},\"input\":{\"kind\":\"text\",\"text\":\"Evidence.\"}}}";
@@ -25,7 +24,8 @@ int main(void) {
         }
         if (status == THINKTHEN_SESSION_END_V1) break;
         if (status == THINKTHEN_SESSION_PENDING_V1) {
-            thrd_yield();
+            uint32_t ready;
+            if (thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) != THINKTHEN_OK) { failed = 1; break; }
             continue;
         }
         const thinkthen_complete_session_packet_v1 *packet = NULL;

@@ -1,20 +1,25 @@
 use super::*;
 use std::sync::Mutex;
-use thinkthen::{Entity, FindSelection, RecordInput, RecordObservation, Relate};
+use thinkthen::{Entity, FindSelection, RecordObservation, Relate};
 
 #[test]
 fn find_selection_reports_synthetic_none_even_when_the_raw_tied_pick_names_a_real_unit() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":0.4,"u002":0.2,"none":0.4}}}}"#)).unwrap();
     let engine = engine(&listener);
     let question = Question::find("Which?").unwrap().offering_none().unwrap();
-    let call = engine
-        .find_complete_with(&question, ["First.", "Second."], CallOptions::new())
-        .unwrap();
-    assert_eq!(call.value().raw_pick(), "u001");
-    assert_eq!(call.value().selection(), FindSelection::None);
-    assert!(call.value().selected().is_none());
-    assert!(call.value().candidates()[2].is_none());
-    let doc = serde_json::to_value(call.value()).unwrap();
+    let call = crate::api::find(
+        &engine,
+        &question,
+        crate::api::plain_records(["First.", "Second."]),
+        CallOptions::new(),
+    )
+    .unwrap();
+    let result = crate::api::found(&call).unwrap();
+    assert_eq!(result.raw_pick(), "u001");
+    assert_eq!(result.selection(), FindSelection::None);
+    assert!(result.selected().is_none());
+    assert!(result.candidates()[2].is_none());
+    let doc = serde_json::to_value(result).unwrap();
     assert!(doc["index"].is_null());
     assert_eq!(
         doc["candidates"],
@@ -33,10 +38,8 @@ fn find_selection_reports_synthetic_none_even_when_the_raw_tied_pick_names_a_rea
 
 #[test]
 fn observer_remapping_after_null_omission_preserves_actual_details_and_identities() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let question = Question::decide("Refund?").unwrap().cut();
     let original = [None, Some("Same."), None, Some("Same.")];
@@ -57,19 +60,13 @@ fn observer_remapping_after_null_omission_preserves_actual_details_and_identitie
             .unwrap()
             .push(event.remap_index(retained[index].0).to_owned());
     };
-    let call = engine
-        .decide_records_complete_with(
-            &question,
-            retained.iter().map(|(_, item)| RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: *item,
-                context: None,
-                options: None,
-            }),
-            CallOptions::new().observe(&observer),
-        )
-        .unwrap();
+    let call = crate::api::decide_records(
+        &engine,
+        &question,
+        retained.iter().map(|(_, item)| crate::api::record(*item)),
+        CallOptions::new().observe(&observer),
+    )
+    .unwrap();
     let events = events.lock().unwrap();
     assert_eq!(events.len(), 4);
     for (at, original_index) in [1, 3].into_iter().enumerate() {
@@ -164,105 +161,9 @@ fn materialized_convenience_rank_find_recognize_and_entities_validate_before_any
 }
 
 #[test]
-fn loaded_atomic_and_rank_preparation_selects_original_fields_and_retains_authored_controls() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
-    })
-    .unwrap();
-    let engine = engine(&listener);
-    let authored = r#"{"name":"selected","wording_version":2,"decide":"Refund?","model":"fixed","batch":1,"on":["/payload"],"item_schema":{"type":"string"}}"#;
-    let question = Question::from_json(authored).unwrap();
-    let restored = Question::from_json(&question.to_json().unwrap()).unwrap();
-    assert_eq!(restored, question);
-    for text in [
-        r#"{"choose":"Route?","options":{"first":{"z":null,"a":"first description"},"second":null},"threshold":0.8}"#,
-        r#"{"score":"Grade?","levels":{"low":null,"high":"Excellent."}}"#,
-    ] {
-        let loaded = Question::from_json(text).unwrap();
-        assert_eq!(
-            Question::from_json(&loaded.to_json().unwrap()).unwrap(),
-            loaded
-        );
-    }
-
-    let location = thinkthen::SourceLocation::new("notes.jsonl".into(), Some(7), Some(7)).unwrap();
-    let input = thinkthen::QuestionInput::annotation_text(
-        r#"{"payload":"Yes.","private":"Never send."}"#,
-        location,
-    )
-    .unwrap();
-    let records = || {
-        [thinkthen::RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: input.clone(),
-            context: None,
-            options: None,
-        }]
-    };
-    let call = engine
-        .decide_records_complete_with(&restored, records(), CallOptions::new())
-        .unwrap();
-    let row = &call.value()[0];
-    assert_eq!(row.result().value(), Answer::Yes);
-    assert_eq!(row.result().question().model(), Some("fixed"));
-    assert_eq!(
-        row.result().question().batch(),
-        Some(thinkthen::BatchSetting::Records(
-            std::num::NonZeroUsize::MIN
-        ))
-    );
-    assert_eq!(
-        row.result().question().on().collect::<Vec<_>>(),
-        ["/payload"]
-    );
-    assert_eq!(row.result().question().name().unwrap().as_str(), "selected");
-    assert_eq!(row.original(), &input);
-    let body = &listener.requests()[0].body;
-    assert_eq!(
-        serde_json::from_slice::<Value>(body).unwrap(),
-        json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Yes.\". Refund?"}}})
-    );
-    let rank = Question::rank_from_json(authored).unwrap();
-    let ranked = engine
-        .rank_records_complete_with(&rank, records(), CallOptions::new())
-        .unwrap();
-    assert_eq!(ranked.value()[0].ordinal(), 0);
-    assert_eq!(
-        ranked.value()[0]
-            .result()
-            .question()
-            .on()
-            .collect::<Vec<_>>(),
-        ["/payload"]
-    );
-    assert_eq!(listener.count(), 2);
-    let missing = thinkthen::QuestionInput::annotation_text(
-        r#"{"other":"No."}"#,
-        thinkthen::SourceLocation::new("bad.jsonl".into(), Some(1), Some(1)).unwrap(),
-    )
-    .unwrap();
-    let error = engine
-        .decide_records_complete_with(
-            &question,
-            [thinkthen::RecordInput {
-                original: missing,
-                ..records()[0].clone()
-            }],
-            CallOptions::new(),
-        )
-        .unwrap_err();
-    assert_eq!(error.kind(), ErrorKind::Usage);
-    assert!(error.facts().is_none());
-    assert_eq!(listener.count(), 2);
-}
-
-#[test]
 fn located_annotation_documents_use_the_native_json_or_literal_reading_without_losing_source() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(
         r#"{"version":1,"questions":{"selected":{"decide":"Refund?","on":["/payload"]}}}"#,
@@ -272,19 +173,13 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
     let structured =
         thinkthen::QuestionInput::annotation_text(r#"{"payload":"Yes."}"#, location.clone())
             .unwrap();
-    let call = engine
-        .annotate_records_complete_with(
-            &set,
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: structured.clone(),
-                context: None,
-                options: None,
-            }],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let call = crate::api::annotate(
+        &engine,
+        &set,
+        [crate::api::record(structured.clone())],
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(call.value()[0].original(), &structured);
     let thinkthen::QuestionInput::Record(record) = &structured else {
         panic!("record")
@@ -297,19 +192,13 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
         .unwrap()
         .build()
         .unwrap();
-    let call = engine
-        .annotate_records_complete_with(
-            &root,
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: literal.clone(),
-                context: None,
-                options: None,
-            }],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let call = crate::api::annotate(
+        &engine,
+        &root,
+        [crate::api::record(literal.clone())],
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(call.value()[0].original(), &literal);
     let thinkthen::QuestionInput::Record(record) = &literal else {
         panic!("record")
@@ -326,16 +215,39 @@ fn located_annotation_documents_use_the_native_json_or_literal_reading_without_l
 
 #[test]
 fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_json() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.8}}}"#);
     let engine = engine(&listener);
     let authored =
         r#"{"decide":"Refund?","on":"/payload","item_schema":{"type":"object","properties":{}}}"#;
     let atomic = Question::from_json(authored).unwrap();
     let rank = Question::rank_from_json(authored).unwrap();
     let text = r#"{"payload":{}}"#;
+    let ranked = |input: &thinkthen::QuestionInput| {
+        let input = match input {
+            thinkthen::QuestionInput::Text(text) => crate::api::text(text),
+            thinkthen::QuestionInput::Record(record) => thinkthen::RequestInput::Records {
+                items: vec![thinkthen::RequestItem {
+                    original: Some(thinkthen::RequestOriginal::Json {
+                        value: record.original().clone(),
+                    }),
+                    context: None,
+                    options: None,
+                    seed_spans: None,
+                    examples: None,
+                    images: Vec::new(),
+                }],
+            },
+            _ => unreachable!(),
+        };
+        crate::api::request(
+            &engine,
+            thinkthen::RequestFunction::Rank,
+            rank.clone().into(),
+            input,
+            thinkthen::RequestEnvironment::default(),
+        )
+    };
     let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     let literal = reading
         .compose(thinkthen::RawRecord::text(text).unwrap())
@@ -345,29 +257,14 @@ fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_js
         thinkthen::QuestionInput::Text(text.into()),
         thinkthen::QuestionInput::Record(literal),
     ] {
-        let records = || {
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: input.clone(),
-                context: None,
-                options: None,
-            }]
-        };
+        let records = || [crate::api::record(input.clone())];
         assert_eq!(
-            engine
-                .decide_records_complete_with(&atomic, records(), CallOptions::new())
+            crate::api::decide_records(&engine, &atomic, records(), CallOptions::new())
                 .unwrap_err()
                 .kind(),
             ErrorKind::Usage
         );
-        assert_eq!(
-            engine
-                .rank_records_complete_with(&rank, records(), CallOptions::new())
-                .unwrap_err()
-                .kind(),
-            ErrorKind::Usage
-        );
+        assert_eq!(ranked(&input).unwrap_err().kind(), ErrorKind::Usage);
     }
     assert_eq!(listener.count(), 0);
     let parsed = reading
@@ -380,21 +277,9 @@ fn atomic_and_rank_pointer_reading_preserves_literal_text_and_admits_explicit_js
     )
     .unwrap();
     for input in [thinkthen::QuestionInput::Record(parsed), located] {
-        let records = || {
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: input.clone(),
-                context: None,
-                options: None,
-            }]
-        };
-        engine
-            .decide_records_complete_with(&atomic, records(), CallOptions::new())
-            .unwrap();
-        engine
-            .rank_records_complete_with(&rank, records(), CallOptions::new())
-            .unwrap();
+        let records = || [crate::api::record(input.clone())];
+        crate::api::decide_records(&engine, &atomic, records(), CallOptions::new()).unwrap();
+        ranked(&input).unwrap();
     }
     assert_eq!(listener.count(), 4);
     for request in listener.requests() {
@@ -424,32 +309,26 @@ fn annotation_documents_send_structural_json_without_inventing_a_location() {
         panic!("native document")
     };
     assert!(record.location().is_none());
-    let call = engine
-        .annotate_records_complete_with(
-            &set,
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: input.clone(),
-                context: None,
-                options: None,
-            }],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let call = crate::api::annotate(
+        &engine,
+        &set,
+        [crate::api::record(input.clone())],
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(call.value()[0].original(), &input);
     assert_eq!(call.facts().requests_sent(), 1);
-    let mut batch = engine.try_annotate_records_complete_with(
-        &set,
-        [Ok(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: input.clone(),
-            context: None,
-            options: None,
-        })],
-        CallOptions::new(),
-    );
+    let mut batch = crate::api::annotation_rows(
+        crate::api::rows(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            set.into(),
+            [Ok(crate::api::record(input.clone()))],
+            CallOptions::new(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
     assert_eq!(batch.next().unwrap().unwrap().original(), &input);
     assert!(batch.next().is_none());
     assert_eq!(listener.count(), 2);

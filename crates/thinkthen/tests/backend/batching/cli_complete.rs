@@ -1,6 +1,6 @@
 //! Aggregate context and full original occurrences execute through the CLI.
 use super::{KEY, folder, text};
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use serde_json::{Value, json};
 use std::fs;
 
@@ -53,12 +53,9 @@ fn per_record_context_previews_refuse_the_same_request_limit_as_execution() {
                 args.push("--plan");
             }
             let output = spawn(&args, &[KEY], input.as_bytes()).expect("command");
-            assert_eq!(
-                output.status.code(),
-                Some(2),
-                "{verb}, plan={planned}: {}",
-                text(&output.stderr)
-            );
+            exits_because(&output, 2, || {
+                format!("{verb}, plan={planned}: {}", text(&output.stderr))
+            });
             assert!(output.stdout.is_empty());
             assert_eq!(listener.count(), 0);
             let cause = text(&output.stderr)
@@ -148,7 +145,7 @@ fn detailed_value(listener: &Listener, operand: &str, verb: &str, exit: i32) -> 
         b"Evidence\n",
     )
     .expect("detailed command");
-    assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+    exits(&output, exit);
     serde_json::from_slice(&output.stdout).expect("detail")
 }
 
@@ -173,12 +170,7 @@ fn filter_and_rank_keep_actual_ordinals_for_equal_records() {
             b"{\"text\":\"equal\"}\n{\"text\":\"equal\"}\n",
         )
         .expect("command");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
         let rows: Vec<Value> = text(&output.stdout)
             .lines()
             .map(|row| serde_json::from_str(row).expect("row"))
@@ -219,7 +211,7 @@ fn find_keeps_every_original_candidate_and_shared_context_separate() {
         b"{\"text\":\"first\",\"extra\":false}\n{\"text\":\"second\",\"extra\":null}\n",
     )
     .expect("command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let row: Value = serde_json::from_slice(&output.stdout).expect("row");
     assert_eq!(row["value"], json!({"text":"second","extra":null}));
     assert_eq!(
@@ -277,17 +269,12 @@ fn annotate_and_relate_send_shared_context_and_keep_originals() {
         b"{\"text\":\"refund\",\"extra\":false}\n",
     )
     .expect("annotate");
-    assert_eq!(
-        annotated.status.code(),
-        Some(0),
-        "{}",
-        text(&annotated.stderr)
-    );
+    exits(&annotated, 0);
     let row: Value = serde_json::from_slice(&annotated.stdout).expect("row");
     assert_eq!(row["input"], json!({"text":"refund","extra":false}));
     assert!(row["meta"]["context_sha256"].is_string());
     let related = spawn(&["relate", "knows=person:person", "--context", &context, "--details", "--no-cache", "--url", listener.base()], &[KEY], br#"[{"name":"Ada","kind":"person","extra":false},{"name":"Bob","kind":"person","extra":null}]"#).expect("relate");
-    assert_eq!(related.status.code(), Some(0), "{}", text(&related.stderr));
+    exits(&related, 0);
     let row: Value = serde_json::from_slice(&related.stdout).expect("row");
     assert_eq!(
         row["input"],
@@ -331,7 +318,7 @@ fn recognize_shared_context_keeps_originals_and_selected_text_offsets() {
         ],
         b"{\"text\":\"Ada met Acme.\",\"extra\":false}\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let row: Value = serde_json::from_slice(&output.stdout).expect("row");
     assert_eq!(row["input"], json!({"text":"Ada met Acme.","extra":false}));
     assert_eq!(row["value"]["entities"][0]["text"], "Ada");
@@ -363,11 +350,10 @@ fn relate_originals_do_not_hide_bad_object_ids_or_explicit_audit_pointers() {
             source.as_bytes(),
         )
         .expect("audit");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(
-            text(&output.stderr),
-            "thinkthen: audit: results line 1 has no string or integer id at the --id pointer\n"
+        crate::harness::refuses(
+            &output,
+            2,
+            "thinkthen: audit: results line 1 has no string or integer id at the --id pointer\n",
         );
     }
 }

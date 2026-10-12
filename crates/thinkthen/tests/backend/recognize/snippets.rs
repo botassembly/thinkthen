@@ -13,11 +13,7 @@ fn snippet_width_clips_both_stages_and_keeps_default_requests() {
             args.extend(["--snippet-pieces", width]);
         }
         let output = run(&listener, &args, input);
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        assert!(output.status.success(), "{}", crate::harness::said(&output));
         let requests = listener.requests();
         assert_eq!(requests.len(), 2);
         let bodies: Vec<_> = requests.iter().map(|r| r.body.clone()).collect();
@@ -170,11 +166,7 @@ fn snippet_width_plan_keys_and_replay_follow_actual_windows() {
             None,
             input,
         );
-        assert!(
-            replay.status.success(),
-            "{}",
-            String::from_utf8_lossy(&replay.stderr)
-        );
+        assert!(replay.status.success(), "{}", crate::harness::said(&replay));
         assert_eq!(json(&replay)["entities"], json(&output)["entities"]);
         assert_eq!(listener.requests().len(), before);
     }
@@ -221,11 +213,7 @@ fn snippet_cache_reuses_only_the_same_generated_windows() {
             Some("fake"),
             input,
         );
-        assert!(
-            output.status.success(),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        assert!(output.status.success(), "{}", crate::harness::said(&output));
         assert_eq!(listener.requests().len(), expected);
     }
     fs::remove_dir_all(root).unwrap();

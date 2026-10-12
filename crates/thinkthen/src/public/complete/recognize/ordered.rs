@@ -133,7 +133,7 @@ impl<R, E> Run<R, E> {
 pub(crate) fn run<T, R, E>(
     jobs: usize,
     cancel: &Cancel,
-    readiness: Option<&crate::public::cli_reader::CliReader<'_>>,
+    readiness: Option<&crate::public::readiness::Readiness<'_>>,
     mut read: impl FnMut() -> Option<Input<T, E>>,
     answer: &(impl Fn(T) -> Result<Row<R>, E> + Sync),
     mut emit: impl FnMut(R) -> Result<bool, E>,
@@ -146,14 +146,14 @@ where
     E: Send + 'static,
 {
     let (events, received) = channel();
-    let wake = readiness.map(crate::public::cli_reader::CliReader::wake);
+    let wake = readiness.map(crate::public::readiness::Readiness::wake);
     if let Some(wake) = &wake {
         let events = events.clone();
         wake.register(Box::new(move || {
             let _sent = events.send(Event::ReaderReady);
         }));
     }
-    struct Clear(Option<crate::public::cli_reader::Wake>);
+    struct Clear(Option<crate::public::readiness::Wake>);
     impl Drop for Clear {
         fn drop(&mut self) {
             if let Some(wake) = &self.0 {

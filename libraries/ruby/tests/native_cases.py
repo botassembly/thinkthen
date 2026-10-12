@@ -7,6 +7,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from session_cases import descriptor, native_cases
+from children import read_process_line
 RUBY = os.environ['RUBY']
 CONSUMER = Path(__file__).with_name('native_case.rb')
 def invoke(step, settings, child, home, backend):
@@ -19,7 +20,7 @@ def invoke(step, settings, child, home, backend):
         try:
             assert backend.read('wait 1') == 'wait 1'
             process.stdin.write('!\n'); process.stdin.flush()
-            assert process.stdout.readline() == 'cancel-fired\n'
+            assert read_process_line(process.stdout) == 'cancel-fired\n'
             backend.process.stdin.write('release\n'); backend.process.stdin.flush()
             stdout, stderr = process.communicate(timeout=60)
             return subprocess.CompletedProcess(args, process.returncode, stdout, stderr)

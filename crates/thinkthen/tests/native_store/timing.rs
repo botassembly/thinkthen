@@ -48,18 +48,21 @@ fn recording_attempts_is_optional_retry_timing_is_header_free_and_replay_never_a
         .build()
         .unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
-    engine
-        .decide_complete_with(&question, "Refund me.", CallOptions::new())
-        .unwrap();
+    crate::api::decide(&engine, &question, "Refund me.", CallOptions::new()).unwrap();
     assert!(!place.join("thinkthen.timing.jsonl").exists());
-    let recorded = engine
-        .decide_complete_with(&question, "Refund me.", CallOptions::new().attempts(true))
-        .unwrap();
+    let recorded = crate::api::decide(
+        &engine,
+        &question,
+        "Refund me.",
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
+    let recorded_result = crate::api::decision(&recorded).unwrap();
     let entries = history(&place);
     assert_eq!(entries.len(), 2);
     for (entry, attempt) in entries.iter().zip(recorded.facts().attempts().unwrap()) {
         only_timing(entry);
-        assert_eq!(entry["key"], recorded.value().meta().requests()[0]);
+        assert_eq!(entry["key"], recorded_result.meta().requests()[0]);
         assert_eq!(entry["ordinal"], attempt.ordinal());
         assert_eq!(entry["wall_ms"], attempt.wall_ms());
     }
@@ -79,11 +82,18 @@ fn recording_attempts_is_optional_retry_timing_is_header_free_and_replay_never_a
         assert!(!text.contains(secret));
     }
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
-    let held = replay
-        .decide_complete_with(&question, "Refund me.", CallOptions::new().attempts(true))
-        .unwrap();
+    let held = crate::api::decide(
+        &replay,
+        &question,
+        "Refund me.",
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
     assert!(held.facts().attempts().unwrap().is_empty());
-    assert_eq!(held.value().answer_id(), recorded.value().answer_id());
+    assert_eq!(
+        crate::api::decision(&held).unwrap().answer_id(),
+        recorded_result.answer_id()
+    );
     assert_eq!(
         std::fs::read(place.join("thinkthen.timing.jsonl")).unwrap(),
         bytes
@@ -104,20 +114,25 @@ fn split_children_attribute_the_actual_parent_and_own_attempt_without_transient_
     let place = folder();
     let engine = build(&listener).record(&place).unwrap().build().unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
-    let call = engine
-        .decide_many_complete_with(
-            &question,
-            ["First.", "Second."],
-            CallOptions::new().attempts(true),
-        )
-        .unwrap();
+    let call = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        crate::api::plain_records(["First.", "Second."]),
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
     assert_eq!(call.facts().attempts().unwrap().len(), 3);
     let entries = history(&place);
     assert_eq!(entries.len(), 4);
     for entry in &entries {
         only_timing(entry);
     }
-    for (row, ordinals) in call.value().iter().zip([[1, 2], [1, 3]]) {
+    for (row, ordinals) in crate::api::decisions(&call)
+        .unwrap()
+        .iter()
+        .zip([[1, 2], [1, 3]])
+    {
         let meta = row.result().meta();
         let key = &meta.requests()[0];
         assert_eq!(
@@ -148,9 +163,13 @@ fn release_only_timing_entry_or_byte_overflow_keeps_old_answers_and_history_and_
             .build()
             .unwrap();
         let question = Question::decide("Refund?").unwrap().cut();
-        engine
-            .decide_complete_with(&question, "Refund me.", CallOptions::new().attempts(true))
-            .unwrap();
+        crate::api::decide(
+            &engine,
+            &question,
+            "Refund me.",
+            CallOptions::new().attempts(true),
+        )
+        .unwrap();
         let seeded = if bytes_limit {
             vec![b'x'; 8 * 1024 * 1024 + 1]
         } else {
@@ -163,9 +182,9 @@ fn release_only_timing_entry_or_byte_overflow_keeps_old_answers_and_history_and_
         };
         std::fs::write(place.join("thinkthen.timing.jsonl"), &seeded).unwrap();
         let other = Question::decide("Other?").unwrap().cut();
-        let failed = engine
-            .decide_complete_with(&other, "Other.", CallOptions::new().attempts(true))
-            .unwrap_err();
+        let failed =
+            crate::api::decide(&engine, &other, "Other.", CallOptions::new().attempts(true))
+                .unwrap_err();
         assert_eq!(failed.kind(), ErrorKind::Local);
         assert_eq!(failed.facts().unwrap().requests_sent(), 1);
         assert_eq!(listener.count(), 2);
@@ -196,13 +215,13 @@ fn nonstorable_recording_creates_no_timing_history_or_saved_answers() {
         Listener::answering(|_| Canned::ok(REPLY).asking("Cache-Control", "no-store")).unwrap();
     let place = folder();
     let engine = build(&listener).record(&place).unwrap().build().unwrap();
-    let error = engine
-        .decide_complete_with(
-            &Question::decide("Refund?").unwrap().cut(),
-            "Refund me.",
-            CallOptions::new().attempts(true),
-        )
-        .unwrap_err();
+    let error = crate::api::decide(
+        &engine,
+        &Question::decide("Refund?").unwrap().cut(),
+        "Refund me.",
+        CallOptions::new().attempts(true),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(error.facts().unwrap().requests_sent(), 1);
     assert_eq!(error.facts().unwrap().attempts().unwrap().len(), 1);
@@ -225,13 +244,13 @@ fn concurrent_recording_calls_append_both_histories_under_one_stable_writer_lock
             .zip(["First?", "Second?"])
             .map(|(engine, text)| {
                 scope.spawn(move || {
-                    engine
-                        .decide_complete_with(
-                            &Question::decide(text).unwrap().cut(),
-                            "Text.",
-                            CallOptions::new().attempts(true),
-                        )
-                        .unwrap()
+                    crate::api::decide(
+                        engine,
+                        &Question::decide(text).unwrap().cut(),
+                        "Text.",
+                        CallOptions::new().attempts(true),
+                    )
+                    .unwrap()
                 })
             })
             .collect::<Vec<_>>();

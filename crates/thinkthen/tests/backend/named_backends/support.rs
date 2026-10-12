@@ -231,8 +231,8 @@ pub(crate) fn assert_no_marker(text: &str, what: &str) {
 
 /// Both outputs as text, after asserting neither holds a marker.
 pub(crate) fn said(output: &Output) -> (String, String) {
-    let stdout = String::from_utf8_lossy(&output.stdout).into_owned();
-    let stderr = String::from_utf8_lossy(&output.stderr).into_owned();
+    let stdout = crate::harness::printed(output);
+    let stderr = crate::harness::said(output);
     assert_no_marker(&stdout, "standard output");
     assert_no_marker(&stderr, "standard error");
     (stdout, stderr)

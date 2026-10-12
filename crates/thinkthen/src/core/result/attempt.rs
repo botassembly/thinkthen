@@ -47,11 +47,11 @@ impl AttemptObservation {
     }
 
     /// Complete result/2 projection, including the outbound SDK identity.
-    /// Ordinary serialization retains the released legacy attempt shape.
+    /// Ordinary serialization retains the released compatibility attempt shape.
     #[must_use]
     pub const fn complete(&self) -> CompleteAttempt<'_> {
         CompleteAttempt {
-            legacy: self,
+            compatibility: self,
             sdk_request_id: &self.sdk_request_id,
         }
     }
@@ -107,7 +107,7 @@ impl AttemptObservation {
 )]
 pub struct CompleteAttempt<'a> {
     #[serde(flatten)]
-    legacy: &'a AttemptObservation,
+    compatibility: &'a AttemptObservation,
     sdk_request_id: &'a crate::core::SdkRequestId,
 }
 

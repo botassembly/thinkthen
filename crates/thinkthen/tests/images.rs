@@ -3,7 +3,6 @@
 use conformance_backend::{Canned, Listener};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::path::PathBuf;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thinkthen::{
     Answer, CallOptions, Engine, ErrorKind, ImageEvidence, ImageInput, ImageMedia, InputFunction,
@@ -12,13 +11,16 @@ use thinkthen::{
 
 #[path = "images/replay.rs"]
 mod replay;
+#[path = "images/request.rs"]
+mod request;
+use request::ImageRequests;
+#[path = "support/image_fixture.rs"]
+mod image_fixture;
+use image_fixture::{LIQUID_DECIDE, RED, folder, question};
 
-const RED: &[u8] = include_bytes!("../../../specification/fixtures/images/red.png");
 const BLUE: &[u8] = include_bytes!("../../../specification/fixtures/images/blue.png");
 const LARGE: &[u8] = include_bytes!("../../../specification/fixtures/images/above-spike.png");
 const JPEG: &[u8] = include_bytes!("../../../specification/fixtures/images/red.jpg");
-const LIQUID_DECIDE: &str =
-    include_str!("../../../specification/fixtures/images/liquid-decide-reply.json");
 const PPLX_DECIDE: &str =
     include_str!("../../../specification/fixtures/images/perplexity-decide-reply.json");
 
@@ -55,25 +57,8 @@ fn pair() -> QuestionInput {
     clippy::expect_used,
     reason = "invalid shared fixtures or loopback setup stop this behavioral test"
 )]
-fn question() -> Question {
-    Question::decide("Is red visible?")
-        .expect("valid saved fixture or loopback configuration")
-        .cut()
-}
-#[expect(
-    clippy::expect_used,
-    reason = "invalid shared fixtures or loopback setup stop this behavioral test"
-)]
 fn engine(listener: &Listener, backend: &str, model: &str) -> Engine {
-    Engine::builder()
-        .backend(backend)
-        .expect("valid saved fixture or loopback configuration")
-        .base_url(listener.base())
-        .expect("valid saved fixture or loopback configuration")
-        .model(model)
-        .expect("valid saved fixture or loopback configuration")
-        .api_key("fake-image-key")
-        .expect("valid saved fixture or loopback configuration")
+    image_builder::builder(listener.base(), backend, model, Some("fake-image-key"))
         .no_cache()
         .max_retries(0)
         .build()
@@ -129,11 +114,11 @@ fn questions(kind: &str) -> Value {
 #[test]
 fn scalar_doors_send_original_order_duplicates_criteria_and_return_typed_facts() {
     let decide = question();
-    let choose = Question::choose::<Color>("Which color?")
+    let choose = Question::choose_labels("Which color?")
         .unwrap()
-        .option(Color::Red, None)
+        .label("red", None)
         .unwrap()
-        .option(Color::Blue, None)
+        .label("blue", None)
         .unwrap()
         .build()
         .unwrap();
@@ -171,14 +156,22 @@ fn scalar_doors_send_original_order_duplicates_criteria_and_return_typed_facts()
         })
         .unwrap();
         let engine = engine(&listener, route, model);
-        let answer = engine.decide_input(&decide, &pair()).unwrap();
-        assert_eq!(*answer.value(), Answer::Yes);
+        let answer = engine.request_decide(&decide, &pair()).unwrap();
+        assert_eq!(answer.value()[0].result().value(), Answer::Yes);
         assert_eq!(answer.facts().input_tokens(), Some(123));
         assert_eq!(
-            *engine.choose_input(&choose, &pair()).unwrap().value(),
+            engine.request_choose(&choose, &pair()).unwrap().value()[0]
+                .result()
+                .value()
+                .and_then(<crate::Color as thinkthen::Choice>::from_label),
             Some(Color::Red)
         );
-        assert_eq!(*engine.score_input(&score, &pair()).unwrap().value(), 0.8);
+        assert_eq!(
+            engine.request_score(&score, &pair()).unwrap().value()[0]
+                .result()
+                .value(),
+            0.8
+        );
         let requests = listener.requests();
         assert_eq!(requests.len(), 3);
         for (request, kind) in requests.iter().zip(["decide", "choose", "score"]) {
@@ -215,7 +208,7 @@ fn image_only_state_has_no_invented_caption_and_large_originals_exceed_spike_cap
         let engine = engine(&listener, route, model);
         assert!(LARGE.len() > 32_768);
         engine
-            .decide_input(
+            .request_decide(
                 &question(),
                 &input(None, vec![fixture(LARGE, ImageMedia::Png)]),
             )
@@ -236,10 +229,55 @@ fn image_only_state_has_no_invented_caption_and_large_originals_exceed_spike_cap
     }
 }
 
+fn unsupported_request(function: InputFunction) -> Result<thinkthen::Request, thinkthen::Error> {
+    let definition: thinkthen::RequestDefinition = match function {
+        InputFunction::Tag => Question::tag_labels("Which color?")?
+            .label("red", None)?
+            .build()?
+            .into(),
+        InputFunction::Filter => question().into(),
+        InputFunction::Rank => Question::rank("How red?")?.into(),
+        InputFunction::Find => Question::find("Which color?")?.into(),
+        InputFunction::Annotate => thinkthen::QuestionSet::builder()
+            .question("red", question())?
+            .build()?
+            .into(),
+        InputFunction::Recognize => thinkthen::Recognize::builder().build()?.into(),
+        InputFunction::Relate => thinkthen::Relate::builder()
+            .relation(thinkthen::RelationRule::one_way(
+                "matches", "color", "color",
+            )?)?
+            .build()?
+            .into(),
+        _ => unreachable!(),
+    };
+    thinkthen::Request::named(
+        function.name(),
+        thinkthen::RequestArguments {
+            question: thinkthen::RequestQuestion::Definition { value: definition },
+            input: thinkthen::RequestInput::Records {
+                items: vec![thinkthen::RequestItem {
+                    original: Some(thinkthen::RequestOriginal::Text {
+                        text: "Compare originals.".into(),
+                    }),
+                    context: None,
+                    options: None,
+                    examples: None,
+                    seed_spans: None,
+                    images: vec![thinkthen::RequestImage::Bytes {
+                        media: ImageMedia::Png,
+                        bytes: RED.to_vec(),
+                    }],
+                }],
+            },
+            options: Default::default(),
+        },
+    )
+}
+
 #[test]
 fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
-    let engine = engine(&listener, "liquid", "d1");
     for function in [
         InputFunction::Tag,
         InputFunction::Filter,
@@ -249,9 +287,7 @@ fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
         InputFunction::Recognize,
         InputFunction::Relate,
     ] {
-        let error = engine
-            .input_details(function, &question(), &pair(), CallOptions::new())
-            .unwrap_err();
+        let error = unsupported_request(function).unwrap().admit().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert_eq!(
             error.to_string(),
@@ -271,7 +307,7 @@ fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
         ("ollama", "local"),
     ] {
         let error = self::engine(&listener, route, model)
-            .decide_input(&question(), &pair())
+            .request_decide(&question(), &pair())
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert!(error.to_string().contains("images are unsupported"));
@@ -286,7 +322,7 @@ fn every_text_only_function_and_unknown_route_refuses_with_zero_connections() {
         .unwrap();
     assert_eq!(
         unnamed
-            .decide_input(&question(), &pair())
+            .request_decide(&question(), &pair())
             .unwrap_err()
             .kind(),
         ErrorKind::Usage
@@ -344,43 +380,18 @@ fn malformed_pixels_media_counts_and_debug_are_safe_and_send_nothing() {
     assert_eq!(listener.count(), 0);
 }
 
-static NEXT: AtomicUsize = AtomicUsize::new(0);
-#[expect(
-    clippy::expect_used,
-    reason = "invalid shared fixtures or loopback setup stop this behavioral test"
-)]
-fn folder() -> PathBuf {
-    let path = std::env::temp_dir().join(format!(
-        "thinkthen-native-images-{}-{}",
-        std::process::id(),
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    ));
-    std::fs::create_dir(&path).expect("valid saved fixture or loopback configuration");
-    path
-}
-
 #[test]
 fn cache_and_strict_replay_use_original_bytes_order_and_state_without_filenames() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .backend("liquid")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model("d1")
-            .unwrap()
-            .api_key("fake-key")
-            .unwrap()
-    };
+    let build = || image_builder::builder(listener.base(), "liquid", "d1", Some("fake-key"));
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
-    let first = engine.details_input(&question(), &pair()).unwrap();
-    let again = engine.details_input(&question(), &pair()).unwrap();
+    let first = engine.request_decide(&question(), &pair()).unwrap();
+    let again = engine.request_decide(&question(), &pair()).unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(again.facts().requests_sent(), 0);
     assert_eq!(
-        first.value().probabilities(),
+        &first.value()[0].result().probabilities(),
         &thinkthen::Probabilities::YesNo { yes: 0.9 }
     );
     let changed = input(
@@ -391,14 +402,17 @@ fn cache_and_strict_replay_use_original_bytes_order_and_state_without_filenames(
             fixture(RED, ImageMedia::Png),
         ],
     );
-    engine.decide_input(&question(), &changed).unwrap();
+    engine.request_decide(&question(), &changed).unwrap();
     assert_eq!(listener.count(), 2);
     let replay = build().no_cache().replay(&folder).unwrap().build().unwrap();
-    replay.decide_input(&question(), &pair()).unwrap();
+    replay.request_decide(&question(), &pair()).unwrap();
     assert_eq!(listener.count(), 2);
     let miss = input(Some("changed context"), vec![fixture(RED, ImageMedia::Png)]);
     assert_eq!(
-        replay.decide_input(&question(), &miss).unwrap_err().kind(),
+        replay
+            .request_decide(&question(), &miss)
+            .unwrap_err()
+            .kind(),
         ErrorKind::Local
     );
     assert_eq!(listener.count(), 2);
@@ -418,29 +432,24 @@ fn batches_retain_inputs_and_context_and_retry_keeps_complete_images() {
         }
     })
     .unwrap();
-    let engine = Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("d1")
-        .unwrap()
+    let engine = image_builder::builder(listener.base(), "liquid", "d1", None)
         .no_cache()
         .max_retries(1)
         .build()
         .unwrap();
     let inputs = vec![pair(), pair()];
-    let rows = engine
-        .decide_input_many_with(
-            &question(),
-            inputs.clone(),
-            CallOptions::new().context("Batch context."),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = request::decisions(
+        &engine,
+        question().into(),
+        inputs.clone().into_iter().map(Ok),
+        CallOptions::new().context("Batch context."),
+    )
+    .unwrap()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0].input(), &inputs[0]);
-    assert_eq!(rows[1].value(), &Answer::Yes);
+    assert_eq!(rows[0].original(), &inputs[0]);
+    assert_eq!(&rows[1].result().value(), &Answer::Yes);
     let bodies = listener.requests();
     assert_eq!(bodies.len(), 2);
     assert_eq!(bodies[0].body, bodies[1].body);
@@ -456,7 +465,7 @@ fn text_input_door_preserves_existing_request_bytes() {
     let engine = engine(&listener, "liquid", "d1");
     engine.decide(&question(), "Original text.").unwrap();
     engine
-        .decide_input(&question(), &QuestionInput::Text("Original text.".into()))
+        .request_decide(&question(), &QuestionInput::Text("Original text.".into()))
         .unwrap();
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
@@ -486,10 +495,10 @@ fn saved_0034_liquid_one_image_exchange_keeps_original_wire_and_usage() {
         ImageMedia::Jpeg,
     );
     let call = engine
-        .details_input(&question, &input(request["state"].as_str(), vec![image]))
+        .request_decide(&question, &input(request["state"].as_str(), vec![image]))
         .unwrap();
     assert_eq!(
-        call.value().probabilities(),
+        &call.value()[0].result().probabilities(),
         &thinkthen::Probabilities::YesNo {
             yes: 0.9987551569665462
         }
@@ -501,3 +510,6 @@ fn saved_0034_liquid_one_image_exchange_keeps_original_wire_and_usage() {
 
 #[path = "images/local.rs"]
 mod local;
+
+#[path = "support/image_builder.rs"]
+mod image_builder;

@@ -9,7 +9,7 @@ use crate::core::{FindResult, Usage};
 pub(crate) struct Find {
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
-    pub(crate) legacy: FindResult,
+    pub(crate) compatibility: FindResult,
 }
 
 impl Find {
@@ -18,38 +18,38 @@ impl Find {
         declarations: &'a crate::core::declaration::QuestionMetadata,
     ) -> impl Serialize + 'a {
         crate::core::declaration::SemanticReadableQuestion::semantic(
-            &self.legacy.question,
+            &self.compatibility.question,
             declarations,
         )
     }
 
     pub(crate) fn profile(&self) -> Option<&str> {
-        self.legacy.question.profile()
+        self.compatibility.question.profile()
     }
     pub(crate) fn raw_pick(&self) -> &str {
-        self.legacy.answer.pick()
+        self.compatibility.answer.pick()
     }
     pub(crate) fn selected(&self) -> Option<usize> {
-        self.legacy.answer.selected()
+        self.compatibility.answer.selected()
     }
     pub(crate) const fn question(&self) -> (&crate::core::QuestionText, bool) {
-        self.legacy.question.parts()
+        self.compatibility.question.parts()
     }
 
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
-        self.legacy.meta.fields()
+        self.compatibility.meta.fields()
     }
 
     pub(crate) fn confidence(&self) -> Option<f64> {
-        self.legacy.answer.confidence()
+        self.compatibility.answer.confidence()
     }
 
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
-        self.legacy.meta.reported_usage
+        self.compatibility.meta.reported_usage
     }
 
     pub(crate) const fn usage(&self) -> Option<Usage> {
-        self.legacy.meta.usage
+        self.compatibility.meta.usage
     }
 }
 
@@ -97,7 +97,7 @@ impl Find {
         candidates: Option<&[CandidateDocument<'_, T>]>,
         serializer: S,
     ) -> Result<S::Ok, S::Error> {
-        let row = &self.legacy;
+        let row = &self.compatibility;
         Document {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
@@ -118,6 +118,6 @@ impl Find {
 
 impl Serialize for Find {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_with_value(self.legacy.value.as_ref(), serializer)
+        self.serialize_with_value(self.compatibility.value.as_ref(), serializer)
     }
 }

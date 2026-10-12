@@ -33,6 +33,7 @@ usage_home
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
+if [ "$profile" = full ]; then . "$REPO/sdlc/scripts/full-compiler"; fi
 # macOS has no `timeout` (ticket 0128). runtime.sh uses it too.
 LIMIT=$REPO/sdlc/scripts/time-limit
 # The extension version names its SQL files (ticket 0128).
@@ -49,22 +50,25 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$PG_HOST" = Linux ]; then
 	[ -f "$("$PG_CONFIG" --includedir-server)/postgres.h" ] || not_run "the PostgreSQL 16 server headers at $PG_CONFIG are missing"
 fi
 
-[ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+export PGRX_PG_CONFIG_PATH="$PG_CONFIG"
+[ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ] || {
 	echo "== build"
 	cargo fmt --check
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline --lib
 }
+reader_profile=
+[ "$profile" != full ] || reader_profile=--release
 if [ "$PG_HOST" = Darwin ]; then
 	# Cargo also links this package's library when it builds the client reader.
 	# Its PostgreSQL symbols resolve when the server loads the extension (ticket 0336).
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS='-Clink-arg=-Wl,-undefined,dynamic_lookup' \
-		cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+	PGRX_PG_CONFIG_PATH="$PG_CONFIG" RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }-Clink-arg=-Wl,-undefined,dynamic_lookup" \
+		cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
 else
-	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet --bin thinkthen_read_inputs
+	PGRX_PG_CONFIG_PATH="$PG_CONFIG" cargo build --locked --offline --quiet ${reader_profile:+$reader_profile} --bin thinkthen_read_inputs
 fi
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend --package thinkthen --bin conformance-backend --bin thinkthen)
-export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
+if [ "$profile" != full ]; then export RUSTFLAGS="--remap-path-prefix=$HOME=/build"; fi
 # package.sh reads the same pg_config and target folder (ticket 0128).
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
@@ -168,16 +172,21 @@ echo "== package"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
 	PACKAGE_LIB=$RUN/artifact/lib
 	PACKAGE_SQL=$RUN/artifact/extension/thinkthen--$EXT_VERSION.sql
-	STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}
+	if [ "$profile" != full ]; then STEPS=${STEPS:-shipped_lacks_probe no_home_in_library examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending}; fi
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
 	mkdir -p "$SHIPPED" && cp -a "$EXT/." "$SHIPPED/"
-	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+	if [ "$profile" != full ]; then
+	    ./pgrx-package-locked.sh --pg-config "$PG_CONFIG" --features panic-probe >/dev/null
+	fi
 	runtime_install "$EXT$("$PG_CONFIG" --pkglibdir)" "$EXT$("$PG_CONFIG" --sharedir)/extension"
 	PACKAGE_LIB=$SHIPPED$("$PG_CONFIG" --pkglibdir)
 	PACKAGE_SQL=$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql
 }
+if [ "$profile" = full ]; then
+    STEPS=${STEPS:-shipped_lacks_probe no_home_in_library start_refuses_other_hosts examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn complete_question_resolution_keeps_privilege_and_content_boundaries client_reader_validates_file_formats complete_cases complete_request_contract_cases complete_image_contract_cases find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment token_variable_refuses_before_sending public_holds_nothing batch_signatures_are_extension_owned_and_private the_grant_reaches_the_extension_alone a_deliberate_grant_survives an_update_cannot_grant_public usage_persistence_status a_cancelled_send_counts_toward_the_total keyed_answers_reuse_without_sending keyed_banded_file_reuses single_cancel batch_cancel preload_forks_cleanly signal_masks single_statement_timeout a_timed_out_batch_leaves_the_session_working benign_interrupt_finishes single_deadline batch_deadline}
+fi
 cp fixtures/*.json "$DATA/"
 fresh generic
 qs -v ON_ERROR_STOP=1 -c "CREATE EXTENSION thinkthen" -f fixtures/tickets.sql -f fixtures/alerts.sql -f fixtures/inbox.sql >/dev/null

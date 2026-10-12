@@ -2,13 +2,8 @@
 use super::*;
 #[cfg(test)]
 fn rows(output: &std::process::Output) -> Vec<Value> {
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout)
+    crate::harness::exits(output, 0);
+    crate::harness::printed(output)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect()

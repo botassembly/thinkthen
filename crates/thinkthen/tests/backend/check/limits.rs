@@ -1,7 +1,7 @@
 //! Backend check request, reply and retry limits.
 
 use super::{KEY, at, check, failures, text};
-use crate::harness::Listener;
+use crate::harness::{Listener, exits, exits_because};
 use conformance_backend::Backend;
 use std::fs;
 
@@ -103,7 +103,7 @@ fn a_retried_status_is_sent_four_times_for_each_probe() {
     for command in [&["backends", "check"][..], &["check"][..]] {
         let backend = Backend::start().expect("backend");
         let output = at(command, &backend, "/arm/503/v1");
-        assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+        exits(&output, 4);
         assert_eq!(backend.count(), 56);
     }
 }
@@ -122,13 +122,9 @@ fn size_refusals_add_two_halves_to_tag_and_relate_requests() {
     })
     .expect("listener");
     let output = check(&["backends", "check"], &["--url", listener.base()], &[]);
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}{}",
-        text(&output.stdout),
-        text(&output.stderr)
-    );
+    exits_because(&output, 0, || {
+        format!("{}{}", text(&output.stdout), text(&output.stderr))
+    });
     assert_eq!(listener.count(), 19);
     let requests = listener.requests();
     let pairs = requests
@@ -149,7 +145,7 @@ fn size_refusals_add_two_halves_to_tag_and_relate_requests() {
         &["--url", listener.base(), "--plan"],
         &[],
     );
-    assert_eq!(plan.status.code(), Some(0), "{}", text(&plan.stderr));
+    exits(&plan, 0);
     assert!(
         text(&plan.stdout)
             .ends_with("prepared-requests upper-bound 16 before retries and refusal splits\n")
@@ -176,12 +172,7 @@ fn a_function_body_close_or_timeout_stops_later_functions() {
             &[],
         );
         let stdout = text(&output.stdout);
-        assert_eq!(
-            output.status.code(),
-            Some(4),
-            "{stdout}{}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 4, || format!("{stdout}{}", text(&output.stderr)));
         assert_eq!(listener.count(), failed_at + 1, "{stdout}");
         let failed = failed_at - 4;
         for (place, name) in super::FUNCTIONS.iter().enumerate() {

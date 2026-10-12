@@ -42,7 +42,7 @@ fn relate_reads_the_names_recognize_found() {
                 .arg(folder.join(input)),
         )
         .expect("binary runs");
-        let error = String::from_utf8_lossy(&output.stderr);
+        let error = crate::harness::said(&output);
         assert!(output.status.success(), "{error}");
         // A plan's second line counts records; the first holds the request.
         let first = output.stdout.split(|byte| *byte == b'\n').next();

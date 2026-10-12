@@ -1,6 +1,6 @@
 //! SQLite admits canonical saved headers before its authorized descriptor reader.
 use thinkthen::{
-    AdmittedRequest, Error, Request, RequestArguments, RequestCall, RequestInput, RequestOptions,
+    AdmittedRequest, Error, Request, RequestArguments, RequestInput, RequestOptions,
     RequestQuestion,
 };
 
@@ -26,18 +26,6 @@ pub(super) fn admit(verb: &str, source: &str) -> Result<Option<AdmittedRequest>,
         },
         options: RequestOptions::default(),
     };
-    let call = match verb {
-        "decide" => RequestCall::Decide(args),
-        "choose" => RequestCall::Choose(args),
-        "tag" => RequestCall::Tag(args),
-        "score" => RequestCall::Score(args),
-        "filter" => RequestCall::Filter(args),
-        "rank" => RequestCall::Rank(args),
-        "find" => RequestCall::Find(args),
-        "annotate" => RequestCall::Annotate(args),
-        "recognize" => RequestCall::Recognize(args),
-        "relate" => RequestCall::Relate(args),
-        _ => return Err(super::super::complete_native::defect()),
-    };
-    Request::new(call).admit().map(Some)
+    let request = Request::named(verb, args)?;
+    request.admit().map(Some)
 }

@@ -69,12 +69,8 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
     .unwrap();
     let place = folder();
     let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
+        crate::api::builder(listener.base(), "native-store-private")
             .model("jev-1.13.0")
-            .unwrap()
-            .api_key("native-store-private")
             .unwrap()
             .max_retries(0)
     };

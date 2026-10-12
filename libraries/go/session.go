@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
-	"time"
 )
 
 // Client owns one native engine and the ten named judgment calls.
@@ -106,48 +105,32 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		for i, v := range values {
 			items[i] = descriptor(v)
 		}
-		switch verb {
-		case "find":
-			source = RequestInputUnits{Items: items}
-		case "relate":
-			source = RequestInputEntities{Items: items}
-		default:
-			source = RequestInputRecords{Items: items}
+		source = RequestInputRecords{Items: items}
+	}
+	if options == nil {
+		options = &RequestOptions{}
+	}
+	var request C.thinkthen_named_request_v1
+	views := []*C.thinkthen_complete_utf8_v1{&request.function, &request.question_json, &request.input_json, &request.options_json}
+	for i, value := range []any{verb, question, source, options} {
+		var data []byte
+		var err error
+		if i == 0 {
+			data = []byte(verb)
+		} else {
+			data, err = json.Marshal(value)
 		}
+		if err != nil {
+			return result, err
+		}
+		bytes := C.CBytes(data)
+		defer C.free(bytes)
+		*views[i] = C.thinkthen_complete_utf8_v1{data: (*C.char)(bytes), len: C.size_t(len(data))}
 	}
-	var call RequestCall
-	switch verb {
-	case "decide":
-		call = RequestCallDecide{Input: source, Options: options, Question: question}
-	case "choose":
-		call = RequestCallChoose{Input: source, Options: options, Question: question}
-	case "tag":
-		call = RequestCallTag{Input: source, Options: options, Question: question}
-	case "score":
-		call = RequestCallScore{Input: source, Options: options, Question: question}
-	case "filter":
-		call = RequestCallFilter{Input: source, Options: options, Question: question}
-	case "rank":
-		call = RequestCallRank{Input: source, Options: options, Question: question}
-	case "find":
-		call = RequestCallFind{Input: source, Options: options, Question: question}
-	case "annotate":
-		call = RequestCallAnnotate{Input: source, Options: options, Question: question}
-	case "recognize":
-		call = RequestCallRecognize{Input: source, Options: options, Question: question}
-	case "relate":
-		call = RequestCallRelate{Input: source, Options: options, Question: question}
-	}
-	request := Request{Call: call}
-	data, err := json.Marshal(request)
-	if err != nil {
-		return result, err
-	}
-	bytes := C.CBytes(data)
-	defer C.free(bytes)
 	const surfaceToken = "go"
-	surface := C.CBytes([]byte(surfaceToken))
-	defer C.free(surface)
+	surfaceBytes := C.CBytes([]byte(surfaceToken))
+	defer C.free(surfaceBytes)
+	surface := C.thinkthen_complete_utf8_v1{data: (*C.char)(surfaceBytes), len: C.size_t(len(surfaceToken))}
 	c.engine.mu.RLock()
 	if c.engine.raw == nil {
 		c.engine.mu.RUnlock()
@@ -155,7 +138,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	}
 	runtime.LockOSThread()
 	var session *C.thinkthen_session
-	err = sessionFailure(C.thinkthen_session_new_with_surface(c.engine.raw, (*C.char)(bytes), C.size_t(len(data)), (*C.char)(surface), C.size_t(len(surfaceToken)), &session))
+	err := sessionFailure(C.thinkthen_session_new_named_with_surface(c.engine.raw, &request, surface, &session))
 	runtime.UnlockOSThread()
 	c.engine.mu.RUnlock()
 	if err != nil {
@@ -196,8 +179,6 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			return result, err
 		}
 	}
-	ticker := time.NewTicker(time.Millisecond)
-	defer ticker.Stop()
 	for {
 		c.mu.Lock()
 		closed := c.closed
@@ -273,11 +254,29 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			if feed != nil && !feed.finished && feed.pending == nil {
 				next = feed.values
 			}
+			interest := C.uint32_t(C.THINKTHEN_SESSION_WAIT_RESULT_V1)
+			if feed != nil && feed.pending != nil {
+				interest = C.THINKTHEN_SESSION_WAIT_INPUT_V1
+			}
+			waited := make(chan error, 1)
+			go func() {
+				runtime.LockOSThread()
+				defer runtime.UnlockOSThread()
+				var ready C.uint32_t
+				waited <- sessionFailure(C.thinkthen_session_wait(session, interest, 50, &ready))
+			}()
 			select {
 			case <-ctx.Done():
+				C.thinkthen_session_cancel(session)
+				err = <-waited
 			case value := <-next:
 				feed.pending = &value
-			case <-ticker.C:
+				err = <-waited
+			case err = <-waited:
+			}
+			// Every path joins its native wait before the deferred free.
+			if err != nil {
+				return result, err
 			}
 		}
 	}

@@ -1,6 +1,7 @@
 //! The speed test's gate (ticket 0145): `probes/speed/measure.py gate` against the loopback backend.
 #![cfg(feature = "cli")]
 
+use crate::harness::stderr_is;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -54,7 +55,7 @@ fn the_speed_gate_holds_and_names_each_fault() {
     let backend = Backend::start().expect("backend");
     let committed =
         gate(&backend, &repository().join("probes/speed/functions.jsonl")).expect("the gate runs");
-    let reported: usize = String::from_utf8_lossy(&committed.stdout)
+    let reported: usize = crate::harness::printed(&committed)
         .lines()
         .map(|line| {
             line.split('\t')
@@ -68,7 +69,7 @@ fn the_speed_gate_holds_and_names_each_fault() {
         backend.count(),
         "status must count what the socket read"
     );
-    let stderr = String::from_utf8_lossy(&committed.stderr);
+    let stderr = crate::harness::said(&committed);
     assert_eq!(committed.status.code(), Some(0), "{stderr}");
     assert_eq!(stderr, "");
 
@@ -93,6 +94,6 @@ fn the_speed_gate_holds_and_names_each_fault() {
     for (list, sentence) in cases {
         let output = gate(&backend, &list.expect("planted table")).expect("the gate runs");
         assert_eq!(output.status.code(), Some(1), "{sentence}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), sentence);
+        stderr_is(&output, sentence);
     }
 }

@@ -1,13 +1,13 @@
 //! Frozen envelope translation retains legacy parsing and diagnostics at its edge.
-use super::{Request as LegacyRequest, alone, flag, member, object};
+use super::{Request as FrozenRequest, alone, flag, member, object};
 use crate::failures::Failure;
 use thinkthen::{
     AdmittedRequest, LoadedQuestion, Question, QuestionInput, QuestionSet, RawRecord, Request,
-    RequestArguments, RequestBatch, RequestCall, RequestDefinition, RequestInput, RequestItem,
-    RequestOptions, RequestOriginal, RequestQuestion,
+    RequestArguments, RequestBatch, RequestDefinition, RequestInput, RequestItem, RequestOptions,
+    RequestOriginal, RequestQuestion,
 };
 
-pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Failure> {
+pub(super) fn translate(request: &FrozenRequest) -> Result<AdmittedRequest, Failure> {
     let definition = definition(request)?;
     refuse_banded_filter(request, &definition)?;
     let input = if let Some(source) = request.envelope.get("source") {
@@ -41,11 +41,7 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
             .map(|text| string_record(text, request.verb == "annotate"))
             .collect::<Result<Vec<_>, Failure>>()?
         };
-        if request.verb == "relate" {
-            RequestInput::Entities { items }
-        } else {
-            RequestInput::Records { items }
-        }
+        RequestInput::Records { items }
     } else if request.verb == "find" {
         let items = member(request, "units", |raw| {
             serde_json::from_str::<Vec<String>>(raw)
@@ -53,14 +49,11 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
         .into_iter()
         .map(|text| item(RequestOriginal::Text { text }))
         .collect();
-        RequestInput::Units { items }
+        RequestInput::Records { items }
     } else {
-        RequestInput::Text {
-            text: member(request, "evidence", |raw| {
-                serde_json::from_str::<String>(raw)
-            })?,
-            images: Vec::new(),
-        }
+        crate::typed::text_input(member(request, "evidence", |raw| {
+            serde_json::from_str::<String>(raw)
+        })?)
     };
     let mut options = RequestOptions {
         attempts: request.attempts,
@@ -79,19 +72,7 @@ pub(super) fn translate(request: &LegacyRequest) -> Result<AdmittedRequest, Fail
         input,
         options,
     };
-    let call = match request.verb.as_str() {
-        "decide" => RequestCall::Decide(args),
-        "choose" => RequestCall::Choose(args),
-        "tag" => RequestCall::Tag(args),
-        "score" => RequestCall::Score(args),
-        "filter" => RequestCall::Filter(args),
-        "rank" => RequestCall::Rank(args),
-        "find" => RequestCall::Find(args),
-        "annotate" => RequestCall::Annotate(args),
-        "recognize" => RequestCall::Recognize(args),
-        _ => RequestCall::Relate(args),
-    };
-    Ok(Request::new(call).admit()?)
+    Ok(Request::named(&request.verb, args)?.admit()?)
 }
 fn string_record(text: String, annotate: bool) -> Result<RequestItem, Failure> {
     if !annotate {
@@ -122,7 +103,7 @@ fn item(original: RequestOriginal) -> RequestItem {
     }
 }
 
-fn definition(request: &LegacyRequest) -> Result<RequestDefinition, Failure> {
+fn definition(request: &FrozenRequest) -> Result<RequestDefinition, Failure> {
     let mut question = request.question.clone();
     if let Some(text) = question.remove("filter") {
         question.insert("decide".to_owned(), text);
@@ -155,7 +136,7 @@ fn definition(request: &LegacyRequest) -> Result<RequestDefinition, Failure> {
 }
 
 fn refuse_banded_filter(
-    request: &LegacyRequest,
+    request: &FrozenRequest,
     definition: &RequestDefinition,
 ) -> Result<(), Failure> {
     if request.verb == "filter"

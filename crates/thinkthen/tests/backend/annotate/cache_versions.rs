@@ -90,12 +90,7 @@ fn a_cached_answer_from_another_version_takes_no_part_in_the_model_check() {
         "right?",
         &["--model", "fake-1"],
     );
-    assert_eq!(
-        first.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&first.stderr)
-    );
+    crate::harness::exits(&first, 0);
     let second = run(
         &listener,
         &cache,
@@ -103,15 +98,10 @@ fn a_cached_answer_from_another_version_takes_no_part_in_the_model_check() {
         "is it right?",
         &["--model", "fake-1"],
     );
-    assert_eq!(
-        second.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&second.stderr)
-    );
+    crate::harness::exits(&second, 0);
     assert!(second.stderr.is_empty());
     assert_eq!(
-        String::from_utf8_lossy(&second.stdout),
+        crate::harness::printed(&second),
         "{\"left\":\"yes\",\"right\":\"yes\",\"left_answer\":true,\"right_answer\":true}\n"
     );
     assert_eq!(
@@ -130,17 +120,12 @@ fn a_mutable_alias_refreshes_old_groups_and_the_new_group_together() {
     let first = run(&listener, &cache, "alias-refresh", "right?", &alias);
     assert_eq!(first.status.code(), Some(0));
     let second = run(&listener, &cache, "alias-refresh", "is it right?", &alias);
-    assert_eq!(
-        second.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&second.stderr)
-    );
+    crate::harness::exits(&second, 0);
     assert!(!second.stdout.is_empty());
     assert_eq!(questions(&listener), [2, 2], "both questions refresh");
     assert_eq!(sent.load(Ordering::SeqCst), 2);
     assert_eq!(
-        String::from_utf8_lossy(&second.stderr)
+        crate::harness::said(&second)
             .matches("sends each planned cache request live")
             .count(),
         1

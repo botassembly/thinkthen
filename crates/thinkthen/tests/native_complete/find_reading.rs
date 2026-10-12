@@ -10,11 +10,18 @@ fn saved_find_reading_uses_actual_ordered_units_and_preserves_model_profile_and_
     let question = Question::load_find(&path).unwrap();
     assert_eq!(question.kind(), QuestionKind::Find);
     let engine = engine(&listener);
-    let call = engine
-        .find_complete_with(&question, ["first", "second"], CallOptions::new())
-        .unwrap();
-    let result = call.value();
-    assert_eq!(result.selected(), Some(&"second"));
+    let call = crate::api::find(
+        &engine,
+        &question,
+        crate::api::plain_records(["first", "second"]),
+        CallOptions::new(),
+    )
+    .unwrap();
+    let result = crate::api::found(&call).unwrap();
+    assert_eq!(
+        result.selected(),
+        Some(&thinkthen::QuestionInput::Text("second".into()))
+    );
     assert_eq!(result.raw_pick(), "u002");
     assert_eq!(result.question().profile(), Some("saved-profile"));
     assert_eq!(
@@ -70,13 +77,7 @@ fn single_unit_with_none_selects_the_original_or_none_and_reuses_cached_answers(
         );
         let listener = Listener::answering(move |_| Canned::ok(&response)).unwrap();
         let folder = folder();
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "complete-private")
             .cache_at(&folder)
             .unwrap()
             .max_retries(0)
@@ -95,13 +96,13 @@ fn single_unit_with_none_selects_the_original_or_none_and_reuses_cached_answers(
             );
             [Ok(record)]
         };
-        let call = engine
-            .try_find_records_complete_with(&question, records(), CallOptions::new())
-            .unwrap();
-        let result = call.value();
+        let call = crate::api::find(&engine, &question, records(), CallOptions::new()).unwrap();
+        let result = crate::api::found(&call).unwrap();
         assert_eq!(result.selected().is_some(), selected);
         if selected {
-            let record = result.selected().unwrap();
+            let thinkthen::QuestionInput::Record(record) = result.selected().unwrap() else {
+                panic!("selected record");
+            };
             assert_eq!(
                 record.original().content().unwrap().to_json().unwrap(),
                 original
@@ -117,11 +118,15 @@ fn single_unit_with_none_selects_the_original_or_none_and_reuses_cached_answers(
             document["answer"]["probabilities"],
             serde_json::from_str::<Value>(probabilities).unwrap()
         );
-        let cached = engine
-            .try_find_records_complete_with(&question, records(), CallOptions::new())
-            .unwrap();
-        assert_eq!(cached.value().answer_id(), result.answer_id());
-        assert_eq!(cached.value().identity().origin(), Some(Origin::Cache));
+        let cached = crate::api::find(&engine, &question, records(), CallOptions::new()).unwrap();
+        assert_eq!(
+            crate::api::found(&cached).unwrap().answer_id(),
+            result.answer_id()
+        );
+        assert_eq!(
+            crate::api::found(&cached).unwrap().identity().origin(),
+            Some(Origin::Cache)
+        );
         assert_eq!(cached.facts().requests_sent(), 0);
         assert_eq!(listener.count(), 1);
         assert_eq!(

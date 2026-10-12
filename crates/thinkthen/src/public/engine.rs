@@ -4,14 +4,14 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::core::{self, BackendProfile, Prices, Value};
+use crate::core::{self, BackendProfile, Prices};
 use crate::engine::facade::Roots;
 use crate::engine::facade::{self, Settings};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, guarded};
 use crate::public::question::{ChooseQuestion, Kind, LoadedQuestion, Question, TagQuestion};
-use crate::public::results::{self, Answer, Call, Counters, Details};
+use crate::public::results::{Answer, Call, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
 /// One judgment and the question keys behind it.
@@ -227,16 +227,6 @@ impl Engine {
         self.inner.finish_usage_status()
     }
 
-    /// Write this process's pending usage totals before the process exits,
-    /// for a host that never drops its engine. Dropping the last clone does
-    /// the same. Only the wait for the usage lock is bounded, by one second.
-    /// A forked child that never called the engine writes nothing.
-    /// Return persistence failure with the shared advice; the answer stays valid.
-    #[must_use]
-    pub fn finish_usage(&self) -> crate::public::UsagePersistence {
-        self.inner.finish_usage_status()
-    }
-
     /// This engine's totals: the sends, cache answers and tokens of calls
     /// made through it and its clones. Another engine in the same process
     /// counts its own, from zero; add several with `Counters`' `Sum`. A
@@ -272,11 +262,11 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Answer>, Error> {
-        let question = question.question();
-        only(question, DECISIONS, "decide")?;
-        Ok(self
-            .judge(question, evidence, options)?
-            .map(|judged| results::answer(&judged.value)))
+        self.decide_input_with(
+            question,
+            &super::QuestionInput::Text(evidence.to_owned()),
+            options,
+        )
     }
 
     /// Pick one option of `C`, or `None` when the answer is not sure.
@@ -303,12 +293,11 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Option<C>>, Error> {
-        self.judge(&question.0, evidence, options)?
-            .try_map(|judged| match judged.value {
-                Value::Choice(Some(label)) => C::from_label(&label).map(Some).ok_or_else(unbound),
-                Value::Choice(None) => Ok(None),
-                _ => Err(Error::defect("a choose answer held no choice")),
-            })
+        self.choose_input_with(
+            question,
+            &super::QuestionInput::Text(evidence.to_owned()),
+            options,
+        )
     }
 
     /// Place the evidence on the question's levels: 0 at the lowest, 1 at the highest.
@@ -331,12 +320,11 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<f64>, Error> {
-        only(question, &[Kind::Score], "score")?;
-        self.judge(question, evidence, options)?
-            .try_map(|judged| match judged.value {
-                Value::Score(position) => Ok(position),
-                _ => Err(Error::defect("a score answer held no position")),
-            })
+        self.score_input_with(
+            question,
+            &super::QuestionInput::Text(evidence.to_owned()),
+            options,
+        )
     }
 
     /// Every label of `C` that reached the cut, in declared order.
@@ -363,14 +351,24 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Vec<C>>, Error> {
-        self.judge(&question.0, evidence, options)?
-            .try_map(|judged| match judged.value {
-                Value::Tag(labels) => labels
-                    .iter()
-                    .map(|label| C::from_label(label).ok_or_else(unbound))
-                    .collect(),
-                _ => Err(Error::defect("a tag answer held no labels")),
-            })
+        self.atomic_complete(
+            super::InputFunction::Tag,
+            question.question(),
+            &super::QuestionInput::Text(evidence.to_owned()),
+            options,
+        )?
+        .try_map(super::complete::tags)?
+        .try_map(|result| {
+            result
+                .value()
+                .iter()
+                .map(|label| {
+                    C::from_label(label).ok_or(Error::defect(
+                        "the backend answered a label the choice does not hold",
+                    ))
+                })
+                .collect()
+        })
     }
 
     /// One judgment with its probabilities and request facts.
@@ -397,28 +395,11 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<Details>, Error> {
-        let question = question.question();
-        only(
+        self.details_input_with(
             question,
-            &[
-                Kind::Decide,
-                Kind::Banded,
-                Kind::Choose,
-                Kind::Tag,
-                Kind::Score,
-            ],
-            "details",
-        )?;
-        self.keyed(question, evidence, options)?
-            .try_map(|(judged, keys)| {
-                Details::of(
-                    &judged,
-                    question,
-                    self.inner.backend(),
-                    self.profile.as_ref(),
-                    keys,
-                )
-            })
+            &super::QuestionInput::Text(evidence.to_owned()),
+            options,
+        )
     }
 
     /// The facade engine that asks this question's model.
@@ -438,33 +419,4 @@ impl Engine {
             _ => Ok(Arc::clone(&self.inner)),
         }
     }
-
-    fn judge(
-        &self,
-        question: &Question,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<facade::Judgment>, Error> {
-        Ok(self
-            .keyed(question, text, options)?
-            .map(|(judged, _)| judged))
-    }
-
-    /// One text's judgment and the question keys behind it.
-    fn keyed(
-        &self,
-        question: &Question,
-        text: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Keyed>, Error> {
-        self.keyed_input(
-            question,
-            &super::QuestionInput::Text(text.to_owned()),
-            options,
-        )
-    }
-}
-
-fn unbound() -> Error {
-    Error::defect("the backend answered a label the choice does not hold")
 }

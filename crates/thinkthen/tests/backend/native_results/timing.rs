@@ -33,12 +33,7 @@ fn details_recording_writes_only_timing_fields_and_replay_sends_nothing() {
         .unwrap()
     };
     let live = run("--record");
-    assert_eq!(
-        live.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&live.stderr)
-    );
+    crate::harness::exits(&live, 0);
     let row: Value = serde_json::from_slice(&live.stdout).unwrap();
     let bytes = std::fs::read(root.join("thinkthen.timing.jsonl")).unwrap();
     let history: Value = serde_json::from_slice(&bytes).unwrap();

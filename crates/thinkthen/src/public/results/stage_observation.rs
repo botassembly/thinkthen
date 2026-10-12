@@ -5,21 +5,6 @@ use crate::engine::{error::Error as EngineError, facade::Answered};
 use crate::public::{InputFunction, QuestionInput, options::Stop};
 use std::sync::Arc;
 
-pub(crate) fn observe_question(
-    stop: &Stop<'_>,
-    backend: &Backend,
-    reading: (
-        InputFunction,
-        &'static str,
-        &core::Question,
-        Option<Threshold>,
-    ),
-    answered: &Answered,
-    positions: &mut [usize; 4],
-) -> Result<(), EngineError> {
-    observe_question_at(stop, backend, reading, answered, positions, (0, None))
-}
-
 fn stage_slot(stage: &str) -> Option<usize> {
     match stage {
         "boundary" => Some(0),

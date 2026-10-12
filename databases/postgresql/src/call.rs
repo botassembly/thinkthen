@@ -164,7 +164,7 @@ pub(crate) fn finish_usage() {
     let kept: Vec<Engine> = all.iter().map(|(_, engine)| engine.clone()).collect();
     drop(all);
     for engine in kept {
-        let _status = engine.finish_usage();
+        let _status = engine.finish_usage_status();
     }
 }
 

@@ -110,6 +110,19 @@ pub(crate) fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Comma
     command
 }
 
+/// Configure interactive pipes without adding retry or input-pause overrides.
+/// Each caller supplies its own home, arguments and complete environment.
+pub(crate) fn piped(home: impl AsRef<std::path::Path>) -> Command {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+    command
+        .clear_environment()
+        .home(home)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    command
+}
+
 /// Counts the replies written with `Canned::notifying(tally.sender())`, so a
 /// held reply can wait for others to be written first (ticket 0352). The
 /// wait gives up after `FAILSAFE`, so a missing reply fails on counts.
@@ -184,4 +197,128 @@ impl Gathering {
                 .wait_timeout_while(arrived, FAILSAFE, |count| *count < self.wanted);
         }
     }
+}
+
+/// Check the exit code and show the command's diagnostic on failure.
+pub(crate) fn exits(output: &Output, wanted: i32) {
+    exits_because(output, wanted, String::new);
+}
+
+pub(crate) fn exits_because(output: &Output, wanted: i32, context: impl FnOnce() -> String) {
+    assert_eq!(
+        output.status.code(),
+        Some(wanted),
+        "{}: {}",
+        context(),
+        said(output)
+    );
+}
+
+pub(crate) fn text(bytes: &[u8]) -> String {
+    String::from_utf8_lossy(bytes).into_owned()
+}
+
+pub(crate) fn printed(output: &Output) -> String {
+    text(&output.stdout)
+}
+
+pub(crate) fn said(output: &Output) -> String {
+    text(&output.stderr)
+}
+
+pub(crate) fn code(output: &Output) -> i32 {
+    output.status.code().unwrap_or(-1)
+}
+
+/// A named test folder starts without earlier output.
+pub(crate) fn folder(name: &str) -> std::path::PathBuf {
+    let path = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let _absent = std::fs::remove_dir_all(&path);
+    path
+}
+
+/// Run a question set with exactly the environment and options the case names.
+pub(crate) fn annotate(
+    file: &std::path::Path,
+    options: &[&str],
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    spawn(
+        &[&["annotate", &file.to_string_lossy()][..], options].concat(),
+        environment,
+        evidence,
+    )
+}
+
+/// Run a local annotation fixture with the case's exact environment.
+pub(crate) fn annotate_at(
+    file: &std::path::Path,
+    base: &str,
+    options: &[&str],
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    annotate(
+        file,
+        &[&["--url", base, "--model", "local-1"][..], options].concat(),
+        environment,
+        evidence,
+    )
+}
+
+/// The standard local annotation fixture keeps its transport setup in one place.
+pub(crate) fn annotate_local(
+    file: &std::path::Path,
+    base: &str,
+    options: &[&str],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    annotate_at(
+        file,
+        base,
+        options,
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        evidence,
+    )
+}
+
+/// Pin the command's complete diagnostic, including its final newline.
+pub(crate) fn stderr_is(output: &Output, expected: impl AsRef<str>) {
+    assert_eq!(said(output), expected.as_ref());
+}
+
+/// Keep local transport options shared while each case supplies its own key.
+pub(crate) fn spawn_local(
+    arguments: &[&str],
+    base: &str,
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    spawn(
+        &[arguments, &["--url", base, "--model", "local-1"]].concat(),
+        environment,
+        evidence,
+    )
+}
+
+pub(crate) fn spawn_one_local(
+    arguments: &[&str],
+    base: &str,
+    environment: &[(&str, &str)],
+    evidence: &[u8],
+) -> io::Result<Output> {
+    spawn_local(
+        arguments,
+        base,
+        &[environment, &[("THINKTHEN_BATCH", "1")]].concat(),
+        evidence,
+    )
+}
+
+/// A refused command emits only the complete expected diagnostic.
+pub(crate) fn refuses(output: &Output, status: i32, expected: impl AsRef<str>) {
+    exits(output, status);
+    assert!(output.stdout.is_empty());
+    stderr_is(output, expected);
 }

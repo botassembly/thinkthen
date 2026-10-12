@@ -1,17 +1,9 @@
 use super::*;
 use thinkthen::{BatchSetting, CancelToken, StopCause};
 
-#[derive(serde::Serialize)]
-struct Original {
-    z: bool,
-    body: &'static str,
-    a: Vec<i32>,
-}
-impl thinkthen::Evidence for Original {
-    fn evidence(&self) -> &str {
-        self.body
-    }
-}
+#[path = "../support/original.rs"]
+mod original;
+use original::Original;
 
 #[test]
 fn complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_legacy_call() {
@@ -28,17 +20,22 @@ fn complete_envelopes_keep_owned_originals_and_actual_facts_without_changing_leg
     .unwrap();
     let engine = engine(&listener);
     let question = Question::decide("Good?").unwrap().cut();
-    let call = engine
-        .decide_many_complete_with(
-            &question,
-            [Original {
-                z: false,
-                body: "One.",
-                a: vec![2, 1],
-            }],
-            CallOptions::new().attempts(true),
-        )
-        .unwrap();
+    let rows = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        crate::api::plain_records([Original {
+            z: false,
+            body: "One.",
+            a: vec![2, 1],
+        }]),
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
+    let thinkthen::RequestRows::Decisions(batch) = rows else {
+        panic!("decision rows");
+    };
+    let call = batch.into_call().unwrap();
     assert_eq!(call.value()[0].original().a, [2, 1]);
     let complete = call.complete().unwrap();
     let encoded = serde_json::to_string(&complete).unwrap();
@@ -77,15 +74,16 @@ fn a_started_record_failure_has_original_stop_position_status_and_joined_complet
     .unwrap();
     let engine = engine(&listener);
     let question = Question::decide("Good?").unwrap().cut();
-    let error = engine
-        .decide_many_complete_with(
-            &question,
-            ["One.", "Two."],
-            CallOptions::new()
-                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-                .attempts(true),
-        )
-        .unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        crate::api::plain_records(["One.", "Two."]),
+        CallOptions::new()
+            .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+            .attempts(true),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(error.stopped().at(), Some(2));
     assert_eq!(error.stopped().cause(), StopCause::Status);
@@ -120,9 +118,14 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     let listener = Listener::answering(|_| Canned::ok("{}")).unwrap();
     let engine = engine(&listener);
     let question = Question::decide("Good?").unwrap().cut();
-    let invalid = engine
-        .decide_many_complete_with(&question, ["valid", ""], CallOptions::new().attempts(true))
-        .unwrap_err();
+    let invalid = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        crate::api::plain_records(["valid", ""]),
+        CallOptions::new().attempts(true),
+    )
+    .unwrap_err();
     let refused = serde_json::to_value(invalid.complete()).unwrap();
     assert_eq!(refused["error"]["kind"], "usage");
     assert_eq!(refused["error"]["stopped"]["cause"], "usage");
@@ -130,25 +133,25 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     assert!(refused.get("facts").is_none());
     let token = CancelToken::new();
     token.cancel();
-    let cancelled = engine
-        .decide_complete_with(
-            &question,
-            "valid",
-            CallOptions::new().cancel(&token).attempts(true),
-        )
-        .unwrap_err();
+    let cancelled = crate::api::decide(
+        &engine,
+        &question,
+        "valid",
+        CallOptions::new().cancel(&token).attempts(true),
+    )
+    .unwrap_err();
     assert_eq!(cancelled.kind(), ErrorKind::Cancelled);
     assert_eq!(cancelled.stopped().cause(), StopCause::Cancelled);
     assert_eq!(cancelled.stopped().at(), None);
     let cancelled = serde_json::to_value(cancelled.complete()).unwrap();
     assert!(cancelled.get("facts").is_none());
-    let expired = engine
-        .decide_complete_with(
-            &question,
-            "valid",
-            CallOptions::new().deadline_ms(0).unwrap().attempts(true),
-        )
-        .unwrap_err();
+    let expired = crate::api::decide(
+        &engine,
+        &question,
+        "valid",
+        CallOptions::new().deadline_ms(0).unwrap().attempts(true),
+    )
+    .unwrap_err();
     assert_eq!(expired.kind(), ErrorKind::Deadline);
     assert_eq!(expired.stopped().cause(), StopCause::Deadline);
     assert_eq!(expired.stopped().at(), None);
@@ -158,37 +161,4 @@ fn admission_and_cancellation_keep_distinct_complete_failure_facts_and_zero_send
     assert_eq!(stopped["facts"]["attempts"], json!([]));
     assert!(stopped.get("value").is_none());
     assert_eq!(listener.count(), 0);
-}
-
-#[test]
-fn complete_find_serialization_retains_the_original_payload_selected_by_native_execution() {
-    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"u001":0.2,"u002":0.8}}}}"#)).unwrap();
-    let engine = engine(&listener);
-    let question = Question::find("Where?").unwrap();
-    let call = engine
-        .find_complete_with(
-            &question,
-            [
-                Original {
-                    z: false,
-                    body: "First.",
-                    a: vec![1],
-                },
-                Original {
-                    z: true,
-                    body: "Second.",
-                    a: vec![3, 2],
-                },
-            ],
-            CallOptions::new(),
-        )
-        .unwrap();
-    assert_eq!(call.value().selected().unwrap().body, "Second.");
-    let doc: Value = serde_json::from_str(&call.value().to_json().unwrap()).unwrap();
-    assert_eq!(doc["value"], json!({"z":true,"body":"Second.","a":[3,2]}));
-    assert_eq!(
-        serde_json::to_value(call.complete().unwrap()).unwrap()["value"]["value"],
-        doc["value"]
-    );
-    assert_eq!(listener.count(), 1);
 }

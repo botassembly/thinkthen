@@ -1,4 +1,4 @@
-//! Explicit immutable inputs shared by native and foreign image doors.
+//! Explicit immutable inputs shared by native and foreign image interfaces.
 
 mod calls;
 mod many;

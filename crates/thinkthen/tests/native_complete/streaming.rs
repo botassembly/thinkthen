@@ -19,7 +19,8 @@ fn a_located_reader_failure_returns_the_complete_prefix_then_joined_facts_withou
     let records = reader
         .inspect(|_| pulled.set(pulled.get() + 1))
         .map(|source| source.and_then(|source| reading.compose_source(source)));
-    let mut batch = engine.try_decide_records_complete_with(
+    let mut batch = crate::api::pull_decisions(
+        &engine,
         &question,
         records,
         CallOptions::new()
@@ -72,28 +73,27 @@ impl Evidence for Original {
 }
 #[test]
 fn pulled_originals_need_no_clone_send_or_serialize_and_collection_keeps_complete_facts() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.2}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.2}}}"#);
     let engine = engine(&listener);
     let question = Question::decide("Refund?").unwrap().cut();
     let records = (0..2).map(|number| {
         Ok(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: Original {
+            context: Some("Guide.".into()),
+            ..crate::api::record(Original {
                 number,
                 local: Rc::new(()),
-            },
-            context: Some("Guide.".into()),
-            options: None,
+            })
         })
     });
-    let call = engine
-        .try_decide_records_complete_with(&question, records, CallOptions::new().attempts(true))
-        .into_call()
-        .unwrap();
+    let call = crate::api::pull_decisions(
+        &engine,
+        &question,
+        records,
+        CallOptions::new().attempts(true),
+    )
+    .into_call()
+    .unwrap();
     assert_eq!(call.facts().records(), 2);
     assert_eq!(call.facts().requests_sent(), 1);
     assert!(call.complete().is_some());
@@ -114,18 +114,17 @@ fn pulled_originals_need_no_clone_send_or_serialize_and_collection_keeps_complet
     let pulled = Cell::new(0);
     let records = (0..2).map(|_| {
         pulled.set(pulled.get() + 1);
-        Ok(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Never.",
-            context: None,
-            options: None,
-        })
+        Ok(crate::api::record("Never."))
     });
-    let refused = engine
-        .try_decide_records_complete_with(&question, records, CallOptions::new().cancel(&cancelled))
-        .into_call()
-        .unwrap_err();
+    let refused = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        records,
+        CallOptions::new().cancel(&cancelled),
+    )
+    .err()
+    .unwrap();
     assert_eq!(refused.kind(), ErrorKind::Cancelled);
     assert_eq!(pulled.get(), 0);
     assert_eq!(listener.count(), 1);
@@ -156,8 +155,7 @@ fn pulled_choose_score_tag_and_filter_execute_concrete_complete_results() {
             RawRecord::json(r#"{"z":false,"body":"Text.","options":{"b":null,"a":null}}"#).unwrap(),
         )
         .unwrap();
-    let choices = engine
-        .try_choose_records_complete_with(&choice, [Ok(original)], CallOptions::new())
+    let choices = crate::api::pull_choices(&engine, &choice, [Ok(original)], CallOptions::new())
         .into_call()
         .unwrap();
     assert_eq!(choices.value()[0].result().value(), Some("b"));
@@ -171,34 +169,23 @@ fn pulled_choose_score_tag_and_filter_execute_concrete_complete_results() {
             .unwrap(),
         r#"{"z":false,"body":"Text.","options":{"b":null,"a":null}}"#
     );
-    let inputs = || {
-        [Ok(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Text.",
-            context: None,
-            options: None,
-        })]
-    };
+    let inputs = || [Ok(crate::api::record("Text."))];
     let thinkthen::LoadedQuestion::Question(score) =
         Question::from_json(r#"{"score":"Grade?","levels":["Low","High"]}"#).unwrap()
     else {
         panic!("score")
     };
-    let scored = engine
-        .try_score_records_complete_with(&score, inputs(), CallOptions::new())
+    let scored = crate::api::pull_scores(&engine, &score, inputs(), CallOptions::new())
         .into_call()
         .unwrap();
     assert_eq!(scored.value()[0].result().value(), 0.75);
     let tag = Question::from_json(r#"{"tag":"Topics?","labels":["a","b"]}"#).unwrap();
-    let tagged = engine
-        .try_tag_records_complete_with(&tag, inputs(), CallOptions::new())
+    let tagged = crate::api::pull_tags(&engine, &tag, inputs(), CallOptions::new())
         .into_call()
         .unwrap();
     assert_eq!(tagged.value()[0].result().value(), &["a"]);
     let filter = Question::decide("Keep?").unwrap().cut();
-    let filtered = engine
-        .try_filter_records_complete_with(&filter, inputs(), CallOptions::new())
+    let filtered = crate::api::pull_filters(&engine, &filter, inputs(), CallOptions::new())
         .into_call()
         .unwrap();
     schema::call(&filtered, "completeFilter");
@@ -229,14 +216,18 @@ fn pulled_annotations_preserve_partial_member_failure_original_location_and_owne
     let observer = |event: thinkthen::RecordObservation<'_>| {
         observations.lock().unwrap().push(event.to_owned())
     };
-    let call = engine
-        .try_annotate_records_complete_with(
-            &set,
+    let batch = crate::api::annotation_rows(
+        crate::api::rows(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            set.into(),
             [Ok(original)],
             CallOptions::new().observe(&observer).attempts(true),
         )
-        .into_call()
-        .unwrap();
+        .unwrap(),
+    )
+    .unwrap();
+    let call = batch.into_call().unwrap();
     assert_eq!(call.facts().records(), 1);
     assert_eq!(call.value()[0].result().members().count(), 2);
     assert_eq!(
@@ -257,17 +248,9 @@ fn pulled_annotations_preserve_partial_member_failure_original_location_and_owne
 
 #[test]
 fn an_explicit_per_record_context_obeys_the_caller_byte_cap_before_its_row_sends() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .no_cache()
         .max_request_bytes(120)
         .unwrap()
@@ -276,28 +259,20 @@ fn an_explicit_per_record_context_obeys_the_caller_byte_cap_before_its_row_sends
     let question = Question::decide("Refund?").unwrap().cut();
     let records = || {
         [
+            crate::api::record("First."),
             RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "First.",
-                context: None,
-                options: None,
-            },
-            RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "Second.",
                 context: Some("x".repeat(200).into()),
-                options: None,
+
+                ..crate::api::record("Second.")
             },
         ]
     };
-    let eager = engine
-        .decide_records_complete_with(&question, records(), CallOptions::new())
-        .unwrap_err();
+    let eager =
+        crate::api::eager_decisions(&engine, &question, records(), CallOptions::new()).unwrap_err();
     assert_eq!(eager.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
-    let mut streamed = engine.try_decide_records_complete_with(
+    let mut streamed = crate::api::pull_decisions(
+        &engine,
         &question,
         records().into_iter().map(Ok),
         CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::new(1).unwrap())),

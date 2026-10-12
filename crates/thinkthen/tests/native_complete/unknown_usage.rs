@@ -17,33 +17,22 @@ fn empty_usage_stays_absent_and_explicit_zero_stays_reported_through_cache_and_r
                 .to_string();
         let listener = Listener::answering(move |_| Canned::ok(&body)).unwrap();
         let root = folder();
-        let build = || {
-            Engine::builder()
-                .base_url(listener.base())
-                .unwrap()
-                .model("fixed")
-                .unwrap()
-                .api_key("unknown-usage-private")
-                .unwrap()
-                .max_retries(0)
-        };
+        let build = || crate::api::fixed(listener.base(), "unknown-usage-private").max_retries(0);
         let engine = build().cache_at(&root).unwrap().build().unwrap();
         let question = Question::decide("Good?").unwrap().cut();
-        let live = engine
-            .decide_complete_with(&question, "Text.", CallOptions::new())
-            .unwrap();
-        let held = engine
-            .decide_complete_with(&question, "Text.", CallOptions::new())
-            .unwrap();
+        let live = crate::api::decide(&engine, &question, "Text.", CallOptions::new()).unwrap();
+        let held = crate::api::decide(&engine, &question, "Text.", CallOptions::new()).unwrap();
         let replay = build().replay(&root).unwrap().build().unwrap();
-        let replayed = replay
-            .decide_complete_with(&question, "Text.", CallOptions::new())
-            .unwrap();
+        let replayed = crate::api::decide(&replay, &question, "Text.", CallOptions::new()).unwrap();
         for call in [&live, &held, &replayed] {
-            let row: Value = serde_json::from_str(&call.value().to_json().unwrap()).unwrap();
+            let result = crate::api::decision(call).unwrap();
+            let row: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
             assert_eq!(row["meta"].get("usage"), expected.as_ref());
-            assert_eq!(call.value().reported_usage().is_some(), expected.is_some());
-            assert_eq!(call.value().answer_id(), live.value().answer_id());
+            assert_eq!(result.reported_usage().is_some(), expected.is_some());
+            assert_eq!(
+                result.answer_id(),
+                crate::api::decision(&live).unwrap().answer_id()
+            );
             documents.push(serde_json::to_value(call.complete().unwrap()).unwrap());
         }
         assert_eq!(

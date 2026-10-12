@@ -176,7 +176,7 @@ fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
                     let output = prune(&folder, &[&options[..], dry_run].concat());
                     assert_eq!(output.status.code(), Some(2), "{row}");
                     assert!(output.stdout.is_empty(), "{row}");
-                    assert_eq!(String::from_utf8_lossy(&output.stderr), refusal, "{row}");
+                    assert_eq!(crate::harness::said(&output), refusal, "{row}");
                     assert_eq!(
                         fs::read(folder.join("thinkthen.sqlite")).expect("kept"),
                         before,
@@ -191,7 +191,7 @@ fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
         let out = leaves.iter().filter(|leaves| **leaves).count();
         assert_eq!(output.status.code(), Some(0), "{row}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
+            crate::harness::printed(&output),
             removed(out, 2 - out, size, store_bytes(&folder)),
             "{row}"
         );
@@ -210,7 +210,7 @@ fn prune_refuses_the_alias_and_an_unknown_model_and_keeps_the_upgrade() {
     let output = prune(&empty, &["--answered-by-other-than", "jev-latest"]);
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "removed 0 answers and 0 bytes; 0 answers and 0 bytes remain\n"
     );
     assert!(!empty.join("thinkthen.sqlite").exists());
@@ -253,7 +253,7 @@ fn prune_shrinks_the_store_file_and_takes_the_oldest_answer_first() {
     let after = store_bytes(&folder);
     assert!(after < before, "{after} < {before}");
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         removed(1, 2, before, after)
     );
     let mut kept = vec![filled[0].clone(), filled[2].clone()];
@@ -284,7 +284,7 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         removed(1, 1, before, store_bytes(&folder))
     );
     assert_eq!(held(&folder), [filled[1].clone()]);
@@ -295,7 +295,7 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
     assert_eq!(typo.status.code(), Some(2), "{typo:?}");
     assert!(typo.stdout.is_empty());
     assert!(
-        String::from_utf8_lossy(&typo.stderr)
+        crate::harness::said(&typo)
             .contains("--older-than takes a positive integer and one lowercase unit"),
         "{typo:?}"
     );

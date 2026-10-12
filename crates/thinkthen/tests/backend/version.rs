@@ -16,7 +16,7 @@ fn version_flag_prints_the_identity_line_and_exits_zero() {
     .expect("the compiled binary runs");
 
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!("thinkthen ", env!("CARGO_PKG_VERSION"), "\n")
     );
     assert!(output.stderr.is_empty());

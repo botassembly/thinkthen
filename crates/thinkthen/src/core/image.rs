@@ -128,7 +128,7 @@ impl Serialize for ImageState {
     }
 }
 
-/// The operation selected at an explicit typed input door.
+/// The operation selected at an explicit typed input interface.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum InputFunction {
     /// Yes/no judgment.

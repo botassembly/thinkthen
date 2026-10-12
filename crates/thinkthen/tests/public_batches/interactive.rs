@@ -123,11 +123,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
 fn batch_one_failure_ends_without_pulling_another_caller_record() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::status(503, "busy")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .max_retries(0)
         .no_cache()
         .build()
@@ -195,8 +191,29 @@ fn failing_input(pulls: &AtomicUsize) -> impl Iterator<Item = Result<&'static st
     })
 }
 
-fn reader_failure<T>(mut batch: thinkthen::Batch<'_, T>, pulls: &AtomicUsize) {
-    assert!(matches!(batch.next(), Some(Ok(_))));
+fn fallible_rows<'a>(
+    engine: &Engine,
+    asked: &Question,
+    pulls: &'a AtomicUsize,
+    function: thinkthen::RequestFunction,
+    options: CallOptions<'a>,
+) -> thinkthen::RequestRows<'a, &'static str> {
+    crate::api::rows(
+        engine,
+        function,
+        asked.clone().into(),
+        failing_input(pulls).map(|row| row.map(crate::api::record)),
+        options,
+    )
+    .expect("request rows")
+}
+
+fn reader_failure<T>(
+    mut batch: thinkthen::Batch<'_, T>,
+    pulls: &AtomicUsize,
+    check: impl FnOnce(&T),
+) {
+    check(&batch.next().expect("prefix").expect("answer"));
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
     let error = batch
         .next()
@@ -223,13 +240,29 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
     let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let pulls = AtomicUsize::new(0);
     reader_failure(
-        engine.try_details_many_with(&asked, failing_input(&pulls), options),
+        crate::api::decision_rows(fallible_rows(
+            &engine,
+            &asked,
+            &pulls,
+            thinkthen::RequestFunction::Decide,
+            options,
+        ))
+        .expect("decisions"),
         &pulls,
+        |_| {},
     );
     let pulls = AtomicUsize::new(0);
     reader_failure(
-        engine.try_filter_with(&asked, failing_input(&pulls), options),
+        crate::api::filter_rows(fallible_rows(
+            &engine,
+            &asked,
+            &pulls,
+            thinkthen::RequestFunction::Filter,
+            options,
+        ))
+        .expect("filtered"),
         &pulls,
+        |row| assert!(row.result().value()),
     );
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#)
         .expect("set");
@@ -237,6 +270,7 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
     reader_failure(
         engine.try_annotate_with(&set, failing_input(&pulls), options),
         &pulls,
+        |_| {},
     );
     assert_eq!(listener.count(), 3);
 }
@@ -248,12 +282,17 @@ fn dropping_a_fallible_batch_does_not_read_the_failure_or_tail() {
     let engine = engine(listener.base());
     let asked = question();
     let pulls = AtomicUsize::new(0);
-    let mut batch = engine.try_filter_with(
+    let mut batch = crate::api::filter_rows(fallible_rows(
+        &engine,
         &asked,
-        failing_input(&pulls),
+        &pulls,
+        thinkthen::RequestFunction::Filter,
         CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
-    );
-    assert_eq!(batch.next().expect("row").expect("answer"), "alpha");
+    ))
+    .expect("filtered");
+    let row = batch.next().expect("row").expect("answer");
+    assert_eq!(row.original(), &"alpha");
+    assert!(row.result().value());
     drop(batch);
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
     assert_eq!(listener.count(), 1);
@@ -270,16 +309,21 @@ fn reader_failure_flushes_a_partial_pack_and_drains_its_attempt() {
     let observe = |_| {
         attempts.fetch_add(1, Ordering::SeqCst);
     };
-    let mut batch = engine.try_filter_with(
+    let mut batch = crate::api::filter_rows(fallible_rows(
+        &engine,
         &asked,
-        failing_input(&pulls),
+        &pulls,
+        thinkthen::RequestFunction::Filter,
         CallOptions::new()
             .batch(BatchSetting::Records(
                 std::num::NonZeroUsize::new(2).expect("two"),
             ))
             .observe_attempt(&observe),
-    );
-    assert_eq!(batch.next().expect("prefix").expect("answer"), "alpha");
+    ))
+    .expect("filtered");
+    let row = batch.next().expect("prefix").expect("answer");
+    assert_eq!(row.original(), &"alpha");
+    assert!(row.result().value());
     let error = batch.next().expect("failure").expect_err("reader failure");
     assert_eq!(error.to_string(), "later reader failure");
     assert_eq!(

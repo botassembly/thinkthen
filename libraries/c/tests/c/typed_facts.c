@@ -5,10 +5,7 @@
 #include <string.h>
 #include <thinkthen.h>
 
-static int failed;
-static void check(int holds, const char *what) {
-    if (!holds) { fprintf(stderr, "FAIL %s\n", what); failed = 1; }
-}
+#include "check.c"
 static void facts(char *json, size_t len, int records, int sends) {
     char expected[40];
     snprintf(expected, sizeof expected, "\"records\":%d", records);

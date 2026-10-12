@@ -5,10 +5,9 @@
     reason = "a failed fixture setup should stop the boundary test"
 )]
 
+use crate::harness::{Canned, Listener, spawn_local, stderr_is};
 use std::fs;
 use std::path::PathBuf;
-
-use crate::harness::{Canned, Listener, spawn};
 
 fn questions(name: &str, text: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-structured");
@@ -34,27 +33,16 @@ fn annotate_carries_a_structured_tag_entry_beside_a_plain_one_and_answers_both()
             r#""labels":{"billing":{"what":"Money and invoices."},"urgent":null}}}}"#,
         ),
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &[],
         br#"{"body":"The invoice failed."}"#,
     )
     .expect("the command runs");
+    crate::harness::exits(&output, 0);
     assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"body\":\"The invoice failed.\",\"risky\":true,\"topics\":[\"billing\"]}\n"
     );
     let requests = listener.requests();
@@ -108,17 +96,9 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     };
     let run = |profile: &PathBuf, listener: &Listener| {
         let (set, profile) = (set.to_string_lossy(), profile.to_string_lossy());
-        spawn(
-            &[
-                "annotate",
-                &set,
-                "--profile",
-                &profile,
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
+        spawn_local(
+            &["annotate", &set, "--profile", &profile],
+            listener.base(),
             &[("THINKTHEN_API_KEY", "sk-test-value")],
             br#"{"body":"The invoice failed."}"#,
         )
@@ -128,12 +108,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     let exact = profile("annotate-exact", body.len());
     let listener = Listener::serving(vec![Canned::ok(answer)]).expect("a listener");
     let sent = run(&exact, &listener);
-    assert_eq!(
-        sent.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&sent.stderr)
-    );
+    crate::harness::exits(&sent, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(String::from_utf8_lossy(&requests[0].body), body);
@@ -144,12 +119,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     let one = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92}}}"#;
     let split_listener = Listener::answering(move |_| Canned::ok(one)).expect("a listener");
     let split = run(&under, &split_listener);
-    assert_eq!(
-        split.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&split.stderr)
-    );
+    crate::harness::exits(&split, 0);
     let split_bodies = split_listener.requests();
     assert_eq!(split_bodies.len(), 2);
     for request in &split_bodies {
@@ -164,7 +134,7 @@ fn a_structured_annotate_counts_the_whole_body_and_over_limit_sends_nothing() {
     let refused_listener = Listener::serving(vec![]).expect("a listener");
     let refused = run(&tiny, &refused_listener);
     assert_eq!(refused.status.code(), Some(2));
-    let said = String::from_utf8_lossy(&refused.stderr);
+    let said = crate::harness::said(&refused);
     assert!(
         said.starts_with(
             "thinkthen: profile annotate-tiny allows at most 50 request bytes; this request has "
@@ -195,29 +165,16 @@ fn a_per_question_on_sends_the_json_value_the_pointer_names() {
             r#""is_body":{"decide":"Body?","on":"/body"}}}"#,
         ),
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--jobs",
-            "1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &["--jobs", "1"],
         br#"{"meta":{"a":1},"body":"The invoice failed."}"#,
     )
     .expect("the command runs");
+    crate::harness::exits(&output, 0);
     assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         r#"{"meta":{"a":1},"body":"The invoice failed.","is_meta":true,"is_body":false}"#
             .to_owned()
             + "\n"
@@ -248,30 +205,14 @@ fn several_command_fields_and_a_root_on_send_the_object_the_fields_built() {
         "fields-root",
         r#"{"version":1,"questions":{"risky":{"decide":"Is this risky?"}}}"#,
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--jsonl",
-            "--field",
-            "/body",
-            "--field",
-            "/meta",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &["--jsonl", "--field", "/body", "--field", "/meta"],
         br#"{"meta":{"a":1},"body":"The invoice failed.","extra":"kept"}"#,
     )
     .expect("the command runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body = String::from_utf8_lossy(&requests[0].body);
@@ -294,23 +235,17 @@ fn an_invalid_nested_description_fails_the_set_before_any_request() {
             r#""labels":{"billing":true,"urgent":"Urgent."}}}}"#,
         ),
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &[],
         br#"{"body":"The invoice failed."}"#,
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `questions.topics.labels` is a list of labels, or a map from each label to its description\n"
+    stderr_is(
+        &output,
+        "thinkthen: `questions.topics.labels` is a list of labels, or a map from each label to its description\n",
     );
     assert!(output.stdout.is_empty());
     assert_eq!(listener.connections(), 0);

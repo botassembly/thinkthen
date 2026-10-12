@@ -1,11 +1,11 @@
 //! A saved threshold names the batch setting it was tuned under.
 
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use std::fs;
 
 use serde_json::json;
 
 use super::{KEY, QUESTION, answering, details, folder, text};
-use crate::harness::{Canned, Listener, spawn};
 
 #[test]
 fn a_tuned_file_warns_at_another_batch() {
@@ -58,12 +58,7 @@ fn a_tuned_file_warns_at_another_batch() {
         ];
         let output =
             spawn(&[&fixed[..], extra].concat(), &[KEY], b"line 1\nline 2\n").expect("command");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{name}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{name}: {}", text(&output.stderr)));
         assert_eq!(text(&output.stderr), expected_stderr, "{name}");
         assert_eq!(
             listener.count(),
@@ -118,7 +113,7 @@ fn batch_warning_uses_the_successful_output_boundary() {
         b"line 1\nline 2\n",
     )
     .expect("filter run");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert!(output.stdout.is_empty(), "the filter kept nothing");
     assert_eq!(
         text(&output.stderr),
@@ -131,7 +126,7 @@ fn batch_warning_uses_the_successful_output_boundary() {
         b"line 1",
     )
     .expect("one document");
-    assert_eq!(one.status.code(), Some(1), "{}", text(&one.stderr));
+    exits(&one, 1);
     assert!(one.stderr.is_empty(), "one document has no batch warning");
 
     let structured = format!("{place}/structured.json");
@@ -153,7 +148,7 @@ fn batch_warning_uses_the_successful_output_boundary() {
         b"line 1\nline 2\n",
     )
     .expect("structured run");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert!(
         output.stderr.is_empty(),
         "a structured question runs at batch one"

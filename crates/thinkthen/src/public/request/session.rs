@@ -66,6 +66,8 @@ impl RequestSessionDescriptor {
 /// Transport failures cannot carry host diagnostics or impersonate native stops.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RequestReaderFailure {
+    /// A host producer raised; its private exception stays with the host.
+    Producer,
     /// The caller could not read its input.
     Io {
         /// Physical occurrence, never copied into the safe message.
@@ -90,6 +92,7 @@ pub enum RequestReaderFailure {
 )]
 #[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
 pub(super) enum ReaderFailureDocument {
+    Producer,
     Io {
         #[serde(default, deserialize_with = "super::present")]
         #[cfg_attr(test, schemars(with = "LocationDocument"))]
@@ -114,6 +117,7 @@ impl RequestReaderFailure {
         let document: ReaderFailureDocument = serde_json::from_str(text)
             .map_err(|_| Error::usage("invalid session reader failure"))?;
         let location = match &document {
+            ReaderFailureDocument::Producer => &None,
             ReaderFailureDocument::Io { location }
             | ReaderFailureDocument::Utf8 { location }
             | ReaderFailureDocument::InvalidInput { location } => location,
@@ -128,6 +132,7 @@ impl RequestReaderFailure {
         })
         .transpose()?;
         Ok(match document {
+            ReaderFailureDocument::Producer => Self::Producer,
             ReaderFailureDocument::Io { .. } => Self::Io { location },
             ReaderFailureDocument::Utf8 { .. } => Self::Utf8 { location },
             ReaderFailureDocument::InvalidInput { .. } => Self::InvalidInput { location },
@@ -135,6 +140,7 @@ impl RequestReaderFailure {
     }
     pub(super) fn error(&self) -> Error {
         match self {
+            Self::Producer => Error::local("session producer raised an exception"),
             Self::Io { .. } => Error::local("session input could not be read"),
             Self::Utf8 { .. } => Error::usage("session input is not valid UTF-8"),
             Self::InvalidInput { .. } => Error::usage("session input is invalid"),
@@ -175,6 +181,34 @@ pub enum RequestSessionRead {
     Pending,
     /// Terminal was read and no more output will arrive.
     End,
+}
+
+/// Events that a caller wants a timed native wait to observe.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum RequestSessionWaitInterest {
+    /// Wait for output, exhaustion or cancellation; ignore available input room.
+    Result,
+    /// Wait for output, input room/closure, exhaustion or cancellation.
+    Input,
+    /// Drain final output after cancellation without repeatedly waking for cancel.
+    Settlement,
+}
+
+/// Readiness does not consume a packet or transfer an input descriptor.
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum RequestSessionReady {
+    /// A result or terminal packet can be read.
+    Result,
+    /// The input cell has room.
+    Input,
+    /// Intake has closed; the producer must stop.
+    Closed,
+    /// All output has been consumed.
+    End,
+    /// Cancellation stopped intake; final output may still be pending.
+    Cancelled,
+    /// The caller's timeout passed without requested readiness.
+    Timeout,
 }
 
 /// Owned controls for the native session feed, separate from canonical Request JSON.
@@ -234,6 +268,18 @@ impl RequestSession {
     #[must_use]
     pub fn try_read(&self) -> RequestSessionRead {
         self.queue.read()
+    }
+    /// Block without consuming output until requested readiness or timeout.
+    /// Result waits ignore input room. Settlement waits ignore cancellation so
+    /// callers can drain final facts after a cancellation wake. Cancellation
+    /// wakes Result/Input waits immediately and never joins provider work.
+    #[must_use]
+    pub fn wait(
+        &self,
+        interest: RequestSessionWaitInterest,
+        timeout: std::time::Duration,
+    ) -> RequestSessionReady {
+        self.queue.ready(interest, timeout, self.feed)
     }
     /// Fix EOF or transport failure independently of a full input cell.
     /// # Errors

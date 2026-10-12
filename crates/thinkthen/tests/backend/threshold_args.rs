@@ -54,7 +54,7 @@ fn negative_float_spellings_match_the_equals_form_in_all_seven_homes() {
             assert!(spaced_output.stdout.is_empty(), "{name} {value}");
             assert_eq!(spaced_output.stderr, joined_output.stderr, "{name} {value}");
             assert_eq!(spaced_output.stderr, expected(name, value).as_bytes());
-            let said = String::from_utf8_lossy(&spaced_output.stderr);
+            let said = crate::harness::said(&spaced_output);
             assert!(!said.contains(KEY), "{name} {value}");
             assert!(!said.contains(EVIDENCE), "{name} {value}");
             assert!(listener.requests().is_empty(), "{name} {value}");
@@ -69,7 +69,7 @@ fn a_threshold_does_not_consume_a_following_known_option() {
         let arguments = [prefix, &["--threshold", "--plan"][..]].concat();
         let output = spawn(&arguments, &[], EVIDENCE.as_bytes()).expect("the binary runs");
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(message.contains("a value is required for"), "{message}");
         assert!(!message.contains("a threshold is"), "{message}");
         assert!(output.stdout.is_empty(), "{arguments:?}");
@@ -86,7 +86,7 @@ fn non_numeric_option_tokens_keep_claps_existing_meaning() {
         )
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(2), "{value}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(message.starts_with("error:"), "{value}: {message}");
         assert!(!message.contains("a threshold is"), "{value}: {message}");
     }

@@ -2,7 +2,7 @@
 use crate::core::{self, pack::Ask};
 use crate::engine::{
     facade,
-    pipeline::{self, Asker, Flow},
+    pipeline::{self, Asker},
 };
 use crate::public::{
     Call, CallOptions, CompleteAnnotated, CompleteRecord, Engine, Error, InputEvidence,
@@ -26,6 +26,7 @@ struct Held<T> {
 }
 struct Annotations {
     recover_missing: bool,
+    require_usable_groups: bool,
     engine: Arc<facade::Engine>,
     set: core::QuestionSet,
 }
@@ -72,19 +73,16 @@ impl Asker for Annotations {
         answers: Vec<pipeline::Answered>,
     ) -> Result<facade::Annotation, Error> {
         Annotating::new(&self.engine, self.set.clone())
-            .require_usable_groups(true)
+            .require_usable_groups(self.require_usable_groups)
             .row(input.text, answers)
     }
 }
 impl Engine {
-    /// Annotate every original, retaining successful null and failed member identities.
-    /// # Errors
-    /// Eager invalid records refuse before sending; all-failed rows and stopped calls retain final facts.
     #[allow(
         clippy::type_complexity,
-        reason = "Every original retains its concrete complete annotation"
+        reason = "the private Request primitive retains original and complete result types"
     )]
-    pub fn annotate_records_complete_with<I, T>(
+    pub(crate) fn execute_annotate_records_complete_with<I, T>(
         &self,
         questions: &QuestionSet,
         records: I,
@@ -94,110 +92,20 @@ impl Engine {
         I: IntoIterator<Item = RecordInput<T>>,
         T: InputEvidence,
     {
-        let options = options.started()?;
-        options.admission()?;
-        let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
-        let (held, inputs) = prepare(
-            &questions.0,
-            self.within_admission(records, &options)?,
-            &options,
-        )?;
-        let engine = Arc::clone(&self.inner);
-        let asker = Annotations {
-            recover_missing: false,
-            engine: Arc::clone(&engine),
-            set: questions.0.clone(),
-        };
-        for input in &inputs {
-            asker.asks(input)?;
-        }
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        let mut packing = pull::packing(setting, false, false);
-        packing.detailed = stop.facts().attempts().is_some();
-        stop.run_call(0, |cancel| {
-            let mut rows = Rows {
-                held: &held,
-                engine: &engine,
-                set: &questions.0,
-                stop: &stop,
-                values: Vec::new(),
-                failure: None,
-            };
-            let host = pipeline::eager(inputs, |row| {
-                let flow = rows.take(row);
-                cancel.finished_records(usize::from(flow == Flow::Continue));
-                flow
-            });
-            engine
-                .ask_all(&asker, packing, host, cancel)
-                .map_err(Error::from)?;
-            if let Some(error) = rows.failure {
-                return Err(error);
-            }
-            if rows.values.len() != held.len() {
-                return Err(Error::defect("an annotate call lost an original"));
-            }
-            Ok(rows
-                .values
-                .into_iter()
-                .zip(held)
-                .enumerate()
-                .map(|(at, (result, held))| CompleteRecord {
-                    original: held.original,
-                    ordinal: at,
-                    result,
-                })
-                .collect())
-        })
-    }
-    /// Annotate plain originals using one optional shared context.
-    /// # Errors
-    /// As annotate_records_complete_with.
-    #[allow(
-        clippy::type_complexity,
-        reason = "Every original retains its concrete complete annotation"
-    )]
-    pub fn annotate_complete_with<I, T>(
-        &self,
-        questions: &QuestionSet,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteAnnotated>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,
-    {
-        self.annotate_records_complete_with(
-            questions,
-            records.into_iter().map(|original| RecordInput {
-                examples: None,
-                seed_spans: None,
-                original,
-                context: None,
-                options: None,
-            }),
+        let mut options = options.started()?;
+        options.eager_inputs = true;
+        let context = options.context_text().map(str::to_owned);
+        self.annotate_stream(
+            questions.clone(),
+            records.into_iter().map(Ok),
             options,
-        )
+            context,
+            None,
+        )?
+        .into_call()
     }
 }
 
-type Admission<T> = (Vec<Held<T>>, Vec<Prepared>);
-fn prepare<T: InputEvidence>(
-    set: &core::QuestionSet,
-    records: impl Iterator<Item = RecordInput<T>>,
-    options: &CallOptions<'_>,
-) -> Result<Admission<T>, Error> {
-    let mut held = Vec::new();
-    let mut inputs = Vec::new();
-    for (at, record) in records.enumerate() {
-        options.admission()?;
-        let (item, input) = prepare_record(set, record, options.context_text(), at)?;
-        options.admission()?;
-        held.push(item);
-        inputs.push(input);
-    }
-    Ok((held, inputs))
-}
 fn failed(row: pipeline::Failed<Error>) -> Error {
     match row {
         pipeline::Failed::Asker(error) => error,
@@ -212,40 +120,12 @@ fn failed(row: pipeline::Failed<Error>) -> Error {
     }
 }
 
-struct Rows<'a, 'o, T> {
-    held: &'a [Held<T>],
-    engine: &'a facade::Engine,
-    set: &'a core::QuestionSet,
-    stop: &'a Stop<'o>,
-    values: Vec<CompleteAnnotated>,
-    failure: Option<Error>,
-}
-impl<T: InputEvidence> Rows<'_, '_, T> {
-    fn take(&mut self, row: pull::Row<Annotations>) -> Flow {
-        match self.completed(row) {
-            Ok(value) => {
-                self.values.push(value);
-                Flow::Continue
-            }
-            Err(error) => {
-                self.failure = Some(error.at_record(self.values.len()));
-                Flow::Stop
-            }
-        }
-    }
-    fn completed(&self, row: pull::Row<Annotations>) -> Result<CompleteAnnotated, Error> {
-        let at = self.values.len();
-        let held = self.held.get(at).ok_or_else(super::wrong)?;
-        complete_row(self.engine, self.set, self.stop, held, at, row)
-    }
-}
-
 fn complete_row<T>(
     engine: &facade::Engine,
     set: &core::QuestionSet,
     stop: &Stop<'_>,
     held: &Held<T>,
-    at: usize,
+    (at, legacy): (usize, bool),
     row: pull::Row<Annotations>,
 ) -> Result<CompleteAnnotated, Error> {
     let annotation = row.map_err(failed)?;
@@ -258,8 +138,14 @@ fn complete_row<T>(
     for (_, detail) in &mut observed.observed {
         *detail = detail.clone().with_input(Arc::clone(&held.question_input));
     }
-    crate::public::bulk::observe_annotated(&observed, at, stop)?;
-    if annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty() {
+    let all_failed =
+        annotation.failed_questions == annotation.details.len() && !annotation.details.is_empty();
+    if all_failed && legacy {
+        crate::public::bulk::observe_annotated_questions(&observed, at, stop)?;
+    } else {
+        crate::public::bulk::observe_annotated(&observed, at, stop)?;
+    }
+    if all_failed {
         return Err(crate::public::asking::backend_failed());
     }
     render::complete(
@@ -346,6 +232,7 @@ pub(super) fn preview_asks(
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,
+        require_usable_groups: true,
     }
     .asks(&input)?;
     Ok((asks, dropped))
@@ -364,6 +251,7 @@ pub(in crate::public) fn preview_grouped_asks(
         engine: Arc::clone(engine),
         set: set.0.clone(),
         recover_missing: false,
+        require_usable_groups: true,
     }
     .asks_with_groups(&input, |group, count| {
         groups.extend(std::iter::repeat_n(group, count))

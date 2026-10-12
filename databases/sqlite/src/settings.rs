@@ -179,7 +179,7 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
 /// lock, and the engine skips counters another process built.
 pub(crate) fn finish_usage() {
     if let Some(engine) = ENGINE.get() {
-        let _status = engine.finish_usage();
+        let _status = engine.finish_usage_status();
     }
 }
 

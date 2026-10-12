@@ -1,0 +1,8 @@
+# Source only after a rung selects its explicit full campaign profile.
+# Own compiler processes and retain debug output paths for installed consumers.
+export RUSTC_WRAPPER= CARGO_BUILD_RUSTC_WRAPPER=
+export CARGO_PROFILE_DEV_OPT_LEVEL=2 CARGO_PROFILE_TEST_OPT_LEVEL=2
+export CARGO_PROFILE_DEV_DEBUG=0 CARGO_PROFILE_TEST_DEBUG=0
+export RUSTFLAGS="--remap-path-prefix=/home=/build/host --remap-path-prefix=/Users=/build/users --remap-path-prefix=$REPO=/build/thinkthen"
+export CFLAGS="-ffile-prefix-map=/home=/build/host -ffile-prefix-map=/Users=/build/users -ffile-prefix-map=$REPO=/build/thinkthen"
+export CXXFLAGS="$CFLAGS" THINKTHEN_FULL_COMPILER=1

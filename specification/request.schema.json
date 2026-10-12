@@ -2178,6 +2178,19 @@
           "properties": {
             "kind": {
               "type": "string",
+              "const": "producer"
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "kind"
+          ]
+        },
+        {
+          "type": "object",
+          "properties": {
+            "kind": {
+              "type": "string",
               "const": "io"
             },
             "location": {

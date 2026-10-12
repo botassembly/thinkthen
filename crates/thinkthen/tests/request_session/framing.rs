@@ -638,13 +638,7 @@ fn owned_descriptor(text: &str, dynamic: bool) -> RequestSessionDescriptor {
 fn owned_eager_admission_closes_before_finish_and_leaves_suffix_unconsumed() {
     for (case, request) in owned_eager_cases().into_iter().enumerate() {
         let listener = Listener::answering(response).unwrap();
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("session-fixture")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "session-fixture")
             .no_cache()
             .max_retries(0)
             .max_requests(Some(2))
@@ -892,35 +886,32 @@ fn owned_whole_set_preparation_error_wins_on_first_excess_record() {
     for case in [8, 10] {
         let request = owned_eager_cases().remove(case);
         let listener = Listener::answering(response).unwrap();
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("session-fixture")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "session-fixture")
             .no_cache()
             .max_requests(Some(2))
             .unwrap()
             .build()
             .unwrap();
         let records = (0..3).map(|at| RecordInput {
-            original: QuestionInput::Text("Ada".into()),
             context: (at == 2).then(|| "policy".into()),
-            options: None,
-            seed_spans: None,
-            examples: None,
+
+            ..crate::api::record(QuestionInput::Text("Ada".into()))
         });
         let RequestQuestion::Definition { value } = &request.call.arguments().question else {
             unreachable!()
         };
         let expected = match value {
-            RequestDefinition::Atomic(LoadedQuestion::Question(q)) => engine
-                .try_find_records_complete_with(q, records.map(Ok), CallOptions::new())
-                .unwrap_err(),
-            RequestDefinition::Relate(q) => engine
-                .try_relate_records_complete_with(q, records.map(Ok), CallOptions::new())
-                .unwrap_err(),
+            RequestDefinition::Atomic(LoadedQuestion::Question(q)) => {
+                crate::api::find(&engine, q, records.map(Ok), CallOptions::new()).unwrap_err()
+            }
+            RequestDefinition::Relate(q) => crate::api::whole(
+                &engine,
+                RequestFunction::Relate,
+                q.clone().into(),
+                records.map(Ok),
+                CallOptions::new(),
+            )
+            .unwrap_err(),
             _ => unreachable!(),
         };
         let session = engine

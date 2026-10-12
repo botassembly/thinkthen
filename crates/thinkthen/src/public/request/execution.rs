@@ -1,8 +1,13 @@
-//! Typed native request execution delegates every judgment to the existing engine.
+//! Public wrappers construct native Requests; canonical and native bridges enter
+//! execute -> prepare -> Validated -> private scheduling -> compatibility projection.
+//! Private dispatch never calls public per-function wrappers. SQL row recovery and
+//! typed entities retain distinct private modes under this same execution owner.
+use super::RequestOutcome::Complete as complete;
 use super::{
     AdmittedRequest, RequestDefinition, RequestFunction as Function, RequestInput, RequestItem,
     RequestOptions, RequestOutcome, RequestValue,
 };
+use crate::public::engine::Sealed as _;
 use crate::{Batch, Call, CallOptions, Engine, Error, LoadedQuestion, Question};
 
 /// One runtime feed, owned by the caller and consumed with bounded native scheduling.
@@ -132,18 +137,7 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         self.execute_request_sink(request, environment, None, None, None)
     }
-    #[cfg(feature = "cli")]
-    pub(crate) fn execute_cli_request<'a>(
-        &self,
-        request: &'a AdmittedRequest,
-        environment: RequestEnvironment<'a>,
-        sink: &dyn Fn(RequestValue),
-        release: &dyn Fn(usize),
-        recover: crate::public::options::AnnotationRecovery<'a>,
-    ) -> Result<RequestOutcome, Error> {
-        self.execute_request_sink(request, environment, Some(sink), Some(release), recover)
-    }
-    pub(super) fn execute_request_sink<'a>(
+    pub(crate) fn execute_request_sink<'a>(
         &self,
         request: &'a AdmittedRequest,
         environment: RequestEnvironment<'a>,
@@ -153,26 +147,6 @@ impl Engine {
     ) -> Result<RequestOutcome, Error> {
         let all_filter_results = feed_projection(request, environment.feed.as_ref())?;
         let options = &request.request.call.arguments().options;
-        let prepared = prepare(
-            self,
-            request,
-            environment.controls,
-            environment
-                .feed
-                .as_ref()
-                .is_some_and(|feed| feed.image_inputs),
-        )?;
-        let Prepared {
-            reading: reading_definition,
-            definition,
-            engine,
-            mut controls,
-            context,
-            image_refusal,
-        } = prepared;
-        if let Some(context) = &context {
-            controls = controls.context(context);
-        }
         let eager = environment.feed.as_ref().is_some_and(|feed| feed.eager)
             || !matches!(
                 request.request.call.arguments().input,
@@ -182,30 +156,58 @@ impl Engine {
             .feed
             .as_ref()
             .is_some_and(|feed| matches!(feed.contents, FeedContents::Session(_)));
-        let rows = request.records(&reading_definition, environment, controls, image_refusal)?;
-        let rows = rows.enumerate().map(|(at, row)| {
-            let row = row.map_err(|error| error.at_record(at))?;
-            super::inline::validate_composed(&reading_definition, options, &row)
-                .map_err(|error| error.at_record(at))?;
-            Ok(row)
-        });
-        let rows: super::composition::Inputs<'_> = if eager && !owned_feed {
-            Box::new(rows.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
-        } else {
-            Box::new(rows)
-        };
-        controls.eager_inputs = eager && sink.is_some();
-        let outcome = dispatch(
-            &engine,
-            request.request.call.function(),
-            &definition,
-            rows,
-            controls,
-            eager && (sink.is_none() || request.request.call.function() == Function::Recognize),
-            options,
-            sink,
-            release,
-            recover,
+        let image_inputs = environment
+            .feed
+            .as_ref()
+            .is_some_and(|feed| feed.image_inputs);
+        let outcome = execute(
+            self,
+            request,
+            environment.controls,
+            image_inputs,
+            |prepared| {
+                request.records(
+                    &prepared.reading,
+                    environment,
+                    prepared.controls,
+                    prepared.image_refusal.clone(),
+                )
+            },
+            |Prepared {
+                 definition,
+                 engine,
+                 mut controls,
+                 context,
+                 ..
+             },
+             rows| {
+                if let Some(context) = &context {
+                    controls = controls.context(context);
+                }
+                let rows: super::composition::Inputs<'_> = if eager
+                    && !owned_feed
+                    && request.request.call.function() != Function::Relate
+                {
+                    Box::new(rows.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+                } else {
+                    Box::new(rows)
+                };
+                controls.eager_inputs = eager && sink.is_some();
+                dispatch(
+                    &engine,
+                    request.request.call.function(),
+                    &definition,
+                    rows,
+                    controls,
+                    eager
+                        && (sink.is_none()
+                            || request.request.call.function() == Function::Recognize),
+                    options,
+                    sink,
+                    release,
+                    recover,
+                )
+            },
         )?;
         Ok(if all_filter_results {
             outcome
@@ -214,6 +216,276 @@ impl Engine {
         })
     }
 }
+/// All entry points construct a Request and enter this owner. It prepares the
+/// definition once, then validates each occurrence before private scheduling.
+/// Public compatibility projections never participate in private dispatch.
+pub(super) fn execute<'a, I, T, R>(
+    engine: &Engine,
+    request: &AdmittedRequest,
+    controls: CallOptions<'a>,
+    image_inputs: bool,
+    source: impl FnOnce(&Prepared<'a>) -> Result<I, Error>,
+    run: impl FnOnce(Prepared<'a>, Validated<'a, I::IntoIter>) -> Result<R, Error>,
+) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    let prepared = prepare(engine, request, controls, image_inputs)?;
+    let records = source(&prepared)?.into_iter().enumerate();
+    let rows = Validated {
+        records,
+        controls: prepared.controls,
+        reading: prepared.reading.clone(),
+        options: request.request.call.arguments().options.clone(),
+        function: request.request.call.function(),
+        native_originals: request.native_originals,
+        image_refusal: prepared.image_refusal.clone(),
+        engine: prepared.engine.clone(),
+        find_maximum: if request.request.call.function() == Function::Find {
+            Some(crate::core::Find::maximum(
+                prepared.definition.clone().atomic()?.kind
+                    == crate::public::question::Kind::FindNone,
+            ))
+        } else {
+            None
+        },
+        find_bytes: crate::public::SourceBudget::find(),
+        seen: 0,
+    };
+    run(prepared, rows)
+}
+
+pub(in crate::public) struct Validated<'a, I> {
+    records: std::iter::Enumerate<I>,
+    controls: CallOptions<'a>,
+    reading: RequestDefinition,
+    options: RequestOptions,
+    function: Function,
+    native_originals: bool,
+    image_refusal: Option<String>,
+    engine: Engine,
+    find_maximum: Option<usize>,
+    find_bytes: crate::public::SourceBudget,
+    seen: usize,
+}
+impl<I, T> Iterator for Validated<'_, I>
+where
+    I: Iterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    type Item = Result<crate::RecordInput<T>, Error>;
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let (lower, upper) = self.records.size_hint();
+        if !self.controls.entity_rows {
+            return (lower, upper);
+        }
+        let remaining = crate::core::RelateSpec::MAX_ENTITIES + 1 - self.seen;
+        (
+            lower.min(remaining),
+            Some(upper.map_or(remaining, |upper| upper.min(remaining))),
+        )
+    }
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.controls.entity_rows && self.seen == crate::core::RelateSpec::MAX_ENTITIES + 1 {
+            return None;
+        }
+        let (at, row) = self.records.next()?;
+        self.seen += 1;
+        Some(
+            (|| {
+                self.controls.admission()?;
+                let row = row?;
+                let input = row.original.question_input();
+                self.admit_find(at, &input)?;
+                super::native_feed::validate(
+                    self.function,
+                    &row,
+                    &input,
+                    self.image_refusal.as_deref(),
+                    self.native_originals && self.controls.eager_inputs,
+                )?;
+                // Native preparation preserves its reader-before-declaration and
+                // staged-plan refusal contracts. Find projects already admitted rows.
+                if !self.controls.recovery_rows
+                    && !self.controls.entity_rows
+                    && (!self.native_originals || self.function == Function::Find)
+                {
+                    declarations(&self.reading, &self.options, &row, input)?;
+                }
+                Ok(row)
+            })()
+            .map_err(|error: Error| error.at_record(at))
+            .and_then(|row| self.engine.check_record_limit(at).map(|()| row)),
+        )
+    }
+}
+
+impl<I> Validated<'_, I> {
+    fn admit_find(&mut self, at: usize, input: &crate::QuestionInput) -> Result<(), Error> {
+        let Some(maximum) = self.find_maximum else {
+            return Ok(());
+        };
+        if at == maximum {
+            return Err(Error::usage(crate::public::bulk::count_message(
+                maximum == 254,
+            )));
+        }
+        let bytes = match input {
+            crate::QuestionInput::Text(text) => text.len(),
+            crate::QuestionInput::Record(record) => record.original().retained_bytes()?,
+            crate::QuestionInput::Images(_) => 0,
+        };
+        self.find_bytes.charge(bytes)
+    }
+}
+
+fn declarations<T>(
+    reading: &RequestDefinition,
+    options: &RequestOptions,
+    row: &crate::RecordInput<T>,
+    input: crate::QuestionInput,
+) -> Result<(), Error> {
+    super::inline::validate_composed(
+        reading,
+        options,
+        &crate::RecordInput {
+            original: input,
+            context: row.context.clone(),
+            options: row.options.clone(),
+            seed_spans: row.seed_spans.clone(),
+            examples: row.examples.clone(),
+        },
+    )
+}
+
+/// Snapshot custom input evidence exactly once while retaining caller ownership.
+pub(in crate::public) struct Original<T> {
+    pub(in crate::public) original: T,
+    input: crate::QuestionInput,
+}
+impl<T> crate::InputEvidence for Original<T> {
+    fn question_input(&self) -> crate::QuestionInput {
+        self.input.clone()
+    }
+}
+pub(super) fn snapshot<T: crate::InputEvidence>(
+    row: crate::RecordInput<T>,
+) -> crate::RecordInput<Original<T>> {
+    let input = row.original.question_input();
+    row.map_original(|original| Original { original, input })
+}
+#[allow(
+    clippy::type_complexity,
+    reason = "restoration retains caller originals and complete judgments"
+)]
+pub(in crate::public) fn restore<T, R>(
+    call: Call<Vec<crate::CompleteRecord<Original<T>, R>>>,
+) -> Call<Vec<crate::CompleteRecord<T, R>>> {
+    call.map(|rows| {
+        rows.into_iter()
+            .map(|row| row.map_original(|original| original.original))
+            .collect()
+    })
+}
+pub(in crate::public) fn restore_found<T>(
+    call: Call<crate::CompleteFound<Original<T>>>,
+) -> Call<crate::CompleteFound<T>> {
+    call.map(|result| result.map_original(|original| original.original))
+}
+
+/// Native eager wrappers use the same Request owner and private primitives as
+/// collecting wire dispatch. Originals never enter a serialized representation.
+#[allow(
+    clippy::type_complexity,
+    reason = "the shared owner binds typed originals and private execution"
+)]
+pub(in crate::public) fn native<I, T, R>(
+    engine: &Engine,
+    function: Function,
+    definition: RequestDefinition,
+    records: I,
+    controls: CallOptions<'_>,
+    run: impl FnOnce(
+        &Engine,
+        RequestDefinition,
+        Vec<crate::RecordInput<Original<T>>>,
+        CallOptions<'_>,
+    ) -> Result<R, Error>,
+) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    native_intake(
+        engine,
+        function,
+        definition,
+        records,
+        controls,
+        |engine, definition, rows, controls| {
+            let rows = engine.try_within_admission(rows, &controls)?.collect();
+            run(engine, definition, rows, controls)
+        },
+    )
+}
+
+type NativeRows<I, T> = std::iter::Map<
+    I,
+    fn(Result<crate::RecordInput<T>, Error>) -> Result<crate::RecordInput<Original<T>>, Error>,
+>;
+
+#[allow(
+    clippy::type_complexity,
+    reason = "typed intake shares one Request execution owner"
+)]
+pub(in crate::public) fn native_intake<'a, I, T, R>(
+    engine: &Engine,
+    function: Function,
+    definition: RequestDefinition,
+    records: I,
+    mut controls: CallOptions<'a>,
+    run: impl FnOnce(
+        &Engine,
+        RequestDefinition,
+        Validated<'a, NativeRows<I::IntoIter, T>>,
+        CallOptions<'_>,
+    ) -> Result<R, Error>,
+) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    let request = super::admit_native(function, definition)?;
+    controls.eager_inputs = true;
+    execute(
+        engine,
+        &request,
+        controls,
+        false,
+        |_| Ok(records.into_iter().map(snapshot_row::<T> as fn(_) -> _)),
+        |Prepared {
+             engine,
+             definition,
+             mut controls,
+             context,
+             ..
+         },
+         rows| {
+            if let Some(context) = &context {
+                controls = controls.context(context);
+            }
+            run(&engine, definition, rows, controls)
+        },
+    )
+}
+
+fn snapshot_row<T: crate::InputEvidence>(
+    row: Result<crate::RecordInput<T>, Error>,
+) -> Result<crate::RecordInput<Original<T>>, Error> {
+    row.map(snapshot)
+}
+
 pub(super) struct Prepared<'a> {
     pub reading: RequestDefinition,
     pub definition: RequestDefinition,
@@ -253,7 +525,10 @@ pub(super) fn prepare<'a>(
             &crate::core::ModelName::new(model).map_err(Error::refused)?,
         ))?;
     }
-    if let Some(context) = context.as_deref().filter(|text| !text.is_empty()) {
+    if !controls.recovery_rows
+        && !controls.entity_rows
+        && let Some(context) = context.as_deref().filter(|text| !text.is_empty())
+    {
         crate::public::complete::records::shared_context(&engine.inner, context)?;
     }
     let image_refusal = image_route(&engine, &definition)
@@ -342,9 +617,6 @@ fn scalar_controls<'a>(
     Ok(controls)
 }
 
-fn complete(call: Call<RequestValue>) -> RequestOutcome {
-    RequestOutcome::Complete(call)
-}
 fn stream<T>(
     mut batch: Batch<'_, T>,
     value: impl Fn(Vec<T>) -> RequestValue,
@@ -386,39 +658,47 @@ fn atomic<'a>(
     controls: CallOptions<'a>,
 ) -> Result<RequestOutcome, Error> {
     macro_rules! run {
-        ($eager:ident,$q:expr,$value:expr) => {
+        ($input:ident, $convert:path, $value:expr) => {
             Ok(complete(
                 engine
-                    .$eager($q, rows.collect::<Result<Vec<_>, _>>()?, controls)?
+                    .records_complete(
+                        crate::InputFunction::$input,
+                        q.question(),
+                        rows.collect::<Result<Vec<_>, _>>()?,
+                        controls,
+                    )?
+                    .try_map(|rows| crate::public::complete::records::mapped(rows, $convert))?
                     .map($value),
             ))
         };
     }
-
     match function {
-        Function::Decide => run!(decide_records_complete_with, q, RequestValue::Decisions),
-        Function::Choose => run!(choose_records_complete_with, q, RequestValue::Choices),
-        Function::Tag => run!(tag_records_complete_with, q, RequestValue::Tags),
-        Function::Score => run!(score_records_complete_with, plain(q)?, RequestValue::Scores),
+        Function::Decide => run!(
+            Decide,
+            crate::public::complete::decision,
+            RequestValue::Decisions
+        ),
+        Function::Choose => run!(
+            Choose,
+            crate::public::complete::choice,
+            RequestValue::Choices
+        ),
+        Function::Tag => run!(Tag, crate::public::complete::tags, RequestValue::Tags),
+        Function::Score => run!(Score, crate::public::complete::score, RequestValue::Scores),
         Function::Filter => run!(
-            filter_records_complete_with,
-            plain(q)?,
+            Filter,
+            crate::public::complete::records::filter,
             RequestValue::Filtered
         ),
         Function::Find => Ok(complete(
             engine
-                .try_find_records_complete_with(plain(q)?, rows, controls)?
+                .execute_find_records_complete_with(q.question(), rows, controls)?
                 .map(RequestValue::Found),
         )),
         _ => Err(Error::defect("atomic question entered another function")),
     }
 }
-fn plain(q: &LoadedQuestion) -> Result<&Question, Error> {
-    match q {
-        LoadedQuestion::Question(q) => Ok(q),
-        _ => Err(Error::usage("this function takes no band")),
-    }
-}
+
 pub(super) fn apply(
     definition: &mut RequestDefinition,
     options: &RequestOptions,
@@ -557,12 +837,18 @@ fn dispatch<'a>(
             recover,
         )?;
         return Ok(match rows {
-            super::pull::Rows::Decisions(batch) => stream(batch, RequestValue::Decisions, sink),
-            super::pull::Rows::Choices(batch) => stream(batch, RequestValue::Choices, sink),
-            super::pull::Rows::Tags(batch) => stream(batch, RequestValue::Tags, sink),
-            super::pull::Rows::Scores(batch) => stream(batch, RequestValue::Scores, sink),
-            super::pull::Rows::Filtered(batch) => stream(batch, RequestValue::Filtered, sink),
-            super::pull::Rows::Annotations(batch) => stream(batch, RequestValue::Annotations, sink),
+            super::pull::RequestRows::Decisions(batch) => {
+                stream(batch, RequestValue::Decisions, sink)
+            }
+            super::pull::RequestRows::Choices(batch) => stream(batch, RequestValue::Choices, sink),
+            super::pull::RequestRows::Tags(batch) => stream(batch, RequestValue::Tags, sink),
+            super::pull::RequestRows::Scores(batch) => stream(batch, RequestValue::Scores, sink),
+            super::pull::RequestRows::Filtered(batch) => {
+                stream(batch, RequestValue::Filtered, sink)
+            }
+            super::pull::RequestRows::Annotations(batch) => {
+                stream(batch, RequestValue::Annotations, sink)
+            }
         });
     }
     let outcome = match definition {
@@ -589,12 +875,12 @@ fn dispatch<'a>(
         )),
         RequestDefinition::Find(file) => Ok(complete(
             engine
-                .try_find_records_complete_with(file.question(), rows, controls)?
+                .execute_find_records_complete_with(file.question(), rows, controls)?
                 .map(RequestValue::Found),
         )),
         RequestDefinition::Annotate(set) => Ok(complete(
             engine
-                .annotate_records_complete_with(
+                .execute_annotate_records_complete_with(
                     set,
                     rows.collect::<Result<Vec<_>, _>>()?,
                     controls,
@@ -607,12 +893,12 @@ fn dispatch<'a>(
         RequestDefinition::Recognition(ask) => recognize(engine, ask, rows, controls, eager, sink),
         RequestDefinition::Relate(ask) => Ok(complete(
             engine
-                .try_relate_records_complete_with(ask, rows, controls)?
+                .execute_relate_records_complete_with(ask, rows, controls)?
                 .map(RequestValue::Related),
         )),
         RequestDefinition::DynamicChoose(q) => Ok(complete(
             engine
-                .choose_dynamic_records_complete_with(
+                .execute_choose_dynamic_records_complete_with(
                     q,
                     rows.collect::<Result<Vec<_>, _>>()?,
                     controls,
@@ -661,10 +947,71 @@ fn recognize<'a>(
     eager: bool,
     sink: Option<&dyn Fn(RequestValue)>,
 ) -> Result<RequestOutcome, Error> {
-    let call = if sink.is_some() {
+    let call = if sink.is_some() || !eager {
         engine.request_recognize_stream(ask, rows, controls, eager, sink)?
     } else {
-        engine.try_recognize_records_complete_with(ask, rows, controls)?
+        engine.execute_recognize_records_complete_with(ask, rows, controls)?
     };
     Ok(complete(call.map(RequestValue::Recognized)))
+}
+
+/// Scalar results project the shared private record primitive without batch metadata.
+pub(crate) fn scalar(
+    engine: &Engine,
+    function: crate::InputFunction,
+    question: &Question,
+    input: &crate::QuestionInput,
+    mut controls: CallOptions<'_>,
+) -> Result<Call<crate::core::CompleteAtomic>, Error> {
+    controls.without_context("a single-document call")?;
+    controls.scalar_input = true;
+    native_atomic(
+        engine,
+        function,
+        question,
+        std::iter::once(crate::public::record_input::plain(input.clone())),
+        controls,
+    )?
+    .try_map(|mut rows| {
+        rows.pop()
+            .map(|row| row.result)
+            .ok_or_else(|| Error::defect("a single call returned no row"))
+    })
+}
+
+#[allow(
+    clippy::type_complexity,
+    reason = "native originals retain their complete result"
+)]
+pub(in crate::public) fn native_atomic<I, T>(
+    engine: &Engine,
+    function: crate::InputFunction,
+    question: &Question,
+    records: I,
+    controls: CallOptions<'_>,
+) -> Result<Call<Vec<crate::CompleteRecord<T, crate::core::CompleteAtomic>>>, Error>
+where
+    I: IntoIterator<Item = crate::RecordInput<T>>,
+    T: crate::InputEvidence,
+{
+    let definition = if function == crate::InputFunction::Rank {
+        RequestDefinition::Rank(question.clone())
+    } else if question.kind == crate::public::NativeQuestionKind::Banded {
+        crate::LoadedQuestion::Banded(crate::BandedQuestion(question.clone())).into()
+    } else {
+        question.clone().into()
+    };
+    native(
+        engine,
+        Function::from_input(function),
+        definition,
+        records.into_iter().map(Ok),
+        controls,
+        |engine, definition, records, controls| {
+            let q = definition.atomic()?;
+            Ok(restore(
+                engine.records_complete(function, &q, records, controls)?,
+            ))
+        },
+    )
 }

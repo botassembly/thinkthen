@@ -4,13 +4,7 @@ use thinkthen::{BatchSetting, OwnedRecordObservation, StopCause};
 
 #[cfg(test)]
 fn builder(listener: &Listener) -> thinkthen::EngineBuilder {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    crate::api::fixed(listener.base(), "complete-private")
         .throttle(1)
         .unwrap()
         .max_retries(0)
@@ -70,13 +64,14 @@ fn separate_live_and_stored_replies_omit_mixed_model_facts_and_keep_actual_model
         let place = folder();
         let question = Question::decide("Good?").unwrap().cut();
         let engine = engine_for(mode, &listener, &place, &question);
-        let call = engine
-            .decide_many_complete_with(
-                &question,
-                ["One.", "Two.", "Three."],
-                CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
-            )
-            .unwrap();
+        let call = crate::api::whole(
+            &engine,
+            thinkthen::RequestFunction::Decide,
+            question.clone().into(),
+            crate::api::plain_records(["One.", "Two.", "Three."]),
+            CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+        )
+        .unwrap();
         assert_eq!(call.facts().model(), None, "{mode}");
         let facts = serde_json::to_value(call.facts().complete().unwrap()).unwrap();
         assert!(facts.get("model").is_none(), "{mode}: {facts}");
@@ -87,8 +82,8 @@ fn separate_live_and_stored_replies_omit_mixed_model_facts_and_keep_actual_model
             _ => (3, [Origin::Live; 3]),
         };
         assert_eq!(call.facts().requests_sent(), sends);
-        for ((row, actual), origin) in call
-            .value()
+        for ((row, actual), origin) in crate::api::decisions(&call)
+            .unwrap()
             .iter()
             .zip(["fixed", "other", "fixed"])
             .zip(origins)
@@ -143,16 +138,17 @@ fn check_started_failure(cached: bool) {
             Answer::Yes
         );
     }
-    let error = engine
-        .decide_many_complete_with(
-            &question,
-            ["One.", "Two.", "Three.", "Fail."],
-            CallOptions::new()
-                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-                .attempts(true)
-                .observe(&capture),
-        )
-        .unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.clone().into(),
+        crate::api::plain_records(["One.", "Two.", "Three.", "Fail."]),
+        CallOptions::new()
+            .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+            .attempts(true)
+            .observe(&capture),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(error.stopped().at(), Some(4));
     assert_eq!(error.stopped().cause(), StopCause::Status);

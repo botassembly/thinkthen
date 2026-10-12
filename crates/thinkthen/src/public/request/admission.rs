@@ -11,15 +11,16 @@ use crate::{Error, LoadedQuestion, Question, QuestionKind};
 pub struct AdmittedRequest {
     pub(super) request: Request,
     pub(super) definition: Option<RequestDefinition>,
+    pub(super) native_originals: bool,
     #[cfg(feature = "cli")]
-    pub(super) cli_atomic: Option<super::cli_atomic::Prepared>,
+    pub(super) cli_atomic: Option<crate::cli::atomic::Prepared>,
     pub(super) attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 }
 impl AdmittedRequest {
     #[cfg(feature = "cli")]
     pub(crate) fn retain_cli_atomic(
         mut self,
-        prepared: Option<super::cli_atomic::Prepared>,
+        prepared: Option<crate::cli::atomic::Prepared>,
     ) -> Self {
         self.cli_atomic = prepared;
         self
@@ -29,13 +30,13 @@ impl AdmittedRequest {
         &mut self,
         verb: crate::core::Verb,
         typed: &crate::core::Typed,
-    ) -> Result<super::cli_atomic::Prepared, Error> {
+    ) -> Result<crate::cli::atomic::Prepared, Error> {
         if let Some(prepared) = &self.cli_atomic {
             return Ok(prepared.clone());
         }
         let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = super::cli_atomic::saved(verb, &text, typed)?;
-        let definition = super::cli_atomic::definition(&prepared)?;
+        let prepared = crate::cli::atomic::saved(verb, &text, typed)?;
+        let definition = crate::cli::atomic::definition(&prepared)?;
         let definition = admit_definition(self.request.call.function(), definition)?;
         admit_definition_controls(&definition, &self.request.call.arguments().options)?;
         self.definition = Some(definition);
@@ -46,15 +47,15 @@ impl AdmittedRequest {
     pub(crate) fn resolve_cli_rank(
         &mut self,
         typed: &crate::core::Typed,
-    ) -> Result<super::cli_atomic::Prepared, Error> {
+    ) -> Result<crate::cli::atomic::Prepared, Error> {
         if let Some(prepared) = &self.cli_atomic {
             return Ok(prepared.clone());
         }
         let text = selector_text(&self.request.call.arguments().question)?;
-        let prepared = super::cli_atomic::rank(&text, true, typed)?;
+        let prepared = crate::cli::atomic::rank(&text, true, typed)?;
         let definition = admit_definition(
             self.request.call.function(),
-            super::cli_atomic::definition(&prepared)?,
+            crate::cli::atomic::definition(&prepared)?,
         )?;
         admit_definition_controls(&definition, &self.request.call.arguments().options)?;
         self.definition = Some(definition);
@@ -201,10 +202,13 @@ pub(super) fn admit(
     request: Request,
     attachment_limit: Option<super::transport::TransportAttachmentLimit>,
 ) -> Result<AdmittedRequest, Error> {
-    admit_header(request, attachment_limit, false)
+    admit_header(request, attachment_limit, false, false)
+}
+pub(super) fn admit_native(request: Request) -> Result<AdmittedRequest, Error> {
+    admit_header(request, None, false, true)
 }
 pub(super) fn admit_session(request: Request) -> Result<AdmittedRequest, Error> {
-    let admitted = admit_header(request, None, true)?;
+    let admitted = admit_header(request, None, true, false)?;
     super::framing::admit(&admitted)?;
     if let Some(definition) = &admitted.definition {
         super::framing::reading(&admitted, definition)?;
@@ -215,6 +219,7 @@ fn admit_header(
     request: Request,
     attachment_limit: Option<super::transport::TransportAttachmentLimit>,
     located_feed: bool,
+    native_originals: bool,
 ) -> Result<AdmittedRequest, Error> {
     super::transport::preflight_input(&request.call.arguments().input, attachment_limit)?;
     let function = request.call.function();
@@ -222,7 +227,11 @@ fn admit_header(
     admit_options(function, &args.input, &args.options, located_feed)?;
     admit_input(function, &args.input, &args.options)?;
     let definition = match &args.question {
-        RequestQuestion::Definition { value } => Some(admit_definition(function, value.clone())?),
+        RequestQuestion::Definition { value } => Some(admit_definition_for(
+            function,
+            value.clone(),
+            native_originals,
+        )?),
         RequestQuestion::Text { text } => Some(text_question(function, text)?),
         RequestQuestion::File { path } => {
             path_header(path)?;
@@ -244,6 +253,7 @@ fn admit_header(
     let admitted = AdmittedRequest {
         request,
         definition,
+        native_originals,
         attachment_limit,
         #[cfg(feature = "cli")]
         cli_atomic: None,
@@ -269,6 +279,13 @@ fn text_question(function: Function, text: &str) -> Result<RequestDefinition, Er
 fn admit_definition(
     function: Function,
     definition: RequestDefinition,
+) -> Result<RequestDefinition, Error> {
+    admit_definition_for(function, definition, false)
+}
+fn admit_definition_for(
+    function: Function,
+    definition: RequestDefinition,
+    native_originals: bool,
 ) -> Result<RequestDefinition, Error> {
     let definition = match definition {
         RequestDefinition::Atomic(LoadedQuestion::Question(mut q))
@@ -332,6 +349,14 @@ fn admit_definition(
         RequestDefinition::DecodedSet { .. } => false,
     };
     if !valid {
+        if native_originals
+            && function == Function::Decide
+            && let RequestDefinition::Atomic(LoadedQuestion::Question(q)) = &definition
+        {
+            return Err(Error::usage(
+                format!("decide does not take a {:?} question", q.kind).to_lowercase(),
+            ));
+        }
         return Err(Error::usage(
             "question kind does not match the requested function",
         ));

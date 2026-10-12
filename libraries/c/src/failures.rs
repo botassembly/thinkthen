@@ -5,7 +5,7 @@
 use crate::ffi::values as abi;
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::{CStr, CString};
+use std::ffi::{CStr, CString, c_char};
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread::ThreadId;
@@ -31,7 +31,7 @@ const fn code_of(kind: ErrorKind) -> i32 {
     }
 }
 
-/// One failure the door reports: its code, the retry signal, and a message
+/// One failure the interface reports: its code, the retry signal, and a message
 /// safe to log.
 pub(crate) struct Failure {
     code: i32,
@@ -60,7 +60,13 @@ pub(crate) fn facts_json(facts: &Facts) -> String {
 }
 
 impl Failure {
-    /// A refusal of the door's own argument rules.
+    /// Project a frozen sentence without changing the native diagnostic fields.
+    pub(crate) fn with_message(mut self, message: &str) -> Self {
+        self.message = message.into();
+        self
+    }
+
+    /// A refusal of the interface's own argument rules.
     pub(crate) fn usage(message: impl Into<String>) -> Self {
         Self {
             code: USAGE,
@@ -82,7 +88,7 @@ impl Failure {
         }
     }
 
-    /// A broken promise of the door or the engine beneath it.
+    /// A broken promise of the interface or the engine beneath it.
     pub(crate) fn defect(message: &str) -> Self {
         Self {
             code: DEFECT,
@@ -124,7 +130,7 @@ pub(crate) struct Last {
 }
 
 impl Last {
-    fn of(failure: Failure) -> Self {
+    pub(crate) fn of(failure: Failure) -> Self {
         let message = CString::new(failure.message)
             .unwrap_or_else(|_| c"defect: the message held a NUL".to_owned());
         Self {
@@ -137,6 +143,27 @@ impl Last {
                 .and_then(|facts| CString::new(facts_json(facts)).ok()),
             native_facts: failure.facts,
             stopped: failure.stopped,
+        }
+    }
+    pub(crate) fn message(&self) -> *const c_char {
+        self.message.as_ptr()
+    }
+    pub(crate) fn retryable(&self) -> i32 {
+        i32::from(self.retryable)
+    }
+    pub(crate) fn facts(&self) -> *const c_char {
+        self.facts
+            .as_ref()
+            .map_or(std::ptr::null(), |facts| facts.as_ptr())
+    }
+
+    pub(crate) fn snapshot(&self) -> FailureSnapshot {
+        FailureSnapshot {
+            code: self.code,
+            retryable: self.retryable,
+            message: self.message.to_string_lossy().into_owned(),
+            facts: self.native_facts.clone(),
+            stopped: self.stopped,
         }
     }
 }
@@ -308,16 +335,10 @@ impl fmt::Debug for FailureSnapshot {
 }
 /// Clone under the existing thread/engine lock; never clears or replaces the saved error.
 pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
-    last(held, |last| FailureSnapshot {
-        code: last.code,
-        retryable: last.retryable,
-        message: last.message.to_string_lossy().into_owned(),
-        facts: last.native_facts.clone(),
-        stopped: last.stopped,
-    })
+    last(held, Last::snapshot)
 }
 
-/// Run one door body so no panic unwinds into the host. A panic records the
+/// Run one interface body so no panic unwinds into the host. A panic records the
 /// defect kind on the engine at hand for the calling thread and returns
 /// `fallback`. The error path reaches thread-local storage only through
 /// `try_with`, so a call after thread-local teardown, such as a free from
@@ -325,13 +346,13 @@ pub(crate) fn snapshot(held: Option<&Held>) -> Option<FailureSnapshot> {
 pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> T) -> T {
     contained(body).unwrap_or_else(|| {
         if let Some(held) = held {
-            held.fail(Failure::defect("a panic crossed the C door"));
+            held.fail(Failure::defect("a panic crossed the C interface"));
         }
         fallback
     })
 }
 
-/// The typed facts door retains a completed call through post-reply defects.
+/// The typed facts interface retains a completed call through post-reply defects.
 pub(crate) fn guard_completed<T>(
     held: &Held,
     completed: &mut Option<Facts>,
@@ -339,15 +360,15 @@ pub(crate) fn guard_completed<T>(
     body: impl FnOnce(&mut Option<Facts>) -> T,
 ) -> T {
     contained(|| body(completed)).unwrap_or_else(|| {
-        held.fail(Failure::defect("a panic crossed the C door").completed(completed.as_ref()));
+        held.fail(Failure::defect("a panic crossed the C interface").completed(completed.as_ref()));
         fallback
     })
 }
 
-/// A message the door hands out when no engine table holds one.
+/// A message the interface hands out when no engine table holds one.
 pub(crate) const NO_ENGINE: &CStr = c"no engine came, so no failure is named";
 /// The message after a panic in `thinkthen_error_message` itself.
-pub(crate) const NO_MESSAGE: &CStr = c"the door panicked, so no message came";
+pub(crate) const NO_MESSAGE: &CStr = c"the interface panicked, so no message came";
 
 #[cfg(test)]
 mod tests;

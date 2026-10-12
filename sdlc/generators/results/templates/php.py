@@ -29,7 +29,7 @@ def hint(source, definitions):
             'string': 'string', 'null': 'null', 'object': '\\stdClass'}.get(kind, 'mixed') if isinstance(kind, str) else 'mixed'
 
 
-def outputs(definitions, version, header):
+def outputs(definitions, header):
     lines = ['<?php', '// Generated from the shared Rust result graph; do not edit.',
              'declare(strict_types=1);', 'namespace ThinkThen\\Results;']
     graph = {}
@@ -51,8 +51,7 @@ def outputs(definitions, version, header):
     declarations = re.sub(r'^}\s*$', '', declarations, flags=re.M)
     declarations = '\n'.join(line.rstrip() for line in declarations.splitlines())
     constants = ['<?php', '// Generated from the native C header; do not edit.',
-                 'declare(strict_types=1);', 'namespace ThinkThen\\Session;',
-                 'const REQUEST_VERSION = ' + repr(version) + ';']
+                 'declare(strict_types=1);', 'namespace ThinkThen\\Session;']
     for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):
         constants += [f'const {key} = {value};']
     constants += ['namespace ThinkThen;', 'enum UsagePersistenceState: int {']
@@ -65,19 +64,18 @@ def outputs(definitions, version, header):
 
 
 INPUT_ROOTS = ('RequestInput', 'RequestQuestion', 'RequestReaderFailure',
-               'Request', 'RequestCall', 'RequestItem', 'RequestSource', 'RequestReader',
+               'RequestItem', 'RequestSource', 'RequestReader',
                'RequestOptions', 'RequestSessionDescriptor')
 
 
 def inputs(definitions):
     """Declare the input documents consumed by the PHP public adapter."""
     selected = set(INPUT_ROOTS)
-    selected.update(child for child, _ in definitions['RequestCall']['variants'])
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
-    selected.update(('RequestInput_records', 'RequestInput_source', 'RequestInput_feed',
+    selected.update(('RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
                      'RequestQuestion_text', 'RequestQuestion_definition',
-                     'RequestReaderFailure_invalid_input'))
+                     'RequestReaderFailure_producer'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
              'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;']
     for key, source in definitions.items():

@@ -74,7 +74,7 @@ fn every_view_keeps_original_bytes_score_location_and_exact_aggregate_request() 
                 flags.to_vec()
             };
             let output = call(&listener, &flags, input.as_bytes())?;
-            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+            crate::harness::exits(&output, 0);
             assert_eq!(output.stdout, expected.as_bytes());
             assert_eq!(body(&listener), ordinary);
         }

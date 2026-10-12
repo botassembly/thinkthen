@@ -193,12 +193,7 @@ fn a_split_recording_replays_byte_for_byte() {
         &[],
         &input,
     );
-    assert_eq!(
-        recorded.status.code(),
-        Some(0),
-        "{}",
-        text(&recorded.stderr)
-    );
+    crate::harness::exits(&recorded, 0);
     assert_eq!(listener.count(), 3);
     let detailed_replay = decide(
         listener.base(),
@@ -219,12 +214,7 @@ fn a_split_recording_replays_byte_for_byte() {
         &[],
         &input,
     );
-    assert_eq!(
-        replayed.status.code(),
-        Some(0),
-        "{}",
-        text(&replayed.stderr)
-    );
+    crate::harness::exits(&replayed, 0);
     assert_eq!(replayed.stdout, recorded.stdout);
     assert_eq!(replayed.stderr, recorded.stderr);
     assert_eq!(listener.count(), 3, "replay sends no request");
@@ -250,7 +240,7 @@ fn stored_answers_leave_only_the_misses_to_halve() {
         &[],
         &lines(1..=3),
     );
-    assert_eq!(first.status.code(), Some(0), "{}", text(&first.stderr));
+    crate::harness::exits(&first, 0);
     let mixed = decide(
         listener.base(),
         &[
@@ -307,7 +297,7 @@ fn repeated_members_split_by_record_position() {
         &[],
         "line 1\nline 1\nline 2\nline 3\nline 4\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let bodies = listener.requests();
     assert_eq!(bodies.len(), 3);
     assert_eq!(
@@ -374,7 +364,7 @@ fn estimated_total_charges_the_refused_parent_and_refuses_a_split_child() {
         &[],
         &lines(1..=5),
     );
-    assert_eq!(stopped.status.code(), Some(2), "{}", text(&stopped.stderr));
+    crate::harness::exits(&stopped, 2);
     assert!(text(&stopped.stderr).contains(&format!(
         "max_estimated_input_tokens_total={limit} (encoded-body-bytes-908-v1) would be exceeded before another request in this call"
     )));

@@ -255,7 +255,7 @@ impl Engine {
         })
     }
 
-    /// The one door to the retained state. It compares this process with the
+    /// The one interface to the retained state. It compares this process with the
     /// state's owner first, and a forked child gets fresh state and fresh
     /// counters before anything inherited is touched.
     pub(super) fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {

@@ -1,21 +1,9 @@
 //! Convert separate host values; the shared Rust grammar owns their admission.
 use crate::calls::Crossed;
 use extendr_api::prelude::*;
-use thinkthen::{Request, RequestArguments, RequestCall, RequestInput, RequestQuestion};
+use thinkthen::{Request, RequestArguments, RequestInput, RequestQuestion};
 fn decode<T: serde::de::DeserializeOwned>(text: &str) -> Crossed<T> {
-    serde_json::from_str(text).map_err(|error| {
-        crate::carry(&thinkthen::Error::new(
-            thinkthen::ErrorKind::Usage,
-            if error
-                .to_string()
-                .starts_with("per-item context is text or an object")
-            {
-                "the per-item context does not match context_schema"
-            } else {
-                "invalid canonical request"
-            },
-        ))
-    })
+    serde_json::from_str(text).map_err(|_| crate::usage("invalid canonical request"))
 }
 fn flag(value: &Robj, name: &str) -> bool {
     value
@@ -42,7 +30,7 @@ fn question(value: &Robj) -> Crossed<RequestQuestion> {
         {
             return authored(selector.value.get());
         }
-        decode(&text)
+        RequestQuestion::from_json(&text).map_err(|error| crate::carry(&error))
     } else if flag(value, "literal") {
         Ok(RequestQuestion::Text {
             text: decode(&text)?,
@@ -65,67 +53,72 @@ fn original(value: &Robj) -> Crossed<thinkthen::RequestOriginal> {
             .map_err(|e| crate::carry(&e))
     }
 }
-fn input(value: &Robj) -> Crossed<RequestInput> {
+fn input(
+    value: &Robj,
+    function: thinkthen::RequestFunction,
+) -> Crossed<(RequestInput, Option<thinkthen::RequestColumn>)> {
     if value.rtype() == Rtype::Strings {
-        return decode(&super::text_of(value, "input")?);
+        return RequestInput::from_json(&super::text_of(value, "input")?)
+            .map(|input| (input, None))
+            .map_err(|error| crate::carry(&error));
     }
     let values =
         List::try_from(value.clone()).map_err(|_| crate::usage("invalid canonical request"))?;
-    let mut items = Vec::new();
+    let mut cells = Vec::new();
     for (_, value) in values.iter() {
-        items.push(thinkthen::RequestItem {
-            original: Some(original(&value)?),
-            context: None,
-            options: None,
-            seed_spans: None,
-            examples: None,
-            images: Vec::new(),
-        });
-    }
-    if !flag(value, "collection")
-        && let Some(item) = items.pop()
-    {
-        return match item.original {
-            Some(thinkthen::RequestOriginal::Text { text }) => Ok(RequestInput::Text {
-                text,
-                images: Vec::new(),
-            }),
-            Some(thinkthen::RequestOriginal::Json { value }) => Ok(RequestInput::Json {
-                value,
-                images: Vec::new(),
-            }),
-            None => Err(crate::defect("native scalar input lost its original")),
+        let item = if flag(&value, "missing") {
+            None
+        } else {
+            Some(item(&value)?)
         };
+        cells.push(item);
     }
-    Ok(RequestInput::Records { items })
+    let (column, items) = if flag(value, "column") {
+        let (column, items) =
+            thinkthen::RequestColumn::new(function, cells).map_err(|e| crate::carry(&e))?;
+        (Some(column), items)
+    } else {
+        (None, cells.into_iter().flatten().collect())
+    };
+    let scalar = value
+        .get_attrib("scalar")
+        .filter(|value| !value.is_null())
+        .filter(|_| {
+            column
+                .as_ref()
+                .is_none_or(|column| column.positions().len() == 1)
+        })
+        .map(|value| item(&value))
+        .transpose()?;
+    Ok((function.host_input(items, scalar), column))
 }
+fn item(value: &Robj) -> Crossed<thinkthen::RequestItem> {
+    Ok(thinkthen::RequestItem {
+        original: Some(original(value)?),
+        context: None,
+        options: None,
+        seed_spans: None,
+        examples: None,
+        images: Vec::new(),
+    })
+}
+
 pub(super) fn request(
     function: &str,
     asked: &Robj,
     source: &Robj,
     options: &Robj,
-) -> Crossed<Request> {
+) -> Crossed<(Request, Option<thinkthen::RequestColumn>)> {
+    let function: thinkthen::RequestFunction = function.parse().map_err(|e| crate::carry(&e))?;
+    let (input, column) = input(source, function)?;
     let args = RequestArguments {
         question: question(asked)?,
-        input: input(source)?,
+        input,
         options: if options.is_null() {
             Default::default()
         } else {
             decode(&super::text_of(options, "options")?)?
         },
     };
-    let call = match function {
-        "decide" => RequestCall::Decide(args),
-        "choose" => RequestCall::Choose(args),
-        "tag" => RequestCall::Tag(args),
-        "score" => RequestCall::Score(args),
-        "filter" => RequestCall::Filter(args),
-        "rank" => RequestCall::Rank(args),
-        "find" => RequestCall::Find(args),
-        "annotate" => RequestCall::Annotate(args),
-        "recognize" => RequestCall::Recognize(args),
-        "relate" => RequestCall::Relate(args),
-        _ => return Err(crate::usage("invalid canonical request")),
-    };
-    Ok(Request::new(call))
+    Ok((Request::for_function(function, args), column))
 }

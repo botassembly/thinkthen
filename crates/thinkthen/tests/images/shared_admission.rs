@@ -3,6 +3,7 @@
     clippy::unwrap_used,
     reason = "malformed saved fixtures or loopback setup fail this test, never production input"
 )]
+use super::request::ImageRequests;
 use super::{Color, engine, fixture, input, questions, url};
 use conformance_backend::{Canned, Listener, Rendezvous};
 use serde_json::{Value, json};
@@ -29,21 +30,18 @@ fn bytes(path: &str) -> Vec<u8> {
 }
 fn setup(listener: &Listener, profile: &Value) -> Engine {
     if let Some(path) = profile["profile_file"].as_str() {
-        return Engine::builder()
-            .backend("llamacpp")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model(profile["model"].as_str().unwrap())
-            .unwrap()
-            .profile_json(&String::from_utf8(bytes(path)).unwrap())
-            .unwrap()
-            .api_key("fake-image-key")
-            .unwrap()
-            .no_cache()
-            .max_retries(0)
-            .build()
-            .unwrap();
+        return super::image_builder::builder(
+            listener.base(),
+            "llamacpp",
+            profile["model"].as_str().unwrap(),
+            Some("fake-image-key"),
+        )
+        .profile_json(&String::from_utf8(bytes(path)).unwrap())
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .build()
+        .unwrap();
     }
     let backend = if profile["model"] == "d1" {
         "liquid"
@@ -136,21 +134,34 @@ fn scalar(engine: &Engine, role: &str, evidence: &QuestionInput) -> Result<(), E
     match role {
         "decide" => {
             assert_eq!(
-                engine.decide_input(&super::question(), evidence)?.value(),
+                &engine
+                    .request_decide(&super::question(), evidence)?
+                    .value()
+                    .first()
+                    .unwrap()
+                    .result()
+                    .value(),
                 &thinkthen::Answer::Yes
             );
         }
         "choose" => {
-            let question = Question::choose::<Color>("Which color?")
+            let question = Question::choose_labels("Which color?")
                 .unwrap()
-                .option(Color::Red, None)
+                .label("red", None)
                 .unwrap()
-                .option(Color::Blue, None)
+                .label("blue", None)
                 .unwrap()
                 .build()
                 .unwrap();
             assert_eq!(
-                engine.choose_input(&question, evidence)?.value(),
+                &engine
+                    .request_choose(&question, evidence)?
+                    .value()
+                    .first()
+                    .unwrap()
+                    .result()
+                    .value()
+                    .and_then(<crate::Color as thinkthen::Choice>::from_label),
                 &Some(Color::Red)
             );
         }
@@ -163,7 +174,16 @@ fn scalar(engine: &Engine, role: &str, evidence: &QuestionInput) -> Result<(), E
                 .unwrap()
                 .build()
                 .unwrap();
-            assert_eq!(*engine.score_input(&question, evidence)?.value(), 0.8);
+            assert_eq!(
+                engine
+                    .request_score(&question, evidence)?
+                    .value()
+                    .first()
+                    .unwrap()
+                    .result()
+                    .value(),
+                0.8
+            );
         }
         _ => unreachable!(),
     }
@@ -189,29 +209,34 @@ fn typed_many(
     });
     let options = CallOptions::new().batch(BatchSetting::Max);
     match role {
-        "decide" => engine
-            .decide_input_many_with(&super::question(), inputs, options)
-            .map(|row| {
-                let row = row?;
-                assert_eq!(row.value(), &thinkthen::Answer::Yes);
-                Ok(row.input().clone())
-            })
-            .collect(),
+        "decide" => {
+            super::request::decisions(engine, super::question().into(), inputs.map(Ok), options)?
+                .map(|row| {
+                    let row = row?;
+                    assert_eq!(&row.result().value(), &thinkthen::Answer::Yes);
+                    Ok(row.original().clone())
+                })
+                .collect()
+        }
         "choose" => {
-            let question = Question::choose::<Color>("Which color?")
+            let question = Question::choose_labels("Which color?")
                 .unwrap()
-                .option(Color::Red, None)
+                .label("red", None)
                 .unwrap()
-                .option(Color::Blue, None)
+                .label("blue", None)
                 .unwrap()
                 .build()
                 .unwrap();
-            engine
-                .choose_input_many_with(&question, inputs, options)
+            super::request::choices(engine, question.clone().into(), inputs.map(Ok), options)?
                 .map(|row| {
                     let row = row?;
-                    assert_eq!(row.value(), &Some(Color::Red));
-                    Ok(row.input().clone())
+                    assert_eq!(
+                        &row.result()
+                            .value()
+                            .and_then(<crate::Color as thinkthen::Choice>::from_label),
+                        &Some(Color::Red)
+                    );
+                    Ok(row.original().clone())
                 })
                 .collect()
         }
@@ -224,12 +249,11 @@ fn typed_many(
                 .unwrap()
                 .build()
                 .unwrap();
-            engine
-                .score_input_many_with(&question, inputs, options)
+            super::request::scores(engine, question.into(), inputs.map(Ok), options)?
                 .map(|row| {
                     let row = row?;
-                    assert_eq!(*row.value(), 0.8);
-                    Ok(row.input().clone())
+                    assert_eq!(row.result().value(), 0.8);
+                    Ok(row.original().clone())
                 })
                 .collect()
         }
@@ -431,13 +455,16 @@ fn release_only_different_candidate_orders_split_complete_questions_by_bytes_wit
                     .unwrap(),
                 ),
             });
-        let rows = engine
-            .choose_records_complete_with(
-                &question,
-                inputs,
-                CallOptions::new().batch(BatchSetting::Max),
-            )
-            .unwrap();
+        let thinkthen::RequestRows::Choices(batch) = super::request::rows(
+            &engine,
+            question.into(),
+            inputs.map(Ok),
+            CallOptions::new().batch(BatchSetting::Max),
+        )
+        .unwrap() else {
+            unreachable!()
+        };
+        let rows = batch.into_call().unwrap();
         assert_eq!(rows.value().len(), 2);
         assert_eq!(listener.count(), 2);
         let target = construction["text_recipe"]["by_function"]["choose"]["each_final_body_bytes"]
@@ -488,14 +515,15 @@ fn release_only_details_many_retains_a_valid_large_original_after_one_successful
     let original = evidence(&scenario["construction"], "decide").unwrap();
     let encoded = serde_json::to_string(&original).unwrap();
     assert!(encoded.len() > 16 * 1024 * 1024);
-    let call = engine
-        .details_input_many_with(
-            &super::question(),
-            [original.clone()],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .into_call()
-        .unwrap();
+    let call = super::request::decisions(
+        &engine,
+        super::question().into(),
+        [Ok(original.clone())],
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .unwrap()
+    .into_call()
+    .unwrap();
     assert_eq!(listener.count(), 1);
     let requests = listener.requests();
     assert_eq!(requests[0].body.len(), 32 * 1024 * 1024);
@@ -507,7 +535,8 @@ fn release_only_details_many_retains_a_valid_large_original_after_one_successful
         &original,
     );
     assert_eq!(call.value().len(), 1);
-    let row: Value = serde_json::from_str(&call.value()[0].value().to_json()).unwrap();
+    let row: Value =
+        serde_json::from_str(&call.value()[0].compatibility_details().unwrap().to_json()).unwrap();
     assert_eq!(
         row["input"],
         serde_json::from_str::<Value>(&encoded).unwrap()

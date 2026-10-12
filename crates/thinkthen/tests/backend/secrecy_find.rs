@@ -62,19 +62,14 @@ fn sweep(route: &Route, details: bool) -> io::Result<()> {
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
     let output = spawn(&arguments, &environment(route.keyed), evidence.as_bytes())?;
-    assert_eq!(
-        output.status.code(),
-        Some(route.code),
-        "{case}: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits_because(&output, route.code, || case.to_owned());
     assert_eq!(
         listener.requests().len(),
         route.requests,
         "{case}: requests"
     );
     if let Some(says) = says {
-        let diagnostic = String::from_utf8_lossy(&output.stderr);
+        let diagnostic = crate::harness::said(&output);
         assert!(diagnostic.contains(says), "{case}: {diagnostic}");
     }
     nothing_leaked(&case, &output, &into);

@@ -225,3 +225,6 @@ mod rank_set;
 mod rank_set_identity;
 
 mod native_results;
+
+#[path = "../support/api.rs"]
+mod api;

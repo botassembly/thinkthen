@@ -1,9 +1,10 @@
 //! A stored image answer is usable only with its original validated constituents.
+use super::request::ImageRequests;
 use super::{BLUE, LIQUID_DECIDE, RED, folder, pair, question, url};
 use conformance_backend::{Canned, Listener};
 use rusqlite::Connection;
 use sha2::{Digest as _, Sha256};
-use thinkthen::{Engine, ErrorKind};
+use thinkthen::ErrorKind;
 
 #[expect(
     clippy::expect_used,
@@ -39,18 +40,9 @@ fn corrupted_states(state: &str) -> [(&'static str, String); 7] {
 fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .backend("liquid")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model("d1")
-            .unwrap()
-            .no_cache()
-    };
+    let build = || super::image_builder::builder(listener.base(), "liquid", "d1", None).no_cache();
     let recorder = build().record(&folder).unwrap().build().unwrap();
-    recorder.decide_input(&question(), &pair()).unwrap();
+    recorder.request_decide(&question(), &pair()).unwrap();
     drop(recorder);
     let database = folder.join("thinkthen.sqlite");
     let original = std::fs::read(&database).unwrap();
@@ -75,7 +67,7 @@ fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending
             .unwrap();
         drop(connection);
         let replay = build().replay(&folder).unwrap().build().unwrap();
-        let error = replay.decide_input(&question(), &pair()).unwrap_err();
+        let error = replay.request_decide(&question(), &pair()).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Local, "{name}");
         assert_eq!(
             error.to_string(),
@@ -98,7 +90,7 @@ fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending
         connection.execute(change, []).unwrap();
         drop(connection);
         let replay = build().replay(&folder).unwrap().build().unwrap();
-        let error = replay.decide_input(&question(), &pair()).unwrap_err();
+        let error = replay.request_decide(&question(), &pair()).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Local, "{change}");
         assert_eq!(
             error.to_string(),
@@ -109,7 +101,7 @@ fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending
         std::fs::write(&database, &original).unwrap();
     }
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    replay.decide_input(&question(), &pair()).unwrap();
+    replay.request_decide(&question(), &pair()).unwrap();
     assert_eq!(listener.count(), 1, "restored replay sends nothing");
     drop(replay);
     std::fs::remove_dir_all(folder).unwrap();
@@ -119,18 +111,9 @@ fn sqlite_image_replay_refuses_corrupt_constituents_and_identity_without_sending
 fn image_v2_recording_keeps_its_separate_key_domain_and_replays_with_zero_sends() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .backend("liquid")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model("d1")
-            .unwrap()
-            .no_cache()
-    };
+    let build = || super::image_builder::builder(listener.base(), "liquid", "d1", None).no_cache();
     let recorder = build().record(&folder).unwrap().build().unwrap();
-    recorder.decide_input(&question(), &pair()).unwrap();
+    recorder.request_decide(&question(), &pair()).unwrap();
     drop(recorder);
     let red = url(RED, "image/png");
     let blue = url(BLUE, "image/png");
@@ -167,7 +150,7 @@ fn image_v2_recording_keeps_its_separate_key_domain_and_replays_with_zero_sends(
     assert_eq!(saved_key, expected);
     drop(db);
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    replay.decide_input(&question(), &pair()).unwrap();
+    replay.request_decide(&question(), &pair()).unwrap();
     assert_eq!(listener.count(), 1);
     drop(replay);
     std::fs::remove_dir_all(folder).unwrap();

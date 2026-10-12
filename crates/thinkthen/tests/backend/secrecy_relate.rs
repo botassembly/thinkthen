@@ -3,7 +3,7 @@
 //! Every other backend, recording, cache, and refusal route runs over relate in
 //! `secrecy.rs` and `refusals.rs`.
 
-use crate::harness::spawn;
+use crate::harness::spawn_local;
 use crate::relate::{WRONG, scripted};
 use crate::secrecy::{EVIDENCE, SECOND, environment, folder, nothing_leaked};
 
@@ -11,17 +11,9 @@ use crate::secrecy::{EVIDENCE, SECOND, environment, folder, nothing_leaked};
 fn a_partial_relation_answer_prints_and_exits_six_without_quoting_evidence() {
     let into = folder("relate-partial").expect("folder");
     let listener = scripted(&[r#"{"type":"noul","noul":0.9}"#, WRONG]);
-    let output = spawn(
-        &[
-            "relate",
-            "linked=person:person",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--no-cache",
-            "--details",
-        ],
+    let output = spawn_local(
+        &["relate", "linked=person:person", "--no-cache", "--details"],
+        listener.base(),
         &environment(true),
         format!(
             r#"[{{"name":"{EVIDENCE}","kind":"person"}},{{"name":"{SECOND}","kind":"person"}}]"#

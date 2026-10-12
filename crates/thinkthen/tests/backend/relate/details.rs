@@ -23,7 +23,7 @@ fn an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six() {
     let bare = run(&listener, &["follows=person:person"], input);
     assert_eq!(bare.status.code(), Some(6));
     assert_eq!(
-        String::from_utf8_lossy(&bare.stdout),
+        crate::harness::printed(&bare),
         concat!(
             r#"{"relation":"follows","source":{"name":"Ada","kind":"person"},"#,
             r#""target":{"name":"Grace","kind":"person"},"probability":0.5}"#,
@@ -40,12 +40,7 @@ fn mixed_logical_failure_prints_details_and_exits_six() {
         &["follows=person:person", "--details"],
         br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#,
     );
-    assert_eq!(
-        output.status.code(),
-        Some(6),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 6);
     let result: Value = serde_json::from_slice(&output.stdout).expect("details");
     assert_eq!(result["schema"], "thinkthen.result/2");
     assert_eq!(result["value"].as_array().expect("edges").len(), 1);
@@ -67,12 +62,7 @@ fn the_detailed_question_digest_hashes_the_printed_line_question() {
         &["linked", "--either", "--lines", "--details"],
         b"Ada\nGrace\n",
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let text = String::from_utf8(output.stdout).expect("details text");
     assert!(
         text.contains(r#""question":{"verb":"relate","fields":null,"relations":[{"name":"linked","source":"*","target":"*","reads":"linked","either":true}],"threshold":0.5},"#),
@@ -106,24 +96,14 @@ fn dry_run_reports_the_exact_request_a_real_run_sends() {
         &["works_for=person:organization", "--plan"],
         input,
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.connections(), 0);
     let sent = run(
         &listener,
         &["works_for=person:organization", "--details"],
         input,
     );
-    assert_eq!(
-        sent.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&sent.stderr)
-    );
+    crate::harness::exits(&sent, 0);
     let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
     let received = listener.requests();
     let [request] = received.as_slice() else {

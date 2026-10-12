@@ -1,53 +1,7 @@
 //! Complete recognition delegates all stages and offsets to the existing scheduler.
-use super::contextual;
 use crate::core;
 use crate::public::options::Stop;
-use crate::public::{
-    Call, CallOptions, CompleteRecognized, Engine, Error, InputFunction, Recognize, Recognized,
-};
-
-impl Engine {
-    /// Retain every stage distribution, actual observation and resolved recognition reading.
-    /// # Errors
-    /// The existing size, kind, stage failure and cancellation boundaries apply.
-    pub fn recognize_complete_with(
-        &self,
-        ask: &Recognize,
-        evidence: &str,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRecognized>, Error> {
-        ask.0.validate_mode().map_err(Error::refused)?;
-        ask.0
-            .metadata
-            .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;
-        let engine = contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let cancel = cancel.with_storage_scope();
-            let found =
-                execute(&engine, ask, evidence, &cancel, &stop, (0, None)).map_err(Error::from)?;
-            let value = Recognized::from_native(found.value.clone())?;
-            stop.observe(crate::public::RecordObservation::Row {
-                index: 0,
-                value: crate::public::ObservedRow::Recognized(&value),
-            });
-            Ok((found, value))
-        })?
-        .try_map(|(found, value)| {
-            rendered(
-                &engine,
-                ask,
-                found,
-                value,
-                (
-                    0,
-                    options.context_text(),
-                    stop.facts().attempts().map(<[_]>::to_vec),
-                ),
-            )
-        })
-    }
-}
+use crate::public::{CompleteRecognized, Error, InputFunction, Recognize, Recognized};
 
 pub(super) fn rendered(
     engine: &crate::engine::facade::Engine,

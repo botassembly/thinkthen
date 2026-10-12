@@ -1,10 +1,10 @@
 //! A named folder's writers decide answers; the command warns before a hit.
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::{encoded_decide, plant_recording};
 
 const QUESTION: &str = "asks for a refund";
@@ -138,13 +138,12 @@ fn a_named_recording_warns_before_the_missing_key_failure_without_sending() {
         EVIDENCE.as_bytes(),
     )
     .expect("record refusal");
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    crate::harness::refuses(
+        &output,
+        4,
         format!(
             "{WARNING}thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n"
-        )
+        ),
     );
     assert_eq!(fs::read(entry).expect("entry after refusal"), before);
 }
@@ -173,11 +172,11 @@ fn trust_warning_precedes_the_refresh_cost_warning() {
     .expect("refresh");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"true\n");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         format!(
             "{WARNING}thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\n"
-        )
+        ),
     );
     assert_eq!(listener.requests().len(), 1);
 }

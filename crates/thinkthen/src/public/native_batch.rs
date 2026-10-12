@@ -50,24 +50,6 @@ fn failed(error: &Error) -> RecoverableDetails {
     }
 }
 
-fn selected(
-    question: &Question,
-    options: &CallOptions<'_>,
-    engine: &Engine,
-) -> Result<core::Setting, Error> {
-    if let Some(typed) = options.batch_setting() {
-        return Ok(typed.into());
-    }
-    if let Some(engine) = engine.batch {
-        return Ok(engine);
-    }
-    let Some(file) = question.batch.as_ref() else {
-        return Ok(core::Setting::Max);
-    };
-    core::Setting::of_json(file)
-        .ok_or_else(|| Error::usage("batch takes max or a whole number of at least 1"))
-}
-
 /// What each native row needs to become its details.
 struct Native<'a> {
     question: &'a Question,
@@ -154,7 +136,36 @@ impl Engine {
             ],
             "details_many_recoverable_with",
         )?;
-        let setting = selected(question, &options, self)?;
+        let mut options = options;
+        options.recovery_rows = true;
+        crate::public::request::native(
+            self,
+            crate::RequestFunction::for_definition(&question.clone().into()),
+            question.clone().into(),
+            texts
+                .iter()
+                .cloned()
+                .map(|text| Ok(crate::public::record_input::plain(text))),
+            options,
+            |engine, definition, records, controls| {
+                let q = definition.atomic()?;
+                let texts = records
+                    .into_iter()
+                    .map(|record| record.original.original)
+                    .collect::<Vec<_>>();
+                engine.execute_recoverable_details(&q, &texts, controls)
+            },
+        )
+    }
+
+    fn execute_recoverable_details(
+        &self,
+        question: &Question,
+        texts: &[String],
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<RecoverableDetails>>, Error> {
+        let setting = crate::public::bulk::selected_batch(question, &options, self.batch)
+            .map_err(|_| Error::usage("batch takes max or a whole number of at least 1"))?;
         let context_sha256 = options
             .context_text()
             .map(|text| core::bytes_sha256(text.as_bytes()));

@@ -64,7 +64,7 @@ impl Runs {
         let environment = [KEY, (cache.0, cache.1.as_str())];
         let arguments = [verb, &["--url", url.as_str()], folder].concat();
         let output = spawn(&arguments, &environment, b"hi")?;
-        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stdout = crate::harness::printed(&output);
         let ran = (stdout.as_ref(), output.status.code());
         assert_eq!(ran, printed, "{arguments:?}");
         assert_eq!(self.backend.count(), sent, "{arguments:?}");

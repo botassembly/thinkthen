@@ -104,7 +104,7 @@ fn duplicates_consume_visits_without_refill_and_top_follows_the_merge() -> io::R
             flags.extend(["--top", top]);
         }
         let output = call(&listener, &question, &flags, b"a\nb\nc\n")?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         assert_eq!(output.stdout, expected.as_bytes());
         assert_eq!(
             listener.requests().len(),
@@ -126,7 +126,7 @@ fn plain_top_keeps_originals_after_member_evictions() -> io::Result<()> {
             &["--batch", "1", "--top", top],
             b"c\nb\na\n",
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         assert_eq!(output.stdout, expected.as_bytes());
         assert_eq!(listener.count(), 3);
     }
@@ -143,7 +143,7 @@ fn common_jsonl_field_and_named_windows_use_shared_intake_display() -> io::Resul
         &["--jsonl", "--field", "/body", "-n", "--scores"],
         b"{\"body\":\"a\", \"private\":\"hidden\"}\n{\"body\":\"b\"}\n{\"body\":\"c\"}\n",
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(output.stdout, b"0.7 1:{\"body\":\"a\", \"private\":\"hidden\"}\n0.6 2:{\"body\":\"b\"}\n0.99 3:{\"body\":\"c\"}\n");
     for request in listener.requests() {
         assert!(!text(&request.body).contains("hidden"));
@@ -163,7 +163,7 @@ fn common_jsonl_field_and_named_windows_use_shared_intake_display() -> io::Resul
         ],
         b"",
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(output.stdout, b"--\n1:a\n2:\n--\n3:b\n4:\n--\n5:c\n");
     Ok(())
 }
@@ -178,7 +178,7 @@ fn set_facts_count_originals_and_details_sum_only_their_actual_member_receipts()
         &["--details", "--facts", "--batch", "1"],
         b"a\nb\nc\n",
     )?;
-    assert_eq!(result.status.code(), Some(0), "{}", text(&result.stderr));
+    crate::harness::exits(&result, 0);
     let rows: Vec<Value> = text(&result.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).expect("detail"))
@@ -271,7 +271,7 @@ fn authored_cuts_and_on_are_refused_before_normalization_and_sends() -> io::Resu
     for (index, (set, why)) in cases.into_iter().enumerate() {
         let question = saved(&format!("rank-set-invalid-{index}"), set)?;
         let output = call(&listener, &question, &[], b"secret evidence\n")?;
-        assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 5);
         assert_eq!(output.stderr, format!("thinkthen: {why}\n").as_bytes());
         assert!(output.stdout.is_empty());
         assert_eq!(listener.connections(), 0);
@@ -302,7 +302,7 @@ fn set_owned_meanings_and_existing_display_conflicts_fail_without_sends() -> io:
         vec!["--raw"],
     ] {
         let output = call(&listener, &question, &flags, b"secret evidence\n")?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         assert!(output.stdout.is_empty());
         assert!(!text(&output.stderr).contains("secret evidence"));
     }
@@ -332,7 +332,7 @@ fn malformed_or_duplicate_sets_never_fall_back_and_file_load_is_capped() -> io::
         &format!("{SET}{}", " ".repeat(1_048_576)),
     )?;
     let output = call(&listener, &question, &[], b"secret evidence\n")?;
-    assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 5);
     assert!(output.stdout.is_empty());
     assert_eq!(listener.connections(), 0);
     Ok(())
@@ -357,7 +357,7 @@ fn a_late_failed_member_discards_every_held_rank_and_keeps_secrets_out() -> io::
         })?;
         let flags = [&["--batch", "1"][..], &view].concat();
         let output = call(&listener, &question, &flags, b"a\nlate secret evidence\n")?;
-        assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 4);
         assert!(output.stdout.is_empty());
         assert_eq!(listener.requests().len(), 2);
         assert!(!text(&output.stderr).contains("secret evidence"));
@@ -405,7 +405,7 @@ fn preview_matches_counted_requests(
         b"alpha\nbeta\ngamma\n",
         jobs,
     )?;
-    assert_eq!(preview.status.code(), Some(0), "{}", text(&preview.stderr));
+    crate::harness::exits(&preview, 0);
     assert_eq!(listener.connections(), 0);
     assert!(listener.requests().is_empty());
     let lines: Vec<_> = text(&preview.stdout).lines().map(str::to_owned).collect();
@@ -422,7 +422,7 @@ fn preview_matches_counted_requests(
         b"alpha\nbeta\ngamma\n",
         jobs,
     )?;
-    assert_eq!(runtime.status.code(), Some(0), "{}", text(&runtime.stderr));
+    crate::harness::exits(&runtime, 0);
     assert_eq!(runtime.stdout, b"alpha\nbeta\ngamma\n");
     let requests = listener.requests();
     let per_record = if mixed { 2 } else { 1 };

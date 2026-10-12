@@ -24,10 +24,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteDecision>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_decide_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.question().clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Decide,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Decisions(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native decide batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -50,10 +60,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteChoice>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_choose_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.question().clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Choose,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Choices(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native choose batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -102,10 +122,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteTags>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_tag_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.question().clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Tag,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Tags(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native tag batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -128,10 +158,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteScore>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_score_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Score,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Scores(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native score batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -154,10 +194,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteFilter>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_filter_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Filter,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Filtered(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native filter batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -180,10 +230,20 @@ impl Engine {
     ) -> Result<(Batch<'a, CompleteRecord<T, CompleteAnnotated>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.try_annotate_records_complete_with(
-                question,
-                records.into_iter().map(Ok),
-                options.surface(Surface::RustPolars),
+            Batch::of(
+                crate::public::request::pull::native(
+                    self,
+                    question.clone().into(),
+                    records.into_iter().map(Ok),
+                    options.surface(Surface::RustPolars),
+                    crate::RequestFunction::Annotate,
+                )
+                .and_then(|rows| match rows {
+                    crate::RequestRows::Annotations(batch) => Ok(batch),
+                    _ => Err(Error::defect(
+                        "a native annotate batch returned another result kind",
+                    )),
+                }),
             ),
             positions,
         ))
@@ -205,10 +265,19 @@ impl Engine {
     ) -> Result<(Call<Vec<CompleteRecord<T, CompleteChoice>>>, Vec<usize>), Error> {
         let (records, positions) = present(column, records)?;
         Ok((
-            self.choose_dynamic_records_complete_with(
-                question,
-                records,
+            crate::public::request::native(
+                self,
+                crate::RequestFunction::Choose,
+                question.clone().into(),
+                records.into_iter().map(Ok),
                 options.surface(Surface::RustPolars),
+                |engine, definition, records, controls| {
+                    let q = definition.dynamic_choose()?;
+                    Ok(crate::public::request::restore(
+                        engine
+                            .execute_choose_dynamic_records_complete_with(&q, records, controls)?,
+                    ))
+                },
             )?,
             positions,
         ))

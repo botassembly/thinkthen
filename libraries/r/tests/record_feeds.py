@@ -51,6 +51,13 @@ result <- tt_decide("Feed?", feed)
 stopifnot(length(result$results) == 2L, result$facts$requests_sent == 2,
           inherits(result, "thinkthen_Call"), at == 3L, released_reader == 1L,
           result$results[[1]]$source$first_line==2, result$results[[2]]$source$first_line==4)
+marker <- simpleError("private producer marker")
+raised <- tt_feed(function() stop(marker))
+fault <- tryCatch(tt_decide("Producer?", raised), thinkthen_error=identity)
+stopifnot(inherits(fault,"thinkthen_local"),identical(fault$parent,marker),
+          fault$message == "session producer raised an exception",fault$facts$requests_sent == 0)
+fault <- tryCatch(tt_decide(list(decide="Is it?",item_schema=list(type="array")),"unreachable"),thinkthen_error=identity)
+stopifnot(fault$message == "the question declaration uses an unsupported feature")
 at <- 0L
 bad <- tt_feed(function() { at <<- at + 1L; "never" })
 fault <- tryCatch(tt_choose(list(choose="Invalid?",options=list()), bad), thinkthen_error=identity)

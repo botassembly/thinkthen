@@ -11,10 +11,10 @@
     reason = "a failed fixture setup should stop the boundary test"
 )]
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::path::PathBuf;
 
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::plant_fixture;
 
 /// The response the listener gives to the one question a case asks.
@@ -216,14 +216,13 @@ fn a_blank_selected_string_is_refused_before_any_request() {
         &["--jsonl", "--field", "/body"],
         "{\"body\":\"  \"}\n",
     );
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    crate::harness::refuses(
+        &output,
+        2,
         concat!(
             "thinkthen: the evidence is empty or blank\n",
             "thinkthen: stopped at record 1; 0 records finished\n",
-        )
+        ),
     );
     assert_eq!(listener.connections(), 0);
     assert!(listener.requests().is_empty());
@@ -269,14 +268,14 @@ fn an_evidence_limit_counts_the_fixed_state_and_not_the_quoted_record() {
         } else {
             assert_eq!(listener.connections(), 0, "{name}");
             assert!(listener.requests().is_empty(), "{name}");
-            assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
+            stderr_is(
+                &output,
                 format!(
                     "thinkthen: profile {name} allows at most {} evidence bytes; this request has {}\n\
                      thinkthen: stopped at record 1; 0 records finished\n",
                     limit,
                     state.len()
-                )
+                ),
             );
         }
     }
@@ -361,7 +360,7 @@ fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
         &format!("{RECORD}\n"),
     );
     assert_eq!(output.status.code(), Some(5));
-    let said = String::from_utf8_lossy(&output.stderr);
+    let said = crate::harness::said(&output);
     assert!(
         said.contains("the replay folder holds no answer for question `"),
         "{said}"
@@ -386,10 +385,5 @@ fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
         ],
         &format!("{RECORD}\n"),
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
 }

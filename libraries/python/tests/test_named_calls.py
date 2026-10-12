@@ -196,8 +196,9 @@ def test_named_calls_refuse_invalid_headers_without_sending(backend, tmp_path):
 
 
 @pytest.mark.parametrize('asynchronous', [False, True])
-@pytest.mark.parametrize('failure', ['admission', 'reader', 'backend'])
-def test_producer_cleanup_preserves_typed_failure_and_prefix(backend, tmp_path, asynchronous, failure):
+@pytest.mark.parametrize('failure', ['admission', 'reader', 'backend', 'on', 'token'])
+@pytest.mark.parametrize('cleanup', ['call', 'descriptor'])
+def test_producer_cleanup_preserves_typed_failure_and_prefix(backend, tmp_path, asynchronous, failure, cleanup):
     output = run('''
         import asyncio, os, thinkthen as tt
         mode = os.environ['FAILURE']
@@ -206,32 +207,70 @@ def test_producer_cleanup_preserves_typed_failure_and_prefix(backend, tmp_path, 
             def __init__(self): self.rows = iter(['first', 42, 'later'])
             def __iter__(self): return self
             def __next__(self): return next(self.rows)
+            @property
             def close(self):
+                if os.environ['CLEANUP'] == 'descriptor':
+                    closed.append(True)
+                    raise RuntimeError('producer close lookup failed')
+                return self.cleanup
+            def cleanup(self):
                 closed.append(True)
                 raise RuntimeError('producer cleanup failed')
         engine = tt.Engine(cache=False, max_retries=0, batch=1, throttle=1)
         question = {'decide': 'Late?', 'item_schema': {'type': 'string'}}
         if mode == 'admission': question = {'decide': ''}
-        expected = tt.BackendError if mode == 'backend' else tt.UsageError
+        marker = RuntimeError('token inspection failed')
+        class Token:
+            @property
+            def cancelled(self): raise marker
+        controls = {'on': 42} if mode == 'on' else {'token': Token()} if mode == 'token' else {}
+        expected = {'backend': tt.BackendError, 'on': TypeError, 'token': RuntimeError}.get(mode, tt.UsageError)
         try:
             if os.environ['ASYNCHRONOUS'] == 'True':
-                asyncio.run(engine.asyncio.decide(question, Inputs()))
-            else: engine.decide(question, Inputs())
+                asyncio.run(engine.asyncio.decide(question, Inputs(), **controls))
+            else: engine.decide(question, Inputs(), **controls)
         except expected as error:
             assert closed == [True]
             assert not engine._sessions
-            if mode == 'admission': assert error.facts is None
+            if mode in ('admission', 'on', 'token'): assert getattr(error, 'facts', None) is None
             else:
                 assert error.facts.requests_sent == 1
                 assert error.kind == ('backend' if mode == 'backend' else 'usage')
                 assert error.complete.error.kind == error.kind
                 assert error.terminal.failure.to_dict() == error.complete.to_dict()
                 assert [row.input for row in error.results] == ([] if mode == 'backend' else ['first'])
+            if mode == 'token': assert error is marker
+            if mode == 'on': assert str(error) == "'int' object is not iterable"
         else: raise AssertionError('call failure was lost')
         engine.close()
         print('preserved')
     ''', child_env(backend, tmp_path,
                    'arm/malformed/missing_answer' if failure == 'backend' else 'generic',
-                   FAILURE=failure, ASYNCHRONOUS=str(asynchronous)))
+                   FAILURE=failure, ASYNCHRONOUS=str(asynchronous), CLEANUP=cleanup))
     assert output.splitlines() == ['preserved']
-    assert backend.count() == (0 if failure == 'admission' else 1)
+    assert backend.count() == (0 if failure in ('admission', 'on', 'token') else 1)
+
+
+def test_producer_exception_and_admission_message_survive_native_boundary(backend, tmp_path):
+    output = run('''
+        import thinkthen as tt
+        marker = RuntimeError('private producer marker')
+        def inputs():
+            raise marker
+            yield 'unreachable'
+        engine = tt.Engine(cache=False)
+        try: engine.decide('Is it?', inputs())
+        except tt.LocalError as error:
+            assert error.__cause__ is marker
+            assert str(error) == 'session producer raised an exception'
+            assert error.facts.requests_sent == 0
+        else: raise AssertionError('producer failure answered')
+        try: engine.decide({'decide':'Is it?', 'item_schema':{'type':'array'}}, 'unreachable')
+        except tt.UsageError as error:
+            assert str(error) == 'the question declaration uses an unsupported feature'
+        else: raise AssertionError('unsupported declaration admitted')
+        engine.close()
+        print('retained')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['retained']
+    assert backend.count() == 0

@@ -13,6 +13,13 @@ for (input in list(
   check("canonical source conflict refuses before reading or sending", inherits(error, "thinkthen_usage") &&
     !file.exists(missing) && backend_count() == before)
 }
+before <- backend_count()
+error <- tryCatch(tt_decide("Q?", tt_input("records", items = list(
+  list(original = list(kind = "text", text = "unreachable"), context = FALSE)
+))), error = identity)
+check("invalid selector context retains native diagnosis before sending", inherits(error, "thinkthen_usage") &&
+  identical(conditionMessage(error), "the per-item context does not match context_schema") &&
+  !isTRUE(error$retryable) && inherits(error$facts, "thinkthen_absent") && backend_count() == before)
 records <- tt_decide("Q?", tt_input("records", items = list(record)))
 check("valid record retains the original", identical(records$results[[1L]]$input, "kept"))
 file <- tempfile("input-")

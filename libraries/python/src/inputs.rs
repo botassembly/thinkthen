@@ -4,8 +4,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyString, PyTuple};
 use std::path::PathBuf;
 use thinkthen::{
-    RawRecord, RequestArguments, RequestCall, RequestInput, RequestItem, RequestOriginal,
-    RequestQuestion,
+    RawRecord, RequestArguments, RequestInput, RequestItem, RequestOriginal, RequestQuestion,
 };
 
 pub(crate) fn json(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<String> {
@@ -27,19 +26,12 @@ pub(crate) fn decode<T: serde::de::DeserializeOwned>(
     py: Python<'_>,
     value: &Bound<'_, PyAny>,
 ) -> PyResult<T> {
-    serde_json::from_str(&json(py, value)?).map_err(|error| {
-        let unsupported = "the question declaration uses an unsupported feature";
-        usage(
-            py,
-            if error.to_string().starts_with(unsupported) {
-                unsupported
-            } else {
-                "invalid canonical request"
-            },
-        )
-    })
+    serde_json::from_str(&json(py, value)?).map_err(|_| usage(py, "invalid canonical request"))
 }
 pub(crate) fn question(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<RequestQuestion> {
+    if let Ok(value) = value.extract::<PyRef<'_, crate::question::Question>>() {
+        return Ok(value.0.clone());
+    }
     let (kind, body): (String, Py<PyAny>) = value.extract()?;
     let body = body.bind(py);
     if kind == "selector" {
@@ -86,11 +78,12 @@ pub(crate) fn question(py: Python<'_>, value: &Bound<'_, PyAny>) -> PyResult<Req
             reference: body.extract()?,
         },
         "definition" => RequestQuestion::Definition {
-            value: decode(py, body)?,
+            value: thinkthen::RequestDefinition::from_request_json(&json(py, body)?)
+                .map_err(|error| raised(py, &error))?,
         },
         "raw" => RequestQuestion::Definition {
-            value: serde_json::from_str(&body.extract::<String>()?)
-                .map_err(|_| usage(py, "invalid authored question definition"))?,
+            value: thinkthen::RequestDefinition::from_request_json(&body.extract::<String>()?)
+                .map_err(|error| raised(py, &error))?,
         },
         _ => return Err(usage(py, "invalid question selector")),
     })
@@ -170,14 +163,7 @@ pub(crate) fn item(py: Python<'_>, value: &Bound<'_, PyAny>, verb: &str) -> PyRe
                     let description = description.bind(py);
                     Ok(thinkthen::RecordOption {
                         name,
-                        description: if description.is(&absent) {
-                            None
-                        } else {
-                            Some(
-                                thinkthen::Description::from_json(&json(py, description)?)
-                                    .map_err(|e| raised(py, &e))?,
-                            )
-                        },
+                        description: description_value(py, description, &absent)?,
                     })
                 })
                 .collect::<PyResult<Vec<_>>>()?;
@@ -267,11 +253,7 @@ fn input(
     } else {
         vec![item(py, value, verb)?]
     };
-    Ok(match verb {
-        "find" => RequestInput::Units { items },
-        "relate" => RequestInput::Entities { items },
-        _ => RequestInput::Records { items },
-    })
+    Ok(RequestInput::Records { items })
 }
 fn build_request(
     py: Python<'_>,
@@ -286,20 +268,8 @@ fn build_request(
         input: input(py, source, verb, feed)?,
         options: crate::controls::options(py, options)?,
     };
-    let call = match verb {
-        "decide" => RequestCall::Decide(args),
-        "choose" => RequestCall::Choose(args),
-        "tag" => RequestCall::Tag(args),
-        "score" => RequestCall::Score(args),
-        "filter" => RequestCall::Filter(args),
-        "rank" => RequestCall::Rank(args),
-        "find" => RequestCall::Find(args),
-        "annotate" => RequestCall::Annotate(args),
-        "recognize" => RequestCall::Recognize(args),
-        "relate" => RequestCall::Relate(args),
-        _ => return Err(usage(py, "invalid request function")),
-    };
-    Ok(thinkthen::Request::new(call))
+    let request = thinkthen::Request::named(verb, args).map_err(|e| raised(py, &e))?;
+    Ok(request)
 }
 
 pub(crate) fn request(
@@ -320,4 +290,17 @@ pub(crate) fn request(
             error
         }
     })
+}
+
+fn description_value(
+    py: Python<'_>,
+    value: &Bound<'_, PyAny>,
+    absent: &Bound<'_, PyAny>,
+) -> PyResult<Option<thinkthen::Description>> {
+    if value.is(absent) {
+        return Ok(None);
+    }
+    thinkthen::Description::from_json(&json(py, value)?)
+        .map(Some)
+        .map_err(|e| raised(py, &e))
 }

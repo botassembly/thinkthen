@@ -97,7 +97,9 @@ struct native_functions {
     int (*thinkthen_score_batch_start)(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_batch **);
     int (*thinkthen_score_complete)(const thinkthen_engine *, const thinkthen_question *, const thinkthen_source *, const thinkthen_controls_v1 *, thinkthen_result **);
     void (*thinkthen_session_cancel)(thinkthen_session *);
+    const char * (*thinkthen_session_error_facts_json)(void);
     const char * (*thinkthen_session_error_message)(void);
+    int (*thinkthen_session_error_retryable)(void);
     int (*thinkthen_session_finish)(thinkthen_session *, const char *, size_t);
     void (*thinkthen_session_free)(thinkthen_session *);
     int (*thinkthen_session_new)(const thinkthen_engine *, const char *, size_t, thinkthen_session **);
@@ -107,6 +109,7 @@ struct native_functions {
     int (*thinkthen_session_result_view)(const thinkthen_session_result *, const thinkthen_complete_session_packet_v1 **);
     int (*thinkthen_session_try_push)(thinkthen_session *, const char *, size_t, uint32_t *);
     int (*thinkthen_session_try_read)(thinkthen_session *, uint32_t *, thinkthen_session_result **);
+    int (*thinkthen_session_wait)(const thinkthen_session *, uint32_t, uint32_t, uint32_t *);
     int (*thinkthen_source_files)(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
     void (*thinkthen_source_free)(thinkthen_source *);
     int (*thinkthen_source_image_files)(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
@@ -490,10 +493,18 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_cancel) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_cancel, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_error_facts_json");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_error_facts_json) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_error_facts_json, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_error_message");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_error_message) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_error_message, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_error_retryable");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_error_retryable) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_error_retryable, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_finish");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_finish) == sizeof(symbol), "function pointer width");
@@ -530,6 +541,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_try_read) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_try_read, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_wait");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_wait) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_wait, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_source_files");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_source_files) == sizeof(symbol), "function pointer width");
@@ -931,9 +946,17 @@ void thinkthen_session_cancel(thinkthen_session * arg0) {
     if (!native.thinkthen_session_cancel) abort();
     native.thinkthen_session_cancel(arg0);
 }
+const char * thinkthen_session_error_facts_json(void) {
+    if (!native.thinkthen_session_error_facts_json) abort();
+    return native.thinkthen_session_error_facts_json();
+}
 const char * thinkthen_session_error_message(void) {
     if (!native.thinkthen_session_error_message) abort();
     return native.thinkthen_session_error_message();
+}
+int thinkthen_session_error_retryable(void) {
+    if (!native.thinkthen_session_error_retryable) abort();
+    return native.thinkthen_session_error_retryable();
 }
 int thinkthen_session_finish(thinkthen_session * arg0, const char * arg1, size_t arg2) {
     if (!native.thinkthen_session_finish) abort();
@@ -970,6 +993,10 @@ int thinkthen_session_try_push(thinkthen_session * arg0, const char * arg1, size
 int thinkthen_session_try_read(thinkthen_session * arg0, uint32_t * arg1, thinkthen_session_result ** arg2) {
     if (!native.thinkthen_session_try_read) abort();
     return native.thinkthen_session_try_read(arg0, arg1, arg2);
+}
+int thinkthen_session_wait(const thinkthen_session * arg0, uint32_t arg1, uint32_t arg2, uint32_t * arg3) {
+    if (!native.thinkthen_session_wait) abort();
+    return native.thinkthen_session_wait(arg0, arg1, arg2, arg3);
 }
 int thinkthen_source_files(const thinkthen_engine * arg0, const thinkthen_source_spec_v1 * arg1, thinkthen_source ** arg2) {
     if (!native.thinkthen_source_files) abort();

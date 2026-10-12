@@ -22,15 +22,11 @@ impl Drop for Original {
 fn records(drops: &Rc<Cell<usize>>, ids: &[Option<u32>]) -> Vec<Option<RecordInput<Original>>> {
     ids.iter()
         .map(|id| {
-            id.map(|id| RecordInput {
-                original: Original {
+            id.map(|id| {
+                crate::api::record(Original {
                     id,
                     drops: drops.clone(),
-                },
-                context: None,
-                options: None,
-                examples: None,
-                seed_spans: None,
+                })
             })
         })
         .collect()

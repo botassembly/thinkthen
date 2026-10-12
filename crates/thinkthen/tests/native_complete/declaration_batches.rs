@@ -48,8 +48,7 @@ fn check_unfinished_declared_input_deadline(prefix: usize) {
         position += 1;
         Some(Ok(input(text)))
     });
-    let mut batch =
-        engine.try_decide_records_complete_with(&question, records, two().deadline_at(due));
+    let mut batch = crate::api::pull_decisions(&engine, &question, records, two().deadline_at(due));
     for (at, value) in [Answer::Yes, Answer::No]
         .into_iter()
         .take(prefix)
@@ -81,10 +80,8 @@ fn check_unfinished_declared_input_deadline(prefix: usize) {
 
 #[test]
 fn invalid_second_streamed_item_prevents_the_entire_staged_batch_from_sending() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let question =
         Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
@@ -93,7 +90,7 @@ fn invalid_second_streamed_item_prevents_the_entire_staged_batch_from_sending() 
         .into_iter()
         .inspect(|_| pulled.set(pulled.get() + 1))
         .map(|text| Ok(input(text)));
-    let mut batch = engine.try_decide_records_complete_with(&question, records, two());
+    let mut batch = crate::api::pull_decisions(&engine, &question, records, two());
     let error = batch.next().unwrap().unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
@@ -119,7 +116,7 @@ fn invalid_later_batch_keeps_only_the_dispatched_prefix_and_original_error_posit
         .into_iter()
         .inspect(|_| pulled.set(pulled.get() + 1))
         .map(|text| Ok(input(text)));
-    let mut batch = engine.try_decide_records_complete_with(&question, records, two());
+    let mut batch = crate::api::pull_decisions(&engine, &question, records, two());
     for (at, value) in [Answer::Yes, Answer::No].into_iter().enumerate() {
         let row = batch.next().unwrap().unwrap();
         assert_eq!(row.ordinal(), at);
@@ -149,29 +146,17 @@ fn invalid_later_batch_keeps_only_the_dispatched_prefix_and_original_error_posit
 
 #[test]
 fn an_invalid_replay_batch_is_admitted_before_looking_up_its_missing_first_question() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let question =
         Question::from_json(r#"{"decide":"Refund?","item_schema":{"type":"string"}}"#).unwrap();
-    engine
-        .decide_complete_with(&question, "Primed.", CallOptions::new())
-        .unwrap();
+    crate::api::decide(&engine, &question, "Primed.", CallOptions::new()).unwrap();
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let mut batch = replay.try_decide_records_complete_with(
+    let mut batch = crate::api::pull_decisions(
+        &replay,
         &question,
         [Ok(input(r#""Unstored.""#)), Ok(input("null"))],
         two(),
@@ -191,17 +176,21 @@ fn an_invalid_replay_batch_is_admitted_before_looking_up_its_missing_first_quest
 
 #[test]
 fn annotation_member_declarations_admit_the_whole_stream_batch_before_any_member_sends() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Refund?","item_schema":{"type":"string"}},"second":{"decide":"Urgent?","item_schema":{"type":"string"}}}}"#).unwrap();
-    let mut batch = engine.try_annotate_records_complete_with(
-        &set,
-        [Ok(input(r#""Valid.""#)), Ok(input("null"))],
-        two(),
-    );
+    let mut batch = crate::api::annotation_rows(
+        crate::api::rows(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            set.into(),
+            [Ok(input(r#""Valid.""#)), Ok(input("null"))],
+            two(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
     let error = batch.next().unwrap().unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(error.stopped().at(), Some(2));

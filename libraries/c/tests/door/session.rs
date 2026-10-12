@@ -10,10 +10,7 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
         b"",
         &[("SESSION_CONTROLS", Path::new("1"))],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     #[cfg(not(any(target_os = "macos", target_os = "windows")))]
     {
         let output = run_with(
@@ -27,10 +24,7 @@ fn owned_session_controls_refuse_before_sending_and_preserve_outputs() {
                 ("XDG_STATE_HOME", Path::new("")),
             ],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
     }
     assert_schema_admission_refusals(&backend);
     assert_definition_admission_refusals(&backend);
@@ -65,10 +59,7 @@ fn assert_schema_admission_refusals(backend: &Backend) {
             b"",
             &[("SESSION_ADMISSION", Path::new(&json))],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(text(&output.stdout), format!("{error}\n"));
         assert!(!text(&output.stdout).contains("private-"));
     }
@@ -123,10 +114,7 @@ fn assert_definition_admission_refusals(backend: &Backend) {
             b"",
             &[("SESSION_ADMISSION", Path::new(&json))],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         let reported = if message == "invalid canonical request" {
             "invalid session arguments or input"
         } else {
@@ -158,10 +146,7 @@ fn session_owns_inputs_engine_and_transferred_packets() {
                 ]
             },
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         let packets: Vec<serde_json::Value> = text(&output.stdout)
             .lines()
             .map(|line| serde_json::from_str(line).expect("canonical packet JSON"))

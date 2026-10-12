@@ -147,6 +147,28 @@ test('Client reports native deadline settlement and invalid admission sends noth
   assert.deepEqual(value.slice(1),[['usage','invalid field pointer',null],['usage','invalid canonical request',null],['usage','invalid session descriptor',null],['cancelled','the call was cancelled',null],['usage','invalid canonical request',null],['usage','the question declaration uses an unsupported feature',null]]);assert.equal(await backend.count(),0);
 });
 
+test('setImmediate runs while native next waits for a held result',async t=>{
+  const backend=await startBackend(t);
+  const run=child(backend,`
+    const client=new tt.Client({cache:false,max_retries:0});
+    const operation=client.start('decide','Does it pass?','held');
+    const pending=(async()=>{while(!(await operation.next()).done){}})();
+    await new Promise(resolve=>setImmediate(resolve));
+    line({ready:true});
+    process.stdin.once('data',()=>{process.stdin.destroy();operation.cancel();});
+    try{await pending;}catch(error){if(error.kind!=='cancelled')throw error;}
+    client.close(); return true;
+  `,{arm:'arm/held',stdin:true});
+  assert.equal(await backend.wait(1),1);
+  await until(()=>run.lines.some(line=>line.value?.ready===true),2000);
+  assert.ok(run.lines.some(line=>line.value?.ready===true));
+  run.proc.stdin.write('cancel\n');
+  const exited=await within(run.exited,30000);
+  assert.equal(exited.code,0);
+  assert.equal(run.lines.at(-1).value.value,true);
+  backend.release();
+});
+
 test('Client cancellation closes its feed and settles while provider replies remain held',async t=>{
   const backend=await startBackend(t);
   const run=child(backend,`
@@ -233,4 +255,18 @@ test('Client recognize retains every aggregate chunk and its completed failure p
   `,{arm:'arm/full/capture'});
   assert.deepEqual(value.rows,[0,1]);assert.equal(value.nonempty,true);assert.deepEqual(value.empty,[]);
   assert.deepEqual(value.failed,{kind:'usage',rows:[0,1],sends:4});
+});
+
+test('Client retains producer exceptions and native admission messages',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    const marker=Error('private producer marker'),client=new tt.Client({cache:false});
+    async function* inputs(){throw marker;}
+    try {await client.decide('Is it?',inputs());throw Error('producer answered');}
+    catch(error){if(error.cause!==marker || error.message!=='session producer raised an exception' || error.facts.requests_sent!==0)throw error;}
+    try {await client.decide({decide:'Is it?',item_schema:{type:'array'}},'unreachable');throw Error('unsupported declaration admitted');}
+    catch(error){if(!(error instanceof tt.ClientError) || error.kind!=='usage' || error.retryable!==false || error.message!=='the question declaration uses an unsupported feature' || error.complete.error.kind!=='usage')throw error;}
+    client.close();return true;
+  `);
+  assert.equal(value,true);assert.equal(await backend.count(),0);
 });

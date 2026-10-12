@@ -9,7 +9,7 @@ use crate::ffi::carriers::{
     OptionalStringV1, QuestionAuthorV1, QuestionSpecV1, RecognitionTaskV1, StringV1,
 };
 use crate::{
-    Door,
+    EngineHandle,
     current::{QuestionHandle, question::Native},
     failures::{OK, USAGE, guard},
 };
@@ -19,7 +19,7 @@ use crate::{
 /// All active counted buffers, optional author and output obey the header contract.
 #[unsafe(no_mangle)]
 pub(super) unsafe extern "C" fn thinkthen_question_new_recognition_v1(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const QuestionSpecV1,
     metadata: *const QuestionAuthorV1,
     task: *const RecognitionTaskV1,
@@ -27,7 +27,7 @@ pub(super) unsafe extern "C" fn thinkthen_question_new_recognition_v1(
 ) -> std::ffi::c_int {
     // SAFETY: validate required task within the engine's ordinary guarded failure path.
     unsafe {
-        crate::ffi::typed(
+        crate::ffi::run_typed(
             engine,
             |_| read::reference(task).copied(),
             |_, task| author::new_with_task(engine, spec, metadata, Some(task), out),

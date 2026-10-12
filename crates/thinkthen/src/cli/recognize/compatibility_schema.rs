@@ -7,7 +7,7 @@ use crate::core::{BoundaryOdds, NameOdds, PairOdds, PieceOdds, RecognitionPropos
 #[serde(untagged)]
 #[expect(
     dead_code,
-    reason = "only the legacy schema uses this typed projection"
+    reason = "only the compatibility schema uses this typed projection"
 )]
 pub(super) enum RecognitionOdds {
     Whole(WholeOdds),
@@ -18,7 +18,7 @@ pub(super) enum RecognitionOdds {
 #[schemars(rename = "legacyRecognizeAnswer")]
 #[expect(
     dead_code,
-    reason = "only the legacy schema uses this typed projection"
+    reason = "only the compatibility schema uses this typed projection"
 )]
 pub(super) struct WholeOdds {
     pieces: Vec<PieceOdds>,

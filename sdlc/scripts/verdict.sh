@@ -7,3 +7,9 @@ verdict() {
 	*) echo "surfaces: FAIL $2 (exit $3)"; return 1 ;;
 	esac
 }
+
+# A candidate may delegate only these two Linux rows to matching macOS checks.
+apple_delegated() {
+    [ "${THINKTHEN_MACOS_APPLE_CHECKS:-}" = required ] && [ "$(uname -s)" = Linux ] || return 1
+    case $1 in libraries/objective-c | libraries/swift) return 0 ;; *) return 1 ;; esac
+}

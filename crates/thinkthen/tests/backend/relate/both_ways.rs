@@ -46,7 +46,7 @@ fn a_both_ways_edge_says_so_in_input_order_and_keeps_its_question_keys() {
     let rules = mixed_file();
     let bare = run(&listener, &[&rules], NAMES);
     assert_eq!(bare.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&bare.stdout), BARE);
+    assert_eq!(crate::harness::printed(&bare), BARE);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     assert_eq!(String::from_utf8_lossy(&sent[0].body), BODY);

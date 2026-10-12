@@ -1,6 +1,6 @@
 //! The compiled recognize command against a counted loopback backend.
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use serde_json::Value;
 use std::{fs, path::PathBuf, process::Output, sync::Arc};
 
@@ -149,12 +149,7 @@ fn options(question: &Value) -> Vec<String> {
 }
 
 pub(super) fn stdout(output: &Output) -> String {
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(output, 0);
     String::from_utf8(output.stdout.clone()).expect("output text")
 }
 
@@ -320,9 +315,7 @@ fn a_failed_step_two_request_fails_the_text() {
     let wrong = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.5}}}"#;
     let listener = failing_on("none of these", wrong.to_owned());
     let output = run(&listener, &KINDS, ADA);
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED);
+    crate::harness::refuses(&output, 4, REFUSED);
     assert_eq!(listener.requests().len(), 2);
 }
 
@@ -345,9 +338,9 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
     let over = format!("{at_limit}w");
     let refused = run(&listener, &["person"], over.as_bytes());
     assert_eq!(refused.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: recognize: the text is 600001 bytes, over the limit of 600000; raise it with --max-text-bytes\n"
+    stderr_is(
+        &refused,
+        "thinkthen: recognize: the text is 600001 bytes, over the limit of 600000; raise it with --max-text-bytes\n",
     );
     let raised = plan_json(&run(
         &listener,
@@ -496,12 +489,7 @@ fn a_saved_recognize_name_reaches_details_identity_and_warning() {
         ],
         ADA,
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let row: Value = serde_json::from_slice(&output.stdout).expect("details");
     assert_eq!(
         row["meta"]["question_sha256"],
@@ -521,7 +509,7 @@ fn local_validation_matrix_never_sends() {
         let listener = Listener::answering(automatic).expect("listener");
         let output = run(&listener, options, ADA);
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: --kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind\n",
             "{options:?}"
         );

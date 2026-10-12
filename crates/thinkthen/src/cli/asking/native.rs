@@ -38,17 +38,6 @@ pub(super) fn run(
     let composition = composition(&admitted, reading)?;
     let held = RefCell::new(BTreeMap::new());
     let reader = super::native_reader::Reader::new(records);
-    let ready = || reader.ready();
-    let readiness = crate::public::cli_reader::CliReader::new(&ready, environment.input_pause());
-    reader.wake(readiness.wake());
-    let rows = std::iter::from_fn(|| {
-        reader.next(environment.cancel()).map(|row| {
-            let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
-            let record = compose(&composition, &unit)?;
-            held.borrow_mut().insert(unit.ordinal, unit);
-            Ok(record)
-        })
-    });
     let token = crate::CancelToken::new();
     let signal_token = crate::CancelToken::from_flag(environment.cancel().flag());
     let downstream = crate::edge::Downstream::default();
@@ -58,6 +47,17 @@ pub(super) fn run(
         }
         environment.cancel().fired() || token.is_cancelled()
     };
+    let ready = || !signal() && reader.ready();
+    let readiness = crate::public::readiness::Readiness::new(&ready, environment.input_pause());
+    reader.wake(readiness.wake());
+    let rows = std::iter::from_fn(|| {
+        reader.next(environment.cancel()).map(|row| {
+            let unit = row.map_err(|placed| input_error(placed.cause, placed.at))?;
+            let record = compose(&composition, &unit)?;
+            held.borrow_mut().insert(unit.ordinal, unit);
+            Ok(record)
+        })
+    });
     let context = configuration
         .context
         .as_ref()
@@ -201,7 +201,7 @@ fn controls<'a>(
     configuration: (&crate::edge::Environment, &crate::args::Common, bool),
     token: &'a crate::CancelToken,
     signal: &'a (dyn Fn() -> bool + Sync),
-    readiness: &'a crate::public::cli_reader::CliReader<'a>,
+    readiness: &'a crate::public::readiness::Readiness<'a>,
     setting: Option<Setting>,
     context: Option<&'a str>,
 ) -> crate::CallOptions<'a> {
@@ -210,7 +210,7 @@ fn controls<'a>(
         .interrupt(signal)
         .surface(crate::Surface::Cli)
         .attempts(configuration.1.details)
-        .cli_reader(readiness);
+        .readiness(readiness);
     let setting = if !configuration.2 {
         Some(Setting::Records(std::num::NonZeroUsize::MIN))
     } else {

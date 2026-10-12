@@ -1,9 +1,9 @@
 //! The compiled binary taking each record's candidate list from the record.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local};
+pub(crate) use crate::harness::{printed, said};
 use std::io;
 use std::process::Output;
-
-use crate::harness::{Canned, Listener, spawn};
 
 /// The question every case on this page asks.
 const QUESTION: &str = "Which of these codes fits the note?";
@@ -64,16 +64,6 @@ fn choose(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
         ],
         input.as_bytes(),
     )
-}
-
-/// What the run printed on standard output.
-fn printed(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
-/// What the run said on standard error.
-fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 /// The request bodies the listener read, in the order it read them.
@@ -141,24 +131,21 @@ fn a_structured_file_text_pairs_with_each_records_string_options() {
 
     let listener =
         Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))]).expect("a listener");
-    let output = spawn(
+    let output = spawn_local(
         &[
             "choose",
             &format!("@{}", file.to_string_lossy()),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--jsonl",
             "--options",
             "/codes",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         NOTES.split_once('\n').expect("a first line").0.as_bytes(),
     )
     .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    crate::harness::exits(&output, 0);
     let sent = bodies(&listener);
     assert_eq!(sent.len(), 1);
     assert!(
@@ -274,18 +261,9 @@ fn a_typed_option_holding_a_control_character_is_refused_before_any_request() {
     // would write a line of its own into the caller's output.
     let listener =
         Listener::serving(vec![Canned::ok(&picked(&["late", "lost"]))]).expect("a listener");
-    let output = spawn(
-        &[
-            "choose",
-            QUESTION,
-            "late",
-            "lost\nrm -rf /",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--raw",
-        ],
+    let output = spawn_local(
+        &["choose", QUESTION, "late", "lost\nrm -rf /", "--raw"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The parcel arrived late.",
     )

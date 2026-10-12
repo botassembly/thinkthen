@@ -2,7 +2,7 @@
 //! usage totals, and one built by hand writes none.
 
 use super::*;
-#[cfg(unix)]
+#[cfg(all(unix, feature = "cli"))]
 use crate::child::ChildEnvironment as _;
 use crate::child::Folder;
 
@@ -87,7 +87,7 @@ fn assert_usage_persistence(
         );
         assert!(status.advice().is_none());
     }
-    assert_eq!(engine.finish_usage(), status);
+    assert_eq!(engine.finish_usage_status(), status);
 }
 
 pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {

@@ -1,5 +1,6 @@
 //! CLI attachments and whole-file image items use native ordered image semantics.
-use crate::harness::{Canned, Listener, spawn};
+pub(crate) use crate::harness::text;
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use serde_json::{Value, json};
 use std::{fs, path::PathBuf, process::Output};
 
@@ -13,9 +14,7 @@ pub(super) fn fixture(name: &str) -> PathBuf {
         .join("../../specification/fixtures/images")
         .join(name)
 }
-fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
-}
+
 #[expect(
     clippy::expect_used,
     reason = "invalid shared fixtures or loopback setup stop this behavioral test"
@@ -69,7 +68,7 @@ fn attachments_keep_original_order_duplicates_text_and_typed_details() {
         ],
         b"Compare originals.",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let row: Value = serde_json::from_slice(&output.stdout).unwrap();
     assert_eq!(row["value"], true);
     assert_eq!(row["input"]["text"], "Compare originals.");
@@ -105,7 +104,7 @@ fn whole_image_files_are_separate_located_rows_and_later_failure_keeps_the_first
         "--details",
     ];
     let output = call(&listener, &args, b"ignored");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let rows: Vec<Value> = text(&output.stdout)
         .lines()
         .map(|row| serde_json::from_str(row).unwrap())
@@ -162,7 +161,7 @@ fn whole_image_files_are_separate_located_rows_and_later_failure_keeps_the_first
         ],
         b"",
     );
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     assert_eq!(text(&output.stdout).lines().count(), 1);
     assert_eq!(listener.count(), 3);
 }
@@ -181,12 +180,9 @@ fn unsupported_functions_contradictory_modes_and_malformed_attachments_send_noth
         let mut args = args;
         args.extend(["--image", "does-not-exist.jpg"]);
         let output = call(&listener, &args, b"PRIVATE_IMAGE_CAPTION");
-        assert_eq!(
-            output.status.code(),
-            Some(2),
-            "{function}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 2, || {
+            format!("{function}: {}", text(&output.stderr))
+        });
         assert_eq!(
             text(&output.stderr),
             format!("thinkthen: {function} accepts text only; images are unsupported\n")
@@ -224,7 +220,7 @@ fn unsupported_functions_contradictory_modes_and_malformed_attachments_send_noth
         ],
     ] {
         let output = call(&listener, &args, b"PRIVATE_IMAGE_CAPTION");
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        exits(&output, 2);
         assert!(output.stdout.is_empty());
         assert!(!text(&output.stderr).contains("PRIVATE_IMAGE_CAPTION"));
     }
@@ -233,12 +229,11 @@ fn unsupported_functions_contradictory_modes_and_malformed_attachments_send_noth
         excessive.extend(["--image", "does-not-exist.jpg"]);
     }
     let output = call(&listener, &excessive, b"PRIVATE_IMAGE_CAPTION");
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        text(&output.stderr),
-        "thinkthen: image evidence requires 1 to 8 images\n"
+    crate::harness::refuses(
+        &output,
+        2,
+        "thinkthen: image evidence requires 1 to 8 images\n",
     );
-    assert!(output.stdout.is_empty());
     assert_eq!(listener.count(), 0);
 }
 
@@ -288,12 +283,7 @@ fn choose_and_score_and_image_only_decide_use_each_hosted_protocol() {
                 red.to_str().unwrap(),
             ]);
             let output = spawn(&args, &[("THINKTHEN_API_KEY", "sk-image-test")], b"").unwrap();
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{verb}: {}",
-                text(&output.stderr)
-            );
+            exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
             assert_eq!(
                 serde_json::from_slice::<Value>(&output.stdout).unwrap(),
                 value
@@ -324,7 +314,7 @@ fn cli_above_spike_body_ignores_soft_default_but_respects_explicit_limit() {
         ],
         b"",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let requests = listener.requests();
     assert!(requests[0].body.len() > 96_000);
     let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
@@ -341,6 +331,6 @@ fn cli_above_spike_body_ignores_soft_default_but_respects_explicit_limit() {
         ],
         b"",
     );
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     assert_eq!(listener.count(), 1);
 }

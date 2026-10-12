@@ -5,19 +5,15 @@ use std::ops::Range;
 use std::path::Path;
 
 use crate::core::{self, ModelName, RecognizeSpec, RecognizedName};
-use crate::engine::facade::MAX_TEXT_BYTES;
 use crate::public::engine::Engine;
 use crate::public::error::Error;
-use crate::public::options::{CallOptions, Stop};
+use crate::public::options::CallOptions;
 use crate::public::question::{self, Description};
 use crate::public::results::Written;
 
 mod debug;
 mod proposals;
 pub use proposals::{BoundaryProposal, RecognitionValue};
-mod observation;
-use crate::public::results::observe_question;
-use observation::observe_row;
 
 fn nonblank(value: &str, what: &str) -> Result<String, Error> {
     if value.trim().is_empty() || value.chars().any(char::is_control) {
@@ -597,45 +593,24 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
-        ask.0.validate_mode().map_err(Error::refused)?;
-        ask.0
-            .metadata
-            .validate_item(&crate::public::QuestionInput::Text(evidence.to_owned()))?;
-        let engine =
-            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let cancel = cancel.with_storage_scope();
-            let mut positions = [0; 4];
-            let found = engine
-                .recognize_observed(
-                    &ask.0,
-                    evidence,
-                    MAX_TEXT_BYTES,
-                    &cancel,
-                    |stage, question, answered| {
-                        observe_question(
-                            &stop,
-                            engine.backend(),
-                            (
-                                crate::public::InputFunction::Recognize,
-                                stage,
-                                question,
-                                match stage {
-                                    "boundary" => None,
-                                    "relation" => Some(ask.0.relation_threshold),
-                                    _ => Some(ask.0.threshold),
-                                },
-                            ),
-                            answered,
-                            &mut positions,
-                        )
-                    },
-                )
-                .map_err(Error::from)?;
-            let row = Recognized::from_native(found.value)?;
-            observe_row(&stop, &row);
-            Ok(row)
-        })
+        let wrong = || Error::defect("a complete answer has another function's value");
+        crate::public::request::native(
+            self,
+            crate::RequestFunction::Recognize,
+            ask.clone().into(),
+            std::iter::once(Ok(crate::public::record_input::plain(evidence.to_owned()))),
+            options,
+            |engine, definition, records, mut controls| {
+                let ask = definition.recognition()?;
+                controls.scalar_input = true;
+                engine
+                    .execute_recognize_records_complete_with(
+                        &ask,
+                        records.into_iter().map(Ok),
+                        controls,
+                    )?
+                    .try_map(|mut rows| rows.pop().map(|row| row.result.value).ok_or_else(wrong))
+            },
+        )
     }
 }

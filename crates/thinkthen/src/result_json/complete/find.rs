@@ -57,6 +57,6 @@ pub(crate) fn find(
     Ok(core::CompleteFind {
         declarations: row.declarations,
         identity,
-        legacy: find.result(row.input, found.selection, meta),
+        compatibility: find.result(row.input, found.selection, meta),
     })
 }

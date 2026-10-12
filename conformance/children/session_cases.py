@@ -9,7 +9,7 @@ import sys
 import tempfile
 ROOT=Path(__file__).resolve().parents[2]
 sys.path[:0]=[str(ROOT/'conformance/children'),str(ROOT/'conformance')]
-from children import child_env
+from children import child_env, read_process_line
 from cobol_limits import assert_scalar_boundary
 import parity
 import c_parity as shared
@@ -132,7 +132,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         elif step.get('held_cancel'):
                             process=subprocess.Popen(args,env=child,cwd=home,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
                             try:
-                                assert backend.read('wait 1')=='wait 1';process.stdin.write('!');process.stdin.flush();assert process.stdout.readline()=='cancel-fired\n'
+                                assert backend.read('wait 1')=='wait 1';process.stdin.write('!');process.stdin.flush();assert read_process_line(process.stdout)=='cancel-fired\n'
                                 backend.process.stdin.write('release\n');backend.process.stdin.flush();stdout,stderr=process.communicate(timeout=60)
                                 output=subprocess.CompletedProcess(args,process.returncode,stdout,stderr)
                             finally:

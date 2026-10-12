@@ -173,7 +173,7 @@ public final class Json {
         StringBuilder out = new StringBuilder("\"");
         for (char c : text.toCharArray()) {
             if (c == '"' || c == '\\') out.append('\\').append(c);
-            else if (c < 0x20) out.append(String.format("\\u%04x", (int) c));
+            else if (c < 0x20) out.append("\\u00").append(Character.forDigit(c >> 4,16)).append(Character.forDigit(c & 15,16));
             else out.append(c);
         }
         return out.append('"').toString();

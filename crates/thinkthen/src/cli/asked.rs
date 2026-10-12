@@ -207,7 +207,7 @@ fn atomic(
     let prepared = if let Some(admitted) = admitted {
         admitted.resolve_cli_atomic(verb, typed)
     } else {
-        crate::cli_atomic::inline(verb, question, typed)
+        crate::cli::atomic::inline(verb, question, typed)
     }
     .map_err(Failure::from)?;
     Ok((

@@ -8,7 +8,7 @@
 //! and Python finalization drop the session without joining a held provider.
 //! Serialized packets are an internal bridge until generated native result
 //! conversion replaces them; this edge is not the public Python API.
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 
 use pyo3::prelude::*;
 use thinkthen::{
@@ -30,7 +30,7 @@ impl Item {
 
 #[pyclass(frozen, name = "_RequestSession", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
-pub(crate) struct Session(Mutex<Option<RequestSession>>);
+pub(crate) struct Session(Mutex<Option<Arc<RequestSession>>>);
 
 impl Session {
     pub(crate) fn start(
@@ -43,20 +43,38 @@ impl Session {
             let session = engine
                 .request_session_with_surface(request, surface)
                 .map_err(|e| raised(py, &e))?;
-            Ok(Self(Mutex::new(Some(session))))
+            Ok(Self(Mutex::new(Some(Arc::new(session)))))
         })
     }
 }
 
 #[pymethods]
 impl Session {
+    fn _wait(&self, py: Python<'_>, input: bool) {
+        let session = self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone();
+        if let Some(session) = session {
+            py.detach(move || {
+                let interest = if input {
+                    thinkthen::RequestSessionWaitInterest::Input
+                } else {
+                    thinkthen::RequestSessionWaitInterest::Settlement
+                };
+                let _ = session.wait(interest, std::time::Duration::from_millis(50));
+            });
+        }
+    }
+
     fn _poll(&self, py: Python<'_>) -> PyResult<Option<String>> {
         guard(py, || {
             let held = self
                 .0
                 .lock()
                 .unwrap_or_else(std::sync::PoisonError::into_inner);
-            match held.as_ref().map(RequestSession::try_read) {
+            match held.as_ref().map(|session| session.try_read()) {
                 Some(RequestSessionRead::Result(packet)) => {
                     packet.to_json().map(Some).map_err(|e| raised(py, &e))
                 }
@@ -114,7 +132,7 @@ impl Session {
                 .ok_or_else(|| usage(py, "request session is closed"))?;
             let failure = failure
                 .filter(|v| *v)
-                .map(|_| RequestReaderFailure::InvalidInput { location: None });
+                .map(|_| RequestReaderFailure::Producer);
             session.finish(failure).map_err(|e| raised(py, &e))
         })
     }
@@ -136,7 +154,9 @@ impl Session {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .take();
-        drop(session);
+        if let Some(session) = session {
+            session.cancel();
+        }
     }
 
     fn __repr__(&self) -> &'static str {

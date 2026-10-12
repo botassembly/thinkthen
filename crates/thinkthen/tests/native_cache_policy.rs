@@ -53,13 +53,7 @@ fn repeated_fields_and_exceeded_parser_bounds_forbid_actual_cache_writes() {
             reply = reply.asking("Cache-Control", &field);
         }
         let listener = Listener::serving(vec![reply, Canned::ok(NO)]).unwrap();
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("fixture-storage-policy")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
             .cache_at(&folder.0)
             .unwrap()
             .build()
@@ -85,13 +79,7 @@ fn explicit_record_forbids_every_good_answer_of_a_nonstorable_partial_packed_rep
     let folder = Folder::new().unwrap();
     let listener =
         Listener::answering(|_| Canned::ok(YES).asking("Cache-Control", "no-store")).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-storage-policy")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
         .record(&folder.0)
         .unwrap()
         .build()
@@ -127,13 +115,7 @@ fn native_refresh_marks_status_retries_and_split_children_without_changing_reque
         Canned::ok(YES),
     ])
     .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-storage-policy")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
         .refresh_cache(true)
         .max_retries(1)
         .no_cache()
@@ -222,13 +204,7 @@ fn nonstorable_answers_succeed_without_reuse_and_valid_quoted_text_still_caches(
             Canned::ok(NO),
         ])
         .unwrap();
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("fixture-storage-policy")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
             .cache_at(&folder.0)
             .unwrap()
             .build()
@@ -251,13 +227,7 @@ fn nonstorable_answers_succeed_without_reuse_and_valid_quoted_text_still_caches(
         Canned::ok(YES).asking("Cache-Control", "private=\"no-store\", max-age=30")
     })
     .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-storage-policy")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
         .cache_at(&folder.0)
         .unwrap()
         .build()
@@ -283,13 +253,7 @@ fn explicit_record_refuses_after_one_paid_send_with_started_facts_and_no_answer_
     let folder = Folder::new().unwrap();
     let listener =
         Listener::answering(|_| Canned::ok(YES).asking("Cache-Control", "no-store")).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-storage-policy")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-storage-policy")
         .record(&folder.0)
         .unwrap()
         .max_retries(3)
@@ -412,3 +376,6 @@ fn command_record_refusal_reports_local_exit_and_final_started_facts_without_rep
     assert_eq!(listener.count(), 1);
     assert!(!path.join("thinkthen.sqlite").exists());
 }
+
+#[path = "support/api.rs"]
+mod api;

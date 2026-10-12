@@ -3,6 +3,7 @@
 //! Every run goes through `check`. It proves the key's bytes reach neither
 //! output stream nor any file the run wrote under its cache folder.
 
+pub(crate) use crate::harness::text;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::Output;
@@ -121,10 +122,6 @@ fn head(backend: &Backend, path: &str) -> String {
         "url {}{path}/systemone\nprovider systemone\nmodel asked unspecified\nmodel sent jev-1.13.0\n",
         backend.origin()
     )
-}
-
-fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
 }
 
 #[test]
@@ -279,12 +276,11 @@ fn the_check_sends_only_to_the_address_the_user_named() {
 
         // No key is set, so a regression that reached the built-in address still sends nothing.
         let output = check(command, &[], &[]);
-        assert_eq!(
-            text(&output.stderr),
-            "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file\n"
+        crate::harness::refuses(
+            &output,
+            2,
+            "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file\n",
         );
-        assert_eq!(text(&output.stdout), "");
-        assert_eq!(output.status.code(), Some(2));
     }
 }
 
@@ -297,12 +293,11 @@ fn an_unset_key_stops_the_check_before_any_request() {
         let url = format!("{}/arm/full/v1", backend.origin())
             .replace("http://127.0.0.1", "https://127.0.0.2");
         let output = check(command, &["--url", url.as_str()], &[]);
-        assert_eq!(
-            text(&output.stderr),
-            "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n"
+        crate::harness::refuses(
+            &output,
+            4,
+            "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n",
         );
-        assert_eq!(text(&output.stdout), "");
-        assert_eq!(output.status.code(), Some(4));
         assert_eq!(backend.count(), 0);
     }
 }

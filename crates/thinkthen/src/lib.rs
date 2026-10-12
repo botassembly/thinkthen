@@ -65,3 +65,11 @@ pub(crate) use cli::{args, asking, edge, failure, judge, profile};
 
 #[cfg(feature = "cli")]
 pub use cli::entry;
+
+#[cfg(test)]
+extern crate self as thinkthen;
+#[cfg(test)]
+#[path = "../tests/support/api.rs"]
+mod api;
+#[cfg(test)]
+mod ownership_tests;

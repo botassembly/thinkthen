@@ -134,12 +134,7 @@ impl AdmittedRequest {
                     return self.session_records(definition, feed, controls, image_refusal);
                 }
                 let super::execution::FeedContents::Items(items) = feed.contents else {
-                    return super::native_feed::records(
-                        self,
-                        feed.contents,
-                        controls,
-                        image_refusal,
-                    );
+                    return super::native_feed::records(self, feed.contents);
                 };
                 Ok(Box::new(items.map(move |item| {
                     controls.admission()?;

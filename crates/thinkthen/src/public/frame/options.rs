@@ -1,4 +1,4 @@
-//! Typed call-level controls for the eager Rust Polars column door.
+//! Typed call-level controls for the eager Rust Polars column interface.
 
 use std::fmt;
 

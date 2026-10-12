@@ -99,3 +99,33 @@ def test_native_admission_and_removed_keywords(backend, tmp_path):
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['native admission']
     assert backend.count() == 0
+
+
+def test_inline_label_conversion_preserves_order_and_refuses_invalid_labels_without_sending(backend, tmp_path):
+    output = run('''
+        from enum import Enum
+        from typing import Literal
+        import thinkthen as tt
+        class Labels(Enum):
+            zebra = "zebra"
+            alpha = "alpha"
+        class Aliases(Enum):
+            one = "same"
+            two = "same"
+        engine = tt.Engine(cache=False)
+        for labels in (Labels, Literal["zebra", "alpha"]):
+            answer = engine.choose("Which?", "a", options=labels)
+            assert answer.value == "zebra"
+            assert list(answer.details[0].question.options) == ["zebra", "alpha"]
+        for labels, message in ((Aliases, "Enum labels must not have aliases"),
+                                (Literal[1, "alpha"], "Literal labels are strings")):
+            try: engine.choose("Which?", "a", options=labels)
+            except tt.UsageError as error: assert str(error) == message and error.kind == "usage"
+            else: raise AssertionError("invalid labels were admitted")
+        try: engine.recognize("a", kinds=Labels, descriptions={"unknown": "meaning"})
+        except tt.UsageError as error: assert str(error) == "descriptions= names an unknown label"
+        else: raise AssertionError("unknown description admitted")
+        print("ordered labels")
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ["ordered labels"]
+    assert backend.count() == 2

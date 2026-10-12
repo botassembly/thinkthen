@@ -187,3 +187,13 @@ fn option_from_label(
 fn description_from_core(description: &core::Description) -> Result<Description, Error> {
     Description::of(description.as_json().clone())
 }
+
+pub(crate) fn plain<T>(original: T) -> RecordInput<T> {
+    RecordInput {
+        original,
+        context: None,
+        options: None,
+        examples: None,
+        seed_spans: None,
+    }
+}

@@ -8,16 +8,31 @@ repo=$(cd ../.. && pwd)
 usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case "$profile" in routine|full|smoke) ;; *) echo 'unknown Python test profile' >&2; exit 2 ;; esac
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    [ "$profile" = full ] || exit 2
+fi
 command -v uv >/dev/null 2>&1 || { echo 'not run: no uv'; exit 77; }
 command -v maturin >/dev/null 2>&1 || { echo 'not run: no maturin'; exit 77; }
 . ./host.sh
 host=$(python_host)
 [ -n "$host" ] || { echo 'not run: no supported Python'; exit 77; }
-scratch_dir scratch
+if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    scratch=$THINKTHEN_PARITY_PREPARED
+elif [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+    scratch=$THINKTHEN_PARITY_PREPARE
+else
+    scratch_dir scratch
+fi
+if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     artifact=$(realpath "$THINKTHEN_ARTIFACT")
+elif [ "$profile" = full ]; then
+    PYO3_PYTHON=$host sh build-wheel.sh
+    artifact=$(find "$PWD/target/release-wheel" -name 'thinkthen-*.whl' -print)
 else
-    RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" PYO3_PYTHON=$host \
+    build_flags=${RUSTFLAGS:-}
+    [ "$profile" = full ] || [ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || build_flags="${build_flags:+$build_flags }--remap-path-prefix=$HOME=/build"
+    RUSTFLAGS="$build_flags" PYO3_PYTHON=$host \
         maturin build --quiet --locked --offline -o "$scratch/wheel"
     artifact=$(find "$scratch/wheel" -name 'thinkthen-*.whl' -print)
 fi
@@ -25,10 +40,18 @@ uv venv --quiet --offline --python "$host" "$scratch/venv"
 uv pip install --quiet --offline --require-hashes --python "$scratch/venv/bin/python" -r requirements-dev.txt
 uv pip install --quiet --offline --no-deps --python "$scratch/venv/bin/python" "$artifact"
 cp -R tests "$scratch/tests"
-python=$scratch/venv/bin/python
+fi
+venv=$scratch/venv
+python=$venv/bin/python
+if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    scratch_dir runtime
+    cp -R "$scratch/tests" "$runtime/tests"
+    scratch=$runtime
+fi
+export PYTHONDONTWRITEBYTECODE=1
 cd "$scratch"
 unset PYTHONPATH
-"$python" - "$scratch/venv" <<'PY'
+"$python" - "$venv" <<'PY'
 import sys, thinkthen
 from pathlib import Path
 assert Path(thinkthen.__file__).is_relative_to(sys.argv[1])
@@ -48,8 +71,11 @@ PY
     exit
 fi
 export THINKTHEN_TEST_REPO="$repo"
-CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
-"$python" -m mypy --strict tests/native_types.py
+if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
+    "$python" -m mypy --strict tests/native_types.py
+fi
+[ -z "${THINKTHEN_PARITY_PREPARE:-}" ] || exit 0
 if [ "$profile" = routine ]; then
     "$python" - "$repo" "$scratch/ids" <<'PY'
 import sys
@@ -64,12 +90,14 @@ else
     unset THINKTHEN_CONFORMANCE_IDS
 fi
 "$python" - "$repo" "$scratch/tests/native_case.py" <<'PY'
-import sys
+import os, sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path[:0]=[str(root/'conformance/children')]
 from native_fixture import run
-failed=run('python',[sys.executable,sys.argv[2]],root)
-for consumer,library in [('pandas','pandas'),('python-polars','polars')]:
-    failed+=run(consumer,[sys.executable,sys.argv[2]],root,extra_env={'THINKTHEN_FRAME_LIBRARY':library})
+selected=os.environ.get('THINKTHEN_PARITY_CONSUMER')
+failed=0
+for consumer,library in [('python',None),('pandas','pandas'),('python-polars','polars')]:
+    if selected is None or selected==consumer:
+        failed+=run(consumer,[sys.executable,sys.argv[2]],root,extra_env={'THINKTHEN_FRAME_LIBRARY':library} if library else {})
 sys.exit(bool(failed))
 PY

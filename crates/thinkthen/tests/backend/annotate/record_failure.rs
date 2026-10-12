@@ -1,9 +1,9 @@
 //! An isolated missing `on` pointer leaves later annotate records judged.
 
+use crate::harness::{Canned, Listener, spawn};
 use std::io;
 
 use super::set;
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::keys;
 use serde_json::{Value, json};
 
@@ -23,10 +23,10 @@ const NO: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1
 fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()> {
     let file = set("record-missing-pointer", SET);
     let listener = Listener::serving(vec![Canned::ok(YES), Canned::ok(NO)])?;
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -38,12 +38,7 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
             "--max-retries",
             "0",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         INPUT,
     )?;
     assert_eq!(output.status.code(), Some(7));
@@ -115,10 +110,10 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
 fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> io::Result<()> {
     let file = set("record-stop-policy", SET);
     let default = Listener::serving(vec![Canned::ok(YES)])?;
-    let stopped = spawn(
+    let stopped = crate::harness::annotate_local(
+        &file,
+        default.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -126,12 +121,7 @@ fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> 
             "--jobs",
             "1",
             "--no-cache",
-            "--url",
-            default.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         INPUT,
     )?;
     assert_eq!(stopped.status.code(), Some(2));
@@ -149,10 +139,10 @@ fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> 
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
 
     let backend = Listener::serving(vec![Canned::ok(YES), Canned::status(401, "{}")])?;
-    let terminal = spawn(
+    let terminal = crate::harness::annotate_local(
+        &file,
+        backend.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -164,12 +154,7 @@ fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> 
             "--max-retries",
             "0",
             "--no-cache",
-            "--url",
-            backend.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         INPUT,
     )?;
     assert_eq!(terminal.status.code(), Some(4));
@@ -198,27 +183,13 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     let file = set("record-shadowed-name", SET);
     let input = br#"{"urgent":"original","body":"first"}"#;
     let listener = Listener::serving(vec![Canned::ok(YES)])?;
-    let detailed = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--jsonl",
-            "--details",
-            "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let detailed = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &["--jsonl", "--details", "--no-cache"],
         input,
     )?;
-    assert_eq!(
-        detailed.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&detailed.stderr)
-    );
+    crate::harness::exits(&detailed, 0);
     assert!(detailed.stderr.is_empty());
     let row: Value = serde_json::from_slice(&detailed.stdout)?;
     let request = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
@@ -241,36 +212,16 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
 
     let bare = Listener::serving(vec![])?;
-    let refused = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--jsonl",
-            "--no-cache",
-            "--url",
-            bare.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
-        input,
-    )?;
+    let refused =
+        crate::harness::annotate_local(&file, bare.base(), &["--jsonl", "--no-cache"], input)?;
     assert_eq!(refused.status.code(), Some(2));
     assert!(refused.stdout.is_empty());
     assert_eq!(refused.stderr, b"thinkthen: the record already holds `urgent`, so that question cannot be appended\nthinkthen: stopped at record 1; 0 records finished\n");
     assert!(bare.requests().is_empty());
-    let planned = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--jsonl",
-            "--details",
-            "--plan",
-            "--url",
-            bare.base(),
-            "--model",
-            "local-1",
-        ],
+    let planned = crate::harness::annotate_at(
+        &file,
+        bare.base(),
+        &["--jsonl", "--details", "--plan"],
         &[],
         input,
     )?;
@@ -321,12 +272,7 @@ fn continue_refuses_unsupported_modes_before_any_request() -> io::Result<()> {
         args.extend_from_slice(flags);
         args.extend_from_slice(&["--url", listener.base(), "--model", "local-1"]);
         let output = spawn(&args, &[("THINKTHEN_API_KEY", "sk-test-value")], INPUT)?;
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            format!("thinkthen: {message}\n")
-        );
+        crate::harness::refuses(&output, 2, format!("thinkthen: {message}\n"));
     }
     let wrong_verb = spawn(
         &[
@@ -342,7 +288,7 @@ fn continue_refuses_unsupported_modes_before_any_request() -> io::Result<()> {
     )?;
     assert_eq!(wrong_verb.status.code(), Some(2));
     assert!(wrong_verb.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&wrong_verb.stderr).contains("--on-error"));
+    assert!(crate::harness::said(&wrong_verb).contains("--on-error"));
     assert!(listener.requests().is_empty());
     Ok(())
 }
@@ -352,10 +298,10 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
     let file = set("record-continue-facts", SET);
     let no_usage = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1}}}"#;
     let listener = Listener::serving(vec![Canned::ok(YES), Canned::ok(no_usage)])?;
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -366,12 +312,7 @@ fn skipped_row_counts_as_finished_with_only_known_token_usage() -> io::Result<()
             "--jobs",
             "1",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         INPUT,
     )?;
     assert_eq!(output.status.code(), Some(7));
@@ -416,10 +357,10 @@ fn skipped_row_outranks_a_completed_partial_answer_without_erasing_it() -> io::R
     let reply = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::serving(vec![Canned::ok(reply)])?;
     let input = b"{\"body\":\"first\"}\n{\"id\":\"miss\"}\n";
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -429,12 +370,7 @@ fn skipped_row_outranks_a_completed_partial_answer_without_erasing_it() -> io::R
             "--jobs",
             "1",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         input,
     )?;
     assert_eq!(output.status.code(), Some(7));
@@ -468,10 +404,10 @@ fn missing_first_and_last_positions_keep_the_middle_answer() -> io::Result<()> {
     let file = set("record-continue-edges", SET);
     let listener = Listener::serving(vec![Canned::ok(YES)])?;
     let input = b"{\"id\":\"a\"}\n{\"id\":\"b\",\"body\":\"first\"}\n{\"id\":\"c\"}\n";
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--details",
             "--batch",
@@ -481,12 +417,7 @@ fn missing_first_and_last_positions_keep_the_middle_answer() -> io::Result<()> {
             "--jobs",
             "1",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         input,
     )?;
     assert_eq!(output.status.code(), Some(7));
@@ -519,23 +450,16 @@ fn annotation_admits_the_same_invalid_record_through_cli_and_library_before_send
         r#"{"version":1,"questions":{"good":{"decide":"Good?","item_schema":{"type":"string"}}}}"#;
     let file = set("shared-annotation-admission", DECLARED);
     let listener = Listener::serving(vec![])?;
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--jsonl",
-            "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
+        &["--jsonl", "--no-cache"],
         &[("THINKTHEN_API_KEY", "admission-private")],
         b"{\"body\":false}\n",
     )?;
     assert_eq!(output.status.code(), Some(2));
     assert!(output.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&output.stderr).contains("item_schema"));
+    assert!(crate::harness::said(&output).contains("item_schema"));
     let engine = thinkthen::Engine::builder()
         .base_url(listener.base())
         .unwrap()
@@ -551,10 +475,18 @@ fn annotation_admits_the_same_invalid_record_through_cli_and_library_before_send
     let record = reading
         .compose(thinkthen::RawRecord::json(r#"{"body":false}"#).unwrap())
         .unwrap();
-    let error = engine
-        .try_annotate_records_complete_with(&questions, [Ok(record)], thinkthen::CallOptions::new())
-        .into_call()
-        .unwrap_err();
+    let batch = crate::api::annotation_rows(
+        crate::api::rows(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            questions.into(),
+            [Ok(record)],
+            thinkthen::CallOptions::new(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    let error = batch.into_call().unwrap_err();
     assert!(error.to_string().contains("item_schema"));
     assert_eq!(listener.count(), 0);
     Ok(())

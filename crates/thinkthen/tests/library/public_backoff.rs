@@ -8,17 +8,12 @@ use std::fs;
 use std::time::Duration;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Answer, CallOptions, Engine, EngineBuilder, ErrorKind, Question};
+use thinkthen::{Answer, CallOptions, EngineBuilder, ErrorKind, Question};
 
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
 
 fn engine(base: &str) -> EngineBuilder {
-    Engine::builder()
-        .base_url(base)
-        .expect("loopback address")
-        .api_key("sk-test")
-        .expect("fake key")
-        .max_retries(0)
+    crate::api::builder(base, "sk-test").max_retries(0)
 }
 
 fn quick_call() -> CallOptions<'static> {
@@ -92,11 +87,7 @@ fn a_zero_retry_after_waits_instead_of_hammering_the_backend() {
     let listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("loopback address")
-        .api_key("sk-test")
-        .expect("fake key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .no_cache()
         .build()
         .expect("engine");

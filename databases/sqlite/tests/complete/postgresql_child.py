@@ -2,7 +2,7 @@
 import json,subprocess,sys,threading
 from pathlib import Path
 sys.path.insert(0,str(Path(__file__).resolve().parents[4]/'conformance/children'))
-from children import child_env
+from children import child_env, read_process_line
 payload=json.loads(sys.stdin.readline())
 def lit(value):return "'"+str(value).replace("'","''")+"'"
 command=['psql','-X','-q','-At','-v','ON_ERROR_STOP=1','-v','VERBOSITY=verbose','-h',sys.argv[1],'-U','postgres','-d','postgres']
@@ -59,7 +59,7 @@ SELECT document FROM complete_result;
 script='\n'.join(settings)+'\nSELECT pg_backend_pid();\nCREATE TEMP TABLE complete_result AS SELECT '+query+' AS document;\n'+checks
 running=subprocess.Popen(command,env=child_env(keep=('HOME','LANG','LC_ALL')),stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
 running.stdin.write(script);running.stdin.close();running.stdin=None
-pid=running.stdout.readline().strip()
+pid=read_process_line(running.stdout).strip()
 if payload.get('held_cancel'):
     def cancel():
         sys.stdin.readline()

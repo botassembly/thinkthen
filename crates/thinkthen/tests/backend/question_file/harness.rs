@@ -1,10 +1,10 @@
 //! The pieces every page of this binary shares: files, runs, and reads.
 
-use crate::child::ChildEnvironment as _;
+use crate::harness::exits_because;
 use std::fs;
-use std::io::{self, Write};
+use std::io;
 use std::path::PathBuf;
-use std::process::{Command, Output, Stdio};
+use std::process::Output;
 use std::thread;
 
 /// Write one question file under the test target directory and name its path.
@@ -31,22 +31,7 @@ pub(crate) fn written(name: &str, text: &str) -> String {
 
 /// Run the binary with no environment over the evidence the case names.
 pub(crate) fn run(arguments: &[&str], evidence: &[u8]) -> io::Result<Output> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
-        .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(evidence);
-    drop(input);
-    super::wait::finish(child, &arguments.join(" "))
+    crate::harness::spawn(arguments, &[], evidence)
 }
 
 /// A port nothing listens on, so a connection would be refused at once.
@@ -54,24 +39,7 @@ pub(crate) const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// Run the binary with a key set, over the evidence the case names.
 pub(crate) fn run_with(arguments: &[&str], evidence: &[u8], key: &str) -> io::Result<Output> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
-        .env("THINKTHEN_TEST_INPUT_PAUSE_MS", "10000")
-        .env("THINKTHEN_API_KEY", key)
-        .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(evidence);
-    drop(input);
-    super::wait::finish(child, &arguments.join(" "))
+    crate::harness::spawn(arguments, &[("THINKTHEN_API_KEY", key)], evidence)
 }
 
 /// What a case reads when the binary never ran, so the failure says which.
@@ -87,13 +55,10 @@ pub(crate) fn printed_over(arguments: &[&str], evidence: &[u8]) -> String {
     let Ok(output) = run(arguments, evidence) else {
         return UNRUN.to_owned();
     };
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{arguments:?} {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    String::from_utf8_lossy(&output.stdout).into_owned()
+    exits_because(&output, 0, || {
+        format!("{arguments:?} {}", crate::harness::said(&output))
+    });
+    crate::harness::printed(&output)
 }
 
 /// Run one command that is refused, and read back its message and its code.
@@ -102,10 +67,7 @@ pub(crate) fn refused(arguments: &[&str]) -> (String, Option<i32>) {
         return (UNRUN.to_owned(), None);
     };
     assert!(output.stdout.is_empty(), "{arguments:?}");
-    (
-        String::from_utf8_lossy(&output.stderr).into_owned(),
-        output.status.code(),
-    )
+    (crate::harness::said(&output), output.status.code())
 }
 
 /// The file every override case starts from.

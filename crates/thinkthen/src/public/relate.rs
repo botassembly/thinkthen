@@ -6,18 +6,14 @@ use std::path::Path;
 use serde::Serialize;
 
 use crate::core::{self, Json, JsonError, ModelName, RelateSpec, RelationEntityView, Withheld};
-use crate::engine::facade;
 use crate::public::engine::Engine;
-use crate::public::error::{Error, ErrorKind};
-use crate::public::options::{CallOptions, Stop};
+use crate::public::error::Error;
+use crate::public::options::CallOptions;
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
 mod debug;
-mod observation;
 mod records;
-use crate::public::results::observe_question;
-use observation::observe_row;
 
 /// A relate request: its rules, cut, and model.
 #[derive(Clone, PartialEq)]
@@ -328,68 +324,6 @@ impl Engine {
     where
         I: IntoIterator<Item = Entity>,
     {
-        let pairs: Vec<(String, String)> = entities
-            .into_iter()
-            .take(RelateSpec::MAX_ENTITIES + 1)
-            .map(|entity| (entity.name, entity.kind))
-            .collect();
-        let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
-        ask.validate_pairs(&pairs)?;
-        if admitted.is_empty() {
-            let stop = Stop::begin(options)?.with_prices(self.prices);
-            return stop.run_call(0, |_| {
-                let edges = Vec::new();
-                observe_row(&stop, &edges);
-                Ok(edges)
-            });
-        }
-        let engine =
-            crate::public::complete::contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
-        let prepared =
-            facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
-        let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let mut positions = [0; 4];
-            let execution = engine
-                .relate_observed(
-                    prepared,
-                    &admitted,
-                    threshold,
-                    cancel,
-                    |question, answered| {
-                        observe_question(
-                            &stop,
-                            engine.backend(),
-                            (
-                                crate::public::InputFunction::Relate,
-                                "relation",
-                                question,
-                                Some(ask.0.threshold),
-                            ),
-                            answered,
-                            &mut positions,
-                        )
-                    },
-                )
-                .map_err(Error::from)?;
-            if execution.failed > 0 {
-                return Err(Error::of(
-                    ErrorKind::Backend,
-                    format!(
-                        "the backend failed {} of {} relation questions",
-                        execution.failed,
-                        execution.logical.len()
-                    ),
-                ));
-            }
-            let edges = execution
-                .edges
-                .into_iter()
-                .map(Edge::from_native)
-                .collect::<Result<Vec<_>, Error>>()?;
-            observe_row(&stop, &edges);
-            Ok(edges)
-        })
+        self.relate_strict_with(ask, entities, options)
     }
 }

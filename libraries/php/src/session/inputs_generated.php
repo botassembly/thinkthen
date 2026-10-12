@@ -2,91 +2,12 @@
 // Generated from the shared Rust request graph; do not edit.
 declare(strict_types=1);
 namespace ThinkThen\Inputs;
-final class InputRequest extends Document
+final class InputRequestInputEntities extends Document
 {
-    public function __construct(string $schema, mixed $call, array $fields = [])
+    public const TAGS = ['kind' => 'entities'];
+    public function __construct(array $items, array $fields = [])
     {
-        parent::__construct(['schema' => $schema, 'call' => $call, ...$fields]);
-    }
-}
-final class InputRequestCallAnnotate extends Document
-{
-    public const TAGS = ['function' => 'annotate'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallChoose extends Document
-{
-    public const TAGS = ['function' => 'choose'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallDecide extends Document
-{
-    public const TAGS = ['function' => 'decide'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallFilter extends Document
-{
-    public const TAGS = ['function' => 'filter'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallFind extends Document
-{
-    public const TAGS = ['function' => 'find'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallRank extends Document
-{
-    public const TAGS = ['function' => 'rank'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallRecognize extends Document
-{
-    public const TAGS = ['function' => 'recognize'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallRelate extends Document
-{
-    public const TAGS = ['function' => 'relate'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallScore extends Document
-{
-    public const TAGS = ['function' => 'score'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
-    }
-}
-final class InputRequestCallTag extends Document
-{
-    public const TAGS = ['function' => 'tag'];
-    public function __construct(mixed $question, mixed $input, array $fields = [])
-    {
-        parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
+        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
 final class InputRequestInputFeed extends Document
@@ -111,6 +32,14 @@ final class InputRequestInputSource extends Document
     public function __construct(mixed $source, array $fields = [])
     {
         parent::__construct([...self::TAGS, 'source' => $source, ...$fields]);
+    }
+}
+final class InputRequestInputUnits extends Document
+{
+    public const TAGS = ['kind' => 'units'];
+    public function __construct(array $items, array $fields = [])
+    {
+        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
 final class InputRequestItem extends Document
@@ -153,9 +82,9 @@ final class InputRequestReader extends Document
         parent::__construct($fields);
     }
 }
-final class InputRequestReaderFailureInvalidInput extends Document
+final class InputRequestReaderFailureProducer extends Document
 {
-    public const TAGS = ['kind' => 'invalid_input'];
+    public const TAGS = ['kind' => 'producer'];
     public function __construct(array $fields = [])
     {
         parent::__construct([...self::TAGS, ...$fields]);

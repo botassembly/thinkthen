@@ -34,6 +34,40 @@ pub enum RequestDefinition {
     /// Choose with a per-record replacement shortlist.
     DynamicChoose(RecordChooseQuestion),
 }
+// Private dispatch extracts only preparations admitted by the Request owner.
+macro_rules! preparation {
+    ($method:ident, $variant:ident, $type:ty) => {
+        impl RequestDefinition {
+            pub(in crate::public) fn $method(self) -> Result<$type, Error> {
+                match self {
+                    Self::$variant(value) => Ok(value),
+                    _ => Err(Error::defect(
+                        "a native request lost its prepared definition",
+                    )),
+                }
+            }
+        }
+    };
+}
+preparation!(annotation, Annotate, QuestionSet);
+preparation!(rank, Rank, Question);
+preparation!(rank_set, RankSet, RankSet);
+preparation!(recognition, Recognition, Recognize);
+preparation!(relation, Relate, Relate);
+#[cfg(feature = "polars")]
+preparation!(dynamic_choose, DynamicChoose, RecordChooseQuestion);
+impl RequestDefinition {
+    pub(in crate::public) fn atomic(self) -> Result<Question, Error> {
+        match self {
+            Self::Atomic(LoadedQuestion::Question(q)) | Self::Rank(q) => Ok(q),
+            Self::Atomic(LoadedQuestion::Banded(q)) => Ok(q.0),
+            _ => Err(Error::defect(
+                "an atomic request lost its prepared question",
+            )),
+        }
+    }
+}
+
 impl From<LoadedQuestion> for RequestDefinition {
     fn from(q: LoadedQuestion) -> Self {
         Self::Atomic(q)
@@ -106,9 +140,12 @@ impl RequestDefinition {
     /// # Errors
     /// Returns usage for an unsupported feature or an invalid canonical request.
     pub fn from_request_json(text: &str) -> Result<Self, Error> {
-        Self::from_authored_json(text).map_err(|error| match error.to_string().as_str() {
-            "the question declaration uses an unsupported feature" => error,
-            _ => Error::usage("invalid canonical request"),
+        Self::from_authored_json(text).map_err(|mut error| {
+            let unsupported = matches!(error.take_diagnostic(),
+                Some(crate::public::error::diagnostic::Diagnostic::Refusal(cause))
+                    if matches!(cause.downcast_ref::<crate::core::QuestionFileError>(), Some(crate::core::QuestionFileError::Declaration(_))));
+            if unsupported { super::RequestDecodeCause::UnsupportedDeclaration.error() }
+            else { super::RequestDecodeCause::Malformed.error() }
         })
     }
     fn parse(value: &crate::core::Json, text: &str) -> Result<Self, Error> {
@@ -327,7 +364,14 @@ pub(super) fn validate_wire_definition(text: &str) -> Result<(), Error> {
     let Some(call) = root.get("call").and_then(|raw| fields(raw.get())) else {
         return Ok(());
     };
-    let Some(question) = call.get("question").and_then(|raw| fields(raw.get())) else {
+    if let Some(question) = call.get("question") {
+        validate_question_definition(question.get())?;
+    }
+    Ok(())
+}
+pub(super) fn validate_question_definition(text: &str) -> Result<(), Error> {
+    type Fields<'a> = std::collections::BTreeMap<&'a str, &'a serde_json::value::RawValue>;
+    let Ok(question) = serde_json::from_str::<Fields<'_>>(text) else {
         return Ok(());
     };
     if question

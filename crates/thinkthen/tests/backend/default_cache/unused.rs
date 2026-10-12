@@ -1,6 +1,7 @@
 //! `cache unused` names the question keys a folder holds and a list lacks,
 //! from its fixture or its live store, without editing the folder.
 
+use crate::harness::spawn;
 use std::ffi::OsString;
 use std::fs;
 use std::io;
@@ -8,7 +9,6 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use super::folder;
-use crate::harness::spawn;
 
 const USED: &str = "2bc2f3db71bf8156dd2d2060d777a34c80a88cb1c0afa665d469e3b055712f71";
 const OTHER: &str = "0311afcb8eba767b756924bd17cba8bdf973788f9103d8feb9ec00d4a7366474";
@@ -204,12 +204,11 @@ fn store_refusals_leave_the_folder_unchanged() {
     fs::write(case.recording.join("thinkthen.sqlite"), b"").expect("a second store");
     let both = state(&case.recording).expect("both state");
     let refused = case.report(&case.manifest).expect("two stores refusal");
-    assert_eq!(refused.status.code(), Some(5));
-    assert!(refused.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
+    crate::harness::refuses(
+        &refused,
+        5,
         "thinkthen: the replay folder holds both thinkthen.jsonl and thinkthen.sqlite; \
-         run `thinkthen cache convert DIR` to merge them into thinkthen.jsonl\n"
+         run `thinkthen cache convert DIR` to merge them into thinkthen.jsonl\n",
     );
     assert_eq!(state(&case.recording).expect("after two stores"), both);
     fs::remove_file(case.recording.join("thinkthen.sqlite")).expect("second store");
@@ -219,11 +218,10 @@ fn store_refusals_leave_the_folder_unchanged() {
     let refused = case
         .report(&case.manifest)
         .expect("damaged fixture refusal");
-    assert_eq!(refused.status.code(), Some(5));
-    assert!(refused.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n"
+    crate::harness::refuses(
+        &refused,
+        5,
+        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n",
     );
     assert_eq!(
         state(&case.recording).expect("after damaged fixture"),
@@ -268,7 +266,7 @@ fn the_live_store_names_its_unused_keys() {
     .expect("unused report");
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         format!("unused from supplied keys: 1\nunused {}\n", filled[1])
     );
     assert_eq!(

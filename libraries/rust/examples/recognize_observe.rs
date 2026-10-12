@@ -6,7 +6,10 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::time::Duration;
 
-use thinkthen::{CallOptions, Engine, Recognize, RecordInput, RecordObservation};
+use thinkthen::{
+    CallOptions, Engine, QuestionInput, Recognize, RecordInput, RecordObservation, Request,
+    RequestEnvironment, RequestFeed, RequestInput, RequestOptions, RequestOutcome, RequestValue,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fixture = Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -42,18 +45,34 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         _ => {}
     };
-    let records = [text.as_str(), text.as_str()].map(|original| RecordInput {
-            seed_spans: None,
-        original,
+    let records = [text.clone(), text.clone()].map(|original| RecordInput {
+        seed_spans: None,
+        original: QuestionInput::Text(original),
         context: None,
         options: None,
         examples: None,
     });
-    let call = engine.recognize_records_complete_with(
-        &ask,
-        records,
-        CallOptions::new().observe(&callback),
-    )?;
+    let request = Request::for_definition(
+        ask.into(),
+        RequestInput::Feed {
+            name: "observed".to_owned(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
+        },
+        RequestOptions::default(),
+    )
+    .admit()?;
+    let call = match engine.execute_request(
+        &request,
+        RequestEnvironment {
+            controls: CallOptions::new().observe(&callback),
+            feed: Some(RequestFeed::from_records("observed", records.into_iter().map(Ok)).eager()),
+        },
+    )? {
+        RequestOutcome::Complete(call) => call,
+        RequestOutcome::Failed { error, .. } => return Err(error.into()),
+    };
     let held = questions.lock().map_err(|_| "question lock poisoned")?;
     let mut out = std::io::stdout().lock();
     for ((index, stage, position), owned) in held.iter() {
@@ -92,8 +111,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "completed={:?}",
         finished.lock().map_err(|_| "row lock poisoned")?
     )?;
-    for row in call.value() {
-        writeln!(out, "original[{}]={}", row.ordinal(), row.original())?;
+    let RequestValue::Recognized(rows) = call.value() else {
+        return Err("recognition returned another result kind".into());
+    };
+    for row in rows {
+        let QuestionInput::Text(original) = row.original() else {
+            return Err("recognition lost its text original".into());
+        };
+        writeln!(out, "original[{}]={}", row.ordinal(), original)?;
     }
     writeln!(out, "requests_sent={}", call.facts().requests_sent())?;
     Ok(())

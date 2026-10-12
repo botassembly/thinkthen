@@ -1,7 +1,7 @@
 //! Display refusals, snapshot bounds and unchanged failure guarantees.
 
 use crate::find_display::{PICKED, body, call as find_call};
-use crate::harness::{Canned, Listener};
+use crate::harness::{Canned, Listener, exits, exits_because};
 use crate::input_sources::{answer, folder, text};
 use crate::record_display::call;
 use crate::support::{keys, stored};
@@ -37,12 +37,9 @@ fn display_usage_errors_and_late_open_errors_send_nothing() -> io::Result<()> {
             } else {
                 call(&listener, verb, flags, b"secret input\n")?
             };
-            assert_eq!(
-                output.status.code(),
-                Some(2),
-                "{flags:?}: {}",
-                text(&output.stderr)
-            );
+            exits_because(&output, 2, || {
+                format!("{flags:?}: {}", text(&output.stderr))
+            });
             assert!(output.stdout.is_empty());
             assert_eq!(listener.connections(), 0);
             assert!(!text(&output.stderr).contains("secret input"));
@@ -110,7 +107,7 @@ fn release_only_original_byte_budget_counts_blanks_endings_and_all_source_occurr
         ] {
             let listener = Listener::answering(answer)?;
             let output = call(&listener, verb, &flags, &whole)?;
-            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+            exits(&output, 0);
             assert!(output.stdout.is_empty());
             assert_eq!(listener.connections(), 0);
         }
@@ -145,7 +142,7 @@ fn check_overflow_and_lazy_intake(verb: &str, full: &str, whole: &mut Vec<u8>) -
     beyond.extend_from_slice(b"hit\n");
     let lazy_listener = Listener::answering(answer)?;
     let lazy = call(&lazy_listener, verb, &["-n", "--scores"], &beyond)?;
-    assert_eq!(lazy.status.code(), Some(0), "{}", text(&lazy.stderr));
+    exits(&lazy, 0);
     assert_eq!(lazy.stdout, b"0.9 3:hit\n");
     assert_eq!(lazy_listener.requests().len(), 1);
     assert_eq!(output.status.code(), Some(2));
@@ -179,7 +176,7 @@ fn later_backend_failure_keeps_filter_groups_and_leaves_rank_empty() -> io::Resu
         for (flags, prefix) in views {
             let listener = Listener::answering(respond)?;
             let output = call(&listener, verb, flags, b"first\nfail\n")?;
-            assert_eq!(output.status.code(), Some(4), "{}", text(&output.stderr));
+            exits(&output, 4);
             assert_eq!(output.stdout, if verb == "filter" { *prefix } else { b"" });
             assert_eq!(listener.requests().len(), 2);
             assert!(!text(&output.stderr).contains("secret provider body"));
@@ -220,7 +217,7 @@ fn invalid_flags_empty_input_and_invalid_neighbors_send_nothing() -> io::Result<
         ),
     ] {
         let output = find_call(&listener, &flags, input)?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        exits(&output, 2);
         assert!(output.stdout.is_empty());
         let at = if input.starts_with(b" ") { 1 } else { 2 };
         assert!(
@@ -246,13 +243,13 @@ fn release_only_snapshot_counts_original_crlf_bytes_and_retains_ordinary_lazy_bo
     source.extend_from_slice(b"\r\n");
     assert_eq!(source.len(), LIMIT);
     let plain = find_call(&listener, &["--plan"], &source)?;
-    assert_eq!(plain.status.code(), Some(0), "{}", text(&plain.stderr));
+    exits(&plain, 0);
     let around = find_call(
         &listener,
         &["--plan", "--around", "1", "-n", "--scores"],
         &source,
     )?;
-    assert_eq!(around.status.code(), Some(0), "{}", text(&around.stderr));
+    exits(&around, 0);
     assert_eq!(around.stdout, plain.stdout);
     source.push(b'x');
     for flags in [
@@ -339,7 +336,7 @@ fn views_share_recording_keys_and_replay_without_sending_or_a_key() -> io::Resul
             &[&flags[..], &["--replay", plain.to_str().expect("path")]].concat(),
             input,
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        exits(&output, 0);
         assert_eq!(output.stdout, expected);
     }
     assert!(listener.requests().is_empty());
@@ -425,7 +422,7 @@ fn closed_group_output_keeps_completed_find_outcome() -> io::Result<()> {
     )?;
     drop(child.stdout.take().expect("stdout pipe"));
     let output = finish(child, "find group after pipe closes")?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert!(output.stderr.is_empty());
     body(&listener);
     Ok(())

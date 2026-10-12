@@ -22,7 +22,7 @@ Results use generated PHP classes. A field accessor returns `Presence` with sepa
 
 Failures throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailure`, `CancelledFailure` or `DefectFailure`. Started failures retain typed `failure`, `terminal`, completed `results`, packets and `facts()`. Admission failures have no invented facts. Pass a `Cancellation` as the fourth argument, or use `start()`, `poll()`, `cancel()` and `close()`. PHP calls block the ordinary VM. Polling advances at most one producer item. A client destructor closes open operations before freeing its engine and does not wait for a provider reply.
 
-`usage_persistence()` and `finish_usage_status()` return readonly `UsageStatus` observations with generated `UsagePersistenceState` and copied advice. They refuse calls after close. Failed persistence leaves earlier successful answers and facts intact. See [the native engine contract](../c/DESIGN.md).
+`usagePersistence()` and `finishUsageStatus()` return readonly `UsageStatus` observations with generated `UsagePersistenceState` and copied advice. They refuse calls after close. Failed persistence leaves earlier successful answers and facts intact. See [the native engine contract](../c/DESIGN.md).
 
 ## Upgrade from the old APIs
 
@@ -41,3 +41,5 @@ The old PHP public APIs and handwritten native view readers are removed. The fro
 `fixtures/package.py --library LIBRARY --out DIRECTORY` assembles a native-bearing local archive. `THINKTHEN_COMPOSER_BIN=/absolute/path/to/composer.phar sh libraries/php/check.sh 0` installs that archive through Composer with network, scripts and plugins disabled and runs the routine synthetic-backend checks. The gate builds the native library offline; `THINKTHEN_COMPLETE_LIBRARY` selects an explicitly retained library. A fixture archive carrying a debug native library does not qualify a production distribution.
 
 Set `THINKTHEN_ARTIFACT` to check a selected archive. `THINKTHEN_TEST_PROFILE=full` selects the shared installed suite at the release candidate, using `conformance/session_projection.py`. Full parity, large-input cases and other platforms are release-only. No paid backend runs in these checks.
+
+The development PHP API renames `usage_persistence()` to `usagePersistence()` and `finish_usage_status()` to `finishUsageStatus()`. An operation retains its client until close, so `(new Client)->start(...)` remains live.

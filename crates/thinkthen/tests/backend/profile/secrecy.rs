@@ -81,7 +81,7 @@ fn every_command_family_keeps_profile_failures_free_of_keys_and_evidence() {
                 spawn(&borrowed, &[("THINKTHEN_API_KEY", KEY)], input.as_bytes()).expect("command");
             assert_eq!(output.status.code(), Some(*code), "{arguments:?}");
             assert!(output.stdout.is_empty(), "{arguments:?}");
-            let error = String::from_utf8_lossy(&output.stderr);
+            let error = crate::harness::said(&output);
             assert!(error.contains(phrase), "{arguments:?}: {error}");
             assert!(!error.contains(KEY), "{arguments:?}: {error}");
             assert!(!error.contains(EVIDENCE), "{arguments:?}: {error}");

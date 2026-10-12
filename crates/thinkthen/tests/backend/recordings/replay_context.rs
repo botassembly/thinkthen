@@ -27,14 +27,9 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
     let cases = cases(base, &folder_text, &set_text);
     for (name, args, input, source) in cases {
         let output = spawn(&args, &[], input).expect(name);
-        assert_eq!(
-            output.status.code(),
-            Some(5),
-            "{name}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits_because(&output, 5, || name.to_owned());
         assert!(output.stdout.is_empty(), "{name}");
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = crate::harness::said(&output);
         assert!(stderr.contains(source), "{name}: {stderr}");
         assert!(stderr.contains(miss(name)), "{name}: {stderr}");
         if name == "streaming row" {
@@ -178,7 +173,7 @@ fn a_replay_miss_is_a_local_failure_that_names_the_question_key() {
 
     assert_eq!(output.status.code(), Some(5));
     assert!(output.stdout.is_empty());
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     let [expected] = keys(
         &format!("{}/{ENDPOINT_PATH}", listener.base()),
         &encoded_decide(EVIDENCE, "local-1", question),

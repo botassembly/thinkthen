@@ -12,7 +12,7 @@ fn tt_request_build(
     input: Robj,
     options: Robj,
 ) -> Crossed<Robj> {
-    let request = inputs::request(
+    let (request, column) = inputs::request(
         &text_of(&function_name, "function")?,
         &question,
         &input,
@@ -20,7 +20,7 @@ fn tt_request_build(
     )?;
     Ok(ExternalPtr::new(NativeRequest {
         admitted: request.admit().map_err(|e| crate::carry(&e))?,
-        column: crate::request::ColumnMap::from_request(&input),
+        column,
     })
     .into())
 }
@@ -28,17 +28,12 @@ fn tt_request_build(
 #[derive(Debug)]
 struct NativeRequest {
     admitted: AdmittedRequest,
-    column: Option<crate::request::ColumnMap>,
+    column: Option<thinkthen::RequestColumn>,
 }
 
 struct NativeSession {
     session: RequestSession,
-    column: Option<crate::request::ColumnMap>,
-}
-
-#[extendr]
-fn tt_request_column(values: Robj, function_name: Robj) -> Crossed<Robj> {
-    crate::request::column(values, &text_of(&function_name, "function")?)
+    column: Option<thinkthen::RequestColumn>,
 }
 
 #[extendr]
@@ -47,6 +42,7 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         .map_err(|_| crate::usage("an admitted request is required"))?;
     let admitted = request.admitted.clone();
     let function = admitted.request().call.function();
+    let column = request.column.clone();
     let done = calls::call_owned(
         deadline_of(&deadline)?,
         &interrupt_pending,
@@ -54,7 +50,7 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         request
             .column
             .as_ref()
-            .map(crate::request::ColumnMap::observation_positions),
+            .map(|column| column.positions().to_vec()),
         move |engine, controls, account| {
             let started = account.start();
             let outcome = engine.execute_request(
@@ -81,12 +77,23 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
                     }
                 }
             }
-            crate::request::written(&outcome)
+            let value = match &outcome {
+                RequestOutcome::Complete(call) => call.value(),
+                RequestOutcome::Failed { completed, .. } => completed,
+            };
+            let view = column
+                .as_ref()
+                .map(|column| column.view(value).map_err(|e| crate::carry(&e)))
+                .transpose()?
+                .flatten();
+            Ok((crate::request::written(&outcome)?, view))
         },
     )?;
-    let value = crate::native_results::request_packet(&done.result?, function)?;
+    let (text, view) = done.result?;
+    let value = crate::native_results::request_packet(&text, function)?;
+    let value = crate::request::view(value, view)?;
     match &request.column {
-        Some(column) => column.attach(value),
+        Some(column) => crate::request::attach(column, value),
         None => Ok(value),
     }
 }
@@ -110,7 +117,7 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
         "thinkthen_complete",
     )?;
     match &request.column {
-        Some(column) => column.attach(value),
+        Some(column) => crate::request::attach(column, value),
         None => Ok(value),
     }
 }
@@ -129,8 +136,15 @@ fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
         .map_err(|_| crate::defect("native session pointer could not be retained"))?;
     if let Some(column) = &native.column {
         pointer
-            .set_attrib("positions", column.positions.clone())
-            .and_then(|value| value.set_attrib("length", column.length))
+            .set_attrib(
+                "positions",
+                column
+                    .positions()
+                    .iter()
+                    .map(|position| *position as f64)
+                    .collect::<Vec<_>>(),
+            )
+            .and_then(|value| value.set_attrib("length", column.len() as f64))
             .map_err(|_| crate::defect("native column map could not be retained"))?;
     }
     Ok(pointer)
@@ -152,6 +166,29 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
         thinkthen::RequestSessionRead::Pending => Ok(().into()),
         thinkthen::RequestSessionRead::End => Ok(list!(kind = "end").into()),
     }
+}
+
+#[extendr]
+fn tt_request_batch_wait(batch: Robj, input: bool) -> Crossed<()> {
+    let session = ExternalPtr::<NativeSession>::try_from(batch)
+        .map_err(|_| crate::usage("a native request session is required"))?;
+    if interrupt_pending() {
+        session.session.cancel();
+        return Err(crate::interrupted());
+    }
+    let interest = if input {
+        thinkthen::RequestSessionWaitInterest::Input
+    } else {
+        thinkthen::RequestSessionWaitInterest::Settlement
+    };
+    let _ = session
+        .session
+        .wait(interest, std::time::Duration::from_millis(50));
+    if interrupt_pending() {
+        session.session.cancel();
+        return Err(crate::interrupted());
+    }
+    Ok(())
 }
 
 #[extendr]
@@ -200,14 +237,54 @@ fn tt_request_batch_cancel(batch: Robj) -> Crossed<()> {
     Ok(())
 }
 
+#[extendr]
+fn tt_request_error_native(
+    failure: Robj,
+    completed: Robj,
+    positions: Robj,
+    length: Robj,
+    parent: Robj,
+) -> Crossed<Robj> {
+    let failure_fields = List::try_from(failure.clone())
+        .map_err(|_| crate::defect("native failure is not an R list"))?;
+    let mut fields = failure_fields
+        .iter()
+        .filter(|(name, _)| ["message", "kind", "retryable", "facts"].contains(name))
+        .collect::<Vec<_>>();
+    let kind = fields
+        .iter()
+        .find(|(name, _)| *name == "kind")
+        .ok_or_else(|| crate::defect("native failure has no kind"))?;
+    let kind = text_of(&kind.1, "kind")?;
+    fields.extend([
+        ("complete", failure),
+        ("completed", completed),
+        ("positions", positions),
+        ("length", length),
+        ("parent", parent),
+        ("call", ().into()),
+    ]);
+    let mut value = List::from_pairs(fields);
+    value
+        .set_class([
+            format!("thinkthen_{kind}"),
+            "thinkthen_error".into(),
+            "error".into(),
+            "condition".into(),
+        ])
+        .map_err(|_| crate::defect("native error class could not be assigned"))?;
+    Ok(value.into())
+}
+
 extendr_module! {
     mod request;
-    fn tt_request_column;
+    fn tt_request_error_native;
     fn tt_request_build;
     fn tt_request_native;
     fn tt_request_plan;
     fn tt_request_batch_start;
     fn tt_request_batch_poll;
+    fn tt_request_batch_wait;
     fn tt_request_batch_cancel;
     fn tt_request_batch_push;
     fn tt_request_batch_finish;

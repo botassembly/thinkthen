@@ -335,7 +335,14 @@ def bridge():
         lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern '
                   + {'int': 'int'}[prototype['return']] + ' ' + name + '('
                   + ', '.join(parameters[argument] for argument in prototype['arguments']) + ');']
-    lines += ['}']
+    lines += ['}', 'internal static class NativeWait {']
+    for name, value in native['constants'].items():
+        if name.startswith('THINKTHEN_SESSION_WAIT_'):
+            lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
+    prototype = native['functions']['thinkthen_session_wait']
+    parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
+    arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(' + ', '.join(arguments) + ');', '}']
     return '\n'.join(lines) + '\n'
 
 def main():
@@ -450,7 +457,8 @@ def main():
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         if args.inputs:
             schema = json.loads((ROOT / "specification/request.schema.json").read_text())
-            result = cpp.input_render(prepare(graph(schema, ("RequestQuestion", "RequestInput", "RequestOptions", "RequestSessionDescriptor"))))
+            schema["$defs"]["Request"] = {key: value for key, value in schema.items() if key != "$defs"}
+            result = cpp.input_render(prepare(graph(schema, ("Request", "RequestSessionDescriptor"))))
             output = ROOT / "libraries/cpp/include/thinkthen/inputs_generated.hpp"
         else:
             result = cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")
@@ -468,8 +476,7 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import php
         definitions = prepare(graph(json.loads(args.schema.read_text()), php.ROOTS))
-        version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        outputs = php.outputs(definitions, version, (ROOT / "libraries/c/include/thinkthen.h").read_text())
+        outputs = php.outputs(definitions, (ROOT / "libraries/c/include/thinkthen.h").read_text())
         schema = json.loads((ROOT / "specification/request.schema.json").read_text())
         schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
         inputs = prepare(graph(schema, php.INPUT_ROOTS))

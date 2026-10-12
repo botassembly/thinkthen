@@ -76,7 +76,9 @@ fi
 	python3 ../../sdlc/scripts/generate-c-header.py --check
 	python3 ../../sdlc/scripts/check-c-exports.py --self-test include/thinkthen.h
 	# The remaps keep the builder's home out of this build. release-pack --reuse rebuilds the library it packs (ticket 0128).
+	if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
 	export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+	fi
 	cargo fmt --check
 	cargo clippy --locked --offline --all-targets -- -D warnings
 	cargo test --locked --offline -- --nocapture

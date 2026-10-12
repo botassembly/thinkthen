@@ -105,22 +105,44 @@ fn primitive_text_functions_keep_distributions_usage_and_secrecy() {
         .unwrap()
         .build()
         .unwrap();
-    let decision = engine
-        .decide_complete_with(&decide, "Input.", CallOptions::new().attempts(true))
-        .unwrap();
-    assert_eq!(decision.value().value(), Answer::Yes);
+    let decision = crate::api::decide(
+        &engine,
+        &decide,
+        "Input.",
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
+    assert_eq!(
+        crate::api::decision(&decision).unwrap().value(),
+        Answer::Yes
+    );
     assert_eq!(decision.facts().model(), Some("fixed"));
     assert_eq!(decision.facts().input_tokens(), Some(17));
     assert_eq!(decision.facts().output_tokens(), Some(0));
-    engine
-        .choose_complete_with(&choose, "Input.", CallOptions::new())
-        .unwrap();
-    engine
-        .tag_complete_with(&tag, "Input.", CallOptions::new())
-        .unwrap();
-    engine
-        .score_complete_with(&score, "Input.", CallOptions::new())
-        .unwrap();
+    crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Choose,
+        choose.clone().into(),
+        crate::api::text("Input."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
+    crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Tag,
+        tag.clone().into(),
+        crate::api::text("Input."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
+    crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Score,
+        score.clone().into(),
+        crate::api::text("Input."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
     assert!(!format!("{decision:?} {engine:?}").contains("decisions-test-private"));
     assert_routes(&listener);
 }
@@ -130,31 +152,36 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
     let listener = Listener::answering(response).unwrap();
     let engine = builder(&listener).no_cache().build().unwrap();
     let decide = Question::decide("Good?").unwrap().cut();
-    engine
-        .filter_complete_with(
-            &decide,
-            ["One.", "Two."],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .unwrap();
-    engine
-        .rank_complete_with(
-            &Question::rank("Good?").unwrap(),
-            ["One.", "Two."],
-            CallOptions::new(),
-        )
-        .unwrap();
-    engine
-        .find_complete_with(
-            &Question::find("Where?").unwrap(),
-            ["One.", "Two."],
-            CallOptions::new(),
-        )
-        .unwrap();
+    crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Filter,
+        decide.clone().into(),
+        ["One.", "Two."].map(crate::api::record).map(Ok),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .unwrap();
+    crate::api::eager_rank(
+        &engine,
+        &Question::rank("Good?").unwrap(),
+        crate::api::plain_inputs(["One.", "Two."]),
+        CallOptions::new(),
+    )
+    .unwrap();
+    crate::api::find(
+        &engine,
+        &Question::find("Where?").unwrap(),
+        crate::api::plain_records(["One.", "Two."]),
+        CallOptions::new(),
+    )
+    .unwrap();
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"Good?"},"second":{"choose":"Team?","options":["billing","shipping"]}}}"#).unwrap();
-    engine
-        .annotate_complete_with(&set, ["One."], CallOptions::new())
-        .unwrap();
+    crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["One."]),
+        CallOptions::new(),
+    )
+    .unwrap();
     let recognize = Recognize::builder()
         .kind(Kind::new("person", None).unwrap())
         .unwrap()
@@ -162,10 +189,16 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
         .unwrap()
         .build()
         .unwrap();
-    let found = engine
-        .recognize_complete_with(&recognize, "Ada met Acme.", CallOptions::new())
-        .unwrap();
-    assert_eq!(found.value().value().entities().len(), 2);
+    let found =
+        crate::api::recognize(&engine, &recognize, "Ada met Acme.", CallOptions::new()).unwrap();
+    assert_eq!(
+        crate::api::recognition(&found)
+            .unwrap()
+            .value()
+            .entities()
+            .len(),
+        2
+    );
     let relate = Relate::builder()
         .relation(RelationRule::one_way("follows", "person", "person").unwrap())
         .unwrap()
@@ -202,6 +235,14 @@ fn assert_routes(listener: &Listener) {
 fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recording_keeps_names() {
     let listener = Listener::answering(response).unwrap();
     let place = folder();
+    let annotate = |engine: &thinkthen::Engine, set: &QuestionSet| {
+        crate::api::annotate(
+            engine,
+            set,
+            crate::api::plain_inputs(["Input."]),
+            CallOptions::new(),
+        )
+    };
     let set = QuestionSet::from_json(
         r#"{"version":1,"questions":{"first":{"decide":"A?"},"second":{"decide":"B?"}}}"#,
     )
@@ -209,17 +250,13 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
     let only =
         QuestionSet::from_json(r#"{"version":1,"questions":{"second":{"decide":"B?"}}}"#).unwrap();
     let engine = builder(&listener).record(&place).unwrap().build().unwrap();
-    let first = engine
-        .annotate_complete_with(&set, ["Input."], CallOptions::new())
-        .unwrap();
+    let first = annotate(&engine, &set).unwrap();
     let cached = builder(&listener)
         .cache_at(&place)
         .unwrap()
         .build()
         .unwrap();
-    let second = cached
-        .annotate_complete_with(&only, ["Input."], CallOptions::new())
-        .unwrap();
+    let second = annotate(&cached, &only).unwrap();
     let a = first.value()[0].result().members().nth(1).unwrap();
     let b = second.value()[0].result().members().next().unwrap();
     // Removing a named member changes logical position, while retaining its observation.
@@ -229,9 +266,7 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
         r#"{"version":1,"questions":{"first":{"decide":"Different A?"},"second":{"decide":"B?"}}}"#,
     )
     .unwrap();
-    let repacked = cached
-        .annotate_complete_with(&changed, ["Input."], CallOptions::new())
-        .unwrap();
+    let repacked = annotate(&cached, &changed).unwrap();
     let c = repacked.value()[0].result().members().nth(1).unwrap();
     assert_eq!(a.answer_id(), c.answer_id());
     assert_eq!(a.observations(), c.observations());
@@ -283,9 +318,7 @@ fn unchanged_second_question_reuses_observation_after_repacking_and_raw_recordin
         assert!(place.join("thinkthen.jsonl").exists());
     }
     let replay = builder(&listener).replay(&place).unwrap().build().unwrap();
-    replay
-        .annotate_complete_with(&only, ["Input."], CallOptions::new())
-        .unwrap();
+    annotate(&replay, &only).unwrap();
     assert_eq!(listener.count(), 2);
     drop(replay);
     drop(cached);
@@ -394,9 +427,13 @@ fn status_retries_keep_body_route_and_key_and_usage_absence_is_not_zero() {
         .build()
         .unwrap();
     let question = Question::decide("Good?").unwrap().cut();
-    let call = engine
-        .decide_complete_with(&question, "Input.", CallOptions::new().attempts(true))
-        .unwrap();
+    let call = crate::api::decide(
+        &engine,
+        &question,
+        "Input.",
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
     assert_eq!(call.facts().requests_sent(), 2);
     let requests = listener.requests();
     assert_eq!(requests[0].body, requests[1].body);
@@ -405,7 +442,8 @@ fn status_retries_keep_body_route_and_key_and_usage_absence_is_not_zero() {
         requests[0].header("authorization"),
         requests[1].header("authorization")
     );
-    let document: Value = serde_json::from_str(&call.value().to_json().unwrap()).unwrap();
+    let document: Value =
+        serde_json::from_str(&crate::api::decision(&call).unwrap().to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["attempts"][1]["request_id"], "observed-id");
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"reported","answers":[{"type":"predicate","name":"q1","probability":0.9}]}"#)).unwrap();
     let engine = builder(&listener).no_cache().build().unwrap();
@@ -415,9 +453,13 @@ fn status_retries_keep_body_route_and_key_and_usage_absence_is_not_zero() {
     assert_eq!(call.facts().output_tokens(), None);
     let token = thinkthen::CancelToken::new();
     token.cancel();
-    let error = engine
-        .decide_complete_with(&question, "Input.", CallOptions::new().cancel(&token))
-        .unwrap_err();
+    let error = crate::api::decide(
+        &engine,
+        &question,
+        "Input.",
+        CallOptions::new().cancel(&token),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Cancelled);
     assert_eq!(listener.count(), 1);
 }
@@ -439,7 +481,14 @@ fn images_refuse_before_key_lookup_cache_access_or_transport_on_the_text_route()
     let input =
         thinkthen::QuestionInput::Images(thinkthen::ImageEvidence::new(None, vec![image]).unwrap());
     let question = Question::decide("Red?").unwrap().cut();
-    let error = engine.decide_input(&question, &input).unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question.into(),
+        crate::api::plain_records([input]),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
     assert!(!place.join("thinkthen.sqlite").exists());
@@ -449,3 +498,6 @@ fn images_refuse_before_key_lookup_cache_access_or_transport_on_the_text_route()
 
 #[path = "openai_decisions/partial.rs"]
 mod partial;
+
+#[path = "support/api.rs"]
+mod api;

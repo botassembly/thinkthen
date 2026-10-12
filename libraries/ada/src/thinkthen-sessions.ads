@@ -28,6 +28,10 @@ package Thinkthen.Sessions is
    procedure Finish (Owner : in out Session; Failure : Thinkthen.Requests.T_RequestReaderFailure);
    procedure Cancel (Owner : in out Session);
    procedure Close (Owner : in out Session);
+   -- Wait consumes no packet. Join every waiting task before Close/Finalize.
+   -- Generated native constants name Result/Input/Settlement interests and readiness.
+   procedure Wait (Owner : Session'Class; Interest : Interfaces.Unsigned_32;
+                   Timeout_Ms : Interfaces.Unsigned_32; Ready : out Interfaces.Unsigned_32);
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status);
    procedure Close (Value : in out Packet);
    -- Every nested pointer shares Value's lifetime. Join tasks before closing owners.

@@ -6,6 +6,7 @@ mod engine;
 mod files;
 mod inputs;
 mod native_result;
+mod question;
 mod request;
 mod results_generated;
 mod worker;
@@ -163,6 +164,10 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     module.add_function(wrap_pyfunction!(files::_validate_reading, module)?)?;
     module.add_class::<request::Session>()?;
     module.add_class::<request::Item>()?;
+    module.add_class::<question::Question>()?;
+    module.add_function(wrap_pyfunction!(question::_build_question, module)?)?;
+    module.add_function(wrap_pyfunction!(question::_label_names, module)?)?;
+    module.add_function(wrap_pyfunction!(question::_label_values, module)?)?;
     module.add_class::<native_result::NativeResult>()?;
     module.add_function(wrap_pyfunction!(
         native_result::_restore_native_result,

@@ -48,30 +48,15 @@ fn two_selected_groups_pack_two_rows_into_one_request_and_name_question_keys() {
         )
     })
     .expect("listener");
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--jsonl",
-            "--batch",
-            "2",
-            "--details",
-            "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
+        &["--jsonl", "--batch", "2", "--details", "--no-cache"],
         &[("THINKTHEN_API_KEY", "key")],
         b"{\"left\":\"one\",\"right\":\"alpha\"}\n{\"left\":\"two\",\"right\":\"beta\"}\n",
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body = concat!(
@@ -111,10 +96,10 @@ fn a_profile_splits_packed_records_at_its_question_count() {
         r#"{"schema":"thinkthen.backend-profile/1","name":"two-questions","max_questions":2}"#,
     );
     let listener = Listener::answering(all_yes).expect("listener");
-    let output = spawn(
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--batch",
             "2",
@@ -122,21 +107,12 @@ fn a_profile_splits_packed_records_at_its_question_count() {
             &profile.to_string_lossy(),
             "--details",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
         &[("THINKTHEN_API_KEY", "key")],
         b"{\"left\":\"one\",\"right\":\"alpha\"}\n{\"left\":\"two\",\"right\":\"beta\"}\n",
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 4);
     for request in &requests {
@@ -181,20 +157,10 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
     })
     .expect("listener");
     let run = |batch: &str| {
-        spawn(
-            &[
-                "annotate",
-                &file.to_string_lossy(),
-                "--lines",
-                "--batch",
-                batch,
-                "--details",
-                "--no-cache",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
+        crate::harness::annotate_at(
+            &file,
+            listener.base(),
+            &["--lines", "--batch", batch, "--details", "--no-cache"],
             &[("THINKTHEN_API_KEY", "key")],
             b"one\ntwo\n",
         )
@@ -202,18 +168,8 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
     };
     let singleton = run("1");
     let maximum = run("max");
-    assert_eq!(
-        singleton.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&singleton.stderr)
-    );
-    assert_eq!(
-        maximum.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&maximum.stderr)
-    );
+    crate::harness::exits(&singleton, 0);
+    crate::harness::exits(&maximum, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 4);
     let mut first = vec![requests[0].body.clone(), requests[1].body.clone()];
@@ -222,7 +178,7 @@ fn structured_question_text_keeps_singleton_request_bytes_at_max() {
     second.sort();
     assert_eq!(first, second);
     let rows = |output: &std::process::Output| {
-        String::from_utf8_lossy(&output.stdout)
+        crate::harness::printed(output)
             .lines()
             .map(|line| {
                 crate::native_results::compatibility::judgment_with_member_facts(
@@ -242,30 +198,15 @@ fn partial_questions_keep_good_siblings_and_exit_six() {
     );
     let response = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"x":1.0}},"q3":{"type":"noul","noul":0.9},"q4":{"type":"choice","probabilities":{"x":1.0}}}}"#;
     let listener = Listener::serving(vec![Canned::ok(response)]).expect("listener");
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--lines",
-            "--batch",
-            "2",
-            "--details",
-            "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
+        &["--lines", "--batch", "2", "--details", "--no-cache"],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\ntwo\n",
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(6),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 6);
     assert_eq!(listener.requests().len(), 1);
     let rows: Vec<Value> = output
         .stdout
@@ -297,10 +238,10 @@ fn a_question_cap_keeps_records_whole_and_rows_in_order() {
         let input = (1..=5)
             .map(|at| format!("{{\"wide\":\"wide {at}\",\"narrow\":\"narrow {at}\"}}\n"))
             .collect::<String>();
-        let output = spawn(
+        let output = crate::harness::annotate_at(
+            &file,
+            listener.base(),
             &[
-                "annotate",
-                &file.to_string_lossy(),
                 "--jsonl",
                 "--batch",
                 "max",
@@ -310,21 +251,12 @@ fn a_question_cap_keeps_records_whole_and_rows_in_order() {
                 &jobs.to_string(),
                 "--no-cache",
                 "--details",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
             ],
             &[("THINKTHEN_API_KEY", "key")],
             input.as_bytes(),
         )
         .expect("annotate stream");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, 0);
         let rows = rows(&output.stdout);
         assert_eq!(rows.len(), 5);
         for (at, row) in rows.iter().enumerate() {
@@ -366,30 +298,15 @@ fn tag_labels_cross_q9_without_using_wire_offsets_as_logical_places() {
         &json!({"model":"local-1","answers":answers}).to_string(),
     )])
     .expect("listener");
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--lines",
-            "--batch",
-            "2",
-            "--details",
-            "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
+        &["--lines", "--batch", "2", "--details", "--no-cache"],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\ntwo\n",
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body: Value = serde_json::from_slice(&requests[0].body).expect("request JSON");

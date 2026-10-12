@@ -77,77 +77,73 @@ public sealed partial class Engine
             catch { session.Cancel(); stop.Cancel(); throw; }
         }
     }
+    private static readonly InputRequestInput FeedInput = new InputRequestInputFeed { Name = "input" };
+    private static InputPresence<InputRequestOptions> Controls(InputRequestOptions? options) =>
+        options is null ? default : (InputPresence<InputRequestOptions>)options;
     private Task<OwnedCall> CallAsync(InputRequestCall call, CancellationToken cancellation,
         IAsyncEnumerable<InputRequestSessionDescriptor>? feed = null) => ExecuteAsync(
         new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = call }, feed, cancellation);
     public Task<OwnedCall> DecideAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallDecide { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallDecide { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> ChooseAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallChoose { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallChoose { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> TagAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallTag { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallTag { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> ScoreAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallScore { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallScore { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> FilterAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallFilter { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallFilter { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> RankAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRank { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallRank { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> FindAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallFind { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallFind { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> AnnotateAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallAnnotate { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallAnnotate { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> RecognizeAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRecognize { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallRecognize { Question = question, Input = input, Options = Controls(options) }, cancellation);
     public Task<OwnedCall> RelateAsync(InputRequestQuestion question, InputRequestInput input,
         InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRelate { Question = question, Input = input, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation);
+        new InputRequestCallRelate { Question = question, Input = input, Options = Controls(options) }, cancellation);
+    private Task<OwnedCall> FeedAsync(InputRequestCall call,
+        IAsyncEnumerable<InputRequestSessionDescriptor> feed, CancellationToken cancellation) =>
+        CallAsync(call, cancellation, feed ?? throw new ArgumentNullException(nameof(feed)));
     public Task<OwnedCall> DecideAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallDecide { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallDecide { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> ChooseAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallChoose { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallChoose { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> TagAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallTag { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallTag { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> ScoreAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallScore { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallScore { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> FilterAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallFilter { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallFilter { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> RankAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRank { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallRank { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> FindAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallFind { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallFind { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> AnnotateAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallAnnotate { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallAnnotate { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> RecognizeAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRecognize { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallRecognize { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
     public Task<OwnedCall> RelateAsync(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,
-        InputRequestOptions? options = null, CancellationToken cancellation = default) => CallAsync(
-        new InputRequestCallRelate { Question = question, Input = new InputRequestInputFeed { Name = "input" }, Options = options is null ? default : (InputPresence<InputRequestOptions>)options }, cancellation,
-        feed ?? throw new ArgumentNullException(nameof(feed)));
+        InputRequestOptions? options = null, CancellationToken cancellation = default) => FeedAsync(
+        new InputRequestCallRelate { Question = question, Input = FeedInput, Options = Controls(options) }, feed, cancellation);
 }

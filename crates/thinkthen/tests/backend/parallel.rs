@@ -5,12 +5,11 @@
     reason = "a failed fixture setup or a missing field should stop the boundary test"
 )]
 
-use crate::child::ChildEnvironment as _;
-use std::fs;
+pub(crate) use crate::harness::{printed, said};
 use std::io;
 use std::io::{BufRead, BufReader, Write};
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output, Stdio};
+use std::path::Path;
+use std::process::{Child, Output};
 use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, mpsc};
 use std::time::Duration;
@@ -88,9 +87,7 @@ fn piped(base: &str, jobs: Option<&str>) -> io::Result<Child> {
         std::process::id(),
         NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
     ));
-    Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(home)
+    crate::harness::piped(home)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
             "decide",
@@ -103,15 +100,7 @@ fn piped(base: &str, jobs: Option<&str>) -> io::Result<Child> {
         ])
         .args(["--url", base, "--jsonl", "--field", "/body"])
         .args(jobs.into_iter().flat_map(|jobs| ["--jobs", jobs]))
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
-}
-
-/// What the run printed on standard output.
-fn printed(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
 }
 
 fn wrapped(count: usize) -> String {
@@ -124,17 +113,8 @@ fn wrapped(count: usize) -> String {
         .collect()
 }
 
-/// What the run said on standard error.
-fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
-}
-
 /// A folder this test owns, removed and remade so each run starts empty.
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 /// How many answers the folder's store holds; each record here asks one question.
 fn entries(folder: &Path) -> usize {
@@ -452,7 +432,7 @@ fn records_that_are_byte_for_byte_alike_write_one_entry_and_race_with_nobody() {
     )
     .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    crate::harness::exits(&output, 0);
     assert_eq!(printed(&output).lines().count(), 16);
     assert_eq!(entries(&folder), 1);
 }
@@ -483,7 +463,7 @@ fn equal_cache_misses_send_once_at_every_supported_width() {
         )
         .expect("the compiled binary runs");
 
-        assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+        crate::harness::exits(&output, 0);
         let rows = printed(&output);
         assert_eq!(rows.lines().count(), 16);
         // A row the call's in-flight map answers is not from the store, so
@@ -521,7 +501,7 @@ fn different_cache_digests_do_not_share_a_lock() {
     )
     .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(listener.peak(), 2);
 }

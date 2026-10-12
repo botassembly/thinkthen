@@ -4,12 +4,12 @@ use crate::{core, public::Error};
 use serde::Serialize;
 
 impl Details {
-    fn of_complete<T: Serialize>(
+    pub(in crate::public) fn of_complete<T: Serialize>(
         canonical: &core::CompleteAtomic,
         original: Option<&T>,
     ) -> Result<Self, Error> {
         let fields = canonical.metadata();
-        let scalar = Written::of(&canonical.legacy)?;
+        let scalar = Written::of(&canonical.compatibility)?;
         let json = match original {
             Some(original) => {
                 // Match native member materialization without reapplying reader byte limits.
@@ -17,7 +17,7 @@ impl Details {
                     .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
                 let record =
                     core::Record::from_json(core::Json::parse(&source).map_err(Error::refused)?);
-                Written::of(&canonical.legacy.clone().with_input(record))?
+                Written::of(&canonical.compatibility.clone().with_input(record))?
             }
             None => scalar.clone(),
         };
@@ -32,7 +32,7 @@ impl Details {
             profile_warning: fields.profile.cloned(),
             requests: fields.requests.to_vec(),
             requests_sent: fields.sent,
-            cached: canonical.legacy.cached(),
+            cached: canonical.compatibility.cached(),
             usage: canonical.usage().map(usage),
             reported_usage: canonical.reported_usage(),
             confidence: canonical.answer().confidence().map(|p| p.as_f64()),
@@ -43,14 +43,14 @@ impl Details {
     }
 }
 
-macro_rules! legacy {
+macro_rules! compatibility {
     ($($result:ident),+ $(,)?) => { $(
         impl super::$result {
             /// Project the retained native reading as an input-free result/1 Details.
             /// Batch and context metadata retain the actual execution values.
             /// # Errors
             /// Returns Defect if the native carrier cannot be serialized.
-            pub fn legacy_details(&self) -> Result<Details, Error> {
+            pub fn compatibility_details(&self) -> Result<Details, Error> {
                 Details::of_complete::<()>(&self.canonical, None)
             }
         }
@@ -60,13 +60,13 @@ macro_rules! legacy {
             /// # Errors
             /// Retains native member errors for an unserializable original, and Defect
             /// for an internal carrier serialization failure.
-            pub fn legacy_details(&self) -> Result<Details, Error> {
+            pub fn compatibility_details(&self) -> Result<Details, Error> {
                 Details::of_complete(&self.result.canonical, Some(&self.original))
             }
         }
     )+ };
 }
-legacy!(
+compatibility!(
     CompleteDecision,
     CompleteChoice,
     CompleteTags,
@@ -85,7 +85,8 @@ mod tests {
             Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
         })
         .unwrap();
-        let folder = std::env::temp_dir().join(format!("legacy-cache-{}", std::process::id()));
+        let folder =
+            std::env::temp_dir().join(format!("compatibility-cache-{}", std::process::id()));
         std::fs::create_dir(&folder).unwrap();
         let engine = Engine::builder()
             .base_url(listener.base())
@@ -101,15 +102,23 @@ mod tests {
             .unwrap();
         let question = Question::decide("Fits?").unwrap().cut();
         engine
-            .decide_complete_with(&question, "Original.", CallOptions::new())
+            .decide_input_complete_with(
+                &question,
+                &crate::QuestionInput::Text("Original.".into()),
+                CallOptions::new(),
+            )
             .unwrap();
         let call = engine
-            .decide_complete_with(&question, "Original.", CallOptions::new())
+            .decide_input_complete_with(
+                &question,
+                &crate::QuestionInput::Text("Original.".into()),
+                CallOptions::new(),
+            )
             .unwrap();
         let mut result = call.value().clone();
         result.canonical.identity =
             core::ResultIdentity::resolved(result.answer_id().clone(), None, vec![], vec![], None);
-        let details = result.legacy_details().unwrap();
+        let details = result.compatibility_details().unwrap();
         assert!(details.cached());
         assert!(result.identity().question_sources().is_empty());
         assert!(details.to_json().contains(r#""cached":true"#));
@@ -124,7 +133,7 @@ mod tests {
             ordinal: 0,
             result,
         };
-        let error = row.legacy_details().unwrap_err();
+        let error = row.compatibility_details().unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert_eq!(error.to_string(), "a record cannot be written as JSON");
         assert_eq!(listener.count(), 1);

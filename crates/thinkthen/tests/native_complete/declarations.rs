@@ -8,37 +8,23 @@ use thinkthen::{
 fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cache_and_replay() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let first = Question::from_json(r#"{"decide":"Refund?","name":"refund","wording_version":1,"item_schema":{"type":"string"}}"#).unwrap();
     let second = Question::from_json(r#"{"decide":"Refund?","name":"other","wording_version":7,"model":"fixed","batch":2,"on":[""],"item_schema":{"type":"string"},"context_schema":{"type":"object","properties":{}}}"#).unwrap();
-    let live = engine
-        .decide_complete_with(&first, "Refund me.", CallOptions::new())
-        .unwrap();
-    let cached = engine
-        .decide_complete_with(&second, "Refund me.", CallOptions::new())
-        .unwrap();
-    assert_eq!(live.value().answer_id(), cached.value().answer_id());
+    let live = crate::api::decide(&engine, &first, "Refund me.", CallOptions::new()).unwrap();
+    let live_result = crate::api::decision(&live).unwrap();
+    let cached = crate::api::decide(&engine, &second, "Refund me.", CallOptions::new()).unwrap();
+    let cached_result = crate::api::decision(&cached).unwrap();
+    assert_eq!(live_result.answer_id(), cached_result.answer_id());
     assert_eq!(
-        live.value().identity().observations(),
-        cached.value().identity().observations()
+        live_result.identity().observations(),
+        cached_result.identity().observations()
     );
-    assert_eq!(cached.value().question().name().unwrap().as_str(), "other");
-    assert_eq!(
-        cached.value().question().wording_version().unwrap().get(),
-        7
-    );
+    assert_eq!(cached_result.question().name().unwrap().as_str(), "other");
+    assert_eq!(cached_result.question().wording_version().unwrap().get(), 7);
     schema::call(&cached, "completeDecide");
-    let output: Value = serde_json::from_str(&cached.value().to_json().unwrap()).unwrap();
+    let output: Value = serde_json::from_str(&cached_result.to_json().unwrap()).unwrap();
     assert_eq!(output["question"]["item_schema"], json!({"type":"string"}));
     assert_eq!(output["question"]["model"], "fixed");
     assert_eq!(output["question"]["batch"], 2);
@@ -53,9 +39,7 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
     )
     .unwrap();
     for engine in [&engine, &build().replay(&folder).unwrap().build().unwrap()] {
-        let error = engine
-            .decide_complete_with(&bad, "Refund me.", CallOptions::new())
-            .unwrap_err();
+        let error = crate::api::decide(engine, &bad, "Refund me.", CallOptions::new()).unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert_eq!(
             error.detail().message(),
@@ -74,10 +58,8 @@ fn metadata_edits_reuse_actual_observations_but_declarations_validate_before_cac
 #[test]
 fn declarations_admit_typed_projection_false_unicode_and_extras_without_coercion_or_partial_finite_sends()
  {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let schema = InputDeclaration::Object(
         ObjectDeclaration::new(
@@ -107,19 +89,18 @@ fn declarations_admit_typed_projection_false_unicode_and_extras_without_coercion
                 .unwrap(),
         )
         .unwrap();
-    let error = engine
-        .decide_records_complete_with(&question, [input(), bad], CallOptions::new())
+    let error = crate::api::eager_decisions(&engine, &question, [input(), bad], CallOptions::new())
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(error.stopped().at(), Some(2));
     assert_eq!(listener.count(), 0);
-    let call = engine
-        .decide_records_complete_with(
-            &question,
-            [input()],
-            CallOptions::new().context("Fallback."),
-        )
-        .unwrap();
+    let call = crate::api::decide_records(
+        &engine,
+        &question,
+        [input()],
+        CallOptions::new().context("Fallback."),
+    )
+    .unwrap();
     assert_eq!(call.value()[0].result().value(), Answer::Yes);
     let requests = listener.requests();
     let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
@@ -161,40 +142,61 @@ fn closed_question_metadata_grammar_refuses_unknown_features_and_lexically_nonin
         assert!(!format!("{error:?}").contains("secret"));
     }
     let old = Question::from_json(r#"{"decide":"Refund?"}"#).unwrap();
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
-    let call = engine(&listener)
-        .decide_complete_with(&old, "Refund me.", CallOptions::new())
-        .unwrap();
-    assert!(call.value().question().name().is_none());
-    assert!(call.value().question().wording_version().is_none());
-    assert!(!call.value().to_json().unwrap().contains("wording_version"));
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
+    let call =
+        crate::api::decide(&engine(&listener), &old, "Refund me.", CallOptions::new()).unwrap();
+    assert!(
+        crate::api::decision(&call)
+            .unwrap()
+            .question()
+            .name()
+            .is_none()
+    );
+    assert!(
+        crate::api::decision(&call)
+            .unwrap()
+            .question()
+            .wording_version()
+            .is_none()
+    );
+    assert!(
+        !crate::api::decision(&call)
+            .unwrap()
+            .to_json()
+            .unwrap()
+            .contains("wording_version")
+    );
 }
 
 #[test]
 fn annotation_declarations_check_whole_typed_documents_and_every_member_before_dispatch() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let objects = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"refund":{"decide":"Refund?","name":"authored-name","wording_version":4,"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"}},"required":["ready"]}}}}"#).unwrap();
     let text = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"refund":{"decide":"Refund?","item_schema":{"type":"string"}}}}"#).unwrap();
     let document = r#"{"ready":false,"body":"Refund me."}"#;
-    let error = engine
-        .annotate_complete_with(&text, [document], CallOptions::new())
-        .unwrap_err();
+    let error = crate::api::annotate(
+        &engine,
+        &text,
+        crate::api::plain_inputs([document]),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
         error.detail().message(),
         "the item does not match item_schema"
     );
     assert_eq!(listener.count(), 0);
-    let call = engine
-        .annotate_complete_with(&objects, [document], CallOptions::new())
-        .unwrap();
+    let call = crate::api::annotate(
+        &engine,
+        &objects,
+        crate::api::plain_inputs([document]),
+        CallOptions::new(),
+    )
+    .unwrap();
     let row: Value = serde_json::from_str(&call.value()[0].result().to_json().unwrap()).unwrap();
     assert_eq!(
         row["answers"]["refund"]["question"]["name"],
@@ -206,15 +208,17 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
         .unwrap()
         .compose(RawRecord::text(document).unwrap())
         .unwrap();
-    engine
-        .annotate_records_complete_with(&text, [literal], CallOptions::new())
-        .unwrap();
+    crate::api::annotate(&engine, &text, [literal], CallOptions::new()).unwrap();
     let mixed = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"valid":{"decide":"Refund?","item_schema":{"type":"object","properties":{}}},"invalid":{"decide":"Ready?","item_schema":{"type":"string"}}}}"#).unwrap();
     assert_eq!(
-        engine
-            .annotate_complete_with(&mixed, [document], CallOptions::new())
-            .unwrap_err()
-            .kind(),
+        crate::api::annotate(
+            &engine,
+            &mixed,
+            crate::api::plain_inputs([document]),
+            CallOptions::new()
+        )
+        .unwrap_err()
+        .kind(),
         ErrorKind::Usage
     );
     assert_eq!(listener.count(), 2);
@@ -222,10 +226,8 @@ fn annotation_declarations_check_whole_typed_documents_and_every_member_before_d
 
 #[test]
 fn declarations_refuse_coercion_and_distinguish_absent_context_from_json_looking_text() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let scalar = Question::decide("Refund?")
         .unwrap()
@@ -237,8 +239,7 @@ fn declarations_refuse_coercion_and_distinguish_absent_context_from_json_looking
         .compose(RawRecord::json(r#"{"amount":12}"#).unwrap())
         .unwrap();
     assert_eq!(
-        engine
-            .decide_records_complete_with(&scalar, [number], CallOptions::new())
+        crate::api::eager_decisions(&engine, &scalar, [number], CallOptions::new())
             .unwrap_err()
             .detail()
             .message(),
@@ -251,30 +252,20 @@ fn declarations_refuse_coercion_and_distinguish_absent_context_from_json_looking
             ObjectDeclaration::new(vec![], vec![]).unwrap(),
         ))
         .unwrap();
-    let absent = RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: "Refund me.",
-        context: None,
-        options: None,
-    };
-    engine
-        .decide_records_complete_with(
-            &object_context,
-            [absent],
-            CallOptions::new().context("Shared text remains text."),
-        )
-        .unwrap();
+    let absent = crate::api::record("Refund me.");
+    crate::api::decide_records(
+        &engine,
+        &object_context,
+        [absent],
+        CallOptions::new().context("Shared text remains text."),
+    )
+    .unwrap();
     let explicit = RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: "Refund me.",
         context: Some("{}".into()),
-        options: None,
+        ..crate::api::record("Refund me.")
     };
     assert_eq!(
-        engine
-            .decide_records_complete_with(&object_context, [explicit], CallOptions::new())
+        crate::api::eager_decisions(&engine, &object_context, [explicit], CallOptions::new())
             .unwrap_err()
             .detail()
             .message(),

@@ -24,7 +24,7 @@ fn recognize(listener: &Listener, options: &[&str], text: &str) -> Output {
 
 /// The run printed nothing, and its message is exactly `says`.
 fn quiet(output: &Output, code: i32, says: &str) {
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(output);
     assert_eq!(output.status.code(), Some(code), "{stderr}");
     assert!(output.stdout.is_empty());
     assert_eq!(stderr, says);

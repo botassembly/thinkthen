@@ -3,15 +3,13 @@
 //! Each failing listener serves three copies of its failure, so the old rule's
 //! two default retries would each reach it. The listener's count is the proof.
 
-use std::fs;
+use crate::harness::{Canned, Listener, spawn_one as spawn, stderr_is};
 use std::io;
-use std::path::{Path, PathBuf};
 use std::process::Output;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::support::{keys, stored};
 
 /// The key every case sends, which no output may carry.
@@ -72,11 +70,7 @@ fn failing(failure: impl Fn() -> Canned) -> io::Result<Listener> {
 }
 
 /// A fresh folder under the test target directory.
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 /// Check one failed send: one request, exit 4, this sentence, and no secret.
 fn failed_once(listener: &Listener, output: &Output, said: &str) {
@@ -87,11 +81,11 @@ fn failed_once(listener: &Listener, output: &Output, said: &str) {
     );
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), said);
+    assert_eq!(crate::harness::said(output), said);
     let shown = format!(
         "{}{}{output:?}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        crate::harness::printed(output),
+        crate::harness::said(output)
     );
     for secret in [KEY, EVIDENCE] {
         assert!(!shown.contains(secret), "{secret} leaked");
@@ -143,11 +137,10 @@ fn a_stalled_two_record_batch_names_timeout_advice() {
     .expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 1);
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: stopped at record 1; the request for records 1 to 2 failed: the backend timed out; increase --timeout or try again; 0 records finished\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: stopped at record 1; the request for records 1 to 2 failed: the backend timed out; increase --timeout or try again; 0 records finished\n",
     );
 }
 
@@ -185,9 +178,9 @@ fn a_reply_of_exactly_the_bound_is_kept() {
         decide(&listener, &["--no-cache"], &[], EVIDENCE).expect("the compiled binary runs");
 
     assert_eq!(listener.requests().len(), 1);
-    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    stderr_is(&output, "");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
+    assert_eq!(crate::harness::printed(&output), "true\n");
 }
 
 #[test]
@@ -211,7 +204,7 @@ fn a_retried_status_is_still_sent_again() {
     }
     assert_eq!(requests[0].body, requests[1].body, "retry keeps the body");
     assert_eq!(output.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(printed.contains(r#""requests_sent":2,"#), "{printed}");
 }
 
@@ -278,10 +271,10 @@ fn a_record_run_sends_each_request_at_most_once_and_caches_no_failure() {
         }
     }
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         format!(
             "{CLOSED}thinkthen: stopped at record 2; 1 record finished, 0 records from a recording\n"
-        )
+        ),
     );
 }

@@ -10,22 +10,17 @@ def _literal(value):
     if get_origin(value) is not Literal:
         raise UsageError("labels take a direct Literal of strings")
     labels = get_args(value)
-    if any(not isinstance(label, str) for label in labels):
-        raise UsageError("Literal labels are strings")
-    if len(set(labels)) != len(labels):
-        raise UsageError("Literal labels must be distinct")
-    return list(labels)
+    from ._thinkthen import _label_names
+    return _label_names("Literal", list(labels))
 
 
 def _enum(value):
     labels = []
     meanings = {}
-    if len(value.__members__) != len(list(value)):
-        raise UsageError("Enum labels must not have aliases")
+    from ._thinkthen import _label_names
+    _label_names("Enum", [member.name for member in value.__members__.values()])
     for member in value:
         label = member.value if isinstance(member.value, str) else member.name
-        if label in labels:
-            raise UsageError("Enum labels must be distinct")
         labels.append(label)
         meaning = getattr(member, "description", None)
         if meaning is None:
@@ -34,6 +29,7 @@ def _enum(value):
                 meaning = doc
         if meaning is not None:
             meanings[label] = meaning
+    _label_names("EnumValues", labels)
     return labels, meanings
 
 
@@ -60,14 +56,5 @@ def normalize(value, descriptions=None, *, bare_level_names=False):
         if get_origin(value) is not None:
             raise UsageError("labels take a direct Literal of strings")
         return value
-    if descriptions is not None:
-        if not isinstance(descriptions, dict):
-            raise UsageError("descriptions= maps selected labels to meanings")
-        unknown = descriptions.keys() - set(labels)
-        if unknown:
-            raise UsageError("descriptions= names an unknown label")
-        meanings.update(descriptions)
-    if not meanings:
-        return labels
-    return {label: meanings[label] if label in meanings else
-            (label if bare_level_names else None) for label in labels}
+    from ._thinkthen import _label_values
+    return _label_values(labels, meanings, descriptions, bare_level_names)

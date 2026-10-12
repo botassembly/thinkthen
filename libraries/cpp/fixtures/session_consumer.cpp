@@ -78,15 +78,23 @@ int main(int argc,char** argv) {
             throw std::invalid_argument("unknown fixture function");
         };
         auto call=start();
-        if(v.at("cancel").get<bool>()) call.cancel();
+        if(v.at("cancel").get<bool>()) {
+            call.cancel();
+            auto item=RequestSessionDescriptor().set_item(RequestItem().set_original(RequestOriginalText().set_text("closed-push")));
+            if(call.try_push(item) || !call.input_closed() || call.try_push(item)) throw std::logic_error("cancelled push did not stop");
+            auto moved=std::move(call);
+            if(!moved.input_closed() || !call.input_closed() || moved.try_push(item)) throw std::logic_error("moved closed intake reopened");
+            call=std::move(moved);
+        }
         Json::Array packets;
         try {
             if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
+                if(call.input_closed()) break;
                 auto next=RequestSessionDescriptor().set_item(RequestItem::from_document(item));
-                while(!call.try_push(next)) {
+                while(!call.try_push(next) && !call.input_closed()) {
                     auto packet=call.poll();
                     if(packet.packet) packets.push_back(packet.packet->document());
-                    else std::this_thread::yield();
+                    else call.wait(true);
                 }
             }
             call.finish();

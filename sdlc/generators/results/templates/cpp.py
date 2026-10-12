@@ -92,6 +92,12 @@ def input_render(definitions):
                 bodies += [f'inline {n}::{n}(const {cn}& value):Node(value.document()) {{}}']
         elif 'properties' in s:
             constants={k:v['const'] for k,v in s['properties'].items() if isinstance(v,dict) and 'const' in v}
+            for member, field in s['properties'].items():
+                if isinstance(field, dict) and '$ref' in field and member in s.get('required', []):
+                    resolved = definitions[field['$ref'].removeprefix('#/$defs/')]
+                    values = enum_values(resolved)
+                    if values and len(values) == 1:
+                        constants[member] = values[0]
             expr='Json::Object{'+','.join('{'+json.dumps(k)+',Json('+json.dumps(v)+')}' for k,v in constants.items())+'}'
             lines += [f'    {n}():Node(Json({expr})) {{}}']
             for member,field in s['properties'].items():

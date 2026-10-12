@@ -3,7 +3,8 @@
 
 The sources are the historical ticket blocks (0084, 0095, 0147), the export
 sentence for `choices!`, ADR 0017's throttle rename, and tickets 0278 and
-every later ticket's `### Added public declarations` block, in ticket order. No file here copies the declaration list.
+every later ticket's `### Added public declarations` block, in ticket order,
+then specification/rust-api-0.2.md's reviewed delta. No file here copies the declaration list.
 `cargo public-api`, pinned by the install rung, reads the built crate. The
 self-test plants four changes in the real listing and proves each one fails.
 """
@@ -237,7 +238,8 @@ def contract() -> set[str]:
         page = path.read_text(encoding="utf-8")
         if "### Added public declarations" in page or "### Retired public declarations" in page:
             items = apply_additions(items, page, path.name[:4])
-    return items
+    delta = REPO / "specification" / "rust-api-0.2.md"
+    return apply_additions(items, delta.read_text(encoding="utf-8"), delta.name)
 
 
 def built(listing: list[str]) -> set[str]:

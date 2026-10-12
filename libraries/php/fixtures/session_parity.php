@@ -60,7 +60,7 @@ function consume(stdClass $fixture, Client $client): array
                     if (file_exists($signal)) { $operation->cancel(); touch($signal.'.fired'); }
                     $packet = $operation->poll();
                     if ($packet !== null) $packets[] = $packet;
-                    usleep(1000);
+                    $operation->wait();
                 } while ($packet?->kind !== 'terminal');
             } finally { $operation->close(); }
         } else $packets = $client->$verb($question, $input, $options, $cancel)->packets;

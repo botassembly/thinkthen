@@ -32,7 +32,8 @@ impl Engine {
     /// Pull fallible originals with a mandatory whole ordered shortlist on every record.
     /// # Errors
     /// Yields the completed prefix then one joined terminal error with final facts.
-    pub fn try_choose_dynamic_records_complete_with<'a, I, T>(
+    #[cfg(any(test, feature = "polars"))]
+    pub(crate) fn try_choose_dynamic_records_complete_with<'a, I, T>(
         &'a self,
         question: &'a RecordChooseQuestion,
         records: I,
@@ -48,10 +49,13 @@ impl Engine {
                 question.clone().into(),
                 records,
                 options,
-                crate::RequestCall::Choose,
+                crate::RequestFunction::Choose,
             )
-            .and_then(|rows| {
-                rows.choices("a native dynamic choose batch returned another result kind")
+            .and_then(|rows| match rows {
+                crate::RequestRows::Choices(batch) => Ok(batch),
+                _ => Err(Error::defect(
+                    "a native dynamic choose batch returned another result kind",
+                )),
             }),
         )
     }
@@ -94,6 +98,7 @@ impl Engine {
             stop,
             packing,
             most: self.most,
+            pending_inputs: false,
         };
         Ok(pull::try_start_prepared(
             call,

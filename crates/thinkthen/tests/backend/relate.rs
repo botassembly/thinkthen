@@ -1,6 +1,7 @@
 //! The compiled relate command against a counted loopback backend.
 
 use crate::child::ChildEnvironment as _;
+use crate::harness::{Canned, Listener, finish, spawn, spawn_local, stderr_is};
 use std::{
     fs,
     io::Write as _,
@@ -10,8 +11,6 @@ use std::{
 
 use serde_json::Value;
 
-use crate::harness::{Canned, Listener, finish, spawn};
-
 mod at_once;
 mod both_ways;
 mod ceiling;
@@ -19,7 +18,7 @@ mod details;
 mod menu;
 
 fn plan_json(output: &Output) -> Value {
-    let shown = String::from_utf8_lossy(&output.stdout);
+    let shown = crate::harness::printed(output);
     let mut lines = shown.lines();
     let plan = serde_json::from_str(lines.next().expect("plan report")).expect("plan JSON");
     let counts: Value =
@@ -110,12 +109,7 @@ fn a_saved_relate_name_reaches_details_identity_and_warning() {
         ],
         br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#,
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let row: Value = serde_json::from_slice(&output.stdout).expect("details");
     assert_eq!(
         row["meta"]["question_sha256"],
@@ -199,13 +193,8 @@ fn every_true_edge_survives_an_unrelated_entity() {
         }
         let input = format!("[{}]", names.join(","));
         let output = run(&listener, &["wrote=person:song"], input.as_bytes());
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
+        crate::harness::exits(&output, 0);
+        assert_eq!(crate::harness::printed(&output), expected);
     }
     assert_eq!(listener.requests().len(), 2);
 }
@@ -257,38 +246,32 @@ fn relation_recording_replays_without_a_key_and_keeps_the_same_identity() {
     let _removed = fs::remove_dir_all(&root);
     let listener = Listener::answering(answered).expect("listener");
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#;
-    let recorded = spawn(
+    let recorded = spawn_local(
         &[
             "relate",
             "works_for=person:organization",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--record",
             &root.to_string_lossy(),
             "--no-cache",
             "--details",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "secret")],
         input,
     )
     .expect("record");
     assert_eq!(recorded.status.code(), Some(0));
     let _sent = listener.requests();
-    let replayed = spawn(
+    let replayed = spawn_local(
         &[
             "relate",
             "works_for=person:organization",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--replay",
             &root.to_string_lossy(),
             "--no-cache",
             "--details",
         ],
+        listener.base(),
         &[],
         input,
     )
@@ -357,7 +340,7 @@ fn a_question_file_beside_inline_rules_is_refused_before_any_send() {
             assert_eq!(output.status.code(), Some(2), "{options:?}");
             assert!(output.stdout.is_empty(), "{options:?}");
             assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
+                crate::harness::said(&output),
                 "thinkthen: relate takes inline relation rules or one @FILE, never both\n",
                 "{options:?}"
             );
@@ -385,12 +368,7 @@ fn an_option_limit_does_not_change_pair_requests() {
             options.extend(["--profile", profile.to_str().expect("path")]);
         }
         let output = run(&listener, &options, input);
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, 0);
         plans.push(plan_json(&output));
     }
     assert_eq!(plans[0]["backend_profile"], Value::Null);
@@ -470,9 +448,9 @@ fn release_only_a_relation_of_180_names_sends_bounded_requests() {
         names.as_bytes(),
     )
     .expect("command");
-    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    stderr_is(&output, "");
     assert_eq!(output.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert_eq!(printed.lines().count(), 32_220);
     assert_eq!(
         printed.lines().next(),

@@ -17,15 +17,23 @@
   held <- if (tt_interrupt_pending()) {
     list(interrupt = TRUE)
   } else {
-    tryCatch(list(value = expr), error = function(e) .tt_error_condition(e))
+    tryCatch(list(value = .tt_native(expr)), error = function(e) list(cond = e))
   }
   if (is.null(held$cond) && is.null(held$interrupt) && tt_interrupt_pending()) {
     held <- list(interrupt = TRUE)
   }
   if (!is.null(had_hook)) options(error = had_hook)
   if (!is.null(held$interrupt)) .tt_interrupt()
+  if (inherits(held$cond, "thinkthen_interrupt")) .tt_interrupt()
   if (!is.null(held$cond)) stop(held$cond)
   held$value
+}
+
+.tt_native <- function(expr) {
+  value <- expr
+  if (inherits(value, "extendr_error")) stop(value$value)
+  if (inherits(value, "thinkthen_error")) stop(value)
+  value
 }
 
 # Claim before evaluating any asking argument or the first guarded interrupt
@@ -33,12 +41,11 @@
 # owns final settlement after its already-sent work ends.
 .tt_asking <- function(completion, expr) {
   if (!is.null(completion)) {
-    tryCatch(tt_completion_claim(completion),
-             error = function(e) stop(.tt_condition(conditionMessage(e))))
+    .tt_native(tt_completion_claim(completion))
   }
   early <- "interrupt"
   on.exit(if (!is.null(completion))
-    try(tt_completion_settle_early(completion, early), silent = TRUE), add = TRUE)
+    try(.tt_native(tt_completion_settle_early(completion, early)), silent = TRUE), add = TRUE)
   tryCatch({
     value <- expr
     early <- "success"
@@ -60,39 +67,8 @@
 tt_completion <- function() tt_completion_new()
 tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completion_read_native(handle)))
 
-# One engine error as data: the interrupt marker, or its condition.
-.tt_error_condition <- function(e) {
-  if (inherits(e, "thinkthen_error")) return(list(cond = e))
-  text <- conditionMessage(e)
-  parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
-  if (length(parts) == 3L && identical(parts[[1]], "interrupt")) {
-    return(list(interrupt = TRUE))
-  }
-  list(cond = .tt_condition(text))
-}
-
-# One of the six kinds as an R condition carrying retryable. The Rust half
-# packs kind, retryable, and message around \u{1f} marks.
-.tt_condition <- function(text) {
-  parts <- strsplit(text, "\u{1f}", fixed = TRUE)[[1]]
-  if (!(length(parts) %in% c(3L,4L))) return(simpleError(text))
-  complete <- if (length(parts) == 4L) tt_complete_error_native(parts[[4L]]) else NULL
-  structure(
-    class = c(paste0("thinkthen_", parts[[1]]), "thinkthen_error", "error", "condition"),
-    list(message = parts[[3]], kind = parts[[1]], retryable = identical(parts[[2]], "true"),
-         complete = complete, facts = if (is.null(complete)) NULL else complete$facts,
-         call = NULL)
-  )
-}
-
-# A caller's own mistake, refused before any request with the usage kind.
-.tt_usage <- function(message) {
-  stop(.tt_condition(paste("usage", "false", message, sep = "\u{1f}")))
-}
-
-.tt_local <- function(message) {
-  stop(.tt_condition(paste("local", "false", message, sep = "\u{1f}")))
-}
+.tt_usage <- function(message) .tt_call(tt_error_native("usage", message))
+.tt_local <- function(message) .tt_call(tt_error_native("local", message))
 
 # R's own interrupt, delivered for real: the guarded check consumed the
 # pending signal, so the process sends itself SIGINT and sleeps, and the

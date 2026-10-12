@@ -29,6 +29,17 @@ static class SessionChecks
         catch (ObjectDisposedException) { }
         Console.WriteLine("INSTALLED_CSHARP_USAGE_PASS");
     }
+    public static void ImmediateDiagnostics(Engine engine)
+    {
+        try {
+            using var refused = engine.StartSession(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = new InputRequestQuestionText { Text = "" }, Input = new InputRequestInputText { Text = "unreachable" } } });
+            throw new Exception("empty question admitted");
+        }
+        catch (ThinkThen.Failure error) {
+            if (error.Kind != ThinkThen.FailureKind.Usage || error.Retryable || error.FactsJson is not null || error.Message != "a question is text, not white space") throw;
+        }
+        Console.WriteLine("INSTALLED_CSHARP_IMMEDIATE_DIAGNOSTICS_PASS");
+    }
     static InputRequestQuestionText Question => new() { Text = "Is it?" };
     static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchAlternative0 { Value = 1 } } } };
     static InputRequestSessionDescriptor Item(string text) => new() { Item = new InputRequestItem { Original = new InputRequestOriginalText { Text = text } } };
@@ -110,6 +121,7 @@ static class SessionChecks
             try { using var refused = Engine.Open(invalid); throw new Exception("invalid typed settings admitted"); }
             catch (ThinkThen.Failure error) when (error.Kind == ThinkThen.FailureKind.Usage && error.FactsJson is null) { }
         }
+        ImmediateDiagnostics(engine);
         foreach (InputRequestReaderFailure failure in new InputRequestReaderFailure[] {
             new InputRequestReaderFailureIo(),
             new InputRequestReaderFailureUtf8 { Location = new InputSessionSourceLocation { File = "private-file", FirstLine = 1, LastLine = 2 } },

@@ -153,8 +153,8 @@ pub(crate) fn written(folder: &Path) -> Vec<PathBuf> {
 /// run wrote, and no header name that carries it may reach a file either. The
 /// evidence may reach no byte of standard error.
 pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
-    let out = String::from_utf8_lossy(&output.stdout);
-    let err = String::from_utf8_lossy(&output.stderr);
+    let out = crate::harness::printed(output);
+    let err = crate::harness::said(output);
     assert!(!out.contains(KEY), "{named}: the key is on standard output");
     assert!(!err.contains(KEY), "{named}: the key is on standard error");
     for marker in [EVIDENCE, SECOND, KIND] {
@@ -279,7 +279,7 @@ fn sweep(
         output.status.code(),
         Some(route.code),
         "{case} {view:?}: {}{}",
-        String::from_utf8_lossy(&output.stderr),
+        crate::harness::said(&output),
         seen(&listener)
     );
     assert_eq!(
@@ -288,7 +288,7 @@ fn sweep(
         "{case} {view:?}: the requests the listener saw"
     );
     if let Some(says) = says {
-        let said = String::from_utf8_lossy(&output.stderr);
+        let said = crate::harness::said(&output);
         assert!(said.contains(says), "{case} {view:?}: {said}");
     }
     if route.named == "a success" {

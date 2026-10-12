@@ -22,8 +22,55 @@ impl Engine {
     where
         I: IntoIterator<Item = Entity>,
     {
-        let entities = admitted(ask, entities)?;
-        self.relate_admitted_complete(ask, entities, options, false, &[])
+        self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
+            engine.relate_admitted_complete(ask, entities, options, (false, false), &[])
+        })
+    }
+
+    pub(crate) fn relate_strict_with<I: IntoIterator<Item = Entity>>(
+        &self,
+        ask: &Relate,
+        entities: I,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Vec<Edge>>, Error> {
+        self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
+            if entities.is_empty() {
+                return empty_relations(engine, options);
+            }
+            Ok(engine
+                .relate_admitted_complete(ask, entities, options, (false, true), &[])?
+                .map(|result| result.value))
+        })
+    }
+
+    fn relate_entities_request<I: IntoIterator<Item = Entity>, R>(
+        &self,
+        ask: &Relate,
+        entities: I,
+        mut options: CallOptions<'_>,
+        run: impl FnOnce(
+            &Engine,
+            &Relate,
+            Vec<core::RelationEntity>,
+            CallOptions<'_>,
+        ) -> Result<R, Error>,
+    ) -> Result<R, Error> {
+        options.entity_rows = true;
+        crate::public::request::native(
+            self,
+            crate::RequestFunction::Relate,
+            ask.clone().into(),
+            entities
+                .into_iter()
+                .map(|entity| Ok(crate::public::record_input::plain(NativeEntity(entity)))),
+            options,
+            |engine, definition, records, controls| {
+                let ask = definition.relation()?;
+                let entities =
+                    admitted(&ask, records.into_iter().map(|row| row.original.original.0))?;
+                run(engine, &ask, entities, controls)
+            },
+        )
     }
 
     fn relate_admitted_complete(
@@ -31,7 +78,7 @@ impl Engine {
         ask: &Relate,
         entities: Vec<core::RelationEntity>,
         options: CallOptions<'_>,
-        lines: bool,
+        (lines, strict): (bool, bool),
         inputs: &[Arc<crate::public::QuestionInput>],
     ) -> Result<Call<CompleteRelated>, Error> {
         let engine = contextual(self.for_model(ask.0.model.as_ref())?, &options)?;
@@ -63,6 +110,16 @@ impl Engine {
                     },
                 )
                 .map_err(Error::from)?;
+            if strict && execution.failed > 0 {
+                return Err(Error::of(
+                    crate::ErrorKind::Backend,
+                    format!(
+                        "the backend failed {} of {} relation questions",
+                        execution.failed,
+                        execution.logical.len(),
+                    ),
+                ));
+            }
             if execution.failed > 0 && execution.answered == 0 {
                 return Err(crate::public::asking::backend_failed());
             }
@@ -103,6 +160,14 @@ impl Engine {
     }
 }
 
+/// Typed entities retain the native kind/name contract without inventing records.
+struct NativeEntity(Entity);
+impl crate::InputEvidence for NativeEntity {
+    fn question_input(&self) -> crate::QuestionInput {
+        crate::QuestionInput::Text(self.0.name().to_owned())
+    }
+}
+
 fn admitted(
     ask: &Relate,
     entities: impl IntoIterator<Item = Entity>,
@@ -120,3 +185,15 @@ fn admitted(
 mod preview;
 pub(crate) use preview::Preview as RelationPreview;
 pub(in crate::public) use preview::prepare as preview_relations;
+
+fn empty_relations(engine: &Engine, options: CallOptions<'_>) -> Result<Call<Vec<Edge>>, Error> {
+    let stop = Stop::begin(options)?.with_prices(engine.prices);
+    stop.run_call(0, |_| {
+        let edges = Vec::new();
+        stop.observe(crate::RecordObservation::Row {
+            index: 0,
+            value: crate::ObservedRow::Relations(&edges),
+        });
+        Ok(edges)
+    })
+}

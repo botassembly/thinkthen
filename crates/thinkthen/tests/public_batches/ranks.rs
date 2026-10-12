@@ -40,11 +40,7 @@ fn a_rank_question_sends_its_own_model() {
 fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let limited = Engine::builder()
-        .base_url(listener.base())
-        .expect("url")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let limited = crate::api::builder(listener.base(), "sk-public-batches")
         .max_requests(Some(2))
         .expect("limit")
         .no_cache()
@@ -52,21 +48,29 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
         .expect("engine");
     let ranked = Question::rank("Q?").expect("rank");
     let found = Question::find("Q?").expect("find");
-    for rank in [true, false] {
+    for route in ["rank", "request find", "direct find"] {
         let pulls = AtomicUsize::new(0);
         let input = std::iter::from_fn(|| {
             let n = pulls.fetch_add(1, Ordering::SeqCst);
             assert!(n < 3, "tail stays unread");
             Some(Ok("alpha"))
         });
-        let error = if rank {
+        let error = if route == "rank" {
             limited
                 .try_rank_with(&ranked, input, CallOptions::new())
                 .expect_err("rank cap")
-        } else {
+        } else if route == "direct find" {
             limited
                 .try_find_with(&found, input, CallOptions::new())
-                .expect_err("find cap")
+                .expect_err("direct find cap")
+        } else {
+            crate::api::find(
+                &limited,
+                &found,
+                input.map(|row| row.map(crate::api::record)),
+                CallOptions::new(),
+            )
+            .expect_err("find cap")
         };
         assert_eq!(
             error.to_string(),
@@ -82,20 +86,31 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
             found.clone()
         };
         let maximum = if none { 254 } else { 255 };
-        let pulls = AtomicUsize::new(0);
-        let input = std::iter::from_fn(|| {
-            assert!(
-                pulls.fetch_add(1, Ordering::SeqCst) <= maximum,
-                "tail stays unread"
-            );
-            Some(Ok("alpha"))
-        });
-        assert!(
-            engine
-                .try_find_with(&asked, input, CallOptions::new())
-                .is_err()
-        );
-        assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
+        for direct in [false, true] {
+            let pulls = AtomicUsize::new(0);
+            let input = std::iter::from_fn(|| {
+                assert!(
+                    pulls.fetch_add(1, Ordering::SeqCst) <= maximum,
+                    "tail stays unread"
+                );
+                Some(Ok("alpha"))
+            });
+            let error = if direct {
+                engine
+                    .try_find_with(&asked, input, CallOptions::new())
+                    .expect_err("find count")
+            } else {
+                crate::api::find(
+                    &engine,
+                    &asked,
+                    input.map(|row| row.map(crate::api::record)),
+                    CallOptions::new(),
+                )
+                .expect_err("request find count")
+            };
+            assert_eq!(error.kind(), ErrorKind::Usage);
+            assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
+        }
     }
     let error = engine
         .try_rank_with(
@@ -206,18 +221,30 @@ fn release_only_find_complete_set_stops_at_aggregate_byte_limit_before_any_send(
     let engine = engine(listener.base());
     let found = Question::find("Q?").expect("find");
     let large = "x".repeat(8 * 1024 * 1024 + 1);
-    let pulls = AtomicUsize::new(0);
-    let input = std::iter::from_fn(|| {
-        assert!(
-            pulls.fetch_add(1, Ordering::SeqCst) < 2,
-            "byte tail stays unread"
-        );
-        Some(Ok(large.as_str()))
-    });
-    let error = engine
-        .try_find_with(&found, input, CallOptions::new())
-        .expect_err("bytes");
-    assert_eq!(error.to_string(), "find input exceeds 16 MiB");
-    assert_eq!(pulls.load(Ordering::SeqCst), 2);
+    for direct in [false, true] {
+        let pulls = AtomicUsize::new(0);
+        let input = std::iter::from_fn(|| {
+            assert!(
+                pulls.fetch_add(1, Ordering::SeqCst) < 2,
+                "byte tail stays unread"
+            );
+            Some(Ok(large.as_str()))
+        });
+        let error = if direct {
+            engine
+                .try_find_with(&found, input, CallOptions::new())
+                .expect_err("direct find bytes")
+        } else {
+            crate::api::find(
+                &engine,
+                &found,
+                input.map(|row| row.map(crate::api::record)),
+                CallOptions::new(),
+            )
+            .expect_err("request find bytes")
+        };
+        assert_eq!(error.to_string(), "find input exceeds 16 MiB");
+        assert_eq!(pulls.load(Ordering::SeqCst), 2);
+    }
     assert_eq!(listener.count(), 0);
 }

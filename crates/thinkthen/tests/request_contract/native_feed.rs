@@ -389,13 +389,9 @@ fn undeclared_native_images_still_refuse_function_and_route_without_sends() {
             include_bytes!("../../../../specification/fixtures/images/red.png").to_vec(),
         )
         .unwrap();
-        let record = RecordInput {
-            original: QuestionInput::Images(ImageEvidence::new(None, vec![image]).unwrap()),
-            context: None,
-            options: None,
-            examples: None,
-            seed_spans: None,
-        };
+        let record = crate::api::record(QuestionInput::Images(
+            ImageEvidence::new(None, vec![image]).unwrap(),
+        ));
         let error = engine
             .execute_request(
                 &admitted,

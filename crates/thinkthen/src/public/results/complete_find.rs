@@ -26,6 +26,16 @@ pub struct CompleteFound<T> {
 }
 
 impl<T> CompleteFound<T> {
+    /// Transform every original candidate without changing selection or probabilities.
+    #[must_use]
+    pub fn map_original<U>(self, map: impl FnMut(T) -> U) -> CompleteFound<U> {
+        CompleteFound {
+            canonical: self.canonical,
+            found: self.found.map(map),
+            sources: self.sources,
+        }
+    }
+
     /// Actual mapped selection, distinct from the backend's raw leading pick.
     #[must_use]
     pub fn selection(&self) -> FindSelection {

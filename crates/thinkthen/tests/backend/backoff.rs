@@ -1,11 +1,10 @@
 //! A few compiled-command requests pin retry counts and body reuse.
 
+use crate::harness::{Canned, Listener, spawn, spawn_one, stderr_is};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 #[cfg(unix)]
 use std::{fs, path::Path};
-
-use crate::harness::{Canned, Listener, spawn, spawn_one};
 
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
 
@@ -41,7 +40,7 @@ fn default_and_explicit_retry_counts_are_per_request() {
             assert_eq!(output.stdout, b"true\n");
         } else {
             assert!(output.stdout.is_empty());
-            assert!(String::from_utf8_lossy(&output.stderr).contains("503"));
+            assert!(crate::harness::said(&output).contains("503"));
         }
     }
 }
@@ -65,7 +64,7 @@ fn a_line_break_in_the_key_fails_locally_without_a_send() {
     .expect("compiled command");
     assert_eq!(output.status.code(), Some(2));
     assert!(listener.requests().is_empty());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(&output);
     assert!(
         stderr.contains("API key contains a control character"),
         "{stderr}"
@@ -152,8 +151,8 @@ fn a_malformed_rate_variable_is_a_usage_error_before_any_send() {
     .expect("compiled command");
     assert_eq!(output.status.code(), Some(2));
     assert!(listener.requests().is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000\n"
+    stderr_is(
+        &output,
+        "thinkthen: THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000\n",
     );
 }

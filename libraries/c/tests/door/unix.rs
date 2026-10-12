@@ -89,6 +89,8 @@ pub(super) fn compile(source: &Path) -> PathBuf {
         ])
         .args(["-fsanitize=address", "-fno-omit-frame-pointer", "-I"])
         .arg(crate_dir().join("include"))
+        .arg("-I")
+        .arg(crate_dir().join("tests/c"))
         .arg(source)
         .arg("-o")
         .arg(&binary)

@@ -21,7 +21,7 @@ pub(crate) fn inline(verb: Verb, text: &str, typed: &Typed) -> Result<Prepared, 
         rank_set: None,
     })
 }
-pub(super) fn saved(verb: Verb, text: &str, typed: &Typed) -> Result<Prepared, Error> {
+pub(crate) fn saved(verb: Verb, text: &str, typed: &Typed) -> Result<Prepared, Error> {
     let (file, batch) = QuestionFile::parse_top(text).map_err(Error::refused)?;
     Ok(Prepared {
         resolved: resolve(verb, None, Some(&file), typed).map_err(Error::refused)?,

@@ -7,7 +7,7 @@ case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit
 for tool in gprbuild gnatmake gcc python3 flock nm node; do
   command -v "$tool" >/dev/null 2>&1 || { echo "Ada gate missing $tool" >&2; exit 77; }
 done
-lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}
+lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-heavy.lock}
 if [ "${TT_ADA_LOCKED:-0}" != 1 ] && [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
   TT_ADA_LOCKED=1 exec flock -w 180 -E 75 -o "$lock" env TT_ADA_LOCKED=1 "$0" "$@"
 fi
@@ -48,10 +48,10 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
   "$smoke/smoke"
   exit
 fi
-python3 "$ROOT/checks/native_session.py"
-python3 "$ROOT/../../conformance/children/usage_installed.py" --family ada
-# Full generated shared cases belong to the release profile.
+# Install the package once and select the caller for this profile.
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ]; then
   python3 "$ROOT/checks/native_session.py" --full
+else
+  python3 "$ROOT/checks/native_session.py"
 fi
 echo 'Ada installed typed package gate passed'

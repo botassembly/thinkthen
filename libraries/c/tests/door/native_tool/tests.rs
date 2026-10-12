@@ -116,12 +116,7 @@ static int failed_join(pthread_t thread) {
 #define thinkthen_engine_free(engine) ((void)(engine), _Exit(42))
 int main(void) {"#;
     let source = folder.join("join_refusal.c");
-    let input = input
-        .replace(
-            "\"platform.h\"",
-            &format!("\"{}\"", crate_dir().join("tests/c/platform.h").display()),
-        )
-        .replace("int main(void) {", injection);
+    let input = input.replace("int main(void) {", injection);
     std::fs::write(&source, input).expect("owned faulted fixture copy");
     let backend = Backend::start().expect("backend");
     let output = run(

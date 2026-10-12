@@ -1,6 +1,7 @@
 //! Completed top-N outputs and the ordered admission window through the CLI.
 
 use super::{Canned, Listener, RECORDS, answered, code, over, printed, said};
+use crate::harness::stderr_is;
 use conformance_backend::{Observed, Rendezvous};
 use std::io;
 use std::sync::{Arc, mpsc};
@@ -115,12 +116,12 @@ fn a_failed_later_row_keeps_rank_top_stdout_empty() -> io::Result<()> {
     )?;
     assert_eq!(code(&output), 4);
     assert_eq!(printed(&output), "");
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
             "thinkthen: stopped at record 2; 1 record finished, and nothing was printed because an order needs every record\n",
-        )
+        ),
     );
     Ok(())
 }

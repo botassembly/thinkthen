@@ -9,17 +9,7 @@ use thinkthen::{
 
 #[cfg(test)]
 fn engine(listener: &Listener) -> Engine {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap()
+    crate::api::loopback(listener.base(), "complete-private")
 }
 #[cfg(test)]
 fn folder() -> std::path::PathBuf {
@@ -128,3 +118,9 @@ mod recognize_context;
 mod recognize_examples;
 #[path = "native_complete/recognize_proposals.rs"]
 mod recognize_proposals;
+
+#[path = "support/api.rs"]
+mod api;
+
+#[path = "native_complete/eager_coalescing.rs"]
+mod eager_coalescing;

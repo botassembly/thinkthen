@@ -1,5 +1,7 @@
 //! The conformance backend's generic and fault arms, crossed by the compiled command.
 
+pub(crate) use crate::harness::text;
+use crate::harness::{exits_because, spawn};
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -8,8 +10,6 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
-
-use crate::harness::spawn;
 
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-arms")];
 
@@ -32,10 +32,6 @@ fn file(name: &str, text: &str) -> io::Result<PathBuf> {
     Ok(path)
 }
 
-fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
-}
-
 #[test]
 fn an_unknown_body_on_the_case_arm_earns_the_drift_status_and_never_a_generic_answer() {
     let backend = Backend::start().expect("backend");
@@ -46,12 +42,11 @@ fn an_unknown_body_on_the_case_arm_earns_the_drift_status_and_never_a_generic_an
         "unknown",
     )
     .expect("the command runs");
-    assert_eq!(text(&output.stdout), "");
-    assert_eq!(
-        text(&output.stderr),
-        "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
     );
-    assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         backend.count(),
         4,
@@ -115,11 +110,7 @@ fn each_malformed_arm_fails_the_last_question_with_its_cause() {
                 "{{\"ready\":true,\"kind\":{{\"failed\":{{\"kind\":\"backend\",\"cause\":\"{cause}\"}}}}}}\n"
             ),
         );
-        assert_eq!(
-            output.status.code(),
-            Some(6),
-            "{cause} is a partial failure"
-        );
+        exits_because(&output, 6, || format!("{cause} is a partial failure"));
         assert_eq!(backend.count(), 1, "{cause}");
     }
 }

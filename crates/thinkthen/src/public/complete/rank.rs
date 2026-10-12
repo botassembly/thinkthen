@@ -42,16 +42,17 @@ impl Engine {
             return Call::new(held.into_iter().map(|(_, row)| row).collect(), facts)
                 .try_map(|rows| ranked(rows, None));
         }
-        self.try_rank_records_complete_with(question, records, options)
+        let records = self.try_within_admission(records, &options)?;
+        self.execute_rank_records_complete_with(question, records, options)
     }
     /// Admit a fallible whole original set before any complete rank request.
     /// # Errors
-    /// Input failures refuse the whole set before sending; otherwise as rank_records_complete_with.
+    /// Input failures refuse the whole set before sending; started failures retain their facts.
     #[allow(
         clippy::type_complexity,
         reason = "Each ranked original retains its concrete complete result"
     )]
-    pub fn try_rank_records_complete_with<I, T>(
+    pub(crate) fn try_rank_records_complete_with<I, T>(
         &self,
         question: &Question,
         records: I,
@@ -61,26 +62,25 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>>,
         T: InputEvidence,
     {
-        let options = options.started()?;
-        let records = self.try_within_admission(
-            records
-                .into_iter()
-                .enumerate()
-                .map(|(at, record)| record.map_err(|error| error.at_record(at))),
-            &options,
-        )?;
-        self.rank_records_complete_with(question, records, options)
+        crate::public::request::native(
+            self,
+            crate::RequestFunction::Rank,
+            crate::RequestDefinition::Rank(question.clone()),
+            records,
+            options,
+            |engine, definition, records, controls| {
+                let q = definition.rank()?;
+                Ok(crate::public::request::restore(
+                    engine.execute_rank_records_complete_with(&q, records, controls)?,
+                ))
+            },
+        )
     }
-    /// Complete rank of the whole original set using described decide or saved score.
-    /// Positions are assigned after stable ordering, retaining the original ordinals.
-    ///
-    /// # Errors
-    /// Invalid questions or inputs refuse before sending; started failures retain facts.
     #[allow(
         clippy::type_complexity,
-        reason = "Each occurrence retains its original and concrete complete result"
+        reason = "the private Request primitive retains original and complete result types"
     )]
-    pub fn rank_records_complete_with<I, T>(
+    pub(crate) fn execute_rank_records_complete_with<I, T>(
         &self,
         question: &Question,
         records: I,
@@ -92,37 +92,6 @@ impl Engine {
     {
         self.records_complete(InputFunction::Rank, question, records, options)?
             .try_map(|rows| ranked(rows, question.threshold))
-    }
-
-    /// Complete rank of plain originals under one optional shared context.
-    ///
-    /// # Errors
-    /// As rank_records_complete_with, retaining existing rank convenience calls.
-    #[allow(
-        clippy::type_complexity,
-        reason = "Each occurrence retains its original and concrete complete result"
-    )]
-    pub fn rank_complete_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRank>>>, Error>
-    where
-        I: IntoIterator<Item = T>,
-        T: InputEvidence,
-    {
-        self.rank_records_complete_with(
-            question,
-            records.into_iter().map(|original| RecordInput {
-                examples: None,
-                seed_spans: None,
-                original,
-                context: None,
-                options: None,
-            }),
-            options,
-        )
     }
 }
 

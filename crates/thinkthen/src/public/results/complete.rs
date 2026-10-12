@@ -135,8 +135,21 @@ macro_rules! scalar_projection {
             /// Write the existing scalar result/1 details without its record original.
             /// # Errors
             /// Returns a defect if the retained result cannot be serialized.
+            /// Write frozen single-text result/1 details without scheduler batch metadata.
+            /// This projection changes no complete reading or execution fact.
+            /// # Errors
+            /// Returns a defect if the retained result cannot be serialized.
+            pub fn to_unbatched_scalar_json(&self) -> Result<String, Error> {
+                let mut canonical = self.canonical.clone();
+                canonical.clear_batch_metadata();
+                canonical.compatibility.scalar_json()
+                    .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
+            }
+            /// Write result/1 scalar details with actual batch and context metadata.
+            /// # Errors
+            /// Returns a defect if the retained result cannot be serialized.
             pub fn to_scalar_json(&self) -> Result<String, Error> {
-                self.canonical.legacy.scalar_json()
+                self.canonical.compatibility.scalar_json()
                     .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
             }
         }

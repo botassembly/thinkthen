@@ -20,17 +20,7 @@ mod table;
     reason = "a malformed isolated loopback fixture stops the proof"
 )]
 fn engine(listener: &Listener) -> Engine {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("request-fixture")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap()
+    crate::api::loopback(listener.base(), "request-fixture")
 }
 #[allow(
     clippy::unwrap_used,
@@ -110,34 +100,47 @@ fn direct(
     }
     match (function, definition) {
         (RequestFunction::Decide, RequestDefinition::Atomic(q)) => {
-            value!(engine.decide_records_complete_with(q, rows, controls))
+            value!(crate::api::decide_records(engine, q, rows, controls))
         }
         (RequestFunction::Choose, RequestDefinition::Atomic(q)) => {
-            value!(engine.choose_records_complete_with(q, rows, controls))
+            value!(crate::api::choose(engine, q, rows, controls))
         }
         (RequestFunction::Tag, RequestDefinition::Atomic(q)) => {
-            value!(engine.tag_records_complete_with(q, rows, controls))
+            value!(crate::api::tag(engine, q, rows, controls))
         }
         (RequestFunction::Score, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
-            value!(engine.score_records_complete_with(q, rows, controls))
+            value!(crate::api::score(engine, q, rows, controls))
         }
         (RequestFunction::Filter, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
-            value!(engine.filter_records_complete_with(q, rows, controls))
+            value!(crate::api::filter_records(engine, q, rows, controls))
         }
         (RequestFunction::Rank, RequestDefinition::Rank(q)) => {
-            value!(engine.rank_records_complete_with(q, rows, controls))
+            value!(crate::api::eager_rank(engine, q, rows, controls))
         }
         (RequestFunction::Find, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
-            value!(engine.find_records_complete_with(q, rows, controls))
+            value!(crate::api::find(
+                engine,
+                q,
+                (rows).into_iter().map(Ok),
+                controls
+            ))
         }
         (RequestFunction::Annotate, RequestDefinition::Annotate(q)) => {
-            value!(engine.annotate_records_complete_with(q, rows, controls))
+            value!(crate::api::annotate(engine, q, rows, controls))
         }
         (RequestFunction::Recognize, RequestDefinition::Recognition(q)) => {
-            value!(engine.recognize_records_complete_with(q, rows, controls))
+            value!(crate::api::recognize_records(engine, q, rows, controls))
         }
         (RequestFunction::Relate, RequestDefinition::Relate(q)) => {
-            value!(engine.relate_records_complete_with(q, rows, controls))
+            let call = crate::api::whole(
+                engine,
+                function,
+                q.clone().into(),
+                rows.into_iter().map(Ok),
+                controls,
+            )
+            .unwrap();
+            serde_json::to_value(crate::api::related(&call).unwrap()).unwrap()
         }
         _ => panic!("the declared case has the expected native definition"),
     }
@@ -358,26 +361,14 @@ fn native_and_canonical_replays_keep_the_original_answer_identity() {
     let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("request-identity-{}", std::process::id()));
     std::fs::create_dir_all(&folder).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("request-fixture")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "request-fixture")
         .cache_at(&folder)
         .unwrap()
         .max_retries(0)
         .build()
         .unwrap();
     let q = Question::decide("Fits?").unwrap().cut();
-    let rows = vec![RecordInput {
-        original: QuestionInput::Text("Alpha.".into()),
-        context: None,
-        options: None,
-        examples: None,
-        seed_spans: None,
-    }];
+    let rows = vec![crate::api::record(QuestionInput::Text("Alpha.".into()))];
     let live = direct(&engine, RequestFunction::Decide, &q.clone().into(), rows);
     let request = Request::new(RequestCall::Decide(args(
         q.into(),
@@ -413,19 +404,13 @@ fn text_request_band_keeps_native_threshold_reading() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
     let question = Question::decide("Fits?").unwrap().band(0.8, 0.95).unwrap();
-    let expected = engine
-        .decide_records_complete_with(
-            &question,
-            vec![RecordInput {
-                original: QuestionInput::Text("Alpha.".into()),
-                context: None,
-                options: None,
-                examples: None,
-                seed_spans: None,
-            }],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let expected = crate::api::decide_records(
+        &engine,
+        &LoadedQuestion::Banded(question),
+        vec![crate::api::record(QuestionInput::Text("Alpha.".into()))],
+        CallOptions::new(),
+    )
+    .unwrap();
     let request = Request::new(RequestCall::Decide(RequestArguments {
         question: RequestQuestion::Text {
             text: "Fits?".into(),
@@ -532,3 +517,56 @@ fn authorized_saved_definition_preserves_selector_and_refuses_replacement_before
     assert!(matches!(outcome, RequestOutcome::Complete(_)));
     assert_eq!(listener.requests().len(), 1);
 }
+
+#[test]
+fn named_requests_select_function_and_collection_kind() {
+    for name in [
+        "decide",
+        "choose",
+        "tag",
+        "score",
+        "filter",
+        "rank",
+        "find",
+        "annotate",
+        "recognize",
+        "relate",
+    ] {
+        let request = Request::named(
+            name,
+            RequestArguments {
+                question: RequestQuestion::Text {
+                    text: "Question?".into(),
+                },
+                input: RequestInput::Records { items: Vec::new() },
+                options: RequestOptions::default(),
+            },
+        )
+        .unwrap();
+        let wire = serde_json::to_value(&request).unwrap();
+        assert_eq!(wire["call"]["function"], name);
+        assert_eq!(
+            wire["call"]["input"]["kind"],
+            match name {
+                "find" => "units",
+                "relate" => "entities",
+                _ => "records",
+            }
+        );
+    }
+    assert!("DECIDE".parse::<RequestFunction>().is_err());
+    assert!("unknown".parse::<RequestFunction>().is_err());
+    let request = Request::for_definition(
+        Question::find("Where?").unwrap().into(),
+        RequestInput::Records { items: Vec::new() },
+        RequestOptions::default(),
+    );
+    assert_eq!(request.call.function(), RequestFunction::Find);
+    assert!(matches!(
+        request.call.arguments().input,
+        RequestInput::Units { .. }
+    ));
+}
+
+#[path = "support/api.rs"]
+mod api;

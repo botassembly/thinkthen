@@ -3,7 +3,7 @@
 use serde_json::Value;
 
 use super::{all_yes, rows, set};
-use crate::harness::{Listener, spawn};
+use crate::harness::Listener;
 
 #[test]
 fn the_input_cap_closes_a_request_at_4096_records() {
@@ -13,10 +13,10 @@ fn the_input_cap_closes_a_request_at_4096_records() {
     );
     let listener = Listener::answering(all_yes).expect("listener");
     let input: String = (1..=4097).map(|at| format!("r{at}\n")).collect();
-    let output = spawn(
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--lines",
             "--batch",
             "max",
@@ -25,21 +25,12 @@ fn the_input_cap_closes_a_request_at_4096_records() {
             "--jobs",
             "2",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
         &[("THINKTHEN_API_KEY", "key")],
         input.as_bytes(),
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let mut sizes: Vec<usize> = listener
         .requests()
         .iter()

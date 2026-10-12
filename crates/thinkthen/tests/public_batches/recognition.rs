@@ -47,11 +47,7 @@ fn recognition_observes_edge_and_stated_relation_in_order() {
         Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":3,"output_tokens":1}}).to_string())
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .prices_usd_per_million("0.25", "0.25")
         .expect("prices")
         .no_cache()

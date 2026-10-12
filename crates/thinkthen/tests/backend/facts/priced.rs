@@ -69,9 +69,7 @@ fn caller_price_config_rounds_once_and_a_retry_missing_usage_omits_cost() {
         assert_eq!(warned.status.code(), Some(0));
         assert_eq!(warned_listener.count(), 1);
         assert_eq!(line(&warned)["estimated_cost_usd"], "0.000001");
-        assert!(
-            String::from_utf8_lossy(&warned.stderr).contains("usage counters could not be updated")
-        );
+        assert!(crate::harness::said(&warned).contains("usage counters could not be updated"));
     }
 
     let retried =
@@ -102,7 +100,7 @@ fn caller_price_config_rejects_invalid_pair_without_a_send() {
     assert_eq!(refused.status.code(), Some(2));
     assert_eq!(listener.count(), 0);
     assert!(
-        String::from_utf8_lossy(&refused.stderr)
+        crate::harness::said(&refused)
             .contains("configuration prices require both input and output fields")
     );
 }

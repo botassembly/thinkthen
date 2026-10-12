@@ -49,11 +49,7 @@ fn the_largest_timeout_answers_and_retries() {
         }
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("loopback address")
-        .api_key("sk-test")
-        .expect("fake key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .timeout(Duration::from_secs(86_400))
         .expect("largest timeout")
         .max_retries(1)

@@ -46,7 +46,7 @@ pub use complete_record::CompleteRecord;
 pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
-pub use call::{Call, DoorReply, Facts};
+pub use call::{Call, CallReply, Facts};
 pub use found::{Candidate, Found, Picked};
 mod ranked;
 pub use ranked::{Ranked, RankedRow};
@@ -54,7 +54,7 @@ mod set_ranked;
 pub use set_ranked::SetRanked;
 mod tally;
 pub use tally::{Tally, TallyStart};
-mod legacy;
+mod compatibility;
 mod member;
 pub(crate) use member::Member;
 pub(crate) use member::batch_warning;
@@ -67,17 +67,12 @@ mod stage_observation;
 pub(crate) use observation::ObservedQuestion;
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 pub use owned_observation::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation};
-pub(crate) use stage_observation::{
-    observe_question, observe_question_at, observe_question_inputs,
-};
+pub(crate) use stage_observation::{observe_question_at, observe_question_inputs};
 
 use serde::Serialize;
 
-use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};
-use crate::engine::facade;
+use crate::core::{self, ProfileWarning, Value, Withheld, json_line};
 use crate::public::error::Error;
-use crate::public::question::Question;
-use crate::result_json::{Run, decision};
 
 /// A result's JSON line, written once when the result is made. `Debug`
 /// withholds it, because it holds the question and the names.
@@ -269,69 +264,6 @@ pub struct Details {
 }
 
 impl Details {
-    pub(crate) fn of(
-        judged: &facade::Judgment,
-        question: &Question,
-        backend: &Backend,
-        profile: Option<&BackendProfile>,
-        requests: Vec<String>,
-    ) -> Result<Self, Error> {
-        let answer = &judged.answer;
-        let probabilities = match (answer.yes(), answer.named()) {
-            (Some(yes), _) => Probabilities::YesNo { yes },
-            (None, Some(named)) => Probabilities::Named(
-                named
-                    .into_iter()
-                    .map(|(name, probability)| NamedProbability {
-                        name: name.to_owned(),
-                        probability,
-                    })
-                    .collect(),
-            ),
-            (None, None) => return Err(Error::defect("an answer carried no probability")),
-        };
-        let reply = &judged.answered.reply;
-        let warning =
-            ProfileWarning::between(question.profile.as_ref(), profile.map(BackendProfile::name));
-        let run = Run {
-            backend,
-            tuned_for: question.profile.as_ref(),
-            warning: warning.clone(),
-            batch_setting: None,
-            batch_warning: None,
-            context_sha256: None,
-        };
-        let (json, question_sha256) = decision(
-            run,
-            judged,
-            question.core.clone(),
-            question.threshold,
-            judged.value.clone(),
-            None,
-            requests.clone(),
-        )
-        .map_err(|_| written())?;
-        Ok(Self {
-            sources: judged.answered.sources.clone(),
-            observations: judged.answered.observations.clone(),
-            value: judgment(&judged.value),
-            probabilities,
-            nearest: answer.level().map(str::to_owned),
-            model: reply.model().as_str().to_owned(),
-            question_sha256,
-            profile_warning: warning,
-            requests,
-            requests_sent: judged.answered.requests_sent,
-            cached: judged.answered.replayed,
-            usage: reply.usage().map(usage),
-            reported_usage: reply.reported_usage(),
-            confidence: answer.confidence().map(|held| held.as_f64()),
-            url: backend.url().as_str().to_owned(),
-            json: Written(json),
-            scalar_json: None,
-        })
-    }
-
     /// The `thinkthen.result/1` line that `--details` prints for this one text.
     #[must_use]
     pub fn to_json(&self) -> String {

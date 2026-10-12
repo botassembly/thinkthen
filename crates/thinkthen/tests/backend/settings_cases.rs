@@ -201,8 +201,8 @@ fn command_settings_match_the_shared_cases() {
                 .write_all(input.as_bytes())
                 .expect("input");
             let output = child.wait_with_output().expect("output");
-            let stdout = String::from_utf8_lossy(&output.stdout);
-            let stderr = String::from_utf8_lossy(&output.stderr);
+            let stdout = crate::harness::printed(&output);
+            let stderr = crate::harness::said(&output);
             if let Some(kind) = step["error"].as_str() {
                 let code = match kind {
                     "usage" => 2,

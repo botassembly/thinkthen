@@ -175,7 +175,7 @@ module ThinkThen
             when "observation" then @observations << packet
             when "aggregate"
               values = packet.value.is_a?(Array) ? packet.value : [packet.value]
-              @verb == "recognize" ? @rows.concat(values) : @rows.replace(values)
+              @rows.concat(values)
             when "terminal"
               @terminal = packet
               if packet.key?("failure")
@@ -187,13 +187,19 @@ module ThinkThen
                 error.instance_variable_set(:@results, @rows.freeze)
                 error.instance_variable_set(:@terminal, packet)
                 error.instance_variable_set(:@observations, @observations.freeze)
-                raise error
+                raise error, cause: @producer_error
               end
               return Results::Completed.new(@rows, packet, @scalar, @verb, @observations)
             end
           end
           feed if @producer
-          sleep 0.001
+          input = !@producer.nil?
+          if Fiber.scheduler && !Fiber.current.blocking?
+            # Thread#value lets the fiber scheduler run while native wait releases the GVL.
+            Thread.new { @session.wait(input) }.value
+          else
+            @session.wait(input)
+          end
         end
       ensure
         Client.cleanup(self)
@@ -213,7 +219,8 @@ module ThinkThen
             @session.finish(nil)
             close_producer
             return
-          rescue StandardError
+          rescue StandardError => error
+            @producer_error = error
             @session.finish(true)
             close_producer
             return
@@ -241,6 +248,8 @@ module ThinkThen
       def close_producer
         owner, @owner, @producer = @owner, nil, nil
         owner.close if owner.respond_to?(:close)
+      rescue StandardError
+        raise unless @producer_error
       end
       def inspect = "<ThinkThen::Client::Operation>"
     end

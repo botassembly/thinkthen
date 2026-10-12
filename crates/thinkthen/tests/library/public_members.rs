@@ -27,11 +27,9 @@ thinkthen::choices! {
 }
 
 fn engine(base: &str) -> Engine {
-    Engine::builder()
-        .base_url(base)
-        .and_then(|builder| builder.api_key("sk-public-members"))
-        .map(thinkthen::EngineBuilder::no_cache)
-        .and_then(thinkthen::EngineBuilder::build)
+    crate::api::builder(base, "sk-public-members")
+        .no_cache()
+        .build()
         .expect("engine")
 }
 
@@ -60,11 +58,7 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         "a question set member takes no profile; name it on the set"
     );
     assert_eq!(listener.count(), 0);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-profile-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-profile-local")
         .profile_json(&case["runtime_profile"].to_string())
         .expect("running profile")
         .no_cache()
@@ -87,11 +81,7 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
 fn a_runtime_profile_limit_refuses_the_saved_question_before_sending() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
     let question = loaded(r#"{"decide":"Is this a request?","profile":"old"}"#);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-profile-local")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-profile-local")
         .profile_json(
             r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1}"#,
         )

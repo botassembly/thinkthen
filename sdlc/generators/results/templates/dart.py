@@ -188,13 +188,14 @@ def bridge(abi):
             if value.removeprefix('const ').startswith('size_t'):
                 return ('Pointer<Size>',) * 2
             return ('Pointer<Void>',) * 2
-        return {'int': ('Int32', 'int'), 'size_t': ('Size', 'int'), 'void': ('Void', 'void')}[value]
+        return {'uint32_t': ('Uint32', 'int'), 'int': ('Int32', 'int'), 'size_t': ('Size', 'int'), 'void': ('Void', 'void')}[value]
     symbols = ('thinkthen_engine_new_with', 'thinkthen_engine_free', 'thinkthen_error_code',
                'thinkthen_error_retryable', 'thinkthen_error_message', 'thinkthen_error_facts_json',
                'thinkthen_session_new_with_surface', 'thinkthen_session_try_push',
-               'thinkthen_session_try_read', 'thinkthen_session_finish', 'thinkthen_session_cancel',
+               'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_json',
-               'thinkthen_session_error_message', 'thinkthen_engine_usage_persistence_v1',
+               'thinkthen_session_error_message', 'thinkthen_session_error_retryable',
+               'thinkthen_session_error_facts_json', 'thinkthen_engine_usage_persistence_v1',
                'thinkthen_engine_finish_usage_status_v1')
     lines = ['// Generated from the canonical C header ABI. Do not edit.', "import 'dart:ffi';"]
     for carrier, host in [('thinkthen_complete_usage_persistence_v1', 'NativeUsageState'), ('thinkthen_complete_utf8_v1', 'NativeUsageAdvice')]:
@@ -220,7 +221,9 @@ def bridge(abi):
     lines += ['final class NativeAbi {', *members, '}']
     errors = [(key, value) for key, value in abi['constants'].items() if key.startswith('THINKTHEN_E') and not key.endswith('_V1')]
     lines += ['enum NativeErrorKind { ' + ', '.join(key.removeprefix('THINKTHEN_E').lower() + '(' + str(value) + ')' for key, value in errors) + '; final int code; const NativeErrorKind(this.code); }']
-    for key, value in abi['constants'].items():
-        if key.startswith('THINKTHEN_SESSION_') or key.startswith('THINKTHEN_E') and not key.endswith('_V1'):
-            lines += [f'const {key} = {value};']
+    constants = ('THINKTHEN_SESSION_ACCEPTED_V1', 'THINKTHEN_SESSION_CLOSED_V1',
+                 'THINKTHEN_SESSION_END_V1', 'THINKTHEN_SESSION_FULL_V1',
+                 'THINKTHEN_SESSION_PENDING_V1', 'THINKTHEN_SESSION_RESULT_V1',
+                 'THINKTHEN_SESSION_WAIT_INPUT_V1', 'THINKTHEN_SESSION_WAIT_SETTLEMENT_V1')
+    lines += [f'const {key} = {abi["constants"][key]};' for key in constants]
     return '\n'.join(lines) + '\n'

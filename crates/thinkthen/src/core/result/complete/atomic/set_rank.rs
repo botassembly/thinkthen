@@ -24,7 +24,7 @@ impl Atomic {
         name: &str,
         position: NonZeroUsize,
     ) -> Result<Self, RenderError> {
-        self.legacy.threshold = None;
+        self.compatibility.threshold = None;
         self.rank_position = Some(position);
         self.identity = ResultIdentity::of(
             InputFunction::Rank,
@@ -36,7 +36,7 @@ impl Atomic {
             self.identity.question_sources().to_vec(),
             self.identity.observations().to_vec(),
             &AtomicReading {
-                question: &self.legacy.question,
+                question: &self.compatibility.question,
                 threshold: None,
                 rank_position: Some(position),
             },
@@ -74,15 +74,15 @@ impl Atomic {
                 .map(|member| member.identity.answer_id().clone())
                 .collect::<Vec<_>>(),
         )?;
-        self.legacy.meta = crate::core::Meta::combined(
+        self.compatibility.meta = crate::core::Meta::combined(
             digest.to_owned(),
             requested_model,
             &members
                 .iter()
-                .map(|member| &member.legacy.meta)
+                .map(|member| &member.compatibility.meta)
                 .collect::<Vec<_>>(),
         )?
-        .with_reading_metadata(&self.legacy.meta);
+        .with_reading_metadata(&self.compatibility.meta);
         Ok(self)
     }
 }

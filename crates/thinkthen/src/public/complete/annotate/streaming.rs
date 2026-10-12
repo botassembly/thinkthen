@@ -13,33 +13,6 @@ struct Original<T> {
     prepared: Prepared,
 }
 impl Engine {
-    /// Pull fallible original records into ordered complete annotations.
-    /// # Errors
-    /// Yields the completed prefix then one terminal error; member failures retain identities.
-    pub fn try_annotate_records_complete_with<'a, I, T>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteAnnotated>>
-    where
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                questions.clone().into(),
-                records,
-                options,
-                crate::RequestCall::Annotate,
-            )
-            .and_then(|rows| {
-                rows.annotations("a native annotate batch returned another result kind")
-            }),
-        )
-    }
-
     pub(crate) fn annotate_stream<'a, I, T>(
         &self,
         questions: QuestionSet,
@@ -52,6 +25,41 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
+        self.annotate_stream_project(
+            questions,
+            records,
+            options,
+            context,
+            recover,
+            |original, ordinal, result| {
+                Ok(Some(CompleteRecord {
+                    original,
+                    ordinal,
+                    result,
+                }))
+            },
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one annotation pipeline retains private compatibility and recovery projections"
+    )]
+    pub(crate) fn annotate_stream_project<'a, I, T, R: 'a>(
+        &self,
+        questions: QuestionSet,
+        records: I,
+        options: CallOptions<'a>,
+        context: Option<String>,
+        recover: crate::public::options::AnnotationRecovery<'a>,
+        project: impl Fn(T, usize, CompleteAnnotated) -> Result<Option<R>, Error> + 'a,
+    ) -> Result<Batch<'a, R>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        let legacy = options.legacy_annotation;
+        let strict_preflight = options.eager_inputs && recover.is_none();
         let setting = crate::public::bulk::selected_set_batch(&questions.0, &options, self.batch)?;
         let engine = Arc::clone(&self.inner);
         let stop = Stop::begin(options)?.with_prices(self.prices);
@@ -59,6 +67,7 @@ impl Engine {
         packing.detailed = stop.facts().attempts().is_some();
         let preparing = Annotations {
             recover_missing: false,
+            require_usable_groups: !legacy,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -68,7 +77,7 @@ impl Engine {
                 .and_then(|record| prepare_record(&preparing_set, record, context.as_deref(), at))
                 .map_err(|error| error.at_record(at))?;
             if let Err(error) = preparing.asks(&prepared)
-                && error.missed_pointer().is_none()
+                && (strict_preflight || error.missed_pointer().is_none())
             {
                 return Err(error.at_record(at));
             }
@@ -77,6 +86,7 @@ impl Engine {
         let records = self.admit_prepared_stream(records, &options)?;
         let asker = Annotations {
             recover_missing: recover.is_some(),
+            require_usable_groups: !legacy,
             engine: Arc::clone(&engine),
             set: questions.0.clone(),
         };
@@ -85,6 +95,7 @@ impl Engine {
             stop,
             packing,
             most: self.most,
+            pending_inputs: false,
         };
         Ok(pull::try_start_prepared(
             call,
@@ -120,13 +131,16 @@ impl Engine {
                 {
                     return Ok(None);
                 }
-                let result = complete_row(&engine, &questions.0, stop, &original.held, at, row)
-                    .map_err(|error| error.at_record(at))?;
-                Ok(Some(CompleteRecord {
-                    original: original.held.original,
-                    ordinal: at,
-                    result,
-                }))
+                let result = complete_row(
+                    &engine,
+                    &questions.0,
+                    stop,
+                    &original.held,
+                    (at, legacy),
+                    row,
+                )
+                .map_err(|error| error.at_record(at))?;
+                project(original.held.original, at, result)
             }),
         ))
     }

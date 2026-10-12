@@ -61,7 +61,7 @@ impl Account {
     }
 
     /// Fail the call when a question event could not be written.
-    pub(crate) fn written(&self) -> Result<(), String> {
+    pub(crate) fn written(&self) -> Result<(), crate::NativeError> {
         if self.unwritten.load(Ordering::SeqCst) {
             return Err(crate::defect("a question event could not be written"));
         }
@@ -76,7 +76,7 @@ impl Account {
         &self,
         started: thinkthen::TallyStart<'_>,
         facts: &Facts,
-    ) -> Result<(), String> {
+    ) -> Result<(), crate::NativeError> {
         started.finish(facts).map_err(|e| carry(&e))?;
         self.counted.store(true, Ordering::SeqCst);
         Ok(())
@@ -112,5 +112,5 @@ impl Snapshot {
 }
 
 pub(crate) struct Completed<T> {
-    pub(crate) result: Result<T, String>,
+    pub(crate) result: Result<T, crate::NativeError>,
 }

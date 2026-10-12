@@ -1,7 +1,7 @@
 //! Unchanged single-source bytes, label routes and request identities.
 
 use super::input_sources::{answer, folder, text};
-use crate::harness::{Listener, spawn};
+use crate::harness::{Listener, exits, exits_because, spawn, spawn_local};
 use serde_json::json;
 use std::fs;
 use std::io;
@@ -55,12 +55,7 @@ fn non_utf8_file_names_keep_answers_and_use_display_strings() -> io::Result<()> 
                 command.arg("--input").arg(&two);
             }
             let output = command.output()?;
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{verb}: {}",
-                text(&output.stderr)
-            );
+            exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
             let printed = text(&output.stdout);
             assert_named_output(&printed, verb, details, multiple, [&one, &two]);
         }
@@ -238,28 +233,13 @@ fn labels_that_name_existing_files_remain_labels() -> io::Result<()> {
     let b = b.to_str().expect("path");
     for verb in ["choose", "score", "tag"] {
         let listener = Listener::answering(answer)?;
-        let output = spawn(
-            &[
-                verb,
-                "Clear?",
-                a,
-                b,
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-                "--no-cache",
-                "--plan",
-            ],
+        let output = spawn_local(
+            &[verb, "Clear?", a, b, "--no-cache", "--plan"],
+            listener.base(),
             &[],
             b"only stdin",
         )?;
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
         let printed = text(&output.stdout);
         assert!(printed.contains("only stdin"), "{verb}");
         assert!(!printed.contains("private evidence"), "{verb}");
@@ -305,12 +285,9 @@ fn aggregate_commands_offer_windows_and_refuse_missing_inputs() -> io::Result<()
             &[],
             b"one\ntwo",
         )?;
-        assert_eq!(
-            output.status.code(),
-            Some(5),
-            "{command:?}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 5, || {
+            format!("{command:?}: {}", text(&output.stderr))
+        });
     }
     assert_eq!(listener.connections(), 0);
     Ok(())
@@ -358,12 +335,7 @@ fn every_default_document_value_command_associates_named_answers() -> io::Result
                 &[],
                 b"ignored",
             )?;
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{verb}: {}",
-                text(&output.stderr)
-            );
+            exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
             let rows: Vec<serde_json::Value> = text(&output.stdout)
                 .lines()
                 .map(|line| serde_json::from_str(line).expect("result"))
@@ -407,7 +379,7 @@ fn a_later_invalid_table_header_is_a_zero_send_preflight_refusal() -> io::Result
         &[],
         b"",
     )?;
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     assert!(output.stdout.is_empty());
     assert_eq!(listener.connections(), 0);
     Ok(())

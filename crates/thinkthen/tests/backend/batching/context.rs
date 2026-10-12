@@ -1,11 +1,11 @@
 //! A context is shared evidence on the wire and named separately in each row.
 
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use std::fs;
 
 use serde_json::Value;
 
 use super::{KEY, details, folder, text};
-use crate::harness::{Canned, Listener, spawn};
 
 #[test]
 fn a_context_rides_the_batch_and_names_its_raw_bytes() {
@@ -36,7 +36,7 @@ fn a_context_rides_the_batch_and_names_its_raw_bytes() {
         b"Come Together\nHelp!\n",
     )
     .expect("command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert!(output.stderr.is_empty());
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
@@ -80,7 +80,7 @@ fn a_context_is_in_batch_one_and_the_dry_run_plan() {
         b"line 1\nline 2\n",
     )
     .expect("batch one");
-    assert_eq!(at_one.status.code(), Some(0), "{}", text(&at_one.stderr));
+    exits(&at_one, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 2);
     for request in &sent {
@@ -102,7 +102,7 @@ fn a_context_is_in_batch_one_and_the_dry_run_plan() {
         b"line 1\nline 2\n",
     )
     .expect("plan");
-    assert_eq!(planned.status.code(), Some(0), "{}", text(&planned.stderr));
+    exits(&planned, 0);
     let plan: Value = serde_json::from_slice(
         planned
             .stdout
@@ -135,12 +135,7 @@ fn filter_and_rank_plan_the_same_shared_context() {
             b"line 1\nline 2\n",
         )
         .expect("plan");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{verb}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{verb}: {}", text(&output.stderr)));
         let plan: Value = serde_json::from_slice(
             output
                 .stdout
@@ -192,7 +187,7 @@ fn a_refused_context_batch_keeps_the_context_in_both_halves() {
         super::lines(1..=4).as_bytes(),
     )
     .expect("split run");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let sent = split.requests();
     assert_eq!(sent.len(), 3);
     let sizes: Vec<_> = sent
@@ -242,7 +237,7 @@ fn a_late_context_overflow_keeps_earlier_rows_and_sends_no_third_record() {
         input.as_bytes(),
     )
     .expect("context run");
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1, "earlier records sent together");
     let body: Value = serde_json::from_slice(&sent[0].body).expect("request body");
@@ -405,12 +400,7 @@ fn a_context_size_refusal_names_the_binding_limit_and_never_sends_that_record() 
             listener.base(),
         ];
         let output = spawn(&[&fixed[..], &extra].concat(), &[KEY], input).expect("command");
-        assert_eq!(
-            output.status.code(),
-            Some(2),
-            "{name}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 2, || format!("{name}: {}", text(&output.stderr)));
         assert!(output.stdout.is_empty(), "{name}");
         assert_eq!(listener.count(), 0, "{name}");
         assert!(!text(&output.stderr).contains("record 1 marker"), "{name}");
@@ -443,19 +433,14 @@ fn a_changed_context_keeps_the_question_digest_but_misses_the_recording() {
         input,
     )
     .expect("recorded run");
-    assert_eq!(
-        recorded.status.code(),
-        Some(0),
-        "{}",
-        text(&recorded.stderr)
-    );
+    exits(&recorded, 0);
     let changed = spawn(
         &[&fixed[..], &["--context", &second, "--no-cache"]].concat(),
         &[KEY],
         input,
     )
     .expect("changed context");
-    assert_eq!(changed.status.code(), Some(0), "{}", text(&changed.stderr));
+    exits(&changed, 0);
     let (recorded, changed) = (details(&recorded), details(&changed));
     assert_eq!((recorded.len(), changed.len()), (2, 2));
     assert_eq!(
@@ -478,7 +463,7 @@ fn a_changed_context_keeps_the_question_digest_but_misses_the_recording() {
         input,
     )
     .expect("replay under another context");
-    assert_eq!(replay.status.code(), Some(5), "{}", text(&replay.stderr));
+    exits(&replay, 5);
     assert!(replay.stdout.is_empty());
     assert_eq!(
         listener.count(),

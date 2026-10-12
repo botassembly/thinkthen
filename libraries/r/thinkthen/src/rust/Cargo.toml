@@ -22,7 +22,7 @@ path = "document.rs"
 
 [dependencies]
 thinkthen = { path = "../../../../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
-extendr-api = "=0.8.2"
+extendr-api = { version = "=0.8.2", features = ["result_condition"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 

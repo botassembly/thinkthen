@@ -1,11 +1,11 @@
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Output;
 use std::thread;
 
 use crate::child::Folder;
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::{
     DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, keys, plant_fixture,
 };
@@ -16,11 +16,7 @@ const ANSWERED: &str = concat!(
 );
 const EVIDENCE: &str = "Refund me please.";
 
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     spawn(arguments, environment, EVIDENCE.as_bytes())
@@ -58,7 +54,7 @@ fn the_platform_cache_is_used_by_default_and_no_cache_disables_it() {
     for (run_number, expected) in [(1, 1), (2, 0)] {
         let output = run(&["decide", "asks for a refund", "--details"], &environment).expect("run");
         assert_eq!(output.status.code(), Some(0));
-        let printed = String::from_utf8_lossy(&output.stdout);
+        let printed = crate::harness::printed(&output);
         assert!(
             printed.contains(&format!(r#""requests_sent":{expected},"cached":"#)),
             "run {run_number}: {printed}"
@@ -155,9 +151,9 @@ fn an_enabled_default_cache_without_a_home_has_the_fixed_local_failure() {
     )
     .expect("run");
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: no default cache folder is available; set THINKTHEN_CACHE or use --no-cache\n"
+    stderr_is(
+        &output,
+        "thinkthen: no default cache folder is available; set THINKTHEN_CACHE or use --no-cache\n",
     );
     assert!(!relative_home.exists());
     assert!(!relative_cache.exists());
@@ -202,13 +198,13 @@ fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {
     .expect("replay refusal");
     assert_eq!(output.status.code(), Some(5));
     let [key] = keys(&url(), &body()).try_into().expect("one question");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         format!(
             "thinkthen: the decide request for one document: the replay folder holds no answer \
              for question `{key}`; the key is the SHA-256 of the adapter, address, model, \
              shared state and question as sent\n"
-        )
+        ),
     );
     assert!(!missing.exists());
 }
@@ -286,9 +282,9 @@ fn an_existing_wide_default_cache_is_refused_without_changing_its_mode() {
     )
     .expect("run");
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the default cache folder is not private; set its permissions to 0700 or use --no-cache\n"
+    stderr_is(
+        &output,
+        "thinkthen: the default cache folder is not private; set its permissions to 0700 or use --no-cache\n",
     );
     assert_eq!(
         fs::metadata(cache).expect("metadata").permissions().mode() & 0o777,

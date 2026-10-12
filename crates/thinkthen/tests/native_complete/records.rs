@@ -23,21 +23,10 @@ fn original(id: usize) -> Original {
 
 #[test]
 fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wire_identity() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
     let inputs = || {
@@ -45,23 +34,21 @@ fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wir
             .into_iter()
             .enumerate()
             .map(|(at, context)| RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: original(at),
                 context: context.map(Into::into),
-                options: None,
+
+                ..crate::api::record(original(at))
             })
     };
-    let call = engine
-        .decide_records_complete_with(
-            &question,
-            inputs(),
-            CallOptions::new()
-                .batch(BatchSetting::Max)
-                .context("Fallback.")
-                .attempts(true),
-        )
-        .unwrap();
+    let call = crate::api::decide_records(
+        &engine,
+        &question,
+        inputs(),
+        CallOptions::new()
+            .batch(BatchSetting::Max)
+            .context("Fallback.")
+            .attempts(true),
+    )
+    .unwrap();
     let rows = call.value();
     assert_eq!(call.facts().records(), 4);
     for (at, row) in rows.iter().enumerate() {
@@ -101,9 +88,13 @@ fn native_originals_need_no_clone_send_or_serialization_and_context_controls_wir
         assert_eq!(doc["meta"]["attempts"].as_array().unwrap().len(), 1);
     }
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let held = replay
-        .decide_records_complete_with(&question, inputs(), CallOptions::new().context("Fallback."))
-        .unwrap();
+    let held = crate::api::decide_records(
+        &replay,
+        &question,
+        inputs(),
+        CallOptions::new().context("Fallback."),
+    )
+    .unwrap();
     for (one, other) in rows.iter().zip(held.value()) {
         assert_eq!(one.result().answer_id(), other.result().answer_id());
     }
@@ -138,35 +129,29 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
     ])
     .unwrap();
     let second = RecordOptions::project(r#"{"choices":{"d":"D","c":null}}"#, "/choices").unwrap();
-    let rows = engine
-        .choose_records_complete_with(
-            &fixed,
-            [
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: original(0),
-                    context: None,
-                    options: Some(first.clone()),
-                },
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: original(1),
-                    context: None,
-                    options: Some(second),
-                },
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: original(2),
-                    context: None,
-                    options: Some(first),
-                },
-            ],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .unwrap();
+    let rows = crate::api::choose(
+        &engine,
+        &fixed,
+        [
+            RecordInput {
+                options: Some(first.clone()),
+
+                ..crate::api::record(original(0))
+            },
+            RecordInput {
+                options: Some(second),
+
+                ..crate::api::record(original(1))
+            },
+            RecordInput {
+                options: Some(first),
+
+                ..crate::api::record(original(2))
+            },
+        ],
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .unwrap();
     assert_eq!(
         rows.value()
             .iter()
@@ -188,21 +173,16 @@ fn replacement_shortlists_remain_whole_ordered_and_per_question_coalescing_keeps
         std::str::from_utf8(&listener.requests()[0].body).unwrap(),
         r#"{"state":"Each question quotes the text it asks about.","model":"fixed","questions":{"q1":{"type":"choice","instructions":"The text is \"Same.\". Which?","criteria":{"b":["bold",{"what":"B"}],"a":null}},"q2":{"type":"choice","instructions":"The text is \"Same.\". Which?","criteria":{"d":"D","c":null}}}}"#
     );
-    let invalid = engine
-        .decide_records_complete_with(
-            &Question::decide("Refund?").unwrap().cut(),
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: original(0),
-                context: None,
-                options: Some(
-                    RecordOptions::project(r#"{"options":["a","b"]}"#, "/options").unwrap(),
-                ),
-            }],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let invalid = crate::api::decide_records(
+        &engine,
+        &Question::decide("Refund?").unwrap().cut(),
+        [RecordInput {
+            options: Some(RecordOptions::project(r#"{"options":["a","b"]}"#, "/options").unwrap()),
+            ..crate::api::record(original(0))
+        }],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(invalid.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 1);
 }
@@ -212,29 +192,27 @@ fn numeric_rank_positions_keep_original_occurrences_stable_ties_and_saved_score_
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"score","probabilities":{"0":0.8,"1":0.2}},"q2":{"type":"score","probabilities":{"0":0.1,"1":0.9}}}}"#)).unwrap();
     let engine = engine(&listener);
     let score = Question::rank_from_json(r#"{"score":"Grade?","levels":["low","high"]}"#).unwrap();
-    let rows = engine
-        .rank_complete_with(
-            &score,
-            ["first", "second", "first"],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .unwrap();
+    let rows = crate::api::eager_rank(
+        &engine,
+        &score,
+        crate::api::plain_inputs(["first", "second", "first"]),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .unwrap();
+    let ranked = crate::api::ranked(&rows).unwrap();
     assert_eq!(
-        rows.value()
-            .iter()
-            .map(|row| row.ordinal())
-            .collect::<Vec<_>>(),
+        ranked.iter().map(|row| row.ordinal()).collect::<Vec<_>>(),
         [1, 0, 2]
     );
     assert_eq!(
-        rows.value()
+        ranked
             .iter()
             .map(|row| row.result().value())
             .collect::<Vec<_>>(),
         [1, 2, 3]
     );
     schema::call(&rows, "completeRank");
-    for row in rows.value() {
+    for row in ranked {
         let doc: Value = serde_json::from_str(&row.result().to_json().unwrap()).unwrap();
         assert_eq!(doc["schema"], "thinkthen.result/2");
         assert_eq!(doc["value"], row.result().value());
@@ -242,17 +220,17 @@ fn numeric_rank_positions_keep_original_occurrences_stable_ties_and_saved_score_
         assert_eq!(doc["question"]["verb"], "score");
     }
     assert_ne!(
-        rows.value()[1].result().answer_id(),
-        rows.value()[2].result().answer_id()
+        ranked[1].result().answer_id(),
+        ranked[2].result().answer_id()
     );
     assert_eq!(
-        rows.value()[1].result().identity().observations(),
-        rows.value()[2].result().identity().observations()
+        ranked[1].result().identity().observations(),
+        ranked[2].result().identity().observations()
     );
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.questions(), 2);
     let refused = engine
-        .rank_complete_with(
+        .rank_with(
             &Question::decide("Refund?").unwrap().cut(),
             ["text"],
             CallOptions::new(),
@@ -264,48 +242,32 @@ fn numeric_rank_positions_keep_original_occurrences_stable_ties_and_saved_score_
 
 #[test]
 fn eager_invalid_later_evidence_refuses_the_whole_native_source_before_sending() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let engine = engine(&listener);
-    let error = engine
-        .decide_records_complete_with(
-            &Question::decide("Refund?").unwrap().cut(),
-            [
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: original(0),
-                    context: None,
-                    options: None,
-                },
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: Original {
-                        id: 1,
-                        text: " ",
-                        local: Rc::new(()),
-                    },
-                    context: None,
-                    options: None,
-                },
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let error = crate::api::eager_decisions(
+        &engine,
+        &Question::decide("Refund?").unwrap().cut(),
+        [
+            crate::api::record(original(0)),
+            crate::api::record(Original {
+                id: 1,
+                text: " ",
+                local: Rc::new(()),
+            }),
+        ],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
 }
 
 fn seed_records(seeds: &[thinkthen::RecognitionSeedSpan]) -> [RecordInput<&'static str>; 2] {
     [None, Some(seeds.to_vec())].map(|seed_spans| RecordInput {
-        original: "First.",
-        context: None,
-        options: None,
-        examples: None,
         seed_spans,
+
+        ..crate::api::record("First.")
     })
 }
 
@@ -316,6 +278,48 @@ fn assert_seed_refusal(error: thinkthen::Error, listener: &Listener, door: &str,
     assert_eq!(listener.count(), 0, "{door}");
 }
 
+#[cfg(test)]
+fn assert_whole_seed_refusals(
+    engine: &Engine,
+    listener: &Listener,
+    rank_set: &thinkthen::RankSet,
+    relate: &thinkthen::Relate,
+    find: &Question,
+    seeds: &[thinkthen::RecognitionSeedSpan],
+) {
+    for (function, definition, door) in [
+        (
+            thinkthen::RequestFunction::Rank,
+            thinkthen::RequestDefinition::from(rank_set.clone()),
+            "rank set",
+        ),
+        (
+            thinkthen::RequestFunction::Find,
+            find.clone().into(),
+            "find",
+        ),
+        (
+            thinkthen::RequestFunction::Relate,
+            relate.clone().into(),
+            "relate",
+        ),
+    ] {
+        let error = crate::api::whole(
+            engine,
+            function,
+            definition,
+            seed_records(seeds).into_iter().map(Ok),
+            CallOptions::new(),
+        )
+        .expect_err("record seed controls must refuse");
+        assert_seed_refusal(
+            error,
+            listener,
+            door,
+            "item recognition controls apply only to recognize",
+        );
+    }
+}
 #[test]
 fn eager_nonrecognize_records_refuse_later_seed_controls_before_sending() {
     let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
@@ -343,65 +347,114 @@ fn eager_nonrecognize_records_refuse_later_seed_controls_before_sending() {
         }],
     ] {
         let records = || seed_records(&seeds);
-        macro_rules! probe {
-            ($method:ident, $question:expr, $message:expr, $records:expr) => {
-                let error = engine
-                    .$method($question, $records, CallOptions::new())
-                    .unwrap_err();
-                assert_seed_refusal(error, &listener, stringify!($method), $message);
-            };
+        for (function, definition, door) in [
+            (
+                thinkthen::RequestFunction::Decide,
+                decide.clone().into(),
+                "decide_records_complete_with",
+            ),
+            (
+                thinkthen::RequestFunction::Filter,
+                decide.clone().into(),
+                "filter_records_complete_with",
+            ),
+            (
+                thinkthen::RequestFunction::Choose,
+                choose.clone().into(),
+                "choose_records_complete_with",
+            ),
+            (
+                thinkthen::RequestFunction::Tag,
+                tag.clone().into(),
+                "tag_records_complete_with",
+            ),
+            (
+                thinkthen::RequestFunction::Score,
+                score.clone().into(),
+                "score_records_complete_with",
+            ),
+            (
+                thinkthen::RequestFunction::Annotate,
+                annotate.clone().into(),
+                "annotate_records_complete_with",
+            ),
+        ] {
+            let error = crate::api::whole(
+                &engine,
+                function,
+                definition,
+                records().into_iter().map(Ok),
+                CallOptions::new(),
+            )
+            .unwrap_err();
+            assert_seed_refusal(
+                error,
+                &listener,
+                door,
+                "item recognition controls apply only to recognize",
+            );
         }
-        let seeds_only = "record seed spans are admitted only for recognize";
-        probe!(decide_records_complete_with, &decide, seeds_only, records());
-        probe!(choose_records_complete_with, &choose, seeds_only, records());
-        probe!(tag_records_complete_with, &tag, seeds_only, records());
-        probe!(score_records_complete_with, &score, seeds_only, records());
-        probe!(filter_records_complete_with, &decide, seeds_only, records());
-        probe!(rank_records_complete_with, &rank, seeds_only, records());
-        probe!(
-            annotate_records_complete_with,
-            &annotate,
-            seeds_only,
-            records()
+        let error = crate::api::eager_rank(&engine, &rank, records(), CallOptions::new())
+            .expect_err("rank record seeds");
+        assert_seed_refusal(
+            error,
+            &listener,
+            "rank",
+            "item recognition controls apply only to recognize",
         );
-        probe!(
-            rank_set_records_complete_with,
-            &rank_set,
-            seeds_only,
-            records()
-        );
-        probe!(
-            try_rank_records_complete_with,
-            &rank,
-            seeds_only,
-            records().into_iter().map(Ok)
-        );
-        probe!(
-            try_rank_set_records_complete_with,
-            &rank_set,
-            seeds_only,
-            records().into_iter().map(Ok)
-        );
-        let find_only = "find takes one whole-set call context and no per-record controls";
-        probe!(find_records_complete_with, &find, find_only, records());
-        probe!(
-            try_find_records_complete_with,
-            &find,
-            find_only,
-            records().into_iter().map(Ok)
-        );
-        let relate_only = "relate takes one whole-set call context and no per-record controls";
-        probe!(
-            relate_records_complete_with,
-            &relate,
-            relate_only,
-            records()
-        );
-        probe!(
-            try_relate_records_complete_with,
-            &relate,
-            relate_only,
-            records().into_iter().map(Ok)
+        assert_whole_seed_refusals(&engine, &listener, &rank_set, &relate, &find, &seeds);
+    }
+}
+
+#[test]
+fn eager_atomic_annotation_and_set_rank_plan_later_contexts_before_any_send() {
+    let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
+    let engine = crate::api::fixed(listener.base(), "complete-private")
+        .no_cache()
+        .max_request_bytes(1024)
+        .unwrap()
+        .build()
+        .unwrap();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let definition =
+        r#"{"version":1,"questions":{"first":{"decide":"Refund?"},"second":{"decide":"Urgent?"}}}"#;
+    let annotation = thinkthen::QuestionSet::from_json(definition).unwrap();
+    let ranking = thinkthen::RankSet::from_json(definition).unwrap();
+    let records = || {
+        [None, Some("x".repeat(2048).into())].map(|context| RecordInput {
+            context,
+
+            ..crate::api::record("Plain.")
+        })
+    };
+    for error in [
+        crate::api::eager_decisions(&engine, &question, records(), CallOptions::new())
+            .map(|_| ())
+            .unwrap_err(),
+        crate::api::whole(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            annotation.into(),
+            records().into_iter().map(Ok),
+            CallOptions::new(),
+        )
+        .map(|_| ())
+        .unwrap_err(),
+        crate::api::whole(
+            &engine,
+            thinkthen::RequestFunction::Rank,
+            ranking.into(),
+            records().into_iter().map(Ok),
+            CallOptions::new(),
+        )
+        .map(|_| ())
+        .unwrap_err(),
+    ] {
+        assert_eq!(error.kind(), ErrorKind::Usage);
+        assert_eq!(
+            listener.count(),
+            0,
+            "a valid earlier plan sent before the later refusal"
         );
     }
 }

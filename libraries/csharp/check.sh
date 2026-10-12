@@ -70,7 +70,9 @@ mkdir -p "$here/target/scratch/lib" "$here/target/scratch/nuget" "$here/target/s
 scratch_dir package_cache
 export DOTNET_CLI_HOME="$here/target/scratch/dotnet-home" NUGET_PACKAGES="$package_cache"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
+if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
 export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+fi
 native=${THINKTHEN_NATIVE_ASSET:-$root/libraries/c/target/debug/libthinkthen_c.so}
 if [ -z "${THINKTHEN_NATIVE_ASSET:-}" ]; then
     RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2

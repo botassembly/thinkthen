@@ -26,9 +26,13 @@ fn partial_refusal_keeps_valid_observations_and_only_missing_piece_is_sent_again
         r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Retry?"}}}"#,
     )
     .unwrap();
-    let first = engine
-        .annotate_complete_with(&set, ["Input."], CallOptions::new())
-        .unwrap();
+    let first = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Input."]),
+        CallOptions::new(),
+    )
+    .unwrap();
     let document: Value =
         serde_json::from_str(&first.value()[0].result().to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["failed_questions"], 1);
@@ -39,9 +43,13 @@ fn partial_refusal_keeps_valid_observations_and_only_missing_piece_is_sent_again
     assert!(failed.answer_id().is_none());
     assert!(failed.failure_id().is_some());
     assert!(!document.to_string().contains("private"));
-    let second = engine
-        .annotate_complete_with(&set, ["Input."], CallOptions::new())
-        .unwrap();
+    let second = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Input."]),
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(
         second.value()[0]
             .result()
@@ -66,9 +74,13 @@ fn partial_refusal_keeps_valid_observations_and_only_missing_piece_is_sent_again
     db.execute("UPDATE answers SET answer='{broken'", [])
         .unwrap();
     drop(db);
-    let error = engine
-        .annotate_complete_with(&set, ["Input."], CallOptions::new())
-        .unwrap_err();
+    let error = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Input."]),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(listener.count(), 2);
     drop(engine);
@@ -97,15 +109,25 @@ fn failed_expanded_tag_member_is_not_false_and_its_valid_siblings_are_reused() {
         .build()
         .unwrap();
     assert_eq!(
-        engine
-            .tag_complete_with(&question, "Input.", CallOptions::new())
-            .unwrap_err()
-            .kind(),
+        crate::api::request(
+            &engine,
+            thinkthen::RequestFunction::Tag,
+            question.clone().into(),
+            crate::api::text("Input."),
+            thinkthen::RequestEnvironment::default()
+        )
+        .unwrap_err()
+        .kind(),
         ErrorKind::Backend
     );
-    engine
-        .tag_complete_with(&question, "Input.", CallOptions::new())
-        .unwrap();
+    crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Tag,
+        question.clone().into(),
+        crate::api::text("Input."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
     assert_eq!(listener.count(), 2);
     let sent = listener.requests();
     let remainder: Value = serde_json::from_slice(&sent[1].body).unwrap();

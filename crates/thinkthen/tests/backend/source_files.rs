@@ -56,7 +56,7 @@ pub(super) fn call(
 }
 
 fn rows(output: &Output) -> Vec<Value> {
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(output, 0);
     text(&output.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
@@ -132,7 +132,7 @@ fn ten_folder_examples_retain_original_records_and_physical_sources() -> io::Res
         check_rows(verb, &rows, documents);
     }
     let output = call(&listener, &commands[4], &[documents], &["--files-only"])?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(
         text(&output.stdout),
         format!(
@@ -236,7 +236,7 @@ fn invalid_reader_options_and_missing_operands_admit_no_requests() -> io::Result
             &[path.to_str().unwrap()],
             &extra,
         )?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         assert!(listener.requests().is_empty());
     }
     let output = call(
@@ -245,7 +245,7 @@ fn invalid_reader_options_and_missing_operands_admit_no_requests() -> io::Result
         &[path.to_str().unwrap(), "/missing-source-0420"],
         &[],
     )?;
-    assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 5);
     assert!(listener.requests().is_empty());
     Ok(())
 }
@@ -276,7 +276,7 @@ fn release_only_source_rank_withholds_output_and_stops_before_the_invalid_tail_a
             &paths,
             &["--unit", "file", "--facts"],
         )?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         let stderr = text(&output.stderr);
         assert_eq!(
             stderr.lines().next(),
@@ -318,11 +318,10 @@ fn unrepresentable_folder_names_refuse_the_complete_manifest_without_sending() -
         &[place.to_str().unwrap()],
         &[],
     )?;
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        text(&output.stderr),
-        "thinkthen: --input could not be opened: source path is not valid UTF-8\n"
+    crate::harness::refuses(
+        &output,
+        5,
+        "thinkthen: --input could not be opened: source path is not valid UTF-8\n",
     );
     assert!(listener.requests().is_empty());
     Ok(())

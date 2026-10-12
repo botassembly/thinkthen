@@ -4,6 +4,8 @@ Baseline command success is deliberately separate from adopted public cases.
 Families print a cell only after assertions at their named public boundary.
 """
 import json
+import math
+from contextlib import ExitStack
 import os
 import re
 from pathlib import Path
@@ -11,6 +13,8 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
+from concurrent.futures import ThreadPoolExecutor
 
 
 def all_consumers(parity):
@@ -45,6 +49,23 @@ CLI_IMAGE_SCENARIOS = {
 }
 
 
+# Each image scenario group already contains every boundary and failure kind.
+# Format stays in every binding: it exercises declared media and attachment
+# conversion. Repeated native image limits/decoders need one verb per group.
+# Named samples retain both Usage (native builders) and Local (file loaders).
+# duplicate-schema represents exact-byte JSON grammar, including numeric spelling.
+CORE_SAMPLE = {
+    'image-admission-dimension-decide', 'image-admission-count-decide',
+    'image-admission-body-excess-decide', 'image-admission-malformed-decide',
+    'image-admission-truncated-decide', 'image-admission-packing-overflow-decide',
+    'image-admission-valid-above-spike-cap-decide',
+    'declaration-shorthand', 'declaration-file-unsupported',
+    'wording-version-overflow', 'author-name-uppercase',
+    'duplicate-schema', 'named-uppercase',
+}
+REFERENCE_CONSUMERS = {'cli', 'rust', 'c'}
+
+
 def required_cases(parity, consumer):
     """Resolve the assertions at a public door without changing shared SDK cases."""
     contract = next(row for row in all_consumers(parity) if row['id'] == consumer)
@@ -52,6 +73,9 @@ def required_cases(parity, consumer):
     resolved = {}
     for case in parity['required_cases']:
         if consumer not in case.get('consumers', [consumer]):
+            continue
+        if (consumer not in REFERENCE_CONSUMERS and case.get('tier') == 'core'
+                and case['id'] not in CORE_SAMPLE):
             continue
         ruling = rulings.get(case['id'], {})
         if ruling.get('boundary') == 'sdk-only':
@@ -117,6 +141,11 @@ def inventory():
     cases = parity['required_cases']
     consumers = parity['consumers']
     validate_consumer_contracts(parity)
+    if any(case.get('tier') not in ('core', 'binding') for case in cases):
+        raise ValueError('every required parity case needs a core or binding tier')
+    core_ids = {case['id'] for case in cases if case['tier'] == 'core'}
+    if not CORE_SAMPLE <= core_ids:
+        raise ValueError('core sample must name existing core cases')
     for label, rows in [('case', cases), ('consumer', all_consumers(parity))]:
         ids = [row['id'] for row in rows]
         if len(ids) != len(set(ids)) or not ids:
@@ -231,7 +260,8 @@ def cells(output, consumers, cases, parity=None):
             raise ValueError(f'duplicate parity cell {key}')
         resolved = resolved_cases.get(row['consumer'], cases)
         if row['case'] not in resolved:
-            raise ValueError(f'sdk-only CLI case emitted as a parity cell {key}')
+            cause = 'sdk-only CLI case' if row['consumer'] == 'cli' else 'unsampled core case'
+            raise ValueError(f'{cause} emitted as a parity cell {key}')
         required = resolved[row['case']].get('checks', ['named', 'runtime'])
         if row['status'] not in ('pass', 'fail'):
             raise ValueError(f'{key}: skipped or unknown status')
@@ -243,21 +273,36 @@ def cells(output, consumers, cases, parity=None):
     return found
 
 
+def tool_environment():
+    """Resolve dependency locations before any runner replaces the caller's home."""
+    home = Path.home()
+    tools = os.environ.get('THINKTHEN_TOOLCHAINS', str(home / '.cache/thinkthen-toolchains'))
+    defaults = dict(THINKTHEN_TOOLCHAINS=tools, R_LIBS_USER=str(Path(tools) / 'r-library'),
+                    PUB_CACHE=str(home / '.pub-cache'), UV_CACHE_DIR=str(home / '.cache/uv'),
+                    UV_PYTHON_INSTALL_DIR=str(home / '.local/share/uv/python'),
+                    npm_config_cache=str(home / '.npm'))
+    return {name: os.environ.get(name, value) for name, value in defaults.items()}
+
+
 def consumer_environment(scratch, port):
     # Preserve tool locations before replacing HOME; never copy user config.
     names = ('PATH', 'LANG', 'LC_ALL', 'TMPDIR', 'XDG_RUNTIME_DIR',
-             'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF',
+             'RUSTFLAGS', 'CFLAGS', 'CXXFLAGS', 'THINKTHEN_FULL_COMPILER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_TEST_OPT_LEVEL',
+             'CARGO_PROFILE_DEV_DEBUG', 'CARGO_PROFILE_TEST_DEBUG',
+             'RUSTUP_TOOLCHAIN', 'RUSTC_WRAPPER', 'SCCACHE_CONF', 'THINKTHEN_SESSION_JDK_HOME',
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD',
              'THINKTHEN_TOOLCHAINS', 'THINKTHEN_DUCKDB_CLI',
              'SQLITE_AMALGAMATION', 'THINKTHEN_PRIVATE_NAMES',
-             'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR')
+             'R_LIBS_USER', 'PUB_CACHE', 'UV_CACHE_DIR', 'UV_PYTHON_INSTALL_DIR', 'npm_config_cache')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     for name, fallback in [('CARGO_HOME', '.cargo'), ('RUSTUP_HOME', '.rustup')]:
         env[name] = os.environ.get(name, str(Path.home() / fallback))
-    env.setdefault('UV_PYTHON_INSTALL_DIR', str(Path.home() / '.local/share/uv/python'))
+    env.update(tool_environment())
+    if held := env.get('THINKTHEN_HEAVY_LOCK_HELD'):
+        env.setdefault('THINKTHEN_HEAVY_LOCK', held)
     for name, folder in [('HOME', 'home'), ('XDG_CONFIG_HOME', 'config'),
                          ('XDG_CACHE_HOME', 'cache'), ('XDG_STATE_HOME', 'state'),
-                         ('APPDATA', 'appdata'), ('LOCALAPPDATA', 'localappdata')]:
+                         ('APPDATA', 'appdata'), ('LOCALAPPDATA', 'localappdata'), ('TMPDIR', 'tmp')]:
         path = Path(scratch) / folder
         path.mkdir()
         env[name] = str(path)
@@ -266,7 +311,7 @@ def consumer_environment(scratch, port):
         cache.mkdir()
         (cache / 'thinkthen-toolchains').symlink_to(Path(toolchains).expanduser().resolve(),
                                                    target_is_directory=True)
-    env.update(CARGO_BUILD_JOBS=os.environ.get('CARGO_BUILD_JOBS', '1'), CARGO_NET_OFFLINE='true',
+    env.update(CARGO_BUILD_JOBS=os.environ.get('CARGO_BUILD_JOBS', '4'), CARGO_NET_OFFLINE='true',
                THINKTHEN_TEST_PROFILE='full',
                THINKTHEN_BASE_URL=f'http://127.0.0.1:{port}/generic/v1',
                THINKTHEN_API_KEY='sk-conformance-loopback')
@@ -275,7 +320,13 @@ def consumer_environment(scratch, port):
 
 def apple_pending(consumer):
     # 0518 ends GNU Objective-C support; every Foundation case still runs on Apple.
-    return consumer == 'objective-c' and sys.platform != 'darwin'
+    return (consumer == 'objective-c' and sys.platform != 'darwin'
+            or consumer == 'swift' and apple_delegated())
+
+
+def apple_delegated():
+    return (sys.platform == 'linux'
+            and os.environ.get('THINKTHEN_MACOS_APPLE_CHECKS') == 'required')
 
 
 def installed_artifacts(directory, consumers):
@@ -342,8 +393,8 @@ def summarize(consumer, cases, code, seen, error, log):
 def support_table(parity, matrix):
     cases = {case['id']: case for case in parity['required_cases']}
     consumers = {row['id']: row for row in all_consumers(parity)}
-    lines = ['| Binding | Functions working out of ten | Files | Images | What is left |',
-             '| --- | --- | --- | --- | --- |']
+    lines = ['| Binding | Functions working out of ten | Files | Images | What is left | Duration (s) |',
+             '| --- | --- | --- | --- | --- | --- |']
     for row in matrix:
         def capability(kinds):
             selected = [state for key, state in row['cells'].items() if cases[key]['kind'] in kinds]
@@ -368,7 +419,7 @@ def support_table(parity, matrix):
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
         if row.get('platform_pending'):
             count = files = images = 'Apple qualification pending'
-            remaining = f'{len(gaps)} required assertions pending on macOS; Apple-only ruling 0518'
+            remaining = f'{len(gaps)} required assertions pending on macOS; no local pass'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
@@ -377,7 +428,7 @@ def support_table(parity, matrix):
                         else 'boundary coverage ' + row['cells'].get(case_id, 'missing'))
             reason = ruling['reason'].replace('|', '/').replace('\n', ' ')
             remaining += f'; {case_id}: {boundary}, {coverage}, {reason}'
-        lines.append(f"| {row['consumer']} | {count} | {files} | {images} | {remaining} |")
+        lines.append(f"| {row['consumer']} | {count} | {files} | {images} | {remaining} | {row.get('duration_seconds', 0):.2f} |")
     return '\n'.join(lines) + '\n'
 
 
@@ -397,8 +448,6 @@ def run(port, baseline=False, artifact_dir=None):
     commands = {}
     for row in consumers.values():
         command = ['python3', 'conformance/c_parity.py'] if row['id'] == 'c' else row['baseline']
-        if artifacts and row['id'] == 'rust':
-            command = ['sh', 'libraries/rust/check.sh']
         if artifacts and row['id'] == 'cli' and command[0] == 'cargo':
             raise ValueError('installed parity requires the actual CLI consumer')
         commands.setdefault(tuple(command), []).append(row['id'])
@@ -423,11 +472,15 @@ def run(port, baseline=False, artifact_dir=None):
 
 
 def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir, artifacts, installed, installed_library, matrix):
-    for command, ids in commands.items():
+    def run_command(command, ids, preparation=None):
+        rows = []
+        started = time.monotonic()
         label = '+'.join(ids)
         log = output_dir / (label + '.log')
         code, seen, error = None, {}, None
-        platform_pending = ids == ['objective-c'] and apple_pending('objective-c')
+        setup_seconds = preparation[1] if preparation else 0
+        remaining = 900 - setup_seconds
+        platform_pending = len(ids) == 1 and apple_pending(ids[0])
         execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
@@ -440,15 +493,22 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
                     env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
                                THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
                                THINKTHEN_C_LIBRARY=str(installed_library))
+                if preparation:
+                    env.update(THINKTHEN_PARITY_PREPARED=preparation[0], THINKTHEN_PARITY_CONSUMER=ids[0])
                 try:
-                    process = subprocess.run(['sh', 'sdlc/scripts/time-limit', '1800', *args],
+                    if preparation and (preparation[2] != 0 or remaining <= 0):
+                        code = preparation[2] or 124
+                        error = 'family preparation failed or exhausted the consumer budget; see ' + preparation[3]
+                    else:
+                        process = subprocess.run(['sh', 'sdlc/scripts/time-limit', str(max(1, math.floor(remaining))), *args],
                                              cwd=ROOT, env=env, stdout=stream,
                                              stderr=subprocess.STDOUT, check=False)
-                    code = process.returncode
+                        code = process.returncode
                 except OSError:
                     error = 'required runner or toolchain unavailable'
             try:
-                seen = cells(log.read_text(), ids, cases, parity)
+                output = log.read_text()
+                seen = cells(output, ids, cases, parity)
             except (ValueError, KeyError, TypeError) as failure:
                 error = str(failure)
             print(f'parity consumer: {label} exit={code}; asserted cells={len(seen)}', flush=True)
@@ -457,18 +517,71 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
             if platform_pending:
-                row['platform_pending'] = 'Apple-only ruling 0518; qualification requires macOS'
+                row['platform_pending'] = 'Apple qualification requires matching macOS checks; no local pass'
                 row['cells'] = dict.fromkeys(row['cells'], 'platform-pending')
             row['case_rulings'] = consumers[consumer].get('case_rulings', {})
-            matrix.append(row)
+            row['setup_duration_seconds'] = round(setup_seconds, 2) if execute else 0
+            row['runtime_duration_seconds'] = round(time.monotonic() - started, 2) if execute else 0
+            row['duration_seconds'] = round(setup_seconds + time.monotonic() - started, 2) if execute else 0
+            rows.append(row)
+        return rows
+
+    # Preparation owns shared immutable assets until every isolated consumer exits.
+    families = {command: ids for command, ids in commands.items() if len(ids) > 1
+                and not baseline}
+    with ExitStack() as assets:
+        paths = {command: assets.enter_context(tempfile.TemporaryDirectory(prefix='thinkthen-parity-package-'))
+                 for command in families}
+        def prepare(command):
+            ids = families[command]
+            log = output_dir / ('+'.join(ids) + '-setup.log')
+            started = time.monotonic()
+            with tempfile.TemporaryDirectory(prefix='thinkthen-parity-setup-') as scratch, log.open('w') as stream:
+                env = consumer_environment(scratch, port)
+                env['THINKTHEN_PARITY_PREPARE'] = paths[command]
+                if artifacts:
+                    env.update(artifacts[ids[0]], THINKTHEN_COMMAND=str(installed / 'command/thinkthen'),
+                               THINKTHEN_C_HEADER=str(installed / 'c/include/thinkthen.h'),
+                               THINKTHEN_C_LIBRARY=str(installed_library))
+                try:
+                    code = subprocess.run(['sh', 'sdlc/scripts/time-limit', '900', *command, port],
+                                          cwd=ROOT, env=env, stdout=stream, stderr=subprocess.STDOUT,
+                                          check=False).returncode
+                except OSError:
+                    code = 127
+            return command, (paths[command], time.monotonic() - started, code, str(log.relative_to(ROOT)))
+        with ThreadPoolExecutor(max_workers=4) as workers:
+            prepared = dict(workers.map(prepare, families))
+        jobs = [(command, [member], prepared[command]) for command, ids in families.items() for member in ids]
+        jobs += [(command, ids, None) for command, ids in commands.items() if command not in families]
+        # Rust consumers share Cargo outputs and occupy one serial lane.
+        rust_lane = [job for job in jobs if set(job[1]) & {'rust', 'rust-polars'}]
+        lanes = [[job] for job in jobs if not set(job[1]) & {'rust', 'rust-polars'}]
+        if rust_lane:
+            lanes.insert(0, rust_lane)
+        def run_lane(lane):
+            return [row for command, ids, preparation in lane for row in run_command(command, ids, preparation)]
+        with ThreadPoolExecutor(max_workers=4) as workers:
+            for rows in workers.map(run_lane, lanes):
+                matrix.extend(rows)
     (output_dir / 'matrix.json').write_text(json.dumps(matrix, indent=2) + '\n')
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    return int(any(row['baseline_exit'] != 0 or row['baseline_error'] or any(state != 'pass' for state in row['cells'].values()) for row in matrix if not row.get('platform_pending')))
+    executed = [row for row in matrix if not row.get('platform_pending')]
+    pending = [row for row in matrix if row.get('platform_pending')]
+    excluded = apple_delegated() and all(row['consumer'] in {'objective-c', 'swift'} for row in pending)
+    return int(not executed or bool(pending) and not excluded
+               or any(row['baseline_exit'] != 0 or row['baseline_error']
+                      or not row['cells'] or any(state != 'pass' for state in row['cells'].values())
+                      for row in executed))
 
 
 def main():
+    if sys.argv[1:] == ['--tool-environment']:
+        for name, value in tool_environment().items():
+            print(f'{name}={value}')
+        return 0
     if sys.argv[1:] == ['--validate']:
         parity = inventory()
         print(f"parity inventory: {len(all_consumers(parity))} public consumers; "

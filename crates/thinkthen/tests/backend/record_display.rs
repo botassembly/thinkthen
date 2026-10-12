@@ -57,7 +57,7 @@ fn every_flag_combination_preserves_lines_and_uses_shortest_scores() -> io::Resu
         for (flags, expected) in cases {
             let listener = Listener::answering(answer)?;
             let output = call(&listener, verb, flags, input)?;
-            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+            crate::harness::exits(&output, 0);
             assert_eq!(output.stdout, expected.as_bytes(), "{verb} {flags:?}");
             assert_eq!(listener.requests().len(), 2);
         }
@@ -238,7 +238,7 @@ fn batched_and_split_views_keep_stable_ties_and_file_local_top_positions() -> io
                 flags.extend(["--top", "2"]);
             }
             let output = spawn(&flags, &[], b"")?;
-            assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+            crate::harness::exits(&output, 0);
             let mut expected = format!("-- 0.9\n{one}:1:one\n-- 0.9\n{one}:3:last\n");
             if verb == "filter" {
                 expected.push_str(&format!("-- 0.9\n{two}:1:two\n-- 0.9\n{two}:2:end\n"));

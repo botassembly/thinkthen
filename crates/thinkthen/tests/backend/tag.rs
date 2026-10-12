@@ -1,9 +1,8 @@
 //! The compiled `tag` command against a loopback backend.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local, stderr_is};
 use std::fs;
 use std::path::PathBuf;
-
-use crate::harness::{Canned, Listener, spawn};
 
 const ANSWER: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.91},"#,
@@ -22,7 +21,7 @@ fn file(name: &str, text: &str) -> PathBuf {
 #[test]
 fn described_labels_make_one_exact_request_and_one_complete_result() {
     let listener = Listener::serving(vec![Canned::ok(ANSWER)]).expect("listener");
-    let output = spawn(
+    let output = spawn_local(
         &[
             "tag",
             "Which topics?",
@@ -31,24 +30,16 @@ fn described_labels_make_one_exact_request_and_one_complete_result() {
             "--label",
             "urgent=The item needs prompt attention.",
             "--details",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The invoice failed.",
     )
     .expect("tag runs");
 
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert!(output.stderr.is_empty());
-    let line = String::from_utf8_lossy(&output.stdout);
+    let line = crate::harness::printed(&output);
     assert!(line.contains(r#""value":["billing"]"#), "{line}");
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("tag details");
     assert_eq!(
@@ -75,27 +66,15 @@ fn described_labels_make_one_exact_request_and_one_complete_result() {
 fn an_empty_tag_list_is_a_successful_answer() {
     let answer = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.2}}}"#;
     let listener = Listener::serving(vec![Canned::ok(answer)]).expect("listener");
-    let output = spawn(
-        &[
-            "tag",
-            "Which topics?",
-            "billing",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["tag", "Which topics?", "billing"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"No charge is mentioned.",
     )
     .expect("tag runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "[]\n");
+    crate::harness::exits(&output, 0);
+    assert_eq!(crate::harness::printed(&output), "[]\n");
 }
 
 #[test]
@@ -116,7 +95,7 @@ fn typed_labels_replace_the_question_files_whole_list() {
     )
     .expect("tag plans");
     assert_eq!(output.status.code(), Some(0));
-    let plan = String::from_utf8_lossy(&output.stdout);
+    let plan = crate::harness::printed(&output);
     assert!(plan.contains(r#"label \"new\" applies"#), "{plan}");
     assert!(!plan.contains("Old label"), "{plan}");
 }
@@ -193,7 +172,7 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
             Canned::ok(ANSWER),
         ])
         .expect("listener");
-        let output = spawn(
+        let output = spawn_local(
             &[
                 "tag",
                 "Which topics?",
@@ -204,23 +183,15 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
                 &jobs,
                 "--batch",
                 "1",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
             ],
+            listener.base(),
             &[("THINKTHEN_API_KEY", "sk-test-value")],
             b"first\nsecond\nthird\n",
         )
         .expect("tag runs");
+        crate::harness::exits(&output, 0);
         assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
+            crate::harness::printed(&output),
             concat!(
                 r#"{"input":"first","value":["billing"]}"#,
                 "\n",
@@ -241,25 +212,14 @@ fn a_described_tag_file_sends_the_same_bytes_as_typed_labels() {
         "described",
         r#"{"tag":"Which topics?","labels":{"billing":"The item concerns a charge.","urgent":"The item needs prompt attention."}}"#,
     );
-    let output = spawn(
-        &[
-            "tag",
-            &format!("@{}", question.to_string_lossy()),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["tag", &format!("@{}", question.to_string_lossy())],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The invoice failed.",
     )
     .expect("tag runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(
@@ -278,27 +238,19 @@ fn one_structured_description_expands_every_label_and_sends_exact_bytes() {
         "structured",
         r#"{"tag":"Which topics?","labels":{"billing":{"what":"Money and invoices."},"urgent":"The item needs prompt attention."}}"#,
     );
-    let output = spawn(
+    let output = spawn_local(
         &[
             "tag",
             &format!("@{}", question.to_string_lossy()),
             "--details",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The invoice failed.",
     )
     .expect("tag runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let line = String::from_utf8_lossy(&output.stdout);
+    crate::harness::exits(&output, 0);
+    let line = crate::harness::printed(&output);
     assert!(line.contains(r#""value":["billing"]"#), "{line}");
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("tag details");
     assert_eq!(
@@ -327,25 +279,14 @@ fn a_structured_tag_text_carries_labels_without_criteria() {
         "structured-text",
         r#"{"tag":["Which topics?","Ask which apply."],"labels":["billing","urgent"]}"#,
     );
-    let output = spawn(
-        &[
-            "tag",
-            &format!("@{}", question.to_string_lossy()),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["tag", &format!("@{}", question.to_string_lossy())],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"The invoice failed.",
     )
     .expect("tag runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(
@@ -375,9 +316,9 @@ fn an_invalid_tag_description_sends_no_request() {
     )
     .expect("tag refuses");
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `labels` in the question file is a list of labels, or a map from each label to its description\n"
+    stderr_is(
+        &output,
+        "thinkthen: `labels` in the question file is a list of labels, or a map from each label to its description\n",
     );
     assert!(listener.requests().is_empty());
 }

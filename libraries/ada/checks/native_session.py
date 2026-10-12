@@ -121,3 +121,4 @@ end;''']
         backend.wait(timeout=10)
         diagnostics = backend.stderr.read()
         assert not diagnostics, diagnostics
+    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(installed), '--ada-objects', str(installed / 'obj')], env=child_env(), check=True)

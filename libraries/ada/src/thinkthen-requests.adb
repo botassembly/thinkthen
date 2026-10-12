@@ -2076,6 +2076,17 @@ Add (Result, "schema", Encode (Value.T_schema));
 Append (Result, "}");
 return To_String (Result);
 end Encode;
+function Encode (Value : T_RequestReaderFailure_producer_field_kind) return String is
+begin
+return """producer""";
+end Encode;
+function Encode (Value : T_RequestReaderFailure_producer) return String is
+Result : Unbounded_String := To_Unbounded_String ("{");
+begin
+Add (Result, "kind", Encode (Value.T_kind));
+Append (Result, "}");
+return To_String (Result);
+end Encode;
 function Encode (Value : T_RequestReaderFailure_io_field_kind) return String is
 begin
 return """io""";
@@ -2136,9 +2147,10 @@ end Encode;
 function Encode (Value : T_RequestReaderFailure) return String is
 begin
 case Value.Kind is
-when T_RequestReaderFailure_arm_RequestReaderFailure_io => return Encode (Value.V_0);
-when T_RequestReaderFailure_arm_RequestReaderFailure_utf8 => return Encode (Value.V_1);
-when T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input => return Encode (Value.V_2);
+when T_RequestReaderFailure_arm_RequestReaderFailure_producer => return Encode (Value.V_0);
+when T_RequestReaderFailure_arm_RequestReaderFailure_io => return Encode (Value.V_1);
+when T_RequestReaderFailure_arm_RequestReaderFailure_utf8 => return Encode (Value.V_2);
+when T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input => return Encode (Value.V_3);
 end case;
 end Encode;
 function Encode (Value : T_RequestSessionDescriptor) return String is

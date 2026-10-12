@@ -11,14 +11,14 @@ use crate::public::error::Error;
 
 /// Count-only facts fixed when one call and all of its workers finish.
 ///
-/// It serializes with its members in name order, as the C door prints them.
+/// It serializes with its members in name order, as the C interface prints them.
 #[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "facts"))]
 pub struct Facts {
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     pub(super) attempts: Option<Vec<crate::public::AttemptObservation>>,
-    // Explicit legacy serialization stays count-only; complete projection adopts this ID.
+    // Explicit compatibility serialization stays count-only; complete projection adopts this ID.
     #[serde(skip)]
     #[cfg_attr(test, schemars(skip))]
     pub(super) call_id: Option<CallId>,
@@ -228,11 +228,11 @@ impl<T> Call<T> {
     }
 }
 
-/// The C door's success reply: the bare value, the call's facts, and the
+/// The C interface's success reply: the bare value, the call's facts, and the
 /// attempts when the request asked for them.
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "callSuccess"))]
-pub struct DoorReply {
+pub struct CallReply {
     value: Box<RawValue>,
     facts: Facts,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -240,16 +240,16 @@ pub struct DoorReply {
 }
 
 /// The value may hold record text, so `Debug` shows the facts alone.
-impl fmt::Debug for DoorReply {
+impl fmt::Debug for CallReply {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
-            .debug_struct("DoorReply")
+            .debug_struct("CallReply")
             .field("facts", &self.facts)
             .finish_non_exhaustive()
     }
 }
 
-impl DoorReply {
+impl CallReply {
     /// Gather one reply from the value's JSON text, its facts, and any attempts.
     ///
     /// # Errors
@@ -261,7 +261,7 @@ impl DoorReply {
         attempts: Option<Vec<crate::public::AttemptObservation>>,
     ) -> Result<Self, Error> {
         let value =
-            RawValue::from_string(value).map_err(|_| Error::defect("a door value is not JSON"))?;
+            RawValue::from_string(value).map_err(|_| Error::defect("a reply value is not JSON"))?;
         Ok(Self {
             value,
             facts,

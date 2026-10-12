@@ -1,9 +1,8 @@
 //! The input pause: an open batch goes out when piped input pauses for 50 ms,
 //! and a test's longer pause holds it until input ends (Debt 030).
 
-use crate::child::ChildEnvironment as _;
 use std::io::Write as _;
-use std::process::{Child, ChildStdin, Command, Stdio};
+use std::process::{Child, ChildStdin};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -16,17 +15,12 @@ type Mode<'a> = (&'a str, &'a [&'a str], &'a [(&'a str, &'a str)]);
 /// Start `decide` on lines, write three records and keep the pipe open.
 fn held(listener: &Listener, extra: &[&str], environment: &[(&str, &str)]) -> (Child, ChildStdin) {
     let fixed = ["decide", QUESTION, "--lines", "--url", listener.base()];
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(folder("home"))
+    let mut child = crate::harness::piped(folder("home"))
         .env(KEY.0, KEY.1)
         .envs(environment.iter().copied())
         .args(fixed)
         .args(["--model", "jev-1.13.0"])
         .args(extra)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .expect("the command starts");
     let mut writer = child.stdin.take().expect("an input pipe");

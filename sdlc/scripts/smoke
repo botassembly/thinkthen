@@ -16,7 +16,14 @@ set -eu
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+campaign=
+if [ "${1:-}" = --full-functional ]; then
+    campaign=--full-functional
+    shift
+    . sdlc/scripts/full-compiler
+fi
 . sdlc/scripts/scratch.sh
+. sdlc/scripts/verdict.sh
 case_id=01-decide-yes-captured
 # The surfaces the rung smokes. PostgreSQL and Polars stay in the routine surfaces rung; see ticket 0335.
 skipped='libraries/polars databases/postgresql'
@@ -25,6 +32,9 @@ skipped='libraries/polars databases/postgresql'
 one() {
 	bin=$1
 	shift
+	if [ -n "$campaign" ] && apple_delegated "$1"; then
+		echo "smoke: pending $1 (matching macOS qualification required)"; return 0
+	fi
 	scratch_dir work
 	mkdir "$work/cache" "$work/config" "$work/usage"
 	mkfifo "$work/in"
@@ -65,7 +75,8 @@ one() {
 		echo "smoke: pass $1"; return 0
 	fi
 		reason="printed '$got' with $count requests, not 'smoke: $want' with the seed's 1" ;;
-	77) echo "smoke: not run $1 (no host toolchain)"; return 0 ;;
+	77) if [ -z "$campaign" ]; then echo "smoke: not run $1 (no host toolchain)"; return 0; fi
+		reason='not run; candidate requires a host toolchain' ;;
 	*) reason="exit $code" ;;
 	esac
 	echo "smoke: FAIL $1 ($reason)"
@@ -90,4 +101,4 @@ if [ "$#" -eq 0 ]; then
 		set -- $(printf '%s\n' "$@" | grep -vx "$surface")
 	done
 fi
-printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" --one "$bin"
+printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" ${campaign:+"$campaign"} --one "$bin"

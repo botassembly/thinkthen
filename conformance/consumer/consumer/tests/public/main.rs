@@ -11,7 +11,6 @@
 mod cases;
 #[path = "../../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
-mod native;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,

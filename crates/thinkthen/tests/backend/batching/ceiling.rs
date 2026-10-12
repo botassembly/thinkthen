@@ -1,9 +1,9 @@
 //! The byte setting closes command batches at every address and warns at the built-in one.
 
+use crate::harness::{Listener, exits, exits_because, spawn, spawn_file};
 use std::fs;
 
 use super::{KEY, QUESTION, answering, decide, folder, places, text};
-use crate::harness::{Listener, spawn, spawn_file};
 
 type Case<'a> = (&'a str, Vec<&'a str>, Vec<(&'a str, &'a str)>, &'a [usize]);
 
@@ -92,12 +92,7 @@ fn the_request_size_closes_batches_at_every_address() {
         let listener = Listener::answering(answering).expect("a loopback listener");
         let extra = [&["--no-cache", "--jobs", "1"][..], extra.as_slice()].concat();
         let output = decide_file(listener.base(), &extra, &environment, &input);
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{name}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{name}: {}", text(&output.stderr)));
         let requests = listener.requests();
         let sizes: Vec<usize> = requests
             .iter()
@@ -165,12 +160,7 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
             input,
         )
         .expect("command");
-        assert_eq!(
-            blank.status.code(),
-            Some(0),
-            "{value:?}: {}",
-            text(&blank.stderr)
-        );
+        exits_because(&blank, 0, || format!("{value:?}: {}", text(&blank.stderr)));
         assert_eq!(blank.stdout, unset.stdout, "{value:?}");
     }
     let one = spawn(
@@ -179,14 +169,14 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
         b"line 1",
     )
     .expect("one document");
-    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
+    exits(&one, 0);
     let choose = spawn(
         &["choose", "Which?", "a", "b", "--plan"],
         &[("THINKTHEN_MAX_REQUEST_BYTES", "0")],
         b"line 1",
     )
     .expect("unrelated verb");
-    assert_eq!(choose.status.code(), Some(0), "{}", text(&choose.stderr));
+    exits(&choose, 0);
 }
 
 #[test]
@@ -213,7 +203,7 @@ fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
         b"alpha\nbeta\ngamma\n",
     )
     .expect("plan command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let lines = text(&output.stdout);
     let mut lines = lines.lines();
     let first = lines.next().expect("first disclosed body");
@@ -246,7 +236,7 @@ fn a_later_ordinary_command_request_is_refused_by_the_process_cap() {
         &[],
         "line 1\nline 2\n",
     );
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    exits(&output, 2);
     assert_eq!(
         text(&output.stderr),
         "thinkthen: the process send budget was spent before another request\nthinkthen: stopped at record 2; 1 record finished\n"
@@ -305,12 +295,7 @@ fn a_raised_size_warns_only_at_the_built_in_address() {
             b"line 1",
         )
         .expect("dry run");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{base}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || format!("{base}: {}", text(&output.stderr)));
         assert_eq!(text(&output.stderr), expected, "{base}");
     }
 }
@@ -342,12 +327,7 @@ fn repeated_rank_records_complete_under_the_planned_allowance_with_every_origina
         spawn_file(&[&fixed[..], extra].concat(), &[KEY], &input).expect("rank command")
     };
     let old_allowance = run(&["--max-requests-total", "11"]);
-    assert_eq!(
-        old_allowance.status.code(),
-        Some(2),
-        "{}",
-        text(&old_allowance.stderr)
-    );
+    exits(&old_allowance, 2);
     assert!(old_allowance.stdout.is_empty());
     assert!(
         text(&old_allowance.stderr)
@@ -355,7 +335,7 @@ fn repeated_rank_records_complete_under_the_planned_allowance_with_every_origina
     );
     assert_eq!(listener.count(), 11);
     let preview = run(&["--plan"]);
-    assert_eq!(preview.status.code(), Some(0), "{}", text(&preview.stderr));
+    exits(&preview, 0);
     assert_eq!(listener.count(), 11, "planning sends nothing");
     let counts: serde_json::Value =
         serde_json::from_str(text(&preview.stdout).lines().nth(1).expect("plan counts"))
@@ -368,12 +348,7 @@ fn repeated_rank_records_complete_under_the_planned_allowance_with_every_origina
         .expect("request bound")
         .to_string();
     let complete = run(&["--max-requests-total", &allowance]);
-    assert_eq!(
-        complete.status.code(),
-        Some(0),
-        "{}",
-        text(&complete.stderr)
-    );
+    exits(&complete, 0);
     let rows = super::details(&complete);
     assert_eq!(rows.len(), 186);
     let mut positions = Vec::new();

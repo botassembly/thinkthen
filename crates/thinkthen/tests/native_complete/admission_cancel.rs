@@ -1,5 +1,5 @@
 use super::*;
-use thinkthen::{CancelToken, InputEvidence, QuestionInput, RankSet, RecordInput};
+use thinkthen::{CancelToken, InputEvidence, QuestionInput, RankSet};
 struct Original<'a> {
     token: &'a CancelToken,
     snapshots: &'a AtomicUsize,
@@ -18,27 +18,19 @@ fn call(
     token: &CancelToken,
     snapshots: &AtomicUsize,
 ) -> Result<(), thinkthen::Error> {
-    let records = || {
-        (0..3).map(|_| RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: Original { token, snapshots },
-            context: None,
-            options: None,
-        })
-    };
+    let records = || (0..3).map(|_| crate::api::record(Original { token, snapshots }));
     let options = CallOptions::new().cancel(token);
     let question = Question::decide("Ready?").unwrap().cut();
     let rank = Question::rank("Ready?").unwrap();
     let set = r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#;
     match function {
-        "atomic" => engine.decide_records_complete_with(&question,records(),options).map(|_|()),
-        "annotation" => engine.annotate_records_complete_with(&thinkthen::QuestionSet::from_json(set).unwrap(),records(),options).map(|_|()),
-        "rank" => engine.rank_records_complete_with(&rank,records(),options).map(|_|()),
-        "rank-set" => engine.rank_set_records_complete_with(&RankSet::from_json(set).unwrap(),records(),options).map(|_|()),
-        "find" => engine.find_records_complete_with(&Question::find("Which?").unwrap(),records(),options).map(|_|()),
-        "recognize" => engine.recognize_records_complete_with(&thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{}}"#).unwrap(),records(),options).map(|_|()),
-        "relate" => engine.relate_records_complete_with(&thinkthen::Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap(),records(),options).map(|_|()),
+        "atomic" => crate::api::eager_decisions(engine,&question,records(),options).map(|_|()),
+        "annotation" => crate::api::whole(engine,thinkthen::RequestFunction::Annotate,thinkthen::QuestionSet::from_json(set).unwrap().into(),records().map(Ok),options).map(|_|()),
+        "rank" => crate::api::eager_rank(engine,&rank,records(),options).map(|_|()),
+        "rank-set" => crate::api::whole(engine,thinkthen::RequestFunction::Rank,RankSet::from_json(set).unwrap().into(),records().map(Ok),options).map(|_|()),
+        "find" => crate::api::find(engine, &Question::find("Which?").unwrap(), records().map(Ok), options).map(|_|()),
+        "recognize" => crate::api::recognize_records(engine,&thinkthen::Recognize::from_json(r#"{"version":1,"recognize":{}}"#).unwrap(),records(),options).map(|_|()),
+        "relate" => crate::api::whole(engine,thinkthen::RequestFunction::Relate,thinkthen::Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),records().map(Ok),options).map(|_|()),
         _=>panic!("function"),
     }
 }
@@ -80,21 +72,16 @@ fn native_finite_source_cancel_stops_before_pulling_the_next_record() {
         let at = pulls.fetch_add(1, Ordering::Relaxed);
         assert_eq!(at, 0, "a cancelled native source was pulled again");
         token.cancel();
-        Some(Ok(RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Plain.",
-            context: None,
-            options: None,
-        }))
+        Some(Ok(crate::api::record("Plain.")))
     });
-    let error = engine
-        .try_rank_records_complete_with(
-            &Question::rank("Ready?").unwrap(),
-            records,
-            CallOptions::new().cancel(&token),
-        )
-        .unwrap_err();
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        Question::rank("Ready?").unwrap().into(),
+        records,
+        CallOptions::new().cancel(&token),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Cancelled);
     assert_eq!(pulls.load(Ordering::Relaxed), 1);
     assert!(error.facts().is_none());

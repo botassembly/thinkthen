@@ -8,6 +8,8 @@ The names table in [`../CONTRIBUTING.md`](../CONTRIBUTING.md#the-four-names) fix
 
 The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommended typed family for each language and links its generated contracts. The [0.2 upgrade guide](../libraries/UPGRADING-0.2.md) maps changed calls. The [package design](../sdlc/decisions/2026-10-09-native-package-design.md) defines runtime floors and intended platform support, including stable JDK 22 and Apple-only Objective-C. Package documentation distinguishes the final development APIs from published 0.1.2 installation and candidate platform qualification.
 
+`RequestInput::from_json(&str) -> Result<RequestInput, Error>` decodes the existing [canonical input selector grammar](request.schema.json) beside `RequestItem::from_json` and `RequestQuestion::from_json`. It preserves serde admission and classifies failures through the shared typed context validator. Bindings retain `RequestDecodeCause` diagnostics instead of interpreting serde error text. This method changes no selector fields, optional values or null handling. [ADR 0125](../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns native admission. Ian can overturn this API detail.
+
 `spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
 | Document | What it fixes | Status |

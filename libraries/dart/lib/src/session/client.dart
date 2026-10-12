@@ -45,11 +45,12 @@ final class SessionFailure implements Exception {
   String toString() => failure.error.message;
 }
 
-/// Polling uses the native nonblocking operations and yields to the Dart event loop.
+/// Native waits run in a helper isolate while the calling isolate stays responsive.
 final class OwnedSession implements Finalizable {
   final NativeAbi _abi;
   final NativeOwner _owner;
-  bool _reading = false, _pushing = false;
+  bool _reading = false, _pushing = false, _closed = false;
+  int _waiters = 0;
   OwnedSession._(this._abi, Pointer<Void> pointer)
       : _owner = NativeOwner(_abi.thinkthen_session_freePointer, pointer) {
     _owner.setRelease(_abi.thinkthen_session_free);
@@ -61,21 +62,42 @@ final class OwnedSession implements Finalizable {
 
   void close() {
     cancel();
-    _owner.close();
+    _closed = true;
+    if (_waiters == 0) _owner.close();
+  }
+
+  Pointer<Void> get _live {
+    if (_closed) throw StateError('Native owner is closed');
+    return _owner.live;
+  }
+
+  Future<void> _wait(bool input) async {
+    final address = _live.address;
+    final interest = input
+        ? THINKTHEN_SESSION_WAIT_INPUT_V1
+        : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
+    _waiters++;
+    try {
+      // Only the numeric address crosses isolates. This owner retains the allocation.
+      await Isolate.run(() => _nativeSessionWait(address, interest));
+    } finally {
+      _waiters--;
+      if (_closed && _waiters == 0) _owner.close();
+    }
   }
 
   void finish({InputRequestReaderFailure? failure}) {
     if (failure == null) {
       checkSession(
         _abi,
-        _abi.thinkthen_session_finish(_owner.live, nullptr, 0),
+        _abi.thinkthen_session_finish(_live, nullptr, 0),
       );
     } else {
       withBytes(
         failure,
         (bytes, length) => checkSession(
           _abi,
-          _abi.thinkthen_session_finish(_owner.live, bytes, length),
+          _abi.thinkthen_session_finish(_live, bytes, length),
         ),
       );
     }
@@ -93,7 +115,7 @@ final class OwnedSession implements Finalizable {
               (bytes, length) => checkSession(
                   _abi,
                   _abi.thinkthen_session_try_push(
-                      _owner.live, bytes, length, status)));
+                      _live, bytes, length, status)));
           if (status.value == THINKTHEN_SESSION_ACCEPTED_V1) return true;
           if (status.value == THINKTHEN_SESSION_CLOSED_V1) return false;
           if (status.value != THINKTHEN_SESSION_FULL_V1)
@@ -101,7 +123,7 @@ final class OwnedSession implements Finalizable {
         } finally {
           calloc.free(status);
         }
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await _wait(true);
       }
     } finally {
       _pushing = false;
@@ -116,8 +138,8 @@ final class OwnedSession implements Finalizable {
         final status = calloc<Uint32>();
         final output = calloc<Pointer<Void>>();
         try {
-          checkSession(_abi,
-              _abi.thinkthen_session_try_read(_owner.live, status, output));
+          checkSession(
+              _abi, _abi.thinkthen_session_try_read(_live, status, output));
           if (status.value == THINKTHEN_SESSION_END_V1) return null;
           if (status.value == THINKTHEN_SESSION_RESULT_V1) {
             final packet = output.value;
@@ -141,7 +163,7 @@ final class OwnedSession implements Finalizable {
           calloc.free(status);
           calloc.free(output);
         }
-        await Future<void>.delayed(const Duration(milliseconds: 10));
+        await _wait(false);
       }
     } finally {
       _reading = false;
@@ -261,7 +283,6 @@ final class Engine implements Finalizable {
     Object? readerFailure;
     var failed = false, readerFinished = false;
     void stop() {
-      session.cancel();
       session.close();
     }
 
@@ -295,15 +316,16 @@ final class Engine implements Finalizable {
       } else {
         subscription = feed.listen(
           (descriptor) async {
-            if (readerFinished || cancellation?.cancelled == true ||
+            if (readerFinished ||
+                cancellation?.cancelled == true ||
                 session._owner.pointer == nullptr) return;
             subscription!.pause();
             try {
               if (!await session.push(descriptor))
                 await subscription?.cancel();
-              else if (!readerFinished && cancellation?.cancelled != true &&
-                  session._owner.pointer != nullptr)
-                subscription?.resume();
+              else if (!readerFinished &&
+                  cancellation?.cancelled != true &&
+                  session._owner.pointer != nullptr) subscription?.resume();
             } catch (error) {
               failReader(error);
             }
@@ -422,4 +444,18 @@ final class Engine implements Finalizable {
           Cancellation? cancellation,
           Stream<InputRequestSessionDescriptor>? feed}) =>
       _call("relate", question, input, options, cancellation, feed);
+}
+
+void _nativeSessionWait(int address, int interest) {
+  final abi = NativeAbi();
+  final ready = calloc<Uint32>();
+  try {
+    // Read immediate diagnostics on the helper isolate that made the call.
+    checkSession(
+        abi,
+        abi.thinkthen_session_wait(
+            Pointer<Void>.fromAddress(address), interest, 50, ready));
+  } finally {
+    calloc.free(ready);
+  }
 }

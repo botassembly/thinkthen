@@ -3,9 +3,8 @@ use super::records::{Held, Prepared, Records, prepare_record};
 use crate::core;
 use crate::engine::pipeline::Asker as _;
 use crate::public::{
-    Batch, CallOptions, CompleteChoice, CompleteDecision, CompleteFilter, CompleteRecord,
-    CompleteScore, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error, InputEvidence,
-    InputFunction, Question, RecordInput,
+    Batch, CallOptions, CompleteRecord, Engine, Error, InputEvidence, InputFunction, Question,
+    RecordInput,
 };
 use crate::public::{options::Stop, pull};
 use std::sync::Arc;
@@ -16,134 +15,6 @@ struct Original<T> {
 }
 
 impl Engine {
-    /// Pull fallible originals into complete decisions, retaining contexts and locations.
-    /// # Errors
-    /// Yields the completed prefix then one joined terminal error with final facts.
-    pub fn try_decide_records_complete_with<'a, Q, I, T>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteDecision>>
-    where
-        Q: DecisionQuestion + ?Sized,
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                question.question().clone().into(),
-                records,
-                options,
-                crate::RequestCall::Decide,
-            )
-            .and_then(|rows| rows.decisions("a native decide batch returned another result kind")),
-        )
-    }
-
-    /// Pull fallible originals with complete ordered replacement choose shortlists.
-    /// # Errors
-    /// Yields the completed prefix then one terminal input/backend/stop error.
-    pub fn try_choose_records_complete_with<'a, Q, I, T>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteChoice>>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                question.question().clone().into(),
-                records,
-                options,
-                crate::RequestCall::Choose,
-            )
-            .and_then(|rows| rows.choices("a native choose batch returned another result kind")),
-        )
-    }
-
-    /// Pull fallible originals with every accepted and rejected tag probability.
-    /// # Errors
-    /// Unsupported controls/images refuse their row before sending it.
-    pub fn try_tag_records_complete_with<'a, Q, I, T>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteTags>>
-    where
-        Q: DetailQuestion + ?Sized,
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                question.question().clone().into(),
-                records,
-                options,
-                crate::RequestCall::Tag,
-            )
-            .and_then(|rows| rows.tags("a native tag batch returned another result kind")),
-        )
-    }
-
-    /// Pull fallible originals with complete graded score answers and per-record context.
-    /// # Errors
-    /// Yields the completed prefix then a joined terminal error with final facts.
-    pub fn try_score_records_complete_with<'a, I, T>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteScore>>
-    where
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                question.clone().into(),
-                records,
-                options,
-                crate::RequestCall::Score,
-            )
-            .and_then(|rows| rows.scores("a native score batch returned another result kind")),
-        )
-    }
-
-    /// Pull complete filter judgments for every original, including rejected rows.
-    /// # Errors
-    /// Yields the completed prefix then a joined terminal error with final facts.
-    pub fn try_filter_records_complete_with<'a, I, T>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, CompleteRecord<T, CompleteFilter>>
-    where
-        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
-        T: InputEvidence + 'a,
-    {
-        Batch::of(
-            crate::public::request::pull::native(
-                self,
-                question.clone().into(),
-                records,
-                options,
-                crate::RequestCall::Filter,
-            )
-            .and_then(|rows| rows.filtered("a native filter batch returned another result kind")),
-        )
-    }
-
     #[expect(
         clippy::too_many_arguments,
         reason = "owned context stays separate from borrowed caller controls"
@@ -161,8 +32,45 @@ impl Engine {
         I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
         T: InputEvidence + 'a,
     {
-        super::admitted(function, &question)?;
-        let setting = crate::public::bulk::selected_batch(&question, &options, self.batch)?;
+        self.complete_stream_project(
+            function,
+            question,
+            records,
+            options,
+            context,
+            move |original, ordinal, canonical| {
+                Ok(Some(CompleteRecord {
+                    original,
+                    ordinal,
+                    result: convert(canonical)?,
+                }))
+            },
+        )
+    }
+
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one private pipeline owns typed result projections"
+    )]
+    pub(crate) fn complete_stream_project<'a, I, T, R: 'a>(
+        &self,
+        function: InputFunction,
+        question: Question,
+        records: I,
+        options: CallOptions<'a>,
+        context: Option<String>,
+        project: impl Fn(T, usize, core::CompleteAtomic) -> Result<Option<R>, Error> + 'a,
+    ) -> Result<Batch<'a, R>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        let scalar = options.scalar_input;
+        let setting = if scalar {
+            core::Setting::Max
+        } else {
+            crate::public::bulk::selected_batch(&question, &options, self.batch)?
+        };
         let engine = self.asking(&question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let attempts = stop.facts().attempts().is_some();
@@ -199,6 +107,7 @@ impl Engine {
             stop,
             packing,
             most,
+            pending_inputs: options.pending_inputs,
         };
         Ok(pull::try_start_prepared(
             call,
@@ -217,7 +126,11 @@ impl Engine {
                         .map_err(|error| error.at_record(at))?;
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
-                let mut run = super::batch_run(&engine, &held.question, profile.as_ref(), setting);
+                let mut run = if scalar {
+                    super::run(&engine, &held.question, profile.as_ref())
+                } else {
+                    super::batch_run(&engine, &held.question, profile.as_ref(), setting)
+                };
                 run.context_sha256 = held.context_sha256;
                 let events = attempts.then(|| judged.answered.attempts.clone());
                 let mut canonical = super::atomic(
@@ -231,11 +144,7 @@ impl Engine {
                 .map_err(|_| super::wrong())?;
                 canonical.source = held.source;
                 canonical.images = held.images;
-                Ok(Some(CompleteRecord {
-                    original: held.original,
-                    ordinal: at,
-                    result: convert(canonical)?,
-                }))
+                project(held.original, at, canonical)
             }),
         ))
     }

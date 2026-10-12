@@ -32,7 +32,7 @@ fn per_record_context_reaches_the_wire_and_empty_suppresses_shared_context() {
         input,
     )
     .expect("command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let mut bodies: Vec<Value> = listener
         .requests()
         .iter()
@@ -82,12 +82,7 @@ fn single_document_shared_context_is_sent_and_strictly_replayed() {
         b"line 1",
     )
     .expect("record");
-    assert_eq!(
-        recorded.status.code(),
-        Some(1),
-        "{}",
-        text(&recorded.stderr)
-    );
+    crate::harness::exits(&recorded, 1);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     let body: Value = serde_json::from_slice(&sent[0].body).expect("request");
@@ -102,12 +97,7 @@ fn single_document_shared_context_is_sent_and_strictly_replayed() {
         b"line 1",
     )
     .expect("replay");
-    assert_eq!(
-        replayed.status.code(),
-        Some(1),
-        "{}",
-        text(&replayed.stderr)
-    );
+    crate::harness::exits(&replayed, 1);
     assert_eq!(listener.count(), 1, "strict replay sends nothing");
 }
 
@@ -141,7 +131,7 @@ fn declared_object_context_preserves_member_order_and_null_refuses_before_send()
         b"{\"text\":\"line 1\",\"context\":{\"z\":false,\"a\":null}}\n",
     )
     .expect("object context");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     assert!(text(&sent[0].body).contains(r#""state":{"z":false,"a":null}"#));
@@ -151,7 +141,7 @@ fn declared_object_context_preserves_member_order_and_null_refuses_before_send()
         b"{\"text\":\"line 1\",\"context\":{}}\n{\"text\":\"line 2\",\"context\":null}\n",
     )
     .expect("null refusal");
-    assert_eq!(refused.status.code(), Some(2), "{}", text(&refused.stderr));
+    crate::harness::exits(&refused, 2);
     assert!(refused.stdout.is_empty());
     assert_eq!(listener.count(), 1, "the malformed stage sends nothing");
 }

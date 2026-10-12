@@ -21,6 +21,15 @@ question$unexpected <- TRUE
 refused <- tryCatch(tt_decide(question, "x"), thinkthen_error = identity)
 check("authored selectors refuse unknown fields without sends", inherits(refused, "thinkthen_usage") && identical(conditionMessage(refused), "invalid canonical request") && backend_count() == arrivals)
 check("invalid request sends nothing", backend_count() == arrivals)
+for (kind in c("records", "units", "entities")) {
+  refused <- tryCatch(tt_decide("Q?", tt_input(kind, items = list(list(
+    original = list(kind = "text", text = "x"), context = 1)))), thinkthen_error = identity)
+  check("input selectors retain typed context refusal without facts or sends",
+    inherits(refused, "thinkthen_usage") && identical(refused$kind, "usage") &&
+    identical(conditionMessage(refused), "the per-item context does not match context_schema") &&
+    inherits(refused$complete, "thinkthen_CallError") &&
+    inherits(refused$complete$facts, "thinkthen_absent") && backend_count() == arrivals)
+}
 empty <- tt_decide("No records?", NULL)
 check("ordinary NULL supplies no records and sends nothing", length(empty$results) == 0L &&
   empty$facts$requests_sent == 0 && backend_count() == arrivals)

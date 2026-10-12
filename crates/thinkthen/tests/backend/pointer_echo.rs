@@ -59,7 +59,7 @@ fn a_pointer_holding_a_control_character_is_refused_and_never_echoed() {
         )
         .expect("the compiled binary runs");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             format!("thinkthen: {said}\n"),
             "{arguments:?}"
         );

@@ -26,6 +26,30 @@ fn structured_tag(prefix: &str) -> (String, PathBuf, PathBuf) {
     (format!("@{}", question.to_string_lossy()), exact, under)
 }
 
+/// Send the structured-profile cases with their shared transport and key.
+fn send(
+    arguments: &[&str],
+    profile: &Path,
+    listener: &Listener,
+    evidence: &[u8],
+) -> std::process::Output {
+    spawn(
+        &[
+            arguments,
+            &[
+                "--profile",
+                &profile.to_string_lossy(),
+                "--url",
+                listener.base(),
+            ],
+        ]
+        .concat(),
+        &[("THINKTHEN_API_KEY", "secret-key")],
+        evidence,
+    )
+    .expect("command")
+}
+
 /// Preview bytes retain packing at the edge and splitting one byte under.
 /// Both plans bound requests by the two admitted wire questions.
 #[test]
@@ -43,12 +67,7 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
             b"Refund me please.",
         )
         .expect("command");
-        assert_eq!(
-            planned.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&planned.stderr)
-        );
+        crate::harness::exits(&planned, 0);
         let mut lines = planned.stdout.split(|byte| *byte == b'\n');
         let document: serde_json::Value =
             serde_json::from_slice(lines.next().expect("a preview line")).expect("preview");
@@ -88,32 +107,10 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
 fn a_structured_request_counts_its_complete_body_at_the_edge() {
     let (question, exact, under) = structured_tag("");
     let base = ["tag", question.as_str(), "--model", "local-1"];
-    let send = |profile: &Path, listener: &Listener| {
-        spawn(
-            &[
-                &base[..],
-                &[
-                    "--profile",
-                    &profile.to_string_lossy(),
-                    "--url",
-                    listener.base(),
-                ],
-            ]
-            .concat(),
-            &[("THINKTHEN_API_KEY", "secret-key")],
-            b"Refund me please.",
-        )
-        .expect("command")
-    };
 
     let listener = Listener::answering(|_| Canned::ok(STRUCTURED_TAG_ANSWERS)).expect("listener");
-    let sent = send(&exact, &listener);
-    assert_eq!(
-        sent.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&sent.stderr)
-    );
+    let sent = send(&base, &exact, &listener, b"Refund me please.");
+    crate::harness::exits(&sent, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(
@@ -122,13 +119,8 @@ fn a_structured_request_counts_its_complete_body_at_the_edge() {
     );
 
     let split_listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let split = send(&under, &split_listener);
-    assert_eq!(
-        split.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&split.stderr)
-    );
+    let split = send(&base, &under, &split_listener, b"Refund me please.");
+    crate::harness::exits(&split, 0);
     let bodies: Vec<serde_json::Value> = split_listener
         .requests()
         .iter()
@@ -143,7 +135,7 @@ fn a_structured_request_counts_its_complete_body_at_the_edge() {
         );
     }
     assert_eq!(
-        String::from_utf8_lossy(&split.stdout),
+        crate::harness::printed(&split),
         "[\"billing\",\"urgent\"]\n"
     );
 }
@@ -154,38 +146,17 @@ fn a_structured_request_counts_its_complete_body_at_the_edge() {
 fn expanded_tags_count_as_wire_questions_and_over_limit_sends_nothing() {
     let one = profile("one-question", r#""max_questions":1"#);
     let tiny = profile("tiny-request", r#""max_request_bytes":10"#);
-    let run = |profile: &Path, listener: &Listener| {
-        spawn(
-            &[
-                "tag",
-                "Which topics?",
-                "billing",
-                "urgent",
-                "--profile",
-                &profile.to_string_lossy(),
-                "--url",
-                listener.base(),
-            ],
-            &[("THINKTHEN_API_KEY", "secret-key")],
-            b"private evidence",
-        )
-        .expect("command")
-    };
+    let arguments = ["tag", "Which topics?", "billing", "urgent"];
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let output = run(&one, &listener);
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    let output = send(&arguments, &one, &listener, b"private evidence");
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.requests().len(), 2);
 
     let refused = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let output = run(&tiny, &refused);
+    let output = send(&arguments, &tiny, &refused, b"private evidence");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(refused.connections(), 0);
-    let said = String::from_utf8_lossy(&output.stderr);
+    let said = crate::harness::said(&output);
     assert!(
         said.starts_with(
             "thinkthen: profile tiny-request allows at most 10 request bytes; this request has "

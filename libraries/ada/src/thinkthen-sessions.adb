@@ -103,6 +103,13 @@ package body Thinkthen.Sessions is
    begin
       Close (Value);
    end Finalize;
+   procedure Wait (Owner : Session'Class; Interest : Unsigned_32;
+                   Timeout_Ms : Unsigned_32; Ready : out Unsigned_32) is
+      Native_Ready : aliased Unsigned_32;
+   begin
+      Check (thinkthen_session_wait (Owner.Handle, Interest, Timeout_Ms, Native_Ready'Access));
+      Ready := Native_Ready;
+   end Wait;
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status) is
       Native_Status : aliased Unsigned_32;
       New_Handle : aliased Packet_Access := null;

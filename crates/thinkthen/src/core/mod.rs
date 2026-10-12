@@ -27,7 +27,9 @@ mod digest;
 mod find;
 mod identity;
 pub(crate) use identity::answer::{AtomicReading, RecordScope};
-pub(crate) use identity::legacy::{Metadata as LegacyMetadata, observation as legacy_observation};
+pub(crate) use identity::compatibility::{
+    Metadata as CompatibilityMetadata, observation as compatibility_observation,
+};
 pub(crate) mod image;
 mod json;
 pub(crate) mod measure;

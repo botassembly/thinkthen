@@ -1,5 +1,5 @@
 #!/bin/sh
-# Usage: split.sh REV
+# Usage: sh sdlc/scripts/count-rust-source-classification REV
 # Counts nonblank .rs lines under crates/ at REV, split into product and test.
 # Test lines: files under any tests/ or *_tests/ folder, files named tests.rs
 # or *_tests.rs, files and folders named test_*, and inline `#[cfg(test)] mod NAME { ... }` blocks in other files.

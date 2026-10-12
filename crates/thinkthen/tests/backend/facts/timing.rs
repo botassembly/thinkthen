@@ -68,5 +68,5 @@ fn command_time_excludes_parallel_http_once_and_keeps_post_reply_input_wait() {
     for text in ["First.", "Second."] {
         assert!(requests.contains(&json!({"model":"fixed","state":"Each question quotes the text it asks about.","questions":{"q1":{"type":"noul","instructions":format!("The text is \"{text}\". Good?")}}})));
     }
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("timing-private"));
+    assert!(!crate::harness::said(&output).contains("timing-private"));
 }

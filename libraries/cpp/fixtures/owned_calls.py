@@ -82,11 +82,11 @@ try:
     assert len(server.requests)==before+1, server.requests
     print('CPP_INSTALLED_LOCALE_PASS nested_input probabilities retained_packets')
     baseline = len(server.requests)
-    for mode in ('values','invalid','image','failure'):
+    for mode in ('values','invalid','image','closed','failure'):
         qpath = scratch / ('tag-question.json' if mode == 'image' else 'decide-question.json')
         result = subprocess.run([binary,mode,qpath,qpath],env=env,capture_output=True,text=True,timeout=5)
         assert result.returncode == 0, (mode,result.returncode,result.stdout,result.stderr)
-        assert result.stdout.strip() in ('values-pass','admission-pass','failure-pass'), result
+        assert result.stdout.strip() in ('values-pass','admission-pass','failure-pass','closed-push-pass'), result
         assert len(server.requests) == baseline + (mode == 'failure'), (mode,len(server.requests))
         print('CPP_INSTALLED_EDGE_PASS',mode)
     source = scratch / 'physical.txt'

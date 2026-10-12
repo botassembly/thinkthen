@@ -1,11 +1,11 @@
 //! Retain scalar cancellation and the historical explicit-four chunk boundary.
 
+use crate::harness::{Canned, stderr_is};
 use std::fs;
 use std::io;
 use std::path::Path;
 
 use super::held;
-use crate::harness::Canned;
 
 const RECOGNIZED: &str = r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"IN","probabilities":{"IN":1.0,"OUT":0.0}}}}"#;
 // The former single phrase makes seven BILOU chunks. Two copies retain its
@@ -29,7 +29,7 @@ fn interrupted_chunks(count: usize, framing: &[&str], stderr: &str) -> io::Resul
     // held owns the signal, count+1 rendezvous and exact final request count.
     let output = held(count, &arguments, TEXT, || Canned::ok(RECOGNIZED))?;
     assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), stderr);
+    stderr_is(&output, stderr);
     Ok(())
 }
 

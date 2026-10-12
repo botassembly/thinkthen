@@ -30,6 +30,30 @@ public final class SessionConsumer {
             Thread.sleep(5);
         }
     }
+    static void waitScheduler(Engine engine, Inputs.RequestQuestion question) throws Exception {
+        var request = new Inputs.Request().call(new Inputs.RequestCallDecide().question(question)
+            .input(new Inputs.RequestInputFeed().name("input")));
+        try (var scheduler = Executors.newSingleThreadExecutor(); var session = engine.startSession(request)) {
+            session.waitReady(false).get(2, TimeUnit.SECONDS);
+            session.waitReady(false).get(2, TimeUnit.SECONDS);
+            CompletableFuture.runAsync(() -> {}, scheduler).get(1, TimeUnit.SECONDS);
+            var threads = java.lang.management.ManagementFactory.getThreadMXBean();
+            long before = threads.getTotalStartedThreadCount();
+            for (int i = 0; i < 12; i++) {
+                var waiting = session.waitReady(false);
+                check(!waiting.isDone(), "native wait returned without waiting");
+                CompletableFuture.runAsync(() -> check(!waiting.isDone(), "scheduler callback ran after the native wait"), scheduler).get(1, TimeUnit.SECONDS);
+                waiting.get(2, TimeUnit.SECONDS);
+                check(session.tryRead().packet() == null, "wait consumed or invented a result");
+            }
+            check(threads.getTotalStartedThreadCount() - before <= 2, "timed waits create a new worker each time");
+            synchronized (session) {
+                var waiting = session.waitReady(false);
+                check(waiting.cancel(false), "pending wait did not cancel");
+                check(session.waitReady(false) == waiting, "cancelled wait was replaced before its native worker returned");
+            }
+        }
+    }
     public static void main(String[] ignored) throws Exception {
         if (ignored.length == 1 && ignored[0].equals("smoke")) {
             try (var engine = new Engine()) {
@@ -93,6 +117,7 @@ public final class SessionConsumer {
             catch (CompletionException error) { check(error.getCause() instanceof IllegalArgumentException,"Unicode representation failure"); }
             try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
             catch (CompletionException error) { retainedFailure = (Engine.SessionFailure)error.getCause(); }
+            waitScheduler(engine, question);
             var held = engine.decide(question,records("hold-jvm-java"),options());
             arrived("hold-jvm-java");
             check(done(engine.decide(question,records("session-independent"),options())).terminal().facts().value().requestsSent().intValueExact() == 1,"unrelated session blocked");
@@ -109,7 +134,7 @@ public final class SessionConsumer {
                     var next = session.tryRead();
                     if (next.packet() instanceof Results.SessionPacketTerminal settled) terminal = settled;
                     if (next.ended()) break;
-                    Thread.sleep(5);
+                    session.waitReady(false).join();
                 }
                 check(terminal != null && terminal.failure().state() == Presence.State.VALUE,"owned reader failure");
             }

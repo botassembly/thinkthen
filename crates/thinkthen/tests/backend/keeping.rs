@@ -1,9 +1,9 @@
 //! `filter` and `rank` over a loopback backend: what is kept, and in what order.
 
+use crate::harness::{Canned, Listener, spawn_one as spawn, stderr_is};
+pub(crate) use crate::harness::{code, printed, said};
 use std::io;
 use std::process::Output;
-
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 mod default_framing;
 mod graded_rank;
@@ -89,21 +89,6 @@ fn over(verb: &str, base: &str, arguments: &[&str], input: &str) -> io::Result<O
     )
 }
 
-/// What the run printed on standard output.
-pub(crate) fn printed(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
-
-/// What the run said on standard error.
-pub(crate) fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
-}
-
-/// The exit code the run earned.
-pub(crate) fn code(output: &Output) -> i32 {
-    output.status.code().unwrap_or(-1)
-}
-
 #[test]
 fn filter_prints_every_kept_record_byte_for_byte_and_in_input_order() -> io::Result<()> {
     let listener = serving(&["0.91", "0.02", "0.77", "0.55"])?;
@@ -123,7 +108,7 @@ fn filter_prints_every_kept_record_byte_for_byte_and_in_input_order() -> io::Res
             "{\"id\":\"R-4\",\"body\":\"The refund never arrived.\"}\n",
         )
     );
-    assert_eq!(said(&output), "");
+    stderr_is(&output, "");
     Ok(())
 }
 
@@ -387,12 +372,12 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
         printed(&output),
         "{\"id\":\"R-1\",\"body\":\"The payout failed again.\"}\n"
     );
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
             "thinkthen: stopped at record 2; 1 record finished\n",
-        )
+        ),
     );
 
     let listener = Listener::serving(vec![
@@ -416,13 +401,13 @@ fn a_failed_record_stops_filter_after_a_prefix_and_leaves_rank_printing_nothing(
     )?;
     assert_eq!(code(&output), 4, "{}", said(&output));
     assert_eq!(printed(&output), "");
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the backend answered with status 500: the backend failed after the allowed attempts; try again later or change --max-retries\n",
             "thinkthen: stopped at record 2; 1 record finished,",
             " and nothing was printed because an order needs every record\n",
-        )
+        ),
     );
     Ok(())
 }

@@ -401,3 +401,28 @@ fn native_input_schema_preserves_closed_shapes_and_null_absence() {
         String::from_utf8_lossy(&output.stderr)
     );
 }
+
+#[test]
+fn typed_decode_causes_preserve_native_admission_messages() {
+    for (text, cause, message) in [
+        (
+            "{}",
+            RequestDecodeCause::Malformed,
+            "invalid canonical request",
+        ),
+        (
+            r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"text","text":"Is it?"},"input":{"kind":"records","items":[{"original":{"kind":"text","text":"never"},"context":42}]}}}"#,
+            RequestDecodeCause::PerItemContext,
+            "the per-item context does not match context_schema",
+        ),
+        (
+            r#"{"schema":"thinkthen.request/1","call":{"function":"decide","question":{"kind":"definition","value":{"decide":"Is it?","item_schema":{"type":"array"}}},"input":{"kind":"text","text":"never"}}}"#,
+            RequestDecodeCause::UnsupportedDeclaration,
+            "the question declaration uses an unsupported feature",
+        ),
+    ] {
+        let error = Request::from_json(text).expect_err("request refused");
+        assert_eq!(error.request_decode_cause(), Some(cause));
+        assert_eq!(error.to_string(), message);
+    }
+}

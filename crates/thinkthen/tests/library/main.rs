@@ -9,7 +9,7 @@
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
 use child::run;
-#[cfg(unix)]
+#[cfg(all(unix, feature = "cli"))]
 use child::wait;
 
 mod ca_bundle;
@@ -24,3 +24,6 @@ mod public_size_retry;
 mod public_tally;
 mod public_timeout;
 mod question_file;
+
+#[path = "../support/api.rs"]
+mod api;

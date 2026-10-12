@@ -1,4 +1,4 @@
-//! Keep the legacy schema graph intact while closing the complete readers.
+//! Keep the compatibility schema graph intact while closing the complete readers.
 use serde_json::{Map, Value, json};
 use std::collections::BTreeSet;
 

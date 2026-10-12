@@ -10,15 +10,31 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/nul
 fi
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ] || exit 2
+fi
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 # Resolve the supported compiler floor before any native build or package work.
 python3 "$here/tests/toolchains.py" --stable
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    package=$THINKTHEN_PARITY_PREPARED/package
+elif [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     . "$root/sdlc/scripts/installed.sh"
     installed_unpack
-    package=$scratch
+    if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+        package=$THINKTHEN_PARITY_PREPARE/package
+        mkdir -p "$package"
+        cp -a "$scratch/." "$package/"
+    else
+        package=$scratch
+    fi
 else
-    scratch_dir package
+    if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+        package=$THINKTHEN_PARITY_PREPARE/package
+        mkdir -p "$package"
+    else
+        scratch_dir package
+    fi
     if [ -z "${THINKTHEN_JVM_NATIVE:-}" ]; then
         RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
     fi
@@ -38,9 +54,19 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     "$THINKTHEN_JDK_HOME/bin/java" --enable-native-access=ALL-UNNAMED -cp "$jars/*:$consumer" SessionConsumer smoke
     exit
 fi
+if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
 python3 "$here/tests/session_installed.py" --jars "$jars" --out "$consumer"
 python3 "$here/tests/usage_installed.py" --jars "$jars" --out "$consumer/usage"
+fi
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+    python3 "$here/tests/public_types.py" --jars "$jars" --out "$THINKTHEN_PARITY_PREPARE/shared"
+    exit 0
+fi
 if [ "${THINKTHEN_TEST_PROFILE:-routine}" = full ] || [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
-    python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/shared"
+    if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+        python3 "$here/tests/public_types.py" --jars "$jars" --out "$THINKTHEN_PARITY_PREPARED/shared"
+    else
+        python3 "$here/tests/public_types.py" --jars "$jars" --out "$consumer/shared"
+    fi
 fi
 echo 'JVM stable package PASS: installed Java, Kotlin and Scala consumers'

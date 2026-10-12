@@ -16,7 +16,10 @@ pub fn main() !void {
     });
     defer call.deinit();
     while (true) switch (try call.read()) {
-        .pending => std.Thread.yield() catch {},
+        .pending => {
+            var ready: u32 = undefined;
+            try tt.session.checked(tt.c.thinkthen_session_wait(call.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
+        },
         .end => break,
         .packet => |value| {
             var packet = value;

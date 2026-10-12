@@ -63,6 +63,7 @@ class OwnedSession internal constructor(private val native: thinkthen.OwnedSessi
     fun tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = nativeResult { native.tryPush(descriptor) }
     fun finish(failure: Inputs.RequestReaderFailure? = null) = nativeResult { native.finish(failure) }
     fun cancel() = native.cancel()
+    fun waitReady(input: Boolean): java.util.concurrent.CompletableFuture<Void> = native.waitReady(input)
     fun tryRead(): Read = nativeResult { val read = native.tryRead(); Read(read.packet()?.let { Results.SessionPacket.read(it.json()) }, read.ended()) }
     override fun close() = native.close()
     data class Read(val packet: Results.SessionPacket?, val ended: Boolean)

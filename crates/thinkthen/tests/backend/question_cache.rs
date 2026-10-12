@@ -42,7 +42,7 @@ fn decide_with(listener: &Listener, option: &str, folder: &str, input: &str) -> 
 
 /// The run's `--facts` line, the last line of standard error.
 fn facts(output: &Output) -> Value {
-    let said = String::from_utf8_lossy(&output.stderr);
+    let said = crate::harness::said(output);
     serde_json::from_str(said.lines().last().expect("a facts line")).expect("facts JSON")
 }
 
@@ -67,23 +67,13 @@ fn a_longer_run_sends_only_the_new_records_questions() {
     let listener = Listener::answering(answering).expect("a loopback listener");
     let cache = folder("headline");
     let first = decide(&listener, &cache, &lines(1..=100));
-    assert_eq!(
-        first.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&first.stderr)
-    );
+    crate::harness::exits(&first, 0);
     assert_eq!(listener.questions(), 100);
     assert_eq!(facts(&first)["cache_answers"], 0);
     let _first = listener.requests();
 
     let second = decide(&listener, &cache, &lines(1..=120));
-    assert_eq!(
-        second.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&second.stderr)
-    );
+    crate::harness::exits(&second, 0);
     assert_eq!(asked(&listener), [(101..=120).collect::<Vec<_>>()]);
     assert_eq!(
         listener.questions(),
@@ -115,21 +105,16 @@ fn a_partial_reply_keeps_its_good_answers_and_a_rerun_asks_only_the_failed_one()
     let cache = folder("partial");
     let partial = decide(&listener, &cache, &lines(1..=5));
     assert_eq!(partial.status.code(), Some(4));
-    assert_eq!(String::from_utf8_lossy(&partial.stdout).lines().count(), 2);
+    assert_eq!(crate::harness::printed(&partial).lines().count(), 2);
     assert_eq!(asked(&listener), [vec![1, 2, 3, 4, 5]]);
     let stored = crate::support::stored(std::path::Path::new(&cache)).expect("the store");
     assert_eq!(stored.len(), 4, "every answer but record 3's");
 
     let rerun = decide(&listener, &cache, &lines(1..=5));
-    assert_eq!(
-        rerun.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&rerun.stderr)
-    );
+    crate::harness::exits(&rerun, 0);
     assert_eq!(asked(&listener), [vec![3]]);
     assert_eq!(facts(&rerun)["cache_answers"], 4);
-    assert_eq!(String::from_utf8_lossy(&rerun.stdout).lines().count(), 5);
+    assert_eq!(crate::harness::printed(&rerun).lines().count(), 5);
 }
 
 /// Adding a label to a `tag` run sends only that label's questions.
@@ -166,21 +151,11 @@ fn a_new_tag_label_sends_only_its_own_questions() {
         .expect("the command runs")
     };
     let first = tag(&["billing", "urgent"]);
-    assert_eq!(
-        first.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&first.stderr)
-    );
+    crate::harness::exits(&first, 0);
     assert_eq!(listener.questions(), 6);
     let _first = listener.requests();
     let second = tag(&["billing", "urgent", "late"]);
-    assert_eq!(
-        second.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&second.stderr)
-    );
+    crate::harness::exits(&second, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     let body = String::from_utf8_lossy(&sent[0].body);
@@ -214,12 +189,7 @@ fn two_processes_write_one_store_at_once() {
         .map(|input| start(&arguments, &[KEY], input.as_bytes()).expect("a child starts"));
     for child in children {
         let output = crate::harness::finish(child, "a writer").expect("a writer ends");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, 0);
     }
     assert_eq!(listener.questions(), 40);
     let stored = crate::support::stored(std::path::Path::new(&cache)).expect("the store");
@@ -263,7 +233,7 @@ fn a_stored_answer_that_no_longer_decodes_refuses_cache_and_replay_without_sends
         assert_eq!(refused.status.code(), Some(5));
         assert!(refused.stdout.is_empty());
         assert_eq!(
-            String::from_utf8_lossy(&refused.stderr).lines().next(),
+            crate::harness::said(&refused).lines().next(),
             Some(
                 "thinkthen: the entry `thinkthen.jsonl` was refused: stored constituents or identity are invalid"
             )

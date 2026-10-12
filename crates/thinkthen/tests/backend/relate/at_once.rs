@@ -1,5 +1,6 @@
 //! Ticket 0143: one relate's requests go out together under `--jobs`.
 
+pub(crate) use crate::harness::said;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Output;
@@ -20,10 +21,6 @@ fn relation(body: &[u8]) -> String {
         .to_owned()
 }
 
-fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
-}
-
 #[test]
 fn relate_requests_reach_the_throttle_and_no_further() {
     let gathering = Gathering::new(3);
@@ -36,7 +33,7 @@ fn relate_requests_reach_the_throttle_and_no_further() {
     let options = ["r", "--lines", "--jobs", "3"];
     let output = run(&listener, &options, names.as_bytes());
 
-    assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.requests().len(), 4);
     assert_eq!(listener.peak(), 3);
 }
@@ -81,7 +78,7 @@ fn split_relations_print_what_one_job_prints() {
         .expect("listener");
         let one = reversed(&listener, "1", details);
         let four = reversed(&listener, "4", details);
-        assert_eq!(one.status.code(), Some(0), "{}", said(&one));
+        crate::harness::exits(&one, 0);
         assert!(!one.stdout.is_empty());
         if details {
             let judgment = |output: &Output| {
@@ -186,7 +183,7 @@ fn a_failed_chunk_stops_the_run_as_one_job_does() {
 
     let (one, sent_one) = failing("1", a_later_model_differs);
     let (two, sent_two) = failing("2", a_later_model_differs);
-    assert_eq!(one.status.code(), Some(4), "{}", said(&one));
+    crate::harness::exits(&one, 4);
     assert_eq!(
         (two.status.code(), said(&two), &two.stdout),
         (one.status.code(), said(&one), &one.stdout)

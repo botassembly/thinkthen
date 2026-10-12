@@ -61,12 +61,7 @@ fn saved_boundary_mode_replays_whole_questions_without_later_sends_and_preserves
         None,
         b"Nobody",
     );
-    assert_eq!(
-        proposed.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&proposed.stderr)
-    );
+    crate::harness::exits(&proposed, 0);
     let proposal = json(&proposed);
     assert_eq!(
         proposal["value"],
@@ -127,7 +122,7 @@ fn saved_boundary_mode_replays_whole_questions_without_later_sends_and_preserves
         b"Ada",
     );
     assert_eq!(missing.status.code(), Some(5));
-    assert!(String::from_utf8_lossy(&missing.stderr).contains("replay"));
+    assert!(crate::harness::said(&missing).contains("replay"));
     assert_eq!(listener.count(), 3);
     let plan = local(
         &listener,
@@ -166,7 +161,7 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
         .concat();
         let refused = local(&listener, &arguments, Some("fake"), b"");
         assert_eq!(refused.status.code(), Some(2));
-        assert!(String::from_utf8_lossy(&refused.stderr).contains("boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"));
+        assert!(crate::harness::said(&refused).contains("boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"));
     }
     let bad = local(
         &listener,
@@ -180,7 +175,7 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
         b"",
     );
     assert_eq!(bad.status.code(), Some(2));
-    assert!(!String::from_utf8_lossy(&bad.stderr).contains("private-mode-wording"));
+    assert!(!crate::harness::said(&bad).contains("private-mode-wording"));
     assert_eq!(listener.count(), 0);
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("boundary-invalid-{}", std::process::id()));
@@ -206,15 +201,9 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
             Some("fake"),
             b"",
         );
-        assert_eq!(
-            refused.status.code(),
-            Some(5),
-            "{}",
-            String::from_utf8_lossy(&refused.stderr)
-        );
+        crate::harness::exits(&refused, 5);
         assert!(
-            String::from_utf8_lossy(&refused.stderr)
-                .contains("boundary_only recognition takes no relations")
+            crate::harness::said(&refused).contains("boundary_only recognition takes no relations")
         );
     }
     assert_eq!(listener.count(), 0);
@@ -222,10 +211,6 @@ fn forbidden_boundary_controls_and_bad_mode_refuse_before_inputs_or_sends() {
 }
 
 #[test]
-#[expect(
-    clippy::too_many_lines,
-    reason = "one saved-result case checks proposal rescoring, the run-cut floor and both diff formats without another harness"
-)]
 fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
     let listener = Listener::answering(automatic).unwrap();
     let complete = local(
@@ -266,12 +251,7 @@ fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
             b"",
         )
         .unwrap();
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, 0);
         let case = json(&output);
         assert_eq!(case["said"]["mode"], "boundary_only");
         assert_eq!(case["said"]["proposals"].as_array().unwrap().len(), count);
@@ -298,12 +278,7 @@ fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
         b"",
     )
     .unwrap();
-    assert_eq!(
-        diff.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&diff.stderr)
-    );
+    crate::harness::exits(&diff, 0);
     let changed: Value =
         serde_json::from_slice(diff.stdout.split(|byte| *byte == b'\n').next().unwrap()).unwrap();
     assert_eq!(changed["lost"], row["value"]["proposals"]);
@@ -322,7 +297,7 @@ fn saved_boundary_proposals_rescore_offline_without_classified_kinds() {
     )
     .unwrap();
     assert_eq!(table.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&table.stdout).contains("- Ada [0,3) p 0.7500"));
+    assert!(crate::harness::printed(&table).contains("- Ada [0,3) p 0.7500"));
     assert_eq!(listener.count(), 1);
     fs::remove_dir_all(root).unwrap();
 }

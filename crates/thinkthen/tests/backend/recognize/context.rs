@@ -110,12 +110,7 @@ fn saved_record_context_exchanges_keep_jobs_eight_separation_and_zero_send_repla
             input.as_bytes(),
         )
         .unwrap();
-        assert_eq!(
-            replay.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&replay.stderr)
-        );
+        crate::harness::exits(&replay, 0);
         assert_eq!(listener.count() - before, 9);
         let changed = input.replace("First context", "Changed context");
         let missed = spawn(
@@ -156,12 +151,7 @@ fn saved_record_context_exchanges_keep_jobs_eight_separation_and_zero_send_repla
                 input.as_bytes(),
             )
             .unwrap();
-            assert_eq!(
-                output.status.code(),
-                Some(2),
-                "{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+            crate::harness::exits(&output, 2);
             assert_eq!(listener.count(), before);
         }
     }
@@ -277,7 +267,7 @@ fn stage_context_saved_call_record_precedence_matches_exact_exchanges_and_replay
         let input = format!("{}\n", json!({"body":fixture["text"],"context":context}));
         let output = spawn(&args, &[("THINKTHEN_API_KEY", "fake")], input.as_bytes()).unwrap();
         assert_eq!(output.status.code(), Some(2));
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("private invalid context"));
+        assert!(!crate::harness::said(&output).contains("private invalid context"));
         assert_eq!(listener.count(), 6);
     }
     let output = spawn(

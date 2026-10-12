@@ -1,5 +1,5 @@
 //! One framed item per outstanding native input demand.
-use crate::public::cli_reader::Wake;
+use crate::public::readiness::Wake;
 use crate::schedule::Placed;
 use std::sync::{Arc, Condvar, Mutex};
 use std::thread;

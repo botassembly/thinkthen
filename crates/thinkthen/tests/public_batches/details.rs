@@ -19,11 +19,7 @@ fn dynamic_details_keep_original_input_and_one_request() {
     let _serial = serial();
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"first","probabilities":{"first":0.9,"second":0.1}},"q2":{"type":"choice","choice":"second","probabilities":{"first":0.2,"second":0.8}}},"usage":{"input_tokens":5,"output_tokens":3}}"#;
     let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .prices_usd_per_million("0.25", "0.25")
         .expect("prices")
         .no_cache()
@@ -147,11 +143,7 @@ fn a_tag_row_whose_label_shares_overflow_fails() {
         ))
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
         .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"one","max_questions":1}"#)
@@ -240,11 +232,20 @@ fn fallible_input_keeps_packed_detail_and_grouped_annotation_request_bytes() {
             );
         } else {
             assert_eq!(
-                engine
-                    .try_details_many_with(&asked, records.map(Ok), options)
-                    .collect::<Result<Vec<_>, _>>()
-                    .expect("fallible detail")
-                    .len(),
+                crate::api::decision_rows(
+                    crate::api::rows(
+                        &engine,
+                        thinkthen::RequestFunction::Decide,
+                        asked.clone().into(),
+                        records.map(|original| Ok(crate::api::record(original))),
+                        options,
+                    )
+                    .expect("request rows")
+                )
+                .expect("decisions")
+                .collect::<Result<Vec<_>, _>>()
+                .expect("fallible detail")
+                .len(),
                 4
             );
         }

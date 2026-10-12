@@ -78,6 +78,15 @@ impl<T> AnnotatedRecord<T> {
         }
     }
 
+    pub(in crate::public) fn complete(
+        input: T,
+        result: crate::CompleteAnnotated,
+    ) -> Result<Self, crate::Error> {
+        let values = result.canonical.compatibility.value().clone();
+        let json = Written::of(&values)?;
+        Ok(Self::new(input, values.into_values(), json))
+    }
+
     /// The record as given.
     #[must_use]
     pub fn input(&self) -> &T {

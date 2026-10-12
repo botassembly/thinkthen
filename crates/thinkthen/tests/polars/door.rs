@@ -292,13 +292,7 @@ fn a_chunked_and_sliced_column_answers_each_row() {
     assert_eq!(chunked.n_chunks(), 3);
     let sliced = chunked.slice(5, 5);
     let answered = engine
-        .decide_series(
-            &question,
-            &sliced,
-            CallOptions::new().batch(thinkthen::BatchSetting::Records(
-                std::num::NonZeroUsize::MIN,
-            )),
-        )
+        .decide_series(&question, &sliced, common::singleton())
         .expect("the answers");
     let answers: Vec<Option<bool>> = answered.value().bool().expect("Boolean").iter().collect();
     assert_eq!(

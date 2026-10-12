@@ -64,11 +64,7 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(4), "{status} {body}");
         assert!(output.stdout.is_empty(), "{status} {body}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            expected,
-            "{status} {body}"
-        );
+        assert_eq!(crate::harness::said(&output), expected, "{status} {body}");
         assert_eq!(listener.requests().len(), 1, "{status} {body}");
     }
 }

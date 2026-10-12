@@ -1,9 +1,9 @@
 //! Owned native requests retain DuckDB's compact result codecs.
 use super::CallScope;
 use thinkthen::{
-    Engine, Error, Facts, LoadedQuestion, Request, RequestArguments, RequestBatch, RequestCall,
-    RequestDefinition, RequestInput, RequestItem, RequestOptions, RequestOriginal, RequestQuestion,
-    RequestSessionRead, RequestSessionResult, RequestSessionRow, RequestValue, Surface,
+    Engine, Error, Facts, Request, RequestBatch, RequestDefinition, RequestInput, RequestItem,
+    RequestOptions, RequestOriginal, RequestSessionRead, RequestSessionResult, RequestSessionRow,
+    RequestValue, Surface,
 };
 
 pub(crate) struct ResultSet {
@@ -34,49 +34,24 @@ pub(crate) fn build(
     input: RequestInput,
     scope: CallScope<'_>,
 ) -> Result<Request, String> {
-    let args = RequestArguments {
-        question: RequestQuestion::Definition {
-            value: definition.clone(),
-        },
-        input,
-        options: RequestOptions {
-            context: scope.context.map(str::to_owned),
-            batch: scope
-                .batch
-                .map(|value| {
-                    crate::engines::batch_setting(value).map(|setting| match setting {
-                        thinkthen::BatchSetting::Max => RequestBatch::Named("max".to_owned()),
-                        thinkthen::BatchSetting::Records(count) => RequestBatch::Count(count.get()),
-                    })
+    let options = RequestOptions {
+        context: scope.context.map(str::to_owned),
+        batch: scope
+            .batch
+            .map(|value| {
+                crate::engines::batch_setting(value).map(|setting| match setting {
+                    thinkthen::BatchSetting::Max => RequestBatch::Named("max".to_owned()),
+                    thinkthen::BatchSetting::Records(count) => RequestBatch::Count(count.get()),
                 })
-                .transpose()?,
-            deadline_ms: Some(scope.due),
-            max_requests_total: scope.total.map(u64::try_from).transpose().map_err(|_| {
-                "thinkthen usage: a request total is a whole number of 0 or more".to_owned()
-            })?,
-            ..Default::default()
-        },
+            })
+            .transpose()?,
+        deadline_ms: Some(scope.due),
+        max_requests_total: scope.total.map(u64::try_from).transpose().map_err(|_| {
+            "thinkthen usage: a request total is a whole number of 0 or more".to_owned()
+        })?,
+        ..Default::default()
     };
-    let call = match &definition {
-        RequestDefinition::Atomic(LoadedQuestion::Banded(_)) => RequestCall::Decide(args),
-        RequestDefinition::Atomic(LoadedQuestion::Question(q)) => match q.kind() {
-            thinkthen::QuestionKind::Decide => RequestCall::Decide(args),
-            thinkthen::QuestionKind::Choose => RequestCall::Choose(args),
-            thinkthen::QuestionKind::Score => RequestCall::Score(args),
-            thinkthen::QuestionKind::Tag => RequestCall::Tag(args),
-            thinkthen::QuestionKind::Find => RequestCall::Find(args),
-            _ => return Err("thinkthen defect: unknown atomic request".to_owned()),
-        },
-        RequestDefinition::Annotate(_) => RequestCall::Annotate(args),
-        RequestDefinition::Rank(_) | RequestDefinition::RankSet(_) => RequestCall::Rank(args),
-        RequestDefinition::Recognize(_) | RequestDefinition::Recognition(_) => {
-            RequestCall::Recognize(args)
-        }
-        RequestDefinition::Find(_) => RequestCall::Find(args),
-        RequestDefinition::Relate(_) => RequestCall::Relate(args),
-        _ => return Err("thinkthen defect: unsupported compact request".to_owned()),
-    };
-    Ok(Request::new(call))
+    Ok(Request::for_definition(definition, input, options))
 }
 
 pub(crate) fn run(

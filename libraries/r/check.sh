@@ -85,7 +85,13 @@ done
 python3 tests/request_surface.py
 python3 tests/record_feeds.py
 # These existing ten producer cases add feed framing, not a second full parity run.
-python3 tests/feed_cases.py
+if [ "$profile" = full ]; then
+  python3 tests/feed_cases.py >"$scratch/feed-cases.log" || { cat "$scratch/feed-cases.log"; exit 1; }
+  # Producer assertions are distinct; required parity cells have one owner above.
+  sed '/^parity: /d' "$scratch/feed-cases.log"
+else
+  python3 tests/feed_cases.py
+fi
 if [ "$profile" = full ]; then
   bash tests/with-backend.sh "$backend" tests/request_width.R
   bash tests/with-backend.sh "$backend" tests/interrupt.R
