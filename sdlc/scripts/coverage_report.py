@@ -34,11 +34,15 @@ def report(root, run, revision, production, collections, elapsed):
         source = (root / path).read_text().splitlines()
         denominator[path] = {number for number in counts if source[number - 1].strip()}
     hits = {name: lines(root, payload) for name, payload in collections.items()}
-    limitations = {name: [path.name for path in sorted((run / name).glob('limited-fsize-*'))]
-                   for name in collections}
-    limited = any(limitations.values())
-    zero_key = 'unobserved' if limited else 'unreached'
-    unit_key = 'observed_unit_only' if limited else 'unit_only'
+    limitations = {name: {
+        'finite_fsize': [path.name for path in sorted((run / name).glob('limited-fsize-*'))],
+        'no_normal_exit': [path.name for path in sorted((run / name).glob('process-*'))
+                           if not (path / 'normal-exit').exists()]}
+        for name in collections}
+    # Signals, _exit and failures before constructors can bypass LLVM flush.
+    # Even an empty inventory cannot prove all outside paths were measured.
+    zero_key = 'unobserved'
+    unit_key = 'observed_unit_only'
     file_totals = {}
     for path, numbers in sorted(denominator.items()):
         reached = {name: {number for number in numbers if files.get(path, {}).get(number, 0) > 0}
@@ -62,15 +66,14 @@ def report(root, run, revision, production, collections, elapsed):
     total = totals['mapped_nonblank']
     for name in collections:
         rows.append(f'| {name} | {totals[name]} | {total} | {100 * totals[name] / total:.2f}% |')
-    if limited:
-        rows += ['', 'Finite RLIMIT_FSIZE children retain their product file-size limit and assertions. Only the compiler runtime writes to /dev/null. Each missing child profile has an owned limited-fsize-PID directory in its collection. Their executed paths are unmeasured. Zero observed hits do not establish that a path is unreached; observed unit-only hits do not establish that outside tests never reach those paths.', '']
-        for name, observations in limitations.items():
-            rows.append(f'{name}: {len(observations)} child profiles unavailable because of finite RLIMIT_FSIZE.')
+    rows += ['', 'Finite RLIMIT_FSIZE children retain their product file-size limit and assertions. Only the compiler runtime writes to /dev/null. Owned limited-fsize-PID directories identify that cause. Process-PID directories without normal-exit identify children that bypassed normal exit; SIGINT, SIGTERM, other signals and _exit can do this. The inventory does not identify which signal caused an exit and cannot observe exits before its constructor. These paths are unmeasured. Zero observed hits do not establish that a path is unreached; observed unit-only hits do not establish that outside tests never reach those paths.', '']
+    for name, observations in limitations.items():
+        rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
     rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining source units. Unit-only comparisons use the union of those two source-unit collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
-             f'Raw profiles, profile rejection diagnostics, collection exports and per-file counts: `{run.relative_to(root) if run.is_relative_to(root) else run.name}`.', '']
-    for label, key in [('Most lines observed only in source-unit profiles' if limited else 'Most lines reached only by source-unit tests', unit_key),
-                       ('Most lines with no observed hits; missing child paths are unmeasured' if limited else 'Most lines reached by no measured test', zero_key)]:
-        rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: |']
+             'The JSON measurement contains the per-file counts and missing-profile observations. Build output is temporary and is not durable evidence.', '']
+    for label, key in [('Most lines observed only in source-unit profiles', unit_key),
+                       ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:
+        rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: | ---: |']
         for path, values in sorted(file_totals.items(), key=lambda item: (-item[1][key], item[0]))[:30]:
             rows.append(f'| {path} | {values[key]} |')
         rows.append('')

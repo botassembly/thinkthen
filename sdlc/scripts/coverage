@@ -2,11 +2,13 @@
 """Collect release-only native coverage. Installed adapters follow this slice."""
 import argparse
 import datetime
+import ctypes
 import json
 import os
 from pathlib import Path
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import time
@@ -21,24 +23,47 @@ class MissingTool(Exception):
 
 
 def command(args, cwd, env, log, *, capture=False, timeout=None):
-    """Keep the real exit and diagnostics, including partial timeout output."""
+    """Own the harness group and reap its children, preserving exit and output."""
+    if sys.platform == 'linux':
+        # Adopt orphaned grandchildren so group cleanup can reap them too.
+        libc = ctypes.CDLL(None, use_errno=True)
+        if libc.prctl(36, 1, 0, 0, 0):  # PR_SET_CHILD_SUBREAPER
+            raise OSError(ctypes.get_errno(), 'cannot own coverage descendants')
     started = time.monotonic()
+    timed_out = False
     with log.open('wb') as output:
+        child = subprocess.Popen(args, cwd=cwd, env=env, stdout=subprocess.PIPE if capture else output,
+                                 stderr=output, start_new_session=True)
         try:
-            result = subprocess.run(args, cwd=cwd, env=env, stdout=subprocess.PIPE if capture else output,
-                                    stderr=output, timeout=timeout, check=False)
-        except subprocess.TimeoutExpired as error:
-            if error.stdout:
-                output.write(error.stdout)
-            raise RuntimeError(f'timed out: {shlex.join(args)}; see {log}') from error
-        if capture:
-            output.write(result.stdout)
-    print(f'{log.name}: exit {result.returncode}, elapsed {time.monotonic() - started:.1f}s', flush=True)
-    if result.returncode:
-        if result.returncode == 77:
+            try:
+                stdout, _ = child.communicate(timeout=timeout)
+            except subprocess.TimeoutExpired:
+                timed_out = True
+                os.killpg(child.pid, signal.SIGKILL)
+                stdout, _ = child.communicate()
+            if capture:
+                output.write(stdout)
+        finally:
+            # Also clean up on interruption or a harness that leaves children.
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            child.wait()
+            if sys.platform == 'linux':
+                while True:
+                    try:
+                        os.waitpid(-child.pid, 0)
+                    except ChildProcessError:
+                        break
+    print(f'{log.name}: exit {child.returncode}, elapsed {time.monotonic() - started:.1f}s', flush=True)
+    if timed_out:
+        raise RuntimeError(f'timed out (exit {child.returncode}): {shlex.join(args)}; see {log}')
+    if child.returncode:
+        if child.returncode == 77:
             raise MissingTool(f'{shlex.join(args)}; see {log}')
-        raise RuntimeError(f'exit {result.returncode}: {shlex.join(args)}; see {log}')
-    return result.stdout if capture else None
+        raise RuntimeError(f'exit {child.returncode}: {shlex.join(args)}; see {log}')
+    return stdout if capture else None
 
 
 def tools():
@@ -169,7 +194,7 @@ def main():
     subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
                     '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%m.profraw')), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
-    env.update(CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+    env.update(LLVM_PROFILE_FILE=str(run / 'active/%m.profraw'), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
                CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '-C', f'link-arg={initializer}']),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
