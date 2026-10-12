@@ -32,3 +32,4 @@ A committed release-suite script measures how much of the Rust core and the C li
 - 2026-10-12 started
 - 2026-10-12 next: The native tooling slice retains feature-selection, profile-write and launcher failures as diagnostics; finish Cargo launch metadata and source-unit classification, validate the frozen slice, then add installed C, Python and JVM collections before the full main baseline.
 - 2026-10-12 next: Finish the owned native validation at 307296e1d; fresh source review found incomplete signal-terminated profile reporting and timeout descendant cleanup, then installed collections and the baseline remain before deletion waves.
+- 2026-10-12 next: Native collection, routine test and lint passed at 307296e1d and all owned jobs exited; fix signal-profile reporting and timeout descendant cleanup, remove transient record pointers, then add installed collections for the full baseline before deletion waves.
