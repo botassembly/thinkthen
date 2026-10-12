@@ -71,6 +71,7 @@ def build(run, env):
     metadata = json.loads(command(['cargo', 'metadata', '--offline', '--no-deps', '--format-version', '1'],
                                   ROOT, env, run / 'metadata.log', capture=True))
     package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen')
+    env.update(CARGO_PKG_NAME=package['name'], CARGO_MANIFEST_DIR=str(Path(package['manifest_path']).parent))
     features = set(package['features'].get('default', []))
     while True:
         expanded = features | {value for feature in features for value in package['features'].get(feature, [])}

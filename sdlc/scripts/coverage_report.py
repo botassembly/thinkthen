@@ -43,11 +43,12 @@ def report(root, run, revision, production, collections, elapsed):
     for path, numbers in sorted(denominator.items()):
         reached = {name: {number for number in numbers if files.get(path, {}).get(number, 0) > 0}
                    for name, files in hits.items()}
-        outside = reached['rust-integration'] | reached['cli-source']
+        outside = reached['rust-integration']
+        units = reached['source-unit'] | reached['cli-source']
         file_totals[path] = {'mapped_nonblank': len(numbers),
                             **{name: len(value) for name, value in reached.items()},
-                            unit_key: len(reached['source-unit'] - outside),
-                            zero_key: len(numbers - outside - reached['source-unit'])}
+                            unit_key: len(units - outside),
+                            zero_key: len(numbers - outside - units)}
     totals = {key: sum(values[key] for values in file_totals.values())
               for key in ('mapped_nonblank', *collections, unit_key, zero_key)}
     payload = {'source': revision, 'scope': 'partial native collection; installed surfaces unmeasured',
@@ -65,7 +66,7 @@ def report(root, run, revision, production, collections, elapsed):
         rows += ['', 'Finite RLIMIT_FSIZE children retain their product file-size limit and assertions. Only the compiler runtime writes to /dev/null. Each missing child profile has an owned limited-fsize-PID directory in its collection. Their executed paths are unmeasured. Zero observed hits do not establish that a path is unreached; observed unit-only hits do not establish that outside tests never reach those paths.', '']
         for name, observations in limitations.items():
             rows.append(f'{name}: {len(observations)} child profiles unavailable because of finite RLIMIT_FSIZE.')
-    rows += ['', '`cli-source` runs the existing `cli::` source harness; `source-unit` excludes that harness. `rust-integration` runs every integration target discovered by Cargo metadata, with its default feature requirements. No ignored release/stress tests run.', '',
+    rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining source units. Unit-only comparisons use the union of those two source-unit collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
              f'Raw profiles, profile rejection diagnostics, collection exports and per-file counts: `{run.relative_to(root) if run.is_relative_to(root) else run.name}`.', '']
     for label, key in [('Most lines observed only in source-unit profiles' if limited else 'Most lines reached only by source-unit tests', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured' if limited else 'Most lines reached by no measured test', zero_key)]:
@@ -74,7 +75,7 @@ def report(root, run, revision, production, collections, elapsed):
             rows.append(f'| {path} | {values[key]} |')
         rows.append('')
     for prefix in PREFIXES:
-        rows += [f'## {prefix}', '', '| Module | Mapped nonblank | Reached by integration | Reached by CLI | Reached by units |',
+        rows += [f'## {prefix}', '', '| Module | Mapped nonblank | Reached by integration | Reached by CLI source units | Reached by other source units |',
                  '| --- | ---: | ---: | ---: | ---: |']
         groups = {}
         for path, values in file_totals.items():
