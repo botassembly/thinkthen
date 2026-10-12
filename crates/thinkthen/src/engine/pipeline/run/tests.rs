@@ -85,6 +85,7 @@ fn spent_deadline_on_end_reports_unfinished_declared_input_without_queuing_a_job
             window: 2,
             jobs: 1,
             continues: false,
+            coalesces: false,
             pause: PAUSE,
         },
         Counts {

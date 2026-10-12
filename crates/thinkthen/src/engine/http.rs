@@ -300,7 +300,6 @@ impl Client {
             usage.request_body_sent(exchange.body.len(), tokens);
             let ordinal = cancel.attempt_started();
             marked();
-            let sending = cancel.sending();
             let (sent, wall_ms) = timed(
                 &self.agent,
                 exchange,
@@ -309,7 +308,6 @@ impl Client {
                 (cancel.cache_refresh, self.api),
                 usage,
             );
-            drop(sending);
             if let (Some(ordinal), Some(digest)) = (ordinal, cancel.attempt_digest()) {
                 let (info, outcome) = observed_result(&sent);
                 cancel.attempt_completed(info.clone().observation(

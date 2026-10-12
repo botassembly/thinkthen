@@ -6,6 +6,55 @@
 )]
 use thinkthen::{Engine, EngineBuilder, RecordInput};
 
+// Forward fallible eager feeds without copying their per-function fixture setup.
+macro_rules! whole_call {
+    ($method:ident, $function:ident, $question:ty) => {
+        pub(crate) fn $method<'a, I, T>(
+            engine: &Engine,
+            question: &$question,
+            records: I,
+            controls: thinkthen::CallOptions<'a>,
+        ) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error>
+        where
+            I: IntoIterator<Item = Result<RecordInput<T>, thinkthen::Error>>,
+            I::IntoIter: 'a,
+            T: thinkthen::InputEvidence + 'a,
+        {
+            whole(
+                engine,
+                thinkthen::RequestFunction::$function,
+                question.clone().into(),
+                records,
+                controls,
+            )
+        }
+    };
+}
+whole_call!(try_recognize_records, Recognize, thinkthen::Recognize);
+whole_call!(relation, Relate, thinkthen::Relate);
+whole_call!(find, Find, thinkthen::Question);
+
+// Borrow each typed row slice from its actual collecting Request carrier.
+macro_rules! call_rows {
+    ($method:ident, $variant:ident, $result:ty) => {
+        pub(crate) fn $method(
+            call: &thinkthen::Call<thinkthen::RequestValue>,
+        ) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, $result>]> {
+            match call.value() {
+                thinkthen::RequestValue::$variant(rows) => Some(rows),
+                _ => None,
+            }
+        }
+    };
+}
+call_rows!(choices, Choices, thinkthen::CompleteChoice);
+call_rows!(scores, Scores, thinkthen::CompleteScore);
+call_rows!(recognized, Recognized, thinkthen::CompleteRecognized);
+call_rows!(ranked, Ranked, thinkthen::CompleteRank);
+call_rows!(tags, Tags, thinkthen::CompleteTags);
+call_rows!(set_ranked, SetRanked, thinkthen::CompleteSetRank);
+call_rows!(decisions, Decisions, thinkthen::CompleteDecision);
+
 /// Start the actual loopback listener with the caller's exact saved reply.
 #[cfg(test)]
 pub(crate) fn answering(reply: &'static str) -> conformance_backend::Listener {
@@ -81,26 +130,6 @@ pub(crate) fn text(text: &str) -> thinkthen::RequestInput {
     }
 }
 
-/// Read actual choice rows from the collecting Request carrier.
-pub(crate) fn choices(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteChoice>]> {
-    match call.value() {
-        thinkthen::RequestValue::Choices(rows) => Some(rows),
-        _ => None,
-    }
-}
-
-/// Read actual score rows from the collecting Request carrier.
-pub(crate) fn scores(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteScore>]> {
-    match call.value() {
-        thinkthen::RequestValue::Scores(rows) => Some(rows),
-        _ => None,
-    }
-}
-
 /// Judge an actual eager composed feed through the public collecting Request.
 pub(crate) fn whole<'a, I, T>(
     engine: &Engine,
@@ -157,49 +186,10 @@ pub(crate) fn recognize(
     )
 }
 
-pub(crate) fn recognized(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteRecognized>]> {
-    match call.value() {
-        thinkthen::RequestValue::Recognized(rows) => Some(rows),
-        _ => None,
-    }
-}
-
 pub(crate) fn recognition(
     call: &thinkthen::Call<thinkthen::RequestValue>,
 ) -> Option<&thinkthen::CompleteRecognized> {
     recognized(call)?.first().map(|row| row.result())
-}
-
-pub(crate) fn try_recognize_records<'a, I, T>(
-    engine: &Engine,
-    question: &thinkthen::Recognize,
-    records: I,
-    controls: thinkthen::CallOptions<'a>,
-) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error>
-where
-    I: IntoIterator<Item = Result<RecordInput<T>, thinkthen::Error>>,
-    I::IntoIter: 'a,
-    T: thinkthen::InputEvidence + 'a,
-{
-    whole(
-        engine,
-        thinkthen::RequestFunction::Recognize,
-        question.clone().into(),
-        records,
-        controls,
-    )
-}
-
-/// Read actual complete ranks from the collecting Request carrier.
-pub(crate) fn ranked(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteRank>]> {
-    match call.value() {
-        thinkthen::RequestValue::Ranked(rows) => Some(rows),
-        _ => None,
-    }
 }
 
 /// Read the actual whole-set relation carrier from a public Request call.
@@ -210,68 +200,6 @@ pub(crate) fn related(
         thinkthen::RequestValue::Related(row) => Some(row),
         _ => None,
     }
-}
-
-/// Execute a relation's actual eager Request feed.
-pub(crate) fn relation<'a, I, T>(
-    engine: &Engine,
-    question: &thinkthen::Relate,
-    records: I,
-    controls: thinkthen::CallOptions<'a>,
-) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error>
-where
-    I: IntoIterator<Item = Result<RecordInput<T>, thinkthen::Error>>,
-    I::IntoIter: 'a,
-    T: thinkthen::InputEvidence + 'a,
-{
-    whole(
-        engine,
-        thinkthen::RequestFunction::Relate,
-        question.clone().into(),
-        records,
-        controls,
-    )
-}
-
-/// Read actual tag rows from the collecting Request carrier.
-pub(crate) fn tags(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteTags>]> {
-    match call.value() {
-        thinkthen::RequestValue::Tags(rows) => Some(rows),
-        _ => None,
-    }
-}
-
-/// Read actual complete set-rank rows from the collecting Request carrier.
-pub(crate) fn set_ranked(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteSetRank>]> {
-    match call.value() {
-        thinkthen::RequestValue::SetRanked(rows) => Some(rows),
-        _ => None,
-    }
-}
-
-/// Execute Find through its actual eager Request feed.
-pub(crate) fn find<'a, I, T>(
-    engine: &Engine,
-    question: &thinkthen::Question,
-    records: I,
-    controls: thinkthen::CallOptions<'a>,
-) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error>
-where
-    I: IntoIterator<Item = Result<RecordInput<T>, thinkthen::Error>>,
-    I::IntoIter: 'a,
-    T: thinkthen::InputEvidence + 'a,
-{
-    whole(
-        engine,
-        thinkthen::RequestFunction::Find,
-        question.clone().into(),
-        records,
-        controls,
-    )
 }
 
 /// Borrow the actual complete Find carrier produced by Request.
@@ -323,16 +251,6 @@ where
         },
     )?;
     engine.execute_request_rows(&request, records, controls)
-}
-
-/// Borrow the actual complete decision rows produced by collecting Request.
-pub(crate) fn decisions(
-    call: &thinkthen::Call<thinkthen::RequestValue>,
-) -> Option<&[thinkthen::CompleteRecord<thinkthen::QuestionInput, thinkthen::CompleteDecision>]> {
-    match call.value() {
-        thinkthen::RequestValue::Decisions(rows) => Some(rows),
-        _ => None,
-    }
 }
 
 // Borrow no originals while taking an actual typed batch from its public carrier.

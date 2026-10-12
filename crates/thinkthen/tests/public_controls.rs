@@ -367,38 +367,38 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     );
 }
 
-/// The consumer's `a_held_reply_ends_the_call_at_its_deadline` covers a deadline during a held send.
+/// A host can refuse while the provider still holds the response.
 #[test]
-fn a_check_runs_before_a_held_send_and_never_during_it() {
+fn a_host_check_stops_before_a_held_send_is_released() {
     let _serial = serial();
     let asked = question();
-    let second = Backend::start().expect("backend");
-    let engine = engine(&format!("{}/arm/held/v1", second.origin()));
-    let runs = AtomicUsize::new(0);
+    let backend = Backend::start().expect("backend");
+    let engine = engine(&format!("{}/arm/held/v1", backend.origin()));
+    let (noticed, notice) = std::sync::mpsc::channel();
+    let caller = Mutex::new(None);
     let check = || {
-        runs.fetch_add(1, Ordering::SeqCst);
-        false
+        assert_eq!(Some(thread::current().id()), *caller.lock().unwrap());
+        if backend.count() == 1 {
+            noticed.send(()).expect("host notification");
+            true
+        } else {
+            false
+        }
     };
-    let answer = thread::scope(|scope| {
+    let (answer, interrupted) = thread::scope(|scope| {
         let call = scope.spawn(|| {
+            *caller.lock().unwrap() = Some(thread::current().id());
             engine.decide_with(&asked, "Refund me.", CallOptions::new().interrupt(&check))
         });
-        assert_eq!(second.wait(1), 1, "the send is held");
-        let before = runs.load(Ordering::SeqCst);
-        thread::sleep(Duration::from_millis(300));
-        assert_eq!(
-            runs.load(Ordering::SeqCst),
-            before,
-            "a check ran in the send"
-        );
-        assert!(before >= 1, "the check ran before the send");
-        second.release();
-        call.join().expect("call")
+        assert_eq!(backend.wait(1), 1, "the send is held");
+        let interrupted = notice.recv_timeout(Duration::from_secs(2));
+        backend.release();
+        (call.join().expect("call"), interrupted)
     });
-    assert_eq!(
-        answer.ok().map(thinkthen::Call::into_value),
-        Some(Answer::Yes)
-    );
+    interrupted.expect("host interrupt must fire before provider release");
+    assert_eq!(kind(&answer), Some(ErrorKind::Cancelled));
+    assert_eq!(backend.count(), 1, "no request follows host refusal");
+    assert_eq!(answer.unwrap_err().facts().unwrap().requests_sent(), 1);
 }
 
 /// The host check runs only while no send of the call is out. At the
@@ -511,18 +511,22 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
             let batch = engine_at(&format!("{}/arm/held/v1", held.origin()), Some(4), 30);
             let runs = AtomicUsize::new(0);
             let released = AtomicUsize::new(0);
+            let (notified, notice) = std::sync::mpsc::channel();
             let check = || {
                 if held.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
+                    notified.send(()).expect("host refusal");
                     resume_unwind(Box::new(PAYLOAD));
                 }
                 false
             };
             let caught = thread::scope(|scope| {
-                scope.spawn(|| {
+                let (held, released) = (&held, &released);
+                let release = scope.spawn(move || {
                     assert_eq!(held.wait(4), 4, "four two-record requests are in flight");
-                    thread::sleep(Duration::from_millis(400));
+                    let refused = notice.recv_timeout(Duration::from_secs(2));
                     held.release();
                     released.store(1, Ordering::SeqCst);
+                    refused
                 });
                 let caught = catch_unwind(AssertUnwindSafe(|| {
                     batch
@@ -537,6 +541,10 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
                         )
                         .count()
                 }));
+                release
+                    .join()
+                    .expect("release worker")
+                    .expect("host refused while four sends were held");
                 assert_eq!(released.load(Ordering::SeqCst), 1);
                 caught
             });

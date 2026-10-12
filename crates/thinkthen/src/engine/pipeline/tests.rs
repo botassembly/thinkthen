@@ -83,6 +83,7 @@ const ONE_EACH: Packing = Packing {
     context: false,
     detailed: false,
     continues: false,
+    coalesces: false,
 };
 
 fn stop_of(failed: &Failed<()>) -> &'static str {

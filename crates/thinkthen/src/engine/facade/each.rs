@@ -335,6 +335,7 @@ impl Engine {
             context: false,
             detailed: cancel.detailed(),
             continues: false,
+            coalesces: false,
         };
         let mut failure = None;
         let mut place = 0;

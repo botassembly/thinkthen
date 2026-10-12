@@ -447,6 +447,7 @@ pub(crate) struct Stop<'a> {
     attempt_observer: Option<AttemptObserver<'a>>,
     attempts: Option<Mutex<Receiver<AttemptObservation>>>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
+    host_refused: AtomicBool,
 }
 
 impl<'a> Stop<'a> {
@@ -493,6 +494,7 @@ impl<'a> Stop<'a> {
             attempt_observer: options.attempt_observer,
             attempts,
             panic: Mutex::new(None),
+            host_refused: AtomicBool::new(false),
         };
         if CancelToken::any(stop.token) {
             return Err(Error::cancelled());
@@ -529,15 +531,18 @@ impl<'a> Stop<'a> {
         if CancelToken::any(self.token) {
             return true;
         }
-        let Some(check) = self.check.filter(|_| !self.base.sending_now()) else {
+        let Some(check) = self.check else {
             return false;
         };
-        workers::with_host_diagnostics(|| catch_unwind(AssertUnwindSafe(check))).unwrap_or_else(
-            |payload| {
+        let refused = workers::with_host_diagnostics(|| catch_unwind(AssertUnwindSafe(check)))
+            .unwrap_or_else(|payload| {
                 self.hold_panic(payload);
                 true
-            },
-        )
+            });
+        if refused {
+            self.host_refused.store(true, Ordering::Release);
+        }
+        refused
     }
 
     /// Run one engine call on this thread with the caller's controls polled
@@ -582,7 +587,9 @@ impl<'a> Stop<'a> {
         if let Some(payload) = held {
             resume_unwind(payload);
         }
-        if CancelToken::any(self.token) && !(self.settle_success_on_cancel && result.is_ok()) {
+        if (CancelToken::any(self.token) || self.host_refused.load(Ordering::Acquire))
+            && !(self.settle_success_on_cancel && result.is_ok())
+        {
             return Err(Error::cancelled());
         }
         result

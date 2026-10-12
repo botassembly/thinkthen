@@ -140,6 +140,8 @@ pub(crate) struct Packing {
     /// Whether the host takes rows past a failure, as the SQL hosts do. A
     /// halved request then sends its second half after a refused first.
     pub(crate) continues: bool,
+    /// Share completed answers for eagerly admitted inputs in this call only.
+    pub(crate) coalesces: bool,
 }
 
 /// The host side of one call: it hands inputs over through its port and
@@ -298,6 +300,7 @@ impl Engine {
                     window,
                     jobs: state.width,
                     continues: packing.continues,
+                    coalesces: packing.coalesces,
                     pause: host.pause(),
                 };
                 let packer = Packer::new(limits, model);

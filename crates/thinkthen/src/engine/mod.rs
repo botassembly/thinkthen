@@ -2,7 +2,7 @@
 
 use std::fmt;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
@@ -44,7 +44,6 @@ pub(crate) struct Cancel<'a> {
     token: [Option<Arc<AtomicBool>>; 2],
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
-    sends: Arc<AtomicUsize>,
     sent_any: Arc<AtomicBool>,
     send_budget: Option<(crate::engine::budget::SendBudget, Option<u64>)>,
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
@@ -96,16 +95,6 @@ impl fmt::Debug for Check<'_> {
             .debug_struct("Check")
             .field("caller", &self.caller)
             .finish_non_exhaustive()
-    }
-}
-
-/// One blocking send in flight, counted until it drops.
-#[derive(Debug)]
-pub(crate) struct Sending<'a>(&'a AtomicUsize);
-
-impl Drop for Sending<'_> {
-    fn drop(&mut self) {
-        self.0.fetch_sub(1, Ordering::AcqRel);
     }
 }
 
@@ -247,7 +236,6 @@ impl<'a> Cancel<'a> {
                 run: check,
                 caller: thread::current().id(),
             }),
-            sends: Arc::default(),
             ..self.clone()
         }
     }
@@ -302,24 +290,9 @@ impl<'a> Cancel<'a> {
         interrupted
     }
 
-    /// Count one blocking send, during which the calling thread runs no check.
-    pub(crate) fn sending(&self) -> Sending<'_> {
-        self.sends.fetch_add(1, Ordering::AcqRel);
-        Sending(&self.sends)
-    }
-
-    pub(crate) fn sending_now(&self) -> bool {
-        self.sends.load(Ordering::Acquire) != 0
-    }
-
-    /// The stop this checkpoint observes, from the calling thread. The host
-    /// check runs only while no worker is in a blocking send.
+    /// Observe host refusal on its owning thread, including overlapping sends.
     pub(crate) fn stop_between_sends(&self) -> Option<error::Error> {
-        if !self.sending_now() {
-            self.stop()
-        } else {
-            self.remaining_without_check().err()
-        }
+        self.stop()
     }
 
     /// Observe the deadline alone, or the budget left.

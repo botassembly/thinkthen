@@ -104,7 +104,8 @@ where
     }
     let pause = readiness.and_then(|reader| reader.pause);
     let cancel = call.stop.shared();
-    let (engine, packing) = (call.engine, call.packing);
+    let (engine, mut packing) = (call.engine, call.packing);
+    packing.coalesces = call.aggregate_inputs;
     let coordinator = thread::spawn(move || {
         let ended = guarded(|| {
             engine
@@ -125,7 +126,6 @@ where
         });
         let _sent = events.send(Event::End(ended));
     });
-    let paced = !call.aggregate_inputs || call.stop.observing();
     Batch::from_source(Box::new(Pull {
         items: records,
         held: VecDeque::new(),
@@ -139,7 +139,7 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && readiness.is_none() && paced,
+        interactive: packing.inputs == Some(1) && readiness.is_none() && !call.aggregate_inputs,
         pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
@@ -370,5 +370,6 @@ pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: b
         context,
         detailed: false,
         continues,
+        coalesces: false,
     }
 }

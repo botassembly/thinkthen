@@ -121,3 +121,6 @@ mod recognize_proposals;
 
 #[path = "support/api.rs"]
 mod api;
+
+#[path = "native_complete/eager_coalescing.rs"]
+mod eager_coalescing;
