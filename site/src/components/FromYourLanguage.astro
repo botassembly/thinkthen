@@ -1,10 +1,13 @@
 ---
 // The language pages that show how to reach a backend. Each item links the
 // page's Backends section. pandas and Polars share Python's section.
-import { SURFACES, BINDINGS } from '../data/catalog.mjs';
+import { SURFACES, BINDINGS, CODE_FUNCTIONS } from '../data/catalog.mjs';
+import { hasSamples } from '../data/samples.mjs';
 import LinkName from './LinkName.astro';
 
-const pages = SURFACES.filter((s) => s.backends && s.backends !== 'python');
+// A page with no samples has no Backends section.
+const names = [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file'];
+const pages = SURFACES.filter((s) => s.backends && s.backends !== 'python' && hasSamples(s.slug, names));
 ---
 <h2>From your language</h2>
 <p>Each page shows how its language names a backend.</p>

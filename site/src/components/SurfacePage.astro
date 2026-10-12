@@ -8,12 +8,13 @@ import Base from '../layouts/Base.astro';
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import { FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE, BACKEND_ROUTES, OPENAI_ANNOUNCED } from '../data/catalog.mjs';
-import { backendsName, captioned, files, firstCall, installSample, sample, moreSamples } from '../data/samples.mjs';
+import { backendsName, captioned, files, firstCall, installSample, sample, moreSamples, hasSamples } from '../data/samples.mjs';
 import { buildLines } from '../data/build-lines.mjs';
 import postgresGrant from '../../../databases/postgresql/fixtures/grant.sql?raw';
 
 const { surface, route: pageRoute, eyebrow = ['/languages/', 'Languages'] } = Astro.props;
 const shell = surface.slug === 'shell';
+const full = hasSamples(surface.slug, [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file']);
 const notes = surface.install.some(([, note]) => note);
 const first = shell ? null : firstCall(surface.slug);
 const build = first ? buildLines(surface.slug, first.file) : null;
@@ -29,10 +30,11 @@ const headline = shell
 // backend. A page whose route is python links Python's section.
 const route = surface.backends ?? null;
 const named = route && route !== 'python';
-const title = named ? `Jev and System One API from ${surface.name}` : surface.name;
-const description = named
-  ? `Call Jev and any System One API from ${surface.name} with ThinkThen. OpenAI has announced the OpenAI Decisions API. It is not released yet.`
+const title = full && named ? `Jev and models like it from ${surface.name}` : surface.name;
+const description = full && named
+  ? `Call Jev and models like it from ${surface.name} with ThinkThen, and name the backend that answers: TypeSafe, OpenAI Decisions, Ollama or another server.`
   : surface.blurb.replace(/`/g, '');
+if (!full && !surface.call) throw new Error(`${pageRoute}: a page with no samples needs a call sentence in catalog.mjs`);
 if (description.length > 160) throw new Error(`${pageRoute}: the description runs ${description.length} characters, over 160`);
 const backendSample = ['env', 'builder', 'code'].includes(route) ? installSample(surface.slug, backendsName(surface.slug), true) : null;
 const backendConstructor = {
@@ -81,7 +83,7 @@ const guide = packageGuide(surface.slug);
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
   {surface.slug === 'python' && <p>Working with data frames? <a href="/languages/pandas/">pandas</a> and <a href="/languages/polars/">Polars</a> have their own pages.</p>}
-  {!shell && <p>The <a href={guide}>{surface.name} package guide</a> and its <a href={packageExample(surface.slug)}>consumer example</a> give the full API.</p>}
+  {!shell && full && <p>The <a href={guide}>{surface.name} package guide</a> and its <a href={packageExample(surface.slug)}>consumer example</a> give the full API.</p>}
 
   <h2>Install</h2>
   <table class="install">
@@ -167,6 +169,15 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
     </>
   )}
 
+  {!full && (
+    <>
+      <h2 id="call">A call</h2>
+      <p>{parts(surface.call).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+      <p>The <a href={guide}>{surface.name} package guide</a> gives the full API, and its <a href={packageExample(surface.slug)}>consumer example</a> shows a complete program.</p>
+    </>
+  )}
+  {full && (
+  <>
   <h2>A first call</h2>
   {first ? (
     <>
@@ -296,6 +307,9 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
 
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>
+
+  </>
+  )}
 
   <slot />
 

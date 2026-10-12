@@ -4,7 +4,8 @@
 import Base from '../../layouts/Base.astro';
 import LinkName from '../../components/LinkName.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, BINDINGS, TAB_GROUPS, COUNTS } from '../../data/catalog.mjs';
+import { SURFACES, BINDINGS, TAB_GROUPS, COUNTS, CODE_FUNCTIONS } from '../../data/catalog.mjs';
+import { hasSamples } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
 const plain = (text) => text.replaceAll('`', '');
@@ -12,10 +13,13 @@ const groups = TAB_GROUPS
   .filter((g) => g.name !== 'Command line' && g.name !== 'Databases')
   .map((g) => ({ name: g.name, list: g.slugs.map((slug) => ({ ...SURFACES.find((s) => s.slug === slug), route: BINDINGS.find((b) => b.slug === slug).route })) }));
 const databases = BINDINGS.filter((b) => b.database);
+const names = [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file'];
+const withSamples = groups.flatMap((g) => g.list).filter((s) => hasSamples(s.slug, names));
+const listed = (list) => list.map((s, i) => `${i === 0 ? '' : i === list.length - 1 ? ' and ' : ', '}${s.name}`).join('');
 ---
 <Base title="Languages" description="Find your language, install ThinkThen there, and paste a first call. The same ten functions run from Bash, every language binding and agents.">
   <h1>Languages</h1>
-  <p class="lede">Find your language. Its page installs ThinkThen, makes a first call, and shows all ten functions there.</p>
+  <p class="lede">Find your language. Its page shows how to install ThinkThen and links the package guide. The {listed(withSamples)} pages also show a first call and all ten functions.</p>
   <p class="counts">{COUNTS.functions}, <a href="/languages/bash/">{COUNTS.cli}</a>, {COUNTS.bindings}.</p>
 
   <h2><a href="/languages/bash/">Bash</a></h2>
