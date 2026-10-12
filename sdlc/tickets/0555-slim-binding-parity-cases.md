@@ -1,6 +1,6 @@
 # 0555: Run core limit cases once and a representative subset per binding
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -15,6 +15,8 @@ Reviews: revision 330a33d9478a3202c9ec9bd85ed2b7c282d5b0be, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: Reviewed tier changes landed in the shared batch; the fourth 0543 amendment moves full campaign proof to the final candidate.)
 
 ## Outcome
 
