@@ -57,6 +57,17 @@ PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
 - Install the Apple packages that the Swift and Objective-C `check.sh` scripts need on the M5, then rerun both. If they need full Xcode or an Apple account, tell the PM, who will raise it with Ian. 0556 does not close on exit 77.
 - Land from the tested SHA.
 
+PM amendment, 2026-10-12, third. Source limits and Apple checks.
+- Apple: this replaces the M5 bullet above. The M5 has only Command Line Tools, so the Swift and Objective-C package checks cannot run there. Under [the 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md), Apple runs on a GitHub macOS workflow at the candidate, and platform qualification does not hold 0556 open. 0556 closes on its routine installed checks. The candidate fails if the GitHub Swift or Objective-C run exits nonzero or 77.
+- The six binding limits that block lint at `e52ac9593` may rise only by the measured amount, and only with a named cause in the commit:
+  - Ada declarations, 8,638 to 8,653, generated from the approved named C export;
+  - Ada Python, 550 to 551, for the child-environment helper import;
+  - C examples and tests, 3,340 to the measured total after the shared helper saves its 23 lines, for the direct named-export checks this ticket required;
+  - Java, 4,071 to 4,161, plus Kotlin and Scala by one line each, for the JVM wait fixes and their regression tests.
+- Before landing, list every binding and database limit that differs from `origin/main` in the combined record, with each limit's change and its cause. The fresh reviewer accepts or rejects each raise, as `AGENTS.md` requires. Against main the binding limits rise by 1,634 lines and fall by 214. The largest raises are the C library's Rust, up 419, Python's Rust, up 205, and the C++ header, up 171. The record must not say "no limit was raised".
+- The record is the evidence. State results in its text. Drop pointers to `target/` and `builds/` directories, because sweeps delete them.
+- Explain the C nextest timeouts and the 80 unrun cases before acceptance, or show that they reproduce on `origin/main`.
+
 ## Progress
 
 - 2026-10-11 started
@@ -77,3 +88,4 @@ PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
 - 2026-10-11 next: Read amendments 22b005e1b and consolidate current main, 0549, 0555 and the product stack into one revision; runner-only ad4b49b4a exited 1 on a missing retained TypeScript archive, three developers now own consolidation and runner fixes, decode and direct ABI proof, and Engine regressions, with compiler checks released and no source-only acceptance permitted.
 - 2026-10-11 next: Combined ba41be5a7 passes unchanged installed C 42/42, Polars 46/46 and owning Rust checks; whole routine test and lint now run on that frozen revision before any acceptance, while exhaustive ratchets confirm JVM overages and a new C fixture overage, with a separate safe fixture repair lane and Mac package prerequisites unresolved.
 - 2026-10-11 next: Official test on frozen ba41be5a7 exited 0 with 2002 workspace, 21 consumer and 44 Python cases; full C passed 25 unit and 82 integration cases plus installed 42/42 and Polars 46/46, but lint exited 1 on child-environment violations that the runner lane is repairing, so no acceptance or candidate qualification is recorded.
+- 2026-10-11 next: Prepared current-main combination e52ac9593 is pushed and all developers and jobs exited; routine test passed on ba41be5a7 and runner plus Ada generation repairs pass their owning checks, but final acceptance waits for unchanged C, JVM and Ada source-limit rulings, genuine matching M5 Apple packages and final same-revision gates followed by fresh review and the strict candidate campaign.
