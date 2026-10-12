@@ -3,8 +3,6 @@
 #include "results_generated.hpp"
 #include "inputs_generated.hpp"
 #include <memory>
-#include <thread>
-#include <chrono>
 namespace tt {
 enum class NativeFailureKind { usage=THINKTHEN_EUSAGE, backend=THINKTHEN_EBACKEND,
     deadline=THINKTHEN_EDEADLINE, local=THINKTHEN_ELOCAL,
@@ -36,6 +34,7 @@ struct Poll {
 // Cancellation and destruction do not join native work. Packets own copied values.
 class Call {
     std::unique_ptr<thinkthen_session,detail::SessionDeleter> session_;
+    bool input_closed_=false;
     explicit Call(thinkthen_session* p):session_(p) {}
     friend class Client;
     void require_live() const { if(!session_) throw std::logic_error("C++ call is closed"); }
@@ -44,13 +43,14 @@ public:
     Call& operator=(Call&&)=default;
     Call(const Call&)=delete;
     Call& operator=(const Call&)=delete;
-    void cancel() noexcept { if(session_) thinkthen_session_cancel(session_.get()); }
-    void close() noexcept { session_.reset(); }
-    void finish() { require_live(); detail::check_session(thinkthen_session_finish(session_.get(),nullptr,0)); }
+    void cancel() noexcept { input_closed_=true; if(session_) thinkthen_session_cancel(session_.get()); }
+    void close() noexcept { input_closed_=true; session_.reset(); }
+    bool input_closed() const noexcept { return input_closed_ || !session_; }
+    void finish() { require_live(); detail::check_session(thinkthen_session_finish(session_.get(),nullptr,0)); input_closed_=true; }
     bool try_push(const inputs::RequestSessionDescriptor& item) {
-        require_live(); auto bytes=item.document().dump(); uint32_t state=THINKTHEN_SESSION_CLOSED_V1;
+        require_live(); if(input_closed_) return false; auto bytes=item.document().dump(); uint32_t state=THINKTHEN_SESSION_CLOSED_V1;
         detail::check_session(thinkthen_session_try_push(session_.get(),bytes.data(),bytes.size(),&state));
-        if(state==THINKTHEN_SESSION_CLOSED_V1) throw std::logic_error("native input is closed");
+        input_closed_=state==THINKTHEN_SESSION_CLOSED_V1;
         return state==THINKTHEN_SESSION_ACCEPTED_V1;
     }
     Poll poll() {
@@ -68,6 +68,11 @@ public:
         }
         return {PollState::result,std::move(value)};
     }
+    // Wait consumes nothing. Keep this owner live and join waiters before close.
+    void wait(bool input=false) {
+        require_live(); uint32_t ready=0;
+        detail::check_session(thinkthen_session_wait(session_.get(),input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,50,&ready));
+    }
     // Explicit blocking convenience; a caller can run this on its chosen worker.
     std::vector<results::SessionPacket> collect() {
         std::vector<results::SessionPacket> values;
@@ -75,7 +80,7 @@ public:
             for(;;) {
                 auto next=poll(); if(next.state==PollState::end) return values;
                 if(next.packet) values.push_back(std::move(*next.packet));
-                else std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                else wait();
             }
         } catch(SessionFailure& error) { error.packets=std::move(values); throw; }
     }
@@ -86,9 +91,13 @@ struct UsageStatus {
 };
 class Client {
     std::unique_ptr<thinkthen_engine,detail::EngineDeleter> engine_;
-    Call start(const char* function,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
+    template<class RequestCall>
+    Call start(RequestCall call,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
         if(!engine_) throw std::logic_error("C++ client is closed");
-        auto bytes=Json{{"schema",results::request_version},{"call",Json{{"function",function},{"question",question.document()},{"input",input.document()},{"options",options.document()}}}}.dump();
+        call.set_question(question);
+        call.set_input(input);
+        call.set_options(options);
+        auto bytes=inputs::Request().set_call(call).document().dump();
         thinkthen_session* raw=nullptr;
         detail::check_session(thinkthen_session_new_with_surface(engine_.get(),bytes.data(),bytes.size(),"cpp",3,&raw));
         return Call(raw);
@@ -103,16 +112,16 @@ public:
     void close() noexcept { engine_.reset(); }
     UsageStatus usage_persistence() const { return usage_status(false); }
     UsageStatus finish_usage_status() const { return usage_status(true); }
-    Call decide(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("decide",question,input,options); }
-    Call choose(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("choose",question,input,options); }
-    Call tag(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("tag",question,input,options); }
-    Call score(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("score",question,input,options); }
-    Call filter(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("filter",question,input,options); }
-    Call rank(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("rank",question,input,options); }
-    Call find(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("find",question,input,options); }
-    Call annotate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("annotate",question,input,options); }
-    Call recognize(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("recognize",question,input,options); }
-    Call relate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start("relate",question,input,options); }
+    Call decide(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallDecide{},question,input,options); }
+    Call choose(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallChoose{},question,input,options); }
+    Call tag(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallTag{},question,input,options); }
+    Call score(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallScore{},question,input,options); }
+    Call filter(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallFilter{},question,input,options); }
+    Call rank(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRank{},question,input,options); }
+    Call find(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallFind{},question,input,options); }
+    Call annotate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallAnnotate{},question,input,options); }
+    Call recognize(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRecognize{},question,input,options); }
+    Call relate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRelate{},question,input,options); }
 private:
     UsageStatus usage_status(bool finish) const {
         if(!engine_) throw std::logic_error("C++ client is closed");

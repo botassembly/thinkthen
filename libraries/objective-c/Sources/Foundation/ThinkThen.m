@@ -21,6 +21,8 @@ static NSData *TTEncode(id object, NSError **error) {
 @interface TTSession () {
     struct thinkthen_session *_native;
     NSLock *_lock;
+    NSUInteger _waiters;
+    BOOL _closed;
 }
 - (instancetype)initWithNative:(struct thinkthen_session *)native;
 @end
@@ -30,7 +32,7 @@ static NSData *TTEncode(id object, NSError **error) {
     return self;
 }
 - (BOOL)live:(NSError **)error {
-    if (_native) return YES;
+    if (_native && !_closed) return YES;
     if (error) *error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ELOCAL userInfo:@{NSLocalizedDescriptionKey:@"Session is closed"}];
     return NO;
 }
@@ -71,7 +73,22 @@ static NSData *TTEncode(id object, NSError **error) {
     } @finally { thinkthen_session_result_free(packet); [_lock unlock]; }
 }
 - (void)cancel { [_lock lock]; thinkthen_session_cancel(_native); [_lock unlock]; }
-- (void)close { [_lock lock]; thinkthen_session_free(_native); _native = NULL; [_lock unlock]; }
+- (BOOL)waitInput:(BOOL)input error:(NSError **)error {
+    [_lock lock];
+    if (![self live:error]) { [_lock unlock]; return NO; }
+    struct thinkthen_session *retained = _native; _waiters++;
+    [_lock unlock];
+    uint32_t ready = 0;
+    BOOL ok = TTCheck(thinkthen_session_wait(retained, input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready), error);
+    [_lock lock]; _waiters--;
+    if (_closed && !_waiters) { thinkthen_session_free(_native); _native = NULL; }
+    [_lock unlock]; return ok;
+}
+- (void)close {
+    [_lock lock]; _closed = YES; thinkthen_session_cancel(_native);
+    if (!_waiters) { thinkthen_session_free(_native); _native = NULL; }
+    [_lock unlock];
+}
 - (void)dealloc { thinkthen_session_free(_native); }
 @end
 @interface TTCall ()
@@ -87,7 +104,6 @@ static NSData *TTEncode(id object, NSError **error) {
     TTSession *_session;
     TTFeed _feed;
     TTCompletion _completion;
-    dispatch_source_t _timer;
     dispatch_queue_t _queue;
     NSDictionary *_pending;
     NSMutableArray *_packets;
@@ -103,11 +119,16 @@ static NSData *TTEncode(id object, NSError **error) {
     if ((self = [super init])) {
         _session = session; _feed = [feed copy]; _completion = [completion copy];
         _packets = [NSMutableArray array]; _queue = dispatch_queue_create("thinkthen.foundation.callback", DISPATCH_QUEUE_SERIAL);
-        _timer = dispatch_source_create(DISPATCH_SOURCE_TYPE_TIMER, 0, 0, _queue);
-        // The source retains this task until completion or cancellation breaks the cycle.
-        dispatch_source_set_event_handler(_timer, ^{ [self tick]; });
-        dispatch_source_set_timer(_timer, DISPATCH_TIME_NOW, 10 * NSEC_PER_MSEC, NSEC_PER_MSEC);
-        dispatch_resume(_timer);
+        dispatch_async(_queue, ^{
+            while (!self->_finished) {
+                if (self.cancelled) { [self settle:[NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}] call:nil]; break; }
+                [self tick];
+                if (self->_finished) break;
+                if (self->_feed && !self->_pending) continue;
+                NSError *error = nil;
+                if (![self->_session waitInput:self->_pending != nil error:&error]) [self settle:error call:nil];
+            }
+        });
     }
     return self;
 }
@@ -115,7 +136,7 @@ static NSData *TTEncode(id object, NSError **error) {
     if (_finished) return;
     _finished = YES; [_session close];
     if (self.cancelled) { call = nil; error = [NSError errorWithDomain:TTErrorDomain code:THINKTHEN_ECANCELLED userInfo:@{NSLocalizedDescriptionKey:@"Cancelled"}]; }
-    dispatch_source_cancel(_timer); _timer = nil; _feed = nil; _pending = nil;
+    _feed = nil; _pending = nil;
     TTCompletion completion = _completion; _completion = nil;
     completion(call, error);
 }

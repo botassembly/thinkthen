@@ -1,10 +1,9 @@
 //! Complete-set rank and find admission, shared by fallible and original callers.
 
-use super::observation::observe_find;
-use crate::core::{self, Find, ranking_under};
+use crate::core::{self, Find};
 use crate::public::engine::{Engine, Evidence, evidence, evidence_error, only};
 use crate::public::error::Error;
-use crate::public::options::{CallOptions, Stop};
+use crate::public::options::CallOptions;
 use crate::public::question::{Kind, Question};
 use crate::public::results::{Call, Found, Ranked};
 type PreparedFind<T> = (Vec<T>, Find, std::sync::Arc<crate::engine::facade::Engine>);
@@ -70,40 +69,26 @@ impl Engine {
         T: Evidence,
     {
         only(question, &[Kind::Rank], "rank")?;
-        let records = self.try_within_limit(records)?;
-        // A rank judges every record before it orders any, so a blank record
-        // is refused before the first send.
-        for (at, record) in records.as_slice().iter().enumerate() {
-            question
-                .admit_input(&super::super::InputEvidence::question_input(record))
-                .map_err(|error| error.at_record(at))?;
-            evidence(record.evidence())?;
-        }
-        let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
-            Ok(Some((item, yes)))
-        })?;
-        let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
-        let facts = batch
-            .facts()
-            .cloned()
-            .ok_or_else(|| Error::defect("a completed rank has no facts"))?;
-        let order = ranking_under(
-            &rows.iter().map(|(_, yes)| *yes).collect::<Vec<_>>(),
-            None,
-            question.threshold,
-        );
-        // Rows arrive in input order, so a row's place is its input index.
-        let mut rows: Vec<Option<(T, f64)>> = rows.into_iter().map(Some).collect();
-        Ok(Call::new(
-            order
+        self.try_rank_records_complete_with(
+            question,
+            records
                 .into_iter()
-                .filter_map(|place| {
-                    let (item, yes) = rows.get_mut(place).and_then(Option::take)?;
-                    Some(Ranked::new(place, item, yes))
+                .map(|row| row.map(crate::public::record_input::plain)),
+            options,
+        )?
+        .try_map(|rows| {
+            rows.into_iter()
+                .map(|row| {
+                    let probability = row
+                        .result
+                        .canonical
+                        .answer()
+                        .yes()
+                        .ok_or_else(|| Error::defect("a decide answer lost its probability"))?;
+                    Ok(Ranked::new(row.ordinal, row.original, probability))
                 })
-                .collect(),
-            facts,
-        ))
+                .collect()
+        })
     }
 
     /// Select the one unit that best answers the question, from 2 to 255.
@@ -156,36 +141,21 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
-        let options = options.started()?;
-        let (units, find, engine) = self.prepare_find(question, units, &options)?;
-        for (at, unit) in units.iter().enumerate() {
-            question
-                .metadata
-                .validate_item(&super::super::InputEvidence::question_input(unit))
-                .map_err(|error| error.at_record(at))?;
-        }
-        let none = question.kind == Kind::FindNone;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        stop.run_call(1, |cancel| {
-            let found = engine.find(&find, cancel).map_err(Error::from)?;
-            observe_find(&stop, &engine, question, &find, &found)?;
-            Ok(found)
-        })?
-        .try_map(|found| Found::new(units, none, &found))
+        Ok(self
+            .try_find_complete_with(question, units, options)?
+            .map(|result| result.found))
     }
 
-    pub(in crate::public) fn prepare_find<I, T>(
+    pub(in crate::public) fn prepare_find<T>(
         &self,
         question: &Question,
-        units: I,
+        units: Vec<T>,
         options: &CallOptions<'_>,
     ) -> Result<PreparedFind<T>, Error>
     where
-        I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
         let none = question.kind == Kind::FindNone;
-        let units = admit_find(question, units, options, |at| self.check_record_limit(at))?;
         let texts = units
             .iter()
             .map(|unit| evidence(unit.evidence()))
@@ -237,7 +207,7 @@ impl Question {
     }
 }
 
-fn count_message(none: bool) -> &'static str {
+pub(in crate::public) fn count_message(none: bool) -> &'static str {
     if none {
         "a find question offering none takes 1 to 254 units"
     } else {

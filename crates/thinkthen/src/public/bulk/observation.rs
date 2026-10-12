@@ -7,15 +7,6 @@ use crate::public::options::Stop;
 use crate::public::question::Question;
 use crate::public::results::{ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation};
 
-pub(crate) fn observe_find(
-    stop: &Stop<'_>,
-    engine: &facade::Engine,
-    question: &Question,
-    find: &core::Find,
-    found: &facade::Found,
-) -> Result<(), Error> {
-    observe_find_inputs(stop, engine, question, find, found, &[])
-}
 pub(crate) fn observe_find_inputs(
     stop: &Stop<'_>,
     engine: &facade::Engine,

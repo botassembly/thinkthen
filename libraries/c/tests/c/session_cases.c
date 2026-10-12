@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
             if(thinkthen_session_try_push(session,argv[i],strlen(argv[i]),&pushed))return 1;
             if(pushed!=THINKTHEN_SESSION_FULL_V1)break;
             if(read_packet(session,&results,&count,&status))return 1;
-            if(status==THINKTHEN_SESSION_PENDING_V1)sched_yield();
+            if(status==THINKTHEN_SESSION_PENDING_V1){uint32_t ready;if(thinkthen_session_wait(session,THINKTHEN_SESSION_WAIT_INPUT_V1,50,&ready))return 1;}
         }
     }
     if(thinkthen_session_finish(session,NULL,0)) return 1;
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
         uint32_t status;
         if(read_packet(session,&results,&count,&status)) return 1;
         if(status==THINKTHEN_SESSION_END_V1)break;
-        if(status==THINKTHEN_SESSION_PENDING_V1){sched_yield();continue;}
+        if(status==THINKTHEN_SESSION_PENDING_V1){uint32_t ready;if(thinkthen_session_wait(session,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,50,&ready))return 1;continue;}
     }
     thinkthen_session_free(session);
     fputs("{\"packets\":[",stdout);

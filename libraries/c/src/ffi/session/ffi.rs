@@ -4,7 +4,7 @@
     reason = "the C ownership contract permits foreign pointer access"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
-use crate::Door;
+use crate::EngineHandle;
 use crate::session::{SessionHandle, SessionResultHandle, errors};
 use std::ffi::c_char;
 use thinkthen::{
@@ -24,6 +24,73 @@ pub const THINKTHEN_SESSION_PENDING_V1: u32 = 1;
 /// Terminal was read and no more output will arrive.
 pub const THINKTHEN_SESSION_END_V1: u32 = 2;
 
+/// Wait only for results, end or cancel; input room cannot wake this wait.
+pub const THINKTHEN_SESSION_WAIT_RESULT_V1: u32 = 0;
+/// Wait for result, input room/closure, end or cancel.
+pub const THINKTHEN_SESSION_WAIT_INPUT_V1: u32 = 1;
+/// Drain output after cancel without waking repeatedly for cancellation.
+pub const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1: u32 = 2;
+/// A result or terminal packet is ready; no packet has been consumed.
+pub const THINKTHEN_SESSION_READY_RESULT_V1: u32 = 0;
+/// Caller-supplied input has room.
+pub const THINKTHEN_SESSION_READY_INPUT_V1: u32 = 1;
+/// Caller-supplied input has closed.
+pub const THINKTHEN_SESSION_READY_CLOSED_V1: u32 = 2;
+/// Every output packet has been consumed.
+pub const THINKTHEN_SESSION_READY_END_V1: u32 = 3;
+/// Intake was cancelled; settlement can still be pending.
+pub const THINKTHEN_SESSION_READY_CANCELLED_V1: u32 = 4;
+/// The caller-given timeout passed.
+pub const THINKTHEN_SESSION_READY_TIMEOUT_V1: u32 = 5;
+
+/// Block for requested readiness without consuming a packet or joining provider
+/// work. timeout_ms is the maximum condition wait in milliseconds; zero checks
+/// readiness immediately. RESULT ignores input room; INPUT also watches intake;
+/// SETTLEMENT ignores cancel to drain final packets after cancellation. Output
+/// readiness takes priority over cancel. Success preserves thread-local errors;
+/// failures preserve out_ready and set only the calling thread's diagnostic.
+/// # Safety
+/// session is live for the whole wait, including concurrent cancel/read/push.
+/// Shared operations are synchronized internally. out_ready is writable and
+/// nonnull. Free only after every concurrent operation, including wait, returns.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_wait(
+    session: *const SessionHandle,
+    interest: u32,
+    timeout_ms: u32,
+    out_ready: *mut u32,
+) -> std::ffi::c_int {
+    errors::call(|| {
+        required(out_ready)?;
+        use thinkthen::{RequestSessionReady as Ready, RequestSessionWaitInterest as Interest};
+        let interest = match interest {
+            THINKTHEN_SESSION_WAIT_RESULT_V1 => Interest::Result,
+            THINKTHEN_SESSION_WAIT_INPUT_V1 => Interest::Input,
+            THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 => Interest::Settlement,
+            _ => return Err(ErrorKind::Usage),
+        };
+        // SAFETY: the caller retains its live owner while this shared borrow waits.
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let ready = session.0.wait(
+            interest,
+            std::time::Duration::from_millis(u64::from(timeout_ms)),
+        );
+        let ready = match ready {
+            Ready::Result => THINKTHEN_SESSION_READY_RESULT_V1,
+            Ready::Input => THINKTHEN_SESSION_READY_INPUT_V1,
+            Ready::Closed => THINKTHEN_SESSION_READY_CLOSED_V1,
+            Ready::End => THINKTHEN_SESSION_READY_END_V1,
+            Ready::Cancelled => THINKTHEN_SESSION_READY_CANCELLED_V1,
+            Ready::Timeout => THINKTHEN_SESSION_READY_TIMEOUT_V1,
+        };
+        // SAFETY: required checked the caller's writable slot; nothing can fail now.
+        unsafe {
+            *out_ready = ready;
+        }
+        Ok(())
+    })
+}
+
 fn required<T>(slot: *mut T) -> Result<(), ErrorKind> {
     if slot.is_null() {
         Err(ErrorKind::Usage)
@@ -42,7 +109,7 @@ fn required<T>(slot: *mut T) -> Result<(), ErrorKind> {
 /// requires zero), and out is writable. Extents must fit Rust slices.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_new(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
     request_len: usize,
     out: *mut *mut SessionHandle,
@@ -60,7 +127,7 @@ pub unsafe extern "C" fn thinkthen_session_new(
 /// readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_new_with_surface(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
     request_len: usize,
     surface: *const c_char,
@@ -78,32 +145,104 @@ pub unsafe extern "C" fn thinkthen_session_new_with_surface(
     }
 }
 
+/// Existing canonical components for one named request. Every view is counted
+/// UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
+#[repr(C)]
+pub struct NamedRequestV1 {
+    /// Exact lower-case public function name.
+    pub function: crate::session::views::thinkthen_complete_utf8_v1,
+    /// Existing canonical question selector JSON.
+    pub question_json: crate::session::views::thinkthen_complete_utf8_v1,
+    /// Existing canonical input selector JSON.
+    pub input_json: crate::session::views::thinkthen_complete_utf8_v1,
+    /// Existing canonical options JSON; pass {} for omitted controls.
+    pub options_json: crate::session::views::thinkthen_complete_utf8_v1,
+}
+
+/// Construct one named request through Rust and create its owned native session.
+/// Components use the existing canonical question, input and options grammars.
+/// Materialized Records become find Units or relate Entities in shared Rust;
+/// every materialized descriptor is decoded before session creation. Sources
+/// and caller feeds retain their selectors. Unknown names say "unknown function".
+/// Ownership, diagnostics and output rules match thinkthen_session_new.
+/// # Safety
+/// engine is live; request points to a readable aligned component structure.
+/// Every view points to its counted readable UTF-8 bytes (NULL requires zero);
+/// extents fit Rust slices. out is nonnull writable pointer storage. All inputs
+/// may be freed or overwritten after return; the engine may also be freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
+    engine: *const EngineHandle,
+    request: *const NamedRequestV1,
+    surface: crate::session::views::thinkthen_complete_utf8_v1,
+    out: *mut *mut SessionHandle,
+) -> std::ffi::c_int {
+    // SAFETY: every component and the output obey the caller's counted contract.
+    unsafe {
+        start_session(
+            engine,
+            out,
+            || named_text(surface)?.parse().map_err(|_| ErrorKind::Usage),
+            || {
+                let request = request.as_ref().ok_or(ErrorKind::Usage)?;
+                Request::named_from_json(
+                    named_text(request.function)?,
+                    named_text(request.question_json)?,
+                    named_text(request.input_json)?,
+                    named_text(request.options_json)?,
+                )
+                .map_err(decode_failure)
+            },
+        )
+    }
+}
+
+unsafe fn named_text<'a>(
+    view: crate::session::views::thinkthen_complete_utf8_v1,
+) -> Result<&'a str, ErrorKind> {
+    // SAFETY: the caller retains the readable extent for this shared borrow.
+    unsafe { super::text(view.data.cast(), view.len) }.map_err(|_| ErrorKind::Usage)
+}
+
+fn decode_failure(error: thinkthen::Error) -> errors::Failure {
+    if error.request_decode_cause() == Some(thinkthen::RequestDecodeCause::Malformed) {
+        errors::Failure::Kind(ErrorKind::Usage)
+    } else {
+        errors::Failure::Native(error)
+    }
+}
+
 unsafe fn new_session(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
     request_len: usize,
     out: *mut *mut SessionHandle,
     surface: impl FnOnce() -> Result<Surface, ErrorKind>,
+) -> std::ffi::c_int {
+    // SAFETY: forward the existing export's input and output obligations.
+    unsafe {
+        start_session(engine, out, surface, || {
+            let text = super::text(request_json, request_len).map_err(|_| ErrorKind::Usage)?;
+            Request::from_json(text).map_err(decode_failure)
+        })
+    }
+}
+
+unsafe fn start_session(
+    engine: *const EngineHandle,
+    out: *mut *mut SessionHandle,
+    surface: impl FnOnce() -> Result<Surface, ErrorKind>,
+    request: impl FnOnce() -> Result<Request, errors::Failure>,
 ) -> std::ffi::c_int {
     errors::native_call(|| {
         required(out)?;
         let surface = surface()?;
         // SAFETY: the caller keeps its engine live until this call returns.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
-        // SAFETY: the caller supplies the documented readable extent.
-        let text =
-            unsafe { super::text(request_json, request_len) }.map_err(|_| ErrorKind::Usage)?;
-        let request = Request::from_json(text).map_err(|error| {
-            if error.to_string() == "invalid canonical request" {
-                errors::Failure::Kind(ErrorKind::Usage)
-            } else {
-                errors::Failure::Native(error)
-            }
-        })?;
         let session = engine
             .0
             .engine
-            .request_session_with_surface(request, surface)
+            .request_session_with_surface(request()?, surface)
             .map_err(errors::Failure::Native)?;
         let owner = Box::into_raw(Box::new(SessionHandle(session)));
         // SAFETY: required checked nonnull and the caller promises writable storage.
@@ -193,6 +332,21 @@ pub extern "C" fn thinkthen_session_error_message() -> *const c_char {
     )
 }
 
+/// Read the retry signal of the calling thread's last immediate session failure.
+/// Returns zero before a failure. Success and engine construction preserve it.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_retryable() -> std::ffi::c_int {
+    errors::guard(0, errors::retryable)
+}
+
+/// Borrow the native facts JSON of the last immediate session failure, or NULL.
+/// The calling thread owns these bytes until its next immediate session failure
+/// or thread exit. Success and engine construction preserve the same pointer.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_facts_json() -> *const c_char {
+    errors::guard(std::ptr::null(), errors::facts)
+}
+
 /// Release an independent packet owner. NULL is ignored.
 /// # Safety
 /// result is NULL or an unfreed owner no operation or borrowed view is using.
@@ -245,7 +399,7 @@ pub unsafe extern "C" fn thinkthen_session_try_push(
 }
 
 /// Fix input EOF or a canonical closed reader failure. NULL with zero means EOF;
-/// other inputs decode kind io, utf8 or invalid_input and optional location.
+/// other inputs decode kind io, utf8, invalid_input or producer and optional location.
 /// No input bytes survive return. A changed finish refuses without changing intake.
 /// # Safety
 /// session is live and failure_json has failure_len readable UTF-8 bytes.
@@ -335,7 +489,7 @@ pub unsafe extern "C" fn thinkthen_session_result_view(
 /// nonoverlapping slots. Destruction waits for concurrent callers to return.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_usage_persistence_v1(
-    engine: *const Door,
+    engine: *const EngineHandle,
     out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
     out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
 ) -> std::ffi::c_int {
@@ -359,7 +513,7 @@ pub unsafe extern "C" fn thinkthen_engine_usage_persistence_v1(
 /// The engine and output obligations of usage_persistence_v1 apply.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_engine_finish_usage_status_v1(
-    engine: *const Door,
+    engine: *const EngineHandle,
     out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
     out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
 ) -> std::ffi::c_int {
@@ -375,7 +529,7 @@ pub unsafe extern "C" fn thinkthen_engine_finish_usage_status_v1(
 }
 
 unsafe fn usage_status(
-    engine: *const Door,
+    engine: *const EngineHandle,
     out_state: *mut crate::session::views_generated::thinkthen_complete_usage_persistence_v1,
     out_advice: *mut crate::session::views::thinkthen_complete_utf8_v1,
     observe: fn(&thinkthen::Engine) -> thinkthen::UsagePersistence,

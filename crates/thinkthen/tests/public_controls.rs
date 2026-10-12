@@ -58,10 +58,8 @@ fn engine(base: &str) -> Engine {
 }
 
 fn engine_at(base: &str, width: Option<u8>, timeout: u64) -> Engine {
-    Engine::builder()
-        .base_url(base)
-        .and_then(|builder| builder.api_key("sk-public-controls"))
-        .and_then(|builder| builder.timeout(Duration::from_secs(timeout)))
+    crate::api::builder(base, "sk-public-controls")
+        .timeout(Duration::from_secs(timeout))
         .and_then(|builder| match width {
             Some(width) => builder.throttle(width),
             None => Ok(builder),
@@ -550,3 +548,6 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
         },
     );
 }
+
+#[path = "support/api.rs"]
+mod api;

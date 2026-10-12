@@ -1,12 +1,12 @@
 //! A cache folder holds answers from any address, because the address is in
 //! every question key, by ADR 0111 section 3. No folder binds to one backend.
 
+use crate::harness::{Canned, Listener, spawn_one as spawn, spawn_one_local, stderr_is};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::support::{encoded_decide, plant_recording, stored};
 
 const QUESTION: &str = "asks for a refund";
@@ -17,11 +17,7 @@ const ANSWER: &str = concat!(
 );
 type FolderFiles = Vec<(std::ffi::OsString, Vec<u8>)>;
 
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 fn decide(base: &str, folder: &Path, mode: &str, key: bool) -> io::Result<std::process::Output> {
     decide_model(base, folder, mode, key, "local-1")
@@ -112,17 +108,9 @@ fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() 
         after[0]["answer"], r#"{"type":"noul","noul":0.1}"#,
         "answer replaced"
     );
-    let replay = spawn(
-        &[
-            "decide",
-            QUESTION,
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--replay",
-            path,
-        ],
+    let replay = spawn_one_local(
+        &["decide", QUESTION, "--replay", path],
+        listener.base(),
         &[],
         EVIDENCE.as_bytes(),
     )
@@ -173,7 +161,7 @@ fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
             .expect("missing-key run");
         assert_eq!(failed.status.code(), Some(4), "{row}");
         assert!(failed.stdout.is_empty(), "{row}");
-        assert_eq!(String::from_utf8_lossy(&failed.stderr), NO_KEY, "{row}");
+        assert_eq!(crate::harness::said(&failed), NO_KEY, "{row}");
         assert_eq!(
             cache.exists(),
             present,
@@ -243,7 +231,7 @@ fn a_control_character_key_writes_nothing_and_a_hit_reads_no_key() {
         .expect("control-character-key run");
         assert_eq!(failed.status.code(), Some(2), "{row}");
         assert!(failed.stdout.is_empty(), "{row}");
-        assert_eq!(String::from_utf8_lossy(&failed.stderr), REFUSAL, "{row}");
+        assert_eq!(crate::harness::said(&failed), REFUSAL, "{row}");
         assert_eq!(cache.exists(), present, "{row}: folder presence");
         if present {
             assert_eq!(fs::read_dir(&cache).expect("folder").count(), 0, "{row}");
@@ -280,9 +268,9 @@ fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
     let refused =
         decide("https://example.invalid/v1", &cache, "--cache", false).expect("dangling-path run");
     assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
+    stderr_is(
+        &refused,
+        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n",
     );
     assert!(refused.stdout.is_empty());
     assert!(fs::symlink_metadata(&cache).is_ok());
@@ -366,12 +354,7 @@ fn two_processes_write_one_store_at_once_and_both_succeed() {
     });
 
     for output in [&first_output, &second_output] {
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(output, 0);
     }
     assert_eq!((first.requests().len(), second.requests().len()), (1, 1));
     assert_eq!(stored(&cache).expect("the store").len(), 2);
@@ -407,7 +390,7 @@ fn an_old_entry_is_ignored_until_convert_and_a_replay_writes_nothing() {
 
     let missed = decide(base, &recording, "--replay", false).expect("miss runs");
     assert_eq!(missed.status.code(), Some(5));
-    let message = String::from_utf8_lossy(&missed.stderr);
+    let message = crate::harness::said(&missed);
     assert!(message.starts_with(
         "thinkthen: the decide request for one document: the replay folder holds no answer for question `"
     ));
@@ -453,9 +436,9 @@ fn a_store_that_is_no_database_is_a_secret_safe_storage_failure() {
 
     let refused = decide(listener.base(), &cache, "--cache", false).expect("refusal runs");
     assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
+    stderr_is(
+        &refused,
+        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n",
     );
     assert!(listener.requests().is_empty());
 }

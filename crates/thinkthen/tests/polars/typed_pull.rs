@@ -30,15 +30,12 @@ fn records<'a>(
         .into_iter()
         .map(|id| {
             id.map(|id| RecordInput {
-                original: Original {
+                context: Some("row guide".into()),
+                ..crate::api::record(Original {
                     id,
                     snapshots,
                     drops: Rc::clone(drops),
-                },
-                context: Some("row guide".into()),
-                options: None,
-                examples: None,
-                seed_spans: None,
+                })
             })
         })
         .collect()

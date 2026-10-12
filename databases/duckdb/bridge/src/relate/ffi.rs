@@ -280,7 +280,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
             let result = crate::ffi::request::run(
                 &engine,
                 ask.into(),
-                thinkthen::RequestInput::Entities { items },
+                thinkthen::RequestInput::Records { items },
                 crate::ffi::CallScope {
                     due,
                     token: &token,

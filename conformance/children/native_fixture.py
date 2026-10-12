@@ -206,7 +206,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     import os, subprocess, sys, tempfile, sqlite3
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
-    from children import child_env
+    from children import child_env, read_process_line
     cases={v['id']:v for v in json.loads((root/'conformance/cases.json').read_text())['cases']}
     named={v['id']:v for v in json.loads((root/'conformance/named-inputs.json').read_text())['cases']}
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
@@ -227,7 +227,8 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                   '--target-dir',str(source.parent.parent)]
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
-            env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
+            env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS','RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
+                                'CARGO_PROFILE_DEV_OPT_LEVEL','CARGO_PROFILE_DEV_DEBUG'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
             env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
             env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
             env['CARGO_NET_OFFLINE']='true'
@@ -311,7 +312,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                                 try:
                                     child.stdin.write(c_parity.compact(framed)+'\n');child.stdin.flush()
                                     if framed['batch_probe']:
-                                        assert child.stdout.readline()=='ready\n'
+                                        assert read_process_line(child.stdout)=='ready\n'
                                         assert int(backend.read('count'))==before,'batch sent before its first pull'
                                         child.stdin.write('continue\n');child.stdin.close();child.stdin=None
                                         stdout,stderr=child.communicate(timeout=120)

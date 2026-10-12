@@ -1,12 +1,11 @@
 //! The one line a user sitting at a terminal is told, and its absence in a pipe.
 
 use crate::child::ChildEnvironment as _;
+use crate::harness::{finish, spawn, stderr_is};
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-
-use crate::harness::{finish, spawn};
 
 /// The line a run reading from a terminal writes on standard error.
 const WAITING: &str =
@@ -95,7 +94,7 @@ fn a_terminal_is_told_what_the_command_waits_for_and_a_pipe_is_not() {
     );
 
     let piped = spawn(&asked, &[], b"Refund me please.\n").expect("the compiled binary runs");
-    assert_eq!(String::from_utf8_lossy(&piped.stderr), "");
+    stderr_is(&piped, "");
     assert_eq!(piped.status.code(), Some(0));
 }
 

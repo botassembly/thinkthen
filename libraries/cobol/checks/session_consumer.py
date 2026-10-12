@@ -17,6 +17,7 @@ native.thinkthen_engine_new_with.restype = ct.c_void_p
 for name in ('thinkthen_session_cancel','thinkthen_session_free','thinkthen_engine_free','thinkthen_session_result_free'):
     function = getattr(native, name); function.argtypes = [ct.c_void_p]; function.restype = None
 bridge.COBOL_PUSH.argtypes = [ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_uint32)]
+native.thinkthen_session_wait.argtypes = [ct.c_void_p,ct.c_uint32,ct.c_uint32,ct.POINTER(ct.c_uint32)]
 native.thinkthen_session_try_read.argtypes = [ct.c_void_p,ct.POINTER(ct.c_uint32),ct.POINTER(ct.c_void_p)]
 native.thinkthen_session_finish.argtypes = [ct.c_void_p,ct.c_void_p,ct.c_size_t]
 native.thinkthen_session_result_json.argtypes = [ct.c_void_p,ct.POINTER(ct.c_void_p),ct.POINTER(ct.c_size_t)]
@@ -56,7 +57,9 @@ try:
                 status, packet = ct.c_uint32(), ct.c_void_p()
                 assert native.thinkthen_session_try_read(session,ct.byref(status),ct.byref(packet)) == 0
                 if packet.value: owners.append(packet.value)
-                else: time.sleep(0.001)
+                else:
+                    ready = ct.c_uint32()
+                    assert native.thinkthen_session_wait(session,1,50,ct.byref(ready)) == 0
         assert native.thinkthen_session_finish(session,None,0) == 0
         if value['held_cancel']:
             assert sys.stdin.read(1) == '!'

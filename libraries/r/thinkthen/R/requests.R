@@ -27,34 +27,23 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
 .tt_request <- function(function_name, question, input, options) {
   question <- structure(.tt_json(if (inherits(question, "thinkthen_question")) unclass(question) else question),
                         selector = inherits(question, "thinkthen_question"), literal = is.character(question) && length(question) == 1L)
-  column <- NULL
-  if (is.null(input) || (is.atomic(input) && !is.object(input) && !is.raw(input))) {
-    column <- .tt_call(tt_request_column(unname(as.list(input)), function_name))
-    if (length(column$values) != length(input)) input <- column$values
-  }
+  column <- is.null(input) || (is.atomic(input) && !is.object(input) && !is.raw(input))
   if (inherits(input, "thinkthen_feed")) input <- structure(input$header, class = "thinkthen_input")
   if (inherits(input, "thinkthen_input")) input <- .tt_json(unclass(input))
-  else if (is.null(input) || (!is.null(column) && (column$length != 1 || !length(column$values))) || is.data.frame(input) || function_name %in% c("filter", "rank", "find", "annotate", "relate") ||
-           (is.character(input) && length(input) != 1L)) {
-    # Native column conversion retains original slots separately from canonical items.
+  else {
+    collection <- is.data.frame(input) || (column && length(input) != 1L)
     if (is.data.frame(input)) input <- lapply(seq_len(nrow(input)), function(at) lapply(input, `[[`, at))
-    input <- structure(unname(lapply(input, function(value) structure(.tt_json(if (inherits(value, "thinkthen_input")) unclass(value) else value),
-                       text = is.character(value) && length(value) == 1L, selector = inherits(value, "thinkthen_input")))), collection = TRUE)
-  } else input <- structure(list(structure(.tt_json(input), text = is.character(input) && length(input) == 1L)), collection = FALSE)
-  if (is.list(options) && !length(options)) options <- NULL else options <- .tt_json(options)
-  if (!is.null(column)) {
-    attr(input, "positions") <- column$positions
-    attr(input, "length") <- column$length
+    scalar <- if (collection) NULL else structure(.tt_json(input), text = is.character(input) && length(input) == 1L)
+    cells <- unname(lapply(input, function(value) structure(.tt_json(if (inherits(value, "thinkthen_input")) unclass(value) else value),
+      text = is.character(value) && length(value) == 1L, selector = inherits(value, "thinkthen_input"), missing = column && is.na(value))))
+    input <- structure(cells, scalar = scalar, column = column)
   }
+  if (is.list(options) && !length(options)) options <- NULL else options <- .tt_json(options)
   .tt_call(tt_request_build(function_name, question, input, options))
 }
 
-.tt_request_failure <- function(failure, completed = NULL, positions = NULL, length = NULL) {
-  condition <- structure(list(message = failure$message, kind = failure$kind,
-    retryable = failure$retryable, facts = failure$facts, complete = failure,
-    completed = completed, positions = positions, length = length, call = NULL),
-    class = c(paste0("thinkthen_", failure$kind), "thinkthen_error", "error", "condition"))
-  stop(condition)
+.tt_request_failure <- function(failure, completed = NULL, positions = NULL, length = NULL, parent = NULL) {
+  .tt_call(tt_request_error_native(failure, completed, positions, length, parent))
 }
 .tt_named_call <- function(function_name, question, input, options, deadline_ms, completion) {
   .tt_asking(completion, {
@@ -65,7 +54,7 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
     request <- .tt_request(function_name, question, input, options)
     result <- .tt_call(tt_request_native(request, deadline_ms, completion))
     if (!is.null(result$failure)) .tt_request_failure(result$failure, result$results, result$positions, result$length)
-    .tt_column_view(result, function_name)
+    result
   })
 }
 tt_decide <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("decide", question, input, options, deadline_ms, completion)
@@ -92,11 +81,12 @@ tt_batch <- function(function_name, question, input, options = list()) {
   state$stopped <- FALSE
   state$pending <- NULL
   state$released <- FALSE
+  state$producer_error <- NULL
   producer <- if (inherits(input, "thinkthen_feed")) input else NULL
   release <- function() {
     if (state$released) return(invisible(NULL))
     state$released <- TRUE
-    if (!is.null(producer)) producer$close()
+    if (!is.null(producer)) tryCatch(producer$close(), error = function(e) { if (is.null(state$producer_error)) stop(e) })
     invisible(NULL)
   }
   reg.finalizer(state, function(e) release(), onexit = TRUE)
@@ -114,7 +104,7 @@ tt_batch <- function(function_name, question, input, options = list()) {
   advance <- function() {
     if (is.null(producer) || is.null(producer$next_item) || state$stopped) return(invisible(NULL))
     if (is.null(state$pending)) {
-      state$pending <- tryCatch(producer$next_item(), error = function(e) tt_reader_failure("io"))
+      state$pending <- tryCatch(producer$next_item(), error = function(e) { state$producer_error <- e; tt_reader_failure("producer") })
       if (is.null(state$pending)) { finish(); return(invisible(NULL)) }
       if (inherits(state$pending, "thinkthen_reader_failure")) { finish(state$pending); return(invisible(NULL)) }
     }
@@ -132,7 +122,7 @@ tt_batch <- function(function_name, question, input, options = list()) {
       state$stopped <- TRUE
       state$facts <- event$facts
       release()
-      if (!is.null(event$failure)) .tt_request_failure(event$failure, positions = attr(native, "positions"), length = attr(native, "length"))
+      if (!is.null(event$failure)) .tt_request_failure(event$failure, positions = attr(native, "positions"), length = attr(native, "length"), parent = state$producer_error)
       return(NULL)
     }
     advance()
@@ -150,7 +140,7 @@ tt_batch <- function(function_name, question, input, options = list()) {
     tryCatch(repeat {
       value <- poll()
       if (!is.null(value) || state$ended) return(value)
-      Sys.sleep(0.001)
+      .tt_call(tt_request_batch_wait(native, !state$stopped && !is.null(producer)))
     }, interrupt = function(e) { cancel(); stop(e) })
   }
   close <- function() { cancel(); state$ended <- TRUE; invisible(NULL) }
@@ -161,26 +151,3 @@ tt_batch <- function(function_name, question, input, options = list()) {
 print.thinkthen_question <- function(x, ...) { cat("<question: content withheld>\n"); invisible(x) }
 print.thinkthen_input <- function(x, ...) { cat("<input: content withheld>\n"); invisible(x) }
 print.thinkthen_batch <- function(x, ...) { cat("<batch>\n"); invisible(x) }
-
-# Ordinary views fill host slots only; complete results and identities stay native.
-.tt_column_view <- function(call, function_name) {
-  if (is.null(call$positions) || !function_name %in% c("decide", "choose", "tag", "score")) return(call)
-  rows <- call$results
-  values <- lapply(rows, function(row) if (function_name == "tag") as.character(row$value) else row$value)
-  na <- switch(function_name, decide = NA, choose = NA_character_, score = NA_real_, NULL)
-  scalar <- function(value) is.null(value) || (length(value) == 1L && typeof(value) == typeof(na))
-  view <- if (!is.null(na) && all(vapply(values, scalar, TRUE))) rep(na, call$length) else rep(list(switch(function_name, tag = character(), NA)), call$length)
-  at <- call$positions[seq_along(values)] + 1L
-  if (is.list(view)) view[at] <- values
-  else view[at] <- vapply(values, function(value) if (is.null(value)) na else value, na)
-  call$value <- view
-  if (function_name %in% c("decide", "choose")) {
-    probability <- rep(NA_real_, call$length)
-    probability[at] <- vapply(rows, function(row) {
-      if (function_name == "decide") row$answer$probability
-      else if (is.null(row$value)) NA_real_ else row$answer$probabilities[[row$value]]
-    }, 0)
-    call$probability <- probability
-  }
-  call
-}

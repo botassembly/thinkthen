@@ -12,6 +12,7 @@ from children import child_env
 from backend import Backend
 
 archive = Path(sys.argv[1]).resolve()
+(REPO / 'libraries/c/target').mkdir(parents=True, exist_ok=True)
 with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/target') as temporary:
     root = Path(temporary)
     native = root / 'native'

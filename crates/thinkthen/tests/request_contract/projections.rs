@@ -478,15 +478,10 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
         let session = engine(&listener)
             .request_session(Request::new(RequestCall::Find(arguments)))
             .unwrap();
-        let mut documents = vec![];
-        loop {
-            match session.try_read() {
-                RequestSessionRead::Result(packet) => documents
-                    .push(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap()),
-                RequestSessionRead::End => break,
-                RequestSessionRead::Pending => std::thread::yield_now(),
-            }
-        }
+        let documents = crate::api::session_drain(&session)
+            .into_iter()
+            .map(|packet| serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+            .collect::<Vec<_>>();
         let result = &documents
             .iter()
             .find(|packet| packet["kind"] == "aggregate")
@@ -579,16 +574,10 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
             media: ReaderMedia::Text,
         } },
     )))).unwrap();
-    let mut documents = vec![];
-    loop {
-        match session.try_read() {
-            RequestSessionRead::Result(packet) => {
-                documents.push(serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
-            }
-            RequestSessionRead::End => break,
-            RequestSessionRead::Pending => std::thread::yield_now(),
-        }
-    }
+    let documents = crate::api::session_drain(&session)
+        .into_iter()
+        .map(|packet| serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())
+        .collect::<Vec<_>>();
     let value = &documents
         .iter()
         .find(|packet| packet["kind"] == "aggregate")

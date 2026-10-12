@@ -2,20 +2,17 @@
 //! 0111 section 5. Every group's questions share the fixed state, so records
 //! and groups pack together, and each row gathers its questions back.
 
-use std::sync::Arc;
-
-use super::{Values, evidence, observe_annotated, observe_annotated_questions, selected_set_batch};
+use super::Values;
 use crate::core::{self, pack, pack::Ask, quoted_plan};
 use crate::engine::facade::{self, Annotation, GroupAnswer, QuestionAnswer};
-use crate::engine::pipeline::{Answered, Asker, Failed, Flow};
+use crate::engine::pipeline::{Answered, Asker};
 use crate::public::annotated::AnnotatedRecord;
-use crate::public::asking::{Text, backend_failed, packed};
+use crate::public::asking::Text;
 use crate::public::batch::Batch;
-use crate::public::engine::{Engine, Evidence};
-use crate::public::error::{Error, ErrorKind};
-use crate::public::options::{CallOptions, Stop};
-use crate::public::pull;
-use crate::public::results::{Call, ObservedQuestion, Written};
+use crate::public::engine::{Engine, Evidence, evidence};
+use crate::public::error::Error;
+use crate::public::options::CallOptions;
+use crate::public::results::ObservedQuestion;
 use crate::public::set::QuestionSet;
 
 /// What one question set needs of each text beside the text.
@@ -40,18 +37,6 @@ impl Annotating {
                 text.plain(crate::public::InputFunction::Annotate)?,
             ),
         }
-    }
-
-    fn admit_declarations(&self, text: &Text) -> Result<(), Error> {
-        admit_declarations(&self.set, &self.input_record(text)?)
-    }
-
-    pub(crate) fn with_context(mut self, context: Option<&str>) -> Result<Self, Error> {
-        self.shared_context = context
-            .filter(|text| !text.is_empty())
-            .map(evidence)
-            .transpose()?;
-        Ok(self)
     }
 
     pub(crate) fn with_typed_context(
@@ -232,15 +217,6 @@ fn first_failure(
     })
 }
 
-/// The public error for one annotate row with no annotation.
-fn failure(failed: Failed<Error>) -> Error {
-    match failed {
-        Failed::Asker(error) => error,
-        Failed::Pack { error, .. } => packed(error),
-        Failed::Engine { error, .. } | Failed::Stopped(error) => Error::from(error),
-    }
-}
-
 impl Engine {
     /// Each record with every value of the set, lazily, in input order. A
     /// member with an `on` pointer reads that part of the record's JSON text,
@@ -284,145 +260,18 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>> + 'a,
         T: Evidence + 'a,
     {
-        Batch::of((|| {
-            let setting = selected_set_batch(&questions.0, &options, self.batch)?;
-            let stop = Stop::begin(options)?.with_prices(self.prices);
-            let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
-            let asker =
-                Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
-            let call = pull::Call {
-                packing: pull::packing(setting, false, false),
-                engine: Arc::clone(&engine),
-                stop,
-                most: self.most,
-            };
-            Ok(pull::try_start(
-                call,
-                asker,
-                records.into_iter(),
-                Box::new(move |stop, index, item, row| {
-                    row_of(&set, &engine, stop, index, item, row).map(Some)
-                }),
-            ))
-        })())
+        let mut options = options;
+        options.legacy_annotation = true;
+        Batch::of(crate::public::request::pull::annotation(
+            self,
+            questions.clone(),
+            records
+                .into_iter()
+                .map(|row| row.map(crate::public::record_input::plain)),
+            options,
+            |original, _, result| AnnotatedRecord::complete(original, result).map(Some),
+        ))
     }
-}
-
-impl Engine {
-    /// [`Engine::annotate_with`] over texts in hand, for an SQL host. A
-    /// record refused before its request, such as one missing an `on` part,
-    /// fails alone, and every other record is still asked, answered and
-    /// stored, by ADR 0111 section 4. Each row holds its text's place. Any
-    /// other failure ends the call, as it ends `annotate_with`. More texts
-    /// than the engine's record limit are refused before any send.
-    ///
-    /// # Errors
-    ///
-    /// Returns the call's fatal error or a refusal before any send.
-    #[doc(hidden)]
-    pub fn annotate_each_with(
-        &self,
-        questions: &QuestionSet,
-        texts: &[String],
-        options: CallOptions<'_>,
-    ) -> Result<Call<EachRow>, Error> {
-        let setting = selected_set_batch(&questions.0, &options, self.batch)?;
-        let inputs: Vec<_> = self
-            .within_limit(texts)?
-            .enumerate()
-            .map(|(at, text)| Text {
-                at,
-                input: crate::public::QuestionInput::Text(text.clone()),
-            })
-            .collect();
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        let (engine, set) = (Arc::clone(&self.inner), &questions.0);
-        let asker = Annotating::new(&engine, set.clone()).with_context(options.context_text())?;
-        if asker.validates_batches() {
-            for input in &inputs {
-                asker
-                    .admit_declarations(input)
-                    .map_err(|error| error.at_record(input.at))?;
-            }
-        }
-        let packing = pull::packing(setting, false, false);
-        stop.run_call(texts.len(), |cancel| {
-            let mut rows = Vec::with_capacity(texts.len());
-            let mut ended = None;
-            let host = crate::engine::pipeline::eager(inputs, |row: pull::Row<Annotating>| {
-                let row = each(set, &engine, &stop, rows.len(), row);
-                keep(&mut rows, &mut ended, row)
-            });
-            engine
-                .ask_all(&asker, packing, host, cancel)
-                .map_err(Error::from)?;
-            if let Some(error) = ended {
-                return Err(error);
-            }
-            if rows.len() != texts.len() {
-                return Err(Error::defect("an annotate call lost its rows"));
-            }
-            Ok(rows)
-        })
-    }
-}
-
-/// One row per text of [`Engine::annotate_each_with`]: its record or its refusal.
-type EachRow = Vec<Result<AnnotatedRecord<usize>, Error>>;
-
-/// One text's row for an SQL host, or the error that ends the call. A record
-/// refused before its request is the row's own failure.
-fn each(
-    set: &core::QuestionSet,
-    engine: &facade::Engine,
-    stop: &Stop<'_>,
-    at: usize,
-    row: pull::Row<Annotating>,
-) -> Result<Result<AnnotatedRecord<usize>, Error>, Error> {
-    match row {
-        Err(Failed::Asker(error)) if error.kind() == ErrorKind::Usage => Ok(Err(error)),
-        Err(Failed::Pack { error, .. }) => Ok(Err(packed(error))),
-        row => row_of(set, engine, stop, at, Some(at), row).map(Ok),
-    }
-}
-
-/// Keep one row, or hold the error that ends the call and stop.
-fn keep<T>(rows: &mut Vec<T>, ended: &mut Option<Error>, row: Result<T, Error>) -> Flow {
-    match row {
-        Ok(row) => {
-            rows.push(row);
-            Flow::Continue
-        }
-        Err(error) => {
-            *ended = Some(error);
-            Flow::Stop
-        }
-    }
-}
-
-/// One record's annotated row on the calling thread. A record whose every
-/// question failed stops the batch after its question events.
-fn row_of<T>(
-    set: &core::QuestionSet,
-    engine: &facade::Engine,
-    stop: &Stop<'_>,
-    index: usize,
-    item: Option<T>,
-    row: pull::Row<Annotating>,
-) -> Result<AnnotatedRecord<T>, Error> {
-    let annotation = row.map_err(failure)?;
-    let all_failed = annotation
-        .values
-        .iter()
-        .all(|(_, value)| matches!(value, core::AnnotatedValue::Failed(_)));
-    let value = rendered(set, engine, annotation, stop.observing())?;
-    if all_failed {
-        observe_annotated_questions(&value, index, stop)?;
-        return Err(backend_failed());
-    }
-    observe_annotated(&value, index, stop)?;
-    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
-    Ok(AnnotatedRecord::new(item, value.values, value.json))
 }
 
 /// Render a row once all its questions arrive.
@@ -459,10 +308,8 @@ pub(crate) fn rendered(
     } else {
         Vec::new()
     };
-    let json = Written::of(&core::NamedValues::new(annotation.values.clone()))?;
     Ok(Values {
         values: annotation.values,
-        json,
         observed,
     })
 }

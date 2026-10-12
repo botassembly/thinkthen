@@ -39,6 +39,47 @@ impl Queue {
             .wait(state)
             .unwrap_or_else(|error| error.into_inner())
     }
+    pub(super) fn ready(
+        &self,
+        interest: super::RequestSessionWaitInterest,
+        timeout: std::time::Duration,
+        feed: bool,
+    ) -> super::RequestSessionReady {
+        use super::{RequestSessionReady as Ready, RequestSessionWaitInterest as Interest};
+        let started = std::time::Instant::now();
+        let mut state = self.lock();
+        loop {
+            if state.output.is_some() || state.terminal.is_some() {
+                return Ready::Result;
+            }
+            if state.settled || state.receiver_closed {
+                return Ready::End;
+            }
+            if interest != Interest::Settlement && self.cancel.is_cancelled() {
+                return Ready::Cancelled;
+            }
+            if interest == Interest::Input
+                && feed
+                && (state.intake_closed || state.finish.is_some())
+            {
+                return Ready::Closed;
+            }
+            if interest == Interest::Input && feed && state.input.is_none() {
+                return Ready::Input;
+            }
+            let Some(remaining) = timeout.checked_sub(started.elapsed()) else {
+                return Ready::Timeout;
+            };
+            if remaining.is_zero() {
+                return Ready::Timeout;
+            }
+            state = self
+                .wake
+                .wait_timeout(state, remaining)
+                .unwrap_or_else(|error| error.into_inner())
+                .0;
+        }
+    }
     pub(super) fn capacity(&self) -> RequestSessionPushStatus {
         let state = self.lock();
         if state.intake_closed || state.finish.is_some() {
@@ -93,6 +134,7 @@ impl Queue {
             }
             if let Err(error) = controls.reader_admission() {
                 state.intake_closed = true;
+                self.wake.notify_all();
                 return Some(Err(error));
             }
             if let Some(item) = state.input.take() {
@@ -105,14 +147,23 @@ impl Queue {
                     Finish::Native(error) => error.take(),
                 };
                 state.intake_closed = true;
+                self.wake.notify_all();
                 return error.map(Err);
             }
-            // An idle producer must not hide the native request deadline.
-            state = self
-                .wake
-                .wait_timeout(state, std::time::Duration::from_millis(10))
-                .unwrap_or_else(|error| error.into_inner())
-                .0;
+            state = match controls.reader_remaining() {
+                Ok(Some(remaining)) => {
+                    self.wake
+                        .wait_timeout(state, remaining)
+                        .unwrap_or_else(|error| error.into_inner())
+                        .0
+                }
+                Ok(None) => self.wait(state),
+                Err(error) => {
+                    state.intake_closed = true;
+                    self.wake.notify_all();
+                    return Some(Err(error));
+                }
+            };
         }
     }
     pub(super) fn publish(&self, packet: RequestSessionResult) {

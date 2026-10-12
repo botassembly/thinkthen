@@ -73,7 +73,38 @@ const fn only(
 }
 
 /// Every refusal a command line or one record can reach.
-const REFUSALS: [Refusal; 33] = [
+const REFUSALS: [Refusal; 37] = [
+    only(
+        "a bare label beside quiet",
+        &["choose"],
+        &["--raw", "--quiet"],
+        "--raw prints a bare label",
+        2,
+    ),
+    only(
+        "a percent threshold",
+        &["decide", "choose"],
+        &["--threshold", "90"],
+        "a single cut is above zero and at most one",
+        2,
+    ),
+    only(
+        "a reversed band",
+        &["decide"],
+        &["--threshold", "0.9:0.1"],
+        "a band's low side is below its high side",
+        2,
+    ),
+    Refusal {
+        evidence: "{empty}",
+        ..only(
+            "empty evidence",
+            &["decide", "choose", "score"],
+            &[],
+            "the evidence is empty or blank",
+            2,
+        )
+    },
     every(
         "a base that is no address",
         &["--url", "ftp://127.0.0.1/v1"],
@@ -387,6 +418,7 @@ fn folder(named: &str) -> io::Result<PathBuf> {
 fn evidence_of(named: &str) -> Vec<u8> {
     match named {
         "" => EVIDENCE.as_bytes().to_vec(),
+        "{empty}" => Vec::new(),
         "{huge}" => {
             let mut bytes = EVIDENCE.as_bytes().to_vec();
             bytes.resize(crate::support::MAX_RECORD_BYTES + 1, b'x');
@@ -447,17 +479,12 @@ fn refuse(refusal: &Refusal, verb: (&str, &[&str], &str), listener: &Listener) -
         },
     )?;
 
-    assert_eq!(
-        output.status.code(),
-        Some(refusal.code),
-        "{named}: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits_because(&output, refusal.code, || named.to_owned());
     assert!(
         output.stdout.is_empty(),
         "{named}: a refusal prints nothing"
     );
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     let says = own_sentence(name, refusal.named).unwrap_or(refusal.says);
     assert!(
         message.contains(says),

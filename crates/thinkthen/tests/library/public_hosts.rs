@@ -14,11 +14,7 @@ use thinkthen::{
 const YES: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":12,"output_tokens":3}}"#;
 
 fn engine(listener: &Listener) -> Engine {
-    Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    crate::api::builder(listener.base(), "sk-test")
         .no_cache()
         .build()
         .expect("engine")

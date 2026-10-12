@@ -3,7 +3,7 @@ import pathlib
 import json,os,sys,subprocess,tempfile,sqlite3
 from pathlib import Path
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
-from children import child_env
+from children import child_env, read_process_line
 ROOT=Path(__file__).resolve().parents[4]
 sys.path.insert(0,str(ROOT/'conformance'))
 import parity as inventory
@@ -59,7 +59,7 @@ def execute(consumer,frame,env,home,backend):
     elif consumer=='postgresql':
         command=[sys.executable,str(ROOT/'databases/sqlite/tests/complete/postgresql_child.py'),os.environ['THINKTHEN_POSTGRESQL_SOCKET']]
         if 'files' in frame['inputs']:
-            reader=subprocess.run([str(ROOT/'databases/postgresql/target/debug/thinkthen_read_inputs')],input=compact(frame['inputs']),env=env,cwd=home,text=True,capture_output=True)
+            reader=subprocess.run([str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'databases/postgresql/target'))/('release' if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' else 'debug')/'thinkthen_read_inputs')],input=compact(frame['inputs']),env=env,cwd=home,text=True,capture_output=True)
             if reader.returncode:raise AssertionError(reader.stderr)
             frame={**frame,'inputs':json.loads(reader.stdout)}
     else:raise ValueError('unknown SQL consumer: '+consumer)
@@ -69,7 +69,7 @@ def execute(consumer,frame,env,home,backend):
             running.stdin.write(compact(frame)+'\n');running.stdin.flush()
             assert backend.read('wait 1')=='wait 1'
             running.stdin.write('!\n');running.stdin.flush()
-            assert running.stdout.readline()=='cancel-fired\n'
+            assert read_process_line(running.stdout)=='cancel-fired\n'
             backend.process.stdin.write('release\n');backend.process.stdin.flush()
             stdout,stderr=running.communicate(timeout=120)
         else:stdout,stderr=running.communicate(compact(frame)+'\n',timeout=120)

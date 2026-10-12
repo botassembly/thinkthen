@@ -1,10 +1,9 @@
 //! Recording preflight, repair, concurrency, and file-size failures.
 
+use crate::harness::{Canned, Listener, UNMAKEABLE, spawn, spawn_local, stderr_is};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::thread;
-
-use crate::harness::{Canned, Listener, UNMAKEABLE, spawn};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -14,11 +13,7 @@ const TRUE: &str = concat!(
 );
 const STORAGE: &str = "thinkthen: the recording folder could not be read or written; check its permissions and free space\n";
 
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 #[cfg(unix)]
 fn entries(folder: &Path) -> std::io::Result<Vec<PathBuf>> {
@@ -71,7 +66,7 @@ fn every_command_refuses_recording_storage_before_key_lookup_or_a_request() {
         ];
         let output = spawn(&[command, &options].concat(), &[], input).expect("command runs");
         assert_eq!(output.status.code(), Some(5), "{command:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), STORAGE);
+        stderr_is(&output, STORAGE);
         assert!(listener.requests().is_empty(), "{command:?}");
     }
 }
@@ -111,7 +106,7 @@ fn a_read_only_cache_file_refuses_before_a_request() {
     )
     .expect("second command");
     assert_eq!(second.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&second.stderr), STORAGE);
+    stderr_is(&second, STORAGE);
     assert!(listener.requests().is_empty());
     fs::set_permissions(&sqlite, fs::Permissions::from_mode(0o600)).expect("restore cache");
 }
@@ -123,10 +118,9 @@ fn concurrent_record_only_processes_each_send_and_the_later_write_wins() {
     let listener = Listener::answering(|_| Canned::ok(TRUE).after(150)).expect("a listener");
     let base = listener.base().to_owned();
     let run = || {
-        spawn(
-            &[
-                "decide", QUESTION, "--url", &base, "--model", "local-1", "--record", &named,
-            ],
+        spawn_local(
+            &["decide", QUESTION, "--record", &named],
+            &base,
             &[("THINKTHEN_API_KEY", "sk-test-value")],
             EVIDENCE.as_bytes(),
         )
@@ -189,7 +183,7 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
     let output = finish(child, "the limited child").expect("limited child finishes");
 
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&output.stderr), STORAGE);
+    stderr_is(&output, STORAGE);
     assert_eq!(listener.requests().len(), 1, "no extra request");
     assert!(entries(&recording).expect("entries").is_empty());
     let temporary = fs::read_dir(&recording)

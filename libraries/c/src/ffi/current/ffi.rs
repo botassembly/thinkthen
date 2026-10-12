@@ -16,7 +16,7 @@ mod question;
 pub(crate) mod read;
 #[path = "recognition/ffi.rs"]
 mod recognition;
-use crate::Door;
+use crate::EngineHandle;
 use crate::current::{self, QuestionHandle, Source, SourceHandle};
 use crate::failures::{Failure, OK, guard};
 use crate::ffi::values as abi;
@@ -35,7 +35,7 @@ use carriers::{QuestionSpecV1, RecordV1, SourceSpecV1, StringV1};
 /// return EUSAGE. Every nonzero return leaves every output unchanged.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_new(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const QuestionSpecV1,
     out: *mut *mut QuestionHandle,
 ) -> std::ffi::c_int {
@@ -47,13 +47,13 @@ pub unsafe extern "C" fn thinkthen_question_new(
 /// All pointers obey the installed header's storage and lifetime contract.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_question_load(
-    engine: *const Door,
+    engine: *const EngineHandle,
     path: StringV1,
     out: *mut *mut QuestionHandle,
 ) -> std::ffi::c_int {
     // SAFETY: counted path and writable output follow the header.
     unsafe {
-        super::typed(
+        super::run_typed(
             engine,
             |_| {
                 read::required(out)?;
@@ -71,14 +71,14 @@ pub unsafe extern "C" fn thinkthen_question_load(
 /// All pointers obey the installed header's storage and lifetime contract.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_source_records(
-    engine: *const Door,
+    engine: *const EngineHandle,
     records: *const RecordV1,
     count: usize,
     out: *mut *mut SourceHandle,
 ) -> std::ffi::c_int {
     // SAFETY: readable arrays and output have their documented extents.
     unsafe {
-        super::typed(
+        super::run_typed(
             engine,
             |_| {
                 read::required(out)?;
@@ -118,7 +118,7 @@ pub unsafe extern "C" fn thinkthen_source_records(
 /// All pointers obey the installed header's storage and lifetime contract.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_source_files(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const SourceSpecV1,
     out: *mut *mut SourceHandle,
 ) -> std::ffi::c_int {
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn thinkthen_source_files(
 /// Existing source_files unit IMAGE_FILE remains a whole-image convenience.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_source_image_files(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const SourceSpecV1,
     out: *mut *mut SourceHandle,
 ) -> std::ffi::c_int {
@@ -141,14 +141,14 @@ pub unsafe extern "C" fn thinkthen_source_image_files(
     unsafe { source_files(engine, spec, out, true) }
 }
 unsafe fn source_files(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec: *const SourceSpecV1,
     out: *mut *mut SourceHandle,
     images: bool,
 ) -> i32 {
     // SAFETY: counted paths and descriptors are readable through this call.
     unsafe {
-        super::typed(
+        super::run_typed(
             engine,
             |_| {
                 read::required(out)?;

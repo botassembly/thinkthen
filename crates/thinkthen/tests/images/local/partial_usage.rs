@@ -1,4 +1,5 @@
 use super::{IMAJEV, build, folder, pair, question};
+use crate::request::ImageRequests;
 use conformance_backend::{Canned, Listener};
 use serde_json::Value;
 
@@ -18,15 +19,26 @@ fn native_partial_usage_recording_keeps_input_unknown_mass_and_absent_output_ver
         .build()
         .unwrap();
     let call = engine
-        .details_input(&question(), &pair())
+        .request_decide(&question(), &pair())
         .expect("native integration accepts original partial usage");
     assert_eq!(call.facts().input_tokens(), Some(887));
     assert_eq!(call.facts().output_tokens(), None);
     assert_eq!(
-        call.value().reported_usage().unwrap().input_tokens(),
+        call.value()[0]
+            .result()
+            .reported_usage()
+            .unwrap()
+            .input_tokens(),
         Some(887)
     );
-    assert_eq!(call.value().reported_usage().unwrap().output_tokens(), None);
+    assert_eq!(
+        call.value()[0]
+            .result()
+            .reported_usage()
+            .unwrap()
+            .output_tokens(),
+        None
+    );
     assert_eq!(listener.count(), 1);
     let database = rusqlite::Connection::open(place.join("thinkthen.sqlite")).unwrap();
     let response: Vec<u8> = database
@@ -43,7 +55,7 @@ fn native_partial_usage_recording_keeps_input_unknown_mass_and_absent_output_ver
         .unwrap();
     assert_eq!(counts, (Some(887), None));
     assert_eq!(
-        call.value().probabilities(),
+        &call.value()[0].result().probabilities(),
         &thinkthen::Probabilities::YesNo {
             yes: 0.6316676506859308
         }
@@ -54,10 +66,10 @@ fn native_partial_usage_recording_keeps_input_unknown_mass_and_absent_output_ver
         .unwrap()
         .build()
         .unwrap();
-    let retained = replay.details_input(&question(), &pair()).unwrap();
+    let retained = replay.request_decide(&question(), &pair()).unwrap();
     assert_eq!(
-        retained.value().reported_usage(),
-        call.value().reported_usage()
+        retained.value()[0].result().reported_usage(),
+        call.value()[0].result().reported_usage()
     );
     assert_eq!(listener.count(), 1);
     drop(replay);

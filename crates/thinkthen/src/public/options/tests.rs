@@ -67,7 +67,7 @@ fn diagnostic_boundary_child() {
     assert!(!error.retryable());
     assert_eq!(
         error.to_string(),
-        "defect: the engine panicked below the public door"
+        "defect: the engine panicked below the public interface"
     );
 
     let scoped: Result<(), Error> = guarded(|| {
@@ -162,4 +162,26 @@ fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
     assert!(stderr.contains("prior hook: host cancel marker"));
     assert!(stderr.contains("prior hook: host callback marker"));
     assert!(stderr.contains("prior hook: unrelated host marker"));
+}
+
+#[test]
+fn a_held_host_panic_survives_a_poisoned_lock() {
+    for dropped in [false, true] {
+        let stop = Stop::begin(CallOptions::new()).expect("valid stop");
+        let _panic = catch_unwind(AssertUnwindSafe(|| {
+            let mut held = stop.panic.lock().expect("held panic");
+            *held = Some(Box::new("held host marker"));
+            panic_any("poison panic lock");
+        }));
+        assert!(stop.observer_panicked());
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            if dropped {
+                stop.resume_panic_after_join();
+            } else {
+                let _result = stop.finish(Ok(()));
+            }
+        }))
+        .expect_err("held panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"held host marker"));
+    }
 }

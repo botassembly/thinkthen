@@ -33,14 +33,14 @@ pub(super) fn legacy_id(
 ) -> Result<ObservationId, Error> {
     let (_, canonical_answer) = canonical_parts(answer, state)?;
     let present = |name| source.is_none_or(|source| source.member(name).is_some());
-    let metadata = crate::core::LegacyMetadata {
+    let metadata = crate::core::CompatibilityMetadata {
         answered_by: Some(&answer.answered_by),
         input_tokens: present("input_tokens").then_some(answer.input_tokens),
         output_tokens: present("output_tokens").then_some(answer.output_tokens),
         taken_at: Some(answer.taken_at),
         origin: Some(&answer.origin),
     };
-    crate::core::legacy_observation(&answer.key, &canonical_answer, &metadata)
+    crate::core::compatibility_observation(&answer.key, &canonical_answer, &metadata)
         .map_err(|_| invalid())
 }
 
@@ -56,7 +56,7 @@ impl Entries {
         let mut normalized = BTreeMap::new();
         for (_, mut answer) in self.answers {
             let state = self.states.get(&answer.state).ok_or_else(invalid)?;
-            let legacy = super::fixture::key_of(&answer, state).ok_or_else(invalid)?;
+            let compatibility = super::fixture::key_of(&answer, state).ok_or_else(invalid)?;
             let version = answer.key_version.unwrap_or(1);
             if !matches!(version, 1 | 2)
                 || answer
@@ -67,7 +67,7 @@ impl Entries {
                 return Err(invalid());
             }
             if version == 1
-                && (legacy.hex() != answer.key
+                && (compatibility.hex() != answer.key
                     || answer
                         .adapter
                         .as_deref()

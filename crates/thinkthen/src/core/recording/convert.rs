@@ -125,7 +125,7 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
     let unquoted =
         matches!(form, Some(Requote::Quoted(_) | Requote::Unquotable)) && requoted.is_none();
     let original_usage = reported_counts(entry.response.get())?;
-    let metadata = crate::core::LegacyMetadata {
+    let metadata = crate::core::CompatibilityMetadata {
         answered_by: Some(reply.model.as_str()),
         input_tokens: original_usage.0,
         output_tokens: original_usage.1,
@@ -146,7 +146,7 @@ pub(crate) fn convert(bytes: &[u8], quote: bool) -> Result<Vec<Converted>, Conve
             reply.model.as_str(),
         )?;
         let observation_id =
-            crate::core::legacy_observation(&original_key.hex(), &canonical, &metadata)
+            crate::core::compatibility_observation(&original_key.hex(), &canonical, &metadata)
                 .map_err(|_| Converting::Unanswered)?;
         let row = |state: &str, question: &str, origin: Origin| Converted {
             observation_id: observation_id.clone(),

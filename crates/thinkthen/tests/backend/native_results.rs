@@ -35,16 +35,12 @@ for name,row in case['rows']:
         .write_all(document.to_string().as_bytes())
         .unwrap();
     let output = child.wait_with_output().unwrap();
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "{}", crate::harness::said(&output));
 }
 #[cfg(test)]
 fn withheld(output: &std::process::Output, sentinel: &str) {
-    assert!(!String::from_utf8_lossy(&output.stdout).contains(sentinel));
-    assert!(!String::from_utf8_lossy(&output.stderr).contains(sentinel));
+    assert!(!crate::harness::printed(output).contains(sentinel));
+    assert!(!crate::harness::said(output).contains(sentinel));
 }
 #[cfg(test)]
 fn partial_facts(output: &std::process::Output) {
@@ -106,7 +102,7 @@ fn authored_decide_meanings_change_details_value_but_keep_bare_boolean_and_exit_
                 assert_eq!(row["answer"]["probability"], probability);
                 assert_eq!(row["threshold"], 0.5);
             } else {
-                assert_eq!(String::from_utf8_lossy(&output.stdout), bare);
+                assert_eq!(crate::harness::printed(&output), bare);
             }
         }
         assert_eq!(listener.count(), 2);
@@ -180,12 +176,7 @@ fn atomic_command_details_keep_actual_partial_usage_probabilities_and_independen
             b"Text.",
         )
         .unwrap();
-        assert_eq!(
-            output.status.code(),
-            Some(code),
-            "{}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits(&output, code);
         withheld(&output, "native-cli-private");
         let row: Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(row["schema"], "thinkthen.result/2");
@@ -235,20 +226,10 @@ fn filtered_duplicate_occurrences_keep_original_observed_batch_counts_and_replay
     };
     let live = run("--record", "max");
     let replay = run("--replay", "1");
-    assert_eq!(
-        live.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&live.stderr)
-    );
-    assert_eq!(
-        replay.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&replay.stderr)
-    );
+    crate::harness::exits(&live, 0);
+    crate::harness::exits(&replay, 0);
     let decode = |output: &std::process::Output| {
-        String::from_utf8_lossy(&output.stdout)
+        crate::harness::printed(output)
             .lines()
             .map(|line| serde_json::from_str::<Value>(line).unwrap())
             .collect::<Vec<_>>()

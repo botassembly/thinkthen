@@ -3,7 +3,7 @@ declare(strict_types=1);
 namespace ThinkThen;
 use ThinkThen\Inputs as Input;
 
-/** Own a native session. A client can close without depending on its batches. */
+/** Own a native session and retain its client until the operation closes. */
 final class Operation
 {
     private ?\FFI\CData $session = null;
@@ -11,10 +11,11 @@ final class Operation
     private ?string $pending = null;
     private bool $advance = false;
     private bool $started = false;
+    private ?\Throwable $producerError = null;
     private array $rows = [];
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
-    public function __construct(private readonly \FFI $ffi, \FFI\CData $engine,
+    public function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
         string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
         array $options, private readonly ?Cancellation $token)
     {
@@ -31,14 +32,26 @@ final class Operation
         $question = $question instanceof QuestionInput
             ? ($question->definitionJson === null ? new Input\InputRequestQuestion($question->descriptor) : new Input\InputRequestQuestionDefinition(new Input\RawJson($question->definitionJson)))
             : (is_string($question) ? new Input\InputRequestQuestionText($question) : new Input\InputRequestQuestionDefinition($question));
-        $callClass = Input\Document::class;
-        $candidate = 'ThinkThen\\Inputs\\InputRequestCall'.ucfirst($function);
-        if (class_exists($candidate) && is_subclass_of($candidate, $callClass) && $candidate::TAGS['function'] === $function) $callClass = $candidate;
-        else throw new UsageFailure('unknown function');
-        $request = Client::json(new Input\InputRequest(\ThinkThen\Session\REQUEST_VERSION, new $callClass(question: $question, input: $source, fields: ['options' => new Input\InputRequestOptions($options)])));
+        $buffers = [];
+        $request = $ffi->new('struct thinkthen_named_request_v1');
+        foreach (['function' => $function, 'question_json' => Client::json($question),
+            'input_json' => Client::json($source), 'options_json' => Client::json(new Input\InputRequestOptions($options))] as $field => $text) {
+            $request->$field = $this->utf8($text, $buffers);
+        }
+        $surface = $this->utf8('php', $buffers);
         $owner = $ffi->new('struct thinkthen_session *');
-        $this->check($ffi->thinkthen_session_new_with_surface($engine, $request, strlen($request), 'php', 3, \FFI::addr($owner)));
+        $this->check($ffi->thinkthen_session_new_named_with_surface($engine, \FFI::addr($request), $surface, \FFI::addr($owner)));
         $this->session = $owner;
+    }
+    private function utf8(string $text, array &$buffers): \FFI\CData
+    {
+        $bytes = $this->ffi->new('char['.(strlen($text) + 1).']');
+        \FFI::memcpy($bytes, $text, strlen($text));
+        $buffers[] = $bytes;
+        $view = $this->ffi->new('struct thinkthen_complete_utf8_v1');
+        $view->data = \FFI::addr($bytes[0]);
+        $view->len = strlen($text);
+        return $view;
     }
     private function check(int $code): void
     {
@@ -71,13 +84,21 @@ final class Operation
             return $packet;
         } finally { $this->ffi->thinkthen_session_result_free($owner); }
     }
+    /** Wait for native readiness without consuming a packet; poll stays nonblocking. */
+    public function wait(): void
+    {
+        if ($this->session === null) throw new UsageFailure('operation is closed');
+        $ready = $this->ffi->new('uint32_t');
+        $interest = $this->producer !== null ? \ThinkThen\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
+        $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, 50, \FFI::addr($ready)));
+    }
     public function result(): \ThinkThen\Results\Completed
     {
         try {
             while ($this->terminal === null) {
                 $this->poll();
                 if ($this->terminal !== null) break;
-                usleep(1000);
+                $this->wait();
             }
             if ($this->terminal->has('failure')) {
                 $failure = $this->terminal->failure;
@@ -86,7 +107,7 @@ final class Operation
                     'usage' => UsageFailure::class, 'backend' => BackendFailure::class, 'deadline' => DeadlineFailure::class,
                     'local' => LocalFailure::class, 'cancelled' => CancelledFailure::class, default => DefectFailure::class,
                 };
-                throw new $class($detail->message, $failure, $this->rows, $this->terminal, $this->packets);
+                throw new $class($detail->message, $failure, $this->rows, $this->terminal, $this->packets, $this->producerError);
             }
             return new \ThinkThen\Results\Completed($this->rows, $this->terminal, $this->packets);
         } finally { $this->close(); }
@@ -104,8 +125,9 @@ final class Operation
                     $finished = false;
                     $this->pending = Client::json(new Input\InputRequestSessionDescriptor(new Input\InputRequestItem(Client::descriptor($this->producer->current()))));
                 }
-            } catch (\Throwable) {
-                $failure = Client::json(new Input\InputRequestReaderFailureInvalidInput());
+            } catch (\Throwable $error) {
+                $this->producerError = $error;
+                $failure = Client::json(new Input\InputRequestReaderFailureProducer());
                 $this->check($this->ffi->thinkthen_session_finish($this->session, $failure, strlen($failure)));
                 $this->producer = null;
                 return;
@@ -134,6 +156,7 @@ final class Operation
         }
         $this->producer = null;
         $this->pending = null;
+        $this->client = null;
     }
     public function __destruct() { $this->close(); }
     public function __debugInfo(): array { return ['type' => self::class]; }

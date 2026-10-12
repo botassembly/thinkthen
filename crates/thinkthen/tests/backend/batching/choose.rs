@@ -1,11 +1,11 @@
 //! A compiled choose stream keeps each row's complete options on the wire.
 
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use std::fs;
 
 use serde_json::{Map, Value, json};
 
 use super::{KEY, details, folder, text};
-use crate::harness::{Canned, Listener, spawn};
 
 fn chosen_odds(label: &str, chosen: &str) -> Value {
     json!(if label == chosen { 0.9 } else { 0.1 })
@@ -52,7 +52,7 @@ fn equal_selected_records_share_only_an_equal_complete_question() {
         input.as_bytes(),
     )
     .expect("choose stream");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let wire = text(&requests[0].body);
@@ -117,8 +117,8 @@ fn batch_one_reuses_the_one_document_body_and_request_identity() {
         b"same\n",
     )
     .expect("batch one");
-    assert_eq!(old.status.code(), Some(0), "{}", text(&old.stderr));
-    assert_eq!(batched.status.code(), Some(0), "{}", text(&batched.stderr));
+    exits(&old, 0);
+    exits(&batched, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 2);
     assert_eq!(sent[0].body, sent[1].body);
@@ -166,7 +166,7 @@ fn a_choose_file_warns_when_its_tuned_batch_is_overridden() {
         b"first\nsecond\n",
     )
     .expect("choose stream");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
         text(&output.stderr),
@@ -216,8 +216,8 @@ fn context_changes_choose_request_identity_and_names_exact_file_bytes() {
         b"same\n",
     )
     .expect("context choose");
-    assert_eq!(plain.status.code(), Some(0), "{}", text(&plain.stderr));
-    assert_eq!(shared.status.code(), Some(0), "{}", text(&shared.stderr));
+    exits(&plain, 0);
+    exits(&shared, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     let shared_body: Value = serde_json::from_slice(&requests[1].body).expect("request body");
@@ -293,7 +293,7 @@ fn a_refused_choose_batch_keeps_each_halfs_original_options() {
         input.as_bytes(),
     )
     .expect("choose stream");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let requests = listener.requests();
     let sizes: Vec<_> = requests
         .iter()
@@ -402,12 +402,9 @@ fn a_tie_is_a_valid_null_but_a_missing_answer_stops_after_the_prefix() {
             b"one\ntwo\n",
         )
         .expect("choose stream");
-        assert_eq!(
-            output.status.code(),
-            Some(expected),
-            "{name}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, expected, || {
+            format!("{name}: {}", text(&output.stderr))
+        });
         assert_eq!(listener.requests().len(), 1, "{name}");
         let rows = details(&output);
         assert_eq!(rows.len(), values.len(), "{name}");

@@ -20,11 +20,11 @@ use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
 
+#[cfg(test)]
+mod compatibility_schema;
 mod config;
 mod dry_run;
 mod examples;
-#[cfg(test)]
-mod legacy_schema;
 mod native;
 mod source;
 
@@ -38,7 +38,7 @@ pub(crate) struct Detailed<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<Record>,
     question: &'a RecognizeSpec,
-    #[schemars(with = "legacy_schema::RecognitionOdds")]
+    #[schemars(with = "compatibility_schema::RecognitionOdds")]
     answer: &'a Probabilities,
     meta: Meta,
 }

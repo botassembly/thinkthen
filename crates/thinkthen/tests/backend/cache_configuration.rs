@@ -1,12 +1,12 @@
 //! Read-only configuration and command-family precedence.
 
+use crate::harness::{Canned, Listener, spawn};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
 use crate::child::Folder;
-use crate::harness::{Canned, Listener, spawn};
 
 const ANSWERED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
@@ -14,11 +14,7 @@ const ANSWERED: &str = concat!(
 );
 const EVIDENCE: &str = "Refund me please.";
 
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     spawn(arguments, environment, EVIDENCE.as_bytes())
@@ -97,11 +93,10 @@ fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
         ],
     )
     .expect("dry run");
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: --refresh-cache needs an enabled answer cache; use --cache DIR or enable the default cache\n"
+    crate::harness::refuses(
+        &output,
+        2,
+        "thinkthen: --refresh-cache needs an enabled answer cache; use --cache DIR or enable the default cache\n",
     );
     assert!(listener.requests().is_empty());
     assert_eq!(
@@ -183,7 +178,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
         EVIDENCE.as_bytes(),
     )
     .expect("saved question plan");
-    assert!(String::from_utf8_lossy(&saved.stdout).contains(r#""model":"saved-1""#));
+    assert!(crate::harness::printed(&saved).contains(r#""model":"saved-1""#));
 }
 
 #[test]
@@ -230,14 +225,9 @@ fn a_configuration_another_user_can_write_is_warned_about() {
             &[(moved.0, moved.1.as_str())],
         )
         .expect("dry run");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{mode:o}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits_because(&output, 0, || format!("{mode:o}"));
         assert!(!output.stdout.is_empty(), "{mode:o}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), says, "{mode:o}");
+        assert_eq!(crate::harness::said(&output), says, "{mode:o}");
     }
 }
 
@@ -278,13 +268,8 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
         let output = crate::wait::finish(child, "mcp configuration");
         let stdout = reader.join().unwrap();
         let output = output.unwrap();
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{mode:o}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert_eq!(String::from_utf8_lossy(&output.stderr), warning, "{mode:o}");
+        crate::harness::exits_because(&output, 0, || format!("{mode:o}"));
+        assert_eq!(crate::harness::said(&output), warning, "{mode:o}");
         assert_eq!(
             stdout, b"{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{}}\n",
             "{mode:o}"
@@ -300,5 +285,5 @@ fn mcp_warns_once_on_stderr_for_shared_configuration_and_keeps_protocol_clean() 
     let refused = spawn(&["mcp", "--no-cache"], &[(moved.0, moved.1.as_str())], PING).unwrap();
     assert_eq!(refused.status.code(), Some(2));
     assert!(refused.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&refused.stderr).contains("its `backends` are refused"));
+    assert!(crate::harness::said(&refused).contains("its `backends` are refused"));
 }

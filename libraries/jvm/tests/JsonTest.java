@@ -18,6 +18,8 @@ public final class JsonTest {
         if (!List.of("facts", "value").equals(List.copyOf(((Map<?, ?>) envelope).keySet())))
             throw new AssertionError("member order");
         if (!"\"a\\u0000\\\\\\\"\"".equals(Json.quote("a\0\\\""))) throw new AssertionError("quote " + Json.quote("a\0\\\""));
+        for(char control=0;control<32;control++) if(!Json.quote(String.valueOf(control)).equals("\""+String.format("\\u%04x",(int)control)+"\"")) throw new AssertionError("control escape "+(int)control);
+        if(!"\"café😀\"".equals(Json.quote("café😀"))) throw new AssertionError("Unicode quote");
         rejects(() -> Json.parse("{\"value\":1,\"value\":2}"), "duplicate member");
         rejects(() -> Json.parse("{\"value\":1} x"), "trailing text");
         rejects(() -> Json.parseObject("[1]"), "array as object");

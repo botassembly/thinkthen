@@ -4,12 +4,12 @@
 //! table. The two record verbs take no operands and refuse the two views that
 //! table drives, so their refusals are pinned here, sentence by sentence.
 
+use crate::harness::{Canned, Listener, spawn_one as spawn, spawn_one_local, stderr_is};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::keeping::{RECORDS, answered, code, printed, said};
 use crate::secrecy::{KEY, nothing_leaked};
 
@@ -20,11 +20,7 @@ const QUESTION: &str = "Does this report a payment failure?";
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// A folder this test owns, removed and remade so each run starts empty.
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 /// A file under the test's own temporary folder, holding this text.
 fn written(name: &str, text: &str) -> io::Result<PathBuf> {
@@ -54,12 +50,12 @@ fn a_band_is_refused_by_filter_in_either_home_and_names_the_way_to_three_piles()
         "0.1:0.9",
     ])?;
     assert_eq!(code(&output), 2);
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: --threshold: `filter` takes a single cut, so ask ",
             "`decide --details` and split the three piles with `jq`\n",
-        )
+        ),
     );
     assert_eq!(printed(&output), "");
 
@@ -70,22 +66,22 @@ fn a_band_is_refused_by_filter_in_either_home_and_names_the_way_to_three_piles()
     let path = format!("@{}", file.display());
     let output = refused(&["filter", &path, "--jsonl", "--field", "/body"])?;
     assert_eq!(code(&output), 5, "a value from the file is a local failure");
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the question file's `threshold`: `filter` takes a single cut, ",
             "so ask `decide --details` and split the three piles with `jq`\n",
-        )
+        ),
     );
 
     let output = refused(&["rank", &path, "--jsonl", "--field", "/body"])?;
     assert_eq!(code(&output), 5);
-    assert_eq!(
-        said(&output),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the question file's `threshold`: `rank` takes a single cut ",
             "and never a band\n",
-        )
+        ),
     );
     Ok(())
 }
@@ -100,11 +96,11 @@ fn record_verbs_name_their_own_required_question_kind() -> io::Result<()> {
     for command in ["filter", "rank"] {
         let output = refused(&[command, &question, "--lines"])?;
         assert_eq!(code(&output), 2, "{command}");
-        assert_eq!(
-            said(&output),
+        stderr_is(
+            &output,
             format!(
                 "thinkthen: `{command}` reads a `decide` question, but the question file holds a `choose` question\n"
-            )
+            ),
         );
         assert!(printed(&output).is_empty());
     }
@@ -142,9 +138,9 @@ fn rank_refuses_a_band_from_either_home() -> io::Result<()> {
         "0.2:0.9",
     ])?;
     assert_eq!(code(&output), 2);
-    assert_eq!(
-        said(&output),
-        "thinkthen: --threshold: `rank` takes a single cut and never a band\n"
+    stderr_is(
+        &output,
+        "thinkthen: --threshold: `rank` takes a single cut and never a band\n",
     );
 
     let file = written(
@@ -159,9 +155,9 @@ fn rank_refuses_a_band_from_either_home() -> io::Result<()> {
         "/body",
     ])?;
     assert_eq!(code(&output), 5);
-    assert_eq!(
-        said(&output),
-        "thinkthen: the question file's `threshold`: `rank` takes a single cut and never a band\n"
+    stderr_is(
+        &output,
+        "thinkthen: the question file's `threshold`: `rank` takes a single cut and never a band\n",
     );
     Ok(())
 }
@@ -248,9 +244,9 @@ fn top_takes_a_whole_number_of_one_or_more_and_says_so() -> io::Result<()> {
         arguments.extend(["--url", listener.base()]);
         let output = refused(&arguments)?;
         assert_eq!(code(&output), 2);
-        assert_eq!(
-            said(&output),
-            "thinkthen: `filter` keeps records and has no order to cut, so --top belongs to `rank`\n"
+        stderr_is(
+            &output,
+            "thinkthen: `filter` keeps records and has no order to cut, so --top belongs to `rank`\n",
         );
         assert_eq!(listener.connections(), 0);
         assert!(listener.requests().is_empty());
@@ -271,20 +267,17 @@ fn a_recording_made_by_decide_replays_under_both_commands_with_no_request_sent()
     })?;
     let base = listener.base().to_owned();
 
-    let made = spawn(
+    let made = spawn_one_local(
         &[
             "decide",
             QUESTION,
-            "--url",
-            &base,
-            "--model",
-            "local-1",
             "--jsonl",
             "--field",
             "/body",
             "--record",
             &cache.display().to_string(),
         ],
+        &base,
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         RECORDS.as_bytes(),
     )?;
@@ -293,20 +286,17 @@ fn a_recording_made_by_decide_replays_under_both_commands_with_no_request_sent()
     assert_eq!(paid, 4);
 
     for verb in ["filter", "rank"] {
-        let output = spawn(
+        let output = spawn_one_local(
             &[
                 verb,
                 QUESTION,
-                "--url",
-                &base,
-                "--model",
-                "local-1",
                 "--jsonl",
                 "--field",
                 "/body",
                 "--replay",
                 &cache.display().to_string(),
             ],
+            &base,
             &[],
             RECORDS.as_bytes(),
         )?;

@@ -6,11 +6,11 @@ public sealed class OwnedSession : IDisposable
 {
     private readonly SessionHandle handle;
     private readonly CancellationTokenSource disposed = new();
-    private int reading, producing, closed;
-    private const int WaitMilliseconds = 10;
+    private int reading, producing, closed, cancelled;
     internal OwnedSession(IntPtr pointer) => handle = new(pointer);
     public void Cancel()
     {
+        Volatile.Write(ref cancelled, 1);
         try { NativeSession.thinkthen_session_cancel(handle); }
         catch (ObjectDisposedException) { }
     }
@@ -49,7 +49,7 @@ public sealed class OwnedSession : IDisposable
                     finally { if (pinned) packet.DangerousRelease(); }
                 }
                 if (status != 1) throw new InvalidOperationException("Invalid native read status.");
-                await Task.Delay(WaitMilliseconds, linked.Token).ConfigureAwait(false);
+                await WaitAsync(false).ConfigureAwait(false);
             }
         }
         finally { Volatile.Write(ref reading, 0); }
@@ -72,11 +72,17 @@ public sealed class OwnedSession : IDisposable
                 if (status == 0) return true;
                 if (status == 2) return false;
                 if (status != 1) throw new InvalidOperationException("Invalid native push status.");
-                await Task.Delay(WaitMilliseconds, linked.Token).ConfigureAwait(false);
+                await WaitAsync(true).ConfigureAwait(false);
             }
         }
         finally { Volatile.Write(ref producing, 0); }
     }
+    private Task WaitAsync(bool input) => Task.Factory.StartNew(() =>
+    {
+        uint interest = input ? NativeWait.Input : Volatile.Read(ref cancelled) != 0 ? NativeWait.Settlement : NativeWait.Result;
+        // Keep P/Invoke and its calling-thread diagnostic together on a dedicated thread.
+        NativeSession.Check(NativeWait.thinkthen_session_wait(handle, interest, 50, out _));
+    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     public void Dispose()
     {
         if (Interlocked.Exchange(ref closed, 1) != 0) return;

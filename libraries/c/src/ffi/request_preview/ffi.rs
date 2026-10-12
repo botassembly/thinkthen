@@ -1,10 +1,10 @@
 //! Canonical Request preview forwards to native admission and returns owned JSON.
 #![allow(
     unsafe_code,
-    reason = "the counted C door reads and writes caller storage"
+    reason = "the counted C interface reads and writes caller storage"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
-use crate::{Door, session::errors};
+use crate::{EngineHandle, session::errors};
 use std::ffi::{CString, c_char};
 use thinkthen::{ErrorKind, Request, RequestEnvironment};
 
@@ -19,7 +19,7 @@ use thinkthen::{ErrorKind, Request, RequestEnvironment};
 /// Extents fit Rust slices. The engine remains live until this call returns.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_request_plan_json(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
     request_len: usize,
     out: *mut *mut c_char,

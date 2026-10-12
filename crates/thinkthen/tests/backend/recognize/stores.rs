@@ -20,13 +20,8 @@ fn concurrent_recognition_completes_with_fresh_and_populated_cache_or_recording(
                     Some("key"),
                     input,
                 );
-                assert_eq!(
-                    result.status.code(),
-                    Some(0),
-                    "{mode} jobs={jobs}: {}",
-                    String::from_utf8_lossy(&result.stderr)
-                );
-                assert_eq!(String::from_utf8_lossy(&result.stdout).lines().count(), 8);
+                crate::harness::exits_because(&result, 0, || format!("{mode} jobs={jobs}"));
+                assert_eq!(crate::harness::printed(&result).lines().count(), 8);
             }
         }
     }
@@ -62,13 +57,8 @@ fn two_recognition_processes_share_a_fresh_and_populated_cache() {
         start.wait();
         for run in runs {
             let output = run.join().expect("worker");
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-            assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 8);
+            crate::harness::exits(&output, 0);
+            assert_eq!(crate::harness::printed(&output).lines().count(), 8);
         }
     }
 }
@@ -267,9 +257,7 @@ fn failed_relation_question_prints_no_partial_entity_or_edge_object() {
         &WORKS,
         ADA,
     );
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED);
+    crate::harness::refuses(&output, 4, REFUSED);
 }
 
 #[test]

@@ -23,16 +23,16 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $call = $client->decide('Is it?', 'surface-attribution');
     $earlier = json_encode($call->facts()->toObject());
     check($call->results[0]->value === true && $call->facts()->requests_sent === 1, 'retained answer and sends');
-    $observed = $client->usage_persistence();
+    $observed = $client->usagePersistence();
     if ($mode === 'usage-failed') check($observed->state === ThinkThen\UsagePersistenceState::Pending && $observed->advice === null, 'held writer pending');
-    $finished = $client->finish_usage_status();
+    $finished = $client->finishUsageStatus();
     $expected = $mode === 'usage-failed' ? ThinkThen\UsagePersistenceState::Failed : ThinkThen\UsagePersistenceState::Written;
     check($finished->state === $expected, 'finalized state');
     check($finished->advice === ($mode === 'usage-failed' ? 'check the usage folder permissions and free space' : null), 'native safe advice');
-    check($client->usage_persistence() == $finished && $client->finish_usage_status() == $finished, 'latched observation');
+    check($client->usagePersistence() == $finished && $client->finishUsageStatus() == $finished, 'latched observation');
     check(json_encode($call->facts()->toObject()) === $earlier, 'retained facts changed');
     $client->close();
-    foreach (['usage_persistence', 'finish_usage_status'] as $method) {
+    foreach (['usagePersistence', 'finishUsageStatus'] as $method) {
         try { $client->$method(); throw new RuntimeException('closed method admitted'); }
         catch (ThinkThen\UsageFailure) {}
     }
@@ -74,7 +74,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         if ($packet?->kind === 'row') $rows[] = $packet->value;
         if ($packet?->kind === 'terminal') $terminal = $packet;
         if (microtime(true) > $deadline) throw new RuntimeException('poll did not finish generator');
-        usleep(1000);
+        $operation->wait();
     }
     $client->close();
     check($produced === 3 && array_map(fn($r) => $r->value, $rows) === [true, false, true], 'poll generator answers/order');
@@ -126,6 +126,19 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         check($error->terminal->has('failure'), 'terminal failure missing');
     }
 } elseif ($mode === 'zero') {
+    $marker = new RuntimeException('private producer marker');
+    $producer = (function() use ($marker) { throw $marker; yield 'unreachable'; })();
+    try { $client->decide('Is it?', $producer); throw new RuntimeException('producer answered'); }
+    catch (ThinkThen\LocalFailure $error) {
+        check($error->getPrevious() === $marker, 'producer cause lost');
+        check($error->getMessage() === 'session producer raised an exception' && $error->facts()->requests_sent === 0, 'producer native diagnostic changed');
+    }
+    try { $client->decide(['decide' => 'Is it?', 'item_schema' => ['type' => 'array']], 'unreachable'); throw new RuntimeException('unsupported declaration admitted'); }
+    catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'the question declaration uses an unsupported feature', 'native admission changed'); }
+
+    try { $client->start('decide', 'Is it?', ['unreachable-first', Client::item('unreachable-tail', ['context' => false])]); throw new RuntimeException('invalid tail admitted eagerly'); }
+    catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'the per-item context does not match context_schema', 'eager tail admission changed'); }
+
     try { new Client([], getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
     catch (ThinkThen\LocalFailure) {}
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
@@ -164,13 +177,16 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     while (!file_exists(getenv('TT_BARRIER').'/arrived-hold-php')) {
         $operation->poll();
         if (microtime(true) > $deadline) throw new RuntimeException('provider did not arrive');
-        usleep(1000);
+        $operation->wait();
     }
     $weak = WeakReference::create($client);
     unset($client);
-    check($weak->get() === null, 'open operation retained engine');
-    try { $operation->poll(); throw new RuntimeException('destructor left native owner open'); }
-    catch (ThinkThen\UsageFailure) {}
+    check($weak->get() !== null, 'open operation lost client');
+    $operation->poll();
+    $operation->close();
+    check($weak->get() === null, 'closed operation retained client');
+    $temporary = (new Client(['cache' => false]))->start('decide', 'Is it?', 'temporary-client');
+    check($temporary->result()->results[0]->value === true, 'temporary client closed operation');
     check(!file_exists(getenv('TT_BARRIER').'/release-hold-php'), 'cleanup needed provider release');
     $other = new Client(['cache' => false]);
     check($other->decide('Is it?', 'independent')->results[0]->value === true, 'cleanup stalled unrelated engine');

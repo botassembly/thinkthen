@@ -39,7 +39,7 @@ pub(crate) mod error;
 mod frame;
 mod native_batch;
 mod options;
-pub(crate) use options::cli_reader;
+pub(crate) use options::readiness;
 mod panic;
 mod plan;
 pub(crate) use plan::SourceBudget;
@@ -95,7 +95,7 @@ pub use options::{
     process_requests_sent,
 };
 pub use panic::{contained, uncontained};
-pub use plan::PlanEstimate;
+pub use plan::{PlanEstimate, SourceBudgetExceeded};
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,
@@ -110,10 +110,10 @@ pub use results::FindSelection;
 #[cfg(test)]
 pub(crate) use results::QuestionJson;
 pub use results::{
-    Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, Candidate, CompleteAnnotated,
-    CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision, CompleteFacts,
-    CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord, CompleteScore,
-    CompleteSetRank, CompleteTags, Counters, Details, DoorReply, Facts, Found, Judgment,
+    Answer, AttemptObservation, AttemptOutcome, BatchMismatch, Call, CallReply, Candidate,
+    CompleteAnnotated, CompleteAnnotationMember, CompleteAttempt, CompleteChoice, CompleteDecision,
+    CompleteFacts, CompleteFilter, CompleteFound, CompleteRank, CompleteRankMember, CompleteRecord,
+    CompleteScore, CompleteSetRank, CompleteTags, Counters, Details, Facts, Found, Judgment,
     NamedProbability, ObservedRow, Picked, Probabilities, ProfileMismatch, QuestionDetail, Ranked,
     RankedRow, RecordObservation, ResultMetadata, Row, SetRanked, Tally, TallyStart, Usage,
     complete_call_schema,
@@ -129,7 +129,7 @@ pub use results::{OwnedObservedRow, OwnedQuestionDetail, OwnedRecordObservation}
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 
-/// The Polars crate the door takes, so a caller names the exact version.
+/// The Polars crate the interface takes, so a caller names the exact version.
 #[cfg(feature = "polars")]
 pub use ::polars;
 
@@ -157,3 +157,6 @@ pub use named_question::QuestionFileReference;
 pub use results::{
     SourceBoundaryProposal, SourceRecognition, SourceRecognizedEntity, SourceRecognizedRelation,
 };
+
+#[cfg(feature = "cli")]
+pub(crate) use options::AnnotationRecovery;

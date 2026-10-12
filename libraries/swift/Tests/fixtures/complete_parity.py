@@ -12,7 +12,7 @@ import sys
 import tempfile
 ROOT = Path(__file__).resolve().parents[4]
 sys.path[:0] = [str(ROOT / "conformance"), str(ROOT / "conformance/children")]
-from children import child_env
+from children import child_env, read_process_line
 from session_projection import project_session
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--binary", type=Path, required=True)
@@ -90,7 +90,7 @@ def native_parity(consumer, command):
                                     assert backend.read("wait 1") == "wait 1"
                                     running.stdin.write("!")
                                     running.stdin.flush()
-                                    signal = running.stdout.readline()
+                                    signal = read_process_line(running.stdout)
                                     assert signal == "cancel-fired\n", (signal, running.stderr.read() if running.poll() is not None else "signal not received")
                                     backend.process.stdin.write("release\n")
                                     backend.process.stdin.flush()

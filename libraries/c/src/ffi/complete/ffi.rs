@@ -4,7 +4,7 @@
     reason = "C handles and outputs obey the reviewed lifetime contract"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
-use crate::Door;
+use crate::EngineHandle;
 use crate::complete::{self, ResultHandle};
 use crate::current::{Content, QuestionHandle, SourceHandle};
 use crate::failures::{self, DEFECT, Failure, OK, USAGE};
@@ -24,7 +24,7 @@ use crate::ffi::values::{
 };
 use thinkthen::{CallOptions, Facts};
 unsafe fn run(
-    engine: *const Door,
+    engine: *const EngineHandle,
     kind: u32,
     question: *const QuestionHandle,
     source: *const SourceHandle,
@@ -120,7 +120,7 @@ pub(super) unsafe fn options<'a>(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_decide_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -134,7 +134,7 @@ pub(crate) unsafe extern "C" fn thinkthen_decide_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_choose_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -148,7 +148,7 @@ pub(crate) unsafe extern "C" fn thinkthen_choose_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_tag_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -162,7 +162,7 @@ pub(crate) unsafe extern "C" fn thinkthen_tag_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_score_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -176,7 +176,7 @@ pub(crate) unsafe extern "C" fn thinkthen_score_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_filter_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -190,7 +190,7 @@ pub(crate) unsafe extern "C" fn thinkthen_filter_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_rank_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -204,7 +204,7 @@ pub(crate) unsafe extern "C" fn thinkthen_rank_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_find_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -218,7 +218,7 @@ pub(crate) unsafe extern "C" fn thinkthen_find_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_annotate_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -232,7 +232,7 @@ pub(crate) unsafe extern "C" fn thinkthen_annotate_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_recognize_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -246,7 +246,7 @@ pub(crate) unsafe extern "C" fn thinkthen_recognize_complete(
 /// Every pointer obeys include/thinkthen.h's counted-storage and lifetime rules.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_relate_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question: *const QuestionHandle,
     source: *const SourceHandle,
     controls: *const ControlsV1,
@@ -597,7 +597,7 @@ pub(crate) unsafe extern "C" fn thinkthen_result_relate(
 /// out=NULL returns EUSAGE without changing the saved failure.
 #[unsafe(no_mangle)]
 pub(crate) unsafe extern "C" fn thinkthen_error_complete(
-    engine: *const Door,
+    engine: *const EngineHandle,
     out: *mut *mut ResultHandle,
 ) -> std::ffi::c_int {
     failures::guard(None, DEFECT, || {

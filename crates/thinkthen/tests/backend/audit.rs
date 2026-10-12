@@ -7,6 +7,7 @@
 )]
 
 use crate::child::ChildEnvironment as _;
+use crate::harness::stderr_is;
 use crate::measure_support;
 use crate::wait;
 
@@ -144,9 +145,9 @@ fn a_replayed_recording_piped_to_audit_grades_as_the_prototype_does() {
     let output = wait::finish(audit, "thinkthen audit").expect("audit finishes");
     let decided = wait::finish(decide, "thinkthen decide").expect("decide finishes");
     assert_eq!(decided.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    stderr_is(&output, "");
     assert_eq!(
-        without_added(&String::from_utf8_lossy(&output.stdout)),
+        without_added(&crate::harness::printed(&output)),
         ported(fixture("replay/audit.jsonl"))
     );
 }

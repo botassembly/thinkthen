@@ -523,3 +523,6 @@ mod rank_set;
 
 #[path = "public_batches/reading_numbers.rs"]
 mod reading_numbers;
+
+#[path = "support/api.rs"]
+mod api;

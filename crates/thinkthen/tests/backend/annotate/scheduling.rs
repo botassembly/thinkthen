@@ -6,11 +6,9 @@
     reason = "a failed fixture setup or a missing field should stop the boundary test"
 )]
 
-use crate::child::ChildEnvironment as _;
-use std::fs;
+use crate::harness::{Canned, Gathering, Listener, finish, spawn, stderr_is};
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
 use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
@@ -18,7 +16,6 @@ use std::time::{Duration, Instant};
 use conformance_backend::Rendezvous;
 
 use super::{one_question, set};
-use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 pub(super) fn yes(model: &str, input: u64, output: u64) -> String {
     format!(
@@ -64,11 +61,7 @@ pub(super) fn grouped_input(record: usize, count: usize) -> String {
     format!(r#"{{"record":{record},{fields}}}"#)
 }
 
-pub(super) fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 fn stored(cache: &Path) -> usize {
     crate::support::stored(cache).expect("the store").len()
@@ -90,14 +83,10 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
             Canned::ok(&all_yes(body, "local-1", 10, 2))
         })
         .expect("a listener");
-        let output = spawn(
+        let output = crate::harness::annotate_at(
+            &file,
+            listener.base(),
             &[
-                "annotate",
-                &file.to_string_lossy(),
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
                 "--jobs",
                 &jobs.to_string(),
                 "--no-cache",
@@ -124,14 +113,10 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 .expect("a listener");
         let input = format!("{}\n{}\n", grouped_input(1, 2), grouped_input(2, 2));
         let stream_file = grouped("two-groups", 2);
-        let output = spawn(
+        let output = crate::harness::annotate_at(
+            &stream_file,
+            listener.base(),
             &[
-                "annotate",
-                &stream_file.to_string_lossy(),
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
                 "--jsonl",
                 "--batch",
                 "1",
@@ -260,7 +245,7 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
     )
     .expect("mixed run");
     assert_eq!(second.status.code(), Some(0));
-    let row = String::from_utf8_lossy(&second.stdout);
+    let row = crate::harness::printed(&second);
     assert!(
         row.contains(r#""usage":{"input_tokens":20,"output_tokens":4}"#),
         "{row}"
@@ -282,14 +267,10 @@ fn annotate_equal_records_share_one_request() {
     let listener =
         Listener::answering(move |_| Canned::ok(&answer).after(1_000)).expect("a listener");
     let input = format!("{}\n{}\n", grouped_input(1, 1), grouped_input(1, 1));
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--jsonl",
             "--batch",
             "1",
@@ -299,7 +280,6 @@ fn annotate_equal_records_share_one_request() {
             "--jobs",
             "32",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         input.as_bytes(),
     )
     .expect("annotate run");
@@ -310,7 +290,7 @@ fn annotate_equal_records_share_one_request() {
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     let key = crate::support::keys(listener.url(), &sent[0].body);
-    let rows = String::from_utf8_lossy(&output.stdout);
+    let rows = crate::harness::printed(&output);
     assert_eq!(rows.lines().count(), 2);
     assert_eq!(rows.matches(r#""cached":false"#).count(), 2);
     let requests = format!(r#""requests":["{}"]"#, key[0]);
@@ -324,9 +304,7 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
             .expect("a listener");
     let file = grouped("broken-pipe", 2);
     let state = crate::child::Folder::Usage.variable(&folder("broken-pipe-usage"));
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::piped(env!("CARGO_TARGET_TMPDIR"))
         .env(state.0, state.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
@@ -343,9 +321,6 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
             "4",
             "--no-cache",
         ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .expect("the binary runs");
     let mut input = child.stdin.take().expect("stdin");
@@ -403,9 +378,7 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     .expect("a listener");
     let file = grouped("closed-pipe-failure", 1);
     let platform = crate::child::Folder::Cache.variable(&cache.join(".platform"));
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::piped(env!("CARGO_TARGET_TMPDIR"))
         .env(platform.0, platform.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
@@ -425,9 +398,6 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
             "--cache",
             &named,
         ])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()
         .expect("the binary runs");
     let input: String = (1..=3)
@@ -473,31 +443,26 @@ fn usage_overflow_fails_safely() {
     })
     .expect("a listener");
     let file = grouped("usage-overflow", 2);
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--details",
             "--no-cache",
             "--profile",
             &one_question().to_string_lossy(),
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         grouped_input(1, 2).as_bytes(),
     )
     .expect("the run");
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the backend reported token counts whose total is too large\n",
             "thinkthen: usage counters could not be updated; ",
             "check the usage folder permissions and free space\n",
-        )
+        ),
     );
     assert!(output.stdout.is_empty());
 }

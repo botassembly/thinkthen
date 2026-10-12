@@ -188,11 +188,11 @@ def bridge(abi):
             if value.removeprefix('const ').startswith('size_t'):
                 return ('Pointer<Size>',) * 2
             return ('Pointer<Void>',) * 2
-        return {'int': ('Int32', 'int'), 'size_t': ('Size', 'int'), 'void': ('Void', 'void')}[value]
+        return {'uint32_t': ('Uint32', 'int'), 'int': ('Int32', 'int'), 'size_t': ('Size', 'int'), 'void': ('Void', 'void')}[value]
     symbols = ('thinkthen_engine_new_with', 'thinkthen_engine_free', 'thinkthen_error_code',
                'thinkthen_error_retryable', 'thinkthen_error_message', 'thinkthen_error_facts_json',
                'thinkthen_session_new_with_surface', 'thinkthen_session_try_push',
-               'thinkthen_session_try_read', 'thinkthen_session_finish', 'thinkthen_session_cancel',
+               'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_finish', 'thinkthen_session_cancel',
                'thinkthen_session_free', 'thinkthen_session_result_free', 'thinkthen_session_result_json',
                'thinkthen_session_error_message', 'thinkthen_engine_usage_persistence_v1',
                'thinkthen_engine_finish_usage_status_v1')

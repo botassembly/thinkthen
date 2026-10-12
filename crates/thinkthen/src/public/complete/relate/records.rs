@@ -5,33 +5,11 @@ use crate::public::{
 };
 use std::sync::Arc;
 impl Engine {
-    /// Relate selected native records, retaining the complete ordered original entity set.
-    /// # Errors
-    /// Invalid fields, non-source duplicate entities, unsupported controls and images refuse before sending.
     #[allow(
         clippy::type_complexity,
-        reason = "The whole original set retains a concrete complete relation aggregate"
+        reason = "the private Request primitive retains original and complete result types"
     )]
-    pub fn relate_records_complete_with<I, T>(
-        &self,
-        ask: &Relate,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRecord<Vec<T>, CompleteRelated>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,
-    {
-        self.try_relate_records_complete_with(ask, records.into_iter().map(Ok), options)
-    }
-    /// Admit a fallible native whole set with the existing 255-entity boundary.
-    /// # Errors
-    /// Reader/field failures refuse the whole set; started failures retain final call facts.
-    #[allow(
-        clippy::type_complexity,
-        reason = "The whole original set retains a concrete complete relation aggregate"
-    )]
-    pub fn try_relate_records_complete_with<I, T>(
+    pub(crate) fn execute_relate_records_complete_with<I, T>(
         &self,
         ask: &Relate,
         records: I,
@@ -61,7 +39,7 @@ impl Engine {
                 })
                 .collect()
         });
-        self.relate_admitted_complete(ask, entities, options, lines, &inputs)?
+        self.relate_admitted_complete(ask, entities, options, (lines, false), &inputs)?
             .try_map(|mut result| {
                 result.input_sources = input_sources;
                 if located {

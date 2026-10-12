@@ -1,4 +1,4 @@
-//! The Rust Polars door, behind the `polars` feature (ticket 0130).
+//! The Rust Polars interface, behind the `polars` feature (ticket 0130).
 
 use polars::prelude::{DataFrame, Expr, LazyFrame, Series};
 
@@ -23,7 +23,7 @@ mod typed_series;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
-/// The Series and frame door, implemented for [`Engine`]. It needs the
+/// The Series and frame interface, implemented for [`Engine`]. It needs the
 /// `polars` feature, and takes the Polars version [`crate::polars`] names.
 ///
 /// Joined text judgments retain native complete results alongside the input
@@ -104,7 +104,7 @@ pub trait PolarsEngine {
     /// Score and tag refuse a probability request before any send.
     ///
     /// # Errors
-    /// Returns the same call error as the matching Series door.
+    /// Returns the same call error as the matching Series interface.
     fn column_with(
         &self,
         question: &Question,

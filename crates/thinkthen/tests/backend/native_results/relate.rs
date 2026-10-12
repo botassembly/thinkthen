@@ -70,12 +70,7 @@ fn located_relation_duplicates_replay_one_observation_with_actual_filenames_and_
         b"Ada\nBob\nAda\n",
     )
     .unwrap();
-    assert_eq!(
-        live.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&live.stderr)
-    );
+    crate::harness::exits(&live, 0);
     withheld(&live, "relation-private");
     let live: Value = serde_json::from_slice(&live.stdout).unwrap();
     assert_eq!(live["value"].as_array().unwrap().len(), 2);

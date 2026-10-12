@@ -19,7 +19,7 @@ TTTask *task = [client decide:@{@"kind":@"text", @"text":@"Does this mention a r
 
 `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate` share this named call family. Question selectors, input selectors and options use Foundation dictionaries, arrays, strings, numbers and `NSNull`. Rust owns their admission. `TTImageBytes(data, media)` accepts an `NSData` attachment and performs the internal base64 conversion. Authored JSON values remain ordinary Foundation values.
 
-A feed supplies one descriptor at a time through `TTFeed`; its input selector names a native feed. The callback returns nil at EOF or nil with a native reader-failure dictionary. It runs on the task's private callback queue and must return promptly. A task keeps one descriptor while native intake is full and drains native output on the same timer. `TTSession` also exposes explicit nonblocking push, finish, read, cancel and close for callers that own their scheduling. ARC releases native owners. Completion runs on the private callback queue; dispatch UI changes to the main queue.
+A feed supplies one descriptor at a time through `TTFeed`; its input selector names a native feed. The callback returns nil at EOF or nil with a native reader-failure dictionary. It runs on the task's private callback queue and must return promptly. A task keeps one descriptor while native intake is full and drains native output on its dispatch queue and waits for native readiness. `TTSession` also exposes explicit nonblocking push, finish, read, cancel and close for callers that own their scheduling. ARC releases native owners. Completion runs on the private callback queue; dispatch UI changes to the main queue.
 
 | Legacy call | Foundation call |
 | --- | --- |

@@ -1,4 +1,5 @@
 use super::*;
+use crate::harness::{exits_because, stderr_is};
 
 #[test]
 fn a_live_reply_counts_valid_usage_when_its_only_answer_is_refused() {
@@ -46,7 +47,7 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
     )
     .expect("retry");
     assert_eq!(retried.status.code(), Some(0));
-    let details = String::from_utf8_lossy(&retried.stdout);
+    let details = crate::harness::printed(&retried);
     assert!(
         details.contains(r#""requests_sent":2,"cached":false"#),
         "{details}"
@@ -238,9 +239,9 @@ fn an_unsafe_usage_folder_refuses_the_run_before_any_send() {
     let (output, requests) = refused_before_any_send(&root, "secret-warning-key");
     assert_eq!((output.status.code(), requests), (Some(5), 0));
     assert_eq!(output.stdout, b"");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\nthinkthen: stopped at record 1; 0 records finished\n"
+    stderr_is(
+        &output,
+        "thinkthen: cannot read the usage totals: the usage folder that thinkthen status names has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\nthinkthen: stopped at record 1; 0 records finished\n",
     );
 }
 
@@ -263,9 +264,9 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
     let (output, requests) = refused_before_any_send(&root, "secret-zero-byte-key");
     assert_eq!((output.status.code(), requests), (Some(5), 0));
     assert_eq!(output.stdout, b"");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n"
+    stderr_is(
+        &output,
+        "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n",
     );
     assert_eq!(fs::read(&month).expect("unchanged month"), b"");
     let state = Folder::Usage.variable(&root);
@@ -275,11 +276,9 @@ fn a_malformed_month_refuses_the_run_and_keeps_its_bytes() {
         b"evidence",
     )
     .expect("plan");
-    assert_eq!(
-        planned.status.code(),
-        Some(0),
-        "a plan sends nothing, so it never refuses"
-    );
+    exits_because(&planned, 0, || {
+        "a plan sends nothing, so it never refuses".to_owned()
+    });
 }
 
 /// Release QA put `garbage` or zero bytes in this month's file of a folder
@@ -303,7 +302,7 @@ fn a_malformed_month_without_a_lock_refuses_the_run_before_any_send() {
         assert_eq!((output.status.code(), requests), (Some(5), 0), "{label}");
         assert_eq!(output.stdout, b"", "{label}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\nthinkthen: stopped at record 1; 0 records finished\n",
             "{label}"
         );
@@ -330,9 +329,9 @@ fn a_month_other_users_can_read_refuses_the_run_and_names_the_unsafe_fix() {
     let (output, requests) = refused_before_any_send(&root, "secret-shared-month-key");
     assert_eq!((output.status.code(), requests), (Some(5), 0));
     assert_eq!(output.stdout, b"");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: cannot read the usage totals: 2026-08.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.\nthinkthen: stopped at record 1; 0 records finished\n"
+    stderr_is(
+        &output,
+        "thinkthen: cannot read the usage totals: 2026-08.json has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it out of the usage folder that thinkthen status names.\nthinkthen: stopped at record 1; 0 records finished\n",
     );
 }
 
@@ -402,8 +401,8 @@ fn requests_go_out_while_another_process_holds_the_usage_lock() {
     assert_eq!((count, peak), (16, 16), "in flight while the lock was held");
     assert!(!exited, "the command exited before its totals were written");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 16);
-    assert_eq!(String::from_utf8_lossy(&output.stderr), "");
+    assert_eq!(crate::harness::printed(&output).lines().count(), 16);
+    stderr_is(&output, "");
     let status = run(&["status", "--json"], &environment).expect("status");
     assert_eq!(usage(&status, "requests_sent"), Some(16));
     assert_eq!(usage(&status, "input_tokens"), Some(1408));

@@ -46,10 +46,10 @@ impl Engine {
             options.admission()?;
             self.check_record_limit(at)?;
             record
-                .and_then(|record| prepare(&engine, ask, record, options.context_text(), limit))
+                .and_then(|record| prepare(&engine, ask, record, options.context_text()))
                 .map_err(|error| error.at_record(at))
         });
-        let mut units: Box<dyn Iterator<Item = Result<Unit<crate::QuestionInput>, Error>> + '_> =
+        let units: Box<dyn Iterator<Item = Result<Unit<crate::QuestionInput>, Error>> + '_> =
             if eager {
                 Box::new(units.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
             } else {
@@ -58,6 +58,19 @@ impl Engine {
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let requested_attempts = stop.facts().attempts().is_some();
         stop.run_call(0, |cancel| {
+            let admitted = units.enumerate().map(|(at, unit)| {
+                let unit = unit?;
+                unit.prepared
+                    .admit(limit)
+                    .map_err(|error| error.at_record(at))?;
+                Ok(unit)
+            });
+            let mut units: Box<dyn Iterator<Item = Result<Unit<crate::QuestionInput>, Error>>> =
+                if eager {
+                    Box::new(admitted.collect::<Result<Vec<_>, _>>()?.into_iter().map(Ok))
+                } else {
+                    Box::new(admitted)
+                };
             let cancel = cancel.with_storage_scope();
             let originals = RefCell::new(BTreeMap::new());
             let mut count = 0;
@@ -75,7 +88,7 @@ impl Engine {
             let outcome = ordered::run(
                 engine.width(&cancel).map_err(Error::from)?,
                 &cancel,
-                options.cli_reader,
+                options.readiness,
                 read,
                 &|(ordinal, prepared)| answer(ordinal, prepared, limit, &cancel),
                 |answered| {

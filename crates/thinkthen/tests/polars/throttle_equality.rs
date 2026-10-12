@@ -17,14 +17,10 @@ use std::thread;
 use conformance_backend::Backend;
 use thinkthen::PolarsEngine;
 use thinkthen::polars::prelude::{NamedFrom, Series};
-use thinkthen::{Answer, BatchSetting, CallOptions, Engine, Question};
+use thinkthen::{Answer, Engine, Question};
 
 const THROTTLE: u8 = 2;
 const TEXTS: usize = 3;
-
-fn singleton() -> CallOptions<'static> {
-    CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-}
 
 /// One way to decide the texts on an engine.
 type Call<'a> = dyn Fn(&Engine) -> Vec<Option<bool>> + 'a;
@@ -87,13 +83,13 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
             // Exactly two held requests, then the third arrives only after release.
             let slice = held_in_flight(|engine, index| {
                 let _answered: Vec<_> = engine
-                    .decide_many_with(&question, [refs[index]], singleton())
+                    .decide_many_with(&question, [refs[index]], common::singleton())
                     .collect();
             });
             assert_eq!(slice, (2, TEXTS), "the slice in flight on the held arm");
             let decide = held_in_flight(|engine, index| {
                 let one = Series::new("body".into(), &[refs[index]]);
-                let _answered = engine.decide_series(&question, &one, singleton());
+                let _answered = engine.decide_series(&question, &one, common::singleton());
             });
             assert_eq!(decide, slice, "decide_series in flight on the held arm");
             let score = Question::score("How urgent is this?")
@@ -103,7 +99,7 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
                 .expect("a score question");
             let scored = held_in_flight(|engine, index| {
                 let one = Series::new("body".into(), &[refs[index]]);
-                let _answered = engine.score_series(&score, &one, singleton());
+                let _answered = engine.score_series(&score, &one, common::singleton());
             });
             assert_eq!(scored, (2, TEXTS), "score_series in flight on the held arm");
         },
@@ -131,7 +127,7 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
     };
     let (from_series, series_count) = answered(&|engine| {
         let answered = engine
-            .decide_series(question, series, singleton())
+            .decide_series(question, series, common::singleton())
             .expect("the series call");
         answered
             .value()
@@ -142,7 +138,7 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
     });
     let (from_slice, slice_count) = answered(&|engine| {
         engine
-            .decide_many_with(question, refs.iter().copied(), singleton())
+            .decide_many_with(question, refs.iter().copied(), common::singleton())
             .map(|row| {
                 row.map(|row| (*row.value() != Answer::Unsure).then(|| *row.value() == Answer::Yes))
             })

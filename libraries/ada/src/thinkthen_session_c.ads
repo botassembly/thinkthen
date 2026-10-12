@@ -230,7 +230,16 @@ package Thinkthen_Session_C is
    K_THINKTHEN_SESSION_END_V1 : constant := 2;
    K_THINKTHEN_SESSION_FULL_V1 : constant := 1;
    K_THINKTHEN_SESSION_PENDING_V1 : constant := 1;
+   K_THINKTHEN_SESSION_READY_CANCELLED_V1 : constant := 4;
+   K_THINKTHEN_SESSION_READY_CLOSED_V1 : constant := 2;
+   K_THINKTHEN_SESSION_READY_END_V1 : constant := 3;
+   K_THINKTHEN_SESSION_READY_INPUT_V1 : constant := 1;
+   K_THINKTHEN_SESSION_READY_RESULT_V1 : constant := 0;
+   K_THINKTHEN_SESSION_READY_TIMEOUT_V1 : constant := 5;
    K_THINKTHEN_SESSION_RESULT_V1 : constant := 0;
+   K_THINKTHEN_SESSION_WAIT_INPUT_V1 : constant := 1;
+   K_THINKTHEN_SESSION_WAIT_RESULT_V1 : constant := 0;
+   K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 : constant := 2;
    K_THINKTHEN_SOURCE_FILE_V1 : constant := 3;
    K_THINKTHEN_SOURCE_IMAGE_FILE_V1 : constant := 4;
    K_THINKTHEN_SOURCE_JSONL_V1 : constant := 5;
@@ -5401,10 +5410,18 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_cancel";
+   function thinkthen_session_error_facts_json return Interfaces.C.Strings.chars_ptr
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_error_facts_json";
    function thinkthen_session_error_message return Interfaces.C.Strings.chars_ptr
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_error_message";
+   function thinkthen_session_error_retryable return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_error_retryable";
    function thinkthen_session_finish
      (session : access thinkthen_session;
       failure_json : Interfaces.C.Strings.chars_ptr;
@@ -5464,6 +5481,14 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_try_read";
+   function thinkthen_session_wait
+     (session : access constant thinkthen_session;
+      interest : Interfaces.Unsigned_32;
+      timeout_ms : Interfaces.Unsigned_32;
+      out_ready : access Interfaces.Unsigned_32) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_wait";
    function thinkthen_source_files
      (engine : access constant thinkthen_engine;
       spec : access constant thinkthen_source_spec_v1;

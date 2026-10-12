@@ -1,7 +1,7 @@
 //! Private bounded native sessions for the named Ruby calls.
 use super::{EngineValue, Fault, checked};
 use magnus::{Error, RClass, RModule, Ruby, TryConvert, Value, function, method, prelude::*};
-use std::sync::{Mutex, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use thinkthen::{
     Request, RequestReaderFailure, RequestSession, RequestSessionPush, RequestSessionRead,
 };
@@ -10,11 +10,22 @@ use thinkthen::{
 struct Item(thinkthen::RequestItem);
 #[magnus::wrap(class = "ThinkThen::Native::RequestSession", free_immediately, size)]
 #[derive(Debug)]
-struct Session(Mutex<Option<RequestSession>>);
+struct Session(Mutex<Option<Arc<RequestSession>>>);
 impl Session {
+    fn wait(ruby: &Ruby, this: &Self, input: bool) -> Result<(), Error> {
+        let session = this
+            .0
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .clone();
+        if let Some(session) = session {
+            super::session_wait::wait(ruby, session, input)?;
+        }
+        Ok(())
+    }
     fn poll(ruby: &Ruby, this: &Self) -> Result<Option<Value>, Error> {
         let held = this.0.lock().unwrap_or_else(PoisonError::into_inner);
-        match held.as_ref().map(RequestSession::try_read) {
+        match held.as_ref().map(|session| session.try_read()) {
             Some(RequestSessionRead::Result(packet)) => {
                 let json = checked(ruby, packet.to_json().map_err(Fault::from))?;
                 super::native_result::packet(ruby, &json).map(Some)
@@ -24,7 +35,7 @@ impl Session {
         }
     }
     fn item(ruby: &Ruby, _this: &Self, descriptor: Value) -> Result<Item, Error> {
-        decode(ruby, descriptor).map(Item)
+        item(ruby, descriptor).map(Item)
     }
     fn push(ruby: &Ruby, this: &Self, descriptor: &Item) -> Result<&'static str, Error> {
         let held = this.0.lock().unwrap_or_else(PoisonError::into_inner);
@@ -55,7 +66,7 @@ impl Session {
         )?;
         let failure = failure
             .filter(|v| *v)
-            .map(|_| RequestReaderFailure::InvalidInput { location: None });
+            .map(|_| RequestReaderFailure::Producer);
         checked(ruby, session.finish(failure).map_err(Fault::from))
     }
     fn cancel(&self) {
@@ -69,7 +80,9 @@ impl Session {
         }
     }
     fn close(&self) {
-        drop(self.0.lock().unwrap_or_else(PoisonError::into_inner).take());
+        if let Some(session) = self.0.lock().unwrap_or_else(PoisonError::into_inner).take() {
+            session.cancel();
+        }
     }
 }
 // Decode authored definitions, record descriptors and controls separately. The
@@ -82,20 +95,17 @@ fn decode<T: serde::de::DeserializeOwned>(ruby: &Ruby, value: Value) -> Result<T
     let text: String = client(ruby)?.funcall("dump", (value,))?;
     checked(
         ruby,
-        serde_json::from_str(&text).map_err(|error| {
-            let message = error.to_string();
-            Fault::usage(
-                if message.starts_with("the question declaration uses an unsupported feature") {
-                    "the question declaration uses an unsupported feature"
-                } else if message.starts_with("per-item context is text or an object") {
-                    "the per-item context does not match context_schema"
-                } else {
-                    "invalid canonical request"
-                },
-            )
-        }),
+        serde_json::from_str(&text).map_err(|_| Fault::usage("invalid canonical request")),
     )
 }
+fn item(ruby: &Ruby, value: Value) -> Result<thinkthen::RequestItem, Error> {
+    let text: String = client(ruby)?.funcall("dump", (value,))?;
+    checked(
+        ruby,
+        thinkthen::RequestItem::from_json(&text).map_err(Fault::from),
+    )
+}
+
 fn build(
     ruby: &Ruby,
     verb: &str,
@@ -104,12 +114,19 @@ fn build(
     options: Value,
     feed: bool,
 ) -> Result<Request, Error> {
-    use thinkthen::{RequestArguments, RequestCall, RequestInput, RequestQuestion};
+    use thinkthen::{RequestArguments, RequestInput, RequestQuestion};
     let client = client(ruby)?;
     let selector: RClass = client.const_get("Question")?;
     let source: RClass = client.const_get("Source")?;
     let question = if question.is_kind_of(selector) {
-        decode(ruby, question.funcall("selector", ())?)?
+        {
+            let text: String =
+                client.funcall("dump", (question.funcall::<_, _, Value>("selector", ())?,))?;
+            checked(
+                ruby,
+                thinkthen::RequestQuestion::from_json(&text).map_err(Fault::from),
+            )?
+        }
     } else if question.is_kind_of(ruby.class_string()) {
         RequestQuestion::Text {
             text: checked(
@@ -120,7 +137,13 @@ fn build(
         }
     } else {
         RequestQuestion::Definition {
-            value: decode(ruby, question)?,
+            value: {
+                let text: String = client.funcall("dump", (question,))?;
+                checked(
+                    ruby,
+                    thinkthen::RequestDefinition::from_request_json(&text).map_err(Fault::from),
+                )?
+            },
         }
     };
     let input = if feed {
@@ -137,38 +160,22 @@ fn build(
     } else {
         let item = |value| {
             let descriptor: Value = client.funcall("descriptor", (value,))?;
-            decode(ruby, descriptor)
+            item(ruby, descriptor)
         };
         let items = if let Some(array) = magnus::RArray::from_value(input) {
             array.into_iter().map(item).collect::<Result<_, Error>>()?
         } else {
             vec![item(input)?]
         };
-        match verb {
-            "find" => RequestInput::Units { items },
-            "relate" => RequestInput::Entities { items },
-            _ => RequestInput::Records { items },
-        }
+        RequestInput::Records { items }
     };
     let args = RequestArguments {
         question,
         input,
         options: decode(ruby, options)?,
     };
-    let call = match verb {
-        "decide" => RequestCall::Decide(args),
-        "choose" => RequestCall::Choose(args),
-        "tag" => RequestCall::Tag(args),
-        "score" => RequestCall::Score(args),
-        "filter" => RequestCall::Filter(args),
-        "rank" => RequestCall::Rank(args),
-        "find" => RequestCall::Find(args),
-        "annotate" => RequestCall::Annotate(args),
-        "recognize" => RequestCall::Recognize(args),
-        "relate" => RequestCall::Relate(args),
-        _ => return checked(ruby, Err(Fault::usage("invalid request function"))),
-    };
-    Ok(Request::new(call))
+    let request = checked(ruby, Request::named(verb, args).map_err(Fault::from))?;
+    Ok(request)
 }
 fn start(
     ruby: &Ruby,
@@ -186,7 +193,7 @@ fn start(
             .request_session_with_surface(request, thinkthen::Surface::Ruby)
             .map_err(Fault::from),
     )?;
-    Ok(Session(Mutex::new(Some(session))))
+    Ok(Session(Mutex::new(Some(Arc::new(session)))))
 }
 fn request_engine(ruby: &Ruby, text: String) -> Result<EngineValue, Error> {
     checked(
@@ -233,6 +240,7 @@ pub(super) fn register(ruby: &Ruby, native: RModule, engine: RClass) -> Result<(
     native.define_module_function("request_engine", function!(request_engine, 1))?;
     native.define_class("RequestItem", ruby.class_object())?;
     let session = native.define_class("RequestSession", ruby.class_object())?;
+    session.define_method("wait", method!(Session::wait, 1))?;
     session.define_method("poll", method!(Session::poll, 0))?;
     session.define_method("item", method!(Session::item, 1))?;
     session.define_method("push", method!(Session::push, 1))?;

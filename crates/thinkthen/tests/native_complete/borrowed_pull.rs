@@ -26,30 +26,43 @@ fn seven_native_batches_refuse_recognition_controls_when_pulled_without_sending(
         std::iter::once_with(|| {
             pulled.set(pulled.get() + 1);
             Ok(RecordInput {
-                original: "First.",
-                context: None,
-                options: None,
-                examples: None,
                 seed_spans: Some(vec![]),
+
+                ..crate::api::record("First.")
             })
         })
     };
     macro_rules! probe {
         ($method:ident, $question:expr) => {
             refuses_controls(
-                engine.$method($question, records(), CallOptions::new()),
+                crate::api::$method(&engine, $question, records(), CallOptions::new()),
                 &pulled,
                 &listener,
             )
         };
     }
-    probe!(try_decide_records_complete_with, &decide);
-    probe!(try_choose_records_complete_with, &choose);
-    probe!(try_tag_records_complete_with, &tag);
-    probe!(try_score_records_complete_with, &score);
-    probe!(try_filter_records_complete_with, &decide);
-    probe!(try_choose_dynamic_records_complete_with, &dynamic);
-    probe!(try_annotate_records_complete_with, &set);
+    probe!(pull_decisions, &decide);
+    probe!(pull_choices, &choose);
+    probe!(pull_tags, &tag);
+    probe!(pull_scores, &score);
+    probe!(pull_filters, &decide);
+    refuses_controls(
+        crate::api::pull_choices(&engine, &dynamic, records(), CallOptions::new()),
+        &pulled,
+        &listener,
+    );
+    let batch = crate::api::annotation_rows(
+        crate::api::rows(
+            &engine,
+            thinkthen::RequestFunction::Annotate,
+            set.into(),
+            records(),
+            CallOptions::new(),
+        )
+        .unwrap(),
+    )
+    .unwrap();
+    refuses_controls(batch, &pulled, &listener);
 }
 
 #[cfg(test)]
@@ -88,10 +101,8 @@ impl Drop for Original<'_> {
 
 #[test]
 fn borrowed_local_original_snapshots_once_and_early_drop_keeps_callbacks_on_the_caller() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let engine = engine(&listener);
     let question = Question::decide("Fits?").unwrap().cut();
     let pulled = Cell::new(0);
@@ -112,19 +123,14 @@ fn borrowed_local_original_snapshots_once_and_early_drop_keeps_callbacks_on_the_
     };
     let records = (0..3).map(|_| {
         pulled.set(pulled.get() + 1);
-        Ok(RecordInput {
-            original: Original {
-                snapshots: &snapshots,
-                drops: &drops,
-                local: Rc::clone(&local),
-            },
-            context: None,
-            options: None,
-            examples: None,
-            seed_spans: None,
-        })
+        Ok(crate::api::record(Original {
+            snapshots: &snapshots,
+            drops: &drops,
+            local: Rc::clone(&local),
+        }))
     });
-    let mut batch = engine.try_decide_records_complete_with(
+    let mut batch = crate::api::pull_decisions(
+        &engine,
         &question,
         records,
         CallOptions::new()

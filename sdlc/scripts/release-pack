@@ -113,12 +113,17 @@ if [ "$TARGET" = x86_64-pc-windows-msvc ]; then
 		export CARGO_TARGET_DIR
 	fi
 fi
+if [ "${THINKTHEN_FULL_COMPILER:-}" != 1 ]; then
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo --remap-path-prefix=$home_remap=/build/home"
 if [ "$TARGET" != x86_64-pc-windows-msvc ]; then
 	CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
 else
 	# MSVC does not accept the Unix compiler's file-prefix-map flags.
 	CFLAGS=${CFLAGS:-}
+fi
+elif [ "$TARGET" = x86_64-pc-windows-msvc ]; then
+	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$source_remap=/build/source --remap-path-prefix=$cargo_remap=/build/cargo"
+	CFLAGS=
 fi
 export RUSTFLAGS CFLAGS
 . sdlc/scripts/scratch.sh

@@ -7,6 +7,7 @@ mod metadata;
 mod observations;
 mod questions;
 mod rank_set;
+pub(crate) mod request;
 mod rows;
 pub(crate) mod streaming;
 mod structured;

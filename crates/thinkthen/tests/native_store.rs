@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, Observation, Origin, Question};
+use thinkthen::{BatchSetting, CallOptions, ErrorKind, Observation, Origin, Question};
 
 const STATE: &str = "\"Each question quotes the text it asks about.\"";
 const QUESTION: &str = r#"{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}"#;
@@ -27,13 +27,7 @@ fn folder() -> PathBuf {
 
 #[cfg(test)]
 fn build(listener: &Listener) -> thinkthen::EngineBuilder {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("native-store-private")
-        .unwrap()
+    crate::api::fixed(listener.base(), "native-store-private")
         .no_cache()
         .max_retries(0)
 }
@@ -61,7 +55,7 @@ fn legacy_key(url: &str) -> String {
 }
 
 #[cfg(test)]
-fn legacy_observation(key: &str, origin: &str) -> String {
+fn compatibility_observation(key: &str, origin: &str) -> String {
     framed(
         "thinkthen.legacy-observation/1",
         &[
@@ -146,7 +140,7 @@ fn upgrade_legacy_origin(origin: &str) {
         std::fs::metadata(&database).unwrap().modified().unwrap(),
         modified
     );
-    let expected_id = legacy_observation(&key, origin);
+    let expected_id = compatibility_observation(&key, origin);
     assert_eq!(
         historical.value().observations(),
         &[Observation::Answered {
@@ -356,3 +350,6 @@ mod request_keys;
 
 #[path = "native_store/timing.rs"]
 mod timing;
+
+#[path = "support/api.rs"]
+mod api;

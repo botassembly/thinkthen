@@ -29,10 +29,10 @@ fn a_refused_batch_halves_once_and_keeps_request_order() {
         }
     })
     .expect("listener");
-    let output = spawn(
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--lines",
             "--batch",
             "3",
@@ -41,21 +41,12 @@ fn a_refused_batch_halves_once_and_keeps_request_order() {
             "--no-cache",
             "--max-retries",
             "0",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\ntwo\nthree\n",
     )
     .expect("annotate stream");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
     let facts: Value = serde_json::from_slice(&output.stderr).expect("run facts");
@@ -106,20 +97,16 @@ fn a_failed_second_half_prints_first_half_and_names_next_row() {
             _ => Canned::status(401, "{}"),
         }
     }).expect("listener");
-    let output = spawn(
+    let output = crate::harness::annotate_at(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--lines",
             "--batch",
             "3",
             "--no-cache",
             "--max-retries",
             "0",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
         &[("THINKTHEN_API_KEY", "key")],
         b"one\ntwo\nthree\n",
@@ -130,7 +117,7 @@ fn a_failed_second_half_prints_first_half_and_names_next_row() {
         output.stdout.iter().filter(|&&byte| byte == b'\n').count(),
         2
     );
-    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    let diagnostic = crate::harness::said(&output);
     assert!(
         diagnostic.contains("stopped at record 3; the request for records 3 to 3 failed:")
             && diagnostic.contains("2 records finished"),
@@ -181,12 +168,7 @@ fn a_missing_whole_replay_finds_the_recorded_halves_without_sending() {
         input,
     )
     .expect("recorded run");
-    assert_eq!(
-        recorded.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&recorded.stderr)
-    );
+    crate::harness::exits(&recorded, 0);
     assert_eq!(listener.requests().len(), 3);
     let replayed = spawn(
         &[&base[..], &["--replay", &directory.to_string_lossy()]].concat(),
@@ -194,12 +176,7 @@ fn a_missing_whole_replay_finds_the_recorded_halves_without_sending() {
         input,
     )
     .expect("replay run");
-    assert_eq!(
-        replayed.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&replayed.stderr)
-    );
+    crate::harness::exits(&replayed, 0);
     assert_eq!(listener.requests().len(), 0);
     let rows = |output: &std::process::Output| {
         output

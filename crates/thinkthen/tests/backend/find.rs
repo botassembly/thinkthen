@@ -1,11 +1,10 @@
 //! The aggregate find request and its dedicated mapped result.
 
+use crate::harness::{Canned, Listener, finish, spawn, spawn_local};
 use std::fs;
 use std::io::Write as _;
 use std::path::PathBuf;
 use std::process::Stdio;
-
-use crate::harness::{Canned, Listener, finish, spawn};
 
 const PICKED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"u002","#,
@@ -23,21 +22,15 @@ type Preflight = (Vec<&'static str>, Vec<u8>, i32);
 #[test]
 fn two_lines_make_one_exact_request_and_the_selected_original_line_returns() {
     let listener = Listener::serving(vec![Canned::ok(PICKED)]).expect("listener");
-    let output = spawn(
-        &[
-            "find",
-            "Which unit answers?",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["find", "Which unit answers?"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"first line\nsecond line\n",
     )
     .expect("find runs");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "second line\n");
+    assert_eq!(crate::harness::printed(&output), "second line\n");
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body = String::from_utf8_lossy(&requests[0].body);
@@ -65,7 +58,7 @@ fn a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader() {
     )
     .expect("find runs");
     assert_eq!(output.status.code(), Some(3));
-    let row = String::from_utf8_lossy(&output.stdout);
+    let row = crate::harness::printed(&output);
     let document: serde_json::Value = serde_json::from_str(&row).unwrap();
     assert_eq!(document["schema"], "thinkthen.result/2");
     assert_eq!(document["value"], serde_json::Value::Null);
@@ -103,7 +96,7 @@ fn jsonl_pointer_sends_only_evidence_and_returns_the_whole_original_record() {
     .expect("find runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"id\":2,\"body\":\"second line\"}\n"
     );
     let requests = listener.requests();
@@ -164,7 +157,7 @@ fn backend_failure_repeats_neither_the_key_nor_the_response_body() {
     )
     .expect("find fails safely");
     assert_eq!(output.status.code(), Some(4));
-    let diagnostic = String::from_utf8_lossy(&output.stderr);
+    let diagnostic = crate::harness::said(&output);
     assert!(!diagnostic.contains(marker), "{diagnostic}");
     assert!(!diagnostic.contains(key), "{diagnostic}");
 }

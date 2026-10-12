@@ -14,40 +14,23 @@ pub(super) struct Prepared {
     pub(super) context: Option<String>,
     pub(super) ask: Recognize,
 }
+impl Prepared {
+    pub(super) fn admit(&self, limit: usize) -> Result<(), Error> {
+        self.engine
+            .admit_recognition_limit(&self.ask.0, &self.text, limit)
+            .map_err(Error::from)
+    }
+}
 pub(super) struct Unit<T> {
     pub(super) original: T,
     pub(super) prepared: Prepared,
 }
 impl Engine {
-    /// Recognize selected native record text while retaining each original and location.
-    /// # Errors
-    /// All first-stage input/profile boundaries are admitted before sending. Started
-    /// stage failures retain the single call's completed prefix and final facts.
     #[allow(
         clippy::type_complexity,
-        reason = "Original occurrences retain concrete complete results"
+        reason = "the private Request primitive retains original and complete result types"
     )]
-    pub fn recognize_records_complete_with<I, T>(
-        &self,
-        ask: &Recognize,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<CompleteRecord<T, CompleteRecognized>>>, Error>
-    where
-        I: IntoIterator<Item = RecordInput<T>>,
-        T: InputEvidence,
-    {
-        self.try_recognize_records_complete_with(ask, records.into_iter().map(Ok), options)
-    }
-
-    /// Recognize a fallible native reader through the same eager admission and scheduler.
-    /// # Errors
-    /// Later reader errors, images and per-record controls refuse before any send.
-    #[allow(
-        clippy::type_complexity,
-        reason = "Original occurrences retain concrete complete results"
-    )]
-    pub fn try_recognize_records_complete_with<I, T>(
+    pub(crate) fn execute_recognize_records_complete_with<I, T>(
         &self,
         ask: &Recognize,
         records: I,
@@ -65,21 +48,18 @@ impl Engine {
         let units = self.try_within_admission(
             records.into_iter().enumerate().map(|(at, record)| {
                 record
-                    .and_then(|record| {
-                        prepare(
-                            &engine,
-                            ask,
-                            record,
-                            options.context_text(),
-                            facade::MAX_TEXT_BYTES,
-                        )
-                    })
+                    .and_then(|record| prepare(&engine, ask, record, options.context_text()))
                     .map_err(|error| error.at_record(at))
             }),
             &options,
         )?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(0, |cancel| {
+            for (at, unit) in units.as_slice().iter().enumerate() {
+                unit.prepared
+                    .admit(facade::MAX_TEXT_BYTES)
+                    .map_err(|error| locate(error, at, options.scalar_input))?;
+            }
             let cancel = cancel.with_storage_scope();
             let mut rows = Vec::new();
             for (
@@ -98,9 +78,10 @@ impl Engine {
                     &unit.text,
                     &cancel,
                     &stop,
-                    (at, Some(&unit.input)),
+                    (at, (!options.scalar_input).then_some(&unit.input)),
                 )
-                .map_err(|error| Error::from(error).at_record(at))?;
+                .map_err(Error::from)
+                .map_err(|error| locate(error, at, options.scalar_input))?;
                 let value = Recognized::from_native(found.value.clone())?;
                 stop.observe(crate::public::RecordObservation::Row {
                     index: at,
@@ -135,13 +116,9 @@ pub(super) fn prepare<T: InputEvidence>(
     ask: &Recognize,
     record: RecordInput<T>,
     fallback: Option<&str>,
-    limit: usize,
 ) -> Result<Unit<T>, Error> {
     let (original, input, text, context, resolved, ask) = prepare_input(ask, record, fallback)?;
     let engine = engine.clone().with_aggregate_context_value(resolved);
-    engine
-        .admit_recognition_limit(&ask.0, &text, limit)
-        .map_err(Error::from)?;
     Ok(Unit {
         original,
         prepared: Prepared {
@@ -235,4 +212,8 @@ fn admit_source(record: &crate::public::RecordEvidence) -> Result<(), Error> {
         .span_lines(0, text.chars().count())?;
     }
     Ok(())
+}
+
+fn locate(error: Error, at: usize, scalar: bool) -> Error {
+    if scalar { error } else { error.at_record(at) }
 }

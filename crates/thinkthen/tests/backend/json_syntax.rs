@@ -1,11 +1,11 @@
 //! Invalid JSON names its input, gives a safe place, and opens no connection.
 
+pub(crate) use crate::harness::said;
+use crate::harness::{Canned, Listener, exits, exits_because, spawn, stderr_is};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
-
-use crate::harness::{Canned, Listener, spawn};
 
 const QUESTION: &str = "Does this report a payment failure?";
 type PrivateCase<'a> = (&'a str, &'a [u8], &'a [&'a str]);
@@ -14,10 +14,6 @@ fn written(name: &str, bytes: &[u8]) -> io::Result<PathBuf> {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
     fs::write(&path, bytes)?;
     Ok(path)
-}
-
-fn said(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stderr).into_owned()
 }
 
 fn listener() -> io::Result<Listener> {
@@ -150,14 +146,13 @@ fn jsonl_syntax_keeps_the_record_sentence_and_sends_nothing() {
     )
     .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        said(&output),
+    crate::harness::refuses(
+        &output,
+        2,
         concat!(
             "thinkthen: the record is not valid JSON\n",
             "thinkthen: stopped at record 1; 0 records finished\n",
-        )
+        ),
     );
     assert_eq!(listener.connections(), 0);
     assert!(listener.requests().is_empty());
@@ -258,7 +253,7 @@ fn invalid_utf8_names_a_stream_record_and_a_whole_document_as_evidence() {
             format!("thinkthen: the {noun} is not valid UTF-8\n")
         };
         assert_eq!(output.status.code(), Some(5));
-        assert_eq!(said(&output), expected);
+        stderr_is(&output, expected);
         assert!(output.stdout.is_empty());
         assert_eq!(listener.connections(), 0);
         assert!(listener.requests().is_empty());
@@ -315,20 +310,15 @@ fn a_jsonl_record_nests_at_most_127_levels() {
         )
         .expect("the compiled binary runs");
         if depth == 127 {
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{depth} {open}: {}",
-                said(&output)
-            );
+            exits_because(&output, 0, || format!("{depth} {open}: {}", said(&output)));
             assert_eq!(listener.count(), 1, "{depth} {open}");
             continue;
         }
         assert_eq!(output.status.code(), Some(2), "{depth} {open}");
         assert!(output.stdout.is_empty());
-        assert_eq!(
-            said(&output),
-            format!("thinkthen: {TOO_DEEP}\nthinkthen: stopped at record 1; 0 records finished\n")
+        stderr_is(
+            &output,
+            format!("thinkthen: {TOO_DEEP}\nthinkthen: stopped at record 1; 0 records finished\n"),
         );
         assert_eq!(listener.connections(), 0);
     }
@@ -384,7 +374,7 @@ fn an_annotate_document_nests_at_most_127_levels() {
         )
         .expect("the compiled binary runs");
         if depth == 127 {
-            assert_eq!(output.status.code(), Some(0), "{}", said(&output));
+            exits(&output, 0);
             assert_eq!(listener.count(), 1);
             continue;
         }

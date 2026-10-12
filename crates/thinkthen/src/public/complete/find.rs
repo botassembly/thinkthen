@@ -5,26 +5,10 @@ use crate::public::{Call, CallOptions, CompleteFound, Engine, Error, Evidence, F
 mod records;
 
 impl Engine {
-    /// Select from the whole admitted ordered set, retaining every candidate probability.
-    /// # Errors
-    /// Uses the same count/evidence admission, observer and cancellation boundaries as find_with.
-    pub fn find_complete_with<I>(
-        &self,
-        question: &Question,
-        units: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteFound<I::Item>>, Error>
-    where
-        I: IntoIterator,
-        I::Item: Evidence,
-    {
-        self.try_find_complete_with(question, units.into_iter().map(Ok), options)
-    }
-
     /// Admit a fallible whole set before executing the complete find question.
     /// # Errors
     /// Reader, count or byte failures refuse before sending; started failures retain final facts.
-    pub fn try_find_complete_with<I, T>(
+    pub(crate) fn try_find_complete_with<I, T>(
         &self,
         question: &Question,
         units: I,
@@ -34,33 +18,38 @@ impl Engine {
         I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
-        self.find_complete_inputs(question, units, options, &[])
+        crate::public::request::native(
+            self,
+            crate::RequestFunction::Find,
+            question.clone().into(),
+            units
+                .into_iter()
+                .map(|unit| unit.map(crate::public::record_input::plain)),
+            options,
+            |engine, definition, units, controls| {
+                let q = definition.atomic()?;
+                Ok(crate::public::request::restore_found(
+                    engine.execute_find_records_complete_with(
+                        &q,
+                        units.into_iter().map(Ok),
+                        controls,
+                    )?,
+                ))
+            },
+        )
     }
-    fn find_complete_inputs<I, T>(
+    fn find_complete_inputs<T>(
         &self,
         question: &Question,
-        units: I,
+        units: Vec<T>,
         options: CallOptions<'_>,
         inputs: &[std::sync::Arc<crate::public::QuestionInput>],
     ) -> Result<Call<CompleteFound<T>>, Error>
     where
-        I: IntoIterator<Item = Result<T, Error>>,
         T: Evidence,
     {
         let options = options.started()?;
         let (units, find, engine) = self.prepare_find(question, units, &options)?;
-        for (at, unit) in units.iter().enumerate() {
-            let input = inputs.get(at).map(|input| input.as_ref());
-            match input {
-                Some(input) => question.metadata.validate_item(input),
-                None => question
-                    .metadata
-                    .validate_item(&crate::public::QuestionInput::Text(
-                        unit.evidence().to_owned(),
-                    )),
-            }
-            .map_err(|error| error.at_record(at))?;
-        }
         let texts = units
             .iter()
             .map(|unit| unit.evidence().to_owned())

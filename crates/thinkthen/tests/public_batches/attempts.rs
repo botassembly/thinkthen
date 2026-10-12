@@ -3,11 +3,7 @@
 use super::*;
 
 fn one_question_engine(base: &str) -> Engine {
-    Engine::builder()
-        .base_url(base)
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    crate::api::builder(base, "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
         .max_retries(0)

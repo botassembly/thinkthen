@@ -7,6 +7,8 @@ use thinkthen::*;
 
 #[path = "request_session/framing.rs"]
 mod framing;
+#[path = "request_session/wait.rs"]
+mod wait;
 
 fn request(input: RequestInput) -> Request {
     Request::new(RequestCall::Decide(RequestArguments {
@@ -41,17 +43,7 @@ fn descriptor(text: &str) -> RequestSessionDescriptor {
     reason = "the fixture engine uses only its owned loopback listener and fake key"
 )]
 fn engine(listener: &Listener) -> Engine {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("session-fixture")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap()
+    crate::api::loopback(listener.base(), "session-fixture")
 }
 #[allow(
     clippy::unwrap_used,
@@ -68,133 +60,7 @@ fn response(body: &[u8]) -> Canned {
         .collect::<serde_json::Map<_, _>>();
     Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
 }
-fn next(session: &RequestSession) -> RequestSessionRead {
-    let until = Instant::now() + Duration::from_secs(5);
-    loop {
-        let packet = session.try_read();
-        if !matches!(packet, RequestSessionRead::Pending) {
-            return packet;
-        }
-        assert!(Instant::now() < until, "session did not settle");
-        std::thread::yield_now();
-    }
-}
-fn drain(session: &RequestSession) -> Vec<RequestSessionResult> {
-    let mut packets = vec![];
-    loop {
-        match next(session) {
-            RequestSessionRead::Result(packet) => packets.push(packet),
-            RequestSessionRead::End => return packets,
-            RequestSessionRead::Pending => unreachable!(),
-        }
-    }
-}
-
-#[test]
-fn held_provider_bounds_intake_and_cancel_waits_for_actual_terminal_facts() {
-    for framing in [RequestFraming::Document, RequestFraming::Csv] {
-        let release = Arc::new(Rendezvous::new(2));
-        let held = Arc::clone(&release);
-        let (sent, received) = mpsc::channel();
-        let listener = Listener::answering_with_events(
-            move |body| response(body).after_release(Arc::clone(&held)),
-            sent,
-        )
-        .unwrap();
-        let engine = engine(&listener);
-        let arguments = framing::table_request(framing).call.arguments().clone();
-        let session = engine
-            .request_session(Request::new(RequestCall::Decide(arguments)))
-            .unwrap();
-        if matches!(framing, RequestFraming::Csv) {
-            framing::push(&session, descriptor("body\n"));
-        }
-        framing::push(&session, descriptor("first"));
-        received.recv_timeout(Duration::from_secs(5)).unwrap();
-        assert!(matches!(
-            session.try_push(descriptor("second")).unwrap(),
-            RequestSessionPush::Accepted
-        ));
-        // Native scheduling may own additional in-flight inputs; the session bounds
-        // waiting transfers rather than changing those existing scheduler limits.
-        let retry = (0..100)
-            .find_map(|_| match session.try_push(descriptor("next")).unwrap() {
-                RequestSessionPush::Full(value) => Some(value),
-                RequestSessionPush::Accepted => None,
-                other => panic!("feed closed before cancellation: {other:?}"),
-            })
-            .expect("held native work eventually backpressures the one input cell");
-        session.finish(None).unwrap();
-        session.finish(None).unwrap();
-        assert_eq!(
-            session
-                .finish(Some(RequestReaderFailure::Io { location: None }))
-                .unwrap_err()
-                .kind(),
-            ErrorKind::Usage
-        );
-        let began = Instant::now();
-        session.cancel();
-        assert!(began.elapsed() < Duration::from_secs(1));
-        assert!(matches!(
-            session.try_push(retry).unwrap(),
-            RequestSessionPush::Closed(_)
-        ));
-        assert!(matches!(session.try_read(), RequestSessionRead::Pending));
-        assert!(release.wait());
-        let packets = drain(&session);
-        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
-            panic!("terminal comes last")
-        };
-        assert_eq!(
-            terminal.error.as_ref().unwrap().kind(),
-            ErrorKind::Cancelled
-        );
-        assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
-        assert_eq!(terminal.facts.as_ref().unwrap().input_tokens(), None);
-        assert_eq!(
-            packets
-                .iter()
-                .filter(|p| matches!(p, RequestSessionResult::Terminal(_)))
-                .count(),
-            1
-        );
-        assert!(matches!(session.try_read(), RequestSessionRead::End));
-        assert_eq!(listener.count(), 1);
-    }
-}
-
-#[test]
-fn cancel_and_free_return_while_the_provider_is_held_and_the_engine_owner_is_gone() {
-    let release = Arc::new(Rendezvous::new(2));
-    let held = Arc::clone(&release);
-    let (sent, received) = mpsc::channel();
-    let listener = Listener::answering_with_events(
-        move |body| response(body).after_release(Arc::clone(&held)),
-        sent,
-    )
-    .unwrap();
-    let engine = engine(&listener);
-    let session = engine
-        .request_session_with_feed_options(
-            request(feed()),
-            Surface::Rust,
-            RequestSessionFeedOptions {
-                eager: true,
-                ..Default::default()
-            },
-        )
-        .unwrap();
-    session.try_push(descriptor("first")).unwrap();
-    session.finish(None).unwrap();
-    received.recv_timeout(Duration::from_secs(5)).unwrap();
-    drop(engine);
-    let began = Instant::now();
-    session.cancel();
-    drop(session);
-    assert!(began.elapsed() < Duration::from_secs(1));
-    assert!(release.wait());
-}
+use crate::api::{session_drain as drain, session_next as next};
 
 #[allow(
     clippy::unwrap_used,
@@ -699,13 +565,7 @@ fn inline_provider_failure_preserves_completed_rows_and_final_facts() {
 #[test]
 fn oversized_inline_session_refuses_the_whole_set_without_sending() {
     let listener = Listener::answering(response).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("session-fixture")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "session-fixture")
         .no_cache()
         .max_retries(0)
         .max_requests(Some(1))
@@ -1005,3 +865,6 @@ fn owned_reading_retains_typed_context_and_replaces_question_fallback() {
             .any(|packet| matches!(packet, RequestSessionResult::Row(_)))
     );
 }
+
+#[path = "support/api.rs"]
+mod api;

@@ -1,6 +1,10 @@
 #!/bin/sh
 set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+  [ "${THINKTHEN_TEST_PROFILE:-}" = full ] || exit 2
+  exec python3 "$ROOT/checks/installed_native_assets.py" --prepared
+fi
 TT_DART=${TT_DART:-$(command -v dart || echo "$HOME/.local/opt/flutter/bin/dart")}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || echo "$HOME/.local/opt/flutter/bin/flutter")}
 [ -x "$TT_DART" ] || exit 77
@@ -19,7 +23,13 @@ fi
 . "$ROOT/../../sdlc/scripts/installed.sh"
 usage_home
 if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then smoke_guard; fi
-scratch_dir installed
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+  [ "${THINKTHEN_TEST_PROFILE:-}" = full ] || exit 2
+  installed=$THINKTHEN_PARITY_PREPARE
+  [ -d "$installed" ] || exit 2
+else
+  scratch_dir installed
+fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Dart installed: package or C archive missing' >&2; exit 1; }
   case ${THINKTHEN_ARTIFACT##*/} in

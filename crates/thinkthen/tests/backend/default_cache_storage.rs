@@ -1,11 +1,11 @@
 //! A storage failure in the platform default cache names that cache (ticket 0138).
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::os::unix::fs::PermissionsExt as _;
 use std::path::Path;
 
 use crate::child::Folder;
-use crate::harness::{Canned, Listener, spawn};
 
 const DEFAULT: &str = "thinkthen: the default cache folder could not be read or written; check its permissions and free space, use --no-cache, or set THINKTHEN_CACHE to another folder\n";
 const NAMED: &str = "thinkthen: the recording folder could not be read or written; check its permissions and free space\n";
@@ -44,7 +44,7 @@ fn a_default_cache_that_fails_names_the_default_cache() {
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(5), "{options:?} {folder:?}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             expected,
             "{options:?} {folder:?}"
         );
@@ -100,7 +100,7 @@ fn an_unwritable_cache_folder_refuses_before_the_first_send() {
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(5), "{options:?} {folder:?}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             expected,
             "{options:?} {folder:?}"
         );
@@ -160,7 +160,7 @@ fn an_unreadable_usage_month_outranks_the_cache_and_creates_no_cache() {
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(5), "{mode:o}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: cannot read the usage totals: 2026-08.json has invalid contents. Move it out of the usage folder that thinkthen status names, and counting starts again.\n",
             "{mode:o}"
         );
@@ -205,7 +205,7 @@ fn a_read_only_store_refuses_and_a_capped_run_leaves_an_empty_folder() {
     fs::set_permissions(&store, fs::Permissions::from_mode(0o444)).expect("read-only store");
     let refused = run(b"second", &[("THINKTHEN_CACHE", named_text)]);
     assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&refused.stderr), NAMED);
+    stderr_is(&refused, NAMED);
     assert_eq!(listener.connections(), 1, "only the first run sent");
     let capped_run = run(
         b"third",

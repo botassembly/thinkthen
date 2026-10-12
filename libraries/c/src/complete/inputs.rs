@@ -1,6 +1,5 @@
 //! Admission composes typed native records and preserves originals and locations.
-use crate::current::{Content, Input, SourceHandle};
-use crate::failures::Failure;
+use crate::current::{Content, Input};
 use crate::ffi::values::THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE;
 use thinkthen::{
     InputEvidence, QuestionInput, RawRecord, RecordInput, RecordOption, RecordOptions,
@@ -11,25 +10,25 @@ pub(crate) struct Original {
     pub(super) retained: Input,
     pub(super) native: QuestionInput,
 }
+impl Original {
+    pub(super) fn fallback(native: QuestionInput) -> Self {
+        Self {
+            native,
+            retained: Input {
+                original: None,
+                context: None,
+                options: Vec::new(),
+                images: Vec::new(),
+                position: None,
+                index: 0,
+            },
+        }
+    }
+}
 impl InputEvidence for Original {
     fn question_input(&self) -> QuestionInput {
         self.native.clone()
     }
-}
-pub(super) fn records(
-    engine: &thinkthen::Engine,
-    source: &SourceHandle,
-    kind: u32,
-    reading: Option<&RecordReading>,
-) -> Result<Vec<RecordInput<Original>>, Failure> {
-    source
-        .read()?
-        .enumerate()
-        .map(|(at, record)| {
-            engine.check_record_limit(at)?;
-            compose(record?, kind, reading).map_err(Failure::from)
-        })
-        .collect()
 }
 pub(super) fn compose(
     retained: Input,

@@ -1,5 +1,5 @@
 //! Image inputs cannot borrow an answer cached for an ordinary JSON envelope.
-use super::{REPLY, data_url, fixture, text};
+use super::{REPLY, data_url, fixture};
 use crate::harness::{Canned, Listener, spawn};
 use serde_json::{Value, json};
 use std::fs;
@@ -57,12 +57,7 @@ fn images_and_structured_evidence_have_distinct_keys_and_replay_their_own_answer
             )
             .unwrap();
             // JSONL is a record run: its answer is in the row, exit0.
-            assert_eq!(
-                output.status.code(),
-                Some(if image { status } else { 0 }),
-                "{}",
-                text(&output.stderr)
-            );
+            crate::harness::exits(&output, if image { status } else { 0 });
             let row: Value = serde_json::from_slice(&output.stdout).unwrap();
             assert_eq!(row["value"], answer);
         }
@@ -126,12 +121,11 @@ fn corrupt_sqlite_images_refuse_cache_and_replay_without_output_sends_or_writes(
     let before = fs::read(&database).unwrap();
     for mode in ["--replay", "--cache"] {
         let output = call(mode);
-        assert_eq!(output.status.code(), Some(5));
-        assert_eq!(
-            text(&output.stderr),
-            "thinkthen: the entry `thinkthen.sqlite` was refused: stored constituents or identity are invalid\n"
+        crate::harness::refuses(
+            &output,
+            5,
+            "thinkthen: the entry `thinkthen.sqlite` was refused: stored constituents or identity are invalid\n",
         );
-        assert!(output.stdout.is_empty());
         assert_eq!(listener.count(), 1, "{mode} sends nothing");
         assert_eq!(
             fs::read(&database).unwrap(),

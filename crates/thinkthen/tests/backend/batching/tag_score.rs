@@ -1,9 +1,9 @@
 //! Tag's wire expansion and score's ordered levels through compiled record commands.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local};
 use serde_json::{Value, json};
 
 use super::{KEY, details, folder, text};
-use crate::harness::{Canned, Listener, spawn};
 use std::fs;
 
 fn run(
@@ -52,7 +52,7 @@ fn tag_expands_wire_questions_but_reads_one_logical_outcome_per_record() {
         &["--batch", "2"],
         "first\nsecond\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
@@ -108,7 +108,7 @@ fn score_uses_ordered_levels_and_shares_an_equal_record() {
         &["--batch", "3"],
         "first\nsecond\nfirst\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
@@ -161,13 +161,8 @@ fn batch_one_preserves_a_tag_documents_request_bytes() {
         &["--batch", "1"],
         "first\n",
     );
-    assert_eq!(
-        document.status.code(),
-        Some(0),
-        "{}",
-        text(&document.stderr)
-    );
-    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
+    crate::harness::exits(&document, 0);
+    crate::harness::exits(&one, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, requests[1].body);
@@ -201,13 +196,8 @@ fn batch_one_preserves_a_score_documents_request_bytes() {
         &["--batch", "1"],
         "first\n",
     );
-    assert_eq!(
-        document.status.code(),
-        Some(0),
-        "{}",
-        text(&document.stderr)
-    );
-    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
+    crate::harness::exits(&document, 0);
+    crate::harness::exits(&one, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, requests[1].body);
@@ -259,7 +249,7 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
         input.as_bytes(),
     )
     .expect("offline plan");
-    assert_eq!(plan.status.code(), Some(0), "{}", text(&plan.stderr));
+    crate::harness::exits(&plan, 0);
     let lines: Vec<_> = plan.stdout.split(|byte| *byte == b'\n').collect();
     assert_eq!(lines.len(), 3, "plan needs exactly two JSON lines");
     assert!(lines[2].is_empty(), "plan needs a final newline");
@@ -305,7 +295,7 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
         ],
         input,
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     let wires: Vec<usize> = requests
@@ -357,7 +347,7 @@ fn a_tag_record_over_a_limit_splits_its_labels_across_requests() {
             &limit,
             "one\n",
         );
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         assert_eq!(details(&output)[0]["value"], json!([]));
         let sizes: Vec<usize> = listener
             .requests()
@@ -395,7 +385,7 @@ fn a_tag_batch_halves_once_and_counts_the_refused_request() {
         &["--batch", "3", "--max-retries", "0", "--facts"],
         "one\ntwo\nthree\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
     let wires: Vec<usize> = requests
@@ -445,7 +435,7 @@ fn described_labels_and_levels_keep_their_wire_order() {
         ],
         "one\ntwo\n",
     );
-    assert_eq!(tag.status.code(), Some(0), "{}", text(&tag.stderr));
+    crate::harness::exits(&tag, 0);
     let sent = tag_listener.requests();
     assert_eq!(sent.len(), 1);
     let body: Value = serde_json::from_slice(&sent[0].body).expect("request");
@@ -474,23 +464,14 @@ fn described_labels_and_levels_keep_their_wire_order() {
     }}).to_string();
     let score_listener = Listener::serving(vec![Canned::ok(&score_answer)]).expect("listener");
     let argument = format!("@{file}");
-    let score = spawn(
-        &[
-            "score",
-            &argument,
-            "--lines",
-            "--details",
-            "--no-cache",
-            "--url",
-            score_listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let score = spawn_local(
+        &["score", &argument, "--lines", "--details", "--no-cache"],
+        score_listener.base(),
         &[KEY],
         b"one\ntwo\n",
     )
     .expect("score stream");
-    assert_eq!(score.status.code(), Some(0), "{}", text(&score.stderr));
+    crate::harness::exits(&score, 0);
     let sent = score_listener.requests();
     assert_eq!(sent.len(), 1);
     let body: Value = serde_json::from_slice(&sent[0].body).expect("request");

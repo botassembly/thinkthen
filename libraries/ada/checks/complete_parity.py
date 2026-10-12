@@ -7,6 +7,8 @@ import subprocess
 import sys
 import tempfile
 
+import full_case
+
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('shared_session_cases', ROOT / 'conformance/children/session_cases.py')
 shared = importlib.util.module_from_spec(spec)
@@ -22,11 +24,9 @@ if args.case:
 
 
 def invoke(step, settings, env, home, backend):
-    env = dict(env, THINKTHEN_ADA_OBJECTS=str(objects))
-    fixture = home / 'fixture.json'
-    fixture.write_text(shared.shared.compact(step))
-    command = [sys.executable, str(Path(__file__).with_name('full_case.py')),
-               str(package), str(fixture), shared.shared.compact(settings)]
+    env = dict(env, THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback', OPENROUTER_API_KEY='sk-conformance-loopback', PERPLEXITY_API_KEY='sk-conformance-loopback')
+    fixture = full_case.fixture(step, home)
+    command = [str(binary), str(fixture), shared.shared.compact(settings)]
     if not step.get('held_cancel'):
         return subprocess.run(command, cwd=home, env=env, capture_output=True, text=True, timeout=180)
     child = subprocess.Popen(command, cwd=home, env=env, stdin=subprocess.PIPE,
@@ -34,7 +34,7 @@ def invoke(step, settings, env, home, backend):
     try:
         assert backend.read('wait 1') == 'wait 1'
         child.stdin.write('!\n'); child.stdin.flush()
-        assert child.stdout.readline() == 'cancel-fired\n'
+        assert shared.read_process_line(child.stdout) == 'cancel-fired\n'
         backend.process.stdin.write('release\n'); backend.process.stdin.flush()
         stdout, stderr = child.communicate(timeout=120)
         return subprocess.CompletedProcess(command, child.returncode, stdout, stderr)
@@ -45,5 +45,6 @@ def invoke(step, settings, env, home, backend):
 
 
 with tempfile.TemporaryDirectory(prefix='thinkthen-ada-objects-') as temporary:
-    objects = Path(temporary)
+    binary = full_case.build(package, Path(temporary))
     shared.native_cases(Path(__file__).with_name('full_case.py'), consumer='ada', invoke=invoke)
+    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(package), '--ada-objects', str(binary.parent / 'ada-objects')], check=True)

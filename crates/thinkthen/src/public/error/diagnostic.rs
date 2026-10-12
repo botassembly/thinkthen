@@ -2,6 +2,7 @@
 use std::any::Any;
 
 pub(crate) enum Diagnostic {
+    RequestDecode(crate::public::request::RequestDecodeCause),
     Engine(crate::engine::error::Error),
     EngineRange {
         cause: crate::engine::error::Error,

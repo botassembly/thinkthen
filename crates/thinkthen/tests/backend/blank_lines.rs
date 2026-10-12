@@ -35,14 +35,9 @@ fn a_blank_line_is_skipped_and_keeps_its_number() {
         b"a\n   \nb\n\r\nc\n\n",
     )
     .expect("the command runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.count(), 3);
-    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 3);
+    assert_eq!(crate::harness::printed(&output).lines().count(), 3);
     assert!(output.stderr.is_empty());
 }
 
@@ -86,9 +81,9 @@ fn blank_lines_keep_stop_positions_and_jsonl_still_refuses_them() {
         .expect("the command runs");
         assert_eq!(output.status.code(), Some(exit), "{framing}");
         assert_eq!(listener.count(), 1, "{framing}");
-        assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 1);
+        assert_eq!(crate::harness::printed(&output).lines().count(), 1);
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             format!(
                 "thinkthen: {cause}\nthinkthen: stopped at record {stopped_at}; 1 record finished\n"
             ),

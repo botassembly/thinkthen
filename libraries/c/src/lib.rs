@@ -1,4 +1,4 @@
-//! The C door to the thinkthen engine (ticket 0094, ADR 0037).
+//! The C interface to the thinkthen engine (ticket 0094, ADR 0037).
 //!
 //! This crate builds `libthinkthen.so` and `libthinkthen.a` against
 //! `include/thinkthen.h` and owns every exported symbol; `thinkthen` exports
@@ -19,11 +19,11 @@ pub mod ffi;
 /// cbindgen:ignore
 mod call;
 mod current;
-mod door;
 mod failures;
 /// cbindgen:ignore
 mod plan;
 mod session;
+mod typed;
 /// Primitive immutable C JSON and UTF-8 views.
 pub use session::views as complete_json_views;
 /// Immutable generated complete C packet declarations.
@@ -64,6 +64,6 @@ pub struct Judgment {
 /// A NULL _opts token means no cancellation token.
 /// Opaque engine owner. Free after every concurrent call finishes.
 #[derive(Debug)]
-pub struct Door(Held);
+pub struct EngineHandle(Held);
 
 mod complete;

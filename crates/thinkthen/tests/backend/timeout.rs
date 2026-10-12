@@ -1,8 +1,7 @@
 //! Timeout validation at the compiled process boundary.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local, stderr_is};
 use std::path::Path;
-
-use crate::harness::{Canned, Listener, spawn};
 
 const KEY: &str = "test-key";
 const MESSAGE: &str = "thinkthen: --timeout takes a whole number of seconds from 1 to 86400\n";
@@ -35,7 +34,7 @@ fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_arg
             let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
             assert_eq!(output.status.code(), Some(2), "{arguments:?}");
             assert!(output.stdout.is_empty(), "{arguments:?}");
-            assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
+            stderr_is(&output, MESSAGE);
         }
     }
 
@@ -45,7 +44,7 @@ fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_arg
         let output = spawn(&arguments, &[], b"").expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(2), "{command:?}");
         assert!(output.stdout.is_empty(), "{command:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), MESSAGE);
+        stderr_is(&output, MESSAGE);
     }
 
     assert!(
@@ -86,9 +85,9 @@ fn a_one_document_run_refuses_jobs_and_sends_nothing() {
 
         assert_eq!(output.status.code(), Some(2), "dry run {dry_run}");
         assert!(output.stdout.is_empty(), "dry run {dry_run}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            "thinkthen: --jobs bounds the requests in flight, and a single text sends one request\n"
+        stderr_is(
+            &output,
+            "thinkthen: --jobs bounds the requests in flight, and a single text sends one request\n",
         );
         assert_eq!(listener.connections(), 0, "dry run {dry_run}");
         assert!(listener.requests().is_empty(), "dry run {dry_run}");
@@ -98,24 +97,16 @@ fn a_one_document_run_refuses_jobs_and_sends_nothing() {
 #[test]
 fn a_positive_timeout_still_reaches_the_backend() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("a loopback listener");
-    let output = spawn(
-        &[
-            "decide",
-            "Does this pass?",
-            "--timeout",
-            "1",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["decide", "Does this pass?", "--timeout", "1"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", KEY)],
         b"yes",
     )
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
+    assert_eq!(crate::harness::printed(&output), "true\n");
     assert!(output.stderr.is_empty());
     assert_eq!(listener.requests().len(), 1);
 }

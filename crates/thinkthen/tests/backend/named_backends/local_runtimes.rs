@@ -2,6 +2,7 @@
 
 use super::ollama::mimic;
 use super::support::{Home, Proxy, said};
+use crate::harness::exits_because;
 use serde_json::{Value, json};
 
 const NAMES: [&str; 10] = [
@@ -63,11 +64,9 @@ fn local_runtime_defaults_and_string_score_workaround_match_the_supported_server
         );
         let (stdout, stderr) = said(&output);
         assert_eq!(stderr, "");
-        assert_eq!(
-            output.status.code(),
-            Some(if name == "mlx" { 0 } else { 4 }),
-            "{stdout}"
-        );
+        exits_because(&output, if name == "mlx" { 0 } else { 4 }, || {
+            stdout.to_owned()
+        });
         for function in NAMES {
             assert!(
                 stdout.contains(&format!("answered function {function}\n")),

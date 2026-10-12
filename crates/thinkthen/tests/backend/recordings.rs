@@ -1,11 +1,11 @@
 //! The compiled binary against a folder of recorded exchanges.
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::process::Output;
 
-use crate::harness::{Canned, Listener, spawn};
 use crate::result_assertions::normalized_details;
 use crate::support::{
     DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_fixture, stored,
@@ -23,11 +23,7 @@ const ANSWERED: &str = concat!(
 const CLOSED: &str = "http://127.0.0.1:1/v1";
 
 /// A folder this test owns, removed and remade so each run starts empty.
-pub(crate) fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 /// The evidence every case on this page judges.
 const EVIDENCE: &str = "Refund me please.";
@@ -182,7 +178,7 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
     // recording that is exit 4, and no connection opens.
     let output = run(&asked, &[]).expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(4));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("THINKTHEN_API_KEY"), "{message}");
 
     let output = run(
@@ -197,7 +193,7 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
 
     assert_eq!(output.status.code(), Some(0));
     assert!(output.stderr.is_empty());
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(printed.contains(r#""cached":true"#), "{printed}");
     assert!(
         printed.contains(r#""url":"https://api.typesafe.ai/v1/systemone""#),
@@ -226,7 +222,7 @@ fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     let expected = [
         concat!(
             r#""meta":{"tool":"thinkthen "#,
@@ -273,13 +269,12 @@ fn replay_reads_only_the_fixture_and_safely_refuses_it_when_malformed() {
         None,
     )
     .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n"
+    crate::harness::refuses(
+        &output,
+        5,
+        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n",
     );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("DO_NOT_ECHO"));
+    assert!(!crate::harness::said(&output).contains("DO_NOT_ECHO"));
     assert_eq!(listener.requests().len(), 0, "replays open no connection");
 }
 
@@ -305,7 +300,7 @@ fn an_answer_that_records_another_question_is_refused_by_name() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(5));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("thinkthen.jsonl"), "{message}");
     assert!(
         message.contains("holds invalid original exchange bodies"),
@@ -320,7 +315,7 @@ fn an_answer_that_records_another_question_is_refused_by_name() {
     )
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(5));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("thinkthen.jsonl"), "{message}");
 }
 
@@ -339,7 +334,7 @@ fn the_two_options_over_one_folder_are_a_cache_that_calls_once() {
     for run in 0..2 {
         let output = decide(listener.base(), &both, KEY).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(0), "run {run}");
-        let printed = String::from_utf8_lossy(&output.stdout);
+        let printed = crate::harness::printed(&output);
         let replayed = format!(r#""cached":{}"#, run == 1);
         assert!(printed.contains(&replayed), "run {run}: {printed}");
         let requests_sent = format!(r#""requests_sent":{}"#, usize::from(run == 0));
@@ -382,9 +377,9 @@ fn a_recording_path_that_is_a_file_gets_a_fixed_action() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the recording directory is a file; choose another path or remove the file\n"
+    stderr_is(
+        &output,
+        "thinkthen: the recording directory is a file; choose another path or remove the file\n",
     );
 }
 
@@ -459,7 +454,7 @@ fn a_fixture_that_cannot_be_read_is_not_reported_as_a_miss() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(5));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(
         message.contains("could not be read or written"),
         "{message}"
@@ -517,7 +512,7 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
     let output =
         decide(listener.base(), &["--cache", &named, "--details"], None).expect("the binary runs");
     assert_eq!(output.status.code(), Some(0));
-    let row = String::from_utf8_lossy(&output.stdout);
+    let row = crate::harness::printed(&output);
     assert!(row.contains(r#""cached":true"#), "{row}");
     assert!(listener.requests().is_empty(), "a cached run asks nothing");
 
@@ -529,13 +524,13 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
         )
         .expect("the binary runs");
         assert_eq!(output.status.code(), Some(2), "{beside:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(message.contains("--cache"), "{message}");
     }
 
     let output =
         decide(listener.base(), &["--cache", &named, "--plan"], KEY).expect("the binary runs");
     assert_eq!(output.status.code(), Some(2));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("--plan"), "{message}");
 }

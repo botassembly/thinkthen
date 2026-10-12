@@ -12,7 +12,6 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
-	"time"
 )
 
 // Client owns one native engine and the ten named judgment calls.
@@ -196,8 +195,6 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			return result, err
 		}
 	}
-	ticker := time.NewTicker(time.Millisecond)
-	defer ticker.Stop()
 	for {
 		c.mu.Lock()
 		closed := c.closed
@@ -273,11 +270,29 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			if feed != nil && !feed.finished && feed.pending == nil {
 				next = feed.values
 			}
+			interest := C.uint32_t(C.THINKTHEN_SESSION_WAIT_RESULT_V1)
+			if feed != nil && feed.pending != nil {
+				interest = C.THINKTHEN_SESSION_WAIT_INPUT_V1
+			}
+			waited := make(chan error, 1)
+			go func() {
+				runtime.LockOSThread()
+				defer runtime.UnlockOSThread()
+				var ready C.uint32_t
+				waited <- sessionFailure(C.thinkthen_session_wait(session, interest, 50, &ready))
+			}()
 			select {
 			case <-ctx.Done():
+				C.thinkthen_session_cancel(session)
+				err = <-waited
 			case value := <-next:
 				feed.pending = &value
-			case <-ticker.C:
+				err = <-waited
+			case err = <-waited:
+			}
+			// Every path joins its native wait before the deferred free.
+			if err != nil {
+				return result, err
 			}
 		}
 	}

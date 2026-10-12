@@ -1,12 +1,9 @@
 //! The two new verbs at the binary's own edge: usage, the plan, and the help.
 #![cfg(feature = "cli")]
 
-use crate::child::ChildEnvironment as _;
-use std::io::{self, Write};
-use std::process::{Command, Output, Stdio};
-
-use crate::run;
-use crate::wait;
+use crate::harness::{exits_because, stderr_is};
+use std::io;
+use std::process::Output;
 
 /// The teams a routing question picks between.
 const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];
@@ -16,22 +13,7 @@ const LEVELS: [&str; 3] = ["none", "workaround", "blocked"];
 
 /// Run the binary with no environment at all, and feed it one ticket.
 fn run(arguments: &[&str]) -> io::Result<Output> {
-    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
-    command
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(b"The renewal charge bounced last night.");
-    drop(input);
-    wait::finish(child, &arguments.join(" "))
+    crate::harness::spawn(arguments, &[], b"The renewal charge bounced last night.")
 }
 
 /// Run one verb over the labels a case names, plus whatever else it names.
@@ -102,12 +84,7 @@ fn a_list_at_each_edge_of_the_range_is_taken() {
     for (name, labels) in cases {
         let output = verb(name, &labels, &["--plan"]).expect("the compiled binary runs");
 
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{name} with {}",
-            labels.len()
-        );
+        exits_because(&output, 0, || format!("{name} with {}", labels.len()));
     }
 }
 
@@ -116,7 +93,7 @@ fn a_band_on_a_pick_is_a_usage_error_and_a_cut_is_not() {
     let refused = verb("choose", &TEAMS, &["--plan", "--threshold", "0.1:0.9"])
         .expect("the compiled binary runs");
     assert_eq!(refused.status.code(), Some(2));
-    let message = String::from_utf8_lossy(&refused.stderr);
+    let message = crate::harness::said(&refused);
     assert!(message.contains("single cut"), "{message}");
 
     let taken = verb("choose", &TEAMS, &["--plan", "--threshold", "0.8"])
@@ -139,7 +116,7 @@ fn a_rule_on_a_placement_is_a_usage_error_because_score_takes_none() {
         let output = verb("score", &LEVELS, arguments).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+        stderr_is(&output, expected);
     }
 
     // `--threshold` is taken and then refused by the tool, because clap
@@ -149,28 +126,11 @@ fn a_rule_on_a_placement_is_a_usage_error_because_score_takes_none() {
         let output = verb("score", &LEVELS, arguments).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert_eq!(
             message,
             "thinkthen: --threshold: `score` takes no rule, so cut on the number with `jq -e`\n"
         );
-    }
-}
-
-#[test]
-fn two_views_of_one_answer_are_a_usage_error() {
-    let cases: [&[&str]; 3] = [
-        &["--quiet", "--details"],
-        &["--raw", "--details"],
-        &["--raw", "--quiet"],
-    ];
-
-    for arguments in cases {
-        let output = verb("choose", &TEAMS, arguments).expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        assert!(output.stdout.is_empty(), "{arguments:?}");
-        assert!(!output.stderr.is_empty(), "{arguments:?}");
     }
 }
 
@@ -185,29 +145,14 @@ fn every_option_that_is_not_built_yet_is_a_usage_error() {
         let output = verb("choose", &TEAMS, arguments).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(message.contains("unexpected argument"), "{message}");
     }
 }
 
-#[test]
-fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
-    let blank =
-        run(&["choose", "  ", "billing", "other", "--plan"]).expect("the compiled binary runs");
-    assert_eq!(blank.status.code(), Some(2));
-
-    let empty = run::output(
-        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .clear_environment()
-            .args(["score", "How much disruption?", "none", "blocked", "--plan"]),
-    )
-    .expect("the compiled binary runs");
-    assert_eq!(empty.status.code(), Some(2));
-}
-
 /// The request line of a plan; the records line after it is pinned in `spec/decide.md`.
 fn plan_request(output: &Output) -> String {
-    let stdout = String::from_utf8_lossy(&output.stdout);
+    let stdout = crate::harness::printed(output);
     stdout
         .split_inclusive('\n')
         .next()

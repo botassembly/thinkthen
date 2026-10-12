@@ -210,7 +210,7 @@ impl Member {
         if name != &self.name {
             return Err(Error::defect("an annotation changed its member order"));
         }
-        let Some((_, failure, _)) = value.legacy.failed() else {
+        let Some((_, failure, _)) = value.compatibility.failed() else {
             return Ok(None);
         };
         // Serialize only the native enum's declared spelling for the String column.

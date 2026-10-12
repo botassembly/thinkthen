@@ -21,12 +21,11 @@ fn relation_source_rows_are_bounded_before_deduplication_and_before_reading_the_
             &[path.to_str().unwrap()],
             &["--unit", "line"],
         )?;
-        assert_eq!(output.status.code(), Some(2));
-        assert_eq!(
-            text(&output.stderr),
-            "thinkthen: source relate takes at most 255 source records\n"
+        crate::harness::refuses(
+            &output,
+            2,
+            "thinkthen: source relate takes at most 255 source records\n",
         );
-        assert!(output.stdout.is_empty());
         assert!(listener.requests().is_empty());
     }
     Ok(())
@@ -56,7 +55,7 @@ fn release_only_oversized_whitespace_is_refused_before_skipping_and_before_the_n
             &[path.to_str().unwrap(), next.to_str().unwrap()],
             &["--unit", "line"],
         )?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         assert_eq!(
             text(&output.stderr).lines().next(),
             Some(
@@ -92,7 +91,7 @@ fn recognition_relation_endpoints_map_unicode_crlf_spans_in_every_output_shape()
             &[path.to_str().unwrap()],
             &extra,
         )?;
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         let row: Value = serde_json::from_slice(&output.stdout).unwrap();
         let edge = &row["value"]["relations"][0];
         for (endpoint, first, start, end) in [("source", 2, 8, 11), ("target", 3, 16, 20)] {
@@ -136,12 +135,11 @@ fn release_only_relation_source_original_jsonl_evidence_is_bounded_before_any_re
         ],
         &["--jsonl"],
     )?;
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        text(&output.stderr),
-        "thinkthen: source relate input exceeds 16 MiB\n"
+    crate::harness::refuses(
+        &output,
+        2,
+        "thinkthen: source relate input exceeds 16 MiB\n",
     );
-    assert!(output.stdout.is_empty());
     assert!(listener.requests().is_empty());
     Ok(())
 }
@@ -170,7 +168,7 @@ fn release_only_relation_source_expansion_counts_escaped_evidence_and_withholds_
             &[path.to_str().unwrap()],
             &extra,
         )?;
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         assert_eq!(
             text(&output.stderr),
             "thinkthen: source relate output exceeds 16 MiB\n"
@@ -193,7 +191,7 @@ fn all_255_source_occurrences_keep_every_duplicate_endpoint_pair() -> io::Result
         &[path.to_str().unwrap()],
         &["--unit", "line"],
     )?;
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let edges: Vec<Value> = text(&output.stdout)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())

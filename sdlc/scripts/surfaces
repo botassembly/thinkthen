@@ -54,6 +54,7 @@ fi
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+[ "$profile" != full ] || . sdlc/scripts/full-compiler
 THINKTHEN_TEST_PROFILE=$profile
 export THINKTHEN_TEST_PROFILE
 if [ "$profile" = routine ]; then

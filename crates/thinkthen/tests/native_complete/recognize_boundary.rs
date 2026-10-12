@@ -33,12 +33,8 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
     })
     .unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
+    let engine = crate::api::builder(listener.base(), "fake")
         .model("jev-1.13.0")
-        .unwrap()
-        .api_key("fake")
         .unwrap()
         .cache_at(&cache)
         .unwrap()
@@ -55,23 +51,22 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
         .unwrap()
         .iter()
         .map(|row| RecordInput {
-            original: text,
             context: row["context"].as_str().map(Into::into),
-            options: None,
-            examples: None,
-            seed_spans: None,
+
+            ..crate::api::record(text)
         });
-    let result = engine
-        .recognize_records_complete_with(
-            &ask,
-            rows,
-            CallOptions::new().context(fixture["shared_context"].as_str().unwrap()),
-        )
-        .unwrap();
+    let result = crate::api::recognize_records(
+        &engine,
+        &ask,
+        rows,
+        CallOptions::new().context(fixture["shared_context"].as_str().unwrap()),
+    )
+    .unwrap();
+    let result_value = crate::api::recognized(&result).unwrap();
     assert_eq!(listener.count(), 4);
     assert_eq!(result.facts().requests_sent(), 4);
     let captured = listener.requests();
-    for (at, row) in result.value().iter().enumerate() {
+    for (at, row) in result_value.iter().enumerate() {
         let complete = row.result();
         assert!(matches!(
             complete.value().value(),
@@ -130,11 +125,11 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
     assert_eq!(call.facts().requests_sent(), 0);
     assert_eq!(
         rows[0].result().value().to_json(),
-        result.value()[0].result().value().to_json()
+        result_value[0].result().value().to_json()
     );
     assert_eq!(
         rows[0].result().answer_id(),
-        result.value()[0].result().answer_id()
+        result_value[0].result().answer_id()
     );
     assert_eq!(listener.count(), 4);
     std::fs::remove_dir_all(cache).unwrap();
@@ -155,13 +150,7 @@ fn uncertain(body: &[u8]) -> Canned {
 fn proposal_cuts_use_printed_probability_and_modes_keep_distinct_ids_without_later_questions() {
     let listener = Listener::answering(uncertain).unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fake")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fake")
         .cache_at(&cache)
         .unwrap()
         .max_retries(0)
@@ -170,33 +159,30 @@ fn proposal_cuts_use_printed_probability_and_modes_keep_distinct_ids_without_lat
     for (text, count) in [("Åda", 1), ("lowercase", 0), ("", 0)] {
         let whole = Recognize::builder().build().unwrap();
         let boundary = whole.clone().with_mode(RecognitionMode::BoundaryOnly);
-        let complete = engine
-            .recognize_complete_with(&whole, text, CallOptions::new())
-            .unwrap();
-        let proposed = engine
-            .recognize_complete_with(&boundary, text, CallOptions::new())
-            .unwrap();
+        let complete = crate::api::recognize(&engine, &whole, text, CallOptions::new()).unwrap();
+        let complete_value = crate::api::recognition(&complete).unwrap();
+        let proposed = crate::api::recognize(&engine, &boundary, text, CallOptions::new()).unwrap();
+        let proposed_value = crate::api::recognition(&proposed).unwrap();
         assert_eq!(proposed.facts().requests_sent(), 0);
-        assert_ne!(complete.value().answer_id(), proposed.value().answer_id());
+        assert_ne!(complete_value.answer_id(), proposed_value.answer_id());
         assert_eq!(
-            complete.value().identity().observations().len(),
-            proposed.value().identity().observations().len()
+            complete_value.identity().observations().len(),
+            proposed_value.identity().observations().len()
         );
         assert_eq!(
-            complete.value().identity().observations(),
-            proposed.value().identity().observations()
+            complete_value.identity().observations(),
+            proposed_value.identity().observations()
         );
-        assert_eq!(proposed.value().value().proposals().unwrap().len(), count);
+        assert_eq!(proposed_value.value().proposals().unwrap().len(), count);
         if count == 1 {
-            let judgment = complete
-                .value()
+            let judgment = complete_value
                 .probabilities()
                 .judged_proposals()
                 .next()
                 .unwrap();
             assert!((judgment.span_probability() - 0.50004).abs() < 1e-8);
             assert_eq!(judgment.strength(), Some(0.5));
-            let p = &proposed.value().value().proposals().unwrap()[0];
+            let p = &proposed_value.value().proposals().unwrap()[0];
             assert_eq!(
                 (p.text(), p.start(), p.end(), p.length(), p.probability()),
                 ("Åda", 0, 3, 3, 0.5)
@@ -207,13 +193,12 @@ fn proposal_cuts_use_printed_probability_and_modes_keep_distinct_ids_without_lat
                 .unwrap()
                 .build()
                 .unwrap();
-            let rejected = engine
-                .recognize_complete_with(&cut, text, CallOptions::new())
-                .unwrap();
+            let rejected = crate::api::recognize(&engine, &cut, text, CallOptions::new()).unwrap();
+            let rejected_value = crate::api::recognition(&rejected).unwrap();
             assert_eq!(rejected.facts().requests_sent(), 0);
-            assert_eq!(rejected.value().value().proposals().unwrap().len(), 0);
+            assert_eq!(rejected_value.value().proposals().unwrap().len(), 0);
             assert_eq!(
-                rejected.value().probabilities().proposals().unwrap()[0].probability(),
+                rejected_value.probabilities().proposals().unwrap()[0].probability(),
                 0.5
             );
         }
@@ -228,10 +213,10 @@ fn proposal_cuts_use_printed_probability_and_modes_keep_distinct_ids_without_lat
             end: 9,
             kind: None,
         }]);
-    let proposed = engine
-        .recognize_complete_with(&seeded, "lowercase", CallOptions::new())
-        .unwrap();
-    assert!(proposed.value().value().proposals().unwrap().is_empty());
+    let proposed =
+        crate::api::recognize(&engine, &seeded, "lowercase", CallOptions::new()).unwrap();
+    let proposed_value = crate::api::recognition(&proposed).unwrap();
+    assert!(proposed_value.value().proposals().unwrap().is_empty());
     assert_eq!(listener.count(), 2);
     std::fs::remove_dir_all(cache).unwrap();
 }
@@ -265,17 +250,10 @@ fn skipped_stage_controls_refuse_before_native_record_enumeration() {
     ] {
         let rows = std::iter::from_fn(|| {
             advanced.fetch_add(1, Ordering::SeqCst);
-            Some(Ok(RecordInput {
-                original: "Åda",
-                context: None,
-                options: None,
-                examples: None,
-                seed_spans: None,
-            }))
+            Some(Ok(crate::api::record("Åda")))
         });
-        let refused = engine
-            .try_recognize_records_complete_with(&ask, rows, CallOptions::new())
-            .unwrap_err();
+        let refused =
+            crate::api::try_recognize_records(&engine, &ask, rows, CallOptions::new()).unwrap_err();
         assert_eq!(
             refused.detail().message(),
             "boundary_only recognition takes no relations, relation threshold, kind_edge context or relation context"
@@ -322,23 +300,16 @@ fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_a
     })
     .unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fake")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fake")
         .cache_at(&cache)
         .unwrap()
         .max_retries(0)
         .build()
         .unwrap();
     let whole = Recognize::builder().build().unwrap();
-    let full = engine
-        .recognize_complete_with(&whole, "🙂\r\nAda.", CallOptions::new())
-        .unwrap();
-    assert_eq!(full.value().value().entities()[0].text(), "Ada");
+    let full = crate::api::recognize(&engine, &whole, "🙂\r\nAda.", CallOptions::new()).unwrap();
+    let full_value = crate::api::recognition(&full).unwrap();
+    assert_eq!(full_value.value().entities()[0].text(), "Ada");
     assert_eq!(listener.count(), 2);
     let boundary = whole.with_mode(RecognitionMode::BoundaryOnly);
     let mut row = RecordReading::new(&[], None, None)
@@ -348,12 +319,12 @@ fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_a
     row.original = row
         .original
         .with_location(SourceLocation::new("example.txt".into(), Some(40), Some(41)).unwrap());
-    let result = engine
-        .recognize_records_complete_with(&boundary, [row], CallOptions::new())
-        .unwrap();
+    let result =
+        crate::api::recognize_records(&engine, &boundary, [row], CallOptions::new()).unwrap();
+    let result_value = crate::api::recognized(&result).unwrap();
     assert_eq!(result.facts().requests_sent(), 0);
     assert_eq!(listener.count(), 2);
-    let located = result.value()[0].result().source_value().unwrap();
+    let located = result_value[0].result().source_value().unwrap();
     assert_eq!(located.mode(), RecognitionMode::BoundaryOnly);
     let proposed = &located.proposals().unwrap()[0];
     assert_eq!(
@@ -372,7 +343,7 @@ fn decoded_proposals_preserve_punctuation_and_actual_source_lines_without_edge_a
         ),
         (Some(41), Some(41))
     );
-    let json: Value = serde_json::from_str(&result.value()[0].result().to_json().unwrap()).unwrap();
+    let json: Value = serde_json::from_str(&result_value[0].result().to_json().unwrap()).unwrap();
     assert!(json["value"].get("entities").is_none());
     assert_eq!(json["value"]["proposals"][0]["file"], "example.txt");
     assert_eq!(json["value"]["proposals"][0]["first_line"], 41);

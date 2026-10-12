@@ -15,9 +15,20 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . ../../sdlc/scripts/scratch.sh
 usage_home
+root=$(CDPATH= cd ../.. && pwd)
+native_cases() {
+    python3 - "$root" "$1" <<'RUSTNATIVE'
+import os,sys
+from pathlib import Path
+root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
+from native_fixture import run
+binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target')))/'debug/thinkthen-rust-consumer'
+binary.parent.mkdir(parents=True,exist_ok=True)
+sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
+RUSTNATIVE
+}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "$THINKTHEN_ARTIFACT" ] && [ ! -L "$THINKTHEN_ARTIFACT" ] || { echo 'rust: installed crate is missing or linked' >&2; exit 1; }
-    root=$(CDPATH= cd ../.. && pwd)
     scratch_dir installed
     mkdir "$installed/crate" "$installed/consumer"
     tar -xzf "$THINKTHEN_ARTIFACT" -C "$installed/crate" --strip-components=1
@@ -30,14 +41,7 @@ shutil.copytree(root/'libraries/rust/consumer',project,dirs_exist_ok=True,ignore
 manifest=project/'Cargo.toml'
 manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(installed/'crate')))
 RUSTCONSUMER
-    python3 - "$root" "$installed/consumer/Cargo.toml" <<'RUSTNATIVE'
-import os,sys
-from pathlib import Path
-root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
-from native_fixture import run
-binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target')))/'debug/thinkthen-rust-consumer'
-sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
-RUSTNATIVE
+    native_cases "$installed/consumer/Cargo.toml"
     echo 'rust: pass, installed'
     exit 0
 fi
@@ -46,6 +50,12 @@ if [ "$profile" = smoke ]; then
     cargo build --quiet --locked --offline --bin smoke
     "${CARGO_TARGET_DIR:-target}/debug/smoke"
     exit
+fi
+
+if [ "$profile" = full ]; then
+    native_cases "$PWD/consumer/Cargo.toml"
+    echo 'rust: pass, source'
+    exit 0
 fi
 
 cargo fmt --check

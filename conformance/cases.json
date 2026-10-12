@@ -8257,8 +8257,8 @@
         "surface": ".",
         "owner": "0432",
         "baseline": [
-          "python3",
-          "conformance/cli_parity.py"
+          "sh",
+          "conformance/check-cli.sh"
         ],
         "required_checks": [
           "named",
@@ -8603,19 +8603,8 @@
         "surface": "libraries/rust",
         "owner": "0431",
         "baseline": [
-          "cargo",
-          "test",
-          "--locked",
-          "--offline",
-          "-j2",
-          "--manifest-path",
-          "conformance/consumer/Cargo.toml",
-          "--target-dir",
-          "target/consumer",
-          "--package",
-          "consumer",
-          "--",
-          "--nocapture"
+          "sh",
+          "libraries/rust/check.sh"
         ]
       },
       {
@@ -8868,6 +8857,7 @@
     "required_cases": [
       {
         "id": "01-decide-yes-captured",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -8880,6 +8870,7 @@
       },
       {
         "id": "02-decide-no",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -8892,6 +8883,7 @@
       },
       {
         "id": "03-decide-band-unsure",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -8904,6 +8896,7 @@
       },
       {
         "id": "04-decide-band-yes",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -8916,6 +8909,7 @@
       },
       {
         "id": "05-decide-meanings",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -8928,6 +8922,7 @@
       },
       {
         "id": "06-choose-billing",
+        "tier": "binding",
         "verb": "choose",
         "kind": "behavior",
         "input": {
@@ -8940,6 +8935,7 @@
       },
       {
         "id": "07-choose-unsure",
+        "tier": "binding",
         "verb": "choose",
         "kind": "behavior",
         "input": {
@@ -8952,6 +8948,7 @@
       },
       {
         "id": "08-choose-tie",
+        "tier": "binding",
         "verb": "choose",
         "kind": "behavior",
         "input": {
@@ -8964,6 +8961,7 @@
       },
       {
         "id": "09-tag-two",
+        "tier": "binding",
         "verb": "tag",
         "kind": "behavior",
         "input": {
@@ -8976,6 +8974,7 @@
       },
       {
         "id": "10-tag-none",
+        "tier": "binding",
         "verb": "tag",
         "kind": "behavior",
         "input": {
@@ -8988,6 +8987,7 @@
       },
       {
         "id": "11-score-middle",
+        "tier": "binding",
         "verb": "score",
         "kind": "behavior",
         "input": {
@@ -9000,6 +9000,7 @@
       },
       {
         "id": "12-score-upper",
+        "tier": "binding",
         "verb": "score",
         "kind": "behavior",
         "input": {
@@ -9012,6 +9013,7 @@
       },
       {
         "id": "13-filter-records",
+        "tier": "binding",
         "verb": "filter",
         "kind": "behavior",
         "input": {
@@ -9024,6 +9026,7 @@
       },
       {
         "id": "14-filter-none",
+        "tier": "binding",
         "verb": "filter",
         "kind": "behavior",
         "input": {
@@ -9036,6 +9039,7 @@
       },
       {
         "id": "15-rank-records",
+        "tier": "binding",
         "verb": "rank",
         "kind": "behavior",
         "input": {
@@ -9048,6 +9052,7 @@
       },
       {
         "id": "16-rank-stable-tie",
+        "tier": "binding",
         "verb": "rank",
         "kind": "behavior",
         "input": {
@@ -9060,6 +9065,7 @@
       },
       {
         "id": "17-annotate-mixed",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9072,6 +9078,7 @@
       },
       {
         "id": "17-annotate-partial",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9084,6 +9091,7 @@
       },
       {
         "id": "18-annotate-two-groups",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9096,6 +9104,7 @@
       },
       {
         "id": "18-find-second",
+        "tier": "binding",
         "verb": "find",
         "kind": "behavior",
         "input": {
@@ -9108,6 +9117,7 @@
       },
       {
         "id": "19-find-none",
+        "tier": "binding",
         "verb": "find",
         "kind": "behavior",
         "input": {
@@ -9120,6 +9130,7 @@
       },
       {
         "id": "20-usage-fault",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9132,6 +9143,7 @@
       },
       {
         "id": "21-backend-fault",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9144,6 +9156,7 @@
       },
       {
         "id": "22-local-fault",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9156,6 +9169,7 @@
       },
       {
         "id": "23-cancelled-fault",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9168,6 +9182,7 @@
       },
       {
         "id": "24-deadline-fault",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9180,6 +9195,7 @@
       },
       {
         "id": "26-filter-empty-list",
+        "tier": "binding",
         "verb": "filter",
         "kind": "behavior",
         "input": {
@@ -9192,6 +9208,7 @@
       },
       {
         "id": "27-decide-many",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9204,6 +9221,7 @@
       },
       {
         "id": "28-decide-many-repeated-texts",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9216,6 +9234,7 @@
       },
       {
         "id": "29-usage-json-text",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9228,6 +9247,7 @@
       },
       {
         "id": "30-local-question-file",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9240,6 +9260,7 @@
       },
       {
         "id": "31-usage-rank-blank-question",
+        "tier": "binding",
         "verb": "rank",
         "kind": "behavior",
         "input": {
@@ -9252,6 +9273,7 @@
       },
       {
         "id": "32-score-equal-distribution",
+        "tier": "binding",
         "verb": "score",
         "kind": "behavior",
         "input": {
@@ -9264,6 +9286,7 @@
       },
       {
         "id": "33-tag-threshold-excludes",
+        "tier": "binding",
         "verb": "tag",
         "kind": "behavior",
         "input": {
@@ -9276,6 +9299,7 @@
       },
       {
         "id": "34-annotate-repeated-texts",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9288,6 +9312,7 @@
       },
       {
         "id": "35-annotate-score-repeated-texts",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9300,6 +9325,7 @@
       },
       {
         "id": "36-annotate-two-columns",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9312,6 +9338,7 @@
       },
       {
         "id": "37-annotate-choose-one",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9324,6 +9351,7 @@
       },
       {
         "id": "38-annotate-score-one",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9336,6 +9364,7 @@
       },
       {
         "id": "39-annotate-tag-one",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "behavior",
         "input": {
@@ -9348,6 +9377,7 @@
       },
       {
         "id": "40-decide-counters",
+        "tier": "binding",
         "verb": "decide",
         "kind": "behavior",
         "input": {
@@ -9360,6 +9390,7 @@
       },
       {
         "id": "41-offsets-past-an-accent-and-an-emoji",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9372,6 +9403,7 @@
       },
       {
         "id": "42-recognize-C01-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9384,6 +9416,7 @@
       },
       {
         "id": "43-recognize-C02-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9396,6 +9429,7 @@
       },
       {
         "id": "44-recognize-C12-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9408,6 +9442,7 @@
       },
       {
         "id": "45-recognize-C13-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9420,6 +9455,7 @@
       },
       {
         "id": "46-recognize-C14-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9432,6 +9468,7 @@
       },
       {
         "id": "47-recognize-C18-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9444,6 +9481,7 @@
       },
       {
         "id": "48-recognize-C24-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9456,6 +9494,7 @@
       },
       {
         "id": "49-recognize-C33-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9468,6 +9507,7 @@
       },
       {
         "id": "50-recognize-C40-relations",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9480,6 +9520,7 @@
       },
       {
         "id": "51-same-kind-alerts",
+        "tier": "binding",
         "verb": "relate",
         "kind": "behavior",
         "input": {
@@ -9492,6 +9533,7 @@
       },
       {
         "id": "52-cross-kind-staff",
+        "tier": "binding",
         "verb": "relate",
         "kind": "behavior",
         "input": {
@@ -9504,6 +9546,7 @@
       },
       {
         "id": "53-recognize-either",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -9516,6 +9559,7 @@
       },
       {
         "id": "settings-timeout-ends-a-slow-attempt",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9529,6 +9573,7 @@
       },
       {
         "id": "settings-max-retries-zero-sends-once",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9542,6 +9587,7 @@
       },
       {
         "id": "settings-profile-refuses-before-sending",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9555,6 +9601,7 @@
       },
       {
         "id": "settings-model-names-the-request",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9568,6 +9615,7 @@
       },
       {
         "id": "settings-record-sends-every-time",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9581,6 +9629,7 @@
       },
       {
         "id": "settings-replay-answers-from-the-folder-alone",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9594,6 +9643,7 @@
       },
       {
         "id": "settings-max-requests-refuses-past-the-limit",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9607,6 +9657,7 @@
       },
       {
         "id": "settings-cache-off-sends-again",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9620,6 +9671,7 @@
       },
       {
         "id": "settings-request-bytes-splits-relations",
+        "tier": "binding",
         "verb": "decide",
         "kind": "settings",
         "input": {
@@ -9633,6 +9685,7 @@
       },
       {
         "id": "typed-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "typed-result",
         "input": {
@@ -9655,6 +9708,7 @@
       },
       {
         "id": "complete-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "result2",
         "input": {
@@ -9686,6 +9740,7 @@
       },
       {
         "id": "files-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "located",
         "input": {
@@ -9721,6 +9776,7 @@
       },
       {
         "id": "typed-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "typed-result",
         "input": {
@@ -9743,6 +9799,7 @@
       },
       {
         "id": "complete-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "result2",
         "input": {
@@ -9774,6 +9831,7 @@
       },
       {
         "id": "files-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "located",
         "input": {
@@ -9809,6 +9867,7 @@
       },
       {
         "id": "typed-tag",
+        "tier": "binding",
         "verb": "tag",
         "kind": "typed-result",
         "input": {
@@ -9831,6 +9890,7 @@
       },
       {
         "id": "complete-tag",
+        "tier": "binding",
         "verb": "tag",
         "kind": "result2",
         "input": {
@@ -9862,6 +9922,7 @@
       },
       {
         "id": "files-tag",
+        "tier": "binding",
         "verb": "tag",
         "kind": "located",
         "input": {
@@ -9897,6 +9958,7 @@
       },
       {
         "id": "typed-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "typed-result",
         "input": {
@@ -9919,6 +9981,7 @@
       },
       {
         "id": "complete-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "result2",
         "input": {
@@ -9950,6 +10013,7 @@
       },
       {
         "id": "files-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "located",
         "input": {
@@ -9985,6 +10049,7 @@
       },
       {
         "id": "typed-filter",
+        "tier": "binding",
         "verb": "filter",
         "kind": "typed-result",
         "input": {
@@ -10008,6 +10073,7 @@
       },
       {
         "id": "complete-filter",
+        "tier": "binding",
         "verb": "filter",
         "kind": "result2",
         "input": {
@@ -10039,6 +10105,7 @@
       },
       {
         "id": "files-filter",
+        "tier": "binding",
         "verb": "filter",
         "kind": "located",
         "input": {
@@ -10074,6 +10141,7 @@
       },
       {
         "id": "typed-rank",
+        "tier": "binding",
         "verb": "rank",
         "kind": "typed-result",
         "input": {
@@ -10099,6 +10167,7 @@
       },
       {
         "id": "complete-rank",
+        "tier": "binding",
         "verb": "rank",
         "kind": "result2",
         "input": {
@@ -10130,6 +10199,7 @@
       },
       {
         "id": "files-rank",
+        "tier": "binding",
         "verb": "rank",
         "kind": "located",
         "input": {
@@ -10165,6 +10235,7 @@
       },
       {
         "id": "typed-find",
+        "tier": "binding",
         "verb": "find",
         "kind": "typed-result",
         "input": {
@@ -10187,6 +10258,7 @@
       },
       {
         "id": "complete-find",
+        "tier": "binding",
         "verb": "find",
         "kind": "result2",
         "input": {
@@ -10218,6 +10290,7 @@
       },
       {
         "id": "files-find",
+        "tier": "binding",
         "verb": "find",
         "kind": "located",
         "input": {
@@ -10253,6 +10326,7 @@
       },
       {
         "id": "typed-annotate",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "typed-result",
         "input": {
@@ -10276,6 +10350,7 @@
       },
       {
         "id": "complete-annotate",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "result2",
         "input": {
@@ -10307,6 +10382,7 @@
       },
       {
         "id": "files-annotate",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "located",
         "input": {
@@ -10342,6 +10418,7 @@
       },
       {
         "id": "typed-recognize",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "typed-result",
         "input": {
@@ -10366,6 +10443,7 @@
       },
       {
         "id": "complete-recognize",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "result2",
         "input": {
@@ -10397,6 +10475,7 @@
       },
       {
         "id": "files-recognize",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "located",
         "input": {
@@ -10432,6 +10511,7 @@
       },
       {
         "id": "typed-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "typed-result",
         "input": {
@@ -10454,6 +10534,7 @@
       },
       {
         "id": "complete-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "result2",
         "input": {
@@ -10485,6 +10566,7 @@
       },
       {
         "id": "files-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "located",
         "input": {
@@ -10553,6 +10635,7 @@
       },
       {
         "id": "boundary-usage",
+        "tier": "binding",
         "verb": "decide",
         "kind": "error",
         "input": {
@@ -10572,6 +10655,7 @@
       },
       {
         "id": "boundary-backend",
+        "tier": "binding",
         "verb": "decide",
         "kind": "error",
         "input": {
@@ -10591,6 +10675,7 @@
       },
       {
         "id": "boundary-local",
+        "tier": "binding",
         "verb": "decide",
         "kind": "error",
         "input": {
@@ -10610,6 +10695,7 @@
       },
       {
         "id": "boundary-cancelled",
+        "tier": "binding",
         "verb": "decide",
         "kind": "error",
         "input": {
@@ -10629,6 +10715,7 @@
       },
       {
         "id": "boundary-deadline",
+        "tier": "binding",
         "verb": "decide",
         "kind": "error",
         "input": {
@@ -10648,6 +10735,7 @@
       },
       {
         "id": "images-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "images",
         "input": {
@@ -10680,6 +10768,7 @@
       },
       {
         "id": "image-file-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "image-location",
         "input": {
@@ -10708,6 +10797,7 @@
       },
       {
         "id": "images-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "images",
         "input": {
@@ -10740,6 +10830,7 @@
       },
       {
         "id": "image-file-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "image-location",
         "input": {
@@ -10768,6 +10859,7 @@
       },
       {
         "id": "images-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "images",
         "input": {
@@ -10800,6 +10892,7 @@
       },
       {
         "id": "image-file-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "image-location",
         "input": {
@@ -10828,6 +10921,7 @@
       },
       {
         "id": "image-refusal-tag",
+        "tier": "binding",
         "verb": "tag",
         "kind": "refusal",
         "input": {
@@ -10848,6 +10942,7 @@
       },
       {
         "id": "image-refusal-filter",
+        "tier": "binding",
         "verb": "filter",
         "kind": "refusal",
         "input": {
@@ -10868,6 +10963,7 @@
       },
       {
         "id": "image-refusal-rank",
+        "tier": "binding",
         "verb": "rank",
         "kind": "refusal",
         "input": {
@@ -10888,6 +10984,7 @@
       },
       {
         "id": "image-refusal-find",
+        "tier": "binding",
         "verb": "find",
         "kind": "refusal",
         "input": {
@@ -10908,6 +11005,7 @@
       },
       {
         "id": "image-refusal-annotate",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "refusal",
         "input": {
@@ -10928,6 +11026,7 @@
       },
       {
         "id": "image-refusal-recognize",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "refusal",
         "input": {
@@ -10948,6 +11047,7 @@
       },
       {
         "id": "image-refusal-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "refusal",
         "input": {
@@ -10968,6 +11068,7 @@
       },
       {
         "id": "image-dropping-route",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -10986,6 +11087,7 @@
       },
       {
         "id": "image-line-refusal",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11004,6 +11106,7 @@
       },
       {
         "id": "image-window-refusal",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11023,6 +11126,7 @@
       },
       {
         "id": "proxy-reservation-refusal",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11039,6 +11143,7 @@
       },
       {
         "id": "zero-observation-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "boundary",
         "input": {
@@ -11071,6 +11176,7 @@
       },
       {
         "id": "storage-observation-identity",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11107,6 +11213,7 @@
       },
       {
         "id": "storage-no-store-record-refusal",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11125,6 +11232,7 @@
       },
       {
         "id": "storage-damaged-replay",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11140,6 +11248,7 @@
       },
       {
         "id": "storage-ambiguous-replay",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11160,6 +11269,7 @@
       },
       {
         "id": "cancellation-held-call",
+        "tier": "binding",
         "verb": "decide",
         "kind": "boundary",
         "input": {
@@ -11175,6 +11285,7 @@
       },
       {
         "id": "annotate-packed-groups",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "packing",
         "input": {
@@ -11215,6 +11326,7 @@
       },
       {
         "id": "type-01-decide-yes-captured",
+        "tier": "binding",
         "verb": "decide",
         "kind": "type-fixture",
         "input": {
@@ -11235,6 +11347,7 @@
       },
       {
         "id": "type-02-decide-no",
+        "tier": "binding",
         "verb": "decide",
         "kind": "type-fixture",
         "input": {
@@ -11255,6 +11368,7 @@
       },
       {
         "id": "type-03-decide-band-unsure",
+        "tier": "binding",
         "verb": "decide",
         "kind": "type-fixture",
         "input": {
@@ -11275,6 +11389,7 @@
       },
       {
         "id": "type-described-choice",
+        "tier": "binding",
         "verb": "choose",
         "kind": "type-fixture",
         "input": {
@@ -11295,6 +11410,7 @@
       },
       {
         "id": "type-09-tag-two",
+        "tier": "binding",
         "verb": "tag",
         "kind": "type-fixture",
         "input": {
@@ -11315,6 +11431,7 @@
       },
       {
         "id": "type-10-tag-none",
+        "tier": "binding",
         "verb": "tag",
         "kind": "type-fixture",
         "input": {
@@ -11335,6 +11452,7 @@
       },
       {
         "id": "type-11-score-middle",
+        "tier": "binding",
         "verb": "score",
         "kind": "type-fixture",
         "input": {
@@ -11355,6 +11473,7 @@
       },
       {
         "id": "type-13-filter-records",
+        "tier": "binding",
         "verb": "filter",
         "kind": "type-fixture",
         "input": {
@@ -11375,6 +11494,7 @@
       },
       {
         "id": "type-15-rank-records",
+        "tier": "binding",
         "verb": "rank",
         "kind": "type-fixture",
         "input": {
@@ -11395,6 +11515,7 @@
       },
       {
         "id": "type-18-find-second",
+        "tier": "binding",
         "verb": "find",
         "kind": "type-fixture",
         "input": {
@@ -11415,6 +11536,7 @@
       },
       {
         "id": "type-19-find-none",
+        "tier": "binding",
         "verb": "find",
         "kind": "type-fixture",
         "input": {
@@ -11435,6 +11557,7 @@
       },
       {
         "id": "type-17-annotate-partial",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "type-fixture",
         "input": {
@@ -11455,6 +11578,7 @@
       },
       {
         "id": "type-41-offsets-past-an-accent-and-an-emoji",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "type-fixture",
         "input": {
@@ -11475,6 +11599,7 @@
       },
       {
         "id": "type-51-same-kind-alerts",
+        "tier": "binding",
         "verb": "relate",
         "kind": "type-fixture",
         "input": {
@@ -11495,6 +11620,7 @@
       },
       {
         "id": "type-02-decide-details",
+        "tier": "binding",
         "verb": "decide",
         "kind": "type-fixture",
         "input": {
@@ -11515,6 +11641,7 @@
       },
       {
         "id": "image-admission-format-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11539,6 +11666,7 @@
       },
       {
         "id": "image-admission-dimension-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11563,6 +11691,7 @@
       },
       {
         "id": "image-admission-count-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11587,6 +11716,7 @@
       },
       {
         "id": "image-admission-body-excess-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11611,6 +11741,7 @@
       },
       {
         "id": "image-admission-malformed-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11635,6 +11766,7 @@
       },
       {
         "id": "image-admission-truncated-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11659,6 +11791,7 @@
       },
       {
         "id": "image-admission-packing-overflow-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11683,6 +11816,7 @@
       },
       {
         "id": "image-admission-valid-above-spike-cap-decide",
+        "tier": "core",
         "verb": "decide",
         "kind": "image-admission",
         "input": {
@@ -11707,6 +11841,7 @@
       },
       {
         "id": "image-admission-format-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11731,6 +11866,7 @@
       },
       {
         "id": "image-admission-dimension-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11755,6 +11891,7 @@
       },
       {
         "id": "image-admission-count-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11779,6 +11916,7 @@
       },
       {
         "id": "image-admission-body-excess-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11803,6 +11941,7 @@
       },
       {
         "id": "image-admission-malformed-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11827,6 +11966,7 @@
       },
       {
         "id": "image-admission-truncated-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11851,6 +11991,7 @@
       },
       {
         "id": "image-admission-packing-overflow-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11875,6 +12016,7 @@
       },
       {
         "id": "image-admission-valid-above-spike-cap-choose",
+        "tier": "core",
         "verb": "choose",
         "kind": "image-admission",
         "input": {
@@ -11899,6 +12041,7 @@
       },
       {
         "id": "image-admission-format-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -11923,6 +12066,7 @@
       },
       {
         "id": "image-admission-dimension-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -11947,6 +12091,7 @@
       },
       {
         "id": "image-admission-count-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -11971,6 +12116,7 @@
       },
       {
         "id": "image-admission-body-excess-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -11995,6 +12141,7 @@
       },
       {
         "id": "image-admission-malformed-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -12019,6 +12166,7 @@
       },
       {
         "id": "image-admission-truncated-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -12043,6 +12191,7 @@
       },
       {
         "id": "image-admission-packing-overflow-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -12067,6 +12216,7 @@
       },
       {
         "id": "image-admission-valid-above-spike-cap-score",
+        "tier": "core",
         "verb": "score",
         "kind": "image-admission",
         "input": {
@@ -12091,6 +12241,7 @@
       },
       {
         "id": "selected-object-false-unicode",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12113,6 +12264,7 @@
       },
       {
         "id": "item-missing-required",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12135,6 +12287,7 @@
       },
       {
         "id": "item-null-property",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12157,6 +12310,7 @@
       },
       {
         "id": "item-number-string",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12179,6 +12333,7 @@
       },
       {
         "id": "item-boolean-string",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12201,6 +12356,7 @@
       },
       {
         "id": "item-list-nonstring",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12223,6 +12379,7 @@
       },
       {
         "id": "item-root-null",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12245,6 +12402,7 @@
       },
       {
         "id": "item-root-string",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12267,6 +12425,7 @@
       },
       {
         "id": "optional-properties-absent",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12289,6 +12448,7 @@
       },
       {
         "id": "undeclared-properties-retained",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12311,6 +12471,7 @@
       },
       {
         "id": "projection-cannot-recover-field",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12333,6 +12494,7 @@
       },
       {
         "id": "multiple-pointer-object",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12355,6 +12517,7 @@
       },
       {
         "id": "string-reader",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12377,6 +12540,7 @@
       },
       {
         "id": "string-no-coercion-number",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12399,6 +12563,7 @@
       },
       {
         "id": "string-no-coercion-false",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12421,6 +12586,7 @@
       },
       {
         "id": "string-no-coercion-null",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12443,6 +12609,7 @@
       },
       {
         "id": "string-no-coercion-object",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12465,6 +12632,7 @@
       },
       {
         "id": "csv-number-remains-string",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12487,6 +12655,7 @@
       },
       {
         "id": "declared-object-context",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12509,6 +12678,7 @@
       },
       {
         "id": "absent-context-shared-fallback",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12531,6 +12701,7 @@
       },
       {
         "id": "empty-context-suppresses-shared",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12553,6 +12724,7 @@
       },
       {
         "id": "context-null",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12575,6 +12747,7 @@
       },
       {
         "id": "context-mistyped",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12597,6 +12770,7 @@
       },
       {
         "id": "context-json-looking-text",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12619,6 +12793,7 @@
       },
       {
         "id": "legacy-context-object-refused",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12641,6 +12816,7 @@
       },
       {
         "id": "declaration-shorthand",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12663,6 +12839,7 @@
       },
       {
         "id": "declaration-null",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12685,6 +12862,7 @@
       },
       {
         "id": "declaration-empty",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12707,6 +12885,7 @@
       },
       {
         "id": "declaration-nested",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12729,6 +12908,7 @@
       },
       {
         "id": "declaration-unknown-keyword",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12751,6 +12931,7 @@
       },
       {
         "id": "declaration-required-unknown",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12773,6 +12954,7 @@
       },
       {
         "id": "declaration-duplicate-required",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12795,6 +12977,7 @@
       },
       {
         "id": "wording-version-zero",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12817,6 +13000,7 @@
       },
       {
         "id": "wording-version-overflow",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12839,6 +13023,7 @@
       },
       {
         "id": "wording-version-string",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12861,6 +13046,7 @@
       },
       {
         "id": "wording-version-boolean",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12883,6 +13069,7 @@
       },
       {
         "id": "wording-version-null",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12905,6 +13092,7 @@
       },
       {
         "id": "named-missing",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12927,6 +13115,7 @@
       },
       {
         "id": "named-traversal",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12949,6 +13138,7 @@
       },
       {
         "id": "named-uppercase",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12971,6 +13161,7 @@
       },
       {
         "id": "named-overlong",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -12993,6 +13184,7 @@
       },
       {
         "id": "named-file-symlink-escape",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13015,6 +13207,7 @@
       },
       {
         "id": "named-folder-symlink-escape",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13037,6 +13230,7 @@
       },
       {
         "id": "named-name-mismatch",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13059,6 +13253,7 @@
       },
       {
         "id": "lookup-explicit-name",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13081,6 +13276,7 @@
       },
       {
         "id": "lookup-cwd-precedence",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13103,6 +13299,7 @@
       },
       {
         "id": "lookup-named-without-config",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13125,6 +13322,7 @@
       },
       {
         "id": "lookup-at-path-literal",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13147,6 +13345,7 @@
       },
       {
         "id": "lookup-traversal-is-explicit-path",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13169,6 +13368,7 @@
       },
       {
         "id": "lookup-cwd-failure-no-fallback",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13191,6 +13391,7 @@
       },
       {
         "id": "metadata-decide",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13213,6 +13414,7 @@
       },
       {
         "id": "metadata-choose",
+        "tier": "binding",
         "verb": "choose",
         "kind": "named-input",
         "input": {
@@ -13235,6 +13437,7 @@
       },
       {
         "id": "metadata-tag",
+        "tier": "binding",
         "verb": "tag",
         "kind": "named-input",
         "input": {
@@ -13257,6 +13460,7 @@
       },
       {
         "id": "metadata-score",
+        "tier": "binding",
         "verb": "score",
         "kind": "named-input",
         "input": {
@@ -13279,6 +13483,7 @@
       },
       {
         "id": "metadata-filter",
+        "tier": "binding",
         "verb": "filter",
         "kind": "named-input",
         "input": {
@@ -13301,6 +13506,7 @@
       },
       {
         "id": "metadata-rank",
+        "tier": "binding",
         "verb": "rank",
         "kind": "named-input",
         "input": {
@@ -13323,6 +13529,7 @@
       },
       {
         "id": "metadata-find",
+        "tier": "binding",
         "verb": "find",
         "kind": "named-input",
         "input": {
@@ -13345,6 +13552,7 @@
       },
       {
         "id": "metadata-annotate",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "named-input",
         "input": {
@@ -13367,6 +13575,7 @@
       },
       {
         "id": "metadata-recognize",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -13389,6 +13598,7 @@
       },
       {
         "id": "metadata-relate",
+        "tier": "binding",
         "verb": "relate",
         "kind": "named-input",
         "input": {
@@ -13411,6 +13621,7 @@
       },
       {
         "id": "finite-all-before-send",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13433,6 +13644,7 @@
       },
       {
         "id": "stream-staged-batch",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13455,6 +13667,7 @@
       },
       {
         "id": "annotate-member-validation-before-send",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "named-input",
         "input": {
@@ -13477,6 +13690,7 @@
       },
       {
         "id": "annotate-document-json",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "named-input",
         "input": {
@@ -13499,6 +13713,7 @@
       },
       {
         "id": "annotate-document-invalid-json",
+        "tier": "binding",
         "verb": "annotate",
         "kind": "named-input",
         "input": {
@@ -13521,6 +13736,7 @@
       },
       {
         "id": "image-only-declared-item-missing",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13545,6 +13761,7 @@
       },
       {
         "id": "image-ancillary-item",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13569,6 +13786,7 @@
       },
       {
         "id": "cache-hit-cannot-bypass-declaration",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13592,6 +13810,7 @@
       },
       {
         "id": "replay-hit-cannot-bypass-declaration",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13615,6 +13834,7 @@
       },
       {
         "id": "mcp-question-inline-at",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13640,6 +13860,7 @@
       },
       {
         "id": "mcp-question-explicit-name",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13665,6 +13886,7 @@
       },
       {
         "id": "mcp-question-mutually-exclusive",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13690,6 +13912,7 @@
       },
       {
         "id": "author-name-blank",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13712,6 +13935,7 @@
       },
       {
         "id": "author-name-uppercase",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13734,6 +13958,7 @@
       },
       {
         "id": "author-name-leading-digit",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13756,6 +13981,7 @@
       },
       {
         "id": "author-name-control",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13778,6 +14004,7 @@
       },
       {
         "id": "author-name-nonascii",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13800,6 +14027,7 @@
       },
       {
         "id": "wording-version-fraction",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13822,6 +14050,7 @@
       },
       {
         "id": "wording-version-integral-float",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13844,6 +14073,7 @@
       },
       {
         "id": "wording-version-exponent",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13866,6 +14096,7 @@
       },
       {
         "id": "metadata-name-only",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13888,6 +14119,7 @@
       },
       {
         "id": "metadata-version-only",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13910,6 +14142,7 @@
       },
       {
         "id": "metadata-typed-declarations",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13932,6 +14165,7 @@
       },
       {
         "id": "duplicate-metadata",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13954,6 +14188,7 @@
       },
       {
         "id": "duplicate-schema",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13976,6 +14211,7 @@
       },
       {
         "id": "single-format-version",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -13998,6 +14234,7 @@
       },
       {
         "id": "declaration-file-unsupported",
+        "tier": "core",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -14020,6 +14257,7 @@
       },
       {
         "id": "named-malformed-no-fallback",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -14042,6 +14280,7 @@
       },
       {
         "id": "declared-string-null-context",
+        "tier": "binding",
         "verb": "decide",
         "kind": "named-input",
         "input": {
@@ -14064,6 +14303,7 @@
       },
       {
         "id": "rank-set-ordered-members",
+        "tier": "binding",
         "verb": "rank",
         "kind": "named-input",
         "input": {
@@ -14123,6 +14363,7 @@
       },
       {
         "id": "56-recognize-caller-defined-amount",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "behavior",
         "input": {
@@ -14135,6 +14376,7 @@
       },
       {
         "id": "recognize-record-contexts",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -14447,6 +14689,7 @@
       },
       {
         "id": "recognize-empty-context",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -14759,6 +15002,7 @@
       },
       {
         "id": "recognize-shared-context",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -15071,6 +15315,7 @@
       },
       {
         "id": "recognize-null-context",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -15091,6 +15336,7 @@
       },
       {
         "id": "recognize-nontext-context",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {
@@ -15111,6 +15357,7 @@
       },
       {
         "id": "recognize-context-cache-replay",
+        "tier": "binding",
         "verb": "recognize",
         "kind": "named-input",
         "input": {

@@ -1,5 +1,6 @@
 //! CSV and TSV parsing at the compiled binary edge.
 
+use crate::harness::stderr_is;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
@@ -88,11 +89,7 @@ fn every_record_command_accepts_a_table_and_prints_jsonl() {
     for (response, arguments, expected) in cases {
         let output = run_with(response, arguments).expect("the command runs");
         assert_eq!(output.status.code(), Some(0), "{arguments:?}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            *expected,
-            "{arguments:?}"
-        );
+        assert_eq!(crate::harness::printed(&output), *expected, "{arguments:?}");
     }
 
     let set = Path::new(env!("CARGO_TARGET_TMPDIR")).join("table-question-set.json");
@@ -105,7 +102,7 @@ fn every_record_command_accepts_a_table_and_prints_jsonl() {
     let output = run_with(yes, &["annotate", &set_name]).expect("annotate runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"body\":\"yes\",\"id\":\"1\",\"ok\":true}\n"
     );
 }
@@ -114,7 +111,7 @@ fn every_record_command_accepts_a_table_and_prints_jsonl() {
 fn tsv_details_carries_the_parsed_object() {
     let response = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::serving(vec![Canned::ok(response)]).expect("a listener");
-    let output = spawn(
+    let output = crate::harness::spawn_one_local(
         &[
             "decide",
             "Is it yes?",
@@ -122,18 +119,15 @@ fn tsv_details_carries_the_parsed_object() {
             "--field",
             "/body",
             "--details",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--no-cache",
         ],
+        listener.base(),
         &KEY,
         b"body\tid\nyes\t1\n",
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&output.stdout).contains(r#""input":{"body":"yes","id":"1"}"#));
+    assert!(crate::harness::printed(&output).contains(r#""input":{"body":"yes","id":"1"}"#));
 }
 
 #[test]
@@ -162,47 +156,29 @@ fn table_rule_failures_are_exact_and_send_nothing() {
     ];
     for (input, expected) in cases {
         let listener = Listener::serving(vec![Canned::ok(response)]).expect("a listener");
-        let output = spawn(
-            &[
-                "decide",
-                "Is it yes?",
-                "--csv",
-                "--field",
-                "/body",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
+        let output = crate::harness::spawn_one_local(
+            &["decide", "Is it yes?", "--csv", "--field", "/body"],
+            listener.base(),
             &KEY,
             input,
         )
         .expect("the command runs");
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(String::from_utf8_lossy(&output.stderr), *expected);
+        stderr_is(&output, *expected);
         assert!(listener.requests().is_empty());
     }
 }
 
 fn refused_table(input: &[u8], code: i32, expected: &str) -> std::io::Result<()> {
     let listener = Listener::serving(vec![Canned::ok("unused")])?;
-    let output = spawn(
-        &[
-            "decide",
-            "Question",
-            "--csv",
-            "--field",
-            "/body",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = crate::harness::spawn_one_local(
+        &["decide", "Question", "--csv", "--field", "/body"],
+        listener.base(),
         &KEY,
         input,
     )?;
     assert_eq!(output.status.code(), Some(code));
-    assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+    stderr_is(&output, expected);
     assert!(output.stdout.is_empty());
     assert!(listener.requests().is_empty());
     Ok(())
@@ -279,29 +255,19 @@ fn choose_raw_refuses_both_table_framings_before_any_request() {
         let listener = Listener::serving(vec![Canned::ok("unused")]).expect("a listener");
         let delimiter = if framing == "--csv" { ',' } else { '\t' };
         let input = format!("body{delimiter}id\nyes{delimiter}1\n");
-        let output = spawn(
+        let output = crate::harness::spawn_one_local(
             &[
-                "choose",
-                "Which?",
-                "a",
-                "b",
-                framing,
-                "--field",
-                "/body",
-                "--raw",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
+                "choose", "Which?", "a", "b", framing, "--field", "/body", "--raw",
             ],
+            listener.base(),
             &KEY,
             input.as_bytes(),
         )
         .expect("the command runs");
         assert_eq!(output.status.code(), Some(2), "{framing}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            "thinkthen: --raw prints a bare label, but table results stay JSONL; omit --raw or use --lines or --jsonl\n"
+        stderr_is(
+            &output,
+            "thinkthen: --raw prints a bare label, but table results stay JSONL; omit --raw or use --lines or --jsonl\n",
         );
         assert!(listener.requests().is_empty(), "{framing}");
     }
@@ -340,7 +306,7 @@ fn reverse_completion_keeps_table_order_and_a_bad_row_stops_the_tail() {
         .after(delay)
     })
     .expect("a listener");
-    let output = spawn(
+    let output = crate::harness::spawn_one_local(
         &[
             "decide",
             "Is it yes?",
@@ -349,18 +315,15 @@ fn reverse_completion_keeps_table_order_and_a_bad_row_stops_the_tail() {
             "/body",
             "--jobs",
             "4",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
+        listener.base(),
         &KEY,
         b"body,id\nslow,1\nmiddle,2\nfast,3\nbad\nafter,5\n",
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!(
             r#"{"input":{"body":"slow","id":"1"},"value":true}"#,
             "\n",
@@ -379,12 +342,12 @@ fn reverse_completion_keeps_table_order_and_a_bad_row_stops_the_tail() {
                 .any(|request| String::from_utf8_lossy(&request.body).contains(expected))
         );
     }
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the CSV record has 1 field; its header has 2\n",
             "thinkthen: stopped at record 4; 3 records finished\n",
-        )
+        ),
     );
 }
 
@@ -397,20 +360,11 @@ fn one_job_sends_table_requests_in_record_order() {
         Canned::ok(response),
     ])
     .expect("a listener");
-    let output = spawn(
+    let output = crate::harness::spawn_one_local(
         &[
-            "decide",
-            "Question",
-            "--csv",
-            "--field",
-            "/body",
-            "--jobs",
-            "1",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
+            "decide", "Question", "--csv", "--field", "/body", "--jobs", "1",
         ],
+        listener.base(),
         &KEY,
         b"body\nfirst\nsecond\nthird\n",
     )
@@ -445,27 +399,18 @@ fn table_backend_failures_hide_cell_and_key_markers() {
         Canned::ok(&format!(r#"{{"model":"local-1","echo":"{evidence}"}}"#)),
     ] {
         let listener = Listener::serving(vec![response]).expect("a listener");
-        let output = spawn(
-            &[
-                "decide",
-                "Question",
-                "--csv",
-                "--field",
-                "/body",
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
+        let output = crate::harness::spawn_one_local(
+            &["decide", "Question", "--csv", "--field", "/body"],
+            listener.base(),
             &[("THINKTHEN_API_KEY", key)],
             format!("body\n{evidence}\n").as_bytes(),
         )
         .expect("the command runs");
         assert_eq!(output.status.code(), Some(4));
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = crate::harness::said(&output);
         assert!(!stderr.contains(evidence), "{stderr}");
         assert!(!stderr.contains(key), "{stderr}");
-        assert!(!String::from_utf8_lossy(&output.stdout).contains(key));
+        assert!(!crate::harness::printed(&output).contains(key));
     }
 }
 

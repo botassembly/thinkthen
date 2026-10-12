@@ -1,12 +1,12 @@
 //! The public find boundary over free plans and committed recordings.
 #![cfg(feature = "cli")]
 
-use crate::child::ChildEnvironment as _;
+use crate::harness::stderr_is;
 use std::fs;
 use std::io;
 use std::io::Write as _;
 use std::path::PathBuf;
-use std::process::{ChildStdin, Command, Output, Stdio};
+use std::process::{ChildStdin, Output, Stdio};
 
 use crate::wait;
 
@@ -19,23 +19,11 @@ fn feed(stdin: Option<ChildStdin>, input: &[u8]) -> io::Result<()> {
 }
 
 fn run(arguments: &[&str], input: &[u8]) -> io::Result<Output> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
-        .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
-    feed(child.stdin.take(), input)?;
-    wait::finish(child, &arguments.join(" "))
+    crate::harness::spawn(arguments, &[], input)
 }
 
 fn status_without_output(arguments: &[&str], input: &[u8]) -> io::Result<std::process::ExitStatus> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
-        .args(arguments)
+    let mut child = crate::harness::command(arguments, &[])
         .stdin(Stdio::piped())
         .stdout(Stdio::null())
         .stderr(Stdio::null())
@@ -75,7 +63,7 @@ fn recording() -> String {
 fn dry_run_builds_one_aggregate_request_and_names_the_framing() {
     let output = run(&["find", "Which?", "--plan"], b"alpha\nbeta\n").expect("binary runs");
     assert_eq!(output.status.code(), Some(0));
-    let plan = String::from_utf8_lossy(&output.stdout);
+    let plan = crate::harness::printed(&output);
     assert!(
         plan.contains(r#""input":{"framing":"lines","field":[]}"#),
         "{plan}"
@@ -89,12 +77,7 @@ fn count_refusals_are_exact_and_need_no_key() {
     let listener =
         crate::harness::Listener::answering(|_| crate::harness::Canned::ok("unused")).unwrap();
     let output = run(&["find", "Which?", "--url", listener.base()], b"one\n").expect("binary runs");
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `find` takes 2 to 255 units\n"
-    );
+    crate::harness::refuses(&output, 2, "thinkthen: `find` takes 2 to 255 units\n");
     assert_eq!(listener.count(), 0);
 }
 
@@ -106,13 +89,12 @@ fn table_and_jobs_options_are_absent_from_the_find_parser() {
         ("--jobs", vec!["find", "Which?", "--jobs", "2"]),
     ] {
         let output = run(&arguments, b"one\ntwo\n").expect("binary runs");
-        assert_eq!(output.status.code(), Some(2));
-        assert!(output.stdout.is_empty());
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+        crate::harness::refuses(
+            &output,
+            2,
             format!(
                 "error: unexpected argument '{option}' found\n\n  tip: to pass '{option}' as a value, use '-- {option}'\n\nUsage: thinkthen find <QUESTION>\n\nFor more information, try '--help'.\n"
-            )
+            ),
         );
     }
 }
@@ -121,7 +103,7 @@ fn table_and_jobs_options_are_absent_from_the_find_parser() {
 fn help_omits_unsupported_image_attachment_and_repeated_prose() {
     let help = run(&["find", "--help"], b"").expect("binary runs");
     assert_eq!(help.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&help.stdout);
+    let printed = crate::harness::printed(&help);
     assert!(!printed.contains("--image"), "{printed}");
     assert!(
         printed.contains("Image media is unsupported by find"),
@@ -132,7 +114,7 @@ fn help_omits_unsupported_image_attachment_and_repeated_prose() {
         run(&["find", "Which?", "--image", "missing.png"], b"one\ntwo\n").expect("binary runs");
     assert_eq!(refused.status.code(), Some(2));
     assert!(refused.stdout.is_empty());
-    assert!(String::from_utf8_lossy(&refused.stderr).contains("images are unsupported"));
+    assert!(crate::harness::said(&refused).contains("images are unsupported"));
 }
 
 #[test]
@@ -166,7 +148,7 @@ fn committed_reach_recordings_replay_the_selected_line_and_none() {
     .expect("binary runs");
     assert_eq!(answerable.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&answerable.stdout),
+        crate::harness::printed(&answerable),
         "The cobalt permit duration for marker TARGET-S100-A1 is 27 days.\n"
     );
     let blank_question = "Which unit states the cobalt permit duration for marker TARGET-S100-B1?";
@@ -189,9 +171,9 @@ fn release_only_aggregate_byte_limit_refuses_one_byte_over_before_a_key() {
     input.push(b'\n');
     let output = run(&["find", "Which?"], &input).expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `find` reads at most 16 MiB across all units\n"
+    stderr_is(
+        &output,
+        "thinkthen: `find` reads at most 16 MiB across all units\n",
     );
 }
 
@@ -233,7 +215,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
         }
         let output = run(&arguments, many(count).as_bytes()).expect("binary runs");
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(String::from_utf8_lossy(&output.stderr), message);
+        stderr_is(&output, message);
     }
 
     assert_eq!(listener.count(), 0);
@@ -241,10 +223,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
     stops_at_256.extend_from_slice(b"unit 256\nPRIVATE\xff");
     let output = run(&["find", "Which?"], &stops_at_256).expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `find` takes 2 to 255 units\n"
-    );
+    stderr_is(&output, "thinkthen: `find` takes 2 to 255 units\n");
 }
 
 #[test]
@@ -256,15 +235,15 @@ fn syntax_and_no_recording_utf8_refusals_repeat_no_input() {
     )
     .expect("binary runs");
     assert_eq!(invalid_json.status.code(), Some(2));
-    assert!(!String::from_utf8_lossy(&invalid_json.stderr).contains(marker));
+    assert!(!crate::harness::said(&invalid_json).contains(marker));
     let invalid_utf8 = run(&["find", "Which?"], b"first\nsecond\xff\n").expect("binary runs");
     assert_eq!(invalid_utf8.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&invalid_utf8.stderr),
+    stderr_is(
+        &invalid_utf8,
         concat!(
             "thinkthen: the record is not valid UTF-8\n",
             "thinkthen: stopped at record 2; 0 records finished\n",
-        )
+        ),
     );
 }
 
@@ -280,12 +259,12 @@ fn a_named_recording_appears_in_a_find_preflight_stop() {
     )
     .expect("binary runs");
     assert_eq!(output.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: the record is not valid UTF-8\n",
             "thinkthen: stopped at record 2; 0 records finished, 0 records from a recording\n",
-        )
+        ),
     );
 }
 
@@ -303,7 +282,7 @@ fn input_file_and_directory_follow_the_shared_opened_handle_rules() {
     )
     .expect("file runs");
     assert_eq!(accepted.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&accepted.stdout).contains(r#"\"evidence\":\"second\""#));
+    assert!(crate::harness::printed(&accepted).contains(r#"\"evidence\":\"second\""#));
 
     let root_text = root.to_string_lossy();
     let folder = run(
@@ -330,9 +309,9 @@ fn recorder_option_conflict_is_validated_before_empty_input_returns() {
     )
     .expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: --record and --replay name two different folders, and one run keeps one\n"
+    stderr_is(
+        &output,
+        "thinkthen: --record and --replay name two different folders, and one run keeps one\n",
     );
 }
 
@@ -342,8 +321,8 @@ fn release_only_one_oversized_unit_gets_the_safe_aggregate_diagnostic() {
     let input = vec![b'x'; 16 * 1024 * 1024 + 1];
     let output = run(&["find", "Which?"], &input).expect("binary runs");
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: `find` reads at most 16 MiB across all units\n"
+    stderr_is(
+        &output,
+        "thinkthen: `find` reads at most 16 MiB across all units\n",
     );
 }

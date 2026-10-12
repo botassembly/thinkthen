@@ -21,23 +21,22 @@ impl Engine {
         })
     }
 
-    #[pyo3(signature = (function, question, source, options, feed=false, surface=None))]
+    #[pyo3(signature = (function, values, feed=false, surface=None))]
     fn _request_session(
         &self,
         py: Python<'_>,
         function: &str,
-        question: &Bound<'_, PyAny>,
-        source: &Bound<'_, PyAny>,
-        options: &Bound<'_, PyAny>,
+        values: (Bound<'_, PyAny>, Bound<'_, PyAny>, Bound<'_, PyAny>),
         feed: bool,
         surface: Option<&str>,
     ) -> PyResult<crate::request::Session> {
+        let (question, source, options) = values;
         let selected = surface.unwrap_or("python").parse::<Surface>().ok();
         let selected = match selected {
             Some(value @ (Surface::Python | Surface::Pandas | Surface::PythonPolars)) => value,
             _ => return Err(usage(py, "surface must be python, pandas or python-polars")),
         };
-        let request = crate::inputs::request(py, function, question, source, options, feed)?;
+        let request = crate::inputs::request(py, function, &question, &source, &options, feed)?;
         crate::request::Session::start(py, &self.0, request, selected)
     }
 

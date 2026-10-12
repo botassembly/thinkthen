@@ -4,22 +4,14 @@ use super::*;
 fn complete_decision_identity_is_independent_of_retrieval_call_and_default_equivalent_reading() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
-    let live = engine
-        .decide_complete_with(&question, "Refund me.", CallOptions::new().attempts(true))
-        .unwrap();
-    let result = live.value();
+    let decide = |engine: &Engine, question: &Question, options| {
+        crate::api::decide(engine, question, "Refund me.", options)
+    };
+    let live = decide(&engine, &question, CallOptions::new().attempts(true)).unwrap();
+    let result = crate::api::decision(&live).unwrap();
     assert_eq!(result.value(), Answer::Yes);
     assert_eq!(result.identity().origin(), Some(Origin::Live));
     assert_eq!(result.identity().answered_by(), Some("fixed"));
@@ -41,30 +33,27 @@ fn complete_decision_identity_is_independent_of_retrieval_call_and_default_equiv
     assert_decision_document(result);
     schema::call(&live, "completeDecide");
     let equivalent = Question::decide("Refund?").unwrap().cut_at(0.50).unwrap();
-    let cache = engine
-        .decide_complete_with(&equivalent, "Refund me.", CallOptions::new().attempts(true))
-        .unwrap();
-    assert_eq!(cache.value().answer_id(), result.answer_id());
-    assert_eq!(cache.value().identity().origin(), Some(Origin::Cache));
+    let cache = decide(&engine, &equivalent, CallOptions::new().attempts(true)).unwrap();
+    let cache_result = crate::api::decision(&cache).unwrap();
+    assert_eq!(cache_result.answer_id(), result.answer_id());
+    assert_eq!(cache_result.identity().origin(), Some(Origin::Cache));
     assert_ne!(cache.facts().call_id(), live.facts().call_id());
-    let cache_json: Value = serde_json::from_str(&cache.value().to_json().unwrap()).unwrap();
+    let cache_json: Value = serde_json::from_str(&cache_result.to_json().unwrap()).unwrap();
     assert_eq!(cache_json["meta"]["attempts"], json!([]));
     let stricter = Question::decide("Refund?").unwrap().cut_at(0.8).unwrap();
-    let changed = engine
-        .decide_complete_with(&stricter, "Refund me.", CallOptions::new())
-        .unwrap();
-    assert_eq!(changed.value().value(), Answer::No);
-    assert_ne!(changed.value().answer_id(), result.answer_id());
+    let changed = decide(&engine, &stricter, CallOptions::new()).unwrap();
+    let changed_result = crate::api::decision(&changed).unwrap();
+    assert_eq!(changed_result.value(), Answer::No);
+    assert_ne!(changed_result.answer_id(), result.answer_id());
     assert_eq!(
-        changed.value().identity().observations(),
+        changed_result.identity().observations(),
         result.identity().observations()
     );
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let held = replay
-        .decide_complete_with(&question, "Refund me.", CallOptions::new())
-        .unwrap();
-    assert_eq!(held.value().answer_id(), result.answer_id());
-    assert_eq!(held.value().identity().origin(), Some(Origin::Replay));
+    let held = decide(&replay, &question, CallOptions::new()).unwrap();
+    let held_result = crate::api::decision(&held).unwrap();
+    assert_eq!(held_result.answer_id(), result.answer_id());
+    assert_eq!(held_result.identity().origin(), Some(Origin::Replay));
     assert_eq!(listener.count(), 1);
     assert_eq!(
         serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap(),
@@ -104,21 +93,28 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
     })
     .unwrap();
     let engine = engine(&listener);
-    let choice = Question::choose_labels("Which?")
-        .unwrap()
-        .label("a", None)
-        .unwrap()
-        .label("b", None)
+    let choice = ["a", "b"]
+        .into_iter()
+        .try_fold(
+            Question::choose_labels("Which?").unwrap(),
+            |builder, label| builder.label(label, None),
+        )
         .unwrap()
         .build()
         .unwrap();
-    let chosen = engine
-        .choose_complete_with(&choice, "Text.", CallOptions::new())
-        .unwrap();
+    let chosen = crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Choose,
+        choice.clone().into(),
+        crate::api::text("Text."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
+    let result = crate::api::choices(&chosen).unwrap()[0].result();
     schema::call(&chosen, "completeChoose");
-    assert_eq!(chosen.value().value(), None);
-    assert_eq!(chosen.value().confidence(), Some(0.4));
-    let document: Value = serde_json::from_str(&chosen.value().to_json().unwrap()).unwrap();
+    assert_eq!(result.value(), None);
+    assert_eq!(result.confidence(), Some(0.4));
+    let document: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
     assert_eq!(document["value"], Value::Null);
     assert_eq!(
         document["answer"]["probabilities"],
@@ -133,12 +129,18 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
         .unwrap()
         .build()
         .unwrap();
-    let tagged = engine
-        .tag_complete_with(&tags, "Text.", CallOptions::new())
-        .unwrap();
+    let tagged = crate::api::request(
+        &engine,
+        thinkthen::RequestFunction::Tag,
+        tags.into(),
+        crate::api::text("Text."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
+    let tagged_value = crate::api::tags(&tagged).unwrap()[0].result();
     schema::call(&tagged, "completeTag");
-    assert_eq!(tagged.value().value(), ["a"]);
-    let document: Value = serde_json::from_str(&tagged.value().to_json().unwrap()).unwrap();
+    assert_eq!(tagged_value.value(), ["a"]);
+    let document: Value = serde_json::from_str(&tagged_value.to_json().unwrap()).unwrap();
     assert_eq!(document["value"], json!(["a"]));
     assert_eq!(
         document["question"]["label_details"],
@@ -150,30 +152,15 @@ fn concrete_complete_choice_tag_and_score_keep_every_declared_probability_and_su
         document["answer"]["probabilities"],
         json!({"a":0.9,"b":0.1})
     );
-    assert_eq!(tagged.value().identity().observations().len(), 2);
+    assert_eq!(tagged_value.identity().observations().len(), 2);
     assert!(
-        tagged
-            .value()
+        tagged_value
             .identity()
             .question_sources()
             .iter()
             .all(|source| source.batch_size() == Some(2))
     );
-    let score = described_score();
-    let graded = engine
-        .score_complete_with(&score, "Text.", CallOptions::new())
-        .unwrap();
-    schema::call(&graded, "completeScore");
-    assert_eq!(graded.value().value(), 0.75);
-    assert_eq!(graded.value().confidence(), None);
-    typed_score_document(&graded);
-    assert_eq!(listener.count(), 3);
-    assert_eq!(listener.questions(), 4);
-    let refused = engine
-        .score_complete_with(&choice, "Text.", CallOptions::new())
-        .unwrap_err();
-    assert_eq!(refused.kind(), ErrorKind::Usage);
-    assert_eq!(listener.count(), 3);
+    typed_score_document(&engine, &described_score(), &choice, &listener);
 }
 
 #[cfg(test)]
@@ -186,18 +173,42 @@ fn assert_decision_document(result: &CompleteDecision) {
 }
 
 #[cfg(test)]
-fn typed_score_document(graded: &thinkthen::Call<thinkthen::CompleteScore>) {
+fn typed_score_document(engine: &Engine, score: &Question, choice: &Question, listener: &Listener) {
+    let graded = crate::api::request(
+        engine,
+        thinkthen::RequestFunction::Score,
+        score.clone().into(),
+        crate::api::text("Text."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap();
+    let result = crate::api::scores(&graded).unwrap()[0].result();
+    schema::call(&graded, "completeScore");
+    assert_eq!(result.value(), 0.75);
+    assert_eq!(result.confidence(), None);
     let document = serde_json::to_value(graded.complete().unwrap()).unwrap();
     assert_eq!(
-        document["value"]["question"]["levels"],
+        document["value"][0]["question"]["levels"],
         json!(["low", "high"])
     );
     assert_eq!(
-        document["value"]["question"]["label_details"],
+        document["value"][0]["question"]["label_details"],
         json!([
             {"name":"low","description":"Lower."}, {"name":"high","description":"Higher."}
         ])
     );
+    assert_eq!(listener.count(), 3);
+    assert_eq!(listener.questions(), 4);
+    let refused = crate::api::request(
+        engine,
+        thinkthen::RequestFunction::Score,
+        choice.clone().into(),
+        crate::api::text("Text."),
+        thinkthen::RequestEnvironment::default(),
+    )
+    .unwrap_err();
+    assert_eq!(refused.kind(), ErrorKind::Usage);
+    assert_eq!(listener.count(), 3);
 }
 
 #[cfg(test)]

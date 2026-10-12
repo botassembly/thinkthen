@@ -82,7 +82,7 @@ fn run(listener: &Listener, arguments: &[&str], input: &[u8]) -> Output {
 
 /// The one detailed row of a finished run, which prints `stderr`.
 fn row(output: &Output, stderr: &str) -> Value {
-    assert_eq!(String::from_utf8_lossy(&output.stderr), stderr);
+    assert_eq!(crate::harness::said(output), stderr);
     assert_eq!(output.status.code(), Some(0));
     serde_json::from_slice(&output.stdout).expect("one detailed row")
 }
@@ -90,7 +90,7 @@ fn row(output: &Output, stderr: &str) -> Value {
 fn assert_overflow(output: &Output, stop: &str) {
     let (cause, warning) = OVERFLOW.split_at(OVERFLOW.find('\n').expect("two lines") + 1);
     assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+        crate::harness::said(output),
         format!("{cause}{stop}{warning}")
     );
     assert_eq!(output.status.code(), Some(4));

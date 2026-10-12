@@ -2,13 +2,13 @@
 //! 0342): the exact question, the edge each top label makes, the detail
 //! entry, rule order beside pair rules, the cache, and the refusals.
 
+use crate::harness::{Canned, Listener, spawn, stderr_is};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 use serde_json::{Value, json};
 
 use super::{answered, plan_json, run, scripted};
-use crate::harness::{Canned, Listener, spawn};
 
 const PEOPLE: &[u8] = br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Initech","kind":"organization"},{"name":"Grace","kind":"person"}]"#;
 
@@ -149,7 +149,7 @@ fn the_top_label_makes_the_one_edge_and_the_detail_entry() {
             "{row}"
         );
         let bare = run(&listener, &[&rule], input);
-        let edges: Vec<Value> = String::from_utf8_lossy(&bare.stdout)
+        let edges: Vec<Value> = crate::harness::printed(&bare)
             .lines()
             .map(|line| serde_json::from_str(line).expect("edge"))
             .collect();
@@ -210,7 +210,7 @@ fn pair_rules_and_menus_keep_rule_order_in_one_request() {
         .collect();
     assert_eq!(kinds, ["noul", "noul", "choice", "choice"]);
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!(
             r#"{"relation":"knows","source":{"name":"Ada","kind":"person"},"target":{"name":"Grace","kind":"person"},"probability":0.9}"#,
             "\n",
@@ -251,7 +251,7 @@ fn an_unchanged_rerun_answers_every_menu_from_the_cache() {
     assert_eq!(second.status.code(), Some(0));
     assert!(listener.requests().is_empty());
     assert_eq!(first.stdout, second.stdout);
-    assert_eq!(String::from_utf8_lossy(&first.stdout).lines().count(), 2);
+    assert_eq!(crate::harness::printed(&first).lines().count(), 2);
 }
 
 #[test]
@@ -266,9 +266,9 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
     );
     let refused = run(&listener, &[&both], PEOPLE);
     assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: a single-answer relation is directed, so `single` and `either` do not mix\n"
+    stderr_is(
+        &refused,
+        "thinkthen: a single-answer relation is directed, so `single` and `either` do not mix\n",
     );
     let recognize = folder.join("recognize.json");
     fs::write(&recognize, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
@@ -285,11 +285,8 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
     )
     .expect("recognize");
     assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: a recognize relation has a distinct name, source, target, optional reads, and optional either
-"
-    );
+    stderr_is(&refused, "thinkthen: a recognize relation has a distinct name, source, target, optional reads, and optional either
+");
     let profile = folder.join("two-options.json");
     fs::write(
         &profile,
@@ -303,9 +300,9 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
         PEOPLE,
     );
     assert_eq!(refused.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        "thinkthen: profile two-options allows at most 2 options; this request has 3\n"
+    stderr_is(
+        &refused,
+        "thinkthen: profile two-options allows at most 2 options; this request has 3\n",
     );
     assert_eq!(listener.connections(), 0);
 }

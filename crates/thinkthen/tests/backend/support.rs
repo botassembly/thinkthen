@@ -160,9 +160,7 @@ pub(crate) fn stored(folder: &Path) -> io::Result<Vec<serde_json::Value>> {
     )?;
     let converted = spawn(&["cache", "convert", &copy.to_string_lossy()], &[], b"")?;
     if converted.status.code() != Some(0) {
-        return Err(io::Error::other(
-            String::from_utf8_lossy(&converted.stderr).into_owned(),
-        ));
+        return Err(io::Error::other(crate::harness::said(&converted)));
     }
     let lines = fs::read_to_string(copy.join("thinkthen.jsonl"))?;
     fs::remove_dir_all(&copy)?;

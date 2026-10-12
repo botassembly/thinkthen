@@ -38,7 +38,7 @@ fn answered(body: &[u8]) -> Canned {
 }
 
 fn line(output: &std::process::Output) -> Value {
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(output);
     let last = stderr.lines().last().expect("run facts line");
     let facts: Value = serde_json::from_str(last).expect("valid run facts");
     assert_eq!(facts["schema"], "thinkthen.run/1");
@@ -138,7 +138,7 @@ fn a_usage_warning_precedes_the_facts_line() {
     )
     .expect("usage warning command");
     assert_eq!(warned.status.code(), Some(0));
-    let stderr = String::from_utf8_lossy(&warned.stderr);
+    let stderr = crate::harness::said(&warned);
     assert_eq!(stderr.lines().count(), 2);
     assert!(
         stderr
@@ -361,9 +361,9 @@ fn retried_permanent_and_too_large_statuses_name_their_causes() {
             listener.requests().len(),
             sends,
             "{status}: {}",
-            String::from_utf8_lossy(&output.stderr)
+            crate::harness::said(&output)
         );
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = crate::harness::said(&output);
         assert_eq!(stderr.lines().count(), 2, "{status}: {stderr}");
         assert!(
             stderr
@@ -437,7 +437,7 @@ fn dry_run_and_early_setup_failures_report_zero_work() {
     )
     .expect("early failure command");
     assert_eq!(early.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&early.stderr).lines().count(), 2);
+    assert_eq!(crate::harness::said(&early).lines().count(), 2);
     assert_eq!(
         line(&early)["stopped"],
         json!({"at":1,"cause":"local","retryable":false})

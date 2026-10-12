@@ -70,7 +70,7 @@ int main(int argc, const char *argv[]) {
                     if (packet) {
                         [packets addObject:packet];
                         if ([packet isKindOfClass:TTSessionPacketTerminal.class]) explicitTerminal = (id)packet;
-                    } else if (!ended) [NSThread sleepForTimeInterval:0.001];
+                    } else if (!ended) require([session waitInput:NO error:&error]);
                 }
                 [session close]; session = nil;
                 explicitPackets = [packets copy];

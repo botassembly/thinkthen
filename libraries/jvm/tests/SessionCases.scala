@@ -5,6 +5,7 @@ import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
 object SessionCases {
   def main(args: Array[String]): Unit = {
+    if(thinkthen.CaseBatch.run(args, data => main(Array("complete", Json.write(data))))) return
     val data=Fixtures.frame(args)
     try {
       val engine=new ScalaEngine(Inputs.EngineSettings.fromJson(Json.parse(data.get("engine_settings").asInstanceOf[String])))
@@ -16,6 +17,7 @@ object SessionCases {
             def push(d:Inputs.RequestSessionDescriptor):Int=session.tryPush(d)
             def finish(f:Inputs.RequestReaderFailure):Unit=session.finish(f)
             def cancel():Unit=session.cancel()
+            def waitReady(input:Boolean):Unit={session.waitReady(input).join();()}
             def read():thinkthen.OwnedSession.Read={val read=session.tryRead();new thinkthen.OwnedSession.Read(read.packet.map(p=>Fixtures.packet(p.json)).orNull,read.ended)}
             def close():Unit=session.close()
           }

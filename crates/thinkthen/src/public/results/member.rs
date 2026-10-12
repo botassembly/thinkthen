@@ -1,15 +1,14 @@
 //! One bounded answered batch member, retained only until its ordered row leaves.
 
-use serde::Serialize;
 use std::fmt;
 
 use crate::core::{self, BatchWarning, ProfileWarning};
 use crate::engine::facade;
 use crate::public::error::Error;
 use crate::public::question::Question;
-use crate::result_json::{Run, decision_with_requests};
+use crate::result_json::Run;
 
-use super::{Details, Written};
+use super::Details;
 
 pub(crate) fn batch_warning(question: &Question, setting: core::Setting) -> Option<BatchWarning> {
     question
@@ -67,39 +66,6 @@ impl Details {
         self.scalar_json.as_ref().unwrap_or(&self.json).text()
     }
 
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "a record detail needs its original input and selected run metadata"
-    )]
-    pub(crate) fn of_member<T: Serialize>(
-        member: Member,
-        input: &T,
-        question: &Question,
-        backend: &core::Backend,
-        profile: Option<&core::BackendProfile>,
-        setting: core::Setting,
-        context_sha256: Option<&str>,
-    ) -> Result<Self, Error> {
-        // The native input already passed admission. Materialize its retained value
-        // without imposing the external serialized-record byte limit after a send.
-        let original = serde_json::to_string(input)
-            .map_err(|_| Error::usage("a record cannot be written as JSON"))?;
-        let input = core::Record::from_json(core::Json::parse(&original).map_err(Error::refused)?);
-        Self::of_batch_member(
-            member,
-            Some(input),
-            question,
-            backend,
-            profile,
-            setting,
-            context_sha256,
-        )
-    }
-
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "the native scalar shares the member's saved run metadata"
-    )]
     pub(crate) fn of_native_member(
         member: Member,
         question: &Question,
@@ -108,37 +74,6 @@ impl Details {
         setting: core::Setting,
         context_sha256: Option<&str>,
     ) -> Result<Self, Error> {
-        Self::of_batch_member(
-            member,
-            None,
-            question,
-            backend,
-            profile,
-            setting,
-            context_sha256,
-        )
-    }
-
-    #[allow(
-        clippy::too_many_arguments,
-        reason = "one batch member carries its saved run metadata"
-    )]
-    fn of_batch_member(
-        member: Member,
-        input: Option<core::Record>,
-        question: &Question,
-        backend: &core::Backend,
-        profile: Option<&core::BackendProfile>,
-        setting: core::Setting,
-        context_sha256: Option<&str>,
-    ) -> Result<Self, Error> {
-        let mut details = Self::of(
-            &member.judged,
-            question,
-            backend,
-            profile,
-            member.requests.clone(),
-        )?;
         let run = Run {
             backend,
             tuned_for: question.profile.as_ref(),
@@ -150,33 +85,17 @@ impl Details {
             batch_warning: batch_warning(question, setting),
             context_sha256: context_sha256.map(str::to_owned),
         };
-        let scalar_json = input
-            .as_ref()
-            .map(|_| {
-                decision_with_requests(
-                    run.clone(),
-                    &member.judged,
-                    question.core.clone(),
-                    question.threshold,
-                    member.judged.value.clone(),
-                    None,
-                    member.requests.clone(),
-                )
-                .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
-            })
-            .transpose()?;
-        let json = decision_with_requests(
+        let function =
+            crate::RequestFunction::for_definition(&question.clone().into()).input_function();
+        let canonical = crate::result_json::complete::atomic(
             run,
             &member.judged,
-            question.core.clone(),
-            question.threshold,
-            member.judged.value.clone(),
-            input,
-            member.requests.clone(),
+            crate::public::complete::spec(function, question, member.judged.value.clone(), 0),
+            member.requests,
+            None,
+            None,
         )
-        .map_err(|_| Error::defect("a result could not be written as JSON"))?;
-        details.json = Written(json);
-        details.scalar_json = scalar_json.map(Written);
-        Ok(details)
+        .map_err(|_| Error::defect("a complete result could not be constructed"))?;
+        Self::of_complete::<()>(&canonical, None)
     }
 }

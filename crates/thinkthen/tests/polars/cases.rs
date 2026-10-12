@@ -15,15 +15,7 @@ use conformance_backend::Backend;
 use serde_json::value::RawValue;
 use thinkthen::PolarsEngine;
 use thinkthen::polars::prelude::{AnyValue, DataFrame, IntoColumn, Series};
-use thinkthen::{
-    Answer, BatchSetting, CallOptions, Engine, Judgment, LoadedQuestion, Question, QuestionKind,
-    QuestionSet,
-};
-
-/// Captured shared cases use one recorded request for each source record.
-fn recorded_call() -> CallOptions<'static> {
-    CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-}
+use thinkthen::{Answer, Engine, Judgment, LoadedQuestion, Question, QuestionKind, QuestionSet};
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 
@@ -57,7 +49,7 @@ const RUN: &[&str] = &[
 /// Each case the door does not run, by its number or its whole id, and why.
 const NOT_RUN: &[(&str, &str)] = &[
     (
-        "13 14 15 16 18-find-second 19 26 31 41 42 43 44 45 46 47 48 49 50 51 52 53",
+        "13 14 15 16 18-find-second 19 26 31 41 42 43 44 45 46 47 48 49 50 51 52 53 56",
         "filter, rank, find, recognize, and relate, which the door does not carry",
     ),
     (
@@ -197,7 +189,7 @@ fn judgment(value: &Judgment) -> Option<String> {
 /// `decide_many` for a decision and `details` for the others.
 fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cells, Cells) {
     let column = common::column(texts);
-    let options = recorded_call;
+    let options = common::singleton;
     let decided = |listed: Vec<Answer>| -> Cells {
         let answers = listed.into_iter().map(Judgment::Decision);
         answers.map(|answer| judgment(&answer)).collect()
@@ -257,10 +249,10 @@ fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<C
     let records = common::column(texts).with_name("record".into());
     let frame = DataFrame::new(texts.len(), vec![records.into_column()]).expect("a frame");
     let out = door
-        .annotate_frame(&set, &frame, "record", recorded_call())
+        .annotate_frame(&set, &frame, "record", common::singleton())
         .expect("the door");
     let records: Vec<String> = slice
-        .annotate_with(&set, texts.to_vec(), recorded_call())
+        .annotate_with(&set, texts.to_vec(), common::singleton())
         .map(|record| record.map(|record| record.value_json()))
         .collect::<Result<_, _>>()
         .expect("the slice form");

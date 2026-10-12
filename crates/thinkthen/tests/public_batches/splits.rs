@@ -226,11 +226,7 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
         beta.expect("later row answered");
         before
     });
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
         .profile_json(
@@ -269,11 +265,7 @@ fn compatible_profile_group_still_packs_multiple_rows() {
     let _serial = serial();
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9},"q3":{"type":"noul","noul":0.9},"q4":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::serving(vec![Canned::ok(reply)]).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"four","max_questions":4}"#)
         .expect("profile")
         .no_cache()
@@ -299,11 +291,7 @@ fn compatible_profile_group_still_packs_multiple_rows() {
 fn a_later_profile_group_refuses_before_any_request() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .profile_json(
             r#"{"schema":"thinkthen.backend-profile/1","name":"tiny","max_evidence_bytes":1}"#,
         )

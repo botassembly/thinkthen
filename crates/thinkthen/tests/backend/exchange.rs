@@ -1,10 +1,10 @@
 //! The compiled binary against a loopback backend: the request it sends and the reply it reads.
 
+use crate::harness::{Canned, Listener, stderr_is};
 use std::time::{Duration, Instant};
 
 #[cfg(unix)]
 use crate::harness::spawn;
-use crate::harness::{Canned, Listener};
 use crate::support::{decide, digest, encoded_decide, reported_keys};
 
 /// The response a backend gives when it answers the one question that was asked.
@@ -46,7 +46,7 @@ fn the_request_carries_the_encoded_plan_and_the_content_type() {
         String::from_utf8_lossy(&request.body),
         String::from_utf8_lossy(&written)
     );
-    assert_eq!(String::from_utf8_lossy(&output.stdout), "true\n");
+    assert_eq!(crate::harness::printed(&output), "true\n");
     assert_eq!(output.status.code(), Some(0));
 }
 
@@ -70,7 +70,7 @@ fn every_answer_prints_its_bare_value_and_earns_its_own_exit_code() {
         )
         .expect("the compiled binary runs");
 
-        assert_eq!(String::from_utf8_lossy(&output.stdout), printed);
+        assert_eq!(crate::harness::printed(&output), printed);
         assert_eq!(output.status.code(), Some(code), "{probability}");
     }
 }
@@ -86,7 +86,7 @@ fn a_single_cut_answers_yes_or_no_and_never_leaves_a_run_unresolved() {
         let output = decide(listener.base(), &["--threshold", "0.9"], KEY, "Refund me.")
             .expect("the compiled binary runs");
 
-        assert_eq!(String::from_utf8_lossy(&output.stdout), printed);
+        assert_eq!(crate::harness::printed(&output), printed);
         assert_eq!(output.status.code(), Some(code), "{probability}");
     }
 }
@@ -171,7 +171,7 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
     )
     .expect("the compiled binary runs");
 
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(printed.contains(r#""value":null,"#), "{printed}");
     assert!(printed.contains(r#""threshold":"0.1:0.9","#), "{printed}");
     assert_eq!(output.status.code(), Some(3));
@@ -185,7 +185,7 @@ fn a_dry_run_prints_the_plan_and_opens_no_connection() {
         decide(listener.base(), &["--plan"], KEY, "Refund me.").expect("the compiled binary runs");
 
     assert!(listener.requests().is_empty(), "a plan opens no connection");
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(
         printed.contains(concat!(
             r#""request":{"state":"Each question quotes the text it asks about.","#,
@@ -224,7 +224,7 @@ fn a_retried_status_is_sent_again_and_the_second_answer_is_taken() {
 
     assert_eq!(listener.requests().len(), 2);
     assert_eq!(output.status.code(), Some(0));
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(
         printed.contains(r#""requests_sent":2,"cached":false"#),
         "{printed}"
@@ -245,7 +245,7 @@ fn retries_run_out_and_the_backend_failure_is_exit_four() {
 
     assert_eq!(listener.requests().len(), 3);
     assert_eq!(output.status.code(), Some(4));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("503"), "{message}");
     assert!(output.stdout.is_empty());
 }
@@ -297,9 +297,9 @@ fn a_server_retry_floor_past_the_attempt_timeout_fails_at_once() {
         if code == 0 {
             assert!(took >= Duration::from_millis(1000), "{asked}: {took:?}");
         } else {
-            assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
-                "thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries\n"
+            stderr_is(
+                &output,
+                "thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries\n",
             );
             assert!(output.stdout.is_empty(), "{asked}");
             assert!(
@@ -394,7 +394,7 @@ fn an_error_status_that_is_not_retried_fails_at_once() {
 
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(output.status.code(), Some(4));
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert!(message.contains("401"), "{message}");
     assert!(!message.contains("Refund me please."), "{message}");
     assert!(!message.contains("sk-bad"), "{message}");
@@ -418,7 +418,7 @@ fn a_redirect_is_refused_so_no_key_and_no_evidence_reach_another_host() {
     assert!(elsewhere.requests().is_empty());
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    let message = String::from_utf8_lossy(&output.stderr);
+    let message = crate::harness::said(&output);
     assert_eq!(
         message,
         "thinkthen: the backend answered with status 302: the redirect was not followed; use the final --url directly\n"
@@ -466,11 +466,10 @@ fn a_body_the_backend_cut_short_is_exit_four() {
     let output = decide(listener.base(), &["--max-retries", "0"], KEY, "Refund me.")
         .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
     );
 }
 
@@ -491,13 +490,12 @@ fn a_backend_that_closes_before_headers_fails_promptly() {
     // Waiting for the 30 s timeout would fail the hang guard (ticket 0352).
     assert!(started.elapsed() < Duration::from_secs(10));
     assert_eq!(listener.requests().len(), 1);
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the backend closed the connection before a reply and may have received the request; it was not sent again\n",
     );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("private evidence"));
+    assert!(!crate::harness::said(&output).contains("private evidence"));
 }
 
 #[test]
@@ -517,11 +515,10 @@ fn an_open_peer_that_sends_no_reply_reaches_the_timeout_diagnostic() {
 
     assert!(started.elapsed() < Duration::from_secs(30));
     assert_eq!(listener.requests().len(), 1);
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend timed out; increase --timeout or try again\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the backend timed out; increase --timeout or try again\n",
     );
 }
 
@@ -561,7 +558,5 @@ fn a_refused_port_fails_before_the_first_default_retry_wait() {
     )
     .expect("the compiled binary runs");
     assert!(started.elapsed() < Duration::from_secs(10)); // only rules the waits out
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stderr), REFUSED_DIAGNOSTIC);
+    crate::harness::refuses(&output, 4, REFUSED_DIAGNOSTIC);
 }

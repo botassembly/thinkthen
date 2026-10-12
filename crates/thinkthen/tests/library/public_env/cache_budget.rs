@@ -112,10 +112,8 @@ fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
         .cut();
     let budget = SendBudget::new();
     let engine = |base: &str, path: &Path, key: &str| {
-        Engine::builder()
-            .base_url(base)
-            .and_then(|builder| builder.model("local-1"))
-            .and_then(|builder| builder.api_key(key))
+        crate::api::builder(base, key)
+            .model("local-1")
             .and_then(|builder| builder.cache_at(path))
             .and_then(EngineBuilder::build)
             .expect("engine")
@@ -165,10 +163,8 @@ fn zero_budget_still_precedes_a_line_break_key_on_first_use() {
     let question = Question::decide("asks for a refund")
         .expect("question")
         .cut();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|builder| builder.model("local-1"))
-        .and_then(|builder| builder.api_key("first\nsecond"))
+    let engine = crate::api::builder(listener.base(), "first\nsecond")
+        .model("local-1")
         .and_then(|builder| builder.cache_at(&cache))
         .and_then(EngineBuilder::build)
         .expect("engine");

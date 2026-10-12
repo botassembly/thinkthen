@@ -41,14 +41,9 @@ fn recognition_details_replay_original_stages_and_counts_across_source_coordinat
         b"ignored",
     )
     .unwrap();
-    assert_eq!(
-        live.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&live.stderr)
-    );
+    crate::harness::exits(&live, 0);
     withheld(&live, "recognition-private");
-    let live: Vec<Value> = String::from_utf8_lossy(&live.stdout)
+    let live: Vec<Value> = crate::harness::printed(&live)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect();
@@ -132,7 +127,7 @@ fn held_sources(live: &[Value], held: &[Value]) {
 
 #[cfg(test)]
 fn rows(output: &std::process::Output) -> Vec<Value> {
-    String::from_utf8_lossy(&output.stdout)
+    crate::harness::printed(output)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect()

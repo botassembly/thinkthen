@@ -157,7 +157,12 @@ def inputs(definitions):
     for key, source in sorted(definitions.items()):
         typ = name(key)
         if 'variants' in source:
-            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {', f'static {typ} fromJson(Object value) {{ Map<String,Object> object = Values.object(value);']
+            lines += [f'public sealed interface {typ} extends Values.Value permits ' + ','.join(name(child) for child, _ in source['variants']) + ' {']
+            alternatives = [definitions[child].get('properties', {}) for child, _ in source['variants']]
+            for field, spec in alternatives[0].items():
+                if isinstance(spec, dict) and 'const' not in spec and all(fields.get(field) == spec for fields in alternatives):
+                    lines.append(f'{typ} {member(field)}({target(spec)} value);')
+            lines.append(f'static {typ} fromJson(Object value) {{ Map<String,Object> object = Values.object(value);')
             for child, tag in source['variants']:
                 lines.append(f'if ({condition(tag)}) return {name(child)}.fromJson(value);')
             # Selection only chooses the host carrier; native admission owns invalid shapes.

@@ -67,6 +67,11 @@ external int _thinkthen_session_try_push(
     assetId: 'package:thinkthen_dart/thinkthen')
 external int _thinkthen_session_try_read(
     Pointer<Void> arg0, Pointer<Uint32> arg1, Pointer<Pointer<Void>> arg2);
+@Native<Int32 Function(Pointer<Void>, Uint32, Uint32, Pointer<Uint32>)>(
+    symbol: 'thinkthen_session_wait',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_session_wait(
+    Pointer<Void> arg0, int arg1, int arg2, Pointer<Uint32> arg3);
 @Native<Int32 Function(Pointer<Void>, Pointer<Uint8>, Size)>(
     symbol: 'thinkthen_session_finish',
     assetId: 'package:thinkthen_dart/thinkthen')
@@ -122,6 +127,7 @@ final class NativeAbi {
       _thinkthen_session_new_with_surface;
   final thinkthen_session_try_push = _thinkthen_session_try_push;
   final thinkthen_session_try_read = _thinkthen_session_try_read;
+  final thinkthen_session_wait = _thinkthen_session_wait;
   final thinkthen_session_finish = _thinkthen_session_finish;
   final thinkthen_session_cancel = _thinkthen_session_cancel;
   final thinkthen_session_free = _thinkthen_session_free;
@@ -160,4 +166,13 @@ const THINKTHEN_SESSION_CLOSED_V1 = 2;
 const THINKTHEN_SESSION_END_V1 = 2;
 const THINKTHEN_SESSION_FULL_V1 = 1;
 const THINKTHEN_SESSION_PENDING_V1 = 1;
+const THINKTHEN_SESSION_READY_CANCELLED_V1 = 4;
+const THINKTHEN_SESSION_READY_CLOSED_V1 = 2;
+const THINKTHEN_SESSION_READY_END_V1 = 3;
+const THINKTHEN_SESSION_READY_INPUT_V1 = 1;
+const THINKTHEN_SESSION_READY_RESULT_V1 = 0;
+const THINKTHEN_SESSION_READY_TIMEOUT_V1 = 5;
 const THINKTHEN_SESSION_RESULT_V1 = 0;
+const THINKTHEN_SESSION_WAIT_INPUT_V1 = 1;
+const THINKTHEN_SESSION_WAIT_RESULT_V1 = 0;
+const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 = 2;

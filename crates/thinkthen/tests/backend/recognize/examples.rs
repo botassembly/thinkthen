@@ -11,12 +11,7 @@ fn root(name: &str) -> PathBuf {
 
 fn plan(listener: &Listener, flags: &[&str], input: &[u8]) -> Value {
     let output = run(listener, &[flags, &["--plan"]].concat(), input);
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let output = stdout(&output);
     let rows: Vec<Value> = output
         .lines()
@@ -55,12 +50,7 @@ fn tagged_examples_preserve_context_and_only_teach_boundaries() {
         ],
         input.as_bytes(),
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 2);
     let boundary: Value = serde_json::from_slice(&requests[0].body).unwrap();
@@ -108,12 +98,7 @@ fn both_file_forms_plan_the_exact_boundary_body_and_enforce_its_byte_limit() {
         ],
         b"Ada",
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(listener.count(), 1);
     let baseline = plan(&listener, &[], b"Ada");
     let refused = run(&listener, &["--max-request-bytes", "1", "--plan"], b"Ada");
@@ -175,12 +160,7 @@ fn record_examples_replace_clear_or_retain_shared_examples_at_jobs_eight() {
         ],
         input.as_bytes(),
     );
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(stdout(&output).lines().count(), 4);
     assert_eq!(listener.count(), 4);
     for request in listener.requests() {
@@ -231,8 +211,8 @@ fn invalid_later_record_examples_refuse_the_collected_input_without_sends() {
         );
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
-        assert!(String::from_utf8_lossy(&output.stderr).contains("record 2"));
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-example"));
+        assert!(crate::harness::said(&output).contains("record 2"));
+        assert!(!crate::harness::said(&output).contains("secret-example"));
     }
     for flags in [
         ["--examples-field", "$.examples"],

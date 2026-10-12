@@ -208,11 +208,7 @@ fn blank_later_record_and_record_limit_fail_before_counted_sends() {
         .expect_err("blank later record");
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(error.to_string(), "evidence is text, not white space");
-    let limited = Engine::builder()
-        .base_url(listener.base())
-        .expect("url")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let limited = crate::api::builder(listener.base(), "sk-public-batches")
         .max_requests(Some(2))
         .expect("limit")
         .no_cache()

@@ -50,7 +50,7 @@ pub(crate) fn atomic(
         &[],
     )?;
     let digest = core::question_sha256_with_profile(&spec.question, spec.threshold, run.tuned_for)?;
-    let legacy = decision_with_digest(
+    let compatibility = decision_with_digest(
         run,
         judged,
         spec.question,
@@ -66,7 +66,7 @@ pub(crate) fn atomic(
         function: spec.function,
         declarations: spec.declarations,
         identity,
-        legacy,
+        compatibility,
         rank_position: spec.rank_position,
         source: None,
         images: None,

@@ -18,14 +18,11 @@ fn records(text: &str) -> Vec<Option<RecordInput<Original>>> {
         .into_iter()
         .map(|id| {
             id.map(|id| RecordInput {
-                original: Original {
+                context: Some("row guide".into()),
+                ..crate::api::record(Original {
                     id,
                     text: text.into(),
-                },
-                context: Some("row guide".into()),
-                options: None,
-                examples: None,
-                seed_spans: None,
+                })
             })
         })
         .collect()

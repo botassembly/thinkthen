@@ -1,4 +1,6 @@
 #include <thinkthen/client.hpp>
+#include <chrono>
+#include <thread>
 #include <fstream>
 #include <clocale>
 #include <locale>
@@ -50,6 +52,26 @@ int main(int argc,char** argv) {
             return answered ? 0:3;
         }
         if(argc!=4) return 2;
+        if(std::string(argv[1])=="closed") {
+            Client client(Json::Object{{"cache",false}});
+            auto question=RequestQuestionDefinition().set_value(RequestDefinition::from_document(Json{{"decide","Is it?"},{"item_schema",Json{{"type","string"}}}}));
+            auto call=client.decide(question,RequestInputFeed().set_name("closed"));
+            auto invalid=RequestSessionDescriptor().set_item(item(Json(42)));
+            if(!call.try_push(invalid)) throw std::logic_error("fresh intake did not accept descriptor");
+            const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(2);
+            for(;;) {
+                try { call.poll(); }
+                catch(const SessionFailure&) { break; }
+                if(std::chrono::steady_clock::now()>deadline) throw std::logic_error("invalid descriptor did not stop native intake");
+                std::this_thread::yield();
+            }
+            auto next=RequestSessionDescriptor().set_item(item(Json("unreachable")));
+            if(call.try_push(next) || !call.input_closed() || call.try_push(next)) throw std::logic_error("native closure did not stop repeat pushes");
+            auto moved=std::move(call);
+            if(!moved.input_closed() || !call.input_closed() || moved.try_push(next)) throw std::logic_error("moved closure reopened intake");
+            moved.close(); if(!moved.input_closed()) throw std::logic_error("closed call reopened intake");
+            std::cout<<"closed-push-pass\n"; return 0;
+        }
         if(std::string(argv[1])=="usage-written" || std::string(argv[1])=="usage-failed") {
             Client client(Json::Object{{"cache",false}}); auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("yes"));
             call.finish(); auto packets=call.collect(); auto earlier=packets.back().document().dump();

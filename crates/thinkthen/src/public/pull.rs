@@ -11,8 +11,6 @@ use std::time::Duration;
 use crate::engine::facade;
 use crate::engine::fork_safe::{Receiver, RecvTimeoutError, Sender, channel};
 use crate::engine::pipeline::{Asker, Failed, Flow, Host, Input, Packing, Port};
-use crate::public::InputEvidence;
-use crate::public::asking::Text;
 use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
 use crate::public::results::Facts;
@@ -78,51 +76,8 @@ pub(crate) struct Call<'a> {
     pub(crate) stop: Stop<'a>,
     pub(crate) packing: Packing,
     pub(crate) most: Option<usize>,
-}
-
-/// Start `asker` over `records` and return the lazy batch of its rows.
-pub(crate) fn start<'a, A, I, T: 'a>(
-    call: Call<'a>,
-    asker: A,
-    records: I,
-    pair: Pair<'a, A, I::Item, T>,
-) -> Batch<'a, T>
-where
-    A: Asker<Input = Text> + Send + 'static,
-    A::Row: Send + 'static,
-    A::Error: From<Error> + Send + 'static,
-    I: Iterator + 'a,
-    I::Item: InputEvidence,
-{
-    try_start(call, asker, records.map(Ok), pair)
-}
-
-/// Start the same ordered pipeline over a fallible caller iterator.
-pub(crate) fn try_start<'a, A, I, R, T: 'a>(
-    call: Call<'a>,
-    asker: A,
-    records: I,
-    pair: Pair<'a, A, R, T>,
-) -> Batch<'a, T>
-where
-    A: Asker<Input = Text> + Send + 'static,
-    A::Row: Send + 'static,
-    A::Error: From<Error> + Send + 'static,
-    I: Iterator<Item = Result<R, Error>> + 'a,
-    R: InputEvidence + 'a,
-{
-    try_start_prepared(
-        call,
-        asker,
-        records,
-        Box::new(|at, item| {
-            Ok(Text {
-                at,
-                input: item.question_input(),
-            })
-        }),
-        pair,
-    )
+    /// Whole-set calls admit duplicates together; row streams keep batch-1 pacing.
+    pub(crate) aggregate_inputs: bool,
 }
 
 /// Pull fallible originals with typed per-record preparation on their owning thread.
@@ -140,14 +95,14 @@ where
     I: Iterator<Item = Result<R, Error>> + 'a,
 {
     let (events, received) = channel();
-    let cli_reader = call.stop.cli_reader;
-    if let Some(reader) = cli_reader {
+    let readiness = call.stop.readiness;
+    if let Some(reader) = readiness {
         let wake_events = events.clone();
         reader.wake().register(Box::new(move || {
             let _sent = wake_events.send(Event::ReaderReady);
         }));
     }
-    let pause = cli_reader.and_then(|reader| reader.pause);
+    let pause = readiness.and_then(|reader| reader.pause);
     let cancel = call.stop.shared();
     let (engine, packing) = (call.engine, call.packing);
     let coordinator = thread::spawn(move || {
@@ -170,6 +125,7 @@ where
         });
         let _sent = events.send(Event::End(ended));
     });
+    let paced = !call.aggregate_inputs || call.stop.observing();
     Batch::from_source(Box::new(Pull {
         items: records,
         held: VecDeque::new(),
@@ -183,7 +139,7 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && cli_reader.is_none(),
+        interactive: packing.inputs == Some(1) && readiness.is_none() && paced,
         pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
@@ -300,7 +256,7 @@ where
             self.pending_ask = false;
             return;
         }
-        if self.stop.cli_reader.is_some_and(|reader| !reader.ready()) {
+        if self.stop.readiness.is_some_and(|reader| !reader.ready()) {
             self.pending_ask = true;
             return;
         }
@@ -375,7 +331,7 @@ impl<A: Asker, I: Iterator, R, T> Pull<'_, A, I, R, T> {
         };
         self.stop.fire();
         self.pending_ask = false;
-        if let Some(reader) = self.stop.cli_reader {
+        if let Some(reader) = self.stop.readiness {
             reader.wake().clear();
         }
         self.port = None;

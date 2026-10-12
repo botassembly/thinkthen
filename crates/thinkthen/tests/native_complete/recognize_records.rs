@@ -8,13 +8,7 @@ use thinkthen::{
 fn an_external_cache_change_between_records_refuses_before_the_next_send() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let folder = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .cache_at(&folder)
         .unwrap()
         .max_retries(0)
@@ -34,16 +28,10 @@ fn an_external_cache_change_between_records_refuses_before_the_next_send() {
             changed.store(true, std::sync::atomic::Ordering::SeqCst);
         }
     };
-    let rows = ["Ada met Acme.", "Bob met Corp."].map(|original| RecordInput {
-        examples: None,
-        seed_spans: None,
-        original,
-        context: None,
-        options: None,
-    });
-    let failure = engine
-        .recognize_records_complete_with(&ask, rows, CallOptions::new().observe(&observer))
-        .unwrap_err();
+    let rows = ["Ada met Acme.", "Bob met Corp."].map(crate::api::record);
+    let failure =
+        crate::api::recognize_records(&engine, &ask, rows, CallOptions::new().observe(&observer))
+            .unwrap_err();
     assert!(changed.load(std::sync::atomic::Ordering::SeqCst));
     assert_eq!(failure.kind(), ErrorKind::Local);
     assert_eq!(failure.facts().unwrap().records(), 1);
@@ -67,13 +55,7 @@ fn record(_id: usize, line: usize) -> RecordInput<thinkthen::RecordEvidence> {
 fn located_recognition_retains_duplicate_occurrences_and_one_call_with_row_attempts() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let folder = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .cache_at(&folder)
         .unwrap()
         .max_retries(0)
@@ -82,20 +64,20 @@ fn located_recognition_retains_duplicate_occurrences_and_one_call_with_row_attem
     let ask = Recognize::builder().build().unwrap();
     let held = Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| held.lock().unwrap().push(event.to_owned());
-    let call = engine
-        .recognize_records_complete_with(
-            &ask,
-            [record(1, 4), record(2, 5)],
-            CallOptions::new()
-                .context("Separate.")
-                .attempts(true)
-                .observe(&observer),
-        )
-        .unwrap();
+    let call = crate::api::recognize_records(
+        &engine,
+        &ask,
+        [record(1, 4), record(2, 5)],
+        CallOptions::new()
+            .context("Separate.")
+            .attempts(true)
+            .observe(&observer),
+    )
+    .unwrap();
+    let rows = crate::api::recognized(&call).unwrap();
     assert_eq!(call.facts().records(), 2);
     assert_eq!(call.facts().requests_sent(), 2);
     assert_eq!(listener.count(), 2);
-    let rows = call.value();
     assert_ne!(rows[0].result().answer_id(), rows[1].result().answer_id());
     assert_eq!(
         rows[0].result().identity().observations(),
@@ -162,16 +144,16 @@ fn recognition_admits_all_records_before_sends_and_empty_records_have_no_observa
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let engine = engine(&listener);
     let ask = Recognize::builder().build().unwrap();
-    let failed = engine
-        .try_recognize_records_complete_with(
-            &ask,
-            [
-                Ok(record(1, 1)),
-                Err(thinkthen::Error::new(ErrorKind::Local, "reader stopped")),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let failed = crate::api::try_recognize_records(
+        &engine,
+        &ask,
+        [
+            Ok(record(1, 1)),
+            Err(thinkthen::Error::new(ErrorKind::Local, "reader stopped")),
+        ],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(failed.kind(), ErrorKind::Local);
     assert_eq!(failed.stopped().at(), Some(2));
     assert!(failed.facts().is_none());
@@ -180,25 +162,24 @@ fn recognition_admits_all_records_before_sends_and_empty_records_have_no_observa
         thinkthen::RecordOptions::project(r#"{"options":["one","two"]}"#, "/options").unwrap(),
     );
     assert_eq!(
-        engine
-            .recognize_records_complete_with(&ask, [record(1, 1), unsupported], CallOptions::new())
-            .unwrap_err()
-            .kind(),
+        crate::api::recognize_records(
+            &engine,
+            &ask,
+            [record(1, 1), unsupported],
+            CallOptions::new()
+        )
+        .unwrap_err()
+        .kind(),
         ErrorKind::Usage
     );
-    let empty = RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: "",
-        context: None,
-        options: None,
-    };
-    let result = engine
-        .recognize_records_complete_with(&ask, [empty], CallOptions::new().attempts(true))
-        .unwrap();
+    let empty = crate::api::record("");
+    let result =
+        crate::api::recognize_records(&engine, &ask, [empty], CallOptions::new().attempts(true))
+            .unwrap();
+    let result_value = crate::api::recognized(&result).unwrap();
     assert_eq!(result.facts().records(), 1);
-    assert_eq!(result.value()[0].result().identity().origin(), None);
-    assert_eq!(result.value()[0].result().meta().attempts(), Some(&[][..]));
+    assert_eq!(result_value[0].result().identity().origin(), None);
+    assert_eq!(result_value[0].result().meta().attempts(), Some(&[][..]));
     assert_eq!(listener.count(), 0);
 }
 
@@ -225,13 +206,13 @@ fn started_recognition_failure_retains_completed_prefix_and_actual_failure_locat
     broken.original = broken
         .original
         .with_location(SourceLocation::new("broken.txt".into(), Some(9), Some(9)).unwrap());
-    let failure = engine
-        .recognize_records_complete_with(
-            &ask,
-            [record(1, 4), broken],
-            CallOptions::new().attempts(true).observe(&observer),
-        )
-        .unwrap_err();
+    let failure = crate::api::recognize_records(
+        &engine,
+        &ask,
+        [record(1, 4), broken],
+        CallOptions::new().attempts(true).observe(&observer),
+    )
+    .unwrap_err();
     assert_eq!(failure.kind(), ErrorKind::Backend);
     assert_eq!(failure.stopped().at(), Some(2));
     assert_eq!(failure.facts().unwrap().records(), 1);
@@ -259,12 +240,8 @@ fn started_recognition_failure_retains_completed_prefix_and_actual_failure_locat
 #[test]
 fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and_original() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
+    let engine = crate::api::builder(listener.base(), "complete-private")
         .model("engine-model")
-        .unwrap()
-        .api_key("complete-private")
         .unwrap()
         .no_cache()
         .max_retries(0)
@@ -284,22 +261,23 @@ fn saved_recognition_selection_uses_native_reading_and_keeps_profile_warning_and
     let saved = thinkthen::RecognizeQuestionFile::load(&path).unwrap();
     assert_eq!(Recognize::load(&path).unwrap_err().kind(), ErrorKind::Local);
     let original = RawRecord::json(r#"{"body":"Ada met Acme.","private":false}"#).unwrap();
-    let call = engine
-        .recognize_records_complete_with(
-            saved.question(),
-            [saved.reading().compose(original).unwrap()],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let call = crate::api::recognize_records(
+        &engine,
+        saved.question(),
+        [saved.reading().compose(original).unwrap()],
+        CallOptions::new(),
+    )
+    .unwrap();
+    let call_value = crate::api::recognized(&call).unwrap();
     assert_eq!(
-        call.value()[0].result().question().profile(),
+        call_value[0].result().question().profile(),
         Some("calibrated")
     );
-    let meta = call.value()[0].result().meta();
+    let meta = call_value[0].result().meta();
     let warning = meta.profile_warning().unwrap();
     assert_eq!(warning.tuned_for(), "calibrated");
     assert_eq!(warning.running(), "running");
-    let document = serde_json::to_value(&call.value()[0]).unwrap();
+    let document = serde_json::to_value(&call_value[0]).unwrap();
     assert_eq!(
         document["input"],
         json!({"body":"Ada met Acme.","private":false})

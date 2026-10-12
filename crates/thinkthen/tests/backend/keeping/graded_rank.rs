@@ -5,13 +5,12 @@
     reason = "a failed fixture setup or a missing field should stop the boundary test"
 )]
 
+use crate::harness::{Canned, Listener, spawn_one as spawn, spawn_one_local};
 use std::fs;
 use std::io;
 use std::path::PathBuf;
 
 use serde_json::{Value, json};
-
-use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 const INPUT: &str = "delta\nbeta  \nalpha\ngamma\n";
 const FILE: &str = r#"{"score":"How relevant?","levels":{"low":"Unrelated.","middle":"Some relevance.","high":"Perfect match."}}"#;
@@ -163,12 +162,7 @@ fn graded_rank_orders_weighted_positions_and_keeps_the_earlier_top_tie() -> io::
     let file = question()?;
     let listener = Listener::answering(response)?;
     let ranked = run("rank", &file, listener.base(), &["--top", "2", "--facts"])?;
-    assert_eq!(
-        ranked.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&ranked.stderr)
-    );
+    crate::harness::exits(&ranked, 0);
     assert_eq!(ranked.stdout, b"alpha\nbeta  \n");
     let facts: Value = serde_json::from_slice(&ranked.stderr)?;
     assert_eq!(facts["records"], 4);
@@ -244,7 +238,7 @@ fn graded_rank_keeps_original_jsonl_bytes() -> io::Result<()> {
     let file = question()?;
     let listener = Listener::answering(response)?;
     let input = b"{ \"text\" : \"beta\" }\n{\"text\":\"alpha\"}\n";
-    let output = spawn(
+    let output = spawn_one_local(
         &[
             "rank",
             &file,
@@ -254,11 +248,8 @@ fn graded_rank_keeps_original_jsonl_bytes() -> io::Result<()> {
             "--jobs",
             "1",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         input,
     )?;

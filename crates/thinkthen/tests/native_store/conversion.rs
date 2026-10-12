@@ -140,7 +140,7 @@ fn fixture_origin_replay_and_conversion_preserve_history_and_idempotent_bytes() 
     std::fs::write(&fixture, format!("{state}\n{answer}\n")).unwrap();
     let original = std::fs::read(&fixture).unwrap();
     let modified = std::fs::metadata(&fixture).unwrap().modified().unwrap();
-    let expected_id = legacy_observation(&key, "fixture");
+    let expected_id = compatibility_observation(&key, "fixture");
     let question = Question::decide("Refund?").unwrap().cut();
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
     let historical = replay.details(&question, "Refund me.").unwrap();

@@ -1,10 +1,10 @@
 //! The `tag` expansion boundary through the compiled command.
 
+use crate::harness::{Canned, Listener, finish, spawn, spawn_local, stderr_is};
 use std::io::{BufRead, BufReader, Write};
 use std::process::Stdio;
 
 use super::file;
-use crate::harness::{Canned, Listener, finish, spawn};
 
 fn answer(probabilities: &[f64]) -> String {
     let answers = probabilities
@@ -69,10 +69,7 @@ fn one_and_twenty_labels_cross_the_compiled_expansion_boundary() {
             .map(|place| format!(r#""label{place}""#))
             .collect::<Vec<_>>()
             .join(",");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            format!("[{expected}]\n")
-        );
+        assert_eq!(crate::harness::printed(&output), format!("[{expected}]\n"));
     }
 }
 
@@ -80,16 +77,9 @@ fn one_and_twenty_labels_cross_the_compiled_expansion_boundary() {
 fn a_quoted_backslashed_label_reaches_the_instruction_as_text() {
     let response = answer(&[0.9]);
     let listener = Listener::serving(vec![Canned::ok(&response)]).expect("listener");
-    let output = spawn(
-        &[
-            "tag",
-            "Which topics?",
-            "say \"yes\"\\now",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["tag", "Which topics?", "say \"yes\"\\now"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"evidence",
     )
@@ -126,7 +116,7 @@ fn each_invalid_tag_reply_is_a_backend_failure() {
         let output = tag(listener.base(), &[], b"evidence").expect("tag runs");
         assert_eq!(output.status.code(), Some(4), "{message}");
         assert!(output.stdout.is_empty(), "{message}");
-        assert!(String::from_utf8_lossy(&output.stderr).contains(message));
+        assert!(crate::harness::said(&output).contains(message));
     }
 }
 
@@ -140,18 +130,17 @@ fn a_repeated_answer_name_refuses_the_reply() {
     );
     let listener = Listener::serving(vec![Canned::ok(body)]).expect("listener");
     let output = tag(listener.base(), &[], b"evidence").expect("tag runs");
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 93 is not one\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 93 is not one\n",
     );
 }
 
 #[test]
 fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
     let listener = Listener::serving(Vec::new()).expect("listener");
-    let output = spawn(
+    let output = spawn_local(
         &[
             "tag",
             "Which topics?",
@@ -159,19 +148,16 @@ fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
             "billing=Charges.",
             "--label",
             "urgent=Prompt.",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--plan",
         ],
+        listener.base(),
         &[],
         b"evidence",
     )
     .expect("tag plans");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         format!(
             concat!(
                 r#"{{"url":"{}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","request":{{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{{"true":"Charges."}}}},"#,
@@ -206,7 +192,7 @@ fn delayed_tag_rows_keep_evidence_and_output_order() {
     .expect("tag runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!(
             r#"{"input":"row 1","value":["billing"]}"#,
             "\n",
@@ -255,7 +241,7 @@ fn earliest_tag_record_failure_wins_after_reverse_completion() {
     .expect("tag runs");
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
-    let said = String::from_utf8_lossy(&output.stderr);
+    let said = crate::harness::said(&output);
     assert!(said.contains("status 500"), "{said}");
     assert!(said.contains("stopped at record 1"), "{said}");
     assert_eq!(listener.requests().len(), 4);
@@ -322,11 +308,8 @@ fn tag_label_diagnostics_name_labels_and_hide_hostile_content() {
         arguments.push("--plan");
         let output = spawn(&arguments, &[], b"evidence").expect("tag refuses");
         assert_eq!(output.status.code(), Some(2));
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            format!("thinkthen: {message}\n")
-        );
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("marker-evidence"));
+        stderr_is(&output, format!("thinkthen: {message}\n"));
+        assert!(!crate::harness::said(&output).contains("marker-evidence"));
     }
 
     let files = [
@@ -352,10 +335,10 @@ fn tag_label_diagnostics_name_labels_and_hide_hostile_content() {
         )
         .expect("tag refuses");
         assert_eq!(output.status.code(), Some(5));
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            format!("thinkthen: the question file's `labels`: {message}\n")
+        stderr_is(
+            &output,
+            format!("thinkthen: the question file's `labels`: {message}\n"),
         );
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("marker-evidence"));
+        assert!(!crate::harness::said(&output).contains("marker-evidence"));
     }
 }

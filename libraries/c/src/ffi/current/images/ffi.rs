@@ -10,7 +10,7 @@ use super::{
 };
 use crate::ffi::values as abi;
 use crate::{
-    Door,
+    EngineHandle,
     current::ImageHandle,
     failures::{Failure, OK, USAGE, guard},
 };
@@ -20,7 +20,7 @@ use crate::{
 /// Counted storage is readable and output writable until return.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_image_clone(
-    engine: *const Door,
+    engine: *const EngineHandle,
     bytes: *const u8,
     len: usize,
     media: u32,
@@ -29,7 +29,7 @@ pub unsafe extern "C" fn thinkthen_image_clone(
 ) -> std::ffi::c_int {
     // SAFETY: caller supplies live handles and the declared counted extents.
     unsafe {
-        crate::ffi::typed(
+        crate::ffi::run_typed(
             engine,
             |_| {
                 read::required(out)?;

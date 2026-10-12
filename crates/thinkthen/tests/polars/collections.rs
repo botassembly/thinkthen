@@ -2,11 +2,7 @@
 use super::common;
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::polars::prelude::{DataFrame, IntoLazy, NamedFrom, Series};
-use thinkthen::{BatchSetting, CallOptions, ErrorKind, PolarsEngine, Question, Recognize, Relate};
-
-fn singleton() -> CallOptions<'static> {
-    CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
-}
+use thinkthen::{CallOptions, ErrorKind, PolarsEngine, Question, Recognize, Relate};
 
 #[test]
 fn filter_and_rank_keep_nullable_duplicate_row_positions() {
@@ -21,7 +17,7 @@ fn filter_and_rank_keep_nullable_duplicate_row_positions() {
     );
     let decide = Question::decide("Relevant?").expect("question").cut();
     let filtered = engine
-        .filter_series(&decide, &texts, singleton())
+        .filter_series(&decide, &texts, common::singleton())
         .expect("filter");
     assert_eq!(filtered.value().name().as_str(), "body");
     assert_eq!(
@@ -36,7 +32,7 @@ fn filter_and_rank_keep_nullable_duplicate_row_positions() {
     assert_eq!(filtered.facts().requests_sent(), 3);
     let rank = Question::rank("Relevant?").expect("rank question");
     let ranked = engine
-        .rank_series(&rank, &texts, singleton())
+        .rank_series(&rank, &texts, common::singleton())
         .expect("rank");
     assert_eq!(
         ranked
@@ -103,7 +99,7 @@ fn find_and_lazy_find_see_all_candidates_in_the_complete_collection() {
         .offering_none()
         .expect("none");
     let found = engine
-        .find_series(&find, &texts, singleton())
+        .find_series(&find, &texts, common::singleton())
         .expect("find");
     assert_eq!(
         found
@@ -140,7 +136,7 @@ fn find_and_lazy_find_see_all_candidates_in_the_complete_collection() {
     );
     let lazy = DataFrame::new(4, vec![texts.into()]).expect("frame").lazy();
     let materialized = engine
-        .find_lazy(&find, lazy, "body", singleton())
+        .find_lazy(&find, lazy, "body", common::singleton())
         .expect("whole logical set");
     assert_eq!(materialized.value(), found.value());
     assert_eq!(listener.count(), 2);

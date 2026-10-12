@@ -39,7 +39,19 @@ class RecognitionExampleText;
 class RecognitionMode;
 class RecognitionSeedSpan;
 class RecognitionStageContext;
+class Request;
 class RequestBatch;
+class RequestCall;
+class RequestCallAnnotate;
+class RequestCallChoose;
+class RequestCallDecide;
+class RequestCallFilter;
+class RequestCallFind;
+class RequestCallRank;
+class RequestCallRecognize;
+class RequestCallRelate;
+class RequestCallScore;
+class RequestCallTag;
 class RequestDefinition;
 class RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties;
 class RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose;
@@ -81,6 +93,7 @@ class RequestReader;
 class RequestSessionDescriptor;
 class RequestSource;
 class RequestThreshold;
+class RequestVersion;
 class SessionSourceLocation;
 class SourceUnit;
 class AuthoredChoose : public Node {
@@ -350,10 +363,111 @@ public: static RecognitionStageContext from_document(const Json& value) { return
     RecognitionStageContext& set_kind_edge(const std::string& value);
     RecognitionStageContext& set_relation(const std::string& value);
 };
+class Request : public Node {
+    Request(const Json& value, int):Node(value) {}
+public: static Request from_document(const Json& value) { return Request(value,0); }
+    Request():Node(Json(Json::Object{{"schema",Json("thinkthen.request/1")}})) {}
+    Request& set_call(const RequestCall& value);
+    Request& set_schema(const RequestVersion& value);
+};
 class RequestBatch : public Node {
     RequestBatch(const Json& value, int):Node(value) {}
 public: static RequestBatch from_document(const Json& value) { return RequestBatch(value,0); }
     explicit RequestBatch(const std::variant<uint64_t, std::string>& value);
+};
+class RequestCall : public Node {
+    RequestCall(const Json& value, int):Node(value) {}
+public: static RequestCall from_document(const Json& value) { return RequestCall(value,0); }
+    RequestCall(const RequestCallDecide& value);
+    RequestCall(const RequestCallChoose& value);
+    RequestCall(const RequestCallTag& value);
+    RequestCall(const RequestCallScore& value);
+    RequestCall(const RequestCallFilter& value);
+    RequestCall(const RequestCallRank& value);
+    RequestCall(const RequestCallFind& value);
+    RequestCall(const RequestCallAnnotate& value);
+    RequestCall(const RequestCallRecognize& value);
+    RequestCall(const RequestCallRelate& value);
+};
+class RequestCallAnnotate : public Node {
+    RequestCallAnnotate(const Json& value, int):Node(value) {}
+public: static RequestCallAnnotate from_document(const Json& value) { return RequestCallAnnotate(value,0); }
+    RequestCallAnnotate():Node(Json(Json::Object{{"function",Json("annotate")}})) {}
+    RequestCallAnnotate& set_input(const RequestInput& value);
+    RequestCallAnnotate& set_options(const RequestOptions& value);
+    RequestCallAnnotate& set_question(const RequestQuestion& value);
+};
+class RequestCallChoose : public Node {
+    RequestCallChoose(const Json& value, int):Node(value) {}
+public: static RequestCallChoose from_document(const Json& value) { return RequestCallChoose(value,0); }
+    RequestCallChoose():Node(Json(Json::Object{{"function",Json("choose")}})) {}
+    RequestCallChoose& set_input(const RequestInput& value);
+    RequestCallChoose& set_options(const RequestOptions& value);
+    RequestCallChoose& set_question(const RequestQuestion& value);
+};
+class RequestCallDecide : public Node {
+    RequestCallDecide(const Json& value, int):Node(value) {}
+public: static RequestCallDecide from_document(const Json& value) { return RequestCallDecide(value,0); }
+    RequestCallDecide():Node(Json(Json::Object{{"function",Json("decide")}})) {}
+    RequestCallDecide& set_input(const RequestInput& value);
+    RequestCallDecide& set_options(const RequestOptions& value);
+    RequestCallDecide& set_question(const RequestQuestion& value);
+};
+class RequestCallFilter : public Node {
+    RequestCallFilter(const Json& value, int):Node(value) {}
+public: static RequestCallFilter from_document(const Json& value) { return RequestCallFilter(value,0); }
+    RequestCallFilter():Node(Json(Json::Object{{"function",Json("filter")}})) {}
+    RequestCallFilter& set_input(const RequestInput& value);
+    RequestCallFilter& set_options(const RequestOptions& value);
+    RequestCallFilter& set_question(const RequestQuestion& value);
+};
+class RequestCallFind : public Node {
+    RequestCallFind(const Json& value, int):Node(value) {}
+public: static RequestCallFind from_document(const Json& value) { return RequestCallFind(value,0); }
+    RequestCallFind():Node(Json(Json::Object{{"function",Json("find")}})) {}
+    RequestCallFind& set_input(const RequestInput& value);
+    RequestCallFind& set_options(const RequestOptions& value);
+    RequestCallFind& set_question(const RequestQuestion& value);
+};
+class RequestCallRank : public Node {
+    RequestCallRank(const Json& value, int):Node(value) {}
+public: static RequestCallRank from_document(const Json& value) { return RequestCallRank(value,0); }
+    RequestCallRank():Node(Json(Json::Object{{"function",Json("rank")}})) {}
+    RequestCallRank& set_input(const RequestInput& value);
+    RequestCallRank& set_options(const RequestOptions& value);
+    RequestCallRank& set_question(const RequestQuestion& value);
+};
+class RequestCallRecognize : public Node {
+    RequestCallRecognize(const Json& value, int):Node(value) {}
+public: static RequestCallRecognize from_document(const Json& value) { return RequestCallRecognize(value,0); }
+    RequestCallRecognize():Node(Json(Json::Object{{"function",Json("recognize")}})) {}
+    RequestCallRecognize& set_input(const RequestInput& value);
+    RequestCallRecognize& set_options(const RequestOptions& value);
+    RequestCallRecognize& set_question(const RequestQuestion& value);
+};
+class RequestCallRelate : public Node {
+    RequestCallRelate(const Json& value, int):Node(value) {}
+public: static RequestCallRelate from_document(const Json& value) { return RequestCallRelate(value,0); }
+    RequestCallRelate():Node(Json(Json::Object{{"function",Json("relate")}})) {}
+    RequestCallRelate& set_input(const RequestInput& value);
+    RequestCallRelate& set_options(const RequestOptions& value);
+    RequestCallRelate& set_question(const RequestQuestion& value);
+};
+class RequestCallScore : public Node {
+    RequestCallScore(const Json& value, int):Node(value) {}
+public: static RequestCallScore from_document(const Json& value) { return RequestCallScore(value,0); }
+    RequestCallScore():Node(Json(Json::Object{{"function",Json("score")}})) {}
+    RequestCallScore& set_input(const RequestInput& value);
+    RequestCallScore& set_options(const RequestOptions& value);
+    RequestCallScore& set_question(const RequestQuestion& value);
+};
+class RequestCallTag : public Node {
+    RequestCallTag(const Json& value, int):Node(value) {}
+public: static RequestCallTag from_document(const Json& value) { return RequestCallTag(value,0); }
+    RequestCallTag():Node(Json(Json::Object{{"function",Json("tag")}})) {}
+    RequestCallTag& set_input(const RequestInput& value);
+    RequestCallTag& set_options(const RequestOptions& value);
+    RequestCallTag& set_question(const RequestQuestion& value);
 };
 class RequestDefinition : public Node {
     RequestDefinition(const Json& value, int):Node(value) {}
@@ -747,6 +861,11 @@ class RequestThreshold : public Node {
 public: static RequestThreshold from_document(const Json& value) { return RequestThreshold(value,0); }
     explicit RequestThreshold(const std::variant<double, std::string>& value);
 };
+class RequestVersion : public Node {
+    RequestVersion(const Json& value, int):Node(value) {}
+public: static RequestVersion from_document(const Json& value) { return RequestVersion(value,0); }
+    explicit RequestVersion(const std::string& value);
+};
 class SessionSourceLocation : public Node {
     SessionSourceLocation(const Json& value, int):Node(value) {}
 public: static SessionSourceLocation from_document(const Json& value) { return SessionSourceLocation(value,0); }
@@ -865,7 +984,49 @@ inline RecognitionSeedSpan& RecognitionSeedSpan::set_start(const uint64_t& value
 inline RecognitionStageContext& RecognitionStageContext::set_boundary(const std::string& value) { set_member("boundary",results::encode(value)); return *this; }
 inline RecognitionStageContext& RecognitionStageContext::set_kind_edge(const std::string& value) { set_member("kind_edge",results::encode(value)); return *this; }
 inline RecognitionStageContext& RecognitionStageContext::set_relation(const std::string& value) { set_member("relation",results::encode(value)); return *this; }
+inline Request& Request::set_call(const RequestCall& value) { set_member("call",results::encode(value)); return *this; }
+inline Request& Request::set_schema(const RequestVersion& value) { set_member("schema",results::encode(value)); return *this; }
 inline RequestBatch::RequestBatch(const std::variant<uint64_t, std::string>& value):Node(results::encode(value)) {}
+inline RequestCall::RequestCall(const RequestCallDecide& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallChoose& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallTag& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallScore& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallFilter& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallRank& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallFind& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallAnnotate& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallRecognize& value):Node(value.document()) {}
+inline RequestCall::RequestCall(const RequestCallRelate& value):Node(value.document()) {}
+inline RequestCallAnnotate& RequestCallAnnotate::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallAnnotate& RequestCallAnnotate::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallAnnotate& RequestCallAnnotate::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallChoose& RequestCallChoose::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallChoose& RequestCallChoose::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallChoose& RequestCallChoose::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallDecide& RequestCallDecide::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallDecide& RequestCallDecide::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallDecide& RequestCallDecide::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallFilter& RequestCallFilter::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallFilter& RequestCallFilter::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallFilter& RequestCallFilter::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallFind& RequestCallFind::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallFind& RequestCallFind::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallFind& RequestCallFind::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallRank& RequestCallRank::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallRank& RequestCallRank::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallRank& RequestCallRank::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallRecognize& RequestCallRecognize::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallRecognize& RequestCallRecognize::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallRecognize& RequestCallRecognize::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallRelate& RequestCallRelate::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallRelate& RequestCallRelate::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallRelate& RequestCallRelate::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallScore& RequestCallScore::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallScore& RequestCallScore::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallScore& RequestCallScore::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
+inline RequestCallTag& RequestCallTag::set_input(const RequestInput& value) { set_member("input",results::encode(value)); return *this; }
+inline RequestCallTag& RequestCallTag::set_options(const RequestOptions& value) { set_member("options",results::encode(value)); return *this; }
+inline RequestCallTag& RequestCallTag::set_question(const RequestQuestion& value) { set_member("question",results::encode(value)); return *this; }
 inline RequestDefinition::RequestDefinition(const RequestDefinitionFieldsDecide& value):Node(value.document()) {}
 inline RequestDefinition::RequestDefinition(const RequestDefinitionFieldsChoose& value):Node(value.document()) {}
 inline RequestDefinition::RequestDefinition(const RequestDefinitionFieldsTag& value):Node(value.document()) {}
@@ -1061,6 +1222,7 @@ inline RequestSource& RequestSource::set_media(const ReaderMedia& value) { set_m
 inline RequestSource& RequestSource::set_paths(const std::vector<std::string>& value) { set_member("paths",results::encode(value)); return *this; }
 inline RequestSource& RequestSource::set_reading(const RequestReader& value) { set_member("reading",results::encode(value)); return *this; }
 inline RequestThreshold::RequestThreshold(const std::variant<double, std::string>& value):Node(results::encode(value)) {}
+inline RequestVersion::RequestVersion(const std::string& value):Node(results::encode(value)) {}
 inline SessionSourceLocation& SessionSourceLocation::set_file(const std::string& value) { set_member("file",results::encode(value)); return *this; }
 inline SessionSourceLocation& SessionSourceLocation::set_first_line(const uint64_t& value) { set_member("first_line",results::encode(value)); return *this; }
 inline SessionSourceLocation& SessionSourceLocation::set_last_line(const uint64_t& value) { set_member("last_line",results::encode(value)); return *this; }

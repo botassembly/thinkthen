@@ -344,6 +344,9 @@ public RequestBatch(String value) { this.value = Values.freeze(value); }
 public Object json() { return value; }
 }
 public sealed interface RequestCall extends Values.Value permits RequestCallDecide,RequestCallChoose,RequestCallTag,RequestCallScore,RequestCallFilter,RequestCallRank,RequestCallFind,RequestCallAnnotate,RequestCallRecognize,RequestCallRelate {
+RequestCall input(RequestInput value);
+RequestCall options(RequestOptions value);
+RequestCall question(RequestQuestion value);
 static RequestCall fromJson(Object value) { Map<String,Object> object = Values.object(value);
 if ("decide".equals(object.get("function"))) return RequestCallDecide.fromJson(value);
 if ("choose".equals(object.get("function"))) return RequestCallChoose.fromJson(value);
@@ -519,6 +522,7 @@ public RequestCallTag questionNull() { return put("question", null); }
 public RequestCallTag omitQuestion() { return omit("question"); }
 }
 public sealed interface RequestDefinition extends Values.Value permits RequestDefinitionFieldsDecide,RequestDefinitionFieldsChoose,RequestDefinitionFieldsTag,RequestDefinitionFieldsScore,RequestDefinitionFieldsRelateVersion,RequestDefinitionFieldsFind,RequestDefinitionFieldsRecognizeVersion,RequestDefinitionFieldsQuestionsVersion {
+RequestDefinition profile(String value);
 static RequestDefinition fromJson(Object value) { Map<String,Object> object = Values.object(value);
 if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionFieldsDecide.fromJson(value);
 if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("find") && !object.containsKey("questions") && !object.containsKey("recognize") && !object.containsKey("relate") && !object.containsKey("score") && !object.containsKey("tag") && !object.containsKey("version")) return RequestDefinitionFieldsChoose.fromJson(value);
@@ -532,6 +536,11 @@ return RequestDefinitionFieldsDecide.fromJson(value);
 }
 }
 public sealed interface RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties extends Values.Value permits RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide,RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose,RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag,RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore {
+RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties contextSchema(AuthoredInputDeclaration value);
+RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties itemSchema(AuthoredInputDeclaration value);
+RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties name(String value);
+RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties on(AuthoredPointers value);
+RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties wordingVersion(Number value);
 static RequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties fromJson(Object value) { Map<String,Object> object = Values.object(value);
 if (object.containsKey("decide") && !object.containsKey("choose") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide.fromJson(value);
 if (object.containsKey("choose") && !object.containsKey("decide") && !object.containsKey("score") && !object.containsKey("tag")) return RequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose.fromJson(value);
@@ -1337,12 +1346,13 @@ public RequestReader window(Number value) { return put("window", value); }
 public RequestReader windowNull() { return put("window", null); }
 public RequestReader omitWindow() { return omit("window"); }
 }
-public sealed interface RequestReaderFailure extends Values.Value permits RequestReaderFailureIo,RequestReaderFailureUtf8,RequestReaderFailureInvalidInput {
+public sealed interface RequestReaderFailure extends Values.Value permits RequestReaderFailureProducer,RequestReaderFailureIo,RequestReaderFailureUtf8,RequestReaderFailureInvalidInput {
 static RequestReaderFailure fromJson(Object value) { Map<String,Object> object = Values.object(value);
+if ("producer".equals(object.get("kind"))) return RequestReaderFailureProducer.fromJson(value);
 if ("io".equals(object.get("kind"))) return RequestReaderFailureIo.fromJson(value);
 if ("utf8".equals(object.get("kind"))) return RequestReaderFailureUtf8.fromJson(value);
 if ("invalid_input".equals(object.get("kind"))) return RequestReaderFailureInvalidInput.fromJson(value);
-return RequestReaderFailureIo.fromJson(value);
+return RequestReaderFailureProducer.fromJson(value);
 }
 }
 public static final class RequestReaderFailureInvalidInput extends Values.Builder<RequestReaderFailureInvalidInput> implements RequestReaderFailure {
@@ -1364,6 +1374,13 @@ protected RequestReaderFailureIo self() { return this; }
 public RequestReaderFailureIo location(SessionSourceLocation value) { return put("location", value); }
 public RequestReaderFailureIo locationNull() { return put("location", null); }
 public RequestReaderFailureIo omitLocation() { return omit("location"); }
+}
+public static final class RequestReaderFailureProducer extends Values.Builder<RequestReaderFailureProducer> implements RequestReaderFailure {
+public RequestReaderFailureProducer() {
+put("kind", "producer");
+}
+public static RequestReaderFailureProducer fromJson(Object value) { RequestReaderFailureProducer result = new RequestReaderFailureProducer(); result.omit("kind"); Values.object(value).forEach(result::extension); return result; }
+protected RequestReaderFailureProducer self() { return this; }
 }
 public static final class RequestReaderFailureUtf8 extends Values.Builder<RequestReaderFailureUtf8> implements RequestReaderFailure {
 public RequestReaderFailureUtf8() {

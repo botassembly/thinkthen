@@ -44,7 +44,7 @@ pub(super) fn run(
     let reader = crate::asking::native_reader::Reader::new(frames);
     let ready = || reader.ready();
     let readiness =
-        crate::public::cli_reader::CliReader::new(&ready, judging.environment.input_pause());
+        crate::public::readiness::Readiness::new(&ready, judging.environment.input_pause());
     reader.wake(readiness.wake());
     let held = RefCell::new(BTreeMap::new());
     let fields = reading
@@ -84,7 +84,7 @@ pub(super) fn run(
         .interrupt(&signal)
         .surface(crate::Surface::Cli)
         .attempts(judging.details())
-        .cli_reader(&readiness);
+        .readiness(&readiness);
     if let Some(setting) = setting {
         controls = controls.batch(match setting {
             Setting::Max => crate::BatchSetting::Max,
@@ -292,7 +292,7 @@ fn receive(
             .question_sources()
             .iter()
             .all(|source| source.origin() != crate::core::Origin::Live);
-        let values = canonical.legacy.value().clone().into_values();
+        let values = canonical.compatibility.value().clone().into_values();
         let mut printed = Some(if judging.details() {
             json_line(canonical)?
         } else if judging.streams() && !original.record.is_object() {

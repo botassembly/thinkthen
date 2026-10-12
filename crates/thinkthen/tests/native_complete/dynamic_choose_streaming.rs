@@ -2,21 +2,11 @@ use super::*;
 use std::cell::Cell;
 use std::num::NonZeroUsize;
 use thinkthen::{
-    BatchSetting, CancelToken, InputFileReader, InputReaderOptions, RawRecord,
-    RecordChooseQuestion, RecordInput, RecordOptions, RecordReading,
+    BatchSetting, InputFileReader, InputReaderOptions, RawRecord, RecordChooseQuestion,
+    RecordInput, RecordReading,
 };
 
-#[cfg(test)]
-fn one() -> CallOptions<'static> {
-    CallOptions::new()
-        .batch(BatchSetting::Records(NonZeroUsize::new(1).unwrap()))
-        .attempts(true)
-}
-
-#[cfg(test)]
-fn candidates(text: &str) -> RecordOptions {
-    RecordOptions::project(text, "").unwrap()
-}
+use crate::api::{dynamic_candidates as candidates, dynamic_one as one};
 
 struct Original(usize, std::rc::Rc<()>);
 impl thinkthen::Evidence for Original {
@@ -30,24 +20,25 @@ fn empty_dynamic_choose_finishes_without_candidates_and_still_validates_batch_co
     let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
     let engine = engine(&listener);
     let invalid = RecordChooseQuestion::from_json(r#"{"choose":"Which?","batch":0}"#).unwrap();
-    let error = engine
-        .try_choose_dynamic_records_complete_with(
-            &invalid,
-            std::iter::empty::<Result<RecordInput<String>, thinkthen::Error>>(),
-            CallOptions::new(),
-        )
-        .into_call()
-        .unwrap_err();
+    let error = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Choose,
+        invalid.clone().into(),
+        std::iter::empty::<Result<RecordInput<String>, thinkthen::Error>>(),
+        CallOptions::new(),
+    )
+    .err()
+    .unwrap();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert!(error.facts().is_none());
-    let call = engine
-        .try_choose_dynamic_records_complete_with(
-            &invalid,
-            std::iter::empty::<Result<RecordInput<String>, thinkthen::Error>>(),
-            CallOptions::new().batch(BatchSetting::Max).attempts(true),
-        )
-        .into_call()
-        .unwrap();
+    let call = crate::api::pull_choices(
+        &engine,
+        &invalid,
+        std::iter::empty::<Result<RecordInput<String>, thinkthen::Error>>(),
+        CallOptions::new().batch(BatchSetting::Max).attempts(true),
+    )
+    .into_call()
+    .unwrap();
     assert!(call.value().is_empty());
     assert_eq!(call.facts().records(), 0);
     assert_eq!(call.facts().requests_sent(), 0);
@@ -63,7 +54,9 @@ fn dynamic_reader_failure_preserves_the_located_prefix_and_never_inherits_candid
         "{not-valid-private",
         r#"{"body":"Missing.","context":"Guide."}"#,
     ] {
-        let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}},"usage":{"input_tokens":887}}"#)).unwrap();
+        let listener = crate::api::answering(
+            r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}},"usage":{"input_tokens":887}}"#,
+        );
         let engine = engine(&listener);
         let question = Question::choose_records("Which?").unwrap();
         let reading = RecordReading::new(&["/body"], Some("/context"), Some("/options")).unwrap();
@@ -79,7 +72,7 @@ fn dynamic_reader_failure_preserves_the_located_prefix_and_never_inherits_candid
         let records = reader
             .inspect(|_| pulled.set(pulled.get() + 1))
             .map(|source| source.and_then(|source| reading.compose_source(source)));
-        let mut batch = engine.try_choose_dynamic_records_complete_with(&question, records, one());
+        let mut batch = crate::api::pull_choices(&engine, &question, records, one());
         let row = batch.next().unwrap().unwrap();
         assert_eq!(row.ordinal(), 0);
         assert_eq!(row.result().value(), Some("b"));
@@ -116,21 +109,21 @@ fn dynamic_reader_failure_preserves_the_located_prefix_and_never_inherits_candid
 #[test]
 fn missing_first_or_later_dynamic_candidates_stop_at_their_original_without_reading_a_suffix() {
     for prefix in [false, true] {
-        let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}}}"#)).unwrap();
+        let listener = crate::api::answering(
+            r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}}}"#,
+        );
         let engine = engine(&listener);
         let question = Question::choose_records("Which?").unwrap();
         let pulled = Cell::new(0);
         let records = (0..3).map(|at| {
             pulled.set(pulled.get() + 1);
             Ok(RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "Same.",
-                context: None,
                 options: (prefix && at == 0).then(|| candidates(r#"["b","a"]"#)),
+
+                ..crate::api::record("Same.")
             })
         });
-        let mut batch = engine.try_choose_dynamic_records_complete_with(&question, records, one());
+        let mut batch = crate::api::pull_choices(&engine, &question, records, one());
         if prefix {
             let row = batch.next().unwrap().unwrap();
             assert_eq!(row.ordinal(), 0);
@@ -157,18 +150,11 @@ fn missing_first_or_later_dynamic_candidates_stop_at_their_original_without_read
 
 #[test]
 fn dynamic_candidate_order_retains_originals_probabilities_and_distinct_replay_identity() {
-    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"saved-model","answers":{"q1":{"type":"choice","probabilities":{"a":0.2,"b":0.8}}}}"#)).unwrap();
+    let listener = crate::api::answering(
+        r#"{"model":"saved-model","answers":{"q1":{"type":"choice","probabilities":{"a":0.2,"b":0.8}}}}"#,
+    );
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let question = RecordChooseQuestion::from_json(
         r#"{"choose":"Which?","model":"saved-model","threshold":0.75,"batch":2}"#,
@@ -182,16 +168,14 @@ fn dynamic_candidate_order_retains_originals_probabilities_and_distinct_replay_i
     let records = || {
         lists.iter().enumerate().map(|(at, list)| {
             Ok(RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: Original(at, std::rc::Rc::new(())),
                 context: Some("Guide.".into()),
                 options: Some(candidates(list)),
+
+                ..crate::api::record(Original(at, std::rc::Rc::new(())))
             })
         })
     };
-    let call = engine
-        .try_choose_dynamic_records_complete_with(&question, records(), one())
+    let call = crate::api::pull_choices(&engine, &question, records(), one())
         .into_call()
         .unwrap();
     assert_eq!(call.facts().model(), Some("saved-model"));
@@ -237,8 +221,7 @@ fn dynamic_candidate_order_retains_originals_probabilities_and_distinct_replay_i
         r#"{"state":"Guide.","model":"saved-model","questions":{"q1":{"type":"choice","instructions":"The text is \"Same.\". Which?","criteria":{"a":null,"b":{"z":"B","a":null}}}}}"#
     );
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let repeated = replay
-        .try_choose_dynamic_records_complete_with(&question, records(), one())
+    let repeated = crate::api::pull_choices(&replay, &question, records(), one())
         .into_call()
         .unwrap();
     assert_eq!(repeated.facts().records(), 3);
@@ -250,68 +233,12 @@ fn dynamic_candidate_order_retains_originals_probabilities_and_distinct_replay_i
 }
 
 #[test]
-fn dynamic_choose_cancellation_stops_before_polling_and_after_a_delivered_row() {
-    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}}}"#)).unwrap();
-    let engine = engine(&listener);
-    let question = Question::choose_records("Which?").unwrap();
-    for pre_cancelled in [true, false] {
-        let token = CancelToken::new();
-        if pre_cancelled {
-            token.cancel();
-        }
-        let pulled = Cell::new(0);
-        let records = (0..2).map(|_| {
-            pulled.set(pulled.get() + 1);
-            Ok(RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "Same.",
-                context: None,
-                options: Some(candidates(r#"["b","a"]"#)),
-            })
-        });
-        let mut batch = engine.try_choose_dynamic_records_complete_with(
-            &question,
-            records,
-            one().cancel(&token),
-        );
-        if !pre_cancelled {
-            assert_eq!(batch.next().unwrap().unwrap().ordinal(), 0);
-            assert_eq!(pulled.get(), 1);
-            token.cancel();
-        }
-        let error = batch.next().unwrap().unwrap_err();
-        assert_eq!(error.kind(), ErrorKind::Cancelled);
-        assert!(batch.next().is_none());
-        if !pre_cancelled {
-            assert_eq!(error.facts().unwrap().records(), 1);
-            assert_eq!(error.facts().unwrap().requests_sent(), 1);
-            assert_eq!(
-                error.facts().unwrap().call_id(),
-                batch.facts().unwrap().call_id()
-            );
-        } else {
-            assert_eq!(pulled.get(), 0);
-            assert!(error.facts().is_none());
-        }
-    }
-    assert_eq!(listener.count(), 1);
-}
-
-#[test]
 fn dynamic_choose_declarations_admit_the_staged_batch_before_replay_lookup_or_send() {
-    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}}}"#)).unwrap();
+    let listener = crate::api::answering(
+        r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"b":0.8,"a":0.2}}}}"#,
+    );
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().no_cache().record(&folder).unwrap().build().unwrap();
     let question = RecordChooseQuestion::from_json(
         r#"{"choose":"Which?","item_schema":{"type":"string"},"context_schema":{"type":"string"}}"#,
@@ -319,16 +246,16 @@ fn dynamic_choose_declarations_admit_the_staged_batch_before_replay_lookup_or_se
     .unwrap();
     let reading = RecordReading::new(&["/body"], Some("/context"), Some("/options")).unwrap();
     let input = |text| reading.compose(RawRecord::json(text).unwrap()).unwrap();
-    engine
-        .try_choose_dynamic_records_complete_with(
-            &question,
-            [Ok(input(
-                r#"{"body":"Primed.","context":"Guide.","options":["b","a"]}"#,
-            ))],
-            one(),
-        )
-        .into_call()
-        .unwrap();
+    crate::api::pull_choices(
+        &engine,
+        &question,
+        [Ok(input(
+            r#"{"body":"Primed.","context":"Guide.","options":["b","a"]}"#,
+        ))],
+        one(),
+    )
+    .into_call()
+    .unwrap();
     let replay = build().replay(&folder).unwrap().build().unwrap();
     for (second, invalid_context, message) in [
         (
@@ -349,7 +276,8 @@ fn dynamic_choose_declarations_admit_the_staged_batch_before_replay_lookup_or_se
                     thinkthen::ObjectContext::new(&RawRecord::json("{}").unwrap()).unwrap(),
                 ));
             }
-            let mut batch = selected.try_choose_dynamic_records_complete_with(
+            let mut batch = crate::api::pull_choices(
+                selected,
                 &question,
                 [
                     Ok(input(

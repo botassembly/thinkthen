@@ -675,9 +675,54 @@ typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 #define THINKTHEN_SESSION_PENDING_V1 1
 
 /*
+ Intake was cancelled; settlement can still be pending.
+ */
+#define THINKTHEN_SESSION_READY_CANCELLED_V1 4
+
+/*
+ Caller-supplied input has closed.
+ */
+#define THINKTHEN_SESSION_READY_CLOSED_V1 2
+
+/*
+ Every output packet has been consumed.
+ */
+#define THINKTHEN_SESSION_READY_END_V1 3
+
+/*
+ Caller-supplied input has room.
+ */
+#define THINKTHEN_SESSION_READY_INPUT_V1 1
+
+/*
+ A result or terminal packet is ready; no packet has been consumed.
+ */
+#define THINKTHEN_SESSION_READY_RESULT_V1 0
+
+/*
+ The caller-given timeout passed.
+ */
+#define THINKTHEN_SESSION_READY_TIMEOUT_V1 5
+
+/*
  Read transferred one independent packet owner.
  */
 #define THINKTHEN_SESSION_RESULT_V1 0
+
+/*
+ Wait for result, input room/closure, end or cancel.
+ */
+#define THINKTHEN_SESSION_WAIT_INPUT_V1 1
+
+/*
+ Wait only for results, end or cancel; input room cannot wake this wait.
+ */
+#define THINKTHEN_SESSION_WAIT_RESULT_V1 0
+
+/*
+ Drain output after cancel without waking repeatedly for cancellation.
+ */
+#define THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 2
 
 /*
  C value `THINKTHEN_SOURCE_FILE_V1`.
@@ -3583,6 +3628,29 @@ typedef struct thinkthen_summary_v1 {
    */
   struct thinkthen_optional_error_v1 error;
 } thinkthen_summary_v1;
+
+/*
+ Existing canonical components for one named request. Every view is counted
+ UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
+ */
+typedef struct thinkthen_named_request_v1 {
+  /*
+   Exact lower-case public function name.
+   */
+  struct thinkthen_complete_utf8_v1 function;
+  /*
+   Existing canonical question selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 question_json;
+  /*
+   Existing canonical input selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 input_json;
+  /*
+   Existing canonical options JSON; pass {} for omitted controls.
+   */
+  struct thinkthen_complete_utf8_v1 options_json;
+} thinkthen_named_request_v1;
 
 typedef struct thinkthen_complete_extension_v1 {
   struct thinkthen_complete_utf8_v1 name;
@@ -7004,13 +7072,13 @@ int thinkthen_batch_next(struct thinkthen_batch *owner, struct thinkthen_result 
  Call `thinkthen_call_opts` without a deadline or cancellation token.
  # Safety
  All pointers obey the corresponding options form's contract.
- The JSON door with no budget and no token: exactly
+ The JSON interface with no budget and no token: exactly
  `thinkthen_call_opts` with THINKTHEN_NO_DEADLINE and a null token.
  */
 char *thinkthen_call(const struct thinkthen_engine *engine, const char *request_json);
 
 /*
- The JSON door: one request, its answer as JSON text, or null.
+ The JSON interface: one request, its answer as JSON text, or null.
 
  # Safety
 
@@ -7429,11 +7497,11 @@ int thinkthen_find_complete(const struct thinkthen_engine *engine,
                             struct thinkthen_result **out);
 
 /*
- Free a string the door returned; null is ignored.
+ Free a string the interface returned; null is ignored.
 
  # Safety
 
- `text` is null or a string the door returned and has not freed.
+ `text` is null or a string the interface returned and has not freed.
  Free a string `thinkthen_call`, `thinkthen_recognize`, or
  `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted
  and ignored.
@@ -8063,6 +8131,13 @@ int thinkthen_score_complete(const struct thinkthen_engine *engine,
 void thinkthen_session_cancel(struct thinkthen_session *session);
 
 /*
+ Borrow the native facts JSON of the last immediate session failure, or NULL.
+ The calling thread owns these bytes until its next immediate session failure
+ or thread exit. Success and engine construction preserve the same pointer.
+ */
+const char *thinkthen_session_error_facts_json(void);
+
+/*
  Borrow a safe UTF-8 immediate diagnostic, never NULL. Success preserves
  it; the next immediate session failure or thread exit ends its validity.
  Execution failures arrive as terminal packets and never change this slot.
@@ -8070,8 +8145,14 @@ void thinkthen_session_cancel(struct thinkthen_session *session);
 const char *thinkthen_session_error_message(void);
 
 /*
+ Read the retry signal of the calling thread's last immediate session failure.
+ Returns zero before a failure. Success and engine construction preserve it.
+ */
+int thinkthen_session_error_retryable(void);
+
+/*
  Fix input EOF or a canonical closed reader failure. NULL with zero means EOF;
- other inputs decode kind io, utf8 or invalid_input and optional location.
+ other inputs decode kind io, utf8, invalid_input or producer and optional location.
  No input bytes survive return. A changed finish refuses without changing intake.
  # Safety
  session is live and failure_json has failure_len readable UTF-8 bytes.
@@ -8102,6 +8183,24 @@ int thinkthen_session_new(const struct thinkthen_engine *engine,
                           const char *request_json,
                           size_t request_len,
                           struct thinkthen_session **out);
+
+/*
+ Construct one named request through Rust and create its owned native session.
+ Components use the existing canonical question, input and options grammars.
+ Materialized Records become find Units or relate Entities in shared Rust;
+ every materialized descriptor is decoded before session creation. Sources
+ and caller feeds retain their selectors. Unknown names say "unknown function".
+ Ownership, diagnostics and output rules match thinkthen_session_new.
+ # Safety
+ engine is live; request points to a readable aligned component structure.
+ Every view points to its counted readable UTF-8 bytes (NULL requires zero);
+ extents fit Rust slices. out is nonnull writable pointer storage. All inputs
+ may be freed or overwritten after return; the engine may also be freed.
+ */
+int thinkthen_session_new_named_with_surface(const struct thinkthen_engine *engine,
+                                             const struct thinkthen_named_request_v1 *request,
+                                             struct thinkthen_complete_utf8_v1 surface,
+                                             struct thinkthen_session **out);
 
 /*
  Create an owned session attributed to its outer language wrapper.
@@ -8176,6 +8275,23 @@ int thinkthen_session_try_push(struct thinkthen_session *session,
 int thinkthen_session_try_read(struct thinkthen_session *session,
                                uint32_t *status,
                                struct thinkthen_session_result **out);
+
+/*
+ Block for requested readiness without consuming a packet or joining provider
+ work. timeout_ms is the maximum condition wait in milliseconds; zero checks
+ readiness immediately. RESULT ignores input room; INPUT also watches intake;
+ SETTLEMENT ignores cancel to drain final packets after cancellation. Output
+ readiness takes priority over cancel. Success preserves thread-local errors;
+ failures preserve out_ready and set only the calling thread's diagnostic.
+ # Safety
+ session is live for the whole wait, including concurrent cancel/read/push.
+ Shared operations are synchronized internally. out_ready is writable and
+ nonnull. Free only after every concurrent operation, including wait, returns.
+ */
+int thinkthen_session_wait(const struct thinkthen_session *session,
+                           uint32_t interest,
+                           uint32_t timeout_ms,
+                           uint32_t *out_ready);
 
 /*
  Clone an explicit native text/image reader selection.

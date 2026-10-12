@@ -75,9 +75,9 @@ def inputs(definitions):
     selected.update(child for child, _ in definitions['RequestCall']['variants'])
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
-    selected.update(('RequestInput_records', 'RequestInput_source', 'RequestInput_feed',
+    selected.update(('RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
                      'RequestQuestion_text', 'RequestQuestion_definition',
-                     'RequestReaderFailure_invalid_input'))
+                     'RequestReaderFailure_producer'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
              'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;']
     for key, source in definitions.items():

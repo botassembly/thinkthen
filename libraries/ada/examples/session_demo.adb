@@ -22,7 +22,11 @@ begin
    loop
       Try_Read (Owner, Answer, State);
       case State is
-         when Pending => delay 0.001;
+         when Pending => declare
+               Ready : Interfaces.Unsigned_32;
+            begin
+               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
+            end;
          when Finished => exit;
          when Result =>
             declare

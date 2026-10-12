@@ -60,7 +60,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     cmp "$package/Sources/ThinkThen/Native/$triple/libthinkthen.so" "$native/lib/libthinkthen.so"
 else
     export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-2} CARGO_NET_OFFLINE=true
-    RUSTC_WRAPPER= RUSTFLAGS="${RUSTFLAGS:-} --remap-path-prefix=$HOME=/build" cargo build --locked --offline --manifest-path "$root/libraries/c/Cargo.toml" --lib -j2
+    build_flags=${RUSTFLAGS:-}
+    [ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || build_flags="$build_flags --remap-path-prefix=$HOME=/build"
+    RUSTC_WRAPPER= RUSTFLAGS="$build_flags" cargo build --locked --offline --manifest-path "$root/libraries/c/Cargo.toml" --lib -j2
     package=$package_scratch/package
     python3 "$here/Tests/fixtures/package_local.py" --native "$root/libraries/c/target/debug/libthinkthen_c.so" --out "$package"
     python3 "$here/Tests/fixtures/guard.py" "$package_scratch/thinkthen-swift-0.2.0.tar.gz"

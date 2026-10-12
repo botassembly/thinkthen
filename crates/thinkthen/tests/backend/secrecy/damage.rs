@@ -1,22 +1,18 @@
 //! The two ways a sweep case damages what its priming run stored.
 
+use crate::harness::{exits_because, spawn};
 use std::fs;
 use std::io;
 use std::path::Path;
 
 use super::{HOSTILE, written};
-use crate::harness::spawn;
 
 /// Turn a priming run's store into its fixture and damage that. A damaged
 /// fixture is not JSON; a hostile one keeps each answer's key and state and
 /// fills every other text field with hostile text, so its key no longer matches.
 pub(crate) fn damage_fixture(dir: &Path, damage: &str) -> io::Result<()> {
     let converted = spawn(&["cache", "convert", &dir.to_string_lossy()], &[], b"")?;
-    assert_eq!(
-        converted.status.code(),
-        Some(0),
-        "the priming store converts"
-    );
+    exits_because(&converted, 0, || "the priming store converts".to_owned());
     let fixture = dir.join("thinkthen.jsonl");
     if damage != HOSTILE {
         return fs::write(fixture, damage);

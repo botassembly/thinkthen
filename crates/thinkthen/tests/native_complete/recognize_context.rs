@@ -5,13 +5,7 @@ use thinkthen::{RawRecord, Recognize, RecordInput, RecordReading};
 fn recognition_keeps_record_context_separate_and_replays_only_unchanged_context() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fake")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fake")
         .cache_at(&cache)
         .unwrap()
         .max_retries(0)
@@ -20,17 +14,14 @@ fn recognition_keeps_record_context_separate_and_replays_only_unchanged_context(
     let ask = Recognize::builder().build().unwrap();
     let rows = || {
         [Some("first"), Some("second"), Some(""), None].map(|context| RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Ada met Acme.",
             context: context.map(Into::into),
-            options: None,
+
+            ..crate::api::record("Ada met Acme.")
         })
     };
     let options = CallOptions::new().context("shared");
-    let first = engine
-        .recognize_records_complete_with(&ask, rows(), options)
-        .unwrap();
+    let first = crate::api::recognize_records(&engine, &ask, rows(), options).unwrap();
+    let first_value = crate::api::recognized(&first).unwrap();
     assert_eq!(first.facts().requests_sent(), 8);
     assert_eq!(first.facts().records(), 4);
     let requests = listener.requests();
@@ -50,28 +41,25 @@ fn recognition_keeps_record_context_separate_and_replays_only_unchanged_context(
             );
         }
     }
-    let replay = engine
-        .recognize_records_complete_with(&ask, rows(), options)
-        .unwrap();
+    let replay = crate::api::recognize_records(&engine, &ask, rows(), options).unwrap();
     assert_eq!(replay.facts().requests_sent(), 0);
-    let changed = engine
-        .recognize_records_complete_with(
-            &ask,
-            [RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "Ada met Acme.",
-                context: Some("changed".into()),
-                options: None,
-            }],
-            options,
-        )
-        .unwrap();
+    let changed = crate::api::recognize_records(
+        &engine,
+        &ask,
+        [RecordInput {
+            context: Some("changed".into()),
+
+            ..crate::api::record("Ada met Acme.")
+        }],
+        options,
+    )
+    .unwrap();
+    let changed_value = crate::api::recognized(&changed).unwrap();
     assert_eq!(changed.facts().requests_sent(), 2);
     assert_eq!(listener.count(), 10);
     assert_ne!(
-        first.value()[0].result().identity().observations(),
-        changed.value()[0].result().identity().observations()
+        first_value[0].result().identity().observations(),
+        changed_value[0].result().identity().observations()
     );
     std::fs::remove_dir_all(cache).unwrap();
 }
@@ -90,16 +78,16 @@ fn selected_recognition_context_rejects_missing_null_and_nontext_before_sends() 
         let valid = reading
             .compose(RawRecord::json(r#"{"body":"Ada met Acme.","context":"first"}"#).unwrap())
             .unwrap();
-        let failure = engine
-            .try_recognize_records_complete_with(
-                &ask,
-                [
-                    Ok(valid),
-                    reading.compose(RawRecord::json(invalid).unwrap()),
-                ],
-                CallOptions::new(),
-            )
-            .unwrap_err();
+        let failure = crate::api::try_recognize_records(
+            &engine,
+            &ask,
+            [
+                Ok(valid),
+                reading.compose(RawRecord::json(invalid).unwrap()),
+            ],
+            CallOptions::new(),
+        )
+        .unwrap_err();
         assert_eq!(failure.stopped().at(), Some(2));
     }
     assert_eq!(listener.count(), 0);
@@ -127,12 +115,8 @@ fn saved_recognition_exchanges_keep_each_context_on_every_stage() {
         Canned::ok(&exchange["response"].to_string())
     })
     .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
+    let engine = crate::api::builder(listener.base(), "fake")
         .model("jev-1.13.0")
-        .unwrap()
-        .api_key("fake")
         .unwrap()
         .no_cache()
         .max_retries(0)
@@ -145,22 +129,21 @@ fn saved_recognition_exchanges_keep_each_context_on_every_stage() {
         .unwrap()
         .iter()
         .map(|row| RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: text,
             context: row["context"].as_str().map(Into::into),
-            options: None,
+
+            ..crate::api::record(text)
         });
-    let result = engine
-        .recognize_records_complete_with(
-            &ask,
-            rows,
-            CallOptions::new().context(fixture["shared_context"].as_str().unwrap()),
-        )
-        .unwrap();
+    let result = crate::api::recognize_records(
+        &engine,
+        &ask,
+        rows,
+        CallOptions::new().context(fixture["shared_context"].as_str().unwrap()),
+    )
+    .unwrap();
+    let result_value = crate::api::recognized(&result).unwrap();
     assert_eq!(result.facts().records(), 4);
     assert_eq!(result.facts().requests_sent(), 12);
-    for row in result.value() {
+    for row in result_value {
         assert_eq!(
             serde_json::from_str::<Value>(&row.result().value().to_json()).unwrap(),
             fixture["value"]
@@ -187,43 +170,41 @@ fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_be
         .unwrap(),
     );
     let rows = [RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: "Ada met Acme.",
         context: Some(context.clone()),
-        options: None,
+
+        ..crate::api::record("Ada met Acme.")
     }];
-    let result = engine
-        .recognize_records_complete_with(&ask, rows, CallOptions::new().context("unsent fallback"))
-        .unwrap();
+    let result = crate::api::recognize_records(
+        &engine,
+        &ask,
+        rows,
+        CallOptions::new().context("unsent fallback"),
+    )
+    .unwrap();
     assert_eq!(result.facts().requests_sent(), 2);
     for request in listener.requests() {
         let raw = std::str::from_utf8(&request.body).unwrap();
         assert!(raw.contains(r#""context":{"z":false,"a":"Object context","extra":null}"#));
         assert!(!raw.contains("unsent fallback"));
     }
-    let refused = engine
-        .recognize_records_complete_with(
-            &ask,
-            [
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: "Ada met Acme.",
-                    context: Some(context),
-                    options: None,
-                },
-                RecordInput {
-                    examples: None,
-                    seed_spans: None,
-                    original: "Ada met Acme.",
-                    context: Some("mistyped".into()),
-                    options: None,
-                },
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let refused = crate::api::recognize_records(
+        &engine,
+        &ask,
+        [
+            RecordInput {
+                context: Some(context),
+
+                ..crate::api::record("Ada met Acme.")
+            },
+            RecordInput {
+                context: Some("mistyped".into()),
+
+                ..crate::api::record("Ada met Acme.")
+            },
+        ],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(refused.kind(), ErrorKind::Usage);
     assert_eq!(refused.stopped().at(), Some(2));
     assert_eq!(listener.count(), 2);
@@ -233,13 +214,7 @@ fn recognition_preserves_declared_object_context_and_refuses_mistyped_context_be
 fn stage_context_changes_only_its_requests_and_complete_identity() {
     let listener = Listener::answering(super::aggregates::recognized_response).unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fake")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fake")
         .cache_at(&cache)
         .unwrap()
         .max_retries(0)
@@ -247,13 +222,11 @@ fn stage_context_changes_only_its_requests_and_complete_identity() {
         .unwrap();
     let ask = Recognize::builder().build().unwrap();
     let fallback = CallOptions::new().context("shared");
-    let initial = engine
-        .recognize_complete_with(&ask, "Ada met Acme.", fallback)
-        .unwrap();
+    let initial = crate::api::recognize(&engine, &ask, "Ada met Acme.", fallback).unwrap();
+    let initial_value = crate::api::recognition(&initial).unwrap();
     let overridden = ask.clone().boundary_context("boundary\nonly");
-    let changed = engine
-        .recognize_complete_with(&overridden, "Ada met Acme.", fallback)
-        .unwrap();
+    let changed = crate::api::recognize(&engine, &overridden, "Ada met Acme.", fallback).unwrap();
+    let changed_value = crate::api::recognition(&changed).unwrap();
     assert_eq!(changed.facts().requests_sent(), 1);
     assert_eq!(listener.count(), 3);
     let requests = listener.requests();
@@ -262,8 +235,8 @@ fn stage_context_changes_only_its_requests_and_complete_identity() {
         body["state"],
         json!({"context":"boundary\nonly","evidence":"Ada met Acme."})
     );
-    let first: Value = serde_json::from_str(&initial.value().to_json().unwrap()).unwrap();
-    let second: Value = serde_json::from_str(&changed.value().to_json().unwrap()).unwrap();
+    let first: Value = serde_json::from_str(&initial_value.to_json().unwrap()).unwrap();
+    let second: Value = serde_json::from_str(&changed_value.to_json().unwrap()).unwrap();
     assert_ne!(first["answer_id"], second["answer_id"]);
     assert!(first["answer_id"].is_string());
     assert_eq!(
@@ -271,26 +244,18 @@ fn stage_context_changes_only_its_requests_and_complete_identity() {
         json!({"boundary":"boundary\nonly"})
     );
     assert_eq!(
-        changed
-            .value()
-            .question()
-            .stage_context()
-            .boundary
-            .as_deref(),
+        changed_value.question().stage_context().boundary.as_deref(),
         Some("boundary\nonly")
     );
     let cleared = ask.clone().boundary_context("").kind_edge_context("");
-    let cleared = engine
-        .recognize_complete_with(&cleared, "Ada met Acme.", fallback)
-        .unwrap();
+    let cleared = crate::api::recognize(&engine, &cleared, "Ada met Acme.", fallback).unwrap();
     assert_eq!(cleared.facts().requests_sent(), 2);
     for request in &listener.requests() {
         let body: Value = serde_json::from_slice(&request.body).unwrap();
         assert_eq!(body["state"], json!("Ada met Acme."));
     }
     assert_eq!(
-        engine
-            .recognize_complete_with(&overridden, "Ada met Acme.", fallback)
+        crate::api::recognize(&engine, &overridden, "Ada met Acme.", fallback)
             .unwrap()
             .facts()
             .requests_sent(),

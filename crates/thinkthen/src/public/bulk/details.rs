@@ -2,17 +2,11 @@
 
 use serde::Serialize;
 
-use crate::core;
-use crate::public::asking::Decisions;
 use crate::public::batch::Batch;
-use crate::public::engine::{DetailQuestion, Engine, Evidence, evidence, only};
+use crate::public::engine::{DetailQuestion, Engine, Evidence};
 use crate::public::error::Error;
-use crate::public::options::{CallOptions, Stop};
-use crate::public::pull;
-use crate::public::question::Kind;
+use crate::public::options::CallOptions;
 use crate::public::results::{Details, Row};
-
-use super::selected_batch;
 
 impl Engine {
     /// Each record's full detail under a runtime or typed question, in input order.
@@ -41,28 +35,13 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence + Serialize,
     {
-        self.try_details_many_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Fallible input for [`Engine::details_many_with`], preserving input order.
-    /// A reader failure ends the batch after its earlier admitted rows.
-    pub fn try_details_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<T, Details>>
-    where
-        I: IntoIterator<Item = Result<T, Error>> + 'a,
-        T: Evidence + Serialize + 'a,
-    {
-        self.try_details_input_many_with(question, records, options)
+        self.try_details_input_many_with(question, records.into_iter().map(Ok), options)
     }
 
     /// Full details over fallible explicit input items, including image files.
     /// # Errors
     /// Reader failures retain earlier completed rows; image admission sends nothing.
-    pub fn try_details_input_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(
+    pub(crate) fn try_details_input_many_with<'a, I, T, Q: DetailQuestion + ?Sized>(
         &'a self,
         question: &'a Q,
         records: I,
@@ -73,60 +52,28 @@ impl Engine {
         T: crate::public::InputEvidence + Serialize + 'a,
     {
         let question = question.question();
-        Batch::of((|| {
-            only(
-                question,
-                &[
-                    Kind::Decide,
-                    Kind::Banded,
-                    Kind::Choose,
-                    Kind::Tag,
-                    Kind::Score,
-                ],
-                "details_many",
-            )?;
-            let setting = selected_batch(question, &options, self.batch)?;
-            let context_sha256 = options
-                .context_text()
-                .map(|text| core::bytes_sha256(text.as_bytes()));
-            let context = options.context_text().map(evidence).transpose()?;
-            let stop = Stop::begin(options)?.with_prices(self.prices);
-            let engine = self.asking(question)?;
-            let asker = Decisions::new(&engine, question, context.clone());
-            let backend = engine.backend().clone();
-            let profile = self.profile.clone();
-            let call = pull::Call {
-                packing: pull::packing(setting, context.is_some(), false),
-                engine,
-                stop,
-                most: self.most,
-            };
-            Ok(pull::try_start(
-                call,
-                asker,
-                records.into_iter(),
-                Box::new(move |stop, index, item, row| {
-                    let member = row
-                        .as_ref()
-                        .ok()
-                        .map(|decided| decided.member(question))
-                        .transpose()?;
-                    super::judged(stop, question, &backend, index, row)?;
-                    let member =
-                        member.ok_or_else(|| Error::defect("a failed row returned a value"))?;
-                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
-                    let details = Details::of_member(
-                        member,
-                        &item,
-                        question,
-                        &backend,
-                        profile.as_ref(),
-                        setting,
-                        context_sha256.as_deref(),
-                    )?;
-                    Ok(Some(Row::new(item, details, 0.0)))
-                }),
-            ))
-        })())
+        if !matches!(
+            question.kind(),
+            crate::QuestionKind::Decide
+                | crate::QuestionKind::Choose
+                | crate::QuestionKind::Tag
+                | crate::QuestionKind::Score
+        ) {
+            return Batch::failed(Error::usage("details_many takes a primitive question"));
+        }
+        Batch::of(crate::public::request::pull::project(
+            self,
+            crate::public::request::RequestFunction::for_definition(&question.clone().into())
+                .input_function(),
+            question.clone(),
+            records
+                .into_iter()
+                .map(|row| row.map(crate::public::record_input::plain)),
+            options,
+            |original, _, canonical| {
+                let details = Details::of_complete(&canonical, Some(&original))?;
+                Ok(Some(Row::new(original, details, 0.0)))
+            },
+        ))
     }
 }

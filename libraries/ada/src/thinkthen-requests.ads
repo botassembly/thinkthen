@@ -2884,6 +2884,13 @@ T_call : T_Request_field_call;
 T_schema : T_Request_field_schema;
 end record;
 function Encode (Value : T_Request) return String;
+type T_RequestReaderFailure_producer_field_kind is null record;
+function Encode (Value : T_RequestReaderFailure_producer_field_kind) return String;
+type T_RequestReaderFailure_producer is record
+T_kind : T_RequestReaderFailure_producer_field_kind;
+end record;
+function Encode (Value : T_RequestReaderFailure_producer) return String;
+subtype T_RequestReaderFailure_value_RequestReaderFailure_producer is T_RequestReaderFailure_producer;
 type T_RequestReaderFailure_io_field_kind is null record;
 function Encode (Value : T_RequestReaderFailure_io_field_kind) return String;
 type T_SessionSourceLocation_field_file is new Unbounded_String;
@@ -2953,12 +2960,13 @@ T_location : T_RequestReaderFailure_invalid_input_Optional_T_location;
 end record;
 function Encode (Value : T_RequestReaderFailure_invalid_input) return String;
 subtype T_RequestReaderFailure_value_RequestReaderFailure_invalid_input is T_RequestReaderFailure_invalid_input;
-type T_RequestReaderFailure_Kind is (T_RequestReaderFailure_arm_RequestReaderFailure_io, T_RequestReaderFailure_arm_RequestReaderFailure_utf8, T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input);
-type T_RequestReaderFailure (Kind : T_RequestReaderFailure_Kind := T_RequestReaderFailure_arm_RequestReaderFailure_io) is record
+type T_RequestReaderFailure_Kind is (T_RequestReaderFailure_arm_RequestReaderFailure_producer, T_RequestReaderFailure_arm_RequestReaderFailure_io, T_RequestReaderFailure_arm_RequestReaderFailure_utf8, T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input);
+type T_RequestReaderFailure (Kind : T_RequestReaderFailure_Kind := T_RequestReaderFailure_arm_RequestReaderFailure_producer) is record
 case Kind is
-when T_RequestReaderFailure_arm_RequestReaderFailure_io => V_0 : T_RequestReaderFailure_value_RequestReaderFailure_io;
-when T_RequestReaderFailure_arm_RequestReaderFailure_utf8 => V_1 : T_RequestReaderFailure_value_RequestReaderFailure_utf8;
-when T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input => V_2 : T_RequestReaderFailure_value_RequestReaderFailure_invalid_input;
+when T_RequestReaderFailure_arm_RequestReaderFailure_producer => V_0 : T_RequestReaderFailure_value_RequestReaderFailure_producer;
+when T_RequestReaderFailure_arm_RequestReaderFailure_io => V_1 : T_RequestReaderFailure_value_RequestReaderFailure_io;
+when T_RequestReaderFailure_arm_RequestReaderFailure_utf8 => V_2 : T_RequestReaderFailure_value_RequestReaderFailure_utf8;
+when T_RequestReaderFailure_arm_RequestReaderFailure_invalid_input => V_3 : T_RequestReaderFailure_value_RequestReaderFailure_invalid_input;
 end case;
 end record;
 function Encode (Value : T_RequestReaderFailure) return String;

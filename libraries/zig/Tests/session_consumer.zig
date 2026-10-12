@@ -73,7 +73,10 @@ pub fn main() !void {
         for (items.array.items) |item| {
             const next: tt.inputs.RequestSessionDescriptor = .{ .item = try request_fixture.decode(tt.inputs.RequestItem, arena.allocator(), item) };
             while (try session.push(a, next) == .full) switch (try session.read()) {
-                .pending => std.Thread.yield() catch {},
+                .pending => {
+                    var ready: u32 = undefined;
+                    try tt.session.checked(tt.c.thinkthen_session_wait(session.raw, tt.c.THINKTHEN_SESSION_WAIT_INPUT_V1, 50, &ready));
+                },
                 .end => break,
                 .packet => |packet| try packets.append(a, packet),
             };
@@ -88,7 +91,10 @@ pub fn main() !void {
     }
     engine.deinit();
     while (true) switch (try session.read()) {
-        .pending => std.Thread.yield() catch {},
+        .pending => {
+            var ready: u32 = undefined;
+            try tt.session.checked(tt.c.thinkthen_session_wait(session.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
+        },
         .end => break,
         .packet => |packet| try packets.append(a, packet),
     };

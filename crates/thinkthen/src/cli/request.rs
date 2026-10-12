@@ -67,13 +67,13 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             let mut common = source_common(&a.common, &a.extra)?;
             let question = selector(&a.question, || {
                 let (resolved, tier, rank_set) = asked::rank(a, None)?;
-                let prepared = crate::cli_atomic::Prepared {
+                let prepared = crate::cli::atomic::Prepared {
                     resolved,
                     batch: tier.batch,
                     tuned: tier.tuned,
                     rank_set,
                 };
-                let definition = crate::cli_atomic::definition(&prepared).map_err(native)?;
+                let definition = crate::cli::atomic::definition(&prepared).map_err(native)?;
                 atomic = Some(prepared);
                 Ok(definition)
             })?;
@@ -196,15 +196,15 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
 }
 fn atomic_definition(
     (resolved, tier): (crate::core::Resolved, asked::FileTier),
-    retained: &mut Option<crate::cli_atomic::Prepared>,
+    retained: &mut Option<crate::cli::atomic::Prepared>,
 ) -> Result<RequestDefinition, Failure> {
-    let prepared = crate::cli_atomic::Prepared {
+    let prepared = crate::cli::atomic::Prepared {
         resolved,
         batch: tier.batch,
         tuned: tier.tuned,
         rank_set: None,
     };
-    let definition = crate::cli_atomic::definition(&prepared).map_err(native)?;
+    let definition = crate::cli::atomic::definition(&prepared).map_err(native)?;
     *retained = Some(prepared);
     Ok(definition)
 }
@@ -346,4 +346,17 @@ fn native(error: crate::Error) -> Failure {
 
 fn relate_config(error: crate::core::RelateConfigError) -> Failure {
     Failure::Relate(crate::failure::relate::Error::Config { file: false, error })
+}
+
+impl crate::Engine {
+    pub(crate) fn execute_cli_request<'a>(
+        &self,
+        request: &'a crate::AdmittedRequest,
+        environment: crate::RequestEnvironment<'a>,
+        sink: &dyn Fn(crate::RequestValue),
+        release: &dyn Fn(usize),
+        recover: crate::public::AnnotationRecovery<'a>,
+    ) -> Result<crate::RequestOutcome, crate::Error> {
+        self.execute_request_sink(request, environment, Some(sink), Some(release), recover)
+    }
 }

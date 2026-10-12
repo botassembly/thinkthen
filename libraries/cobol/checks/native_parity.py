@@ -9,7 +9,7 @@ import tempfile
 from session_records import ROOT, module
 
 sys.path.insert(0, str(ROOT / 'conformance/children'))
-from children import child_env
+from children import child_env, read_process_line
 shared = module('shared_session_cases', ROOT / 'conformance/children/session_cases.py')
 PACKAGE = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / 'libraries/cobol')).resolve(strict=True)
 HEADER = Path(os.environ.get('THINKTHEN_C_HEADER', ROOT / 'libraries/c/include/thinkthen.h')).resolve(strict=True)
@@ -83,7 +83,7 @@ end program COBOL_PUSH.
         try:
             assert backend.read('wait 1') == 'wait 1'
             process.stdin.write('!'); process.stdin.flush()
-            assert process.stdout.readline() == 'cancel-fired\n'
+            assert read_process_line(process.stdout) == 'cancel-fired\n'
             backend.process.stdin.write('release\n'); backend.process.stdin.flush()
             stdout,stderr = process.communicate(timeout=30)
             return subprocess.CompletedProcess(command,process.returncode,stdout,stderr)

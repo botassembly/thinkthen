@@ -19,18 +19,18 @@ use super::{
     images, read,
 };
 use crate::{
-    Door,
+    EngineHandle,
     current::{self, QuestionHandle, SourceHandle, Storage},
     failures::Held,
 };
 use thinkthen::Engine;
 
-pub(super) fn door(base: &str) -> Door {
-    Door(Held::new(
+pub(super) fn interface(base: &str) -> EngineHandle {
+    EngineHandle(Held::new(
         Engine::builder()
             .base_url(base)
             .expect("loopback")
-            .api_key("sk-c-door-loopback")
+            .api_key("sk-c-interface-loopback")
             .expect("fake key")
             .no_cache()
             .max_retries(0)
@@ -50,21 +50,23 @@ pub(super) fn content(text: &str) -> ContentV1 {
         data: string(text),
     }
 }
-pub(super) fn question(door: &Door, spec: QuestionSpecV1) -> Box<QuestionHandle> {
+pub(super) fn question(interface: &EngineHandle, spec: QuestionSpecV1) -> Box<QuestionHandle> {
     let mut out = std::ptr::null_mut();
     // SAFETY: all local descriptors and writable out live through return.
     assert_eq!(
-        unsafe { super::thinkthen_question_new(door, &spec, &mut out) },
+        unsafe { super::thinkthen_question_new(interface, &spec, &mut out) },
         0
     );
     // SAFETY: successful constructor returned one Rust allocation, owned once here.
     unsafe { Box::from_raw(out) }
 }
-pub(super) fn source(door: &Door, records: &[RecordV1]) -> Box<SourceHandle> {
+pub(super) fn source(interface: &EngineHandle, records: &[RecordV1]) -> Box<SourceHandle> {
     let mut out = std::ptr::null_mut();
     // SAFETY: descriptors and output have exactly the advertised extents.
     assert_eq!(
-        unsafe { super::thinkthen_source_records(door, records.as_ptr(), records.len(), &mut out) },
+        unsafe {
+            super::thinkthen_source_records(interface, records.as_ptr(), records.len(), &mut out)
+        },
         0
     );
     // SAFETY: successful constructor returned one allocation, freed once by this Box.
@@ -99,7 +101,7 @@ pub(super) fn scratch(name: &str) -> std::path::PathBuf {
 }
 #[test]
 fn cloned_question_members_and_descriptions_keep_order_after_all_inputs_are_freed() {
-    let door = door("http://127.0.0.1:9/v1");
+    let interface = interface("http://127.0.0.1:9/v1");
     let mut name = String::from("z-first");
     let mut description = String::from("{\"what\":\"private description\"}");
     let choices = [
@@ -120,7 +122,7 @@ fn cloned_question_members_and_descriptions_keep_order_after_all_inputs_are_free
         },
     ];
     let member = question(
-        &door,
+        &interface,
         QuestionSpecV1 {
             kind: 2,
             text: content("Which?"),
@@ -142,7 +144,7 @@ fn cloned_question_members_and_descriptions_keep_order_after_all_inputs_are_free
         },
     ];
     let set = question(
-        &door,
+        &interface,
         QuestionSpecV1 {
             kind: 8,
             members: MemberSpecsV1 {
@@ -155,7 +157,7 @@ fn cloned_question_members_and_descriptions_keep_order_after_all_inputs_are_free
     name.clear();
     description.clear();
     drop(member);
-    drop(door);
+    drop(interface);
     let mut storage = Storage::default();
     let view = storage
         .question(set.descriptor.as_ref().expect("cloned descriptor"))
@@ -235,7 +237,7 @@ fn record_context_candidates_and_duplicate_images_are_independent_owned_snapshot
 }
 #[test]
 fn image_file_sources_keep_filename_and_absent_lines_in_owned_views() {
-    let door = door("http://127.0.0.1:9/v1");
+    let interface = interface("http://127.0.0.1:9/v1");
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../specification/fixtures/images/red.png"
@@ -252,7 +254,7 @@ fn image_file_sources_keep_filename_and_absent_lines_in_owned_views() {
     let mut source = std::ptr::null_mut();
     // SAFETY: initialized paths/options/out remain live through cloning.
     assert_eq!(
-        unsafe { super::thinkthen_source_files(&door, &spec, &mut source) },
+        unsafe { super::thinkthen_source_files(&interface, &spec, &mut source) },
         0
     );
     let source = unsafe { Box::from_raw(source) };
@@ -272,7 +274,7 @@ fn image_file_sources_keep_filename_and_absent_lines_in_owned_views() {
     let images = storage.images(&inputs[0].images);
     drop(inputs);
     drop(source);
-    drop(door);
+    drop(interface);
     for position in positions {
         assert_eq!(position.present, 1);
         assert_eq!(position.value.first_line.present, 0);
@@ -284,16 +286,16 @@ fn image_file_sources_keep_filename_and_absent_lines_in_owned_views() {
 }
 #[test]
 fn debug_withholds_question_record_context_image_bytes_and_filenames() {
-    let door = door("http://127.0.0.1:9/v1");
+    let interface = interface("http://127.0.0.1:9/v1");
     let q = question(
-        &door,
+        &interface,
         QuestionSpecV1 {
             kind: 1,
             text: content("private question marker"),
             ..Default::default()
         },
     );
-    let source = source(&door, &[record("private record marker")]);
+    let source = source(&interface, &[record("private record marker")]);
     let image = current::ImageHandle {
         native: thinkthen::ImageInput::new(
             thinkthen::ImageMedia::Png,
@@ -318,7 +320,7 @@ pub(super) fn list<T: Copy>(data: *const T, len: usize) -> Vec<T> {
         .expect("view array")
         .to_vec()
 }
-pub(super) fn files(door: &Door, path: &str, unit: u32) -> Box<SourceHandle> {
+pub(super) fn files(interface: &EngineHandle, path: &str, unit: u32) -> Box<SourceHandle> {
     let paths = [string(path)];
     let spec = SourceSpecV1 {
         paths: StringsV1 {
@@ -331,14 +333,14 @@ pub(super) fn files(door: &Door, path: &str, unit: u32) -> Box<SourceHandle> {
     let mut out = std::ptr::null_mut();
     // SAFETY: counted path, descriptor, and output live through return.
     assert_eq!(
-        unsafe { super::thinkthen_source_files(door, &spec, &mut out) },
+        unsafe { super::thinkthen_source_files(interface, &spec, &mut out) },
         0
     );
     // SAFETY: constructor handed over one owned Rust allocation.
     unsafe { Box::from_raw(out) }
 }
-pub(super) fn saved_facts(door: &Door) -> String {
-    let facts = crate::failures::facts(Some(&door.0));
+pub(super) fn saved_facts(interface: &EngineHandle) -> String {
+    let facts = crate::failures::facts(Some(&interface.0));
     assert!(!facts.is_null());
     // SAFETY: the saved thread-local error remains live during this immediate clone.
     unsafe { std::ffi::CStr::from_ptr(facts) }
@@ -348,7 +350,7 @@ pub(super) fn saved_facts(door: &Door) -> String {
 }
 
 fn image_source_snapshot() -> Box<SourceHandle> {
-    let door = door("http://127.0.0.1:9/v1");
+    let interface = interface("http://127.0.0.1:9/v1");
     let mut bytes =
         include_bytes!("../../../../../../specification/fixtures/images/red.png").to_vec();
     let mut filename = String::from("private-name.png");
@@ -357,7 +359,7 @@ fn image_source_snapshot() -> Box<SourceHandle> {
     assert_eq!(
         unsafe {
             images::thinkthen_image_clone(
-                &door,
+                &interface,
                 bytes.as_ptr(),
                 bytes.len(),
                 2,
@@ -394,7 +396,7 @@ fn image_source_snapshot() -> Box<SourceHandle> {
         },
     ];
     let source = source(
-        &door,
+        &interface,
         &[RecordV1 {
             context: OptionalContentV1 {
                 present: 1,
@@ -417,6 +419,6 @@ fn image_source_snapshot() -> Box<SourceHandle> {
     unsafe {
         images::thinkthen_image_free(image);
     }
-    drop(door);
+    drop(interface);
     source
 }

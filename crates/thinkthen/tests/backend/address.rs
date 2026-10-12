@@ -63,7 +63,7 @@ fn the_option_outranks_the_variable_and_the_variable_outranks_the_default() {
     assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
 
     let output = decide(&["--plan"], &[]).expect("the compiled binary runs");
-    let printed = String::from_utf8_lossy(&output.stdout);
+    let printed = crate::harness::printed(&output);
     assert!(
         printed.contains(&format!(r#""url":"{BUILT_IN}""#)),
         "{printed}"
@@ -85,7 +85,7 @@ fn a_base_that_is_not_an_http_address_is_a_usage_error_that_shows_no_address() {
 
         assert_eq!(output.status.code(), Some(2), "{bad}");
         assert!(output.stdout.is_empty(), "{bad}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(
             message.starts_with("thinkthen: a base address"),
             "{message}"
@@ -146,12 +146,12 @@ fn each_address_rule_refusal_names_only_the_rule_that_failed() {
             assert_eq!(output.status.code(), Some(2), "{base} {environment:?}");
             assert!(output.stdout.is_empty(), "{base} {environment:?}");
             assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
+                crate::harness::said(&output),
                 expected,
                 "{base} {environment:?}"
             );
             assert!(
-                !String::from_utf8_lossy(&output.stderr).contains(&base),
+                !crate::harness::said(&output).contains(&base),
                 "{base} {environment:?}"
             );
         }
@@ -203,7 +203,7 @@ fn a_plain_http_base_that_is_not_loopback_is_refused_before_any_request() {
                 assert_eq!(output.status.code(), Some(2), "{base} {given:?}");
                 assert!(output.stdout.is_empty(), "{base} {given:?}");
                 assert_eq!(
-                    String::from_utf8_lossy(&output.stderr),
+                    crate::harness::said(&output),
                     "thinkthen: `http://` sends the key across the network in clear text, \
                      so it reaches localhost, 127.0.0.1, and [::1] alone\n",
                     "{base} {given:?}"
@@ -350,7 +350,7 @@ fn a_base_the_option_names_as_white_space_is_refused_as_a_blank_address() {
         assert_eq!(output.status.code(), Some(2), "{blank:?}");
         assert!(output.stdout.is_empty(), "{blank:?}");
         assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: a URL is text, not white space\n",
             "{blank:?}"
         );
@@ -364,7 +364,7 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
             .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{empty:?}");
-        let printed = String::from_utf8_lossy(&output.stdout);
+        let printed = crate::harness::printed(&output);
         assert!(
             printed.contains(&format!(r#""url":"{BUILT_IN}""#)),
             "{printed}"
@@ -396,7 +396,7 @@ fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
         environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
         let output = decide(&["--no-cache"], &environment).expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(4), "{key:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), NO_KEY, "{key:?}");
+        assert_eq!(crate::harness::said(&output), NO_KEY, "{key:?}");
         assert!(output.stdout.is_empty(), "{key:?}");
         assert!(
             matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock),
@@ -414,12 +414,7 @@ fn a_loopback_backend_takes_a_request_with_no_key_and_no_authorization_header() 
         let mut environment = vec![("THINKTHEN_BASE_URL", listener.base())];
         environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
         let output = decide(&["--no-cache"], &environment).expect("the compiled binary runs");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{key:?}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
+        crate::harness::exits_because(&output, 0, || format!("{key:?}"));
         let requests = listener.requests();
         assert_eq!(requests.len(), 1, "{key:?}");
         assert_eq!(requests[0].header("authorization"), None, "{key:?}");

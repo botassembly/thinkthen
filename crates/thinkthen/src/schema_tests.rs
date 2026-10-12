@@ -19,7 +19,7 @@ use crate::core::{
 };
 use crate::engine::facade::Recognized;
 use crate::public::{
-    Counters, DoorReply, ErrorKind, Picked, PlanEstimate, QuestionJson, RankedRow,
+    CallReply, Counters, ErrorKind, Picked, PlanEstimate, QuestionJson, RankedRow,
 };
 
 /// One failed call as a JSON reader would see it: its kind, the retry signal,
@@ -80,7 +80,7 @@ fn generated(reference: &str) -> String {
             schema.remove("description");
         }))
         .into_generator();
-    // The bare value each verb prints at the C door, from the type it prints.
+    // The bare value each verb prints at the C interface, from the type it prints.
     let edges = generator.subschema_for::<Vec<RelationEdge<RelationEntity>>>();
     let named = [
         (
@@ -132,7 +132,7 @@ fn generated(reference: &str) -> String {
         .get_mut("decisionDetails")
         .expect("decision details");
     paired(decision);
-    // The C door's record rows always carry the record they answered.
+    // The C interface's record rows always carry the record they answered.
     let mut record = decision.clone();
     record["required"]
         .as_array_mut()
@@ -151,7 +151,7 @@ fn generated(reference: &str) -> String {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": if reference == "completeCall" { "urn:thinkthen:complete-call" } else { "urn:thinkthen:result" },
         "title": "thinkthen native results and compatibility structures",
-        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a C door value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope."),
+        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a C interface value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope."),
         "$ref": format!("#/$defs/{reference}"),
         "$defs": definitions,
     });
@@ -170,7 +170,7 @@ fn register(generator: &mut schemars::SchemaGenerator) {
         generator.subschema_for::<RecordValue<Bare>>(),
         generator.subschema_for::<Row<'_>>(),
         generator.subschema_for::<Counters>(),
-        generator.subschema_for::<DoorReply>(),
+        generator.subschema_for::<CallReply>(),
         generator.subschema_for::<CallError>(),
         generator.subschema_for::<QuestionJson<'_>>(),
         generator.subschema_for::<PlanEstimate>(),

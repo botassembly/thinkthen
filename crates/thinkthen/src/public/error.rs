@@ -101,6 +101,23 @@ impl ErrorDetail {
 }
 
 impl Error {
+    /// The typed admission reason when canonical request decoding failed.
+    #[must_use]
+    pub fn request_decode_cause(&self) -> Option<crate::public::request::RequestDecodeCause> {
+        match self.detail().diagnostic.as_deref() {
+            Some(diagnostic::Diagnostic::RequestDecode(cause)) => Some(*cause),
+            _ => None,
+        }
+    }
+    /// The native original-byte budget that refused admission, when applicable.
+    #[must_use]
+    pub fn source_budget_exceeded(&self) -> Option<crate::SourceBudgetExceeded> {
+        let diagnostic::Diagnostic::Refusal(cause) = self.detail().diagnostic.as_deref()? else {
+            return None;
+        };
+        cause.downcast_ref::<crate::SourceBudgetExceeded>().copied()
+    }
+
     /// The kind of this error.
     #[must_use]
     pub const fn kind(&self) -> ErrorKind {

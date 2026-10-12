@@ -1,4 +1,4 @@
-//! The native C door's error and hook boundaries.
+//! The native C interface's error and hook boundaries.
 
 use super::{DEFECT, Failure, Held, USAGE, built, guard, lock};
 use std::io::Write;
@@ -49,7 +49,10 @@ fn a_panic_behind_the_door_is_the_fixed_nonretryable_defect() {
         ),
         (DEFECT, DEFECT, 0)
     );
-    assert_eq!(message_of(&engine), "defect: a panic crossed the C door");
+    assert_eq!(
+        message_of(&engine),
+        "defect: a panic crossed the C interface"
+    );
     let result = crate::complete::failure(super::snapshot(Some(&engine)).expect("snapshot"))
         .expect("complete failure");
     assert_eq!(result.summary.state, 2);
@@ -122,14 +125,20 @@ fn native_panic_child() {
         }),
         DEFECT
     );
-    assert_eq!(message_of(&engine), "defect: a panic crossed the C door");
+    assert_eq!(
+        message_of(&engine),
+        "defect: a panic crossed the C interface"
+    );
     assert_eq!(
         guard(Some(&engine), DEFECT, || -> i32 {
             std::panic::panic_any(Exploding)
         }),
         DEFECT
     );
-    assert_eq!(message_of(&engine), "defect: a panic crossed the C door");
+    assert_eq!(
+        message_of(&engine),
+        "defect: a panic crossed the C interface"
+    );
     let none = built(|| -> Result<thinkthen::Engine, Failure> { std::panic::panic_any(Exploding) });
     assert!(none.is_none());
     assert_eq!(super::code(None), DEFECT);

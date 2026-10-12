@@ -4,38 +4,18 @@ use crate::core::Value;
 use crate::public::engine::{DECISIONS, only};
 use crate::public::question::Kind;
 use crate::public::{
-    Answer, Batch, CallOptions, Choice, ChooseQuestion, DecisionQuestion, DetailQuestion, Details,
-    Engine, Error, InputEvidence, Question, Row,
+    Answer, Batch, CallOptions, Choice, ChooseQuestion, DecisionQuestion, Engine, Error,
+    InputEvidence, Question, Row,
 };
 
 impl Engine {
-    /// Ordered yes/no answers over explicit input items.
-    pub fn decide_input_many<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        inputs: I,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.decide_input_many_with(question, inputs, CallOptions::new())
-    }
-    /// Ordered explicit input answers with controls.
-    pub fn decide_input_many_with<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        inputs: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.try_decide_input_many_with(question, inputs.into_iter().map(Ok), options)
-    }
     /// Fallible reader input with earlier completed rows retained.
-    pub fn try_decide_input_many_with<'a, I, R: InputEvidence + 'a, Q: DecisionQuestion + ?Sized>(
+    pub(crate) fn try_decide_input_many_with<
+        'a,
+        I,
+        R: InputEvidence + 'a,
+        Q: DecisionQuestion + ?Sized,
+    >(
         &'a self,
         question: &'a Q,
         inputs: I,
@@ -46,42 +26,23 @@ impl Engine {
     {
         let question = question.question();
         Batch::of(only(question, DECISIONS, "decide").and_then(|()| {
-            self.try_decisions(question, inputs, options, |input, (value, probability)| {
-                Ok(Some(Row::new(
-                    input,
-                    crate::public::results::answer(&value),
-                    probability,
-                )))
-            })
+            self.try_decisions(
+                crate::InputFunction::Decide,
+                question,
+                inputs,
+                options,
+                |input, (value, probability)| {
+                    Ok(Some(Row::new(
+                        input,
+                        crate::public::results::answer(&value),
+                        probability,
+                    )))
+                },
+            )
         }))
     }
-    /// Typed choices over ordered explicit inputs.
-    pub fn choose_input_many<'a, I, C: Choice>(
-        &'a self,
-        question: &'a ChooseQuestion<C>,
-        inputs: I,
-    ) -> Batch<'a, Row<I::Item, Option<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.choose_input_many_with(question, inputs, CallOptions::new())
-    }
-    /// Typed choices over explicit inputs with controls.
-    pub fn choose_input_many_with<'a, I, C: Choice>(
-        &'a self,
-        question: &'a ChooseQuestion<C>,
-        inputs: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Option<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.try_choose_input_many_with(question, inputs.into_iter().map(Ok), options)
-    }
     /// Fallible explicit choice inputs.
-    pub fn try_choose_input_many_with<'a, I, R: InputEvidence + 'a, C: Choice>(
+    pub(crate) fn try_choose_input_many_with<'a, I, R: InputEvidence + 'a, C: Choice>(
         &'a self,
         question: &'a ChooseQuestion<C>,
         inputs: I,
@@ -91,6 +52,7 @@ impl Engine {
         I: IntoIterator<Item = Result<R, Error>> + 'a,
     {
         Batch::of(self.try_decisions(
+            crate::InputFunction::Choose,
             &question.0,
             inputs,
             options,
@@ -106,33 +68,8 @@ impl Engine {
             },
         ))
     }
-    /// Rubric scores over ordered explicit inputs.
-    pub fn score_input_many<'a, I>(
-        &'a self,
-        question: &'a Question,
-        inputs: I,
-    ) -> Batch<'a, Row<I::Item, f64>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.score_input_many_with(question, inputs, CallOptions::new())
-    }
-    /// Rubric scores over explicit inputs with controls.
-    pub fn score_input_many_with<'a, I>(
-        &'a self,
-        question: &'a Question,
-        inputs: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, f64>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence,
-    {
-        self.try_score_input_many_with(question, inputs.into_iter().map(Ok), options)
-    }
     /// Fallible explicit score inputs.
-    pub fn try_score_input_many_with<'a, I, R: InputEvidence + 'a>(
+    pub(crate) fn try_score_input_many_with<'a, I, R: InputEvidence + 'a>(
         &'a self,
         question: &'a Question,
         inputs: I,
@@ -143,6 +80,7 @@ impl Engine {
     {
         Batch::of(only(question, &[Kind::Score], "score").and_then(|()| {
             self.try_decisions(
+                crate::InputFunction::Score,
                 question,
                 inputs,
                 options,
@@ -152,30 +90,5 @@ impl Engine {
                 },
             )
         }))
-    }
-    /// Complete probabilities and facts over explicit input items.
-    pub fn details_input_many<'a, I, Q: DetailQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        inputs: I,
-    ) -> Batch<'a, Row<I::Item, Details>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence + serde::Serialize,
-    {
-        self.details_input_many_with(question, inputs, CallOptions::new())
-    }
-    /// Complete details over explicit input items with controls.
-    pub fn details_input_many_with<'a, I, Q: DetailQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        inputs: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Details>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: InputEvidence + serde::Serialize,
-    {
-        self.try_details_input_many_with(question, inputs.into_iter().map(Ok), options)
     }
 }

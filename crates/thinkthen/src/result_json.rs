@@ -3,8 +3,7 @@
 
 use crate::core::{
     Backend, BatchSetting, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning,
-    Question, Record, RenderError, RequestMeta, Threshold, Value, json_line,
-    question_sha256_with_profile,
+    Question, Record, RenderError, RequestMeta, Threshold, Value,
 };
 use crate::engine::facade::Judgment;
 pub(crate) mod bounded;
@@ -20,70 +19,6 @@ pub(crate) struct Run<'a> {
     pub(crate) batch_setting: Option<BatchSetting>,
     pub(crate) batch_warning: Option<BatchWarning>,
     pub(crate) context_sha256: Option<String>,
-}
-
-/// One `thinkthen.result/1` line. `shown` is the value the row prints, and
-/// `input` is the record a record row carries, and `requests` its question
-/// keys.
-///
-/// # Errors
-///
-/// Returns [`RenderError`] when the question or the document cannot be written.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the question keys belong to the same result document"
-)]
-pub(crate) fn decision(
-    run: Run<'_>,
-    judged: &Judgment,
-    question: Question,
-    threshold: Option<Threshold>,
-    shown: Value,
-    input: Option<Record>,
-    requests: Vec<String>,
-) -> Result<(String, String), RenderError> {
-    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    let json = json_line(&decision_with_digest(
-        run,
-        judged,
-        question,
-        threshold,
-        shown,
-        input,
-        Some(requests),
-        &digest,
-        Vec::new(),
-    )?)?;
-    Ok((json, digest))
-}
-
-/// One command row, naming its question keys and its requests' attempts.
-/// One row that lists its question keys in `meta.requests`, by ADR 0111.
-#[expect(
-    clippy::too_many_arguments,
-    reason = "the request list belongs to this member's result metadata"
-)]
-pub(crate) fn decision_with_requests(
-    run: Run<'_>,
-    judged: &Judgment,
-    question: Question,
-    threshold: Option<Threshold>,
-    shown: Value,
-    input: Option<Record>,
-    requests: Vec<String>,
-) -> Result<String, RenderError> {
-    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
-    json_line(&decision_with_digest(
-        run,
-        judged,
-        question,
-        threshold,
-        shown,
-        input,
-        Some(requests),
-        &digest,
-        Vec::new(),
-    )?)
 }
 
 #[expect(

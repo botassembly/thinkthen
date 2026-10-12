@@ -7,6 +7,7 @@
 )]
 
 use crate::child::ChildEnvironment as _;
+use crate::harness::stderr_is;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -76,7 +77,7 @@ fn list_prints_the_closed_names_in_byte_order_everywhere() {
                         .current_dir(cwd),
                 )
                 .expect("the compiled binary runs");
-                assert_eq!(String::from_utf8_lossy(&output.stdout), LIST, "{locale}");
+                assert_eq!(crate::harness::printed(&output), LIST, "{locale}");
                 assert!(output.stderr.is_empty(), "{locale}");
                 assert_eq!(output.status.code(), Some(0), "{locale}");
             }
@@ -124,7 +125,7 @@ fn an_unknown_name_is_refused_without_echoing_it() {
     ] {
         let output = catalog(&["transform", "show", name], &empty);
         assert!(output.stdout.is_empty(), "{name:?}");
-        assert_eq!(String::from_utf8_lossy(&output.stderr), UNKNOWN, "{name:?}");
+        assert_eq!(crate::harness::said(&output), UNKNOWN, "{name:?}");
         assert_eq!(output.status.code(), Some(2), "{name:?}");
     }
     for arguments in [
@@ -274,7 +275,7 @@ fn the_catalog_reads_no_setting_input_or_file_and_sends_and_runs_nothing() {
     let refused = guarded(&["transform", "show", "canary-0083"], &root, &url);
     fs::set_permissions(root.join("locked"), fs::Permissions::from_mode(0o755)).expect("unlocked");
 
-    assert_eq!(String::from_utf8_lossy(&refused.stderr), UNKNOWN);
+    stderr_is(&refused, UNKNOWN);
     assert_eq!(refused.status.code(), Some(2));
     outputs.push((refused, Vec::new(), 2));
     for (output, expected, code) in &outputs {

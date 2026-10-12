@@ -1,4 +1,5 @@
 //! Operator declarations through the actual SDK/CLI and counted loopback transport.
+use super::request::ImageRequests;
 use super::{BLUE, JPEG, RED, fixture, folder, input, question, url};
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
@@ -61,12 +62,12 @@ fn pair() -> thinkthen::QuestionInput {
 }
 
 #[expect(clippy::unwrap_used, reason = "fixture choices must be valid")]
-fn choose() -> thinkthen::ChooseQuestion<super::Color> {
-    Question::choose::<super::Color>("Which color?")
+fn choose() -> Question {
+    Question::choose_labels("Which color?")
         .unwrap()
-        .option(super::Color::Red, None)
+        .label("red", None)
         .unwrap()
-        .option(super::Color::Blue, None)
+        .label("blue", None)
         .unwrap()
         .build()
         .unwrap()
@@ -95,14 +96,14 @@ fn admitted_profiles_send_original_jpeg_png_order_and_duplicates_through_scalar_
                 fixture(RED, ImageMedia::Png),
             ],
         );
-        let call = engine.decide_input(&question(), &images).unwrap();
-        assert_eq!(call.value(), &Answer::Yes);
+        let call = engine.request_decide(&question(), &images).unwrap();
+        assert_eq!(&call.value()[0].result().value(), &Answer::Yes);
         assert_eq!(
             call.facts().input_tokens(),
             (profile != IMAJEV).then_some(123)
         );
         let duplicate = input(None, vec![fixture(RED, ImageMedia::Png); 2]);
-        engine.decide_input(&question(), &duplicate).unwrap();
+        engine.request_decide(&question(), &duplicate).unwrap();
         let bodies = listener.requests();
         assert_eq!(bodies.len(), 2);
         assert_eq!(bodies[0].line, "POST /v1/systemone HTTP/1.1");
@@ -131,7 +132,10 @@ fn image_choice_and_score_preserve_criteria_and_the_complete_pair() {
         let engine = build(&chosen, "llamacpp", model, profile).build().unwrap();
         let choose = choose();
         assert_eq!(
-            engine.choose_input(&choose, &pair()).unwrap().value(),
+            &engine.request_choose(&choose, &pair()).unwrap().value()[0]
+                .result()
+                .value()
+                .and_then(<crate::Color as thinkthen::Choice>::from_label),
             &Some(super::Color::Red)
         );
         let scored = Listener::answering(|_| {
@@ -149,7 +153,12 @@ fn image_choice_and_score_preserve_criteria_and_the_complete_pair() {
             .unwrap()
             .build()
             .unwrap();
-        assert_eq!(*engine.score_input(&score, &pair()).unwrap().value(), 0.8);
+        assert_eq!(
+            engine.request_score(&score, &pair()).unwrap().value()[0]
+                .result()
+                .value(),
+            0.8
+        );
         for (captured, kind) in [(chosen.requests(), "choose"), (scored.requests(), "score")] {
             assert_eq!(captured.len(), 1);
             assert_eq!(
@@ -173,7 +182,7 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
         let engine = build(&listener, backend, model, profile).build().unwrap();
         assert_eq!(
             engine
-                .decide_input(&question(), &pair())
+                .request_decide(&question(), &pair())
                 .unwrap_err()
                 .kind(),
             ErrorKind::Usage
@@ -191,7 +200,7 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
         .unwrap();
     assert_eq!(
         unprofiled
-            .decide_input(&question(), &pair())
+            .request_decide(&question(), &pair())
             .unwrap_err()
             .kind(),
         ErrorKind::Usage
@@ -210,7 +219,7 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
         .cut();
     assert_eq!(
         engine
-            .decide_input(&overridden, &pair())
+            .request_decide(&overridden, &pair())
             .unwrap_err()
             .kind(),
         ErrorKind::Usage
@@ -234,7 +243,7 @@ fn caller_image_limits_are_checked_before_sending() {
         .unwrap();
     let image = fixture(RED, ImageMedia::Png);
     engine
-        .decide_input(&question(), &input(None, vec![image.clone()]))
+        .request_decide(&question(), &input(None, vec![image.clone()]))
         .unwrap();
     let base = listener.requests()[0].body.len();
     for profile in [
@@ -252,7 +261,7 @@ fn caller_image_limits_are_checked_before_sending() {
             .unwrap();
         assert_eq!(
             engine
-                .decide_input(&question(), &pair())
+                .request_decide(&question(), &pair())
                 .unwrap_err()
                 .kind(),
             ErrorKind::Usage
@@ -265,7 +274,7 @@ fn caller_image_limits_are_checked_before_sending() {
         .unwrap();
     assert_eq!(
         engine
-            .decide_input(&question(), &input(None, vec![image]))
+            .request_decide(&question(), &input(None, vec![image]))
             .unwrap_err()
             .kind(),
         ErrorKind::Usage
@@ -276,7 +285,7 @@ fn caller_image_limits_are_checked_before_sending() {
         .build()
         .unwrap();
     assert_eq!(
-        limited.choose_input(&choose, &pair()).unwrap_err().kind(),
+        limited.request_choose(&choose, &pair()).unwrap_err().kind(),
         ErrorKind::Usage
     );
     assert_eq!(listener.count(), 1);
@@ -300,7 +309,7 @@ fn envelope_excess_is_refused_with_zero_loopback_requests() {
         )],
     ] {
         let error = engine
-            .decide_input(&question(), &input(Some("PRIVATE_CONTEXT"), images))
+            .request_decide(&question(), &input(Some("PRIVATE_CONTEXT"), images))
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert!(!format!("{error:?} {error}").contains("PRIVATE_"));
@@ -326,26 +335,28 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
         .unwrap()
         .build()
         .unwrap();
-    let rows = engine
-        .decide_input_many_with(
-            &question(),
-            vec![pair(), pair()],
-            CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN)),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = super::request::decisions(
+        &engine,
+        question().into(),
+        vec![pair(), pair()].into_iter().map(Ok),
+        CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN)),
+    )
+    .unwrap()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(rows.len(), 2);
     assert_eq!(listener.count(), 2);
     let bodies = listener.requests();
     assert_eq!(bodies[0].body, bodies[1].body);
-    let again = engine
-        .decide_input_many_with(
-            &question(),
-            vec![pair(), pair()],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let again = super::request::decisions(
+        &engine,
+        question().into(),
+        vec![pair(), pair()].into_iter().map(Ok),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .unwrap()
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(again.len(), 2);
     assert_eq!(listener.count(), 2);
     let replay = build(&listener, "llamacpp", "clef-local-0036", CLEF)
@@ -355,7 +366,7 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
         .unwrap();
     assert_eq!(
         replay
-            .decide_input(&question(), &pair())
+            .request_decide(&question(), &pair())
             .unwrap()
             .facts()
             .requests_sent(),
@@ -370,7 +381,7 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
     );
     assert_eq!(
         replay
-            .decide_input(&question(), &reversed)
+            .request_decide(&question(), &reversed)
             .unwrap_err()
             .kind(),
         ErrorKind::Local
@@ -378,10 +389,15 @@ fn retries_cache_replay_cancellation_and_batch_changes_keep_the_same_image_quest
     let token = CancelToken::new();
     token.cancel();
     assert_eq!(
-        engine
-            .decide_input_with(&question(), &pair(), CallOptions::new().cancel(&token))
-            .unwrap_err()
-            .kind(),
+        super::request::decisions(
+            &engine,
+            question().into(),
+            [Ok(pair())],
+            CallOptions::new().cancel(&token)
+        )
+        .and_then(thinkthen::Batch::into_call)
+        .unwrap_err()
+        .kind(),
         ErrorKind::Cancelled
     );
     assert_eq!(listener.count(), 2);
@@ -453,7 +469,7 @@ fn server_context_rejection_returns_a_failure_and_sends_the_complete_original_pr
     let engine = build(&listener, "llamacpp", "clef-local-0036", CLEF)
         .build()
         .unwrap();
-    let error = engine.decide_input(&question(), &pair()).unwrap_err();
+    let error = engine.request_decide(&question(), &pair()).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert!(!format!("{error:?}").contains("PRIVATE_LOCAL_KEY"));
     assert_eq!(listener.count(), 1);
@@ -474,15 +490,18 @@ fn release_only_local_final_image_json_limits_are_exact() {
         .unwrap();
     let image = fixture(RED, ImageMedia::Png);
     engine
-        .decide_input(&question(), &input(None, vec![image.clone()]))
+        .request_decide(&question(), &input(None, vec![image.clone()]))
         .unwrap();
     let base = listener.requests()[0].body.len();
     let at_limit = input(Some(&"x".repeat(2_800_000 - base)), vec![image.clone()]);
-    engine.decide_input(&question(), &at_limit).unwrap();
+    engine.request_decide(&question(), &at_limit).unwrap();
     assert_eq!(listener.requests()[0].body.len(), 2_800_000);
     let over = input(Some(&"x".repeat(2_800_001 - base)), vec![image.clone()]);
     assert_eq!(
-        engine.decide_input(&question(), &over).unwrap_err().kind(),
+        engine
+            .request_decide(&question(), &over)
+            .unwrap_err()
+            .kind(),
         ErrorKind::Usage
     );
     assert_eq!(listener.count(), 2);

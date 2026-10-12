@@ -7,7 +7,7 @@ mod child;
 use child::ChildEnvironment as _;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{BatchSetting, CallId, CallOptions, Engine, Question, SdkRequestId, Surface};
+use thinkthen::{BatchSetting, CallId, CallOptions, Question, SdkRequestId, Surface};
 
 const REPLY: &str = r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 // The quote form is fixed by specification/records.md, independently of headers.
@@ -16,13 +16,7 @@ const BODY: &[u8] = br#"{"state":"Each question quotes the text it asks about.",
 #[test]
 fn public_prepared_send_has_compiled_surface_and_distinct_validated_ids_without_body_changes() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-native-identity")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-native-identity")
         .no_cache()
         .build()
         .unwrap();
@@ -59,13 +53,7 @@ fn status_retries_retain_both_ids_and_a_later_invocation_gets_new_ids() {
         Canned::ok(REPLY),
     ])
     .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-native-identity")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-native-identity")
         .max_retries(1)
         .no_cache()
         .build()
@@ -95,17 +83,7 @@ fn refused_parent_and_split_children_share_invocation_but_have_separate_prepared
         Canned::ok(REPLY),
     ])
     .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-native-identity")
-        .unwrap()
-        .max_retries(0)
-        .no_cache()
-        .build()
-        .unwrap();
+    let engine = crate::api::loopback(listener.base(), "fixture-native-identity");
     let question = Question::decide("Refund?").unwrap().cut();
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
@@ -148,13 +126,7 @@ fn refused_parent_and_split_children_share_invocation_but_have_separate_prepared
 #[test]
 fn concurrent_calls_have_distinct_invocations_and_prepared_ids() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-native-identity")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fixture-native-identity")
         .no_cache()
         .build()
         .unwrap();
@@ -202,17 +174,7 @@ fn concurrent_calls_have_distinct_invocations_and_prepared_ids() {
 #[test]
 fn started_failure_and_zero_send_success_keep_ids_and_explicit_outer_surface_is_truthful() {
     let listener = Listener::answering(|_| Canned::status(503, "{}")).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fixture-native-identity")
-        .unwrap()
-        .max_retries(0)
-        .no_cache()
-        .build()
-        .unwrap();
+    let engine = crate::api::loopback(listener.base(), "fixture-native-identity");
     let question = Question::decide("Refund?").unwrap().cut();
     let error = engine
         .decide_with(
@@ -343,3 +305,6 @@ fn cli_typed_admission_refusal_emits_no_invocation_id_and_sends_nothing() {
     assert!(facts.get("call_id").is_none());
     assert_eq!(facts.get("requests_sent"), Some(&serde_json::json!(0)));
 }
+
+#[path = "support/api.rs"]
+mod api;

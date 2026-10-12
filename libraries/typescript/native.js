@@ -24,7 +24,7 @@ function dump(value) {
 }
 function crossing(call) {
   try {return call();} catch(error) {
-    try {const held=JSON.parse(error.message).err; if(held) throw new ClientError(held.kind,held.message,held.retryable);} catch(parsed) {if(parsed instanceof ClientError) throw parsed;}
+    if(error.name==='ClientError') Object.setPrototypeOf(error,ClientError.prototype);
     throw error;
   }
 }
@@ -58,8 +58,9 @@ class Client {
   close(){this.#closed=true;for(const op of this.#operations) op.close();this.#engine=null;}
 }
 class Operation {
-  #native; #iterator; #pending; #rows=[]; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
+  #native; #waiting; #iterator; #pending; #rows=[]; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
   terminal;
+  #producerError;
   constructor(engine,verb,question,input,controls,remove) {
     this.#remove=remove;
     const {signal,...options}=controls;this.#signal=signal;
@@ -82,7 +83,7 @@ class Operation {
       if(this.#closed) return;
       if(value.done){this.#native.finish(null);this.#iterator=undefined;}
       else this.#pending={text:dump({item:descriptor(value.value)})};
-    }).catch(()=>{if(!this.#closed){this.#native.finish(true);this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
+    }).catch(error=>{if(!this.#closed){this.#producerError=error;this.#native.finish(true);this.#releaseProducer();}}).finally(()=>{if(this.#pending instanceof Promise)this.#pending=undefined;});
   }
   async next() {
     if(this.#done) return {done:true,value:undefined};
@@ -99,7 +100,7 @@ class Operation {
             this.terminal=packet;this.#done=true;this.close();
             if(packet.has('failure')) {
               const failure=packet.failure,error=new ClientError(failure.error.kind,failure.error.message,failure.error.retryable);
-              error.complete=failure;error.facts=failure.facts;error.results=Object.freeze(this.#rows);error.terminal=packet;throw error;
+              error.complete=failure;error.facts=failure.facts;error.results=Object.freeze(this.#rows);error.terminal=packet;if(this.#producerError!==undefined)error.cause=this.#producerError;throw error;
             }
             return {done:true,value:undefined};
           }
@@ -113,7 +114,10 @@ class Operation {
           if(status==='closed') this.#releaseProducer();
         }
         this.#feed();
-        await new Promise(resolve=>setTimeout(resolve,1));
+        // Retain one native worker wait even when an asynchronous producer wins.
+        this.#waiting ??= this.#native.wait(!!this.#pending?.text).finally(()=>{this.#waiting=undefined;});
+        if(this.#pending instanceof Promise) await Promise.race([this.#pending,this.#waiting]);
+        else await this.#waiting;
       }
     } finally {this.#busy=false;}
   }

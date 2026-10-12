@@ -106,7 +106,7 @@ impl<T> Found<T> {
 
 impl<T: Evidence> Found<T> {
     /// The selected unit's place, text and probability, or `None` when
-    /// nothing was selected. The C door writes this as its `find` value.
+    /// nothing was selected. The C interface writes this as its `find` value.
     #[must_use]
     pub fn picked(&self) -> Option<Picked<'_>> {
         let index = self.selected?;

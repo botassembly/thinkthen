@@ -114,3 +114,10 @@ pub(crate) fn alone(path: &str, body: impl FnOnce()) {
     );
     assert!(said.contains("1 passed"), "the child ran {path}");
 }
+
+/// Keep each source record in its own backend request.
+pub(crate) fn singleton() -> thinkthen::CallOptions<'static> {
+    thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
+        std::num::NonZeroUsize::MIN,
+    ))
+}

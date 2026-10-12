@@ -40,13 +40,17 @@ impl Stop<'_> {
     }
 
     pub(crate) fn observer_panicked(&self) -> bool {
-        self.panic.lock().is_ok_and(|held| held.is_some())
+        self.panic
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_some()
     }
 
-    fn hold_panic(&self, payload: Box<dyn std::any::Any + Send>) {
-        if let Ok(mut held) = self.panic.lock() {
-            held.get_or_insert(payload);
-        }
+    pub(super) fn hold_panic(&self, payload: Box<dyn std::any::Any + Send>) {
+        self.panic
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .get_or_insert(payload);
     }
 
     /// A dropped lazy batch has no later `finish`; resume only after its join.
@@ -54,7 +58,11 @@ impl Stop<'_> {
         if std::thread::panicking() {
             return;
         }
-        let held = self.panic.lock().ok().and_then(|mut held| held.take());
+        let held = self
+            .panic
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
         if let Some(payload) = held {
             self.facts.finish();
             resume_unwind(payload);

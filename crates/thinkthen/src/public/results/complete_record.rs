@@ -11,6 +11,16 @@ pub struct CompleteRecord<T, R> {
 }
 
 impl<T, R> CompleteRecord<T, R> {
+    /// Transform the original without changing its occurrence or complete judgment.
+    #[must_use]
+    pub fn map_original<U>(self, map: impl FnOnce(T) -> U) -> CompleteRecord<U, R> {
+        CompleteRecord {
+            original: map(self.original),
+            ordinal: self.ordinal,
+            result: self.result,
+        }
+    }
+
     /// The exact original item retained by this occurrence.
     #[must_use]
     pub const fn original(&self) -> &T {

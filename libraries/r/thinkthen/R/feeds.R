@@ -21,17 +21,19 @@ tt_reader_failure <- function(kind, location = NULL) {
   if (!is.null(deadline_ms)) options$deadline_ms <- deadline_ms
   stream <- tt_batch(function_name, question, input, options)
   on.exit(stream$close())
-  results <- list()
+  chunks <- new.env(parent = emptyenv())
+  count <- 0L
+  results <- function() if (count) unlist(mget(as.character(seq_len(count)), chunks), recursive = FALSE, use.names = FALSE) else list()
   tryCatch(repeat {
     value <- stream$next_result()
     if (is.null(value)) break
-    if (inherits(value, "thinkthen_complete")) results[[length(results) + 1L]] <- value
-    else results <- c(results, value)
+    count <- count + 1L
+    chunks[[as.character(count)]] <- if (inherits(value, "thinkthen_complete")) list(value) else value
   }, thinkthen_error = function(e) {
-    e$completed <- results
+    e$completed <- results()
     stop(e)
   })
-  structure(list(results = results, facts = stream$facts()), class = c("thinkthen_Call", "thinkthen_complete"))
+  structure(list(results = results(), facts = stream$facts()), class = c("thinkthen_Call", "thinkthen_complete"))
 }
 print.thinkthen_feed <- function(x, ...) { cat("<feed: content withheld>\n"); invisible(x) }
 print.thinkthen_record <- function(x, ...) { cat("<record: content withheld>\n"); invisible(x) }

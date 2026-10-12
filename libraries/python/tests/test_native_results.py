@@ -1,20 +1,19 @@
 from conftest import child_env, run
 
 def test_native_results_keep_owned_values_presence_and_pickle(backend, tmp_path):
-    from conftest import child_env, run
     output = run('''
-        import gc, json, pickle, time
+        import gc, json, pickle
         from thinkthen import _thinkthen as native
         from thinkthen._native_results import NativeSessionPacketDecideRow, NativeAtomicDecideValue
         engine = native._Engine('{"cache":false,"max_retries":0}')
-        session = engine._request_session('decide', ('text', 'Late?'), None, {}, True)
+        session = engine._request_session('decide', (('text', 'Late?'), None, {}), True)
         assert session._push(native._RequestItem('note', 'decide')) == 'accepted'
         session._finish()
         rows = []
         while True:
             packet = session._poll_typed()
             if packet is None:
-                time.sleep(.001)
+                session._wait(False)
                 continue
             if packet['kind'] == 'end': break
             if packet.kind == 'row': rows.append(packet)

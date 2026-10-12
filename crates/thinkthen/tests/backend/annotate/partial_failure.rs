@@ -1,10 +1,10 @@
 //! Partial backend failures keep neighboring `annotate` answers.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local, stderr_is};
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
-use crate::harness::{Canned, Listener, spawn};
 use crate::support::keys;
 
 fn questions(name: &str, body: &str) -> PathBuf {
@@ -53,7 +53,7 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
     assert_eq!(bare.status.code(), Some(6));
     assert!(bare.stderr.is_empty());
     assert_eq!(
-        String::from_utf8_lossy(&bare.stdout),
+        crate::harness::printed(&bare),
         "{\"good\":true,\"failed\":{\"failed\":{\"kind\":\"backend\",\"cause\":\"wrong_kind\"}},\"not_sure\":null}\n"
     );
 
@@ -110,7 +110,7 @@ fn one_bad_tag_member_fails_one_logical_question() -> io::Result<()> {
 
     let (_, output) = run(&file, response, true)?;
     assert_eq!(output.status.code(), Some(6));
-    let row = String::from_utf8_lossy(&output.stdout);
+    let row = crate::harness::printed(&output);
     assert!(row.contains(r#""failed_questions":1"#), "{row}");
     let row: serde_json::Value = serde_json::from_slice(&output.stdout)?;
     assert_eq!(
@@ -196,11 +196,10 @@ fn a_group_with_no_valid_answer_remains_a_backend_failure() -> io::Result<()> {
     );
 
     let (_, output) = run(&file, response, false)?;
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the answer to question `q1` is not the shape the question asked for\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the reply was refused: the answer to question `q1` is not the shape the question asked for\n",
     );
     Ok(())
 }
@@ -217,25 +216,16 @@ fn a_record_stream_finishes_after_partial_replies_and_exits_six() -> io::Result<
     );
     let listener = Listener::serving(vec![Canned::ok(response), Canned::ok(response)])?;
     let file = file.to_string_lossy();
-    let output = spawn(
-        &[
-            "annotate",
-            file.as_ref(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-            "--lines",
-            "--batch",
-            "1",
-        ],
+    let output = spawn_local(
+        &["annotate", file.as_ref(), "--lines", "--batch", "1"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"first\nsecond\n",
     )?;
 
     assert_eq!(output.status.code(), Some(6));
     assert!(output.stderr.is_empty());
-    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 2);
+    assert_eq!(crate::harness::printed(&output).lines().count(), 2);
     assert_eq!(listener.requests().len(), 2);
     Ok(())
 }
@@ -252,14 +242,10 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
     );
     let listener = Listener::serving(vec![Canned::ok(partial), Canned::status(401, "{}")])?;
     let file = file.to_string_lossy();
-    let output = spawn(
+    let output = spawn_local(
         &[
             "annotate",
             file.as_ref(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--lines",
             "--batch",
             "1",
@@ -268,18 +254,19 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
             "--max-retries",
             "0",
         ],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"first\nsecond\nthird\n",
     )?;
 
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 1);
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    assert_eq!(crate::harness::printed(&output).lines().count(), 1);
+    stderr_is(
+        &output,
         concat!(
             "thinkthen: stopped at record 2; the request for records 2 to 2 failed: ",
             "the backend answered with status 401: the key was refused; 1 record finished\n",
-        )
+        ),
     );
     assert_eq!(listener.requests().len(), 2);
     Ok(())
@@ -328,11 +315,11 @@ fn a_recorded_partial_reply_replays_its_failed_question_as_a_miss() -> io::Resul
     assert!(listener.requests().is_empty());
     assert!(second.stdout.is_empty());
     assert_eq!(second.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&second.stderr),
+    stderr_is(
+        &second,
         format!(
             "thinkthen: the annotate request: the replay folder holds no answer for question `{failed}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent\n"
-        )
+        ),
     );
     Ok(())
 }

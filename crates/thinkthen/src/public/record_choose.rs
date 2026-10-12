@@ -146,14 +146,11 @@ impl fmt::Debug for RecordChooseQuestion {
     }
 }
 impl Engine {
-    /// Execute choose using a mandatory whole ordered shortlist for every original.
-    /// # Errors
-    /// A missing/invalid later list refuses the entire eager set before sending.
     #[allow(
         clippy::type_complexity,
-        reason = "Each original retains its concrete complete choice"
+        reason = "the private Request primitive retains original and complete result types"
     )]
-    pub fn choose_dynamic_records_complete_with<I, T>(
+    pub(crate) fn execute_choose_dynamic_records_complete_with<I, T>(
         &self,
         question: &RecordChooseQuestion,
         records: I,
@@ -181,10 +178,14 @@ impl Engine {
             .options
             .as_ref()
             .ok_or_else(|| Error::defect("admitted record choose lost its candidates"))?;
-        self.choose_records_complete_with(
+        self.records_complete(
+            crate::InputFunction::Choose,
             &question.with_options(options_for_first)?,
             records,
             options,
-        )
+        )?
+        .try_map(|rows| {
+            crate::public::complete::records::mapped(rows, crate::public::complete::choice)
+        })
     }
 }

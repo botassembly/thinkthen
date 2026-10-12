@@ -71,6 +71,21 @@ public final class Session: @unchecked Sendable {
             } else { try sessionCheck(thinkthen_session_finish(current.handle, nil, 0)) }
         }
     }
+    private func wait(input: Bool) async throws {
+        let current = try lease()
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
+            DispatchQueue.global(qos: .userInitiated).async {
+                do {
+                    try withExtendedLifetime(current) {
+                        var ready: UInt32 = 0
+                        try sessionCheck(thinkthen_session_wait(current.handle,
+                            input ? UInt32(THINKTHEN_SESSION_WAIT_INPUT_V1) : UInt32(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1), 50, &ready))
+                    }
+                    continuation.resume()
+                } catch { continuation.resume(throwing: error) }
+            }
+        }
+    }
     public func push(_ descriptor: InputRequestSessionDescriptor) async throws -> Bool {
         try begin(reader: false)
         defer { end(reader: false) }
@@ -89,7 +104,7 @@ public final class Session: @unchecked Sendable {
                 switch status {
                 case UInt32(THINKTHEN_SESSION_ACCEPTED_V1): return true
                 case UInt32(THINKTHEN_SESSION_CLOSED_V1): return false
-                case UInt32(THINKTHEN_SESSION_FULL_V1): try await Task.sleep(for: .milliseconds(10))
+                case UInt32(THINKTHEN_SESSION_FULL_V1): try await wait(input: true)
                 default: throw JSONConversionError("Invalid native push status")
                 }
             }
@@ -122,7 +137,7 @@ public final class Session: @unchecked Sendable {
                     try Task.checkCancellation()
                     return result
                 case UInt32(THINKTHEN_SESSION_END_V1): return nil
-                case UInt32(THINKTHEN_SESSION_PENDING_V1): try await Task.sleep(for: .milliseconds(10))
+                case UInt32(THINKTHEN_SESSION_PENDING_V1): try await wait(input: false)
                 default: throw JSONConversionError("Invalid native read status")
                 }
             }

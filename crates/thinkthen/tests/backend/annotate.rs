@@ -1,10 +1,9 @@
 //! The compiled `annotate` command against a loopback backend.
 
+use crate::harness::{Canned, Listener, Tally, spawn, stderr_is};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
-
-use crate::harness::{Canned, Listener, Tally, spawn};
 
 const ANSWERED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92},"#,
@@ -67,10 +66,9 @@ fn a_saved_set_name_keeps_its_pinned_identity_and_warning() {
         r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
     )])
     .expect("listener");
-    let output = spawn(
+    let output = crate::harness::annotate(
+        &set_file,
         &[
-            "annotate",
-            &set_file.to_string_lossy(),
             "--details",
             "--profile",
             &profile.to_string_lossy(),
@@ -81,12 +79,7 @@ fn a_saved_set_name_keeps_its_pinned_identity_and_warning() {
         br#"{"body":"Please help me."}"#,
     )
     .expect("command");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result JSON");
     assert_eq!(row["meta"]["questions_sha256"], fixture["questions_sha256"]);
     assert_eq!(row["meta"]["profile_warning"], fixture["warning"]);
@@ -106,27 +99,16 @@ mod structured;
 fn same_evidence_packs_mixed_questions_and_appends_answers() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a listener");
     let file = questions();
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &[],
         br#"{"id":7,"body":"The service failed."}"#,
     )
     .expect("the command runs");
+    crate::harness::exits(&output, 0);
     assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"id\":7,\"body\":\"The service failed.\",\"risky\":true,\"kind\":\"bug\",\"severity\":0.8}\n"
     );
     let requests = listener.requests();
@@ -151,22 +133,16 @@ fn tag_aggregates_beside_another_question_in_one_request() {
             r#""topics":{"tag":"Which topics?","labels":["billing","urgent"]}}}"#,
         ),
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
+        &[],
         br#"{"body":"The invoice failed."}"#,
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"body\":\"The invoice failed.\",\"risky\":true,\"topics\":[\"billing\"]}\n"
     );
     assert_eq!(listener.requests().len(), 1);
@@ -183,22 +159,12 @@ fn absent_on_and_explicit_root_share_one_request_and_whole_evidence() {
         "root-group",
         r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?","on":""}}}"#,
     );
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
-        b"whole plain-text evidence",
-    )
-    .expect("the command runs");
+    let output =
+        crate::harness::annotate_local(&file, listener.base(), &[], b"whole plain-text evidence")
+            .expect("the command runs");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"first\":true,\"second\":false}\n"
     );
     let requests = listener.requests();
@@ -226,19 +192,19 @@ fn a_collision_and_dry_run_send_no_request() {
     )
     .expect("the command runs");
     assert_eq!(collided.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&collided.stderr),
+    stderr_is(
+        &collided,
         concat!(
             "thinkthen: the record already holds `risky`, so that question cannot be appended\n",
             "thinkthen: stopped at record 1; 0 records finished\n",
-        )
+        ),
     );
 
     let mut dry = common.to_vec();
     dry.push("--plan");
     let planned = spawn(&dry, &[], br#"{"body":"The service failed."}"#).expect("the command runs");
     assert_eq!(planned.status.code(), Some(0));
-    let stdout = String::from_utf8_lossy(&planned.stdout);
+    let stdout = crate::harness::printed(&planned);
     assert!(
         stdout.contains(r#""on":{"risky":[""],"kind":[""],"severity":[""]}"#),
         "{stdout}"
@@ -252,17 +218,12 @@ fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
         "missing-questions-wrapper",
         r#"{"version":1,"unresolved":{"decide":"Still open?"}}"#,
     );
-    let output = spawn(
-        &["annotate", &file.to_string_lossy(), "--plan"],
-        &[],
-        b"evidence",
-    )
-    .expect("the command runs");
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the question set is missing its `questions` object\n"
+    let output =
+        crate::harness::annotate(&file, &["--plan"], &[], b"evidence").expect("the command runs");
+    crate::harness::refuses(
+        &output,
+        5,
+        "thinkthen: the question set is missing its `questions` object\n",
     );
 }
 
@@ -270,37 +231,28 @@ fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
 fn positional_input_and_swapped_paths_keep_distinct_routes() {
     let questions = questions();
     let evidence = set("plain-evidence", r#"{"body":"hello"}"#);
-    let second_path = spawn(
-        &[
-            "annotate",
-            &questions.to_string_lossy(),
-            &evidence.to_string_lossy(),
-            "--plan",
-        ],
+    let second_path = crate::harness::annotate(
+        &questions,
+        &[&evidence.to_string_lossy(), "--plan"],
         &[],
         b"",
     )
     .expect("the command runs");
     assert_eq!(second_path.status.code(), Some(0));
     assert!(second_path.stderr.is_empty());
-    assert!(String::from_utf8_lossy(&second_path.stdout).contains("hello"));
+    assert!(crate::harness::printed(&second_path).contains("hello"));
 
-    let swapped = spawn(
-        &[
-            "annotate",
-            &evidence.to_string_lossy(),
-            "--input",
-            &questions.to_string_lossy(),
-            "--plan",
-        ],
+    let swapped = crate::harness::annotate(
+        &evidence,
+        &["--input", &questions.to_string_lossy(), "--plan"],
         &[],
         b"",
     )
     .expect("the command runs");
     assert_eq!(swapped.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&swapped.stderr),
-        "thinkthen: the question set and input appear to be swapped; put the question set after `annotate` and the evidence after `--input`\n"
+    stderr_is(
+        &swapped,
+        "thinkthen: the question set and input appear to be swapped; put the question set after `annotate` and the evidence after `--input`\n",
     );
 }
 
@@ -328,13 +280,8 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
         b"The service failed.",
     )
     .expect("the recording run");
-    assert_eq!(
-        first.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&first.stderr)
-    );
-    let row = String::from_utf8_lossy(&first.stdout);
+    crate::harness::exits(&first, 0);
+    let row = crate::harness::printed(&first);
     assert!(row.contains(r#""questions_sha256":"#), "{row}");
     assert!(row.contains(r#""cached":false"#), "{row}");
     assert!(row.contains(r#""failed_questions":0"#), "{row}");
@@ -344,13 +291,8 @@ fn a_detailed_recording_replays_without_a_key_or_second_request() {
     let mut replayed = base.to_vec();
     replayed.extend(["--replay", &recording_text]);
     let second = spawn(&replayed, &[], b"The service failed.").expect("the replay run");
-    assert_eq!(
-        second.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&second.stderr)
-    );
-    let row = String::from_utf8_lossy(&second.stdout);
+    crate::harness::exits(&second, 0);
+    let row = crate::harness::printed(&second);
     assert!(row.contains(r#""cached":true"#), "{row}");
     assert_eq!(listener.requests().len(), 1);
 }
@@ -365,10 +307,9 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
         "two-groups",
         r#"{"version":1,"questions":{"left_answer":{"decide":"left?","on":"/left"},"right_answer":{"decide":"right?","on":"/right"}}}"#,
     );
-    let output = spawn(
+    let output = crate::harness::annotate(
+        &file,
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--url",
             listener.base(),
             "--model",
@@ -382,9 +323,9 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named model versions `jev-1.2` and `jev-1.3`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns\n"
+    stderr_is(
+        &output,
+        "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named model versions `jev-1.2` and `jev-1.3`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns\n",
     );
     assert!(output.stdout.is_empty());
     assert_eq!(listener.requests().len(), 2);
@@ -409,14 +350,10 @@ fn the_first_group_failure_wins_when_the_second_finishes_first() {
         "failure-order",
         r#"{"version":1,"questions":{"first_answer":{"decide":"first?","on":"/first"},"second_answer":{"decide":"second?","on":"/second"}}}"#,
     );
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
             "--jobs",
             "4",
             "--max-retries",
@@ -424,14 +361,13 @@ fn the_first_group_failure_wins_when_the_second_finishes_first() {
             "--profile",
             &one_question().to_string_lossy(),
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         br#"{"first":"slow","second":"fast"}"#,
     )
     .expect("the command runs");
     assert_eq!(output.status.code(), Some(4));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n"
+    stderr_is(
+        &output,
+        "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n",
     );
     assert_eq!(listener.requests().len(), 2);
 }
@@ -461,10 +397,9 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         let second = r#"{"model":"jev-1.2","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
         let listener =
             Listener::serving(vec![Canned::ok(&first), Canned::ok(second)]).expect("a listener");
-        let output = spawn(
+        let output = crate::harness::annotate(
+            &file,
             &[
-                "annotate",
-                &file.to_string_lossy(),
                 "--url",
                 listener.base(),
                 "--model",
@@ -476,14 +411,9 @@ fn hostile_model_names_never_reach_the_diagnostic() {
             br#"{"left":"evidence-marker","right":"plain"}"#,
         )
         .expect("the command runs");
+        crate::harness::exits_because(&output, 4, || format!("case {place}"));
         assert_eq!(
-            output.status.code(),
-            Some(4),
-            "case {place}: {}",
-            String::from_utf8_lossy(&output.stderr)
-        );
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
+            crate::harness::said(&output),
             "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",
             "case {place}"
         );
@@ -507,11 +437,11 @@ fn a_question_set_named_with_at_is_the_same_file() {
     assert_eq!(at.stdout, bare.stdout);
     let absent = plan("@absent-question-set.json");
     assert_eq!(absent.status.code(), Some(5));
-    assert_eq!(
-        String::from_utf8_lossy(&absent.stderr),
+    stderr_is(
+        &absent,
         format!(
             "thinkthen: the question set could not be opened: {}\n",
             std::io::Error::from_raw_os_error(2)
-        )
+        ),
     );
 }

@@ -41,8 +41,8 @@ fn demos(root: &str) -> io::Result<Output> {
 fn printed(output: &Output) -> String {
     format!(
         "{}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        crate::harness::printed(output),
+        crate::harness::said(output)
     )
 }
 

@@ -6,12 +6,6 @@
 //! every 100 ms, and builds R values from the plain data the worker returns.
 //! It holds no rule, retry, or request of its own.
 //!
-//! Errors cross as one string: the kind word, the retry signal, and the
-//! message, joined by the unit separator. Every `%` doubles, because
-//! extendr raises the string through R's `Rf_error`, whose argument is a
-//! printf format. A NUL and the separator are escaped, because an R string
-//! cannot hold the first and the second would split the packing.
-
 pub mod ffi;
 
 mod calls;
@@ -26,39 +20,68 @@ use thinkthen::{BatchSetting, Engine, EngineBuilder, Error, ErrorKind};
 
 pub use ffi::get_thinkthen_metadata;
 
-/// The separator that carries an error's kind and retry signal to R.
-const SEP: char = '\u{1f}';
-
-/// One failure in the shape the R half parses.
-fn packed(kind: &str, retryable: bool, message: &str) -> String {
-    let message = message
-        .replace('%', "%%")
-        .replace('\0', "\\u0000")
-        .replace(SEP, "\\u001f");
-    format!("{kind}{SEP}{retryable}{SEP}{message}")
+/// An owned error crosses threads without retaining an R value.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct NativeError {
+    kind: String,
+    retryable: bool,
+    message: String,
+    complete: Option<String>,
 }
-
-/// The one error-kind table: the engine's own words (ADR 0047 item 7).
-fn carry(error: &Error) -> String {
-    let base = packed(error.kind().name(), error.retryable(), &error.to_string());
-    serde_json::to_string(&error.complete()).map_or(base.clone(), |snapshot| {
-        format!("{base}{SEP}{}", snapshot.replace('%', "%%"))
-    })
+impl From<NativeError> for extendr_api::Robj {
+    fn from(error: NativeError) -> Self {
+        use extendr_api::prelude::*;
+        let complete = error
+            .complete
+            .as_deref()
+            .and_then(|text| crate::native_results::failure(text).ok());
+        let facts = complete
+            .as_ref()
+            .and_then(|value| List::try_from(value.clone()).ok())
+            .and_then(|value| {
+                value
+                    .iter()
+                    .find(|(name, _)| *name == "facts")
+                    .map(|(_, value)| value)
+            });
+        let mut value = list!(
+            message = error.message.replace('\0', "\\u0000"),
+            kind = error.kind.clone(),
+            retryable = error.retryable,
+            complete = complete.unwrap_or_else(|| ().into()),
+            facts = facts.unwrap_or_else(|| ().into()),
+            call = NULL
+        );
+        let _ = value.set_class([
+            format!("thinkthen_{}", error.kind),
+            "thinkthen_error".into(),
+            "error".into(),
+            "condition".into(),
+        ]);
+        value.into()
+    }
 }
-
-/// A caller's mistake the shim refuses before any request.
-fn usage(message: &str) -> String {
-    packed(ErrorKind::Usage.name(), false, message)
+fn carry(error: &Error) -> NativeError {
+    NativeError {
+        kind: error.kind().name().into(),
+        retryable: error.retryable(),
+        message: error.to_string(),
+        complete: serde_json::to_string(&error.complete()).ok(),
+    }
 }
-
-/// A fault in the shim itself.
-fn defect(message: &str) -> String {
-    packed(ErrorKind::Defect.name(), false, message)
+fn usage(message: &str) -> NativeError {
+    carry(&Error::new(ErrorKind::Usage, message))
 }
-
-/// The marker the R half raises as R's own interrupt condition.
-fn interrupted() -> String {
-    packed("interrupt", false, "the call was interrupted")
+fn defect(message: &str) -> NativeError {
+    carry(&Error::new(ErrorKind::Defect, message))
+}
+fn interrupted() -> NativeError {
+    NativeError {
+        kind: "interrupt".into(),
+        retryable: false,
+        message: "the call was interrupted".into(),
+        complete: None,
+    }
 }
 
 /// The engine settings `tt_engine` takes, as the caller gave them.
@@ -181,7 +204,7 @@ fn chosen() -> MutexGuard<'static, Option<(Settings, Engine)>> {
 /// Build and keep the engine every later call uses. Equal settings a second
 /// time do nothing, and any other settings are refused, because the
 /// throttle is process-wide (ticket 0077).
-fn choose_engine(settings: Settings) -> Result<(), String> {
+fn choose_engine(settings: Settings) -> Result<(), crate::NativeError> {
     let mut slot = chosen();
     if let Some((held, _)) = slot.as_ref() {
         return if *held == settings {
@@ -201,7 +224,7 @@ fn choose_engine(settings: Settings) -> Result<(), String> {
 }
 
 /// The engine in use: the chosen one, or the default engine.
-fn engine() -> Result<Engine, String> {
+fn engine() -> Result<Engine, NativeError> {
     if let Some((_, engine)) = chosen().as_ref() {
         return Ok(engine.clone());
     }
@@ -213,44 +236,4 @@ fn engine() -> Result<Engine, String> {
     slot.as_ref()
         .cloned()
         .ok_or_else(|| defect("default engine was not retained"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn parts(carried: &str) -> Vec<&str> {
-        carried.split(SEP).collect()
-    }
-
-    #[test]
-    fn each_of_the_six_kinds_crosses_as_its_own_word() {
-        let kinds = [
-            (ErrorKind::Usage, "usage"),
-            (ErrorKind::Backend, "backend"),
-            (ErrorKind::Local, "local"),
-            (ErrorKind::Cancelled, "cancelled"),
-            (ErrorKind::Deadline, "deadline"),
-            (ErrorKind::Defect, "defect"),
-        ];
-        for (kind, word) in kinds {
-            assert_eq!(parts(&packed(kind.name(), true, "m")), [word, "true", "m"]);
-        }
-    }
-
-    #[test]
-    fn the_message_escapes_what_r_cannot_carry() {
-        let rows = [
-            ("100% sure %s", "100%% sure %%s"),
-            ("a\u{0}b", "a\\u0000b"),
-            ("a\u{1f}b", "a\\u001fb"),
-        ];
-        for (message, carried) in rows {
-            assert_eq!(parts(&usage(message)), ["usage", "false", carried]);
-        }
-        assert_eq!(
-            parts(&interrupted()),
-            ["interrupt", "false", "the call was interrupted"]
-        );
-    }
 }

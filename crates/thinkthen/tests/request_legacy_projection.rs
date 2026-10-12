@@ -10,17 +10,7 @@ use serde_json::{Value, json};
 use thinkthen::*;
 
 fn engine(listener: &Listener) -> Engine {
-    Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("projection-private")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap()
+    crate::api::loopback(listener.base(), "projection-private")
 }
 fn response(body: &[u8]) -> Canned {
     let body: Value = serde_json::from_slice(body).unwrap();
@@ -61,6 +51,45 @@ fn record() -> RecordInput<QuestionInput> {
         .unwrap()
         .map_original(|record| record.question_input())
 }
+fn native_details(
+    engine: &Engine,
+    question: &LoadedQuestion,
+    original: QuestionInput,
+    controls: CallOptions<'_>,
+) -> Details {
+    let request = Request::for_definition(
+        question.clone().into(),
+        RequestInput::Feed {
+            name: "projection".into(),
+            framing: RequestFraming::Document,
+            reading: ReaderOptions::default(),
+            images: Vec::new(),
+        },
+        RequestOptions::default(),
+    )
+    .admit()
+    .unwrap();
+    let rows = engine
+        .execute_request_rows(&request, crate::api::plain_records([original]), controls)
+        .unwrap();
+    macro_rules! first {
+        ($rows:expr) => {
+            $rows
+                .next()
+                .unwrap()
+                .unwrap()
+                .compatibility_details()
+                .unwrap()
+        };
+    }
+    match rows {
+        RequestRows::Decisions(mut rows) => first!(rows),
+        RequestRows::Choices(mut rows) => first!(rows),
+        RequestRows::Tags(mut rows) => first!(rows),
+        RequestRows::Scores(mut rows) => first!(rows),
+        _ => panic!("fixture kind"),
+    }
+}
 fn documents(details: &Details) -> (Value, Value) {
     (
         serde_json::from_str(&details.to_json()).unwrap(),
@@ -83,52 +112,44 @@ fn all_four_record_and_scalar_projections_match_corresponding_native_batch() {
         let controls = CallOptions::new().context("Separate context.");
         let before = listener.count();
         let (record_details, scalar_details) = match &loaded {
-            LoadedQuestion::Banded(q) => {
-                let call = engine
-                    .decide_records_complete_with(q, [record()], controls)
-                    .unwrap();
+            LoadedQuestion::Banded(_) => {
+                let call =
+                    crate::api::decide_records(&engine, &loaded, [record()], controls).unwrap();
                 let row = &call.value()[0];
                 (
-                    row.legacy_details().unwrap(),
-                    row.result().legacy_details().unwrap(),
+                    row.compatibility_details().unwrap(),
+                    row.result().compatibility_details().unwrap(),
                 )
             }
             LoadedQuestion::Question(q) => {
                 macro_rules! project {
                     ($method:ident) => {{
-                        let call = engine.$method(q, [record()], controls).unwrap();
+                        let call = crate::api::$method(&engine, q, [record()], controls).unwrap();
                         let row = &call.value()[0];
                         (
-                            row.legacy_details().unwrap(),
-                            row.result().legacy_details().unwrap(),
+                            row.compatibility_details().unwrap(),
+                            row.result().compatibility_details().unwrap(),
                         )
                     }};
                 }
                 match q.kind() {
-                    QuestionKind::Choose => project!(choose_records_complete_with),
-                    QuestionKind::Tag => project!(tag_records_complete_with),
-                    QuestionKind::Score => project!(score_records_complete_with),
+                    QuestionKind::Choose => project!(choose),
+                    QuestionKind::Tag => project!(tag),
+                    QuestionKind::Score => project!(score),
                     _ => panic!("fixture kind"),
                 }
             }
         };
         assert_eq!(listener.count(), before + 1, "projections send nothing");
         let original = record().original;
-        let native = engine
-            .try_details_input_many_with(&loaded, [Ok(original)], controls)
-            .next()
-            .unwrap()
-            .unwrap();
-        assert_eq!(documents(&record_details), documents(native.value()));
-        assert_eq!(documents(&scalar_details).0, documents(native.value()).1);
+        let native = native_details(&engine, &loaded, original, controls);
+        assert_eq!(documents(&record_details), documents(&native));
+        assert_eq!(documents(&scalar_details).0, documents(&native).1);
         assert!(documents(&record_details).0.get("input").is_some());
         assert!(documents(&scalar_details).0.get("input").is_none());
-        assert_eq!(record_details.cached(), native.value().cached());
-        assert_eq!(
-            record_details.reported_usage(),
-            native.value().reported_usage()
-        );
-        for details in [&record_details, &scalar_details, native.value()] {
+        assert_eq!(record_details.cached(), native.cached());
+        assert_eq!(record_details.reported_usage(), native.reported_usage());
+        for details in [&record_details, &scalar_details, &native] {
             let debug = format!("{details:?}");
             for secret in [
                 "Sensitive original",
@@ -155,9 +176,13 @@ fn annotation_primitive_null_and_failed_members_match_legacy_exactly() {
         .unwrap()
         .unwrap()
         .value_json();
-    let complete = engine
-        .annotate_complete_with(&set, ["Original."], CallOptions::new())
-        .unwrap();
+    let complete = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Original."]),
+        CallOptions::new(),
+    )
+    .unwrap();
     let before = listener.count();
     let projected = complete.value()[0].result().value_json().unwrap();
     assert_eq!(projected, native);
@@ -175,13 +200,7 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
     let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("legacy-projection-{}", std::process::id()));
     std::fs::create_dir(&folder).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("projection-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "projection-private")
         .cache_at(&folder)
         .unwrap()
         .max_retries(0)
@@ -225,7 +244,7 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
             panic!("decide")
         };
         let before = listener.count();
-        let details = rows[0].legacy_details().unwrap();
+        let details = rows[0].compatibility_details().unwrap();
         let document = documents(&details).0;
         assert_eq!(
             document["input"],
@@ -235,7 +254,7 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
         assert_eq!(details.cached(), original.contains("null"));
         assert_eq!(
             details.cached(),
-            rows[0].result().legacy_details().unwrap().cached()
+            rows[0].result().compatibility_details().unwrap().cached()
         );
         assert_eq!(
             details.observations(),
@@ -261,24 +280,17 @@ fn saved_batch_without_threshold_and_opt_in_attempts_survive_native_projection()
         panic!("score")
     };
     let controls = CallOptions::new().batch(BatchSetting::Max);
-    let complete = engine
-        .score_records_complete_with(q, [record()], controls)
-        .unwrap();
-    let details = complete.value()[0].legacy_details().unwrap();
+    let complete = crate::api::score(&engine, q, [record()], controls).unwrap();
+    let details = complete.value()[0].compatibility_details().unwrap();
     let original = record().original;
-    let native = engine
-        .try_details_input_many_with(&loaded, [Ok(original)], controls)
-        .next()
-        .unwrap()
-        .unwrap();
-    assert_eq!(documents(&details), documents(native.value()));
+    let native = native_details(&engine, &loaded, original, controls);
+    assert_eq!(documents(&details), documents(&native));
     assert!(documents(&details).0["meta"].get("batch_warning").is_none());
     let q = Question::decide("Fits?").unwrap().cut();
-    let call = engine
-        .decide_records_complete_with(&q, [record()], controls.attempts(true))
-        .unwrap();
+    let call =
+        crate::api::decide_records(&engine, &q, [record()], controls.attempts(true)).unwrap();
     let before = listener.count();
-    let scalar = call.value()[0].result().legacy_details().unwrap();
+    let scalar = call.value()[0].result().compatibility_details().unwrap();
     assert_eq!(
         documents(&scalar).0["meta"]["attempts"]
             .as_array()
@@ -288,3 +300,6 @@ fn saved_batch_without_threshold_and_opt_in_attempts_survive_native_projection()
     );
     assert_eq!(listener.count(), before);
 }
+
+#[path = "support/api.rs"]
+mod api;

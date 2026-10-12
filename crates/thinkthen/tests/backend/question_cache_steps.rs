@@ -43,12 +43,7 @@ fn uncached(verb: &str, listener: &Listener, options: &[&str], input: &[u8]) -> 
 }
 
 fn succeeded(output: &Output) -> String {
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(output, 0);
     String::from_utf8(output.stdout.clone()).expect("output text")
 }
 
@@ -129,12 +124,7 @@ fn a_partial_relate_reply_keeps_its_good_answer() {
     let cache = folder("relate-partial");
     let input = entities(1, 2);
     let failed = cached("relate", &partial, &cache, &[WORKS_FOR], &input);
-    assert_eq!(
-        failed.status.code(),
-        Some(6),
-        "{}",
-        String::from_utf8_lossy(&failed.stderr)
-    );
+    crate::harness::exits(&failed, 6);
     assert_eq!(asked(&partial), [2]);
     let stored = crate::support::stored(std::path::Path::new(&cache)).expect("the store");
     assert_eq!(stored.len(), 1, "only the good answer");

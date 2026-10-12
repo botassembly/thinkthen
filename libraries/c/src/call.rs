@@ -1,25 +1,25 @@
-//! The JSON door's grammar and its call-value writer.
+//! The JSON interface's grammar and its call-value writer.
 //!
 //! A request names one verb of ten and up to six envelope keys. Every other
 //! key forms the question object, which the public `from_json` readers
-//! validate, so the door holds no question grammar of its own. The wrapper's
-//! value is the command's bare answer, and `tests/door/` compares its bytes.
+//! validate, so the interface holds no question grammar of its own. The wrapper's
+//! value is the command's bare answer, and `tests/interface/` compares its bytes.
 
 use std::collections::BTreeMap;
 use std::sync::Mutex;
 
 use serde_json::value::RawValue;
 use thinkthen::{
-    AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment,
-    LoadedQuestion, Ranked,
+    AttemptObservation, BatchSetting, CallOptions, CallReply, CancelToken, Engine,
+    RequestEnvironment, RequestOutcome,
 };
 
-use crate::door;
 use crate::failures::Failure;
+use crate::typed;
 
 mod canonical;
-mod legacy;
-mod records;
+mod frozen;
+mod projection;
 pub(crate) use thinkthen_host::source;
 
 const VERBS: [&str; 10] = [
@@ -87,7 +87,7 @@ pub(crate) fn call(
         .and_then(|raw| serde_json::from_str::<String>(raw.get()).ok())
         .is_some_and(|schema| schema.starts_with("thinkthen.request/"))
     {
-        return canonical::call(engine, text, door::options(deadline_ms, token)?);
+        return canonical::call(engine, text, typed::options(deadline_ms, token)?);
     }
     members.remove("schema");
     if flag(&members, "usage")? {
@@ -97,10 +97,8 @@ pub(crate) fn call(
         return written(serde_json::to_string(&engine.usage()));
     }
     let request = split(members)?;
-    let admitted = legacy::translate(&request)?;
-    // Resolve inline definitions before the compatibility writer enumerates sources.
-    let definition = admitted.resolve_question()?;
-    let options = controls(&request, door::options(deadline_ms, token)?)?;
+    let admitted = frozen::translate(&request)?;
+    let options = controls(&request, typed::options(deadline_ms, token)?)?;
     let attempts = Mutex::new(Vec::<AttemptObservation>::new());
     let collect = |event| {
         if let Ok(mut held) = attempts.lock() {
@@ -112,7 +110,22 @@ pub(crate) fn call(
     } else {
         options
     };
-    let (value, facts) = answer(engine, &request, &definition, options)?;
+    let call = match engine
+        .execute_request(
+            &admitted,
+            RequestEnvironment {
+                controls: options,
+                feed: None,
+            },
+        )
+        .map_err(|error| frozen_failure(error, &request))?
+    {
+        RequestOutcome::Complete(call) => call,
+        RequestOutcome::Failed { error, .. } => return Err(frozen_failure(error, &request)),
+    };
+    let value = projection::value(call.value(), &request)
+        .map_err(|failure| failure.completed(Some(call.facts())))?;
+    let facts = call.facts().clone();
     let attempts = if request.attempts {
         let mut events = attempts
             .into_inner()
@@ -122,9 +135,28 @@ pub(crate) fn call(
     } else {
         None
     };
-    written(serde_json::to_string(&DoorReply::new(
+    written(serde_json::to_string(&CallReply::new(
         value, facts, attempts,
     )?))
+}
+
+fn frozen_failure(error: thinkthen::Error, request: &Request) -> Failure {
+    let message = if request.envelope.contains_key("source") {
+        match error.source_budget_exceeded() {
+            Some(thinkthen::SourceBudgetExceeded::Rank) => Some("source rank input exceeds 16 MiB"),
+            Some(thinkthen::SourceBudgetExceeded::Relate) => {
+                Some("source relate input exceeds 16 MiB")
+            }
+            _ => None,
+        }
+    } else {
+        None
+    };
+    let failure = Failure::from(error);
+    match message {
+        Some(message) => failure.with_message(message),
+        None => failure,
+    }
 }
 
 fn controls<'a>(
@@ -228,125 +260,6 @@ fn split(members: Members) -> Result<Request, Failure> {
     })
 }
 
-fn answer(
-    engine: &Engine,
-    request: &Request,
-    definition: &thinkthen::RequestDefinition,
-    options: CallOptions<'_>,
-) -> Result<(String, Facts), Failure> {
-    let verb = request.verb.as_str();
-    if let Some(selection) = request.envelope.get("source") {
-        return source_answer(engine, request, definition, selection.get(), options);
-    }
-    match (verb, definition) {
-        ("decide" | "choose" | "score" | "tag", thinkthen::RequestDefinition::Atomic(asked)) => {
-            let detailed = flag(&request.envelope, "details")?;
-            if request.envelope.contains_key("records") {
-                return records::judgments(engine, request, asked, options, detailed);
-            }
-            let evidence = member(request, "evidence", |raw| {
-                serde_json::from_str::<String>(raw)
-            })?;
-            let call = match asked {
-                LoadedQuestion::Question(asked) => engine.details_with(asked, &evidence, options),
-                LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options),
-            }?;
-            if detailed {
-                return Ok((call.value().to_json(), call.facts().clone()));
-            }
-            Ok((bare(call.value().value())?, call.facts().clone()))
-        }
-        ("filter", thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(asked))) => {
-            let records = member(request, "records", |raw| {
-                serde_json::from_str::<Vec<String>>(raw)
-            })?;
-            let mut batch = engine.filter_with(asked, records.iter().map(String::as_str), options);
-            let kept = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
-            let facts = batch
-                .facts()
-                .cloned()
-                .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
-            Ok((written(serde_json::to_string(&kept))?, facts))
-        }
-        ("rank", thinkthen::RequestDefinition::Rank(asked)) => {
-            let records = member(request, "records", |raw| {
-                serde_json::from_str::<Vec<String>>(raw)
-            })?;
-            let ranked = engine.rank_with(asked, records.iter().map(String::as_str), options)?;
-            Ok((
-                written(serde_json::to_string(
-                    &ranked.value().iter().map(Ranked::row).collect::<Vec<_>>(),
-                ))?,
-                ranked.facts().clone(),
-            ))
-        }
-        ("find", thinkthen::RequestDefinition::Atomic(LoadedQuestion::Question(asked))) => {
-            let units = member(request, "units", |raw| {
-                serde_json::from_str::<Vec<String>>(raw)
-            })?;
-            let found = engine.find_with(asked, units.iter().map(String::as_str), options)?;
-            Ok((
-                written(serde_json::to_string(&found.value().picked()))?,
-                found.facts().clone(),
-            ))
-        }
-        ("annotate", thinkthen::RequestDefinition::Annotate(_)) => {
-            annotate(engine, request, definition, options)
-        }
-        ("recognize", thinkthen::RequestDefinition::Recognition(asked)) => {
-            let evidence = member(request, "evidence", |raw| {
-                serde_json::from_str::<String>(raw)
-            })?;
-            let call = engine.recognize_with(asked, &evidence, options)?;
-            Ok((call.value().to_json(), call.facts().clone()))
-        }
-        ("relate", thinkthen::RequestDefinition::Relate(asked)) => {
-            let records = member(request, "records", |raw| {
-                serde_json::from_str::<Vec<Box<RawValue>>>(raw)
-            })?;
-            let records: Vec<&str> = records.iter().map(|record| record.get()).collect();
-            let entities = door::entities(&records)?;
-            let call = engine.relate_with(asked, entities, options)?;
-            let edges = call
-                .value()
-                .iter()
-                .map(|edge| raw(edge.to_json()))
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok((
-                written(serde_json::to_string(&door::Edges { edges }))?,
-                call.facts().clone(),
-            ))
-        }
-        _ => Err(Failure::defect(
-            "admitted request lost its typed definition",
-        )),
-    }
-}
-
-fn annotate(
-    engine: &Engine,
-    request: &Request,
-    definition: &thinkthen::RequestDefinition,
-    options: CallOptions<'_>,
-) -> Result<(String, Facts), Failure> {
-    let thinkthen::RequestDefinition::Annotate(set) = definition else {
-        return Err(Failure::defect("admitted annotation lost its definition"));
-    };
-    let records = member(request, "records", |raw| {
-        serde_json::from_str::<Vec<String>>(raw)
-    })?;
-    let mut batch = engine.annotate_with(set, records.iter().map(String::as_str), options);
-    let rows = batch
-        .by_ref()
-        .map(|row| raw(row?.value_json()))
-        .collect::<Result<Vec<_>, _>>()?;
-    let facts = batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Failure::defect("completed annotate has no facts"))?;
-    Ok((written(serde_json::to_string(&rows))?, facts))
-}
-
 /// The question text of `rank` or `find`, which read no other key.
 fn alone(verb: &str, question: &Members) -> Result<String, Failure> {
     match question.get(verb) {
@@ -376,7 +289,7 @@ fn member<T>(
     read(raw.get()).map_err(|_| wanted())
 }
 
-/// A door flag read by value: `true` or `false`, absent as `false`.
+/// A interface flag read by value: `true` or `false`, absent as `false`.
 fn flag(members: &Members, key: &str) -> Result<bool, Failure> {
     members.get(key).map_or(Ok(false), |raw| {
         serde_json::from_str::<bool>(raw.get())
@@ -389,26 +302,12 @@ fn object(question: &Members) -> Result<String, Failure> {
     serde_json::to_string(question).map_err(|_| Failure::defect("a question could not be written"))
 }
 
-/// One judgment's bare value, as the command prints it.
-fn bare(value: &Judgment) -> Result<String, Failure> {
-    match value {
-        Judgment::Decision(answer) => written(serde_json::to_string(&match answer {
-            thinkthen::Answer::Yes => Some(true),
-            thinkthen::Answer::No => Some(false),
-            thinkthen::Answer::Unsure => None,
-        })),
-        Judgment::Choice(pick) => written(serde_json::to_string(pick)),
-        Judgment::Score(position) => written(serde_json::to_string(position)),
-        Judgment::Tags(labels) => written(serde_json::to_string(labels)),
-    }
-}
-
 /// One value's JSON text as the crate wrote it, to serialize inside a reply.
 pub(crate) fn raw(text: String) -> Result<Box<RawValue>, Failure> {
     RawValue::from_string(text).map_err(|_| Failure::defect("an answer could not be written"))
 }
 
-/// One typed value's JSON text, or the door's defect.
+/// One typed value's JSON text, or the interface's defect.
 pub(crate) fn written(text: serde_json::Result<String>) -> Result<String, Failure> {
     text.map_err(|_| Failure::defect("an answer could not be written"))
 }
@@ -424,21 +323,4 @@ fn check_source(envelope: &Members) -> Result<(), Failure> {
         ));
     }
     Ok(())
-}
-
-fn source_answer(
-    engine: &Engine,
-    request: &Request,
-    definition: &thinkthen::RequestDefinition,
-    selection: &str,
-    options: CallOptions<'_>,
-) -> Result<(String, Facts), Failure> {
-    Ok(source::execute_prepared(
-        engine,
-        &request.verb,
-        definition,
-        &source::parse(selection)?,
-        options,
-        flag(&request.envelope, "details")?,
-    )?)
 }

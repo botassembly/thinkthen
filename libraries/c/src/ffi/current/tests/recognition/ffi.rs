@@ -1,5 +1,5 @@
 //! Additive task ownership and active-field refusal through the C entry points.
-use super::{door, string, text};
+use super::{interface, string, text};
 use crate::failures::USAGE;
 use crate::ffi::carriers::{OptionalStringV1, QuestionSpecV1, RecognitionTaskV1, RuleV1, StringV1};
 use crate::ffi::current::recognition::{
@@ -8,7 +8,7 @@ use crate::ffi::current::recognition::{
 
 #[test]
 fn recognition_task_copies_buffers_and_ignores_inactive_storage() {
-    let engine = door("http://localhost:1");
+    let engine = interface("http://localhost:1");
     let spec = QuestionSpecV1 {
         kind: 9,
         threshold: RuleV1 {
@@ -55,7 +55,7 @@ fn recognition_task_copies_buffers_and_ignores_inactive_storage() {
     // SAFETY: this test exclusively owns and frees the allocation once.
     unsafe { crate::ffi::current::thinkthen_question_free(owner) };
 
-    let engine = door("http://localhost:1");
+    let engine = interface("http://localhost:1");
     let ignored = OptionalStringV1 {
         present: 0,
         value: StringV1 {
@@ -87,7 +87,7 @@ fn recognition_task_copies_buffers_and_ignores_inactive_storage() {
 
 #[test]
 fn recognition_task_refusals_preserve_output_and_never_read_invalid_extents() {
-    let engine = door("http://localhost:1");
+    let engine = interface("http://localhost:1");
     let spec = QuestionSpecV1 {
         kind: 9,
         ..Default::default()
@@ -146,7 +146,7 @@ fn recognition_task_refusals_preserve_output_and_never_read_invalid_extents() {
 #[test]
 fn completed_recognition_retains_task_after_question_source_and_engine_are_freed() {
     let backend = conformance_backend::Backend::start().expect("loopback");
-    let engine = door(&format!("{}/generic/v1", backend.origin()));
+    let engine = interface(&format!("{}/generic/v1", backend.origin()));
     let task = RecognitionTaskV1 {
         instructions: OptionalStringV1 {
             present: 1,

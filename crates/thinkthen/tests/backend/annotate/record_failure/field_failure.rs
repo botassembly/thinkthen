@@ -3,7 +3,7 @@
 use std::io;
 
 use super::{FIRST_REQUEST, SET, YES, set};
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener};
 use serde_json::{Value, json};
 
 #[test]
@@ -11,10 +11,10 @@ fn missing_field_in_the_middle_stops_without_an_error_row_or_send() -> io::Resul
     let file = set("record-field-missing", SET);
     let listener = Listener::serving(vec![Canned::ok(YES)])?;
     let input = b"{\"id\":\"a\",\"outer\":{\"body\":\"first\"}}\n{\"id\":\"b\",\"body\":\"middle\"}\n{\"id\":\"c\",\"outer\":{\"body\":\"third\"}}\n";
-    let output = spawn(
+    let output = crate::harness::annotate_local(
+        &file,
+        listener.base(),
         &[
-            "annotate",
-            &file.to_string_lossy(),
             "--jsonl",
             "--field",
             "/outer",
@@ -28,12 +28,7 @@ fn missing_field_in_the_middle_stops_without_an_error_row_or_send() -> io::Resul
             "--max-retries",
             "0",
             "--no-cache",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
         ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
         input,
     )?;
     assert_eq!(output.status.code(), Some(2));

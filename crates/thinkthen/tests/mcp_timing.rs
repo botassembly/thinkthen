@@ -15,7 +15,7 @@ use std::{
     process::{Child, ChildStdin, ChildStdout, Command, Stdio},
     time::{Duration, Instant},
 };
-use thinkthen::{BatchSetting, CallOptions, Engine, Question, RecordInput, Surface};
+use thinkthen::{BatchSetting, CallOptions, Engine, Question, Surface};
 
 struct Session {
     process: Child,
@@ -104,38 +104,26 @@ fn direct(
 ) {
     match name {
         "atomic" => assert_eq!(
-            engine
-                .decide_complete_with(decide, "x", options)
+            crate::api::decision(&crate::api::decide(engine, decide, "x", options).unwrap())
                 .unwrap()
-                .value()
                 .value(),
             thinkthen::Answer::Yes
         ),
         "records" => assert_eq!(
-            engine
-                .decide_records_complete_with(
-                    decide,
-                    ["x", "y"].map(|original| RecordInput {
-                        examples: None,
-                        seed_spans: None,
-                        original,
-                        context: None,
-                        options: None
-                    }),
-                    options
-                )
+            crate::api::decide_records(engine, decide, ["x", "y"].map(crate::api::record), options)
                 .unwrap()
                 .value()
                 .len(),
             2
         ),
         _ => assert_eq!(
-            engine
-                .find_complete_with(find, ["x", "y"], options)
-                .unwrap()
-                .value()
-                .selected(),
-            Some(&"x")
+            crate::api::found(
+                &crate::api::find(engine, find, crate::api::plain_records(["x", "y"]), options)
+                    .unwrap()
+            )
+            .unwrap()
+            .selected(),
+            Some(&thinkthen::QuestionInput::Text("x".into()))
         ),
     }
 }
@@ -147,11 +135,7 @@ fn paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_ov
     let base = format!("{}/generic/v1", backend.origin());
     let home = std::env::temp_dir().join(format!("thinkthen-mcp-timing-{}", std::process::id()));
     std::fs::create_dir(&home).unwrap();
-    let engine = Engine::builder()
-        .base_url(&base)
-        .unwrap()
-        .api_key("sk-mcp-loopback-only")
-        .unwrap()
+    let engine = crate::api::builder(&base, "sk-mcp-loopback-only")
         .no_cache()
         .max_retries(0)
         .build()
@@ -225,3 +209,6 @@ fn paired_native_and_installed_mcp_calls_measure_atomic_records_and_whole_set_ov
     drop(engine);
     std::fs::remove_dir_all(home).unwrap();
 }
+
+#[path = "support/api.rs"]
+mod api;

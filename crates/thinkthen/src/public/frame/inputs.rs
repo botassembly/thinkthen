@@ -30,8 +30,11 @@ pub(super) fn details(
     for input in inputs.iter().flatten() {
         crate::public::images::guard(function, input)?;
     }
-    let mut batch =
-        engine.details_input_many_with(question, inputs.iter().flatten().cloned(), options);
+    let mut batch = engine.try_details_input_many_with(
+        question,
+        inputs.iter().flatten().cloned().map(Ok),
+        options,
+    );
     let mut rows = Vec::with_capacity(inputs.len());
     for input in inputs {
         rows.push(if input.is_none() {

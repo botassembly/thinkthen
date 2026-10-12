@@ -6,6 +6,10 @@ use std::num::NonZeroUsize;
 use conformance_backend::{Canned, Listener};
 use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, Question};
 
+fn keyless(base: &str) -> thinkthen::EngineBuilder {
+    Engine::builder().base_url(base).expect("base").no_cache()
+}
+
 #[test]
 fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_without_a_send() {
     const FIRST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". asks for a refund"},"q2":{"type":"noul","instructions":"The text is \"beta\". asks for a refund"}}}"#;
@@ -13,12 +17,7 @@ fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_wit
     assert_eq!((FIRST.len(), SECOND.len()), (248, 170));
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .no_cache()
-        .build()
-        .expect("keyless engine");
+    let engine = keyless(listener.base()).build().expect("keyless engine");
     let question = Question::decide("asks for a refund")
         .expect("question")
         .cut();
@@ -53,12 +52,7 @@ fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_wit
 fn plan_refuses_nonordinary_questions_before_disclosing_a_body_or_sending() {
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .no_cache()
-        .build()
-        .expect("keyless engine");
+    let engine = keyless(listener.base()).build().expect("keyless engine");
     let cases = [
         (Question::rank("Rank these?").expect("rank"), "rank"),
         (Question::find("Find one?").expect("find"), "find"),
@@ -88,10 +82,7 @@ fn plan_refuses_nonordinary_questions_before_disclosing_a_body_or_sending() {
 fn plan_stops_at_the_first_excess_record_without_consuming_the_tail_or_sending() {
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .no_cache()
+    let engine = keyless(listener.base())
         .max_requests(Some(1))
         .expect("cap")
         .build()
@@ -117,10 +108,7 @@ fn plan_stops_at_the_first_excess_record_without_consuming_the_tail_or_sending()
 fn fallible_plan_returns_the_reader_error_at_admission_and_leaves_the_tail_unread() {
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .no_cache()
+    let engine = keyless(listener.base())
         .max_requests(Some(1))
         .expect("cap")
         .build()
@@ -151,12 +139,7 @@ fn fallible_plan_returns_the_reader_error_at_admission_and_leaves_the_tail_unrea
 fn repeated_tag_inputs_bound_each_wire_question_and_keep_the_uncoalesced_preview() {
     let listener =
         Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .no_cache()
-        .build()
-        .expect("keyless engine");
+    let engine = keyless(listener.base()).build().expect("keyless engine");
     let question = Question::tag_labels("Which apply?")
         .and_then(|labels| labels.label("urgent", None))
         .and_then(|labels| labels.label("later", None))

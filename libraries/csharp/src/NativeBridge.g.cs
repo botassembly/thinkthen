@@ -22,3 +22,9 @@ internal static class NativeUsage {
  [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_usage_persistence_v1(EngineHandle engine, out CompleteUsagePersistenceV1 output1, out CompleteUtf8V1 output2);
  [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_engine_finish_usage_status_v1(EngineHandle engine, out CompleteUsagePersistenceV1 output1, out CompleteUtf8V1 output2);
 }
+internal static class NativeWait {
+ internal const uint Input = 1;
+ internal const uint Result = 0;
+ internal const uint Settlement = 2;
+ [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(SessionHandle session, uint interest, uint timeoutMilliseconds, out uint ready);
+}

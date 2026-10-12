@@ -1,22 +1,13 @@
 //! All ten named routes delegate to one engine and its existing schedulers.
 use super::{ResultHandle, inputs, metadata, observations, rows, structured};
-use crate::current::{QuestionHandle, SourceHandle, Storage, question::Native};
+use crate::current::{QuestionHandle, SourceHandle, Storage};
 use crate::failures::Failure;
 use crate::ffi::carriers::{
     OptionalDiscriminatorV1, OptionalMetaV1, OptionalStringV1, RowObservationV1, SummaryV1,
 };
 use crate::ffi::values as abi;
-use crate::ffi::values::{
-    THINKTHEN_FUNCTION_ANNOTATE_V1 as ANNOTATE, THINKTHEN_FUNCTION_CHOOSE_V1 as CHOOSE,
-    THINKTHEN_FUNCTION_DECIDE_V1 as DECIDE, THINKTHEN_FUNCTION_FILTER_V1 as FILTER,
-    THINKTHEN_FUNCTION_FIND_V1 as FIND, THINKTHEN_FUNCTION_RANK_V1 as RANK,
-    THINKTHEN_FUNCTION_RECOGNIZE_V1 as RECOGNIZE, THINKTHEN_FUNCTION_RELATE_V1 as RELATE,
-    THINKTHEN_FUNCTION_SCORE_V1 as SCORE, THINKTHEN_FUNCTION_TAG_V1 as TAG,
-};
 use std::sync::{Mutex, PoisonError};
-use thinkthen::{
-    CallOptions, Engine, Facts, LoadedQuestion, OwnedRecordObservation, RecordObservation,
-};
+use thinkthen::{CallOptions, Engine, Facts, OwnedRecordObservation, RecordObservation};
 pub(crate) fn ask(
     engine: &Engine,
     kind: u32,
@@ -39,42 +30,56 @@ pub(crate) fn ask(
     };
     let options = options.observe(&observer);
     let mut storage = Storage::default();
-    let rows = match (&question.native, kind) {
-        (Native::Find(_), FIND) | (Native::Relate(_), RELATE) => {
-            let records = source.read()?.enumerate().map(|(at, record)| {
-                engine.check_record_limit(at)?;
-                inputs::compose(record?, kind, question.reading.as_ref())
-            });
-            match &question.native {
-                Native::Find(q) => {
-                    let call = engine.try_find_records_complete_with(q, records, options)?;
-                    *completed = Some(call.facts().clone());
-                    vec![rows::find(
-                        &mut storage,
-                        call.value(),
-                        &events.lock().unwrap_or_else(PoisonError::into_inner),
-                    )?]
-                }
-                Native::Relate(q) => {
-                    let call = engine.try_relate_records_complete_with(q, records, options)?;
-                    *completed = Some(call.facts().clone());
-                    vec![structured::relate(&mut storage, call.value())?]
-                }
-                _ => return Err(Failure::defect("whole-set route lost its question")),
-            }
-        }
-        _ => {
-            let records = inputs::records(engine, source, kind, question.reading.as_ref())?;
-            execute(
-                engine,
-                kind,
-                question,
-                records,
-                options,
-                (&mut storage, &events, completed),
-            )?
-        }
+    let originals = Mutex::new(Vec::new());
+    let records = source.read()?.map(|record| {
+        let record = inputs::compose(record?, kind, question.reading.as_ref())?;
+        originals
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(record.original.clone());
+        Ok(record.map_original(|o| o.native))
+    });
+    let request = super::request::prepare(
+        kind,
+        question,
+        thinkthen::RequestInput::Feed {
+            name: "c-complete".into(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
+        },
+    )?
+    .admit()?;
+    let feed = thinkthen::RequestFeed::from_records("c-complete", records);
+    // Whole-set functions own count admission and must stop before an unread tail.
+    let feed = if matches!(
+        kind,
+        abi::THINKTHEN_FUNCTION_FIND_V1 | abi::THINKTHEN_FUNCTION_RELATE_V1
+    ) {
+        feed
+    } else {
+        feed.eager()
     };
+    let feed = if kind == abi::THINKTHEN_FUNCTION_FILTER_V1 {
+        feed.with_all_filter_results()
+    } else {
+        feed
+    };
+    let call = match engine.execute_request(
+        &request,
+        thinkthen::RequestEnvironment {
+            controls: options,
+            feed: Some(feed),
+        },
+    )? {
+        thinkthen::RequestOutcome::Complete(call) => call,
+        thinkthen::RequestOutcome::Failed { error, .. } => return Err(error.into()),
+    };
+    *completed = Some(call.facts().clone());
+    let originals = originals
+        .into_inner()
+        .unwrap_or_else(PoisonError::into_inner);
+    let rows = project(&mut storage, call.value(), &originals, &events)?;
     let events = events.into_inner().unwrap_or_else(PoisonError::into_inner);
     let facts = completed
         .as_ref()
@@ -152,94 +157,79 @@ pub(super) fn result(
         observation_details,
     })
 }
-macro_rules! collect {
-    ($completed:ident; $call:expr, $convert:expr) => {{
-        let call = $call?;
-        *$completed = Some(call.facts().clone());
-        call.value().iter().map($convert).collect()
-    }};
-}
-fn execute(
-    engine: &Engine,
-    kind: u32,
-    question: &QuestionHandle,
-    records: Vec<thinkthen::RecordInput<inputs::Original>>,
-    options: CallOptions<'_>,
-    (s, events, completed): (
-        &mut Storage,
-        &Mutex<Vec<OwnedRecordObservation>>,
-        &mut Option<Facts>,
-    ),
+pub(super) fn project(
+    s: &mut Storage,
+    value: &thinkthen::RequestValue,
+    originals: &[inputs::Original],
+    events: &Mutex<Vec<OwnedRecordObservation>>,
 ) -> Result<Vec<RowObservationV1>, Failure> {
-    match (&question.native, kind) {
-        (Native::Atomic(LoadedQuestion::Question(q)), DECIDE) => {
-            collect!(completed;
-                engine.decide_records_complete_with(q, records, options),
-                |r| rows::decide(s, r)
-            )
-        }
-        (Native::Atomic(LoadedQuestion::Banded(q)), DECIDE) => {
-            collect!(completed;
-                engine.decide_records_complete_with(q, records, options),
-                |r| rows::decide(s, r)
-            )
-        }
-        (Native::Atomic(LoadedQuestion::Question(q)), CHOOSE) => {
-            collect!(completed;
-                engine.choose_records_complete_with(q, records, options),
-                |r| rows::choose(s, r)
-            )
-        }
-        (Native::Atomic(LoadedQuestion::Question(q)), TAG) => {
-            collect!(completed; engine.tag_records_complete_with(q, records, options), |r| {
-                rows::tag(s, r)
-            })
-        }
-        (Native::Atomic(LoadedQuestion::Question(q)), SCORE) => {
-            collect!(completed;
-                engine.score_records_complete_with(q, records, options),
-                |r| rows::score(s, r)
-            )
-        }
-        (Native::Atomic(LoadedQuestion::Question(q)), FILTER) => {
-            collect!(completed;
-                engine.filter_records_complete_with(q, records, options),
-                |r| rows::filter(s, r)
-            )
-        }
-        (Native::Rank(q), RANK) => collect!(completed;
-            engine.rank_records_complete_with(q, records, options),
-            |r| rank_row(s, r, events)
-        ),
-        (Native::Atomic(LoadedQuestion::Question(_)), RANK) => {
-            let q = question.rank_reading()?;
-            collect!(completed;
-                engine.rank_records_complete_with(&q, records, options),
-                |r| rank_row(s, r, events)
-            )
-        }
-        (Native::DynamicChoose(q), CHOOSE) => {
-            collect!(completed; engine.choose_dynamic_records_complete_with(q, records, options), |r| rows::choose(s, r))
-        }
-        (Native::Set(q), ANNOTATE) => collect!(completed;
-            engine.annotate_records_complete_with(q, records, options),
-            |r| structured::annotate(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
-        ),
-        (Native::Recognize(q), RECOGNIZE) => {
-            collect!(completed;
-                engine.recognize_records_complete_with(q, records, options),
-                |r| structured::recognize(s, r)
-            )
-        }
-        (Native::RankSet(set), RANK) => {
-            collect!(completed;
-                engine.rank_set_records_complete_with(set, records, options),
-                |r| super::rank_set::row(s, r, &events.lock().unwrap_or_else(PoisonError::into_inner))
-            )
-        }
-        _ => Err(Failure::usage(
-            "this question reading is not admitted by the named complete call",
+    fn original(
+        originals: &[inputs::Original],
+        ordinal: usize,
+    ) -> Result<inputs::Original, Failure> {
+        originals
+            .get(ordinal)
+            .cloned()
+            .ok_or_else(|| Failure::defect("a completed occurrence lost its original"))
+    }
+    macro_rules! collect {
+        ($rows:expr, $convert:expr) => {
+            $rows
+                .iter()
+                .map(|r| {
+                    let original = original(originals, r.ordinal())?;
+                    $convert(&r.clone().map_original(|_| original))
+                })
+                .collect()
+        };
+    }
+    use thinkthen::RequestValue;
+    match value {
+        RequestValue::Decisions(v) => collect!(v, |r| rows::decide(s, r)),
+        RequestValue::Choices(v) => collect!(v, |r| rows::choose(s, r)),
+        RequestValue::Tags(v) => collect!(v, |r| rows::tag(s, r)),
+        RequestValue::Scores(v) => collect!(v, |r| rows::score(s, r)),
+        RequestValue::Filtered(v) => collect!(v, |r| rows::filter(s, r)),
+        RequestValue::Ranked(v) => collect!(v, |r| rank_row(s, r, events)),
+        RequestValue::SetRanked(v) => collect!(v, |r| super::rank_set::row(
+            s,
+            r,
+            &events.lock().unwrap_or_else(PoisonError::into_inner)
         )),
+        RequestValue::Annotations(v) => collect!(v, |r| structured::annotate(
+            s,
+            r,
+            &events.lock().unwrap_or_else(PoisonError::into_inner)
+        )),
+        RequestValue::Recognized(v) => collect!(v, |r| structured::recognize(s, r)),
+        RequestValue::Found(v) => {
+            if v.candidates()
+                .iter()
+                .filter(|c| c.input().is_some())
+                .count()
+                != originals.len()
+            {
+                return Err(Failure::defect(
+                    "a complete find lost its original candidates",
+                ));
+            }
+            let mut original_iter = originals.iter();
+            let mapped = v.clone().map_original(|native| {
+                original_iter
+                    .next()
+                    .cloned()
+                    .unwrap_or(inputs::Original::fallback(native))
+            });
+            Ok(vec![rows::find(
+                s,
+                &mapped,
+                &events.lock().unwrap_or_else(PoisonError::into_inner),
+            )?])
+        }
+        RequestValue::Related(v) => {
+            let mapped = v.clone().map_original(|_| originals.to_vec());
+            Ok(vec![structured::relate(s, &mapped)?])
+        }
     }
 }
 

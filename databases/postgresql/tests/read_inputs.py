@@ -5,7 +5,7 @@ import sys
 ROOT=Path(__file__).resolve().parents[3]
 sys.path.insert(0,str(ROOT/'databases/sqlite/tests'))
 from helper import Backend
-READER=ROOT/'databases/postgresql/target/debug/thinkthen_read_inputs'
+READER=Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'databases/postgresql/target'))/('release' if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' else 'debug')/'thinkthen_read_inputs'
 with tempfile.TemporaryDirectory(prefix='thinkthen-client-format-') as tmp:
     folder=Path(tmp)
     os.mkfifo(folder/'fifo')

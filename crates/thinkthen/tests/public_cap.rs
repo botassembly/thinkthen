@@ -24,11 +24,7 @@ fn held_request_exhausts_one_limit_while_raised_and_unset_engines_keep_counting(
             .expect("held listener");
     let later_listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("later listener");
     let build = |base: &str, limit| {
-        Engine::builder()
-            .base_url(base)
-            .expect("base")
-            .api_key("sk-test")
-            .expect("key")
+        crate::api::builder(base, "sk-test")
             .no_cache()
             .max_retries(0)
             .max_requests_total(limit)
@@ -119,3 +115,6 @@ fn both_budgets_reserve(engine: &Engine, question: &Question, listener: &Listene
     );
     assert_eq!(listener.count(), 4);
 }
+
+#[path = "support/api.rs"]
+mod api;

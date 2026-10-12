@@ -42,13 +42,7 @@ fn response(body: &[u8]) -> Canned {
 fn judged_proposals_retain_declines_duplicate_winners_and_under_cut_seed_facts() {
     let listener = Listener::answering(response).unwrap();
     let cache = folder();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("fake")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "fake")
         .cache_at(&cache)
         .unwrap()
         .max_retries(0)
@@ -64,10 +58,8 @@ fn judged_proposals_retain_declines_duplicate_winners_and_under_cut_seed_facts()
             end: 14,
             kind: None,
         }]);
-    let first = engine
-        .recognize_complete_with(&ask, "!! Ada Bob Åda", CallOptions::new())
-        .unwrap();
-    let result = first.value();
+    let first = crate::api::recognize(&engine, &ask, "!! Ada Bob Åda", CallOptions::new()).unwrap();
+    let result = crate::api::recognition(&first).unwrap();
     let proposals = result
         .probabilities()
         .judged_proposals()
@@ -99,17 +91,17 @@ fn judged_proposals_retain_declines_duplicate_winners_and_under_cut_seed_facts()
         json!({"entities":[{"text":"!!","start":0,"end":2,"length":2,"kind":"person","strength":0.72}]})
     );
     schema::call(&first, "completeRecognition");
-    let replay = engine
-        .recognize_complete_with(&ask, "!! Ada Bob Åda", CallOptions::new())
-        .unwrap();
+    let replay =
+        crate::api::recognize(&engine, &ask, "!! Ada Bob Åda", CallOptions::new()).unwrap();
+    let replay_value = crate::api::recognition(&replay).unwrap();
     assert_eq!(first.facts().requests_sent(), 2);
     assert_eq!(replay.facts().requests_sent(), 0);
-    assert_eq!(result.answer_id(), replay.value().answer_id());
+    assert_eq!(result.answer_id(), replay_value.answer_id());
     assert_eq!(
         result.identity().observations(),
-        replay.value().identity().observations()
+        replay_value.identity().observations()
     );
-    let cached: Value = serde_json::from_str(&replay.value().to_json().unwrap()).unwrap();
+    let cached: Value = serde_json::from_str(&replay_value.to_json().unwrap()).unwrap();
     assert_eq!(document["answer"], cached["answer"]);
     assert_eq!(listener.count(), 2);
     assert_eq!(listener.questions(), 12);

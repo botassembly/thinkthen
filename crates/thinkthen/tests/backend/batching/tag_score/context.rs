@@ -23,7 +23,7 @@ fn a_tag_context_is_shared_evidence_and_keeps_two_logical_rows() {
         &["--context", &context],
         "first\nsecond\n",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");

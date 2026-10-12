@@ -1,11 +1,11 @@
 //! Every exported symbol of `include/thinkthen.h`, and the only `unsafe` in
 //! this crate. Each symbol reads the host's pointers under the header's
-//! argument rules, hands borrowed Rust values to [`crate::door`] or
+//! argument rules, hands borrowed Rust values to [`crate::typed`] or
 //! [`crate::call`], writes the out parameters only on success, and runs
 //! behind [`guard`], so no panic unwinds into the host.
 #![allow(
     unsafe_code,
-    reason = "the C door reads and writes the host's pointers (ADR 0047 item 3)"
+    reason = "the C interface reads and writes the host's pointers (ADR 0047 item 3)"
 )]
 
 use std::ffi::{CStr, CString, c_char};
@@ -33,16 +33,16 @@ pub mod session;
 use thinkthen::CancelToken;
 
 use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, OK, USAGE, guard};
-use crate::{Door, Judgment, door};
+use crate::{EngineHandle, Judgment, typed};
 
 /// The engine behind a host's pointer, or `None` for null.
 ///
 /// # Safety
 ///
 /// `engine` is null or a live engine that outlives `'a`.
-unsafe fn held<'a>(engine: *const Door) -> Option<&'a Held> {
+unsafe fn held<'a>(engine: *const EngineHandle) -> Option<&'a Held> {
     // SAFETY: the caller passes null or a live engine.
-    unsafe { engine.as_ref() }.map(|door| &door.0)
+    unsafe { engine.as_ref() }.map(|interface| &interface.0)
 }
 
 /// The header's `THINKTHEN_NO_DEADLINE`.
@@ -134,7 +134,10 @@ unsafe fn texts<'a>(
         .iter()
         .zip(lengths)
         // SAFETY: each entry follows `text`'s rule, as the caller promises.
-        .map(|(one, len)| unsafe { text(*one, *len) })
+        .map(|(one, len)| {
+            text_extent(*len)?;
+            unsafe { text(*one, *len) }
+        })
         .collect()
 }
 
@@ -157,15 +160,15 @@ unsafe fn hand_over(held: &Held, json: String, out: *mut *mut c_char, out_len: *
     }
 }
 
-/// The shape every typed `_opts` door shares: a null engine is the usage
+/// The shape every typed `_opts` interface shares: a null engine is the usage
 /// code, the body runs behind the guard, a failure is recorded for the
 /// calling thread, and only success reaches `write`.
 ///
 /// # Safety
 ///
 /// `engine` is null or a live engine.
-unsafe fn typed<T>(
-    engine: *const Door,
+unsafe fn run_typed<T>(
+    engine: *const EngineHandle,
     ask: impl FnOnce(&Held) -> Result<T, Failure>,
     write: impl FnOnce(&Held, T) -> i32,
 ) -> i32 {
@@ -186,7 +189,7 @@ unsafe fn typed<T>(
 /// return NULL/EUSAGE; unreadable cache/configuration returns NULL/ELOCAL.
 /// The NULL-engine error accessors retain the calling thread's failed build.
 #[unsafe(no_mangle)]
-pub extern "C" fn thinkthen_engine_new() -> *mut Door {
+pub extern "C" fn thinkthen_engine_new() -> *mut EngineHandle {
     // SAFETY: the constructor accepts null as the empty settings object.
     unsafe { thinkthen_engine_new_with(std::ptr::null()) }
 }
@@ -202,7 +205,9 @@ pub extern "C" fn thinkthen_engine_new() -> *mut Door {
 /// in the calling thread's null-engine slot. A named backend captures its key;
 /// an explicit base_url receives that key. Building sends nothing.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_new_with(settings_json: *const c_char) -> *mut Door {
+pub unsafe extern "C" fn thinkthen_engine_new_with(
+    settings_json: *const c_char,
+) -> *mut EngineHandle {
     guard(None, std::ptr::null_mut(), || {
         let build = || {
             let text = if settings_json.is_null() {
@@ -214,7 +219,7 @@ pub unsafe extern "C" fn thinkthen_engine_new_with(settings_json: *const c_char)
             crate::settings::build(text)
         };
         failures::built(build).map_or(std::ptr::null_mut(), |engine| {
-            Box::into_raw(Box::new(Door(Held::new(engine))))
+            Box::into_raw(Box::new(EngineHandle(Held::new(engine))))
         })
     })
 }
@@ -227,7 +232,7 @@ pub unsafe extern "C" fn thinkthen_engine_new_with(settings_json: *const c_char)
 /// Free an engine. NULL is accepted and ignored. Free it only after every
 /// call on it has returned.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut Door) {
+pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut EngineHandle) {
     guard(None, (), || {
         if !engine.is_null() {
             // SAFETY: `thinkthen_engine_new` boxed it, and no call uses it.
@@ -251,7 +256,7 @@ pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut Door) {
 /// until that thread's next thinkthen_engine_new or thinkthen_engine_new_with
 /// call, or its exit. Otherwise it names that no engine came.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_error_message(engine: *const Door) -> *const c_char {
+pub unsafe extern "C" fn thinkthen_error_message(engine: *const EngineHandle) -> *const c_char {
     // SAFETY: the caller passes null or a live engine.
     let held = unsafe { held(engine) };
     guard(held, NO_MESSAGE.as_ptr(), || failures::message(held))
@@ -266,7 +271,7 @@ pub unsafe extern "C" fn thinkthen_error_message(engine: *const Door) -> *const 
 /// when no failure with started-call facts exists. The pointer has the same
 /// lifetime as thinkthen_error_message and must not be freed.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_error_facts_json(engine: *const Door) -> *const c_char {
+pub unsafe extern "C" fn thinkthen_error_facts_json(engine: *const EngineHandle) -> *const c_char {
     // SAFETY: the caller passes null or a live engine.
     let held = unsafe { held(engine) };
     guard(held, std::ptr::null(), || failures::facts(held))
@@ -283,7 +288,7 @@ pub unsafe extern "C" fn thinkthen_error_facts_json(engine: *const Door) -> *con
 /// every kind but the backend kind. Zero when nothing failed. With a null
 /// engine it follows the calling thread's last failed build, else zero.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const Door) -> std::ffi::c_int {
+pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const EngineHandle) -> std::ffi::c_int {
     // SAFETY: the caller passes null or a live engine.
     let held = unsafe { held(engine) };
     guard(held, 0, || failures::retryable(held))
@@ -301,7 +306,7 @@ pub unsafe extern "C" fn thinkthen_error_retryable(engine: *const Door) -> std::
 /// is the calling thread's last failed build's code, else THINKTHEN_EUSAGE,
 /// because no engine holds a failure.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_error_code(engine: *const Door) -> std::ffi::c_int {
+pub unsafe extern "C" fn thinkthen_error_code(engine: *const EngineHandle) -> std::ffi::c_int {
     // SAFETY: the caller passes null or a live engine.
     let held = unsafe { held(engine) };
     guard(held, DEFECT, || failures::code(held))
@@ -363,7 +368,7 @@ pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut CancelToken) {
 /// evidence. The judgment lands in `out` on THINKTHEN_OK.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     text: *const c_char,
     text_len: usize,
@@ -392,7 +397,7 @@ pub unsafe extern "C" fn thinkthen_decide(
 /// and `cancel` is the token, documented on THINKTHEN_NO_DEADLINE.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     text: *const c_char,
     text_len: usize,
@@ -403,16 +408,16 @@ pub unsafe extern "C" fn thinkthen_decide_opts(
     // SAFETY: the header's argument rules make each pointer null or valid
     // for what it names, and `out` is written only after its null check.
     unsafe {
-        typed(
+        run_typed(
             engine,
             |held| {
                 if out.is_null() {
                     return Err(Failure::usage("a null out pointer"));
                 }
-                let options = door::options(deadline_ms, cancel.as_ref())?;
-                let question = door::question(string(question_json, "question")?)?;
+                let options = typed::options(deadline_ms, cancel.as_ref())?;
+                let question = typed::question(string(question_json, "question")?)?;
                 let evidence = self::text(text, text_len)?;
-                door::decide(&held.engine, &question, evidence, options)
+                typed::decide(&held.engine, &question, evidence, options)
             },
             |_, judgment| {
                 *out = judgment;
@@ -431,7 +436,7 @@ pub unsafe extern "C" fn thinkthen_decide_opts(
 /// Inputs are borrowed for the call, and failure changes no output.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide_many(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -461,7 +466,7 @@ pub unsafe extern "C" fn thinkthen_decide_many(
 /// The same bulk call with the options beside it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_decide_many_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     question_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -474,16 +479,16 @@ pub unsafe extern "C" fn thinkthen_decide_many_opts(
     // for what it names. `out` holds `count` rows, and a nonzero count
     // passed its null check; `decide_many` returns exactly `count` rows.
     unsafe {
-        typed(
+        run_typed(
             engine,
             |held| {
                 if count > 0 && out.is_null() {
                     return Err(Failure::usage("a null out array with a nonzero count"));
                 }
                 let records = self::texts(texts, lengths, count)?;
-                let options = door::options(deadline_ms, cancel.as_ref())?;
-                let question = door::question(string(question_json, "question")?)?;
-                door::decide_many(&held.engine, &question, &records, options)
+                let options = typed::options(deadline_ms, cancel.as_ref())?;
+                let question = typed::question(string(question_json, "question")?)?;
+                typed::decide_many(&held.engine, &question, &records, options)
             },
             |_, rows| {
                 for (place, row) in rows.into_iter().enumerate() {
@@ -498,18 +503,18 @@ pub unsafe extern "C" fn thinkthen_decide_many_opts(
 /// Call `thinkthen_call_opts` without a deadline or cancellation token.
 /// # Safety
 /// All pointers obey the corresponding options form's contract.
-/// The JSON door with no budget and no token: exactly
+/// The JSON interface with no budget and no token: exactly
 /// `thinkthen_call_opts` with THINKTHEN_NO_DEADLINE and a null token.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
 ) -> *mut c_char {
     // SAFETY: caller pointers pass unchanged to the checked options form.
     unsafe { thinkthen_call_opts(engine, request_json, NO_DEADLINE, std::ptr::null_mut()) }
 }
 
-/// The JSON door: one request, its answer as JSON text, or null.
+/// The JSON interface: one request, its answer as JSON text, or null.
 ///
 /// # Safety
 ///
@@ -521,7 +526,7 @@ pub unsafe extern "C" fn thinkthen_call(
 /// error_code/message/retryable and error_facts_json describe that failure.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_call_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     request_json: *const c_char,
     deadline_ms: i64,
     cancel: *mut CancelToken,
@@ -558,7 +563,7 @@ pub unsafe extern "C" fn thinkthen_call_opts(
 /// Question/result fields and default kind: DESIGN.md.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_recognize(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     text: *const c_char,
     text_len: usize,
@@ -588,7 +593,7 @@ pub unsafe extern "C" fn thinkthen_recognize(
 /// The same call with the options beside it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_recognize_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     text: *const c_char,
     text_len: usize,
@@ -600,14 +605,14 @@ pub unsafe extern "C" fn thinkthen_recognize_opts(
     // SAFETY: the header's argument rules make each pointer null or valid
     // for what it names, and the outs are written only after their null check.
     unsafe {
-        typed(
+        run_typed(
             engine,
             |held| {
-                door::outs(out, out_len)?;
-                let options = door::options(deadline_ms, cancel.as_ref())?;
+                typed::outs(out, out_len)?;
+                let options = typed::options(deadline_ms, cancel.as_ref())?;
                 let spec = string(spec_json, "spec")?;
                 let evidence = self::text(text, text_len)?;
-                door::recognize(&held.engine, spec, evidence, options)
+                typed::recognize(&held.engine, spec, evidence, options)
             },
             |held, (json, _facts)| hand_over(held, json, out, out_len),
         )
@@ -625,7 +630,7 @@ pub unsafe extern "C" fn thinkthen_recognize_opts(
 /// returns its kind and leaves both outputs unchanged. Schema: DESIGN.md.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_relate(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -657,7 +662,7 @@ pub unsafe extern "C" fn thinkthen_relate(
 /// The same call with the options beside it.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_relate_opts(
-    engine: *const Door,
+    engine: *const EngineHandle,
     spec_json: *const c_char,
     texts: *const *const c_char,
     lengths: *const usize,
@@ -670,26 +675,26 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
     // SAFETY: the header's argument rules make each pointer null or valid
     // for what it names, and the outs are written only after their null check.
     unsafe {
-        typed(
+        run_typed(
             engine,
             |held| {
-                door::capped(count)?;
-                door::outs(out, out_len)?;
-                let options = door::options(deadline_ms, cancel.as_ref())?;
+                typed::capped(count)?;
+                typed::outs(out, out_len)?;
+                let options = typed::options(deadline_ms, cancel.as_ref())?;
                 let spec = string(spec_json, "spec")?;
-                let entities = door::entities(&self::texts(texts, lengths, count)?)?;
-                door::relate(&held.engine, spec, entities, options)
+                let entities = typed::entities(&self::texts(texts, lengths, count)?)?;
+                typed::relate(&held.engine, spec, entities, options)
             },
             |held, (json, _facts)| hand_over(held, json, out, out_len),
         )
     }
 }
 
-/// Free a string the door returned; null is ignored.
+/// Free a string the interface returned; null is ignored.
 ///
 /// # Safety
 ///
-/// `text` is null or a string the door returned and has not freed.
+/// `text` is null or a string the interface returned and has not freed.
 /// Free a string `thinkthen_call`, `thinkthen_recognize`, or
 /// `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted
 /// and ignored.
@@ -697,7 +702,7 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
 pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
     guard(None, (), || {
         if !text.is_null() {
-            // SAFETY: the door made it with `CString::into_raw`, and it is freed once.
+            // SAFETY: the interface made it with `CString::into_raw`, and it is freed once.
             drop(unsafe { CString::from_raw(text) });
         }
     });

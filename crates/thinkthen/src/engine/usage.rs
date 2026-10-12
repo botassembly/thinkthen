@@ -217,6 +217,7 @@ impl Counters {
 
     fn add(&self, delta: Counts) {
         let Ok(mut queue) = self.shared.queue.lock() else {
+            self.shared.failed.store(true, Ordering::Release);
             return;
         };
         let totals = queue.totals.checked_add(delta);

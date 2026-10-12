@@ -1,8 +1,8 @@
-//! Call options, the cancel token, and the one door every public call passes.
+//! Call options, the cancel token, and the one interface every public call passes.
 
 mod admission;
-pub(crate) mod cli_reader;
 mod observer;
+pub(crate) mod readiness;
 
 pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
 pub use crate::engine::budget::SendBudget;
@@ -115,7 +115,13 @@ enum Due {
 pub struct CallOptions<'a> {
     pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
-    pub(in crate::public) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
+    // Private projections preserve scalar metadata, SQL row-local refusals, typed
+    // entity admission and legacy annotation group failures without wire controls.
+    pub(in crate::public) scalar_input: bool,
+    pub(in crate::public) recovery_rows: bool,
+    pub(in crate::public) entity_rows: bool,
+    pub(in crate::public) legacy_annotation: bool,
+    pub(in crate::public) readiness: Option<&'a readiness::Readiness<'a>>,
     // Keep local call stops separate from actual process signals.
     cancel: [Option<&'a CancelToken>; 2],
     due: Option<Due>,
@@ -167,7 +173,11 @@ impl<'a> CallOptions<'a> {
         Self {
             cli_text_limit: None,
             eager_inputs: false,
-            cli_reader: None,
+            scalar_input: false,
+            recovery_rows: false,
+            entity_rows: false,
+            legacy_annotation: false,
+            readiness: None,
             cancel: [None, None],
             due: None,
             check: None,
@@ -190,8 +200,8 @@ impl<'a> CallOptions<'a> {
         self
     }
 
-    pub(crate) const fn cli_reader(mut self, reader: &'a cli_reader::CliReader<'a>) -> Self {
-        self.cli_reader = Some(reader);
+    pub(crate) const fn readiness(mut self, reader: &'a readiness::Readiness<'a>) -> Self {
+        self.readiness = Some(reader);
         self
     }
 
@@ -426,7 +436,7 @@ impl<'a> CallOptions<'a> {
 /// The per-call stop state: the call's own flag and deadline, the caller's
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
-    pub(crate) cli_reader: Option<&'a cli_reader::CliReader<'a>>,
+    pub(crate) readiness: Option<&'a readiness::Readiness<'a>>,
     base: Cancel<'static>,
     facts: CallFacts,
     prices: Option<Prices>,
@@ -472,7 +482,7 @@ impl<'a> Stop<'a> {
             }));
         }
         let stop = Self {
-            cli_reader: options.cli_reader,
+            readiness: options.readiness,
             base,
             facts,
             prices: None,
@@ -519,14 +529,12 @@ impl<'a> Stop<'a> {
         if CancelToken::any(self.token) {
             return true;
         }
-        let Some(check) = self.check else {
+        let Some(check) = self.check.filter(|_| !self.base.sending_now()) else {
             return false;
         };
         workers::with_host_diagnostics(|| catch_unwind(AssertUnwindSafe(check))).unwrap_or_else(
             |payload| {
-                if let Ok(mut held) = self.panic.lock() {
-                    held.get_or_insert(payload);
-                }
+                self.hold_panic(payload);
                 true
             },
         )
@@ -566,7 +574,11 @@ impl<'a> Stop<'a> {
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
         self.drain_attempts();
         self.facts.finish();
-        let held = self.panic.lock().ok().and_then(|mut held| held.take());
+        let held = self
+            .panic
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .take();
         if let Some(payload) = held {
             resume_unwind(payload);
         }
@@ -581,10 +593,13 @@ impl<'a> Stop<'a> {
     }
 }
 
-/// Run one engine call and turn any panic below the door into a defect.
+/// Run one engine call and turn any panic below the interface into a defect.
 pub(crate) fn guarded<T>(call: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    super::contained(call)
-        .unwrap_or_else(|| Err(Error::defect("the engine panicked below the public door")))
+    super::contained(call).unwrap_or_else(|| {
+        Err(Error::defect(
+            "the engine panicked below the public interface",
+        ))
+    })
 }
 
 impl fmt::Debug for Stop<'_> {

@@ -23,12 +23,8 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
         .map(|source| source.and_then(|source| saved.reading().compose_source(source)))
     };
     let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
+        crate::api::builder(listener.base(), "complete-private")
             .model("engine-model")
-            .unwrap()
-            .api_key("complete-private")
             .unwrap()
             .max_retries(0)
     };
@@ -36,20 +32,20 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
     let held = std::sync::Mutex::new(Vec::new());
     let observer =
         |event: thinkthen::RecordObservation<'_>| held.lock().unwrap().push(event.to_owned());
-    let call = engine
-        .try_find_records_complete_with(
-            saved.question(),
-            records(),
-            CallOptions::new()
-                .context("Guidance.")
-                .attempts(true)
-                .observe(&observer),
-        )
-        .unwrap();
+    let call = crate::api::find(
+        &engine,
+        saved.question(),
+        records(),
+        CallOptions::new()
+            .context("Guidance.")
+            .attempts(true)
+            .observe(&observer),
+    )
+    .unwrap();
     assert_eq!(call.facts().records(), 1);
     assert_eq!(call.facts().input_tokens(), Some(887));
     assert_eq!(call.facts().output_tokens(), None);
-    let result = call.value();
+    let result = crate::api::found(&call).unwrap();
     assert_original_candidates(result);
     assert_eq!(result.question().profile(), Some("saved-profile"));
     assert_eq!(result.identity().answered_by(), Some("actual-model"));
@@ -64,20 +60,21 @@ fn saved_find_reads_selected_located_units_once_and_retains_every_original_candi
     let doc: Value = serde_json::from_str(&result.to_json().unwrap()).unwrap();
     assert_serialized_candidates(&doc);
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let replayed = replay
-        .try_find_records_complete_with(
-            saved.question(),
-            records(),
-            CallOptions::new().context("Guidance.").attempts(true),
-        )
-        .unwrap();
-    assert_eq!(replayed.value().answer_id(), result.answer_id());
-    assert_eq!(replayed.value().identity().origin(), Some(Origin::Replay));
+    let replayed = crate::api::find(
+        &replay,
+        saved.question(),
+        records(),
+        CallOptions::new().context("Guidance.").attempts(true),
+    )
+    .unwrap();
+    let replayed_result = crate::api::found(&replayed).unwrap();
+    assert_eq!(replayed_result.answer_id(), result.answer_id());
+    assert_eq!(replayed_result.identity().origin(), Some(Origin::Replay));
     assert_eq!(
-        replayed.value().identity().observations(),
+        replayed_result.identity().observations(),
         result.identity().observations()
     );
-    assert_eq!(replayed.value().candidates().len(), 3);
+    assert_eq!(replayed_result.candidates().len(), 3);
     assert_eq!(replayed.facts().requests_sent(), 0);
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.questions(), 1);
@@ -103,76 +100,69 @@ fn whole_set_find_and_rank_reader_failures_and_unsupported_controls_refuse_befor
     let rank = Question::rank("Best?").unwrap();
     let records = || {
         [
-            Ok(RecordInput {
-                examples: None,
-                seed_spans: None,
-                original: "Valid.",
-                context: None,
-                options: None,
-            }),
+            Ok(crate::api::record("Valid.")),
             Err(thinkthen::Error::new(
                 ErrorKind::Local,
                 "the selected source cannot be read",
             )),
         ]
     };
-    let found = engine
-        .try_find_records_complete_with(&find, records(), CallOptions::new())
-        .unwrap_err();
+    let found = crate::api::find(&engine, &find, records(), CallOptions::new()).unwrap_err();
     assert_eq!(found.kind(), ErrorKind::Local);
     assert_eq!(found.stopped().at(), Some(2));
     assert!(found.facts().is_none());
-    let ranked = engine
-        .try_rank_records_complete_with(&rank, records(), CallOptions::new())
-        .unwrap_err();
+    let ranked = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        rank.clone().into(),
+        records(),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(ranked.kind(), ErrorKind::Local);
     assert_eq!(ranked.stopped().at(), Some(2));
     let originals = [
+        crate::api::record("First."),
         RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "First.",
-            context: None,
-            options: None,
-        },
-        RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Second.",
             context: Some("".into()),
-            options: None,
+
+            ..crate::api::record("Second.")
         },
     ];
     assert_eq!(
-        engine
-            .find_records_complete_with(&find, originals, CallOptions::new())
-            .unwrap_err()
-            .kind(),
+        crate::api::find(
+            &engine,
+            &find,
+            (originals).into_iter().map(Ok),
+            CallOptions::new()
+        )
+        .unwrap_err()
+        .kind(),
         ErrorKind::Usage
     );
-    let invalid = engine
-        .try_find_complete_with(
-            &find,
-            [
-                Ok("First."),
-                Err(thinkthen::Error::new(
-                    ErrorKind::Local,
-                    "the source cannot be read",
-                )),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let invalid = crate::api::find(
+        &engine,
+        &find,
+        ([
+            Ok("First."),
+            Err(thinkthen::Error::new(
+                ErrorKind::Local,
+                "the source cannot be read",
+            )),
+        ])
+        .into_iter()
+        .map(|row| row.map(crate::api::record)),
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(invalid.kind(), ErrorKind::Local);
     assert_eq!(listener.count(), 0);
 }
 
 #[test]
 fn composed_rank_keeps_original_location_and_stable_positions_without_observing_source_metadata() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let engine = engine(&listener);
     let question = Question::rank("Best?").unwrap();
     let reading = RecordReading::new(&["/body"], None, None).unwrap();
@@ -190,23 +180,29 @@ fn composed_rank_keeps_original_location_and_stable_positions_without_observing_
         );
         Ok(record)
     });
-    let call = engine
-        .try_rank_records_complete_with(&question, records, CallOptions::new())
-        .unwrap();
-    assert_eq!(call.value()[0].result().value(), 1);
-    assert_eq!(call.value()[1].result().value(), 2);
-    assert_eq!(call.value()[0].ordinal(), 0);
+    let call = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        question.into(),
+        records,
+        CallOptions::new(),
+    )
+    .unwrap();
+    let ranked = crate::api::ranked(&call).unwrap();
+    assert_eq!(ranked[0].result().value(), 1);
+    assert_eq!(ranked[1].result().value(), 2);
+    assert_eq!(ranked[0].ordinal(), 0);
+    let QuestionInput::Record(original) = ranked[1].original() else {
+        panic!("record original")
+    };
+    assert_eq!(original.location().unwrap().first_line(), Some(5));
     assert_eq!(
-        call.value()[1].original().location().unwrap().first_line(),
-        Some(5)
-    );
-    assert_eq!(
-        call.value()[0].result().identity().observations(),
-        call.value()[1].result().identity().observations()
+        ranked[0].result().identity().observations(),
+        ranked[1].result().identity().observations()
     );
     assert_ne!(
-        call.value()[0].result().answer_id(),
-        call.value()[1].result().answer_id()
+        ranked[0].result().answer_id(),
+        ranked[1].result().answer_id()
     );
     assert_eq!(listener.questions(), 1);
     assert_eq!(listener.count(), 1);

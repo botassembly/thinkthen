@@ -95,7 +95,7 @@ fn the_batch_setting_follows_its_tiers() {
         );
     }
     let one = planning(&place, (None, Some("5"), None), "line 1");
-    assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
+    crate::harness::exits(&one, 0);
 }
 
 #[test]
@@ -142,7 +142,7 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
         b"line 1\nline 2\n",
     )
     .expect("the command runs");
-    assert_eq!(chosen.status.code(), Some(0), "{}", text(&chosen.stderr));
+    crate::harness::exits(&chosen, 0);
     let request = chosen.stdout.split(|byte| *byte == b'\n').next();
     let plan: Value = serde_json::from_slice(request.unwrap_or_default()).expect("a choose plan");
     assert_eq!(

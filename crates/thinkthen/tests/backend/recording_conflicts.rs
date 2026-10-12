@@ -1,9 +1,8 @@
 //! Repeated recording writes. Every function stores one answer per question
 //! and `--record` replaces it, by ADR 0111 section 3.
 
-use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use crate::harness::{Canned, Listener, spawn_one as spawn};
 use crate::support::stored;
@@ -18,11 +17,7 @@ const TRUE: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
 );
-fn folder(name: &str) -> PathBuf {
-    let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
+pub(crate) use crate::harness::folder;
 
 fn decide(
     base: &str,
@@ -72,7 +67,7 @@ fn equal_records_in_one_record_run_ask_their_question_once() {
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         concat!(
             r#"{"input":"Refund me please.","value":false}"#,
             "\n",

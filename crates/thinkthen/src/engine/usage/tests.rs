@@ -498,3 +498,15 @@ fn each_unsafe_sentence_names_the_fix() {
 #[cfg(unix)]
 #[path = "no_lock_tests.rs"]
 mod no_lock;
+
+#[test]
+fn a_poisoned_counter_queue_marks_usage_failed() {
+    let counts = Counters::new(None);
+    let _panic = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        let _held = counts.shared.queue.lock().expect("queue");
+        panic!("poison queue");
+    }));
+    counts.cache_answer();
+    assert_eq!(counts.persistence(), UsagePersistence::Failed);
+    assert!(counts.finish());
+}

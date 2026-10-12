@@ -1,24 +1,16 @@
 //! Native composed feeds retain their originals while sharing request admission.
 use super::{AdmittedRequest, RequestFraming, RequestInput};
-use crate::{CallOptions, Error, QuestionInput};
+use crate::{Error, QuestionInput};
 
 pub(super) fn records<'a>(
     request: &'a AdmittedRequest,
     contents: super::execution::FeedContents<'a>,
-    controls: CallOptions<'a>,
-    image_refusal: Option<String>,
 ) -> Result<super::composition::Inputs<'a>, Error> {
     header(request)?;
     let super::execution::FeedContents::Records(records) = contents else {
         return Err(Error::defect("native feed lost its records"));
     };
-    let function = request.request.call.function();
-    Ok(Box::new(records.map(move |row| {
-        controls.admission()?;
-        let row = row?;
-        validate(function, &row, &row.original, image_refusal.as_deref())?;
-        Ok(row)
-    })))
+    Ok(records)
 }
 
 pub(super) fn header(request: &AdmittedRequest) -> Result<(), Error> {
@@ -55,15 +47,38 @@ pub(super) fn validate<T>(
     row: &crate::RecordInput<T>,
     input: &QuestionInput,
     image_refusal: Option<&str>,
+    native: bool,
 ) -> Result<(), Error> {
+    if function == super::RequestFunction::Find {
+        if row.context.is_some() || row.options.is_some() {
+            return Err(Error::usage(
+                "find takes one whole-set call context and no per-record controls",
+            ));
+        }
+        crate::public::images::guard(crate::InputFunction::Find, input)?;
+    }
     if row.options.is_some() && function != super::RequestFunction::Choose {
         return Err(Error::usage("item options apply only to choose"));
     }
-    row.admit_recognition_controls(
-        function,
-        "item recognition controls apply only to recognize",
-        "item recognition controls apply only to recognize",
-    )?;
+    let (examples, seeds) = match (native, function) {
+        (true, super::RequestFunction::Find) => (
+            "find takes one whole-set call context and no per-record controls",
+            "find takes one whole-set call context and no per-record controls",
+        ),
+        (true, super::RequestFunction::Relate) => (
+            "relate takes one whole-set call context and no per-record controls",
+            "relate takes one whole-set call context and no per-record controls",
+        ),
+        (true, _) => (
+            "record examples are admitted only for recognize",
+            "record seed spans are admitted only for recognize",
+        ),
+        (false, _) => (
+            "item recognition controls apply only to recognize",
+            "item recognition controls apply only to recognize",
+        ),
+    };
+    row.admit_recognition_controls(function, examples, seeds)?;
     let images = match input {
         QuestionInput::Record(record) => record.images(),
         QuestionInput::Images(images) => images.images(),

@@ -6,13 +6,7 @@ fn priced_cached_and_replayed_calls_add_zero_cost_without_inventing_tokens() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":49,"output_tokens":0}}"#)).unwrap();
     let place = folder();
     let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
+        crate::api::fixed(listener.base(), "complete-private")
             .prices_usd_per_million("0.01", "0")
             .unwrap()
     };
@@ -83,13 +77,7 @@ fn a_cached_call_keeps_raw_token_overflow_checked_and_the_tally_atomic() {
     }).unwrap();
     let place = folder();
     let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
+        crate::api::fixed(listener.base(), "complete-private")
             .prices_usd_per_million("0", "0")
             .unwrap()
     };
@@ -127,7 +115,7 @@ fn tally_retains_reported_input_when_output_is_absent() {
     let question = Question::decide("Refund?").unwrap().cut();
     let tally = Tally::new();
     let call = tally
-        .run(|| engine.decide_complete_with(&question, "Refund me.", CallOptions::new()))
+        .run(|| crate::api::decide(&engine, &question, "Refund me.", CallOptions::new()))
         .unwrap();
     assert_eq!(call.facts().input_tokens(), Some(887));
     assert_eq!(call.facts().output_tokens(), None);
@@ -141,13 +129,7 @@ fn tally_retains_reported_input_when_output_is_absent() {
 #[test]
 fn engine_priced_tally_rounds_raw_concurrent_totals_once_and_empty_work_is_zero() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":49,"output_tokens":0}}"#)).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .no_cache()
         .prices_usd_per_million("0.01", "0")
         .unwrap()
@@ -166,7 +148,7 @@ fn engine_priced_tally_rounds_raw_concurrent_totals_once_and_empty_work_is_zero(
             let question = &question;
             scope.spawn(move || {
                 let call = tally
-                    .run(|| engine.decide_complete_with(question, item, CallOptions::new()))
+                    .run(|| crate::api::decide(engine, question, item, CallOptions::new()))
                     .unwrap();
                 assert_eq!(call.facts().estimated_cost_usd(), Some("0.000000"));
             });
@@ -189,13 +171,7 @@ fn priced_tally_preserves_partial_usage_and_failed_call_facts_without_fabricated
             Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":887}}"#)
         } else { Canned::status(422, "private rejected body") }
     }).unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .model("fixed")
-        .unwrap()
-        .api_key("complete-private")
-        .unwrap()
+    let engine = crate::api::fixed(listener.base(), "complete-private")
         .max_retries(0)
         .no_cache()
         .prices_usd_per_million("0.01", "0.02")
@@ -205,14 +181,14 @@ fn priced_tally_preserves_partial_usage_and_failed_call_facts_without_fabricated
     let question = Question::decide("Refund?").unwrap().cut();
     let tally = Tally::new();
     tally
-        .run(|| engine.decide_complete_with(&question, "First.", CallOptions::new()))
+        .run(|| crate::api::decide(&engine, &question, "First.", CallOptions::new()))
         .unwrap();
     let snapshot = tally.facts_with_engine(&engine);
     assert_eq!(snapshot.input_tokens(), Some(887));
     assert_eq!(snapshot.output_tokens(), None);
     assert_eq!(snapshot.estimated_cost_usd(), None);
     let error = tally
-        .run(|| engine.decide_complete_with(&question, "Second.", CallOptions::new()))
+        .run(|| crate::api::decide(&engine, &question, "Second.", CallOptions::new()))
         .unwrap_err();
     assert_eq!(error.facts().unwrap().requests_sent(), 1);
     let snapshot = tally.facts_with_engine(&engine);

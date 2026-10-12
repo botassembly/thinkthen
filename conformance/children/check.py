@@ -1,10 +1,11 @@
 """The Python helper's proof, run by test.sh with sentinels in this process."""
 
+import json
 import subprocess
 import sys
 import tempfile
 
-from children import child_env
+from children import child_env, read_process_line
 
 PROBE = ('test -z "${THINKTHEN_SENTINEL+x}" && test -z "${FAKE_SERVICE_API_KEY+x}" && '
          'test -z "${ABSENT_0127+x}" && test "$KEPT_0127" = kept && test "$SET_0127" = set')
@@ -27,5 +28,18 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-child-home-") as home:
     result = subprocess.run(["sh", "-c", probe], env=env, text=True, capture_output=True, check=False)
     if result.returncode != 0 or result.stdout.splitlines() != [home, home + "/explicit", home + "/config"]:
         bad.append("owned home and explicit override")
+# A completed child puts the acknowledgement and JSON in the pipe together.
+# A buffered readline before communicate can silently discard the JSON tail.
+for newline in ("\n", "\r\n"):
+    output = "ready" + newline + json.dumps({"answer": True}) + newline
+    script = "import sys; sys.stdout.write(" + repr(output) + ")"
+    child = subprocess.Popen([sys.executable, "-c", script], stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=child_env())
+    child.wait(timeout=5)
+    if read_process_line(child.stdout) != "ready\n":
+        bad.append("process acknowledgement")
+    stdout, stderr = child.communicate(timeout=5)
+    if child.returncode != 0 or stderr or json.loads(stdout) != {"answer": True}:
+        bad.append("JSON after process acknowledgement")
 print(f"children python: {'ok' if not bad else 'FAIL ' + ', '.join(bad)}")
 sys.exit(1 if bad else 0)

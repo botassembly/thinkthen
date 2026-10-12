@@ -40,11 +40,7 @@ fn a_rank_question_sends_its_own_model() {
 fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let limited = Engine::builder()
-        .base_url(listener.base())
-        .expect("url")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let limited = crate::api::builder(listener.base(), "sk-public-batches")
         .max_requests(Some(2))
         .expect("limit")
         .no_cache()
@@ -64,9 +60,13 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
                 .try_rank_with(&ranked, input, CallOptions::new())
                 .expect_err("rank cap")
         } else {
-            limited
-                .try_find_with(&found, input, CallOptions::new())
-                .expect_err("find cap")
+            crate::api::find(
+                &limited,
+                &found,
+                input.map(|row| row.map(crate::api::record)),
+                CallOptions::new(),
+            )
+            .expect_err("find cap")
         };
         assert_eq!(
             error.to_string(),
@@ -91,9 +91,13 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
             Some(Ok("alpha"))
         });
         assert!(
-            engine
-                .try_find_with(&asked, input, CallOptions::new())
-                .is_err()
+            crate::api::find(
+                &engine,
+                &asked,
+                input.map(|row| row.map(crate::api::record)),
+                CallOptions::new()
+            )
+            .is_err()
         );
         assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
     }
@@ -214,9 +218,13 @@ fn release_only_find_complete_set_stops_at_aggregate_byte_limit_before_any_send(
         );
         Some(Ok(large.as_str()))
     });
-    let error = engine
-        .try_find_with(&found, input, CallOptions::new())
-        .expect_err("bytes");
+    let error = crate::api::find(
+        &engine,
+        &found,
+        input.map(|row| row.map(crate::api::record)),
+        CallOptions::new(),
+    )
+    .expect_err("bytes");
     assert_eq!(error.to_string(), "find input exceeds 16 MiB");
     assert_eq!(pulls.load(Ordering::SeqCst), 2);
     assert_eq!(listener.count(), 0);

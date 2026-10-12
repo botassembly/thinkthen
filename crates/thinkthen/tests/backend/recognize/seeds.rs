@@ -77,7 +77,7 @@ fn invalid_later_seed_admission_sends_nothing_and_withholds_input() {
         let output = run(&listener, FLAGS, input.as_bytes());
         assert_eq!(output.status.code(), Some(2));
         assert!(output.stdout.is_empty());
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-kind"));
+        assert!(!crate::harness::said(&output).contains("secret-kind"));
     }
     assert_eq!(listener.count(), 0);
 }

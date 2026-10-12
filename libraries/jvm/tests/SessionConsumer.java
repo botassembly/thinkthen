@@ -109,7 +109,7 @@ public final class SessionConsumer {
                     var next = session.tryRead();
                     if (next.packet() instanceof Results.SessionPacketTerminal settled) terminal = settled;
                     if (next.ended()) break;
-                    Thread.sleep(5);
+                    session.waitReady(false).join();
                 }
                 check(terminal != null && terminal.failure().state() == Presence.State.VALUE,"owned reader failure");
             }

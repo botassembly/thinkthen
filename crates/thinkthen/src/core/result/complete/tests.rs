@@ -16,7 +16,7 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
         rank_position: None,
         source: None,
         images: None,
-        legacy: DecisionResult::new(
+        compatibility: DecisionResult::new(
             answer.read(Some(threshold)).0,
             Question::Decide {
                 text: QuestionText::new("refund?").unwrap(),
@@ -47,14 +47,14 @@ fn atomic(sources: Vec<QuestionSource>, observations: Vec<Observation>) -> Atomi
 #[test]
 fn complete_rank_serializes_a_positive_integer_while_legacy_keeps_its_value() {
     let mut canonical = atomic(Vec::new(), Vec::new());
-    canonical.legacy.value = crate::core::Value::YesNo(None);
-    canonical.legacy.threshold = None;
+    canonical.compatibility.value = crate::core::Value::YesNo(None);
+    canonical.compatibility.threshold = None;
     canonical.rank_position = std::num::NonZeroUsize::new(7);
     let json = json_line(&canonical).unwrap();
     assert!(json.contains(r#""value":7,"question":"#));
     assert!(json.contains(r#""threshold":null"#));
     assert!(
-        json_line(&canonical.legacy)
+        json_line(&canonical.compatibility)
             .unwrap()
             .contains(r#""value":null,"question":"#)
     );
@@ -84,10 +84,12 @@ fn complete_atomic_serialization_keeps_legacy_projection_and_reports_actual_sour
         "b".repeat(64)
     );
     assert_eq!(json_line(&canonical).unwrap(), expected);
-    let legacy = json_line(&canonical.legacy).unwrap();
-    assert!(legacy.starts_with(r#"{"schema":"thinkthen.result/1","value":true,"question":"#));
-    assert!(!legacy.contains("observation_id"));
-    assert!(!legacy.contains("answer_id"));
+    let compatibility = json_line(&canonical.compatibility).unwrap();
+    assert!(
+        compatibility.starts_with(r#"{"schema":"thinkthen.result/1","value":true,"question":"#)
+    );
+    assert!(!compatibility.contains("observation_id"));
+    assert!(!compatibility.contains("answer_id"));
 }
 
 #[test]
@@ -125,7 +127,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     let canonical = super::Find {
         declarations: Default::default(),
         identity: base.identity,
-        legacy: find.result(None, find.select(&answer).unwrap(), base.legacy.meta),
+        compatibility: find.result(None, find.select(&answer).unwrap(), base.compatibility.meta),
     };
     let document = json_line(&canonical).unwrap();
     assert!(document.starts_with(&format!(
@@ -134,7 +136,7 @@ fn complete_find_keeps_its_whole_set_question_and_all_ordered_probabilities() {
     )));
     assert!(!document.contains("confidence"));
     assert!(
-        json_line(&canonical.legacy).unwrap().starts_with(
+        json_line(&canonical.compatibility).unwrap().starts_with(
             r#"{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find""#,
         )
     );
@@ -148,8 +150,8 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         MemberIdentity, Value,
     };
     let row = atomic(Vec::new(), Vec::new());
-    let question = row.legacy.question;
-    let answer = row.legacy.answer;
+    let question = row.compatibility.question;
+    let answer = row.compatibility.answer;
     let successful = AnnotationMember {
         declarations: Default::default(),
         threshold: Some(Threshold::band(0.2, 0.95).unwrap()),
@@ -163,7 +165,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         }],
         reported_usage: Some(crate::core::ReportedUsage::new(Some(0), None)),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
-        legacy: AnnotatedEntry::Answered(AnnotatedAnswer::new(
+        compatibility: AnnotatedEntry::Answered(AnnotatedAnswer::new(
             Value::YesNo(None),
             question.clone(),
             answer,
@@ -180,7 +182,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
         }],
         reported_usage: None,
         identity: MemberIdentity::Failed(crate::core::FailureId::new("d".repeat(64)).unwrap()),
-        legacy: AnnotatedEntry::Failed(AnnotatedFailure::new(
+        compatibility: AnnotatedEntry::Failed(AnnotatedFailure::new(
             question,
             BackendFailure::new(BackendFailureCause::MissingProbability),
             "failure-key".into(),
@@ -209,7 +211,7 @@ fn annotation_successful_null_and_failure_have_exclusive_typed_identities() {
     let mismatched = AnnotationMember {
         declarations: Default::default(),
         identity: MemberIdentity::Answered(AnswerId::new("c".repeat(64)).unwrap()),
-        legacy: failed.legacy,
+        compatibility: failed.compatibility,
         threshold: failed.threshold,
         sources: failed.sources,
         observations: failed.observations,

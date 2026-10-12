@@ -46,11 +46,7 @@ fn process_send_budget_distinguishes_first_send_retry_and_backend_status() {
     let listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .max_retries(1)
         .no_cache()
         .build()
@@ -97,11 +93,7 @@ fn process_send_budget_distinguishes_first_send_retry_and_backend_status() {
     );
     assert_eq!(listener.count(), 1);
 
-    let no_retry = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    let no_retry = crate::api::builder(listener.base(), "sk-test")
         .max_retries(0)
         .no_cache()
         .build()
@@ -256,10 +248,8 @@ fn run(case: &str, argument: &str) -> Vec<String> {
             let [base, key, model, cache] = argument.splitn(4, '|').collect::<Vec<_>>()[..] else {
                 panic!("four settings");
             };
-            let explicit = Engine::builder()
-                .base_url(base)
-                .and_then(|b| b.api_key(key))
-                .and_then(|b| b.model(model))
+            let explicit = crate::api::builder(base, key)
+                .model(model)
                 .and_then(|b| b.cache_at(cache))
                 .and_then(EngineBuilder::build)
                 .expect("the explicit engine");

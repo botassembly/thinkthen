@@ -1,6 +1,6 @@
 //! Attachment input stops on the first signal even when ancillary stdin has no EOF.
 use super::finish_promptly;
-use crate::harness::{Canned, Listener, command};
+use crate::harness::{Canned, Listener, command, stderr_is};
 use std::io::Write as _;
 use std::os::unix::process::ExitStatusExt as _;
 use std::process::Stdio;
@@ -46,7 +46,7 @@ fn first_signal_terminates_image_attachment_input_with_an_open_writer_and_zero_s
         let output = finish_promptly(child, "cancelled image attachment stdin").unwrap();
         assert_eq!(output.status.signal(), Some(signal));
         assert!(output.stdout.is_empty());
-        assert!(!String::from_utf8_lossy(&output.stderr).contains("sk-image-test"));
+        assert!(!crate::harness::said(&output).contains("sk-image-test"));
         assert_eq!(listener.connections(), 0);
         assert_eq!(listener.count(), 0);
         drop(writer);
@@ -82,9 +82,9 @@ fn a_later_invalid_attachment_refuses_before_stdin_eof_or_any_send() {
     let writer = child.stdin.take().unwrap();
     let output = finish_promptly(child, "invalid indivisible attachments").unwrap();
     assert_eq!(output.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: image media or compressed pixels are invalid or exceed decoder limits\n"
+    stderr_is(
+        &output,
+        "thinkthen: image media or compressed pixels are invalid or exceed decoder limits\n",
     );
     assert!(output.stdout.is_empty());
     assert_eq!(listener.connections(), 0);

@@ -1,9 +1,8 @@
 //! Default record rows keep their parsed input beside each bare value.
 
+use crate::harness::{Canned, Listener, exits_because, spawn, spawn_local};
 use std::fs;
 use std::path::{Path, PathBuf};
-
-use crate::harness::{Canned, Listener, spawn};
 
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-test-value")];
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
@@ -81,14 +80,9 @@ fn four_value_verbs_wrap_each_record_under_input_and_value() {
                 framing.input,
             )
             .expect("command runs");
+            exits_because(&output, 0, || format!("{name} {:?}", framing.arguments));
             assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{name} {:?}",
-                framing.arguments
-            );
-            assert_eq!(
-                String::from_utf8_lossy(&output.stdout),
+                crate::harness::printed(&output),
                 format!("{{\"input\":{},\"value\":{value}}}\n", framing.record),
                 "{name} {:?}",
                 framing.arguments,
@@ -152,11 +146,7 @@ fn annotate_wraps_non_objects_in_record_mode_and_still_enriches_objects() {
         )
         .expect("annotate runs");
         assert_eq!(output.status.code(), Some(0), "{framing:?}");
-        assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
-            expected,
-            "{framing:?}"
-        );
+        assert_eq!(crate::harness::printed(&output), expected, "{framing:?}");
     }
 }
 
@@ -188,20 +178,9 @@ fn one_document_annotation_keeps_every_established_shape() {
     for (input, expected) in cases {
         let listener = Listener::serving(vec![Canned::ok(YES)]).expect("listener");
         let set_name = set.to_string_lossy();
-        let output = spawn(
-            &[
-                "annotate",
-                &set_name,
-                "--url",
-                listener.base(),
-                "--model",
-                "local-1",
-            ],
-            &KEY,
-            input,
-        )
-        .expect("annotate runs");
+        let output = spawn_local(&["annotate", &set_name], listener.base(), &KEY, input)
+            .expect("annotate runs");
         assert_eq!(output.status.code(), Some(0));
-        assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
+        assert_eq!(crate::harness::printed(&output), expected);
     }
 }

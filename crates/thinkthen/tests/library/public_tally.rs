@@ -9,7 +9,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Engine, Question, Tally};
+use thinkthen::{Question, Tally};
 
 #[test]
 fn tally_keeps_reported_tokens_distinct_from_a_later_missing_usage_reply() {
@@ -23,11 +23,7 @@ fn tally_keeps_reported_tokens_distinct_from_a_later_missing_usage_reply() {
         }
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .max_retries(0)
         .no_cache()
         .build()
@@ -58,11 +54,7 @@ fn tally_keeps_reported_tokens_distinct_from_a_later_missing_usage_reply() {
 fn cloned_tallies_keep_both_concurrent_call_receipts() {
     const YES: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":12,"output_tokens":3}}"#;
     let listener = Listener::answering(|_| Canned::ok(YES)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .no_cache()
         .build()
         .expect("engine");
@@ -101,11 +93,7 @@ fn cloned_tallies_keep_both_concurrent_call_receipts() {
 fn a_tally_writes_the_members_a_priced_call_writes() {
     const YES: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1200000,"output_tokens":300000}}"#;
     let listener = Listener::answering(|_| Canned::ok(YES)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-test")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-test")
         .prices_usd_per_million("0.25", "1.5")
         .expect("prices")
         .no_cache()

@@ -89,6 +89,14 @@ final class InputRequestCallTag extends Document
         parent::__construct([...self::TAGS, 'question' => $question, 'input' => $input, ...$fields]);
     }
 }
+final class InputRequestInputEntities extends Document
+{
+    public const TAGS = ['kind' => 'entities'];
+    public function __construct(array $items, array $fields = [])
+    {
+        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
+    }
+}
 final class InputRequestInputFeed extends Document
 {
     public const TAGS = ['kind' => 'feed'];
@@ -111,6 +119,14 @@ final class InputRequestInputSource extends Document
     public function __construct(mixed $source, array $fields = [])
     {
         parent::__construct([...self::TAGS, 'source' => $source, ...$fields]);
+    }
+}
+final class InputRequestInputUnits extends Document
+{
+    public const TAGS = ['kind' => 'units'];
+    public function __construct(array $items, array $fields = [])
+    {
+        parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
 final class InputRequestItem extends Document
@@ -153,9 +169,9 @@ final class InputRequestReader extends Document
         parent::__construct($fields);
     }
 }
-final class InputRequestReaderFailureInvalidInput extends Document
+final class InputRequestReaderFailureProducer extends Document
 {
-    public const TAGS = ['kind' => 'invalid_input'];
+    public const TAGS = ['kind' => 'producer'];
     public function __construct(array $fields = [])
     {
         parent::__construct([...self::TAGS, ...$fields]);

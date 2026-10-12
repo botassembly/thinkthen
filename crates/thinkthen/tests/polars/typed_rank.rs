@@ -24,14 +24,11 @@ fn records(drops: &Rc<Cell<usize>>) -> Vec<Option<RecordInput<Original>>> {
         .into_iter()
         .map(|id| {
             id.map(|id| RecordInput {
-                original: Original {
+                context: Some("row guide".into()),
+                ..crate::api::record(Original {
                     id,
                     drops: drops.clone(),
-                },
-                context: Some("row guide".into()),
-                options: None,
-                examples: None,
-                seed_spans: None,
+                })
             })
         })
         .collect()
@@ -44,30 +41,43 @@ fn set() -> Result<RankSet, thinkthen::Error> {
         r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
 }
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "the canned response requires the fixture request shape"
+)]
+fn ranking_response(body: &[u8]) -> Canned {
+    let body: serde_json::Value = serde_json::from_slice(body).expect("body");
+    let answers = body["questions"]
+        .as_object()
+        .expect("questions")
+        .iter()
+        .map(|(key, question)| {
+            let probability = if question.to_string().contains("weak") {
+                0.2
+            } else {
+                0.9
+            };
+            (
+                key.clone(),
+                serde_json::json!({"type":"noul", "noul":probability}),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":10,"output_tokens":2}}).to_string())
+}
 #[test]
 fn typed_rank_restores_reordered_and_omitted_nonclone_originals() {
-    let listener = Listener::answering(|body| {
-        let body: serde_json::Value = serde_json::from_slice(body).expect("body");
-        let answers = body["questions"].as_object().expect("questions").iter().map(|(key, question)| {
-            let probability = if question.to_string().contains("weak") { 0.2 } else { 0.9 };
-            (key.clone(), serde_json::json!({"type":"noul", "noul":probability}))
-        }).collect::<serde_json::Map<_, _>>();
-        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":10,"output_tokens":2}}).to_string())
-    }).expect("listener");
+    let listener = Listener::answering(ranking_response).expect("listener");
     let engine = common::engine(listener.base());
     let column = Series::new("original".into(), [Some(7u32), None, Some(9), Some(11)]);
     let drops = Rc::new(Cell::new(0));
-    let singleton = || {
-        CallOptions::new().batch(thinkthen::BatchSetting::Records(
-            std::num::NonZeroUsize::MIN,
-        ))
-    };
     let (call, positions) = engine
         .rank_input_column_complete(
             &rank().expect("rank question"),
             &column,
             records(&drops),
-            singleton(),
+            common::singleton(),
         )
         .expect("rank");
     assert_eq!(positions, [0, 2, 3]);
@@ -91,7 +101,7 @@ fn typed_rank_restores_reordered_and_omitted_nonclone_originals() {
             &set().expect("rank set"),
             &column,
             records(&drops),
-            singleton(),
+            common::singleton(),
         )
         .expect("rank set");
     assert_eq!(positions, [0, 2, 3]);
@@ -196,14 +206,7 @@ fn typed_collections_admit_all_controls_before_sending() {
 }
 #[test]
 fn typed_filter_keeps_rejected_observations_and_owned_originals() {
-    let listener = Listener::answering(|body| {
-        let body: serde_json::Value = serde_json::from_slice(body).expect("body");
-        let answers = body["questions"].as_object().expect("questions").iter().map(|(key, question)| {
-            let probability = if question.to_string().contains("weak") { 0.2 } else { 0.9 };
-            (key.clone(), serde_json::json!({"type":"noul", "noul":probability}))
-        }).collect::<serde_json::Map<_, _>>();
-        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":10,"output_tokens":2}}).to_string())
-    }).expect("listener");
+    let listener = Listener::answering(ranking_response).expect("listener");
     let engine = common::engine(listener.base());
     let column = Series::new("original".into(), [Some(7u32), None, Some(9), Some(11)]);
     let drops = Rc::new(Cell::new(0));
@@ -212,9 +215,7 @@ fn typed_filter_keeps_rejected_observations_and_owned_originals() {
             &Question::decide("Relevant?").expect("filter").cut(),
             &column,
             records(&drops),
-            CallOptions::new().batch(thinkthen::BatchSetting::Records(
-                std::num::NonZeroUsize::MIN,
-            )),
+            common::singleton(),
         )
         .expect("filter");
     assert_eq!(positions, [0, 2, 3]);

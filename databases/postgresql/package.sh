@@ -27,7 +27,9 @@ if [ -n "$reuse" ]; then
 	tree=$EXT-shipped
 else
 	# The builder's home stays out of the module, as in check.sh.
-	RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" \
+	package_flags=${RUSTFLAGS:-}
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || package_flags="${package_flags:+$package_flags }--remap-path-prefix=$HOME=/build"
+	RUSTFLAGS="$package_flags" \
 		./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
 	tree=$EXT
 fi

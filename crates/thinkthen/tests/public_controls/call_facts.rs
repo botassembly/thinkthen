@@ -12,10 +12,7 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     let listener = Listener::answering(move |_| Canned::ok(answer)).expect("listener");
     let folder = std::env::temp_dir().join(format!("thinkthen-priced-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|builder| builder.api_key("sk-public-controls"))
-        .expect("backend")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .cache_at(&folder)
         .expect("cache")
         .prices_usd_per_million("0.25", "0.25")
@@ -52,11 +49,7 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
     );
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.requests()[0].body, REFUND_REQUEST.as_bytes());
-    let plain = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let plain = crate::api::builder(listener.base(), "sk-public-controls")
         .no_cache()
         .build()
         .expect("plain");
@@ -74,11 +67,7 @@ fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
         listener.requests()[0].body,
         REFUND_REQUEST.replace("Refund me.", "Another.").as_bytes()
     );
-    let zero = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let zero = crate::api::builder(listener.base(), "sk-public-controls")
         .prices_usd_per_million("0", "0")
         .expect("zero prices")
         .no_cache()
@@ -124,11 +113,7 @@ fn malformed_caller_prices_refuse_before_send() {
 fn priced_empty_relate_is_zero_without_a_send() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .prices_usd_per_million("0.25", "0.25")
         .expect("prices")
         .no_cache()
@@ -158,11 +143,7 @@ fn priced_started_failure_facts_are_copied_while_retry_missing_usage_stays_unpri
         _ => Canned::ok(invalid),
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .prices_usd_per_million("1", "0")
         .expect("prices")
         .max_retries(1)
@@ -204,11 +185,7 @@ fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_re
         }
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .prices_usd_per_million("1", "0")
         .expect("prices")
         .no_cache()
@@ -234,10 +211,8 @@ fn counters_and_cache_answers_match_the_real_attempts() {
     let listener = Listener::answering(|_| Canned::ok(PINNED_DECIDED)).expect("listener");
     let folder = std::env::temp_dir().join(format!("thinkthen-counters-{}", std::process::id()));
     let _gone = std::fs::remove_dir_all(&folder);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|b| b.api_key("sk-public-controls"))
-        .and_then(|b| b.cache_at(&folder))
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
+        .cache_at(&folder)
         .and_then(thinkthen::EngineBuilder::build)
         .expect("engine");
     let asked = question();
@@ -291,10 +266,8 @@ fn each_public_question_model_selects_its_own_cache_freshness() {
     ));
     let _gone = std::fs::remove_dir_all(&folder);
     let build = |model: &str| {
-        Engine::builder()
-            .base_url(listener.base())
-            .and_then(|builder| builder.api_key("sk-public-controls"))
-            .and_then(|builder| builder.model(model))
+        crate::api::builder(listener.base(), "sk-public-controls")
+            .model(model)
             .and_then(|builder| builder.cache_at(&folder))
             .and_then(thinkthen::EngineBuilder::build)
             .expect("engine")
@@ -385,11 +358,7 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
         }
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .throttle(2)
         .expect("throttle")
         .no_cache()
@@ -454,11 +423,7 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
 fn a_failed_eager_rank_carries_its_started_call_facts() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::status(503, "busy")).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-controls")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-controls")
         .max_retries(0)
         .no_cache()
         .build()

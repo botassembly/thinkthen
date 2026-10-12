@@ -1,11 +1,17 @@
 //! One versioned edge contract for native and serialized requests.
 
 mod admission;
-#[cfg(feature = "cli")]
-pub(crate) mod cli_atomic;
+mod column;
+mod question_parts;
+pub use column::{RequestColumn, RequestColumnValues, RequestColumnView};
 mod composition;
+mod decoding;
 mod definition;
+pub use decoding::RequestDecodeCause;
 mod execution;
+#[cfg(test)]
+pub(in crate::public) use execution::native_atomic as atomic;
+pub(in crate::public) use execution::{native, restore, restore_found, scalar};
 mod framing;
 mod inline;
 mod input;
@@ -13,6 +19,7 @@ mod native_feed;
 mod options;
 mod preview;
 pub(crate) mod pull;
+pub use pull::RequestRows;
 mod result;
 mod source;
 pub use source::RequestSourceReader;
@@ -36,7 +43,8 @@ pub use result::{RequestOutcome, RequestValue};
 use serde::{Deserialize, Serialize};
 pub use session::{
     RequestReaderFailure, RequestSession, RequestSessionDescriptor, RequestSessionFeedOptions,
-    RequestSessionPush, RequestSessionPushStatus, RequestSessionRead,
+    RequestSessionPush, RequestSessionPushStatus, RequestSessionRead, RequestSessionReady,
+    RequestSessionWaitInterest,
 };
 pub use session_result::{RequestSessionResult, RequestSessionRow, RequestSessionTerminal};
 use std::path::PathBuf;
@@ -72,23 +80,80 @@ impl Request {
     #[must_use]
     pub fn new(mut call: RequestCall) -> Self {
         let function = call.function();
-        let arguments = match &mut call {
-            RequestCall::Decide(a)
-            | RequestCall::Choose(a)
-            | RequestCall::Tag(a)
-            | RequestCall::Score(a)
-            | RequestCall::Filter(a)
-            | RequestCall::Rank(a)
-            | RequestCall::Find(a)
-            | RequestCall::Annotate(a)
-            | RequestCall::Recognize(a)
-            | RequestCall::Relate(a) => a,
-        };
-        native_controls(arguments, function);
+        native_controls(call.arguments_mut(), function);
         Self {
             schema: RequestVersion::V1,
             call,
         }
+    }
+    /// Construct a named call and select the collection kind for its function.
+    /// # Errors
+    /// Refuses an unknown function name.
+    pub fn named(function: &str, arguments: RequestArguments) -> Result<Self, Error> {
+        Ok(Self::for_function(function.parse()?, arguments))
+    }
+    /// Construct a named call from the existing canonical component grammars.
+    /// # Errors
+    /// Refuses unknown names, malformed components and unsupported declarations.
+    pub fn named_from_json(
+        function: &str,
+        question: &str,
+        input: &str,
+        options: &str,
+    ) -> Result<Self, Error> {
+        let function = function
+            .parse()
+            .map_err(|_| Error::usage("unknown function"))?;
+        Ok(Self::for_function(
+            function,
+            RequestArguments {
+                question: RequestQuestion::from_json(question)?,
+                input: RequestInput::from_json(input)?,
+                options: serde_json::from_str(options)
+                    .map_err(|_| decoding::RequestDecodeCause::Malformed.error())?,
+            },
+        ))
+    }
+    /// Construct a typed call, deriving collection kinds from the function.
+    #[must_use]
+    pub fn for_function(function: RequestFunction, mut arguments: RequestArguments) -> Self {
+        if let RequestInput::Records { items } = arguments.input {
+            arguments.input = match function {
+                RequestFunction::Find => RequestInput::Units { items },
+                RequestFunction::Relate => RequestInput::Entities { items },
+                _ => RequestInput::Records { items },
+            };
+        }
+        let call = match function {
+            RequestFunction::Decide => RequestCall::Decide(arguments),
+            RequestFunction::Choose => RequestCall::Choose(arguments),
+            RequestFunction::Tag => RequestCall::Tag(arguments),
+            RequestFunction::Score => RequestCall::Score(arguments),
+            RequestFunction::Filter => RequestCall::Filter(arguments),
+            RequestFunction::Rank => RequestCall::Rank(arguments),
+            RequestFunction::Find => RequestCall::Find(arguments),
+            RequestFunction::Annotate => RequestCall::Annotate(arguments),
+            RequestFunction::Recognize => RequestCall::Recognize(arguments),
+            RequestFunction::Relate => RequestCall::Relate(arguments),
+        };
+        Self::new(call)
+    }
+    /// Construct a call from the kind of a prepared question definition.
+    #[must_use]
+    pub fn for_definition(
+        definition: RequestDefinition,
+        input: RequestInput,
+        options: RequestOptions,
+    ) -> Self {
+        let function = RequestFunction::for_definition(&definition);
+        Self::for_function(
+            function,
+            RequestArguments {
+                question: RequestQuestion::Definition { value: definition },
+                input,
+                options,
+            },
+        )
     }
     #[cfg(feature = "cli")]
     pub(crate) fn admit_for_transport(
@@ -101,21 +166,14 @@ impl Request {
     /// # Errors
     /// Refuses malformed, unknown, duplicate or null request controls.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|error| {
-            if let Err(authored) = definition::validate_wire_definition(text) {
-                return authored;
-            }
-            let message = if error
-                .to_string()
-                .starts_with("per-item context is text or an object")
-            {
-                "the per-item context does not match context_schema"
-            } else {
-                "invalid canonical request"
-            };
-            Error::usage(message)
+        serde_json::from_str(text).map_err(|_| {
+            definition::validate_wire_definition(text)
+                .and_then(|()| decoding::validate_request_contexts(text))
+                .err()
+                .unwrap_or_else(|| decoding::RequestDecodeCause::Malformed.error())
         })
     }
+
     /// Validate the complete header without reading files or creating an engine.
     /// # Errors
     /// Refuses incompatible selectors, descriptors and controls.
@@ -150,7 +208,46 @@ pub enum RequestFunction {
     /// Judge entity relations.
     Relate,
 }
+impl std::str::FromStr for RequestFunction {
+    type Err = Error;
+    fn from_str(name: &str) -> Result<Self, Self::Err> {
+        match name {
+            "decide" => Ok(Self::Decide),
+            "choose" => Ok(Self::Choose),
+            "tag" => Ok(Self::Tag),
+            "score" => Ok(Self::Score),
+            "filter" => Ok(Self::Filter),
+            "rank" => Ok(Self::Rank),
+            "find" => Ok(Self::Find),
+            "annotate" => Ok(Self::Annotate),
+            "recognize" => Ok(Self::Recognize),
+            "relate" => Ok(Self::Relate),
+            _ => Err(Error::usage("invalid request function")),
+        }
+    }
+}
 impl RequestFunction {
+    /// Select the function of a prepared question definition.
+    #[must_use]
+    pub fn for_definition(definition: &RequestDefinition) -> Self {
+        match definition {
+            RequestDefinition::Atomic(LoadedQuestion::Banded(_)) => Self::Decide,
+            RequestDefinition::Atomic(LoadedQuestion::Question(q)) => match q.kind() {
+                crate::QuestionKind::Decide => Self::Decide,
+                crate::QuestionKind::Choose => Self::Choose,
+                crate::QuestionKind::Tag => Self::Tag,
+                crate::QuestionKind::Score => Self::Score,
+                crate::QuestionKind::Rank => Self::Rank,
+                crate::QuestionKind::Find => Self::Find,
+            },
+            RequestDefinition::Annotate(_) | RequestDefinition::DecodedSet { .. } => Self::Annotate,
+            RequestDefinition::Rank(_) | RequestDefinition::RankSet(_) => Self::Rank,
+            RequestDefinition::Find(_) => Self::Find,
+            RequestDefinition::Recognize(_) | RequestDefinition::Recognition(_) => Self::Recognize,
+            RequestDefinition::Relate(_) => Self::Relate,
+            RequestDefinition::DynamicChoose(_) => Self::Choose,
+        }
+    }
     pub(crate) const fn streams(self) -> bool {
         matches!(
             self,
@@ -158,6 +255,20 @@ impl RequestFunction {
         )
     }
 
+    pub(crate) const fn input_function(self) -> super::InputFunction {
+        match self {
+            Self::Decide => super::InputFunction::Decide,
+            Self::Choose => super::InputFunction::Choose,
+            Self::Tag => super::InputFunction::Tag,
+            Self::Score => super::InputFunction::Score,
+            Self::Filter => super::InputFunction::Filter,
+            Self::Rank => super::InputFunction::Rank,
+            Self::Find => super::InputFunction::Find,
+            Self::Annotate => super::InputFunction::Annotate,
+            Self::Recognize => super::InputFunction::Recognize,
+            Self::Relate => super::InputFunction::Relate,
+        }
+    }
     pub(crate) const fn from_input(function: super::InputFunction) -> Self {
         match function {
             super::InputFunction::Decide => Self::Decide,
@@ -412,4 +523,43 @@ fn native_controls(arguments: &mut RequestArguments, function: RequestFunction) 
             }
         });
     }
+}
+
+/// Admit a borrowed native call without collecting its caller-owned originals.
+pub(crate) fn admit_native(
+    function: RequestFunction,
+    definition: RequestDefinition,
+) -> Result<AdmittedRequest, crate::Error> {
+    if let RequestDefinition::Rank(q) = &definition {
+        crate::public::engine::only(
+            q,
+            &[
+                crate::public::NativeQuestionKind::Rank,
+                crate::public::NativeQuestionKind::Score,
+            ],
+            "rank",
+        )?;
+    }
+    if let RequestDefinition::Rank(q) = &definition
+        && (q.threshold.is_some_and(|rule| !rule.is_cut())
+            || (q.kind() == crate::QuestionKind::Score && q.threshold.is_some()))
+    {
+        return Err(Error::usage(
+            "rank cutoff requires a decide probability and never a band",
+        ));
+    }
+    let request = Request::for_function(
+        function,
+        RequestArguments {
+            question: RequestQuestion::Definition { value: definition },
+            input: RequestInput::Feed {
+                name: "native".into(),
+                framing: RequestFraming::Document,
+                reading: crate::ReaderOptions::default(),
+                images: vec![],
+            },
+            options: RequestOptions::default(),
+        },
+    );
+    admission::admit_native(request)
 }

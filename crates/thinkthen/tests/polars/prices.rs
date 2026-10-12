@@ -1,7 +1,7 @@
 //! Dataframe prices come from one native call's checked raw token total.
 use super::common;
 use conformance_backend::{Canned, Listener};
-use thinkthen::{BatchSetting, CallOptions, PolarsEngine, Question};
+use thinkthen::{CallOptions, PolarsEngine, Question};
 
 #[test]
 fn column_cost_rounds_once_and_omits_overflow_without_poisoning_the_next_call() {
@@ -16,7 +16,7 @@ fn column_cost_rounds_once_and_omits_overflow_without_poisoning_the_next_call() 
         .build()
         .expect("engine");
     let question = Question::decide("Relevant?").expect("question").cut();
-    let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
+    let options = common::singleton();
     let call = engine
         .decide_series(&question, &common::column(&["first", "second"]), options)
         .expect("column");

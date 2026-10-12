@@ -7,6 +7,9 @@ cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+if [ -n "${THINKTHEN_PARITY_PREPARE:-}${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    [ "$profile" = full ] || exit 2
+fi
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 if [ "$profile" = routine ]; then
@@ -33,7 +36,16 @@ public_types() {
     done
 }
 
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+# Full qualification installs one real package, then runs isolated family members.
+if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+    [ -x "$node_home/bin/node" ] || exit 77
+    PATH=$node_home/bin:$PATH
+    sh build-addon.sh
+    scratch_dir packed
+    npm pack --offline --pack-destination "$packed" >/dev/null
+    THINKTHEN_ARTIFACT=$(find "$packed" -name '*.tgz' -print)
+fi
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
     case $(uname -s):$(uname -m) in
@@ -46,29 +58,44 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 77; }
     [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
     [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
-    . "$repo/sdlc/scripts/installed.sh"
-    installed_tests "$repo" libraries/typescript
-    project=$scratch/libraries/typescript
-    echo '{"private": true}' >"$project/package.json"
-    (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
-    python3 "$repo/sdlc/scripts/package-inventory.py" npm --platform "$(node -p 'process.platform + "-" + process.arch')" --check "$project/node_modules/thinkthen" >/dev/null
-    # Keep the pinned compiler beside the fresh consumer, separate from the shipped package.
-    mkdir -p "$project/target/compiler"
-    cp "$repo/libraries/typescript/package.json" "$repo/libraries/typescript/package-lock.json" "$project/target/compiler/"
-    npm ci --offline --no-audit --no-fund --silent --prefix "$project/target/compiler"
-    tsc=$project/target/compiler/node_modules/.bin/tsc
+    if [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
+        scratch_dir project
+        cp -R "$THINKTHEN_PARITY_PREPARED/tests" "$project/tests"
+        ln -s "$THINKTHEN_PARITY_PREPARED/node_modules" "$project/node_modules"
+        echo '{"private":true}' >"$project/package.json"
+        tsc=$THINKTHEN_PARITY_PREPARED/target/compiler/node_modules/.bin/tsc
+    else
+        . "$repo/sdlc/scripts/installed.sh"
+        installed_tests "$repo" libraries/typescript
+        project=$scratch/libraries/typescript
+        echo '{"private": true}' >"$project/package.json"
+        (cd "$project" && npm install --offline --no-audit --no-fund --silent "$THINKTHEN_ARTIFACT")
+        python3 "$repo/sdlc/scripts/package-inventory.py" npm --platform "$(node -p 'process.platform + "-" + process.arch')" --check "$project/node_modules/thinkthen" >/dev/null
+        mkdir -p "$project/target/compiler"
+        cp "$repo/libraries/typescript/package.json" "$repo/libraries/typescript/package-lock.json" "$project/target/compiler/"
+        npm ci --offline --no-audit --no-fund --silent --prefix "$project/target/compiler"
+        tsc=$project/target/compiler/node_modules/.bin/tsc
+    fi
     resolved=$(cd "$project/tests" && node --input-type=module -e 'console.log(import.meta.resolve("thinkthen"))')
-    case $resolved in "file://$project/node_modules/thinkthen/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
+    package_node=${THINKTHEN_PARITY_PREPARED:-$project}/node_modules/thinkthen
+    case $resolved in "file://$package_node/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
+    if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     public_types
     (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
     (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
+    fi
+    if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
+        cp -a "$project/." "$THINKTHEN_PARITY_PREPARE/"
+        exit 0
+    fi
     python3 - "$repo" "$project" "$tsc" <<'NODENATIVE'
-import sys
+import os, sys
 from pathlib import Path
 root=Path(sys.argv[1]);project=Path(sys.argv[2]);tsc=Path(sys.argv[3]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 for language,suffix in [('javascript','mjs'),('typescript','js')]:
+    if os.environ.get('THINKTHEN_PARITY_CONSUMER',language)!=language:continue
     if run(language,['node',str(project/'tests'/('native_case.'+suffix))],root,extra_env={'THINKTHEN_OWNED_MODULE':'cjs' if language=='typescript' else 'esm'},typescript_compiler=tsc):sys.exit(1)
 NODENATIVE
     echo 'typescript: pass, installed'
@@ -123,7 +150,7 @@ if cargo deny --version >/dev/null 2>&1; then
     git -C "$plant/dep" init -q && git -C "$plant/dep" add -A
     git -C "$plant/dep" -c user.name=plant -c user.email=plant@example.invalid commit -qm plant
     printf '[package]\nname = "binding"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n[dependencies]\nplanted = { git = "file://%s/dep" }\n' "$plant" >"$plant/copy/Cargo.toml"
-    CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
+    CARGO_NET_OFFLINE=false CARGO_HOME="$plant/home" cargo fetch --quiet --manifest-path "$plant/copy/Cargo.toml"
     set +e
     # cargo-deny exits with bit 8 set when the sources check fails.
     CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo.toml" check --config "$repo/deny.toml" sources >"$plant/deny" 2>&1

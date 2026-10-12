@@ -4,6 +4,7 @@
 use crate::child::ChildEnvironment as _;
 #[cfg(unix)]
 use crate::child::Folder;
+use crate::harness::stderr_is;
 #[cfg(unix)]
 use std::fs;
 use std::process::Command;
@@ -29,11 +30,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
 
     let output = run::output(command(&home).args(["status", "--json"])).expect("status runs");
 
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "{}", crate::harness::said(&output));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("status JSON");
     let month = value["usage"]["month"].as_str().expect("month");
     let config = Folder::Config.in_home(&home).join("config.json");
@@ -72,11 +69,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
 fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     let output = run::output(command(std::path::Path::new("relative")).args(["status", "--json"]))
         .expect("status runs");
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "{}", crate::harness::said(&output));
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("status JSON");
     assert_eq!(value["configuration"]["path"], serde_json::Value::Null);
     assert_eq!(value["cache"]["path"], serde_json::Value::Null);
@@ -89,7 +82,7 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     let human = run::output(command(std::path::Path::new("relative")).arg("status"))
         .expect("human status runs");
     assert!(human.status.success());
-    let human = String::from_utf8_lossy(&human.stdout);
+    let human = crate::harness::printed(&human);
     assert!(human.contains("cache_entries unavailable\n"), "{human}");
     assert!(human.contains("cache_old_entries unavailable\n"), "{human}");
 }
@@ -233,11 +226,7 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
             .env("THINKTHEN_API_KEY", "secret-status-marker"),
     )
     .expect("status");
-    assert!(
-        output.status.success(),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    assert!(output.status.success(), "{}", crate::harness::said(&output));
     let text = String::from_utf8(output.stdout).expect("status text");
     assert!(!text.contains("secret-status-marker"));
     let value: serde_json::Value = serde_json::from_str(&text).expect("status JSON");
@@ -332,7 +321,7 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
             "thinkthen: cannot read the usage totals: {} has invalid contents. Move it aside, and counting starts again.\n",
             usage.join("2026-09.json").display()
         );
-        assert_eq!(String::from_utf8_lossy(&output.stderr), sentence, "{label}");
+        assert_eq!(crate::harness::said(&output), sentence, "{label}");
         let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
         assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
         assert_eq!(value["usage"]["total"], serde_json::Value::Null);
@@ -342,7 +331,7 @@ fn a_malformed_usage_month_reports_unavailable_counts_and_the_fix() {
         );
         let human = run::output(command(&home).arg("status")).expect("human status");
         assert_eq!(human.status.code(), Some(0));
-        assert_eq!(String::from_utf8_lossy(&human.stderr), sentence);
+        stderr_is(&human, sentence);
         let text = String::from_utf8(human.stdout).expect("text");
         assert!(text.ends_with("month_requests_sent unavailable\nmonth_retries unavailable\nmonth_input_tokens unavailable\nmonth_output_tokens unavailable\nmonth_cache_answers unavailable\ntotal_requests_sent unavailable\ntotal_retries unavailable\ntotal_input_tokens unavailable\ntotal_output_tokens unavailable\ntotal_cache_answers unavailable\n"), "{text}");
         assert_eq!(fs::read(usage.join("2026-09.json")).expect("after"), month);
@@ -370,12 +359,12 @@ fn a_held_usage_lock_reports_busy_within_a_second_and_exits_zero() {
     drop(held);
     assert_eq!(output.status.code(), Some(0));
     assert!(elapsed < std::time::Duration::from_secs(3), "{elapsed:?}");
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         format!(
             "thinkthen: cannot read the usage totals: {} is locked by another process. Try again when it finishes.\n",
             usage.join(".lock").display()
-        )
+        ),
     );
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
@@ -397,12 +386,7 @@ fn an_old_retries_file_beside_a_month_with_retries_is_ignored() {
         ],
     );
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     assert_eq!(output.stderr, b"");
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("JSON");
     assert_eq!(value["usage"]["total"]["requests_sent"], 4);
@@ -424,12 +408,12 @@ fn an_unsafe_usage_month_names_the_unsafe_fix() {
     .expect("mode");
     let output = run::output(command(&home).args(["status"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
+    stderr_is(
+        &output,
         format!(
             "thinkthen: cannot read the usage totals: {} has unsafe or unreadable state. Make it private to your user (folder 0700, files 0600), or move it aside.\n",
             usage.join("2026-09.json").display()
-        )
+        ),
     );
 }
 

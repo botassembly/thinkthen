@@ -33,18 +33,15 @@ def main():
     cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
     named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     library=Path(os.environ.get('THINKTHEN_COMPLETE_LIBRARY',str(ROOT/'libraries/c/target/debug/libthinkthen_c.so')))
-    dart=os.environ.get('TT_DART',str(Path.home()/'.local/opt/flutter/bin/dart'))
-    flutter=os.environ.get('TT_FLUTTER',str(Path.home()/'.local/opt/flutter/bin/flutter'))
+    flutter_binary=Path(os.environ.get('THINKTHEN_FLUTTER_BINARY', ROOT / 'libraries/dart/checks/scratch/flutter-parity-bundle/thinkthen_flutter_example'))
     package = Path(os.environ.get('THINKTHEN_PARITY_PACKAGE', ROOT / ('libraries/php' if consumer == 'php' else 'libraries/dart'))).resolve(strict=True)
-    dart_consumer = Path(os.environ.get('THINKTHEN_DART_CONSUMER', ROOT / 'libraries/dart/checks/session_consumer')).resolve(strict=True) if consumer != 'php' else None
     dart_binary = Path(os.environ.get('THINKTHEN_DART_BINARY', ROOT / 'libraries/dart/checks/scratch/parity-build/bundle/bin/parity_consumer'))
-    flutter_consumer = Path(os.environ.get('THINKTHEN_FLUTTER_CONSUMER', ROOT / 'libraries/dart/flutter/example'))
     if os.environ.get('THINKTHEN_ARTIFACT'):
         if not os.environ.get('THINKTHEN_PARITY_PACKAGE') or not os.environ.get('THINKTHEN_COMPLETE_LIBRARY'):
             raise ValueError('installed complete parity requires extracted package and native library')
         library.resolve(strict=True)
         if consumer == 'dart': dart_binary.resolve(strict=True)
-        if consumer == 'flutter': flutter_consumer.resolve(strict=True)
+        if consumer == 'flutter': flutter_binary.resolve(strict=True)
     failures=0
     with tempfile.TemporaryDirectory(prefix='thinkthen-0429-') as tmp:
         scratch=Path(tmp)
@@ -90,9 +87,11 @@ def main():
                                 elif consumer=='dart':
                                     command=[str(dart_binary),str(path),str(library),compact(settings)]
                                 else:
-                                    command=[flutter,'test','--no-pub','--reporter','expanded',str(flutter_consumer/'test/parity_test.dart')]
+                                    command=[str(flutter_binary),str(path),str(library),compact(settings)]
+                                    child.update(DISPLAY=os.environ['DISPLAY'],
+                                                 XAUTHORITY=os.environ['XAUTHORITY'])
                                     child.update(TT_INPUT=str(path),TT_NATIVE_LIBRARY=str(library),TT_SETTINGS=compact(settings),TT_OUTPUT=str(home/'output.json'))
-                                cwd=flutter_consumer if consumer=='flutter' else home
+                                cwd=home
                                 # Flutter calls explicitly adopt the fixture's owned current directory in its test.
                                 child['TT_CASE_HOME']=str(home)
                                 child['THINKTHEN_PHP_PACKAGE']=str(package)
@@ -108,6 +107,7 @@ def main():
                                         backend.process.stdin.write('release\n');backend.process.stdin.flush()
                                     stdout,stderr=running.communicate(timeout=5 if routine else 120)
                                     assert running.returncode==0,(stdout,stderr)
+                                    assert 'sk-conformance-loopback' not in stdout+stderr, 'credential leaked'
                                     if consumer=='flutter':payload=json.loads((home/'output.json').read_text())
                                     else:
                                         assert not stderr,stderr

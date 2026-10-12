@@ -1,9 +1,7 @@
 //! A stop during a batch, or before a cache miss's first send while another
 //! engine holds the same question, sends nothing new.
 
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread;
-use std::time::{Duration, Instant};
 
 use conformance_backend::Backend;
 use thinkthen::{Answer, BatchSetting, CallOptions, Engine, ErrorKind};
@@ -18,29 +16,17 @@ fn a_stop_during_a_batch_or_before_a_cache_miss_sends_nothing_new() {
     let asked = question();
     let texts = ["one", "two", "three", "four", "five", "six"];
     let runs = Runs::default();
-    // Requests 1 to 3 answer one round at a time and request 4 stays held, so
-    // the check stops the batch at exactly four sends. The count never passes
-    // through 4 unseen, as it could once every reply went free.
-    // Ticket 0340 replaced a 400 ms sleep and a free backend, which failed 1 run in 200 under load.
-    let stopped = AtomicBool::new(false);
-    let check = || {
-        let stop = runs.record(backend.count()) >= 3 && backend.count() >= 4;
-        stopped.fetch_or(stop, Ordering::SeqCst);
-        stop
-    };
+    // Each of the first four sends finishes before the host check runs.
+    // The fourth reply lets the check stop the batch before its fifth send.
+    let check = || runs.record(backend.count()) >= 3 && backend.count() >= 4;
     let options = CallOptions::new()
         .interrupt(&check)
         .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let rows: Vec<_> = thread::scope(|scope| {
         scope.spawn(|| {
-            for sent in 1..=3 {
+            for sent in 1..=4 {
                 backend.wait(sent);
                 backend.round();
-            }
-            // Sent work finishes: request 4 answers once the stop has fired.
-            let bound = Instant::now() + Duration::from_secs(10);
-            while !stopped.load(Ordering::SeqCst) && Instant::now() < bound {
-                thread::sleep(Duration::from_millis(5));
             }
             backend.release();
         });

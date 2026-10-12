@@ -1,6 +1,6 @@
 //! SQLite projections execute the same admitted typed request as complete calls.
 use thinkthen::{
-    Call, CallOptions, Engine, Error, Request, RequestArguments, RequestCall, RequestDefinition,
+    Call, CallOptions, Engine, Error, Request, RequestArguments, RequestDefinition,
     RequestEnvironment, RequestFunction, RequestInput, RequestItem, RequestOptions,
     RequestOriginal, RequestOutcome, RequestQuestion, RequestValue,
 };
@@ -44,29 +44,13 @@ pub(crate) fn run(
     items: Vec<RequestItem>,
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
-    let input = match function {
-        RequestFunction::Find => RequestInput::Units { items },
-        RequestFunction::Relate => RequestInput::Entities { items },
-        _ => RequestInput::Records { items },
-    };
+    let input = RequestInput::Records { items };
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
         input,
         options: RequestOptions::default(),
     };
-    let call = match function {
-        RequestFunction::Decide => RequestCall::Decide(args),
-        RequestFunction::Choose => RequestCall::Choose(args),
-        RequestFunction::Tag => RequestCall::Tag(args),
-        RequestFunction::Score => RequestCall::Score(args),
-        RequestFunction::Filter => RequestCall::Filter(args),
-        RequestFunction::Rank => RequestCall::Rank(args),
-        RequestFunction::Find => RequestCall::Find(args),
-        RequestFunction::Annotate => RequestCall::Annotate(args),
-        RequestFunction::Recognize => RequestCall::Recognize(args),
-        RequestFunction::Relate => RequestCall::Relate(args),
-    };
-    let request = Request::new(call).admit()?;
+    let request = Request::for_function(function, args).admit()?;
     match engine.execute_request(
         &request,
         RequestEnvironment {
@@ -93,16 +77,7 @@ pub(crate) fn details(
     options: CallOptions<'_>,
     records: bool,
 ) -> Result<Vec<thinkthen::Details>, Error> {
-    let function = match question {
-        thinkthen::LoadedQuestion::Banded(_) => RequestFunction::Decide,
-        thinkthen::LoadedQuestion::Question(question) => match question.kind() {
-            thinkthen::QuestionKind::Decide => RequestFunction::Decide,
-            thinkthen::QuestionKind::Choose => RequestFunction::Choose,
-            thinkthen::QuestionKind::Tag => RequestFunction::Tag,
-            thinkthen::QuestionKind::Score => RequestFunction::Score,
-            _ => return Err(wrong_result()),
-        },
-    };
+    let function = RequestFunction::for_definition(&question.clone().into());
     let call = run(engine, function, question.clone().into(), items, options)?;
     macro_rules! project {
         ($rows:expr) => {
@@ -110,9 +85,9 @@ pub(crate) fn details(
                 .into_iter()
                 .map(|row| {
                     if records {
-                        row.legacy_details()
+                        row.compatibility_details()
                     } else {
-                        row.result().legacy_details()
+                        row.result().compatibility_details()
                     }
                 })
                 .collect()

@@ -6,6 +6,8 @@ use magnus::{
 mod native_result;
 mod request;
 mod results_generated;
+#[path = "ffi/session_wait/ffi.rs"]
+mod session_wait;
 #[magnus::wrap(class = "ThinkThen::Cancel", free_immediately, size)]
 #[derive(Debug, Default)]
 struct CancelValue(thinkthen::CancelToken);

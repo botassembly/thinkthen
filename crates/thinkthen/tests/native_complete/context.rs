@@ -10,11 +10,9 @@ fn context() -> RecordContext {
 }
 fn input(context: Option<RecordContext>) -> RecordInput<&'static str> {
     RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: "Refund me.",
         context,
-        options: None,
+
+        ..crate::api::record("Refund me.")
     }
 }
 
@@ -22,37 +20,32 @@ fn input(context: Option<RecordContext>) -> RecordInput<&'static str> {
 fn object_context_is_actual_ordered_state_and_replay_preserves_its_observation() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}},"usage":{"input_tokens":887}}"#)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
-            .max_retries(0)
-    };
+    let build = || crate::api::fixed(listener.base(), "complete-private").max_retries(0);
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let thinkthen::LoadedQuestion::Question(question) = Question::from_json(DECLARED).unwrap()
     else {
         unreachable!()
     };
-    let live = engine
-        .decide_records_complete_with(
-            &question,
-            [input(Some(context()))],
-            CallOptions::new().context("Unsupplied fallback."),
-        )
-        .unwrap();
+    let live = crate::api::decide_records(
+        &engine,
+        &question,
+        [input(Some(context()))],
+        CallOptions::new().context("Unsupplied fallback."),
+    )
+    .unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(
         String::from_utf8(listener.requests()[0].body.clone()).unwrap(),
         r#"{"state":{"guide":"Private guide.","ready":false,"extra":[null,12]},"model":"fixed","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}}}"#
     );
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let held = replay
-        .decide_records_complete_with(&question, [input(Some(context()))], CallOptions::new())
-        .unwrap();
+    let held = crate::api::decide_records(
+        &replay,
+        &question,
+        [input(Some(context()))],
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_eq!(
         live.value()[0].result().answer_id(),
         held.value()[0].result().answer_id()
@@ -83,10 +76,8 @@ fn object_context_is_actual_ordered_state_and_replay_preserves_its_observation()
 
 #[test]
 fn finite_context_admission_refuses_the_whole_call_without_coercion_or_cache_lookup() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let thinkthen::LoadedQuestion::Question(question) = Question::from_json(DECLARED).unwrap()
     else {
@@ -99,13 +90,13 @@ fn finite_context_admission_refuses_the_whole_call_without_coercion_or_cache_loo
             ObjectContext::new(&RawRecord::json(r#"{"ready":null}"#).unwrap()).unwrap(),
         ),
     ] {
-        let error = engine
-            .decide_records_complete_with(
-                &question,
-                [input(Some(context())), input(Some(invalid))],
-                CallOptions::new(),
-            )
-            .unwrap_err();
+        let error = crate::api::eager_decisions(
+            &engine,
+            &question,
+            [input(Some(context())), input(Some(invalid))],
+            CallOptions::new(),
+        )
+        .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert_eq!(
             error.detail().message(),
@@ -124,34 +115,38 @@ fn finite_context_admission_refuses_the_whole_call_without_coercion_or_cache_loo
     }
     let undeclared = Question::decide("Refund?").unwrap().cut();
     assert!(
-        engine
-            .decide_records_complete_with(&undeclared, [input(Some(context()))], CallOptions::new())
-            .is_err()
+        crate::api::eager_decisions(
+            &engine,
+            &undeclared,
+            [input(Some(context()))],
+            CallOptions::new()
+        )
+        .is_err()
     );
     let structured = thinkthen::QuestionSet::from_json(
         r#"{"version":1,"questions":{"refund":{"decide":{"ask":"Refund?"}}}}"#,
     )
     .unwrap();
-    let error = engine
-        .annotate_records_complete_with(
-            &structured,
-            [input(None)],
-            CallOptions::new().context("Plain shared guide."),
-        )
-        .unwrap_err();
+    let error = crate::api::annotate(
+        &engine,
+        &structured,
+        [input(None)],
+        CallOptions::new().context("Plain shared guide."),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
         error.detail().message(),
         "a question written as JSON cannot quote a record beside a context"
     );
     assert_eq!(listener.count(), 0);
-    engine
-        .decide_records_complete_with(
-            &question,
-            [input(None)],
-            CallOptions::new().context("Plain shared guide."),
-        )
-        .unwrap();
+    crate::api::decide_records(
+        &engine,
+        &question,
+        [input(None)],
+        CallOptions::new().context("Plain shared guide."),
+    )
+    .unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(
         serde_json::from_slice::<Value>(&listener.requests()[0].body).unwrap()["state"],
@@ -196,19 +191,15 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
             "the per-item context does not match context_schema"
         );
     }
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.7}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::builder()
         .question("refund", question)
         .unwrap()
         .build()
         .unwrap();
-    let rows = engine
-        .annotate_records_complete_with(&set, [record], CallOptions::new())
-        .unwrap();
+    let rows = crate::api::annotate(&engine, &set, [record], CallOptions::new()).unwrap();
     assert_eq!(
         rows.value()[0]
             .original()
@@ -239,13 +230,13 @@ fn native_context_projection_keeps_originals_and_annotation_wraps_the_typed_stat
         ),
         (None, serde_json::json!("Plain shared guide.")),
     ] {
-        engine
-            .annotate_records_complete_with(
-                &text_set,
-                [input(context)],
-                CallOptions::new().context("Plain shared guide."),
-            )
-            .unwrap();
+        crate::api::annotate(
+            &engine,
+            &text_set,
+            [input(context)],
+            CallOptions::new().context("Plain shared guide."),
+        )
+        .unwrap();
         let requests = listener.requests();
         let body: Value = serde_json::from_slice(&requests.last().unwrap().body).unwrap();
         assert_eq!(body["state"], expected);

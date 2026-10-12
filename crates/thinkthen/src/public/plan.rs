@@ -93,10 +93,28 @@ impl PlanEstimate {
     }
 }
 
+/// The existing original-byte budget that refused a native whole input.
+/// Hosts can project compatibility diagnostics through [`Error::source_budget_exceeded`].
+#[derive(Clone, Copy, Debug, Eq, PartialEq, thiserror::Error)]
+pub enum SourceBudgetExceeded {
+    /// Source plan admission exceeded its original-byte budget.
+    #[error("source plan input exceeds 16 MiB")]
+    Plan,
+    /// Source rank admission exceeded its original-byte budget.
+    #[error("source rank reads at most 16 MiB across all input records")]
+    Rank,
+    /// Find admission exceeded its original-byte budget.
+    #[error("find input exceeds 16 MiB")]
+    Find,
+    /// Relate admission exceeded its original-byte budget.
+    #[error("relate input exceeds 16 MiB")]
+    Relate,
+}
+
 /// Original-byte admission shared by native source and whole-set composition.
 pub(crate) struct SourceBudget {
     remaining: usize,
-    message: &'static str,
+    cause: SourceBudgetExceeded,
 }
 impl SourceBudget {
     pub(crate) fn for_source(rank: bool, plan: bool) -> Option<Self> {
@@ -109,32 +127,32 @@ impl SourceBudget {
     pub(crate) fn plan() -> Self {
         Self {
             remaining: crate::core::MAX_RECORD_BYTES,
-            message: "source plan input exceeds 16 MiB",
+            cause: SourceBudgetExceeded::Plan,
         }
     }
     pub(crate) fn rank() -> Self {
         Self {
             remaining: crate::core::MAX_RECORD_BYTES,
-            message: "source rank reads at most 16 MiB across all input records",
+            cause: SourceBudgetExceeded::Rank,
         }
     }
     pub(crate) fn find() -> Self {
         Self {
             remaining: crate::core::MAX_RECORD_BYTES,
-            message: "find input exceeds 16 MiB",
+            cause: SourceBudgetExceeded::Find,
         }
     }
     pub(crate) fn relate() -> Self {
         Self {
             remaining: crate::core::MAX_RECORD_BYTES,
-            message: "relate input exceeds 16 MiB",
+            cause: SourceBudgetExceeded::Relate,
         }
     }
     pub(crate) fn charge(&mut self, bytes: usize) -> Result<(), Error> {
         self.remaining = self
             .remaining
             .checked_sub(bytes)
-            .ok_or_else(|| Error::usage(self.message))?;
+            .ok_or_else(|| Error::refused(self.cause))?;
         Ok(())
     }
 }

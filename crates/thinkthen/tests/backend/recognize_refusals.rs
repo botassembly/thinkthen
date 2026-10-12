@@ -152,7 +152,7 @@ fn impossible_relation_state_uses_cached_recognition_and_sends_nothing() {
     assert_eq!(refused.status.code(), Some(2));
     assert!(refused.stdout.is_empty());
     assert_eq!(listener.requests().len(), 0);
-    assert!(!String::from_utf8_lossy(&refused.stderr).contains("key"));
+    assert!(!crate::harness::said(&refused).contains("key"));
 }
 
 struct Fixture {
@@ -204,9 +204,7 @@ impl Fixture {
         let key = keyed.then_some("PRIVATE-KEY");
         let output = local(&self.listener, &options, key, self.input.as_bytes());
         if keyed && !output.status.success() {
-            return Err(io::Error::other(
-                String::from_utf8_lossy(&output.stderr).into_owned(),
-            ));
+            return Err(io::Error::other(crate::harness::said(&output)));
         }
         Ok(output)
     }

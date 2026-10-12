@@ -1,4 +1,4 @@
-//! One JSON-only output door; native serializers retain their authored order.
+//! One JSON-only output interface; native serializers retain their authored order.
 
 use super::protocol::{Fault, Id};
 use serde::Serialize;

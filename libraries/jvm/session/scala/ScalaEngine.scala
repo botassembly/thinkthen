@@ -86,6 +86,7 @@ final class OwnedSession private[scala] (private val native: thinkthen.OwnedSess
   def tryPush(descriptor: Inputs.RequestSessionDescriptor): Int = ScalaEngine.native(native.tryPush(ScalaEngine.transport(descriptor)))
   def finish(failure: Inputs.RequestReaderFailure = null): Unit = ScalaEngine.native(native.finish(if (failure == null) null else ScalaEngine.transport(failure)))
   def cancel(): Unit = native.cancel()
+  def waitReady(input: Boolean): java.util.concurrent.CompletableFuture[Void] = native.waitReady(input)
   def tryRead(): OwnedSession.Read = ScalaEngine.native { val read = native.tryRead(); OwnedSession.Read(Option(read.packet()).map(packet => Results.SessionPacket.read(packet.json())), read.ended()) }
   override def close(): Unit = native.close()
 }

@@ -1,12 +1,11 @@
 //! The bounds between record input and ordered output.
 
-use crate::child::ChildEnvironment as _;
 #[cfg(unix)]
 use nix::poll::{PollFd, PollFlags, PollTimeout, poll};
 use std::io::{self, BufRead, BufReader, Write};
 #[cfg(unix)]
 use std::os::fd::AsFd;
-use std::process::{Child, ChildStdin, ChildStdout, Command, ExitStatus, Stdio};
+use std::process::{Child, ChildStdin, ChildStdout, ExitStatus};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::{self, Receiver};
 use std::thread;
@@ -102,15 +101,10 @@ fn raw_child(
         arguments.extend(["--jobs", jobs]);
     }
     arguments.extend(extra);
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(env!("CARGO_TARGET_TMPDIR"))
+    let mut child = crate::harness::piped(env!("CARGO_TARGET_TMPDIR"))
         .env(moved.0, moved.1)
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()?;
     let input = child
         .stdin

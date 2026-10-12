@@ -195,10 +195,6 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
-        if on is not None:
-            from ._frame_calls import library
-            if library(records) is None:
-                raise UsageError('annotate with on= takes a Polars or pandas DataFrame; a list of str takes no on=')
         controls = dict(token=token)
         controls['attempts'] = attempts
         controls['details'] = details
@@ -228,8 +224,6 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
-        if on is not None and relations is not None:
-            raise UsageError("recognize with on= takes no relations; ask them of one text")
         controls = dict(token=token)
         controls['attempts'] = attempts
         controls['details'] = details

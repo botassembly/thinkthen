@@ -2240,6 +2240,8 @@ sealed class InputRequestReaderFailure extends NativeObject {
   InputRequestReaderFailure(super.json);
   factory InputRequestReaderFailure.read(Object? value) {
     final map = readObject(value);
+    if (map["kind"] == "producer")
+      return InputRequestReaderFailureProducer.read(map);
     if (map["kind"] == "io") return InputRequestReaderFailureIo.read(map);
     if (map["kind"] == "utf8") return InputRequestReaderFailureUtf8.read(map);
     if (map["kind"] == "invalid_input")
@@ -2279,6 +2281,15 @@ final class InputRequestReaderFailureIo extends InputRequestReaderFailure {
       json.containsKey("location")
           ? Presence.present(InputSessionSourceLocation.read(json["location"]))
           : const Presence.absent();
+}
+
+final class InputRequestReaderFailureProducer
+    extends InputRequestReaderFailure {
+  InputRequestReaderFailureProducer._(super.json);
+  factory InputRequestReaderFailureProducer.read(Object? value) =>
+      InputRequestReaderFailureProducer._(readObject(value));
+  InputRequestReaderFailureProducer() : super({"kind": "producer"});
+  String get kind => json["kind"] as String;
 }
 
 final class InputRequestReaderFailureUtf8 extends InputRequestReaderFailure {

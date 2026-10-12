@@ -48,7 +48,7 @@ final class Client
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
         if ($cancel?->cancelled) throw new CancelledFailure('the call was cancelled');
-        $operation = new Operation($this->ffi, $this->engine, $function, $question, $input, $options, $cancel);
+        $operation = new Operation($this, $this->ffi, $this->engine, $function, $question, $input, $options, $cancel);
         $this->operations[$operation] = true;
         return $operation;
     }
@@ -68,8 +68,8 @@ final class Client
     public function annotate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
     public function recognize(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
     public function relate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
-    public function usage_persistence(): UsageStatus { return $this->usageStatus(false); }
-    public function finish_usage_status(): UsageStatus { return $this->usageStatus(true); }
+    public function usagePersistence(): UsageStatus { return $this->usageStatus(false); }
+    public function finishUsageStatus(): UsageStatus { return $this->usageStatus(true); }
     private function usageStatus(bool $finish): UsageStatus
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');

@@ -24,12 +24,108 @@ class NativeFixtureEnvironment(unittest.TestCase):
         import native_fixture
         launch = subprocess.run
         def compiler(args, **kwargs):
-            probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'"
+            probe = "import os; assert os.environ.get('FAKE_SERVICE_API_KEY') is None; assert os.environ['APPDATA'] == os.environ['XDG_CONFIG_HOME']; assert os.environ['LOCALAPPDATA'] == os.environ['HOME'] + '/local'; assert os.environ['THINKTHEN_API_KEY'] == 'fixture-only'; assert os.environ['CARGO_BUILD_JOBS'] == '2'; assert os.environ['CARGO_PROFILE_DEV_OPT_LEVEL'] == '2'; assert os.environ['RUSTFLAGS'] == '--remap-path-prefix=/checkout=/build'; assert os.environ['RUSTC_WRAPPER'] == ''"
             return launch([sys.executable, '-c', probe], **kwargs)
-        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2'}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
+        with patch.object(os, 'environ', {'PATH': os.defpath, 'FAKE_SERVICE_API_KEY': 'parent-only', 'APPDATA': '/ambient', 'CARGO_BUILD_JOBS': '2', 'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'RUSTFLAGS': '--remap-path-prefix=/checkout=/build', 'RUSTC_WRAPPER': ''}), patch.object(native_parity, 'required_cases', return_value={}), patch.object(subprocess, 'run', side_effect=compiler):
             native_fixture.run('rust', ['cargo', 'fixture.rs'], parity.ROOT,
                                extra_env={'THINKTHEN_API_KEY': 'fixture-only'},
                                rust_manifest=parity.ROOT/'libraries/rust/consumer/Cargo.toml')
+
+
+class BindingCaseTiers(unittest.TestCase):
+    def test_bindings_keep_every_host_case_and_sample_each_native_group(self):
+        contract = parity.inventory()
+        rows = {row['id']: row for row in contract['required_cases']}
+        sample = set(parity.CORE_SAMPLE)
+        for consumer in parity.all_consumers(contract):
+            identity = consumer['id']
+            selected = parity.required_cases(contract, identity)
+            applicable = {key for key, row in rows.items()
+                          if identity in row.get('consumers', [identity])}
+            if identity == 'cli':
+                applicable -= parity.SDK_ONLY_CLI_CASES
+            expected = applicable if identity in ('cli', 'rust', 'c') else {
+                key for key in applicable if rows[key]['tier'] == 'binding' or key in sample}
+            self.assertEqual(set(selected), expected)
+            for key in selected:
+                self.assertEqual(selected[key].get('checks'),
+                                 ['named', 'runtime'] if identity == 'cli' else rows[key].get('checks'))
+                if identity != 'cli':
+                    self.assertEqual(selected[key]['expect'], rows[key]['expect'])
+        # These cases exercise conversion, ordered attachments, host feeds,
+        # error decoding and cancellation rather than native limit repetition.
+        retained = {'selected-object-false-unicode', 'item-root-null', 'wording-version-boolean',
+                    'wording-version-string', 'wording-version-null',
+                    'stream-staged-batch', 'finite-all-before-send', 'cancellation-held-call',
+                    'images-decide', 'images-choose', 'images-score', 'image-file-decide',
+                    'boundary-usage', 'boundary-cancelled', '40-decide-counters'}
+        self.assertTrue(all(rows[key]['tier'] == 'binding' for key in retained))
+        for kind in ('typed-result', 'result2', 'located'):
+            self.assertEqual({row['verb'] for row in rows.values() if row['kind'] == kind
+                              and row['tier'] == 'binding'}, set(contract['functions']))
+        for group in contract['image_admission_scenarios']:
+            candidates = [row for row in rows.values() if row['input'].get('scenarios_ref') == group]
+            self.assertTrue(any(row['tier'] == 'binding' or row['id'] in sample for row in candidates))
+
+    def test_core_sample_covers_each_native_refusal_group_and_failure_kind(self):
+        contract = parity.inventory()
+        named = {row['id']: row for row in json.loads(
+            (parity.ROOT / 'conformance/named-inputs.json').read_text())['cases']}
+        rows = {row['id']: row for row in contract['required_cases']}
+        raw_grammar = {key for key, fixture in named.items()
+                       if 'question_json' in fixture['input']}
+        self.assertTrue(all(rows[key]['tier'] == 'core' for key in raw_grammar))
+        groups = {}
+        for row in contract['required_cases']:
+            if row['tier'] != 'core':
+                continue
+            key = row['id']
+            if row['kind'] == 'image-admission':
+                group = row['input']['scenarios_ref']
+                kinds = {scenario['expect'].get('kind', 'success') for scenario
+                         in contract['image_admission_scenarios'][group]}
+            else:
+                group = ('question-json' if key in raw_grammar
+                         else key.split('-')[0])
+                kinds = {named[key]['expect'].get('error', 'success')}
+            required, sampled = groups.setdefault(group, (set(), set()))
+            required.update(kinds)
+            if key in parity.CORE_SAMPLE:
+                sampled.update(kinds)
+        for group, (required, sampled) in groups.items():
+            with self.subTest(group=group):
+                self.assertEqual(sampled, required)
+
+    def test_inventory_refuses_missing_tier_and_noncore_sample(self):
+        document = json.loads(parity.DOCUMENT.read_text())
+        for defect in ('missing-tier', 'unknown-tier', 'binding-sample'):
+            with self.subTest(defect=defect), tempfile.TemporaryDirectory() as folder:
+                changed = copy.deepcopy(document)
+                row = next(row for row in changed['parity']['required_cases']
+                           if row['id'] == 'image-admission-dimension-decide')
+                if defect == 'missing-tier':
+                    row.pop('tier')
+                else:
+                    row['tier'] = 'unknown' if defect == 'unknown-tier' else 'binding'
+                fixture = Path(folder) / 'cases.json'
+                fixture.write_text(json.dumps(changed))
+                cause = 'core sample' if defect == 'binding-sample' else 'core or binding tier'
+                with patch.object(parity, 'DOCUMENT', fixture), self.assertRaisesRegex(ValueError, cause):
+                    parity.inventory()
+
+    def test_missing_binding_or_sample_cell_still_fails(self):
+        contract = parity.inventory()
+        required = parity.required_cases(contract, 'python')
+        for missing in ('typed-decide', 'image-admission-dimension-decide'):
+            with self.subTest(missing=missing):
+                output = '\n'.join(parity.PREFIX + json.dumps({
+                    'consumer': 'python', 'case': key,
+                    'checks': row.get('checks', ['named', 'runtime']), 'status': 'pass'})
+                    for key, row in required.items() if key != missing)
+                seen = parity.cells(output, ['python'], required, contract)
+                summary = parity.summarize('python', required, 0, seen, None, 'fixture')
+                self.assertEqual(summary['cells'][missing], 'missing')
+                self.assertEqual(summary['adopted_case_count'], len(required) - 1)
 
 
 class ImageRequestArrivals(unittest.TestCase):
@@ -190,7 +286,11 @@ class PublicAssertions(unittest.TestCase):
             'THINKTHEN_TOOLCHAINS': str(Path(scratch) / 'tools'), 'CARGO_BUILD_JOBS': '1',
             'R_LIBS_USER': str(Path(scratch) / 'r-library'), 'PUB_CACHE': str(Path(scratch) / 'pub-cache'),
             'UV_CACHE_DIR': str(Path(scratch) / 'uv-cache'),
+            'npm_config_cache': str(Path(scratch) / 'npm-cache'),
             'UV_PYTHON_INSTALL_DIR': str(Path(scratch) / 'uv-python'),
+            'CARGO_PROFILE_DEV_OPT_LEVEL': '2', 'CARGO_PROFILE_DEV_DEBUG': '0',
+            'CARGO_PROFILE_TEST_OPT_LEVEL': '2', 'CARGO_PROFILE_TEST_DEBUG': '0',
+            'RUSTFLAGS': '--remap-path-prefix=/checkout=/build/thinkthen',
         }):
             (Path(scratch) / 'tools').mkdir()
             env = parity.consumer_environment(scratch, '12345')
@@ -202,13 +302,207 @@ class PublicAssertions(unittest.TestCase):
             self.assertNotIn('THINKTHEN_CONFORMANCE_IDS', env)
             self.assertNotIn('OTHER_API_KEY', env)
             self.assertEqual(env['CARGO_BUILD_JOBS'], '1')
+            for name in ('CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_TEST_OPT_LEVEL'):
+                self.assertEqual(env[name], '2')
+            self.assertEqual(env['RUSTFLAGS'], '--remap-path-prefix=/checkout=/build/thinkthen')
             self.assertEqual(env['R_LIBS_USER'], str(Path(scratch) / 'r-library'))
             self.assertEqual(env['PUB_CACHE'], str(Path(scratch) / 'pub-cache'))
             self.assertEqual(env['UV_CACHE_DIR'], str(Path(scratch) / 'uv-cache'))
+            self.assertEqual(env['npm_config_cache'], str(Path(scratch) / 'npm-cache'))
             self.assertEqual(env['UV_PYTHON_INSTALL_DIR'], str(Path(scratch) / 'uv-python'))
             self.assertEqual((Path(env['HOME']) / '.cache/thinkthen-toolchains').resolve(),
                              Path(scratch) / 'tools')
             self.assertFalse((Path(env['HOME']) / '.config').exists())
+
+    def test_default_tool_locations_survive_the_isolated_home(self):
+        with tempfile.TemporaryDirectory() as scratch, patch.dict(parity.os.environ, {'HOME': '/caller'}, clear=True):
+            env = parity.consumer_environment(scratch, '12345')
+            expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
+                        'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
+                        'PUB_CACHE': '/caller/.pub-cache', 'UV_CACHE_DIR': '/caller/.cache/uv',
+                        'UV_PYTHON_INSTALL_DIR': '/caller/.local/share/uv/python',
+                        'npm_config_cache': '/caller/.npm', 'CARGO_BUILD_JOBS': '4'}
+            for name, value in expected.items():
+                self.assertEqual(env[name], value)
+            self.assertNotEqual(env['HOME'], '/caller')
+
+    def test_four_consumers_run_together_while_rust_consumers_share_one_lane(self):
+        import threading
+        ids = ['rust', 'rust-polars', 'one', 'two', 'three']
+        contract = {'functions': ['decide'], 'consumers': [
+            {'id': name, 'owner': '0431', 'baseline': ['sh', name]}
+            for name in ids], 'required_cases': list(self.cases.values())}
+        barrier = threading.Barrier(4, timeout=3)
+        finished_rust = threading.Event()
+        def command(args, **kwargs):
+            name = args[-2]
+            self.assertEqual(kwargs['env']['THINKTHEN_HEAVY_LOCK_HELD'], '/owned-lock')
+            self.assertEqual(kwargs['env']['THINKTHEN_HEAVY_LOCK'], '/owned-lock')
+            if name == 'rust-polars':
+                self.assertTrue(finished_rust.is_set())
+            else:
+                barrier.wait()
+            for case in self.cases:
+                kwargs['stdout'].write(self.cell(consumer=name, case=case) + '\n')
+            kwargs['stdout'].write('THINKTHEN_CONFORMANCE_DURATION ' + json.dumps({'consumer': name, 'duration_seconds': 0.25}) + '\n')
+            if name == 'rust':
+                finished_rust.set()
+            return subprocess.CompletedProcess(args, 0)
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.dict(parity.os.environ, {'THINKTHEN_HEAVY_LOCK_HELD': '/owned-lock'}, clear=True):
+            self.assertEqual(parity.run('12345'), 0)
+            matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+            self.assertEqual({row['consumer'] for row in matrix}, set(ids))
+            self.assertTrue(all(0 <= row['duration_seconds'] < 3 for row in matrix))
+            self.assertTrue(all(row['duration_seconds'] != 0.25 for row in matrix))
+            self.assertIn('Duration (s)', (Path(scratch) / 'target/parity/matrix.md').read_text())
+
+    def test_family_prepares_once_and_gives_each_member_private_state_and_remaining_budget(self):
+        import threading
+        import time
+        names = ['python', 'pandas', 'python-polars', 'java', 'kotlin', 'scala']
+        contract = {'functions': ['decide'], 'consumers': [
+            {'id': name, 'owner': '0431', 'baseline': ['sh', 'python' if name in names[:3] else 'jvm']}
+            for name in names], 'required_cases': list(self.cases.values())}
+        prepared, homes, active, peak = {}, {}, 0, 0
+        lock = threading.Lock()
+        first_four = threading.Barrier(4, timeout=3)
+        def command(args, **kwargs):
+            nonlocal active, peak
+            env = kwargs['env']
+            if destination := env.get('THINKTHEN_PARITY_PREPARE'):
+                prepared[destination] = args[-2]
+                Path(destination, 'installed-package').write_text('immutable')
+                time.sleep(.03)
+                return subprocess.CompletedProcess(args, 0)
+            member = env['THINKTHEN_PARITY_CONSUMER']
+            assets = Path(env['THINKTHEN_PARITY_PREPARED'])
+            self.assertEqual((assets / 'installed-package').read_text(), 'immutable')
+            self.assertEqual(args[2], '899')
+            homes[member] = {key: env[key] for key in ('HOME', 'XDG_CONFIG_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME', 'TMPDIR')}
+            # Each backend/cache fixture counter belongs to this member alone.
+            Path(env['XDG_STATE_HOME'], 'counter').write_text(member)
+            with lock:
+                active += 1
+                peak = max(peak, active)
+                join = len(homes) <= 4
+            if join:
+                first_four.wait()
+            time.sleep(.01)
+            self.assertEqual(Path(env['XDG_STATE_HOME'], 'counter').read_text(), member)
+            for case in self.cases:
+                kwargs['stdout'].write(self.cell(consumer=member, case=case) + '\n')
+            with lock:
+                active -= 1
+            return subprocess.CompletedProcess(args, 0)
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.dict(parity.os.environ, {'PATH': os.defpath}, clear=True):
+            self.assertEqual(parity.run('12345'), 0)
+            matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+            self.assertEqual(len(prepared), 2)
+            self.assertEqual(peak, 4)
+            self.assertEqual(len(homes), len(names))
+            for key in next(iter(homes.values())):
+                self.assertEqual(len({env[key] for env in homes.values()}), len(names))
+            self.assertTrue(all(row['duration_seconds'] >= .04 for row in matrix))
+            self.assertTrue(all(not Path(path).exists() for path in prepared))
+            self.assertTrue(all(not Path(env['HOME']).exists() for env in homes.values()))
+
+    def test_failed_or_exhausted_family_setup_fails_every_member_without_runtime(self):
+        names = ['python', 'pandas', 'python-polars']
+        contract = {'functions': ['decide'], 'consumers': [
+            {'id': name, 'owner': '0431', 'baseline': ['sh', 'family']}
+            for name in names], 'required_cases': list(self.cases.values())}
+        for failure in (77, 0):
+            clock = [0]
+            def command(args, **kwargs):
+                self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
+                clock[0] = 901 if failure == 0 else 2
+                return subprocess.CompletedProcess(args, failure)
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.dict(parity.os.environ, {'PATH': os.defpath}, clear=True):
+                self.assertEqual(parity.run('12345'), 1)
+                matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+                self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
+                self.assertTrue(all(row['adopted_case_count'] == 0 and 'preparation' in row['baseline_error'] for row in matrix))
+                self.assertTrue(all(row['duration_seconds'] == clock[0] for row in matrix))
+
+    def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
+        import venv
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            library = root / 'libraries/python'
+            library.mkdir(parents=True)
+            shutil.copyfile(parity.ROOT / 'libraries/python/check.sh', library / 'check.sh')
+            (library / 'host.sh').write_text('python_host() { command -v python3; }\n')
+            scripts = root / 'sdlc/scripts'
+            scripts.mkdir(parents=True)
+            shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
+            assets = root / 'assets'
+            venv.EnvBuilder(with_pip=False).create(assets / 'venv')
+            site = next((assets / 'venv/lib').glob('python*/site-packages')) / 'thinkthen'
+            site.mkdir()
+            (site / '__init__.py').write_text('')
+            (assets / 'tests').mkdir()
+            (assets / 'tests/native_case.py').write_text('# compiled installed caller fixture\n')
+            children = root / 'conformance/children'
+            children.mkdir(parents=True)
+            (children / 'native_fixture.py').write_text(
+                'import os, sys\nfrom pathlib import Path\n'
+                'def run(consumer, command, root, **kwargs):\n'
+                ' assert consumer == os.environ["THINKTHEN_PARITY_CONSUMER"]\n'
+                ' assert command[0] == sys.executable\n'
+                ' assert Path(command[-1]).read_text() == "# compiled installed caller fixture\\n"\n'
+                ' assert not Path(command[-1]).is_relative_to(os.environ["THINKTHEN_PARITY_PREPARED"])\n'
+                ' print("private fixture: " + consumer)\n'
+                ' return False\n')
+            tools = root / 'tools'
+            tools.mkdir()
+            for tool in ('uv', 'maturin'):
+                (tools / tool).write_text('#!/bin/sh\nexit 99\n')
+                (tools / tool).chmod(0o755)
+            for member in ('python', 'pandas', 'python-polars'):
+                with tempfile.TemporaryDirectory() as home:
+                    env = parity.consumer_environment(home, '12345')
+                    env.update(PATH=str(tools) + ':' + os.environ['PATH'], THINKTHEN_PARITY_PREPARED=str(assets), THINKTHEN_PARITY_CONSUMER=member)
+                    result = subprocess.run(['sh', str(library / 'check.sh')], env=env, capture_output=True, text=True)
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                    self.assertIn('private fixture: ' + member, result.stdout)
+            self.assertEqual((assets / 'tests/native_case.py').read_text(), '# compiled installed caller fixture\n')
+
+    def test_bare_rust_campaign_uses_the_complete_source_consumer(self):
+        import shlex
+        rust = next(row for row in parity.inventory()['consumers'] if row['id'] == 'rust')
+        contract = {'functions': ['decide'], 'consumers': [rust],
+                    'required_cases': list(self.cases.values())}
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            scripts = root / 'sdlc/scripts'
+            scripts.mkdir(parents=True)
+            shutil.copyfile(parity.ROOT / 'sdlc/scripts/time-limit', scripts / 'time-limit')
+            (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
+            library = root / 'libraries/rust'
+            library.mkdir(parents=True)
+            shutil.copyfile(parity.ROOT / 'libraries/rust/check.sh', library / 'check.sh')
+            tools = root / 'bin'
+            tools.mkdir()
+            runner = tools / 'python3'
+            runner.write_text('#!/bin/sh\nset -eu\n'
+                              'test "$THINKTHEN_TEST_PROFILE" = full\n'
+                              'test -z "${THINKTHEN_CONFORMANCE_IDS+x}"\n'
+                              'test "$1" = -\ntest "$3" = "$2/libraries/rust/consumer/Cargo.toml"\n'
+                              'cat > "$2/invoked-driver"\n'
+                              'exec ' + shlex.quote(sys.executable) + ' "$2/invoked-driver" "$2" "$3"\n')
+            children = root / 'conformance/children'
+            children.mkdir(parents=True)
+            (children / 'native_fixture.py').write_text(
+                'from pathlib import Path\n'
+                'def run(consumer, command, root, rust_manifest):\n'
+                ' assert consumer == "rust"\n'
+                ' assert Path(command[0]).parent.is_dir()\n'
+                ' assert rust_manifest == root / "libraries/rust/consumer/Cargo.toml"\n' +
+                ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
+                ' return False\n')
+            runner.chmod(0o755)
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.dict(parity.os.environ, {'PATH': str(tools) + ':' + os.defpath}, clear=True):
+                self.assertEqual(parity.run('12345'), 0)
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):
         contract = {'functions': ['decide'], 'consumers': [
@@ -271,7 +565,9 @@ class CliApplicability(unittest.TestCase):
         cli = parity.required_cases(self.contract, 'cli')
         self.assertEqual(len(cli), 244)
         self.assertEqual(len(parity.required_cases(self.contract, 'rust')), 255)
-        self.assertEqual(len(parity.required_cases(self.contract, 'mcp')), 258)
+        self.assertEqual(set(parity.required_cases(self.contract, 'mcp')),
+                         {row['id'] for row in original if row['tier'] == 'binding'
+                          or row['id'] in parity.CORE_SAMPLE})
         self.assertTrue(all(case['checks'] == ['named', 'runtime'] for case in cli.values()))
         self.assertEqual(cli['declaration-null']['expect']['error'], 'local')
         self.assertEqual(cli['cancellation-held-call']['cli_boundary'], 'signal-drain')
@@ -432,20 +728,33 @@ class InstalledInputs(unittest.TestCase):
 
     def test_linux_keeps_apple_cells_pending_without_hiding_required_failures(self):
         contract = parity.inventory()
-        contract = contract | {'consumers': [self.consumers['objective-c'], self.consumers['c']],
+        contract = contract | {'consumers': [self.consumers[key] for key in ('objective-c', 'c', 'python')],
                                'pending_consumers': []}
-        for missing in (False, True):
+        binding_case = 'typed-decide'
+        self.assertEqual(parity.required_cases(contract, 'python')[binding_case]['tier'], 'binding')
+        for missing in (None, 'c', 'python'):
             with self.subTest(missing=missing), tempfile.TemporaryDirectory() as scratch:
                 def command(args, **kwargs):
                     self.assertNotIn('libraries/objective-c/check.sh', args)
-                    for case in list(parity.required_cases(contract, 'c').values())[int(missing):]:
+                    consumer = 'python' if 'libraries/python/check.sh' in args else 'c'
+                    required = parity.required_cases(contract, consumer)
+                    omitted = binding_case if consumer == 'python' else next(iter(required))
+                    for key, case in required.items():
+                        if consumer == missing and key == omitted:
+                            continue
                         kwargs['stdout'].write(parity.PREFIX + json.dumps({
-                            'consumer': 'c', 'case': case['id'], 'status': 'pass',
+                            'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
                 with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                    self.assertEqual(parity.run('12345'), int(missing))
+                    self.assertEqual(parity.run('12345'), int(missing is not None))
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
+                for consumer in ('c', 'python'):
+                    row = next(row for row in matrix if row['consumer'] == consumer)
+                    required = parity.required_cases(contract, consumer)
+                    omitted = binding_case if consumer == 'python' else next(iter(required))
+                    self.assertEqual(row['cells'], {key: 'missing' if consumer == missing and key == omitted
+                                                   else 'pass' for key in required})
                 apple = next(row for row in matrix if row['consumer'] == 'objective-c')
                 self.assertEqual(set(apple['cells']), set(parity.required_cases(contract, 'objective-c')))
                 self.assertEqual(set(apple['cells'].values()), {'platform-pending'})
@@ -491,7 +800,7 @@ class FullCheckpoint(unittest.TestCase):
             root = Path(folder)
             scripts = root / "sdlc/scripts"
             scripts.mkdir(parents=True)
-            for name in ("test", "test-full-cases", "scratch.sh"):
+            for name in ("test", "test-full-cases", "scratch.sh", "full-compiler"):
                 shutil.copyfile(source / name, scripts / name)
             (scripts / "heavy-lock").write_text("")
             # Use the real scratch ownership/cleanup, with no host configuration reads.
@@ -503,6 +812,7 @@ class FullCheckpoint(unittest.TestCase):
             command = '''#!/bin/sh
 printf '%s %s\\n' "${0##*/}" "$*" >> "$ROUTING_LOG"
 case ${0##*/} in
+python3) case $* in *--tool-environment*) printf "THINKTHEN_TOOLCHAINS=%s/tools\\n" "$HOME" ;; esac ;;
 uname) echo Darwin ;;
 sh) case $* in *sdlc/scripts/smoke*) exit "$ROUTING_SMOKE_CODE" ;; esac ;;
 esac
@@ -532,6 +842,7 @@ esac
             self.assertEqual(sum("cargo nextest run" in call for call in calls), 2)
             release, calls = run("test-full-cases", "--run")
             self.assertEqual(release.returncode, 0, release.stderr)
+            self.assertFalse(any('nextest' in call or 'sdlc/scripts/test ' in call for call in calls), calls)
             self.assertEqual(sum("sdlc/scripts/smoke" in call for call in calls), 1)
             self.assertEqual(sum("--ignored" in call for call in calls), 2)
             self.assertEqual(sum("sdlc/scripts/surfaces --full-functional" in call
@@ -558,7 +869,7 @@ esac
                     root = Path(folder)
                     scripts = root / 'sdlc/scripts'
                     scripts.mkdir(parents=True)
-                    for name in ['test-full-cases', 'surfaces', 'verdict.sh']:
+                    for name in ['test-full-cases', 'surfaces', 'verdict.sh', 'full-compiler']:
                         shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
                     files = {
                         'sdlc/scripts/heavy-lock': '',
@@ -598,6 +909,7 @@ esac
                             '*) exit 2 ;;\nesac\n'),
                         'conformance/parity.py': (
                             'import os,sys\n'
+                            'if sys.argv[1:] == ["--tool-environment"]: print("THINKTHEN_TOOLCHAINS=" + os.environ["HOME"] + "/tools"); sys.exit(0)\n'
                             'if sys.argv[1:] != ["--validate"]:\n'
                             ' assert "THINKTHEN_CONFORMANCE_IDS" not in os.environ\n'
                             ' assert os.environ["THINKTHEN_TEST_PROFILE"] == "full"\n'
@@ -627,7 +939,7 @@ esac
                     if failed not in ('safety', 'parity') and not installed:
                         expected += ['pack', 'smoke']
                     if entry == 'test-full-cases':
-                        expected[:0] = ['workspace', 'release-workspace', 'release-consumer']
+                        expected[:0] = ['release-workspace', 'release-consumer']
                     if '--publish' in args:
                         expected.insert(0, 'stage-check')
                         if failed in (None, 'docs'):

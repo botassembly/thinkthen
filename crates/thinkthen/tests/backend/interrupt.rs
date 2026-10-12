@@ -1,18 +1,17 @@
 //! SIGINT and SIGTERM cooperatively stop new attempts and preserve completed output.
 
 use crate::child::ChildEnvironment as _;
+use crate::harness::{Canned, Listener, Observed, finish, stderr_is};
 use conformance_backend::Rendezvous;
 use std::fs;
 use std::io::{self, Write as _};
 use std::os::unix::process::ExitStatusExt as _;
 use std::path::Path;
-use std::process::{Child, Command, Output, Stdio};
+use std::process::{Child, Output, Stdio};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::channel;
 use std::time::Duration;
-
-use crate::harness::{Canned, Listener, Observed, finish};
 
 mod facts_flush;
 mod image_input;
@@ -62,17 +61,12 @@ impl Drop for Acknowledgment {
 }
 
 fn spawn(arguments: &[&str], input: &[u8], acknowledgment: &Acknowledgment) -> io::Result<Child> {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(acknowledgment.0.with_extension("home"))
+    let mut child = crate::harness::piped(acknowledgment.0.with_extension("home"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "5000")
         .env("THINKTHEN_TEST_SIGINT_ACK", &acknowledgment.0)
         .env("THINKTHEN_BATCH", "1")
         .args(arguments)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
         .spawn()?;
     let mut stdin = child
         .stdin
@@ -144,8 +138,8 @@ fn held_with_signal(
         output.status.signal(),
         Some(signal),
         "stdout={} stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        crate::harness::printed(&output),
+        crate::harness::said(&output)
     );
     assert_eq!(listener.requests().len(), count);
     Ok(output)
@@ -266,7 +260,7 @@ fn a_signal_after_a_hung_request_is_the_stop() {
             Some(signal_hook::consts::signal::SIGINT)
         );
         assert!(output.stdout.is_empty());
-        assert_eq!(String::from_utf8_lossy(&output.stderr), stderr);
+        stderr_is(&output, stderr);
     }
 }
 
@@ -292,7 +286,7 @@ fn the_facts_line_follows_the_stop_line_before_sigterm() {
     )
     .expect("interrupted facts run");
     assert!(output.stdout.is_empty());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(&output);
     let mut lines = stderr.lines();
     assert_eq!(
         lines.next(),
@@ -367,14 +361,14 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
         )
         .expect("interrupt run");
         assert_eq!(
-            String::from_utf8_lossy(&output.stdout),
+            crate::harness::printed(&output),
             "{\"input\":\"first\",\"value\":true}\n",
             "signal {signal}: stderr={}",
-            String::from_utf8_lossy(&output.stderr)
+            crate::harness::said(&output)
         );
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            "thinkthen: stopped by a signal; 1 record finished, 0 records from a recording\n"
+        stderr_is(
+            &output,
+            "thinkthen: stopped by a signal; 1 record finished, 0 records from a recording\n",
         );
         let stored = crate::support::stored(&cache).expect("the cache");
         assert_eq!(stored.len(), 1, "the first record's one answer");
@@ -400,12 +394,12 @@ fn an_interrupted_batch_finishes_and_starts_no_other() {
     )
     .expect("interrupt run");
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        crate::harness::printed(&output),
         "{\"input\":\"first\",\"value\":true}\n{\"input\":\"second\",\"value\":false}\n"
     );
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: stopped by a signal; 2 records finished\n"
+    stderr_is(
+        &output,
+        "thinkthen: stopped by a signal; 2 records finished\n",
     );
 }
 
@@ -433,7 +427,7 @@ fn sent_single_decide_and_aggregate_commands_flush_before_sigint_status() {
     ];
     for (answer, command, input, expected) in cases {
         let output = held(1, &command, input, move || Canned::ok(answer)).expect("interrupt run");
-        assert_eq!(String::from_utf8_lossy(&output.stdout), expected);
+        assert_eq!(crate::harness::printed(&output), expected);
         assert!(output.stderr.is_empty());
     }
 }
@@ -483,7 +477,7 @@ fn a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing() {
         .stdin(Stdio::null())
         .output()
         .expect("prlimit runs");
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(&output);
     let expected = "thinkthen: defect: SIGINT routing could not be activated\n";
     let why = "RLIMIT_NPROC must bind this user; root ignores it";
     assert_eq!(

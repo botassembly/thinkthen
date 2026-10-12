@@ -48,15 +48,15 @@ fn native_projection_sends_selected_content_and_controls_retaining_entire_origin
             record
         })
     };
-    let rows = engine
-        .choose_records_complete_with(
-            &question,
-            inputs(),
-            CallOptions::new()
-                .context("Ignored fallback.")
-                .batch(BatchSetting::Max),
-        )
-        .unwrap();
+    let rows = crate::api::choose(
+        &engine,
+        &question,
+        inputs(),
+        CallOptions::new()
+            .context("Ignored fallback.")
+            .batch(BatchSetting::Max),
+    )
+    .unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.questions(), 1);
     assert_eq!(
@@ -96,9 +96,7 @@ fn native_projection_sends_selected_content_and_controls_retaining_entire_origin
         .unwrap()
         .build()
         .unwrap();
-    let replayed = replay
-        .choose_records_complete_with(&question, inputs(), CallOptions::new())
-        .unwrap();
+    let replayed = crate::api::choose(&replay, &question, inputs(), CallOptions::new()).unwrap();
     for (first, held) in rows.value().iter().zip(replayed.value()) {
         assert_eq!(first.result().answer_id(), held.result().answer_id());
         assert_eq!(held.result().identity().origin(), Some(Origin::Replay));
@@ -142,10 +140,8 @@ fn shared_composition_refuses_missing_or_nonstring_controls_without_sending_or_e
 
 #[test]
 fn annotation_member_pointers_read_the_selected_record_and_keep_the_whole_original() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let engine = engine(&listener);
     let set = thinkthen::QuestionSet::from_json(
         r#"{"version":1,"questions":{"refund":{"decide":"Refund?","on":"/message"}}}"#,
@@ -156,9 +152,7 @@ fn annotation_member_pointers_read_the_selected_record_and_keep_the_whole_origin
         .unwrap()
         .compose(RawRecord::json(original).unwrap())
         .unwrap();
-    let call = engine
-        .annotate_records_complete_with(&set, [record], CallOptions::new())
-        .unwrap();
+    let call = crate::api::annotate(&engine, &set, [record], CallOptions::new()).unwrap();
     let doc: Value =
         serde_json::from_str(&serde_json::to_string(&call.value()[0]).unwrap()).unwrap();
     assert_eq!(
@@ -179,10 +173,8 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
     use base64::Engine as _;
     use thinkthen::{ImageInput, ImageMedia};
     const RED: &[u8] = include_bytes!("../../../../specification/fixtures/images/red.png");
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"d1","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
+    let listener =
+        crate::api::answering(r#"{"model":"d1","answers":{"q1":{"type":"noul","noul":0.9}}}"#);
     let folder = folder();
     let engine = storage_builder(&listener, "liquid", "d1")
         .cache_at(&folder)
@@ -202,9 +194,8 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
         record
     };
     let question = Question::decide("Same?").unwrap().cut();
-    let rows = engine
-        .decide_records_complete_with(&question, [record()], CallOptions::new())
-        .unwrap();
+    let rows =
+        crate::api::decide_records(&engine, &question, [record()], CallOptions::new()).unwrap();
     assert_eq!(rows.value()[0].original().images().len(), 2);
     assert_eq!(rows.value()[0].original().images()[0].bytes(), RED);
     let encoded = format!(
@@ -225,9 +216,8 @@ fn explicit_composed_images_keep_bytes_duplicates_and_filename_out_of_live_and_r
     located.original = located
         .original
         .with_location(SourceLocation::new("renamed.jsonl".into(), Some(9), Some(9)).unwrap());
-    let held = replay
-        .decide_records_complete_with(&question, [located], CallOptions::new())
-        .unwrap();
+    let held =
+        crate::api::decide_records(&replay, &question, [located], CallOptions::new()).unwrap();
     assert_eq!(
         held.value()[0].result().answer_id(),
         rows.value()[0].result().answer_id()
@@ -305,19 +295,12 @@ fn complete_file_image_call(
     verb: &str,
     input: &thinkthen::QuestionInput,
 ) -> Value {
-    let record = || thinkthen::RecordInput {
-        examples: None,
-        seed_spans: None,
-        original: input.clone(),
-        context: None,
-        options: None,
-    };
+    let record = || crate::api::record(input.clone());
     match verb {
         "decide" => {
             let q = Question::decide("Seen?").unwrap().cut();
-            let call = engine
-                .decide_records_complete_with(&q, [record()], CallOptions::new())
-                .unwrap();
+            let call =
+                crate::api::decide_records(engine, &q, [record()], CallOptions::new()).unwrap();
             schema::call(&call, "completeDecide");
             serde_json::to_value(call.value()).unwrap()
         }
@@ -330,9 +313,7 @@ fn complete_file_image_call(
                 .unwrap()
                 .build()
                 .unwrap();
-            let call = engine
-                .choose_records_complete_with(&q, [record()], CallOptions::new())
-                .unwrap();
+            let call = crate::api::choose(engine, &q, [record()], CallOptions::new()).unwrap();
             schema::call(&call, "completeChoose");
             serde_json::to_value(call.value()).unwrap()
         }
@@ -345,9 +326,7 @@ fn complete_file_image_call(
                 .unwrap()
                 .build()
                 .unwrap();
-            let call = engine
-                .score_records_complete_with(&q, [record()], CallOptions::new())
-                .unwrap();
+            let call = crate::api::score(engine, &q, [record()], CallOptions::new()).unwrap();
             schema::call(&call, "completeScore");
             serde_json::to_value(call.value()).unwrap()
         }

@@ -18,7 +18,7 @@ pub(crate) fn rank(
     };
     let prepared = match admitted {
         Some(admitted) => admitted.resolve_cli_rank(&typed),
-        None => crate::cli_atomic::rank(&arguments.question, false, &typed),
+        None => crate::cli::atomic::rank(&arguments.question, false, &typed),
     }
     .map_err(|error| match Failure::from(error) {
         Failure::Question(crate::core::QuestionFileError::VerbMismatch { held, .. }) => {

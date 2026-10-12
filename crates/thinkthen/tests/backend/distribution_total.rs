@@ -23,13 +23,12 @@ fn a_distribution_measurement_repeats_no_untrusted_text() {
     )
     .expect("the compiled binary runs");
 
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the answer to question `q1` has probability total 0.8, member count 2, and tolerance 0.01; the total differs from one by more than the tolerance\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the reply was refused: the answer to question `q1` has probability total 0.8, member count 2, and tolerance 0.01; the total differs from one by more than the tolerance\n",
     );
-    let said = String::from_utf8_lossy(&output.stderr);
+    let said = crate::harness::said(&output);
     for marker in [label, "0.4", "private-response-marker"] {
         assert!(!said.contains(marker), "the diagnostic repeated {marker}");
     }

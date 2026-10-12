@@ -44,19 +44,9 @@ fn the_schema_and_the_parser_agree_on_the_shared_corpus() {
         }
         let output = run(&arguments, input).expect("the compiled binary runs");
         if case["valid"].as_bool().expect("a case verdict") {
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{name}: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+            crate::harness::exits_because(&output, 0, || name.to_owned());
         } else {
-            assert_eq!(
-                output.status.code(),
-                Some(5),
-                "{name}: {}",
-                String::from_utf8_lossy(&output.stderr)
-            );
+            crate::harness::exits_because(&output, 5, || name.to_owned());
         }
     }
 }

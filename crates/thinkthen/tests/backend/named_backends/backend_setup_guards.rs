@@ -1,5 +1,6 @@
 //! Ticket 0400: setup-only default inheritance and unchanged trust guards.
 use super::support::{Home, Proxy, listener, said};
+use crate::harness::exits_because;
 use serde_json::json;
 
 #[test]
@@ -159,12 +160,9 @@ fn check_preflights_every_fixed_probe_under_the_selected_setup_before_sending_or
                 args.push("--plan");
             }
             let out = home.run(&args, &[]);
-            assert_eq!(
-                out.status.code(),
-                Some(2),
-                "{field}, plan={plan}: {}",
-                said(&out).1
-            );
+            exits_because(&out, 2, || {
+                format!("{field}, plan={plan}: {}", said(&out).1)
+            });
             assert_eq!(said(&out).0, "");
             assert_eq!(
                 said(&out).1,

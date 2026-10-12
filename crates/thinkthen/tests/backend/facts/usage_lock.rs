@@ -63,7 +63,7 @@ fn a_foreign_usage_lock_loses_only_advisory_counts_before_exit() {
     let output = finish(child, "held usage lock").expect("command output");
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(output.stdout, b"true\n");
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(&output);
     let lines: Vec<_> = stderr.lines().collect();
     assert_eq!(lines.len(), 2, "{stderr}");
     assert_eq!(

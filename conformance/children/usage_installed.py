@@ -16,8 +16,12 @@ from usage import run_usage
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--family', choices=('ada', 'cobol'))
+parser.add_argument('--ada-package', type=Path)
+parser.add_argument('--ada-objects', type=Path)
 args = parser.parse_args()
 families = (args.family,) if args.family else ('ada', 'cobol')
+if bool(args.ada_package) != bool(args.ada_objects):
+    parser.error('--ada-package and --ada-objects must be supplied together')
 
 NATIVE = Path(os.environ.get('THINKTHEN_C_LIBRARY', ROOT / 'libraries/c/target/debug/libthinkthen_c.so'))
 
@@ -142,21 +146,26 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
     (work / 'OWNER').write_text('0468 Ada and COBOL installed persistence consumer\n')
     for family in families:
         package = Path(os.environ.get('THINKTHEN_USAGE_COBOL_PACKAGE', ROOT / 'libraries/cobol')) if family == 'cobol' else ROOT / 'libraries' / family
-        shutil.copytree(package / 'src', work / family / 'src')
+        if family != 'ada' or not args.ada_package:
+            shutil.copytree(package / 'src', work / family / 'src')
     if 'cobol' in families:
         package = Path(os.environ.get('THINKTHEN_USAGE_COBOL_PACKAGE', ROOT / 'libraries/cobol'))
         shutil.copytree(package / 'copybooks', work / 'cobol/copybooks')
         shutil.copytree(package / 'examples', work / 'cobol/examples')
         shutil.copy2(Path(os.environ.get('THINKTHEN_C_HEADER', ROOT / 'libraries/c/include/thinkthen.h')), work / 'cobol/src/thinkthen.h')
-    shutil.copy2(NATIVE, work / 'libthinkthen.so.0')
-    (work / 'libthinkthen.so').symlink_to('libthinkthen.so.0')
+    if 'cobol' in families or not args.ada_package:
+        shutil.copy2(NATIVE, work / 'libthinkthen.so.0')
+        (work / 'libthinkthen.so').symlink_to('libthinkthen.so.0')
     if 'ada' in families:
         shutil.copy2(ROOT / 'libraries/ada/checks/usage_status.adb', work / 'usage_status.adb')
         (work / 'ada-objects').mkdir()
-        build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(work / 'ada/src'),
+        package = args.ada_package.resolve(strict=True) if args.ada_package else work / 'ada'
+        reuse = ['-aO' + str(args.ada_objects.resolve(strict=True))] if args.ada_objects else []
+        linking = [str(package / 'native/lib/libthinkthen.a'), '-ldl', '-lpthread', '-lm'] if args.ada_package else ['-L' + str(work), '-lthinkthen', '-Wl,-rpath,$ORIGIN']
+        build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-I' + str(package / 'src'), *reuse,
                                 str(work / 'usage_status.adb'), '-D', str(work / 'ada-objects'),
-                                '-o', str(work / 'ada-consumer'), '-largs', '-L' + str(work),
-                                '-lthinkthen', '-Wl,-rpath,$ORIGIN'], cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
+                                '-o', str(work / 'ada-consumer'), '-largs', *linking],
+                               cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
         assert build.returncode == 0, build.stdout + build.stderr
     if 'cobol' in families:
         (work / 'usage_status.cob').write_text(cobol_source(work / 'cobol'))

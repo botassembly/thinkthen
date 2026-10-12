@@ -1,9 +1,9 @@
 //! The compiled binary asking a pick and a placement of a loopback backend.
 
+pub(crate) use crate::harness::printed;
+use crate::harness::{Canned, Listener, spawn};
 use std::io;
 use std::process::Output;
-
-use crate::harness::{Canned, Listener, spawn};
 
 /// The teams a routing question picks between, in the order they are sent.
 const TEAMS: [&str; 4] = ["billing", "shipping", "account", "other"];
@@ -113,13 +113,8 @@ fn two_choose_processes_share_a_fresh_and_populated_cache() {
         start.wait();
         for run in runs {
             let output = run.join().expect("worker");
-            assert_eq!(
-                output.status.code(),
-                Some(0),
-                "{}",
-                String::from_utf8_lossy(&output.stderr)
-            );
-            assert_eq!(String::from_utf8_lossy(&output.stdout).lines().count(), 8);
+            crate::harness::exits(&output, 0);
+            assert_eq!(crate::harness::printed(&output).lines().count(), 8);
         }
     }
 }
@@ -132,9 +127,6 @@ fn score(response: &str, arguments: &[&str]) -> io::Result<(Listener, Output)> {
 }
 
 /// What one command printed on standard output.
-fn printed(output: &Output) -> String {
-    String::from_utf8_lossy(&output.stdout).into_owned()
-}
 
 #[test]
 fn a_pick_sends_the_options_as_criteria_in_the_order_they_were_typed() {
@@ -311,7 +303,7 @@ fn a_reply_that_answers_with_the_wrong_shape_or_leaves_an_option_out_is_refused(
 
         assert_eq!(output.status.code(), Some(4), "{response}");
         assert!(output.stdout.is_empty(), "{response}");
-        let message = String::from_utf8_lossy(&output.stderr);
+        let message = crate::harness::said(&output);
         assert!(message.contains("`q1`"), "{message}");
     }
 }
@@ -324,11 +316,10 @@ fn a_repeated_option_name_refuses_the_reply() {
         r#""probabilities":{"billing":0.1,"billing":0.9,"shipping":0.04,"account":0.04,"other":0.02}}}}"#,
     );
     let (_listener, output) = choose(response, &[]).expect("a loopback exchange");
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 165 is not one\n"
+    crate::harness::refuses(
+        &output,
+        4,
+        "thinkthen: the reply was refused: the response is not a systemone response: the JSON at line 1 column 165 is not one\n",
     );
 }
 

@@ -1,20 +1,20 @@
 //! Keep native value/storage regressions while the complete ABI waits for result/2.
 #[path = "checks.rs"]
 mod checks;
-use super::{content, door, files, list, question, record, scratch, source, string, text};
+use super::{content, files, interface, list, question, record, scratch, source, string, text};
 use crate::ffi::carriers::{
     ChoiceV1, ChoicesV1, MemberSpecV1, MemberSpecsV1, OptionalContentV1, QuestionSpecV1,
     RelationV1, RelationsV1, RuleV1,
 };
 use crate::{
-    Door,
+    EngineHandle,
     current::{self, QuestionHandle, ResultHandle, Row},
     failures,
 };
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::CallOptions;
 
-fn make(door: &Door, kind: u32) -> Box<QuestionHandle> {
+fn make(interface: &EngineHandle, kind: u32) -> Box<QuestionHandle> {
     let choices = [
         ChoiceV1 {
             name: string("z-first"),
@@ -42,8 +42,8 @@ fn make(door: &Door, kind: u32) -> Box<QuestionHandle> {
     let second;
     let members;
     if kind == 8 {
-        first = make(door, 1);
-        second = make(door, 2);
+        first = make(interface, 1);
+        second = make(interface, 2);
         members = [
             MemberSpecV1 {
                 name: string("z_first"),
@@ -71,19 +71,32 @@ fn make(door: &Door, kind: u32) -> Box<QuestionHandle> {
             len: 1,
         };
     }
-    question(door, spec)
+    question(interface, spec)
 }
-fn call(door: &Door, kind: u32, q: &QuestionHandle, s: &current::SourceHandle) -> ResultHandle {
-    current::ask(&door.0.engine, kind, q, s, CallOptions::default(), true).expect("native result")
+fn call(
+    interface: &EngineHandle,
+    kind: u32,
+    q: &QuestionHandle,
+    s: &current::SourceHandle,
+) -> ResultHandle {
+    current::ask(
+        &interface.0.engine,
+        kind,
+        q,
+        s,
+        CallOptions::default(),
+        true,
+    )
+    .expect("native result")
 }
 #[test]
 fn ten_private_native_projections_keep_values_probabilities_order_and_owned_storage() {
     for file_mode in [false, true] {
         let backend = Backend::start().expect("loopback");
-        let door = door(&format!("{}/generic/v1", backend.origin()));
+        let interface = interface(&format!("{}/generic/v1", backend.origin()));
         let source = if file_mode {
             files(
-                &door,
+                &interface,
                 concat!(
                     env!("CARGO_MANIFEST_DIR"),
                     "/../../specification/fixtures/files/documents"
@@ -92,7 +105,7 @@ fn ten_private_native_projections_keep_values_probabilities_order_and_owned_stor
             )
         } else {
             source(
-                &door,
+                &interface,
                 &[
                     record("Maria Chen joined Northwind Freight."),
                     record("A different document."),
@@ -100,9 +113,9 @@ fn ten_private_native_projections_keep_values_probabilities_order_and_owned_stor
             )
         };
         let results = (1..=10)
-            .map(|kind| call(&door, kind, &make(&door, kind), &source))
+            .map(|kind| call(&interface, kind, &make(&interface, kind), &source))
             .collect::<Vec<_>>();
-        drop(door);
+        drop(interface);
         drop(source);
         for (index, result) in results.iter().enumerate() {
             assert_eq!(result.summary.function, index as u32 + 1);
@@ -133,9 +146,9 @@ fn native_null_authored_meanings_and_empty_attempts_remain_distinct() {
             r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"noul","noul":{probability}}}}}}}"#
         );
         let backend = Listener::answering(move |_| Canned::ok(&reply)).expect("backend");
-        let door = door(backend.base());
+        let interface = interface(backend.base());
         let q = question(
-            &door,
+            &interface,
             QuestionSpecV1 {
                 kind: 1,
                 text: content("Is it relevant?"),
@@ -158,7 +171,12 @@ fn native_null_authored_meanings_and_empty_attempts_remain_distinct() {
                 ..Default::default()
             },
         );
-        let result = call(&door, 1, &q, &source(&door, &[record("evidence")]));
+        let result = call(
+            &interface,
+            1,
+            &q,
+            &source(&interface, &[record("evidence")]),
+        );
         let Row::Atomic(row) = &result.rows[0] else {
             panic!("atomic");
         };
@@ -168,7 +186,7 @@ fn native_null_authored_meanings_and_empty_attempts_remain_distinct() {
             assert_eq!(row.value.authored.value.kind, kind);
             assert_eq!(text(row.value.authored.value.data), authored);
         }
-        let empty = call(&door, 1, &q, &source(&door, &[]));
+        let empty = call(&interface, 1, &q, &source(&interface, &[]));
         assert_eq!(
             (
                 empty.summary.count,
@@ -192,13 +210,13 @@ fn native_null_authored_meanings_and_empty_attempts_remain_distinct() {
 #[test]
 fn native_wrong_kind_deadline_and_cancel_refuse_without_sending() {
     let backend = Backend::start().expect("loopback");
-    let door = door(&format!("{}/generic/v1", backend.origin()));
-    let q = make(&door, 1);
-    let source = source(&door, &[record("evidence")]);
+    let interface = interface(&format!("{}/generic/v1", backend.origin()));
+    let q = make(&interface, 1);
+    let source = source(&interface, &[record("evidence")]);
     assert_eq!(
-        door.0.fail(
+        interface.0.fail(
             current::ask(
-                &door.0.engine,
+                &interface.0.engine,
                 2,
                 &q,
                 &source,
@@ -211,17 +229,18 @@ fn native_wrong_kind_deadline_and_cancel_refuse_without_sending() {
     );
     let options = CallOptions::default().deadline_ms(0).expect("deadline");
     assert_eq!(
-        door.0.fail(
-            current::ask(&door.0.engine, 1, &q, &source, options, false).expect_err("deadline")
+        interface.0.fail(
+            current::ask(&interface.0.engine, 1, &q, &source, options, false)
+                .expect_err("deadline")
         ),
         3
     );
     let token = thinkthen::CancelToken::new();
     token.cancel();
     assert_eq!(
-        door.0.fail(
+        interface.0.fail(
             current::ask(
-                &door.0.engine,
+                &interface.0.engine,
                 1,
                 &q,
                 &source,
@@ -237,21 +256,28 @@ fn native_wrong_kind_deadline_and_cancel_refuse_without_sending() {
 #[test]
 fn native_started_failure_retains_actual_final_facts() {
     let backend = Backend::start().expect("loopback");
-    let door = door(&format!("{}/arm/status/401/v1", backend.origin()));
-    let q = make(&door, 1);
-    let s = source(&door, &[record("evidence")]);
+    let interface = interface(&format!("{}/arm/status/401/v1", backend.origin()));
+    let q = make(&interface, 1);
+    let s = source(&interface, &[record("evidence")]);
     assert_eq!(
-        door.0.fail(
-            current::ask(&door.0.engine, 1, &q, &s, CallOptions::default(), false)
-                .expect_err("401")
+        interface.0.fail(
+            current::ask(
+                &interface.0.engine,
+                1,
+                &q,
+                &s,
+                CallOptions::default(),
+                false
+            )
+            .expect_err("401")
         ),
         2
     );
     let legacy: serde_json::Value =
-        serde_json::from_str(&super::saved_facts(&door)).expect("legacy facts");
+        serde_json::from_str(&super::saved_facts(&interface)).expect("legacy facts");
     assert_eq!(legacy["requests_sent"], 1);
     assert_eq!(legacy["records"], 0);
-    let saved = failures::snapshot(Some(&door.0)).expect("saved failure");
+    let saved = failures::snapshot(Some(&interface.0)).expect("saved failure");
     assert_eq!(saved.code, 2);
     assert_eq!(
         saved
@@ -265,8 +291,8 @@ fn native_started_failure_retains_actual_final_facts() {
         saved.facts.as_ref().expect("native final facts").records(),
         0
     );
-    door.0.fail(failures::Failure::usage("later refusal"));
-    drop(door);
+    interface.0.fail(failures::Failure::usage("later refusal"));
+    drop(interface);
     assert_eq!(
         saved
             .facts
@@ -280,13 +306,18 @@ fn native_started_failure_retains_actual_final_facts() {
 #[test]
 fn native_loaded_question_set_and_member_failures_keep_order_and_authored_values() {
     let backend = Backend::start().expect("loopback");
-    let door = door(&format!("{}/generic/v1", backend.origin()));
+    let interface = interface(&format!("{}/generic/v1", backend.origin()));
     let q = current::load(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../../specification/fixtures/files/questions.json"
     ))
     .expect("loaded");
-    let result = call(&door, 8, &q, &source(&door, &[record("evidence")]));
+    let result = call(
+        &interface,
+        8,
+        &q,
+        &source(&interface, &[record("evidence")]),
+    );
     let Row::Annotation(row) = &result.rows[0] else {
         panic!("annotation");
     };
@@ -296,12 +327,17 @@ fn native_loaded_question_set_and_member_failures_keep_order_and_authored_values
         ["contract", "urgent"]
     );
     assert_eq!(backend.count(), 1);
-    let door = super::door(&format!(
+    let interface = super::interface(&format!(
         "{}/arm/malformed/missing_probability/v1",
         backend.origin()
     ));
     let q = current::parse(8, r#"{"version":1,"questions":{"first":{"decide":"Q?","true":"granted"},"second":{"choose":"Which?","options":["yes","no"]}}}"#.into()).expect("set");
-    let result = call(&door, 8, &q, &source(&door, &[record("evidence")]));
+    let result = call(
+        &interface,
+        8,
+        &q,
+        &source(&interface, &[record("evidence")]),
+    );
     let Row::Annotation(row) = &result.rows[0] else {
         panic!("annotation");
     };
@@ -331,11 +367,11 @@ fn native_recording_replay_preserves_values_keys_and_zero_send_attempts() {
         thinkthen::Engine::builder()
             .base_url(&base)
             .expect("url")
-            .api_key("sk-c-door-loopback")
+            .api_key("sk-c-interface-loopback")
             .expect("fake key")
             .no_cache()
     };
-    let live = Door(failures::Held::new(
+    let live = EngineHandle(failures::Held::new(
         builder()
             .record(&folder)
             .expect("record")
@@ -346,7 +382,7 @@ fn native_recording_replay_preserves_values_keys_and_zero_send_attempts() {
     let source = source(&live, &[record("evidence")]);
     let first = call(&live, 1, &q, &source);
     drop(live);
-    let replay = Door(failures::Held::new(
+    let replay = EngineHandle(failures::Held::new(
         builder()
             .replay(&folder)
             .expect("replay")
@@ -382,11 +418,11 @@ fn native_recording_replay_preserves_values_keys_and_zero_send_attempts() {
 #[test]
 fn native_line_reader_keeps_unicode_crlf_and_physical_lines_without_sending_paths() {
     let backend = Listener::answering(|_| Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)).expect("loopback");
-    let door = door(backend.base());
+    let interface = interface(backend.base());
     let path = scratch("lines").join("named-input.txt");
     std::fs::write(&path, "é\r\n\r\n😀 tail\n").expect("source");
-    let source = files(&door, path.to_str().expect("path"), 1);
-    let result = call(&door, 1, &make(&door, 1), &source);
+    let source = files(&interface, path.to_str().expect("path"), 1);
+    let result = call(&interface, 1, &make(&interface, 1), &source);
     for (row, input, line) in [(&result.rows[0], "é", 1), (&result.rows[1], "😀 tail", 3)] {
         let Row::Atomic(row) = row else {
             panic!("atomic");
@@ -404,16 +440,16 @@ fn native_line_reader_keeps_unicode_crlf_and_physical_lines_without_sending_path
 #[test]
 fn immutable_shared_native_inputs_produce_independent_results_on_two_threads() {
     let backend = Backend::start().expect("loopback");
-    let door = door(&format!("{}/generic/v1", backend.origin()));
-    let q = make(&door, 1);
-    let source = source(&door, &[record("evidence")]);
+    let interface = interface(&format!("{}/generic/v1", backend.origin()));
+    let q = make(&interface, 1);
+    let source = source(&interface, &[record("evidence")]);
     std::thread::scope(|scope| {
         let one = scope.spawn(|| {
-            let result = call(&door, 1, &q, &source);
+            let result = call(&interface, 1, &q, &source);
             assert_eq!(result.summary.count, 1);
         });
         let two = scope.spawn(|| {
-            let result = call(&door, 1, &q, &source);
+            let result = call(&interface, 1, &q, &source);
             assert_eq!(result.summary.count, 1);
         });
         one.join().expect("first");

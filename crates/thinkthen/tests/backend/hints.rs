@@ -1,27 +1,20 @@
 //! Refusals at the compiled command boundary.
 #![cfg(feature = "cli")]
 
-use crate::child::ChildEnvironment as _;
 use std::ffi::OsStr;
 use std::io::{self, Write};
-use std::process::{Command, Output, Stdio};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::process::{Output, Stdio};
 
 use crate::wait;
 
 fn run(args: &[&OsStr], input: &[u8]) -> io::Result<Output> {
-    static RUNS: AtomicUsize = AtomicUsize::new(0);
-    let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("hints-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
-    let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .clear_environment()
-        .home(home)
-        .env("THINKTHEN_BASE_URL", "http://127.0.0.1:1/v1")
-        .args(args)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+    let mut child =
+        crate::harness::command(&[], &[("THINKTHEN_BASE_URL", "http://127.0.0.1:1/v1")])
+            .args(args)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
     let mut stdin = child
         .stdin
         .take()
@@ -37,7 +30,7 @@ fn check(args: &[&str], input: &[u8], stderr: &str) {
     let output = run(&args, input).expect("binary runs");
     assert_eq!(output.status.code(), Some(2), "{args:?}");
     assert!(output.stdout.is_empty(), "{args:?}");
-    assert_eq!(String::from_utf8_lossy(&output.stderr), stderr, "{args:?}");
+    assert_eq!(crate::harness::said(&output), stderr, "{args:?}");
 }
 
 #[test]

@@ -5,13 +5,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef _WIN32
-#include <windows.h>
-#define yield() Sleep(0)
-#else
-#include <sched.h>
-#define yield() sched_yield()
-#endif
 static int failed;
 static void check(int holds, const char *what) {
     if (!holds) { fprintf(stderr, "FAIL %s\n", what); failed = 1; }
@@ -133,15 +126,32 @@ static thinkthen_session_result *drain(thinkthen_session *session) {
             check(out == NULL, "pending and end clear result output");
             if (status == THINKTHEN_SESSION_END_V1) return kept;
             check(status == THINKTHEN_SESSION_PENDING_V1, "pending status");
-            yield();
+            uint32_t ready;
+            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "native wait succeeds");
         }
     }
 }
 static THREAD_RESULT separate_error(void *unused) {
     (void)unused;
     check(strcmp(thinkthen_session_error_message(), "no session failure yet") == 0, "new thread has independent diagnostic");
+    check(thinkthen_session_error_retryable() == 0 && thinkthen_session_error_facts_json() == NULL, "new thread has no session retry or facts");
     check(thinkthen_session_new(NULL, NULL, 0, NULL) == THINKTHEN_EUSAGE, "other thread refusal");
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "other thread fixed diagnostic");
+    return THREAD_DONE;
+}
+struct native_waiter {
+    thinkthen_session *session;
+    uint32_t ready;
+    int code;
+    int preserved;
+};
+static THREAD_RESULT wait_native(void *argument) {
+    struct native_waiter *waiter = argument;
+    uint32_t sentinel = 99;
+    waiter->preserved = thinkthen_session_wait(waiter->session, 99, 0, &sentinel) == THINKTHEN_EUSAGE && sentinel == 99;
+    const char *before = thinkthen_session_error_message();
+    waiter->code = thinkthen_session_wait(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, 5000, &waiter->ready);
+    waiter->preserved = waiter->preserved && before == thinkthen_session_error_message();
     return THREAD_DONE;
 }
 int main(void) {
@@ -153,8 +163,21 @@ int main(void) {
         thinkthen_engine_free(engine);
         if (!session) return 1;
         (void)getchar();
+        // Discard already-ready observations so this wait watches the held work.
+        for (;;) {
+            uint32_t status; thinkthen_session_result *packet = NULL;
+            check(thinkthen_session_try_read(session, &status, &packet) == THINKTHEN_OK, "held read succeeds");
+            thinkthen_session_result_free(packet);
+            if (status != THINKTHEN_SESSION_RESULT_V1) break;
+        }
+        struct native_waiter waiter = {session, 99, 99, 0};
+        THREAD_TYPE thread;
+        if (fixture_start(&thread, wait_native, &waiter) != 0) return 1;
         thinkthen_session_cancel(session);
         puts("cancelled"); fflush(stdout);
+        check(fixture_join(thread) == 0, "join native waiter before freeing handle");
+        check(waiter.code == THINKTHEN_OK && waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1, "cancel wakes held native wait");
+        check(waiter.preserved, "wait keeps its own calling-thread diagnostics");
         thinkthen_session_free(session);
         puts("freed"); fflush(stdout);
         (void)getchar();
@@ -170,12 +193,20 @@ int main(void) {
         check(out == (thinkthen_session *)(uintptr_t)7, "native refusal preserves output");
         memset(json, 'x', len); free(json);
         const char *message = thinkthen_session_error_message();
+        int retryable = thinkthen_session_error_retryable();
+        const char *facts = thinkthen_session_error_facts_json();
+        check(retryable == 0 && facts == NULL, "admission diagnostic is nonretryable without facts");
+        thinkthen_engine *constructed = thinkthen_engine_new_with("{}");
+        check(constructed != NULL, "independent successful constructor");
+        thinkthen_engine_free(constructed);
+        check(thinkthen_engine_new_with("{\"bad\":1}") == NULL, "independent failed constructor");
         THREAD_TYPE thread;
         if (fixture_start(&thread, separate_error, NULL) != 0) return 1;
         check(fixture_join(thread) == 0, "join independent diagnostic thread");
         thinkthen_engine_free(engine);
         thinkthen_session_free(NULL);
         check(message == thinkthen_session_error_message(), "native diagnostic survives engine free and success");
+        check(retryable == thinkthen_session_error_retryable() && facts == thinkthen_session_error_facts_json(), "native diagnostics survive constructor calls and success");
         puts(message);
         check(thinkthen_session_new(NULL, NULL, 0, NULL) == THINKTHEN_EUSAGE, "next slot mutation");
         check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "fixed failure replaces owned message");
@@ -216,6 +247,9 @@ int main(void) {
     size_t byte_len = 99;
     check(thinkthen_session_result_json(NULL, &bytes, &byte_len) == THINKTHEN_EUSAGE, "NULL result refuses");
     check(bytes == (const char *)(uintptr_t)7 && byte_len == 99, "JSON refusal preserves both outputs");
+    uint32_t ready_sentinel = 99;
+    check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, &ready_sentinel) == THINKTHEN_EUSAGE && ready_sentinel == 99, "wait refusal preserves output");
+    check(thinkthen_session_wait(NULL, THINKTHEN_SESSION_WAIT_RESULT_V1, 0, NULL) == THINKTHEN_EUSAGE, "wait requires output");
     const char invalid[] = {(char)0xff};
     thinkthen_session *sentinel = (thinkthen_session *)(uintptr_t)7;
     const char *bad_surfaces[] = {"", "Go", " go", "php\n", "secret-surface"};
@@ -234,10 +268,17 @@ int main(void) {
     check(thinkthen_session_new(engine, feed, strlen(feed), NULL) == THINKTHEN_EUSAGE, "required constructor output");
     check(sentinel == (thinkthen_session *)(uintptr_t)7, "invalid bytes preserve output");
     check(old_error == thinkthen_error_message(NULL), "session errors preserve failed constructor slot");
+    check(thinkthen_session_error_retryable() == 0 && thinkthen_session_error_facts_json() == NULL, "argument failure owns nonretryable absent facts");
     const char *session_error = thinkthen_session_error_message();
     thinkthen_session *session = open_session(engine, feed);
     check(session_error == thinkthen_session_error_message(), "success preserves immediate session error");
     if (!session) return 1;
+    uint32_t ready = 99;
+    check(thinkthen_session_wait(session, 99, 0, &ready) == THINKTHEN_EUSAGE && ready == 99, "invalid interest preserves readiness");
+    const char *wait_error = thinkthen_session_error_message();
+    check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_INPUT_V1, 0, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_INPUT_V1, "idle feed has room");
+    check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_RESULT_V1, 1, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_TIMEOUT_V1, "result wait ignores input room");
+    check(wait_error == thinkthen_session_error_message(), "wait success preserves immediate diagnostic");
     uint32_t status = 99;
     thinkthen_session_result *result = (thinkthen_session_result *)(uintptr_t)7;
     check(thinkthen_session_try_read(session, NULL, &result) == THINKTHEN_EUSAGE, "required read status");

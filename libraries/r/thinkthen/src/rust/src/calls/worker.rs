@@ -19,7 +19,7 @@ const TICK: Duration = Duration::from_millis(100);
 pub(crate) type Pending<'a> = &'a dyn Fn() -> bool;
 
 /// A shim result: R's value, or the packed failure.
-pub(crate) type Crossed<T> = Result<T, String>;
+pub(crate) type Crossed<T> = Result<T, crate::NativeError>;
 
 /// Cancels the call's token on every way out of the wait, so a detached
 /// worker starts no new request after its caller has left.
@@ -58,7 +58,9 @@ pub(crate) fn call_owned<T: Send + 'static>(
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
     positions: Option<Vec<usize>>,
-    work: impl FnOnce(&Engine, CallOptions<'_>, &Account) -> Result<T, String> + Send + 'static,
+    work: impl FnOnce(&Engine, CallOptions<'_>, &Account) -> Result<T, crate::NativeError>
+    + Send
+    + 'static,
 ) -> Crossed<Completed<T>> {
     call_with_receipt(
         deadline,
@@ -71,10 +73,9 @@ pub(crate) fn call_owned<T: Send + 'static>(
                 .and_then(|value| account.written().map(|()| value));
             let snapshot = account.finish();
             if let Some(held) = &receipt {
-                let kind = result.as_ref().map_or_else(
-                    |error| error.split('\u{1f}').next().unwrap_or("defect").to_owned(),
-                    |_| "success".to_owned(),
-                );
+                let kind = result
+                    .as_ref()
+                    .map_or_else(|error| error.kind.clone(), |_| "success".to_owned());
                 held.settle(kind, snapshot.clone());
             }
             Ok(Completed { result })

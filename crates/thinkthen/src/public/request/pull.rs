@@ -3,55 +3,23 @@ use super::{AdmittedRequest, RequestDefinition, RequestFunction as Function};
 use crate::{
     Batch, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
     CompleteRecord, CompleteScore, CompleteTags, Engine, Error, InputEvidence, InputFunction,
-    LoadedQuestion, QuestionInput, RecordInput,
+    LoadedQuestion, RecordInput,
 };
 
-pub(crate) enum Rows<'a, T> {
+/// Lazy admitted-request rows retain caller originals and native stopping facts.
+pub enum RequestRows<'a, T> {
+    /// Complete decision occurrences.
     Decisions(Batch<'a, CompleteRecord<T, CompleteDecision>>),
+    /// Complete choice occurrences.
     Choices(Batch<'a, CompleteRecord<T, CompleteChoice>>),
+    /// Complete tag occurrences.
     Tags(Batch<'a, CompleteRecord<T, CompleteTags>>),
+    /// Complete score occurrences.
     Scores(Batch<'a, CompleteRecord<T, CompleteScore>>),
+    /// Passing filter occurrences.
     Filtered(Batch<'a, CompleteRecord<T, CompleteFilter>>),
+    /// Complete annotation occurrences.
     Annotations(Batch<'a, CompleteRecord<T, CompleteAnnotated>>),
-}
-
-macro_rules! accessor {
-    ($method:ident, $variant:ident, $value:ty) => {
-        pub(crate) fn $method(
-            self,
-            message: &'static str,
-        ) -> Result<Batch<'a, CompleteRecord<T, $value>>, Error> {
-            match self {
-                Self::$variant(value) => Ok(value),
-                _ => Err(Error::defect(message)),
-            }
-        }
-    };
-}
-impl<'a, T> Rows<'a, T> {
-    accessor!(decisions, Decisions, CompleteDecision);
-    accessor!(choices, Choices, CompleteChoice);
-    accessor!(tags, Tags, CompleteTags);
-    accessor!(scores, Scores, CompleteScore);
-    accessor!(filtered, Filtered, CompleteFilter);
-    accessor!(annotations, Annotations, CompleteAnnotated);
-}
-
-struct Original<T> {
-    original: T,
-    input: QuestionInput,
-}
-impl<T> InputEvidence for Original<T> {
-    fn question_input(&self) -> QuestionInput {
-        self.input.clone()
-    }
-}
-fn restore<T, R>(row: CompleteRecord<Original<T>, R>) -> CompleteRecord<T, R> {
-    CompleteRecord {
-        original: row.original.original,
-        ordinal: row.ordinal,
-        result: row.result,
-    }
 }
 
 pub(crate) fn start<'a, I, T>(
@@ -60,52 +28,60 @@ pub(crate) fn start<'a, I, T>(
     records: I,
     controls: CallOptions<'a>,
     recover: crate::public::options::AnnotationRecovery<'a>,
-) -> Result<Rows<'a, T>, Error>
+) -> Result<RequestRows<'a, T>, Error>
 where
     I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
     T: InputEvidence + 'a,
 {
     super::native_feed::header(request)?;
-    let prepared = super::execution::prepare(engine, request, controls, false)?;
-    let function = request.request.call.function();
-    let options = request.request.call.arguments().options.clone();
-    let super::execution::Prepared {
-        reading,
-        definition,
+    let rows = super::execution::execute(
         engine,
+        request,
         controls,
-        context,
-        image_refusal,
-    } = prepared;
-    let records = records.into_iter().enumerate().map(move |(at, row)| {
-        let prepare = || {
-            controls.admission()?;
-            let row = row?;
-            let input = row.original.question_input();
-            super::native_feed::validate(function, &row, &input, image_refusal.as_deref())?;
-            let original = row.original;
-            let snapshot = RecordInput {
-                original: input,
-                context: row.context,
-                options: row.options,
-                seed_spans: row.seed_spans,
-                examples: row.examples,
-            };
-            super::inline::validate_composed(&reading, &options, &snapshot)?;
-            Ok(snapshot.map_original(|input| Original { original, input }))
-        };
-        prepare().map_err(|error: Error| error.at_record(at))
-    });
-    let rows = dispatch(
-        &engine, function, definition, records, controls, context, recover,
+        false,
+        |_| {
+            Ok(records
+                .into_iter()
+                .map(|row| row.map(super::execution::snapshot)))
+        },
+        |super::execution::Prepared {
+             definition,
+             engine,
+             controls,
+             context,
+             ..
+         },
+         records| {
+            dispatch(
+                &engine,
+                request.request.call.function(),
+                definition,
+                records,
+                controls,
+                context,
+                recover,
+            )
+        },
     )?;
     Ok(match rows {
-        Rows::Decisions(batch) => Rows::Decisions(batch.map_rows(restore)),
-        Rows::Choices(batch) => Rows::Choices(batch.map_rows(restore)),
-        Rows::Tags(batch) => Rows::Tags(batch.map_rows(restore)),
-        Rows::Scores(batch) => Rows::Scores(batch.map_rows(restore)),
-        Rows::Filtered(batch) => Rows::Filtered(batch.map_rows(restore)),
-        Rows::Annotations(batch) => Rows::Annotations(batch.map_rows(restore)),
+        RequestRows::Decisions(batch) => RequestRows::Decisions(
+            batch.map_rows(|row| row.map_original(|original| original.original)),
+        ),
+        RequestRows::Choices(batch) => RequestRows::Choices(
+            batch.map_rows(|row| row.map_original(|original| original.original)),
+        ),
+        RequestRows::Tags(batch) => {
+            RequestRows::Tags(batch.map_rows(|row| row.map_original(|original| original.original)))
+        }
+        RequestRows::Scores(batch) => RequestRows::Scores(
+            batch.map_rows(|row| row.map_original(|original| original.original)),
+        ),
+        RequestRows::Filtered(batch) => RequestRows::Filtered(
+            batch.map_rows(|row| row.map_original(|original| original.original)),
+        ),
+        RequestRows::Annotations(batch) => RequestRows::Annotations(
+            batch.map_rows(|row| row.map_original(|original| original.original)),
+        ),
     })
 }
 
@@ -121,7 +97,7 @@ pub(super) fn dispatch<'a, I, T>(
     controls: CallOptions<'a>,
     context: Option<String>,
     recover: crate::public::options::AnnotationRecovery<'a>,
-) -> Result<Rows<'a, T>, Error>
+) -> Result<RequestRows<'a, T>, Error>
 where
     I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
     T: InputEvidence + 'a,
@@ -133,7 +109,7 @@ where
     }
     macro_rules! atomic {
         ($kind:ident, $input:ident, $convert:ident, $q:expr) => {
-            Ok(Rows::$kind(engine.complete_stream(
+            Ok(RequestRows::$kind(engine.complete_stream(
                 InputFunction::$input,
                 $q,
                 records,
@@ -155,7 +131,7 @@ where
             atomic!(Scores, Score, score, q)
         }
         (Function::Filter, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
-            Ok(Rows::Filtered(engine.complete_stream(
+            Ok(RequestRows::Filtered(engine.complete_stream(
                 InputFunction::Filter,
                 q,
                 records,
@@ -164,10 +140,10 @@ where
                 crate::public::complete::records::filter,
             )?))
         }
-        (Function::Choose, RequestDefinition::DynamicChoose(q)) => Ok(Rows::Choices(
+        (Function::Choose, RequestDefinition::DynamicChoose(q)) => Ok(RequestRows::Choices(
             engine.dynamic_choose_stream(q, records, controls, context)?,
         )),
-        (Function::Annotate, RequestDefinition::Annotate(set)) => Ok(Rows::Annotations(
+        (Function::Annotate, RequestDefinition::Annotate(set)) => Ok(RequestRows::Annotations(
             engine.annotate_stream(set, records, controls, context, recover)?,
         )),
         _ => Err(Error::usage(
@@ -182,27 +158,145 @@ fn question(q: LoadedQuestion) -> crate::Question {
     }
 }
 
+#[cfg(any(test, feature = "polars"))]
 pub(crate) fn native<'a, I, T>(
     engine: &Engine,
     definition: RequestDefinition,
     records: I,
     controls: CallOptions<'a>,
-    function: fn(super::RequestArguments) -> super::RequestCall,
-) -> Result<Rows<'a, T>, Error>
+    function: Function,
+) -> Result<RequestRows<'a, T>, Error>
 where
     I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
     T: InputEvidence + 'a,
 {
-    let request = super::Request::new(function(super::RequestArguments {
-        question: super::RequestQuestion::Definition { value: definition },
-        input: super::RequestInput::Feed {
-            name: "native".into(),
-            framing: super::RequestFraming::Document,
-            reading: crate::ReaderOptions::default(),
-            images: vec![],
-        },
-        options: super::RequestOptions::default(),
-    }))
-    .admit()?;
+    let request = super::admit_native(function, definition)?;
     start(engine, &request, records, controls, None)
+}
+
+pub(in crate::public) fn annotation<'a, I, T, R: 'a>(
+    engine: &Engine,
+    questions: crate::QuestionSet,
+    records: I,
+    controls: CallOptions<'a>,
+    project: impl Fn(T, usize, CompleteAnnotated) -> Result<Option<R>, Error> + 'a,
+) -> Result<Batch<'a, R>, Error>
+where
+    I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+    T: InputEvidence + 'a,
+{
+    let request = super::admit_native(Function::Annotate, questions.into())?;
+    super::execution::execute(
+        engine,
+        &request,
+        controls,
+        false,
+        |_| {
+            Ok(records
+                .into_iter()
+                .map(|row| row.map(super::execution::snapshot)))
+        },
+        |super::execution::Prepared {
+             engine,
+             definition,
+             controls,
+             context,
+             ..
+         },
+         rows| {
+            let set = definition.annotation()?;
+            engine.annotate_stream_project(
+                set,
+                rows,
+                controls,
+                context,
+                None,
+                move |original, at, result| project(original.original, at, result),
+            )
+        },
+    )
+}
+
+/// Compatibility rows project the same admitted Request execution and scheduler.
+pub(in crate::public) fn project<'a, I, T, R: 'a>(
+    engine: &Engine,
+    function: InputFunction,
+    question: crate::Question,
+    records: I,
+    controls: CallOptions<'a>,
+    project: impl Fn(T, usize, crate::core::CompleteAtomic) -> Result<Option<R>, Error> + 'a,
+) -> Result<Batch<'a, R>, Error>
+where
+    I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+    T: InputEvidence + 'a,
+{
+    let request = super::admit_native(Function::from_input(function), question.into())?;
+    super::execution::execute(
+        engine,
+        &request,
+        controls,
+        false,
+        |_| {
+            Ok(records
+                .into_iter()
+                .map(|row| row.map(super::execution::snapshot)))
+        },
+        |super::execution::Prepared {
+             engine,
+             definition,
+             controls,
+             context,
+             ..
+         },
+         rows| {
+            let q = definition.atomic()?;
+            engine.complete_stream_project(
+                function,
+                q,
+                rows,
+                controls,
+                context,
+                move |original, at, result| project(original.original, at, result),
+            )
+        },
+    )
+}
+
+impl<T> std::fmt::Debug for RequestRows<'_, T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("RequestRows").finish_non_exhaustive()
+    }
+}
+impl<T> RequestRows<'_, T> {
+    /// Final native facts become present after exhaustion or terminal failure.
+    #[must_use]
+    pub fn facts(&self) -> Option<&crate::Facts> {
+        match self {
+            Self::Decisions(b) => b.facts(),
+            Self::Choices(b) => b.facts(),
+            Self::Tags(b) => b.facts(),
+            Self::Scores(b) => b.facts(),
+            Self::Filtered(b) => b.facts(),
+            Self::Annotations(b) => b.facts(),
+        }
+    }
+}
+impl Engine {
+    /// Execute a lazy record request through shared admission and native scheduling.
+    /// Originals, observers, cancellation, completed prefixes and reader failures retain
+    /// the collecting request contract; final facts settle when the batch terminates.
+    /// # Errors
+    /// Refuses incompatible request headers before advancing the supplied reader.
+    pub fn execute_request_rows<'a, I, T>(
+        &self,
+        request: &AdmittedRequest,
+        records: I,
+        controls: CallOptions<'a>,
+    ) -> Result<RequestRows<'a, T>, Error>
+    where
+        I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a,
+        T: InputEvidence + 'a,
+    {
+        start(self, request, records, controls, None)
+    }
 }

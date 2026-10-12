@@ -6,7 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
-from children import child_env
+from children import child_env, read_process_line
 import tempfile
 from toolchains import dotnet as resolve_dotnet
 
@@ -113,7 +113,7 @@ def native_parity(consumer, command):
                                     assert backend.read("wait 1") == "wait 1"
                                     running.stdin.write("!")
                                     running.stdin.flush()
-                                    assert running.stdout.readline() == "cancel-fired\n"
+                                    assert read_process_line(running.stdout) == "cancel-fired\n"
                                     backend.process.stdin.write("release\n")
                                     backend.process.stdin.flush()
                                     stdout, stderr = running.communicate(timeout=60)

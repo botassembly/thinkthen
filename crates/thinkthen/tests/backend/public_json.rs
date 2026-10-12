@@ -304,7 +304,7 @@ fn command(
     let output = spawn(&arguments, &[("THINKTHEN_API_KEY", KEY)], input.as_bytes())
         .map_err(|error| error.to_string())?;
     if !matches!(output.status.code(), Some(0 | 1 | 3 | 6)) {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = crate::harness::said(&output);
         return Err(format!("exit {:?}: {stderr}", output.status.code()));
     }
     String::from_utf8(output.stdout).map_err(|error| error.to_string())

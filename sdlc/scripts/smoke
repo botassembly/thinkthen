@@ -16,6 +16,12 @@ set -eu
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
+campaign=
+if [ "${1:-}" = --full-functional ]; then
+    campaign=--full-functional
+    shift
+    . sdlc/scripts/full-compiler
+fi
 . sdlc/scripts/scratch.sh
 case_id=01-decide-yes-captured
 # The surfaces the rung smokes. PostgreSQL and Polars stay in the routine surfaces rung; see ticket 0335.
@@ -90,4 +96,4 @@ if [ "$#" -eq 0 ]; then
 		set -- $(printf '%s\n' "$@" | grep -vx "$surface")
 	done
 fi
-printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" --one "$bin"
+printf '%s\n' "$@" | xargs -P 4 -n 1 sh "$0" ${campaign:+"$campaign"} --one "$bin"

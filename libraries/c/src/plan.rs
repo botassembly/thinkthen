@@ -1,4 +1,4 @@
-//! The plan door's body: one closed `thinkthen.plan-input/1` object,
+//! The plan interface's body: one closed `thinkthen.plan-input/1` object,
 //! previewed through the public `Engine::plan_with` (ticket 0291).
 //!
 //! The object holds `verb`, `question`, `input`, and optional `settings`.

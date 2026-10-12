@@ -37,12 +37,7 @@ fn a_held_model_mismatch_warns_once_without_echoing_the_stored_model_or_credenti
         .unwrap()
     };
     let first = run("Good?");
-    assert_eq!(
-        first.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&first.stderr)
-    );
+    crate::harness::exits(&first, 0);
     assert!(first.stderr.is_empty());
     let second = run("Good?");
     assert_eq!(second.status.code(), Some(0));
@@ -51,7 +46,7 @@ fn a_held_model_mismatch_warns_once_without_echoing_the_stored_model_or_credenti
         b"thinkthen: warning: a held answer names a different model and cannot be reused online\n"
     );
     withheld(&second, "warning-private");
-    assert!(!String::from_utf8_lossy(&second.stdout).contains("stored-private-model"));
+    assert!(!crate::harness::printed(&second).contains("stored-private-model"));
     let hit = run("Good?");
     assert!(hit.stderr.is_empty());
     assert_eq!(hit.status.code(), Some(0));

@@ -5,6 +5,7 @@
 //! line the question quotes, so a row's answer follows its record whatever
 //! the batch.
 
+pub(crate) use crate::harness::text;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Output;
@@ -123,10 +124,6 @@ fn decide(base: &str, extra: &[&str], environment: &[(&str, &str)], input: &str)
     .expect("the command runs")
 }
 
-pub(super) fn text(bytes: &[u8]) -> String {
-    String::from_utf8_lossy(bytes).into_owned()
-}
-
 /// A fresh folder under the target folder.
 pub(super) fn folder(name: &str) -> String {
     static FOLDERS: AtomicUsize = AtomicUsize::new(0);
@@ -198,12 +195,7 @@ fn replay_answers_every_batch() {
         &[],
         &input,
     );
-    assert_eq!(
-        recorded.status.code(),
-        Some(0),
-        "{}",
-        text(&recorded.stderr)
-    );
+    crate::harness::exits(&recorded, 0);
     assert_eq!(listener.count(), 3);
 
     let replayed = decide(
@@ -276,7 +268,7 @@ fn a_table_shares_one_request_and_filter_prints_its_kept_rows() {
     let arguments = [&fixed[..], &["--model", "jev-1.13.0"]].concat();
     let table = b"body\nline 1\nline 2\nline 3\n";
     let output = spawn(&arguments, &[KEY], table).expect("the command runs");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1, "three rows share one request");
     assert_eq!(places(&sent[0].body).len(), 3);
@@ -302,7 +294,7 @@ fn assert_equal_records_share_answers(records: usize) {
         .collect();
     let listener = Listener::answering(answering).expect("a loopback listener");
     let output = decide(listener.base(), &["--no-cache"], &[], &repeats);
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let bodies = listener.requests();
     assert_eq!(bodies.len(), 1);
     assert!(text(&bodies[0].body).contains(QUOTED));
@@ -394,7 +386,7 @@ fn each_row_carries_its_share() {
             "jev-latest",
         ];
         let output = spawn(&arguments, &[KEY], input.as_bytes()).expect("the command runs");
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         let sent = listener.requests();
         assert_eq!(sent.len(), 1);
         assert_eq!(text(&sent[0].body), expected.trim_end_matches('\n'));
@@ -456,12 +448,7 @@ fn a_failed_request_sends_no_later_request() {
         "--no-cache",
     ];
     let output = decide(listener.base(), &options, &[], &lines(1..=6));
-    assert_eq!(
-        output.status.code(),
-        Some(4),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 4);
     assert_eq!(listener.count(), 2, "line 1's request and line 2's");
     assert_eq!(text(&output.stdout), row(1));
 }

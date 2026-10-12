@@ -1,9 +1,8 @@
 //! The request body a question's two homes send, side by side on the wire.
 
+use crate::harness::{Canned, Listener, spawn, spawn_local};
 use std::fs;
 use std::path::PathBuf;
-
-use crate::harness::{Canned, Listener, spawn};
 
 /// The response a backend gives to the one yes/no question these cases ask.
 const DECIDED: &str = concat!(
@@ -37,8 +36,8 @@ fn sent(arguments: &[&str], answer: &str) -> Option<Vec<u8>> {
         b"Refund me please.",
     )
     .ok()?;
-    let printed = String::from_utf8_lossy(&output.stdout).into_owned();
-    let said = String::from_utf8_lossy(&output.stderr).into_owned();
+    let printed = crate::harness::printed(&output);
+    let said = crate::harness::said(&output);
     assert_eq!(output.status.code(), Some(0), "{said}");
     // Every case on this page runs with a key set, so each one is also a
     // secrecy case over the paths the question file opened.
@@ -222,26 +221,14 @@ fn a_score_map_sends_descriptions_in_order_and_reports_the_names() {
         r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
     );
     let listener = Listener::serving(vec![Canned::ok(answered)]).expect("a loopback listener");
-    let output = spawn(
-        &[
-            "score",
-            &file,
-            "--details",
-            "--url",
-            listener.base(),
-            "--model",
-            "local-1",
-        ],
+    let output = spawn_local(
+        &["score", &file, "--details"],
+        listener.base(),
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         b"Refund me please.",
     )
     .expect("the compiled binary runs");
-    assert_eq!(
-        output.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&output.stderr)
-    );
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     assert_eq!(
@@ -252,7 +239,7 @@ fn a_score_map_sends_descriptions_in_order_and_reports_the_names() {
             r#""criteria":[{"what":"No impact."},"Partial.",{}]}}}"#,
         )
     );
-    let printed = String::from_utf8_lossy(&output.stdout).into_owned();
+    let printed = crate::harness::printed(&output);
     assert!(
         printed.contains(r#""levels":["None.","Some.","Blocked."]"#),
         "{printed}"

@@ -4,7 +4,7 @@
 //! its key is the fixture question's key.
 
 use super::{KEY, details, text};
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, exits, exits_because, spawn};
 use crate::support::keys;
 
 const CORPUS: &str =
@@ -71,12 +71,9 @@ fn complete_cli_lines_keep_literal_question_bytes_and_keys() {
             input.as_bytes(),
         )
         .expect("compiled command");
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{framing}: {}",
-            text(&output.stderr)
-        );
+        exits_because(&output, 0, || {
+            format!("{framing}: {}", text(&output.stderr))
+        });
         let rows = details(&output);
         assert_eq!(rows.len(), 5, "{framing}");
         let sent = listener.requests();
@@ -130,7 +127,7 @@ fn structured_cli_values_keep_order_and_question_bytes() {
         input.as_bytes(),
     )
     .expect("compiled command");
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    exits(&output, 0);
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
     let sent = listener.requests();

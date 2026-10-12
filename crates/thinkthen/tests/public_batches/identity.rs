@@ -108,11 +108,7 @@ fn duplicate_records_share_one_question_key_in_one_literal_request() {
         Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .model("jev-latest")
         .expect("model")
         .no_cache()
@@ -177,11 +173,7 @@ fn duplicate_records_share_one_question_key_in_one_literal_request() {
 fn a_retried_filtered_row_keeps_its_observation_and_call_facts() {
     let _serial = serial();
     let (listener, alpha_attempts) = retry_listener();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .max_retries(1)
         .no_cache()
         .build()
@@ -252,11 +244,7 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
     std::fs::create_dir_all(&folder).expect("recording folder");
     let asked = question();
     let setting = BatchSetting::Records(std::num::NonZeroUsize::MIN);
-    let recorded = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let recorded = crate::api::builder(listener.base(), "sk-public-batches")
         .record(&folder)
         .expect("record")
         .build()
@@ -311,11 +299,7 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
 fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .profile_json(
             r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_request_bytes":500}"#,
         )
@@ -394,11 +378,7 @@ fn a_question_limit_packs_whole_records_and_every_group_together() {
         Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string())
     })
     .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .expect("base")
-        .api_key("sk-public-batches")
-        .expect("key")
+    let engine = crate::api::builder(listener.base(), "sk-public-batches")
         .throttle(THROTTLE)
         .expect("throttle")
         .profile_json(

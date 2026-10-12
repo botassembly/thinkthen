@@ -5,7 +5,7 @@ use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 
 #[test]
-fn canonical_namespace_routes_original_bytes_and_legacy_schema_stays_ignored() {
+fn canonical_namespace_routes_original_bytes_and_compatibility_schema_stays_ignored() {
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
     })
@@ -62,7 +62,7 @@ fn legacy_annotation_documents_keep_projection_cache_and_parser_boundaries() {
     })
     .unwrap();
     let base = listener.base();
-    // The unchanged request from the JVM Matrix.requests[11] reaches the same C door.
+    // The unchanged request from the JVM Matrix.requests[11] reaches the same C interface.
     let projected = r#"{"annotate":{"version":1,"questions":{"check":{"decide":"Is it?","on":"/body"}}},"records":["{\"body\":\"annotate-on\",\"hidden\":\"not-sent\"}"]}"#;
     let mut script = Script::default();
     script.ask("settings", &[base, r#"{"model":"fixed"}"#]);

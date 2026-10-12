@@ -78,7 +78,7 @@ fn a_signal_during_usage_flush_still_marks_the_final_facts_line_stopped() {
         Some(signal_hook::consts::signal::SIGTERM)
     );
     assert!(output.stdout.is_empty());
-    let stderr = String::from_utf8_lossy(&output.stderr);
+    let stderr = crate::harness::said(&output);
     assert_eq!(stderr.lines().count(), 1, "{stderr}");
     let facts: Value = serde_json::from_str(stderr.trim_end()).expect("facts JSON");
     assert_eq!(facts["records"], 1);

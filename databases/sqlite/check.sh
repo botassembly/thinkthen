@@ -56,7 +56,9 @@ if [ "$profile" = smoke ]; then
 	smoke_guard
 	# The replay smoke (ticket 0335): the release library copied to a scratch folder, as the
 	# archive lays it out, and loaded from there by its path.
-	RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
+	smoke_flags=${RUSTFLAGS:-}
+	[ "${THINKTHEN_FULL_COMPILER:-}" = 1 ] || smoke_flags="--remap-path-prefix=$HOME=/build"
+	RUSTFLAGS="$smoke_flags" cargo build --locked --offline --quiet --release
 	scratch_dir installed
 	cp -- "${CARGO_TARGET_DIR:-$here/target}/release/libthinkthen0.$suffix" "$installed/"
 	cd "$installed"
@@ -70,18 +72,64 @@ print("smoke:", {1: "true", 0: "false", None: "null"}[value])' "$installed/libth
 	exit
 fi
 
-if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+build_extension() {
+step "the release build carries no home path"
+if [ "$profile" = full ]; then
+    cargo build --locked --offline --quiet --release
+else
+    RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
+fi
+# One build-folder rule, as tests/helper.py reads it: CARGO_TARGET_DIR, or each workspace's own target.
+library=${CARGO_TARGET_DIR:-$here/target}/release/libthinkthen0.$suffix
+if grep -aFq -- "$HOME" "$library"; then
+	echo "FAIL     $library names the builder's home" >&2
+	exit 1
+fi
+
+step "declared exported entry points and one panic guard"
+if [ "$suffix" = dylib ]; then
+	symbols=$(nm -gU "$library" | awk '{ print $NF }' | LC_ALL=C sort)
+	expected=$(sed 's/^/_/' entry-points.txt | LC_ALL=C sort)
+else
+	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }' | LC_ALL=C sort)
+	expected=$(LC_ALL=C sort entry-points.txt)
+fi
+[ "$symbols" = "$expected" ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
+# Ticket 0306: the guard is thinkthen::contained; src holds no catch_unwind of its own.
+# Two sites: the call guard and the usage exit hook (ADR 0113).
+sites=$(grep -rn 'catch_unwind(' src | wc -l)
+guards=$(grep -rn 'contained(' src | wc -l)
+[ "$sites" = 0 ] && [ "$guards" = 2 ] ||
+	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 2" >&2; exit 1; }
+
+}
+
+if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+    build_extension
+    scratch_dir installed
+    cp -- "$library" "$installed/"
+    THINKTHEN_SQLITE_EXTENSION=$installed/libthinkthen0.$suffix
+    export THINKTHEN_SQLITE_EXTENSION
+fi
+
+if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ "$profile" = full ]; then
 	# The installed-file mode (ticket 0128): the shared cases and the examples load the
 	# library unpacked from the release archive, by its path.
 	. ../../sdlc/scripts/scratch.sh
 	. ../../sdlc/scripts/installed.sh
-	installed_unpack
-	THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)
+	if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+	    installed_unpack
+	    THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)
+	fi
 	[ -f "$THINKTHEN_SQLITE_EXTENSION" ] || { echo "FAIL     the archive holds no libthinkthen0 library" >&2; exit 1; }
 	export THINKTHEN_SQLITE_EXTENSION
 	# Ticket 0374: the shipped library keeps its own panic hook.
 	own_panic_hook "$THINKTHEN_SQLITE_EXTENSION"
-	for test in tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py; do
+	installed_tests="tests/test_functions.py tests/examples.py tests/conformance.py tests/test_probability.py tests/test_rank.py tests/test_portable_batch.py tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py"
+	if [ "$profile" = full ]; then
+	    installed_tests="tests/test_trusted_schema.py tests/test_complete_request.py tests/test_complete_tables.py tests/test_usage.py"
+	fi
+	for test in $installed_tests; do
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
@@ -128,30 +176,7 @@ cargo fmt --check
 cargo clippy --locked --offline --quiet --all-targets --all-features -- -D warnings
 cargo test --locked --offline --quiet --lib
 
-step "the release build carries no home path"
-RUSTFLAGS="--remap-path-prefix=$HOME=/build" cargo build --locked --offline --quiet --release
-# One build-folder rule, as tests/helper.py reads it: CARGO_TARGET_DIR, or each workspace's own target.
-library=${CARGO_TARGET_DIR:-$here/target}/release/libthinkthen0.$suffix
-if grep -aFq -- "$HOME" "$library"; then
-	echo "FAIL     $library names the builder's home" >&2
-	exit 1
-fi
-
-step "declared exported entry points and one panic guard"
-if [ "$suffix" = dylib ]; then
-	symbols=$(nm -gU "$library" | awk '{ print $NF }' | LC_ALL=C sort)
-	expected=$(sed 's/^/_/' entry-points.txt | LC_ALL=C sort)
-else
-	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }' | LC_ALL=C sort)
-	expected=$(LC_ALL=C sort entry-points.txt)
-fi
-[ "$symbols" = "$expected" ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
-# Ticket 0306: the guard is thinkthen::contained; src holds no catch_unwind of its own.
-# Two sites: the call guard and the usage exit hook (ADR 0113).
-sites=$(grep -rn 'catch_unwind(' src | wc -l)
-guards=$(grep -rn 'contained(' src | wc -l)
-[ "$sites" = 0 ] && [ "$guards" = 2 ] ||
-	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 2" >&2; exit 1; }
+build_extension
 
 step "the loopback backend and the command that reads the usage totals"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend

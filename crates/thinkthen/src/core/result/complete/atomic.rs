@@ -1,4 +1,4 @@
-//! Complete atomic judgments share the frozen legacy answer representation.
+//! Complete atomic judgments share the frozen compatibility answer representation.
 
 use serde::{Serialize, Serializer};
 
@@ -12,7 +12,7 @@ pub(crate) struct Atomic {
     pub(crate) function: crate::core::image::InputFunction,
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: ResultIdentity,
-    pub(crate) legacy: DecisionResult,
+    pub(crate) compatibility: DecisionResult,
     pub(crate) rank_position: Option<std::num::NonZeroUsize>,
     pub(crate) source: Option<super::wire::PhysicalSource>,
     pub(crate) images: Option<Vec<crate::core::image::Image>>,
@@ -20,19 +20,19 @@ pub(crate) struct Atomic {
 
 impl Atomic {
     pub(crate) fn clear_batch_metadata(&mut self) {
-        self.legacy.meta.batch_setting = None;
-        self.legacy.meta.batch_warning = None;
+        self.compatibility.meta.batch_setting = None;
+        self.compatibility.meta.batch_warning = None;
     }
 
     pub(crate) const fn question(&self) -> &crate::core::Question {
-        &self.legacy.question
+        &self.compatibility.question
     }
     pub(crate) const fn threshold(&self) -> Option<crate::core::Threshold> {
-        self.legacy.threshold
+        self.compatibility.threshold
     }
 
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
-        self.legacy.meta.fields()
+        self.compatibility.meta.fields()
     }
 
     pub(crate) fn ranked(
@@ -40,7 +40,7 @@ impl Atomic {
         record: usize,
         position: std::num::NonZeroUsize,
     ) -> Result<Self, crate::core::RenderError> {
-        self.legacy.threshold = None;
+        self.compatibility.threshold = None;
         self.rank_position = Some(position);
         self.identity = crate::core::ResultIdentity::of(
             crate::core::image::InputFunction::Rank,
@@ -48,7 +48,7 @@ impl Atomic {
             self.identity.question_sources().to_vec(),
             self.identity.observations().to_vec(),
             &crate::core::AtomicReading {
-                question: &self.legacy.question,
+                question: &self.compatibility.question,
                 threshold: None,
                 rank_position: Some(position),
             },
@@ -58,19 +58,19 @@ impl Atomic {
     }
 
     pub(crate) const fn value(&self) -> &crate::core::Value {
-        &self.legacy.value
+        &self.compatibility.value
     }
 
     pub(crate) const fn reported_usage(&self) -> Option<crate::core::ReportedUsage> {
-        self.legacy.meta.reported_usage
+        self.compatibility.meta.reported_usage
     }
 
     pub(crate) const fn usage(&self) -> Option<Usage> {
-        self.legacy.meta.usage
+        self.compatibility.meta.usage
     }
 
     pub(crate) const fn answer(&self) -> &Answer {
-        &self.legacy.answer
+        &self.compatibility.answer
     }
 }
 
@@ -117,9 +117,9 @@ impl Atomic {
                 .document(input, question_name, index, members, position)
                 .serialize(serializer);
         }
-        match (self.function, &self.legacy.value) {
+        match (self.function, &self.compatibility.value) {
             (InputFunction::Decide, Value::YesNo(value)) => {
-                let meaning = match (&self.legacy.question, value) {
+                let meaning = match (&self.compatibility.question, value) {
                     (crate::core::Question::Decide { yes, .. }, Some(true)) => yes.as_ref(),
                     (crate::core::Question::Decide { no, .. }, Some(false)) => no.as_ref(),
                     _ => None,
@@ -144,7 +144,13 @@ impl Atomic {
                 .document(input, question_name, index, members, *value)
                 .serialize(serializer),
             _ => self
-                .document(input, question_name, index, members, &self.legacy.value)
+                .document(
+                    input,
+                    question_name,
+                    index,
+                    members,
+                    &self.compatibility.value,
+                )
                 .serialize(serializer),
         }
     }
@@ -157,7 +163,7 @@ impl Atomic {
         members: Option<Vec<super::wire::RankMemberDocument<'a>>>,
         value: V,
     ) -> super::wire::AtomicDocument<'a, T, V> {
-        let row = &self.legacy;
+        let row = &self.compatibility;
         super::wire::AtomicDocument {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
@@ -181,6 +187,6 @@ impl Atomic {
 
 impl Serialize for Atomic {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_with_input(self.legacy.input.as_ref(), serializer)
+        self.serialize_with_input(self.compatibility.input.as_ref(), serializer)
     }
 }

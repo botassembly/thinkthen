@@ -278,10 +278,10 @@ fn rows(arguments: &[String], input: &str, success: &Value) -> Result<Vec<Value>
     let code = output.status.code();
     let partial = success["failed_questions"].as_u64().unwrap_or(0) > 0;
     if !(matches!(code, Some(0 | 1 | 3)) || partial && code == Some(6)) {
-        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stderr = crate::harness::said(&output);
         return Err(format!("exit {code:?}: {stderr}"));
     }
-    String::from_utf8_lossy(&output.stdout)
+    crate::harness::printed(&output)
         .lines()
         .map(|line| serde_json::from_str(line).map_err(|error| format!("{error}: {line}")))
         .collect()
@@ -296,7 +296,7 @@ fn refused(backend: &Backend, arguments: &[String]) -> Checked {
     let output = spawn(&arguments, &KEY, b"any text").map_err(|error| error.to_string())?;
     same(
         "stderr",
-        &Value::from(String::from_utf8_lossy(&output.stderr)),
+        &Value::from(crate::harness::said(&output)),
         &Value::from(
             "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n",
         ),

@@ -308,10 +308,14 @@ impl<'a> Cancel<'a> {
         Sending(&self.sends)
     }
 
+    pub(crate) fn sending_now(&self) -> bool {
+        self.sends.load(Ordering::Acquire) != 0
+    }
+
     /// The stop this checkpoint observes, from the calling thread. The host
     /// check runs only while no worker is in a blocking send.
     pub(crate) fn stop_between_sends(&self) -> Option<error::Error> {
-        if self.sends.load(Ordering::Acquire) == 0 {
+        if !self.sending_now() {
             self.stop()
         } else {
             self.remaining_without_check().err()

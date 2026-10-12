@@ -15,13 +15,7 @@ fn owned_question_events_survive_engine_destruction_with_originals_locations_and
         |event: thinkthen::RecordObservation<'_>| snapshots.lock().unwrap().push(event.to_owned());
     let expected;
     {
-        let engine = Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
-            .model("fixed")
-            .unwrap()
-            .api_key("complete-private")
-            .unwrap()
+        let engine = crate::api::fixed(listener.base(), "complete-private")
             .cache_at(&folder)
             .unwrap()
             .max_retries(0)
@@ -41,21 +35,21 @@ fn owned_question_events_survive_engine_destruction_with_originals_locations_and
             );
             record
         };
-        let first = engine
-            .decide_records_complete_with(
-                &question,
-                [input()],
-                CallOptions::new().observe(&capture),
-            )
-            .unwrap();
+        let first = crate::api::decide_records(
+            &engine,
+            &question,
+            [input()],
+            CallOptions::new().observe(&capture),
+        )
+        .unwrap();
         expected = first.value()[0].result().answer_id().clone();
-        let held = engine
-            .decide_records_complete_with(
-                &question,
-                [input()],
-                CallOptions::new().observe(&capture),
-            )
-            .unwrap();
+        let held = crate::api::decide_records(
+            &engine,
+            &question,
+            [input()],
+            CallOptions::new().observe(&capture),
+        )
+        .unwrap();
         assert_eq!(held.value()[0].result().answer_id(), &expected);
         assert_eq!(held.facts().requests_sent(), 0);
     }
@@ -107,9 +101,13 @@ fn owned_failed_annotation_events_keep_admitted_rules_actual_failure_ids_and_par
         |event: thinkthen::RecordObservation<'_>| snapshots.lock().unwrap().push(event.to_owned());
     let set = thinkthen::QuestionSet::from_json(r#"{"version":1,"questions":{"uncertain":{"decide":"Sure?","threshold":"0.2:0.8"},"failed":{"decide":"Failed?","threshold":0.9}}}"#).unwrap();
     let engine = engine(&listener);
-    let call = engine
-        .annotate_complete_with(&set, ["Original."], CallOptions::new().observe(&capture))
-        .unwrap();
+    let call = crate::api::annotate(
+        &engine,
+        &set,
+        crate::api::plain_inputs(["Original."]),
+        CallOptions::new().observe(&capture),
+    )
+    .unwrap();
     let members = call.value()[0].result().members().collect::<Vec<_>>();
     let events = snapshots.into_inner().unwrap();
     assert_eq!(events.len(), 3);

@@ -3,7 +3,8 @@ import thinkthen.Inputs
 import thinkthen.Json
 import thinkthen.kotlin.*
 import kotlinx.coroutines.runBlocking
-fun main(args: Array<String>) = runBlocking {
+fun main(args: Array<String>): Unit = runBlocking {
+    if(thinkthen.CaseBatch.run(args) { data -> main(arrayOf("complete", Json.write(data))) }) return@runBlocking
     val data = SessionCases.frame(args)
     try {
         KotlinEngine(Inputs.EngineSettings.fromJson(Json.parse(data["engine_settings"] as String))).use { engine ->
@@ -14,6 +15,7 @@ fun main(args: Array<String>) = runBlocking {
                     override fun push(d:Inputs.RequestSessionDescriptor)=session.tryPush(d)
                     override fun finish(f:Inputs.RequestReaderFailure?)=session.finish(f)
                     override fun cancel()=session.cancel()
+                    override fun waitReady(input:Boolean){session.waitReady(input).join()}
                     override fun read():thinkthen.OwnedSession.Read {val read=session.tryRead();return thinkthen.OwnedSession.Read(read.packet?.let {SessionCases.packet(it.json)},read.ended)}
                     override fun close()=session.close()
                 }

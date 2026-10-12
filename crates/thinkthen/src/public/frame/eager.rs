@@ -95,7 +95,7 @@ impl PolarsEngine for Engine {
             QuestionKind::Tag => self.tag_series(&question, texts, call)?,
             _ => {
                 return Err(Error::usage(
-                    "this column door takes decide, choose, score or tag",
+                    "this column interface takes decide, choose, score or tag",
                 ));
             }
         };

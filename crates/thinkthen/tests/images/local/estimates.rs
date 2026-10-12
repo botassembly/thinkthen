@@ -1,4 +1,5 @@
 use super::{CLEF, REPLY, build, pair, question};
+use crate::request::ImageRequests;
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 use thinkthen::ErrorKind;
@@ -10,7 +11,7 @@ fn local_images_use_approximate_body_admission_and_refuse_a_small_explicit_cap_w
         .max_estimated_input_tokens_total(Some(1))
         .build()
         .unwrap();
-    let error = small.decide_input(&question(), &pair()).unwrap_err();
+    let error = small.request_decide(&question(), &pair()).unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
     assert_eq!(
         error.to_string(),
@@ -22,7 +23,7 @@ fn local_images_use_approximate_body_admission_and_refuse_a_small_explicit_cap_w
         .max_estimated_input_tokens_total(Some(u64::MAX))
         .build()
         .unwrap();
-    sufficient.decide_input(&question(), &pair()).unwrap();
+    sufficient.request_decide(&question(), &pair()).unwrap();
     assert_eq!(listener.count(), 1);
     let request: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(

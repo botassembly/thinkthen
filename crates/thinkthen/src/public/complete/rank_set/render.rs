@@ -12,49 +12,6 @@ fn position(at: usize) -> Result<NonZeroUsize, Error> {
 }
 #[expect(
     clippy::too_many_arguments,
-    reason = "rendering receives the actual invocation, members and original occurrences"
-)]
-pub(super) fn ranked<T>(
-    public: &Engine,
-    engine: &facade::Engine,
-    set: &core::QuestionSet,
-    questions: &[Question],
-    setting: core::Setting,
-    held: Vec<Held<T>>,
-    rows: Vec<Vec<Keyed>>,
-    captured: bool,
-) -> Result<Vec<CompleteRecord<T, CompleteSetRank>>, Error> {
-    let lists = (0..questions.len())
-        .map(|member| {
-            let odds = rows
-                .iter()
-                .map(|row| {
-                    row.get(member)
-                        .and_then(|(judged, _)| judged.answer.yes())
-                        .ok_or_else(super::super::wrong)
-                })
-                .collect::<Result<Vec<_>, _>>()?;
-            Ok(core::ranking(&odds, None))
-        })
-        .collect::<Result<Vec<_>, Error>>()?;
-    let mut positions = vec![vec![0; questions.len()]; rows.len()];
-    for (member, list) in lists.iter().enumerate() {
-        for (at, index) in list.iter().enumerate() {
-            *positions
-                .get_mut(*index)
-                .and_then(|row| row.get_mut(member))
-                .ok_or_else(|| Error::defect("set rank lost a member position"))? = at;
-        }
-    }
-    let selected = core::turns(&lists, None);
-    let rows = held.into_iter().zip(rows).enumerate().collect();
-    let positions = positions.into_iter().enumerate().collect();
-    selected_rows(
-        public, engine, set, questions, setting, rows, selected, positions, captured,
-    )
-}
-#[expect(
-    clippy::too_many_arguments,
     clippy::type_complexity,
     reason = "one renderer retains actual selection and complete members"
 )]

@@ -38,7 +38,7 @@ fn run(listener: &Listener, set: &std::path::Path, flags: &[&str]) -> std::proce
 #[cfg(test)]
 fn rows(output: &std::process::Output) -> Vec<Value> {
     withheld(output, "annotation-private");
-    String::from_utf8_lossy(&output.stdout)
+    crate::harness::printed(output)
         .lines()
         .map(|line| serde_json::from_str(line).unwrap())
         .collect()
@@ -56,14 +56,9 @@ fn complete_annotation_replays_coalesced_observations_and_retains_declared_readi
         &set,
         &["--batch", "max", "--record", recording.to_str().unwrap()],
     );
-    assert_eq!(
-        live.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&live.stderr)
-    );
+    crate::harness::exits(&live, 0);
     assert!(
-        String::from_utf8_lossy(&live.stdout)
+        crate::harness::printed(&live)
             .contains("\"input\":{\"body\":\"Text.\",\"n\":1,\"lexical\":\"Keep Café.\"}")
     );
     let live = rows(&live);

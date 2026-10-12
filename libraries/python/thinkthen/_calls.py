@@ -3,9 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
-import os
 import sys
-import time
 from typing import Generic, TypeVar
 from . import _thinkthen as native
 from . import _inputs as c
@@ -26,42 +24,15 @@ def _json(value):
     return value
 
 
-def _question(verb, question, controls):
-    from ._inputs import QuestionSource
+def _question(verb, question, controls, frame=False):
     if verb == 'annotate' and isinstance(question, type):
         from .pydantic import question_set
         question = question_set(question)
-    if isinstance(question, QuestionSource):
-        if question.none: controls['none'] = True
-        return 'selector', question
-    if question is None and verb in ('recognize', 'relate'):
-        from . import _rules
-        plan = {}
-        if verb == 'recognize':
-            from ._labels import normalize
-            kinds = normalize(controls.pop('kinds', []), controls.pop('descriptions', None))
-            plan['kinds'] = kinds if isinstance(kinds, dict) else {name: None for name in kinds}
-            for key in ('instructions', 'entity_definition'):
-                if key in controls: plan[key] = controls.pop(key)
-        rules = _rules(controls.pop('relations', None), controls.pop('either', None))
-        if rules or verb == 'relate':
-            plan['relations'] = [dict(name=n, source=s, target=t, either=e) for n,s,t,e in rules]
-        return 'definition', {'version': 1, verb: plan}
-    if isinstance(question, os.PathLike):
-        return 'file', os.fspath(question)
-    if isinstance(question, Mapping):
-        return 'definition', _json(question)
-    if verb in ('annotate', 'recognize', 'relate'):
-        return 'file', question
-    if not any(key in controls for key in ('options', 'labels', 'levels', 'true', 'false')):
-        return 'text', question
-    body = {'decide' if verb in ('filter', 'rank') else verb: question}
     from ._labels import normalize
-    for key in ('options', 'labels', 'levels', 'true', 'false'):
+    for key in ('options', 'labels', 'levels', 'kinds'):
         if key in controls:
-            value = controls.pop(key)
-            body[key] = normalize(value, bare_level_names=key == 'levels') if key in ('options', 'labels', 'levels') else value
-    return 'definition', body
+            controls[key] = normalize(controls[key], controls.pop('descriptions', None), bare_level_names=key == 'levels')
+    return native._build_question(verb, question, controls, frame)
 
 
 def _source(verb, value):
@@ -138,38 +109,44 @@ class Operation:
         self.present = ()
         self.members = ()
         fields = dict(controls)
-        asked = _question(verb, question, fields)
-        if frame_surface is not None:
-            if verb == 'annotate':
-                self.members = _frame_calls.members(asked)
-            value, self.present, self.on = _frame_calls.records(self.frame, verb, fields, self.surface, self.members)
-        elif self.frame is not None:
-            if self.surface == 'pandas':
-                from ._pandas_calls import records
-            else:
-                from ._polars_calls import records
-            value, self.present = records(self.frame, verb)
-        self.details = fields.pop('details', False)
-        self.token = fields.pop('token', None)
-        if 'on' in fields:
-            on = fields.pop('on')
-            fields['field'] = [on] if isinstance(on, str) else list(on)
-        source, self.producer, self.scalar = _source(verb, value)
-        if self.token is not None and self.token.cancelled:
-            self._close_producer(preserve_failure=True)
-            raise _cancelled()
+        _, self.producer, _ = _source(verb, value)
+        self.session = None
         try:
-            self.session = engine._engine._request_session(verb, asked, source, fields, self.producer is not None, self.surface)
-        except native.ThinkThenError as error:
-            self._close_producer()
+            asked = _question(verb, question, fields, frame_surface is not None)
+            if frame_surface is not None:
+                if verb == 'annotate':
+                    self.members = _frame_calls.members(asked)
+                value, self.present, self.on = _frame_calls.records(self.frame, verb, fields, self.surface, self.members)
+            elif self.frame is not None:
+                if self.surface == 'pandas':
+                    from ._pandas_calls import records
+                else:
+                    from ._polars_calls import records
+                value, self.present = records(self.frame, verb)
+            self.details = fields.pop('details', False)
+            self.token = fields.pop('token', None)
+            if 'on' in fields:
+                on = fields.pop('on')
+                fields['field'] = [on] if isinstance(on, str) else list(on)
+            source, self.producer, self.scalar = _source(verb, value)
+            if self.token is not None and self.token.cancelled:
+                raise _cancelled()
+            self.session = engine._engine._request_session(verb, (asked, source, fields), self.producer is not None, self.surface)
+            self.engine = engine
+            self.verb = verb
+            self.pending = None
+            self.producer_error = None
+            self.results = []
+            self.terminal = None
+            self.closed = False
+            engine._sessions.add(self)
+        except BaseException:
+            try: self._close_producer(preserve_failure=True)
+            finally:
+                if self.session is not None:
+                    try: self.session.close()
+                    except BaseException: pass
             raise
-        self.engine = engine
-        self.verb = verb
-        self.pending = None
-        self.results = []
-        self.terminal = None
-        self.closed = False
-        engine._sessions.add(self)
 
     def step(self):
         if self.closed:
@@ -200,16 +177,13 @@ class Operation:
                     error.facts = getattr(failure, 'facts', None)
                     error.results = tuple(self.results)
                     error.terminal = packet
-                    raise error
+                    raise error from self.producer_error
                 return True
             if kind == 'row': self.results.append(packet.value)
             if kind == 'aggregate':
                 value = packet.value
                 chunk = list(value) if isinstance(value, list) else [value]
-                if self.verb == 'recognize':
-                    self.results.extend(chunk)
-                else:
-                    self.results = chunk
+                self.results.extend(chunk)
         if self.producer is not None:
             if self.pending is None:
                 try:
@@ -217,7 +191,8 @@ class Operation:
                 except StopIteration:
                     self.session._finish()
                     self._close_producer()
-                except Exception:
+                except Exception as error:
+                    self.producer_error = error
                     self.session._finish(True)
                     self._close_producer()
             if self.pending is not None:
@@ -226,15 +201,18 @@ class Operation:
                 elif status == 'closed': self._close_producer(preserve_failure=True); self.pending = None
         return False
 
+    def wait(self):
+        self.session._wait(self.producer is not None)
+
     def _close_producer(self, preserve_failure=False):
         producer, self.producer = self.producer, None
         if producer is not None:
-            close = getattr(producer, 'close', None)
-            if close is not None:
-                active_failure = preserve_failure or sys.exc_info()[0] is not None
-                try: close()
-                except Exception:
-                    if not active_failure: raise
+            active_failure = preserve_failure or sys.exc_info()[0] is not None
+            try:
+                close = getattr(producer, 'close', None)
+                if close is not None: close()
+            except BaseException:
+                if not active_failure: raise
 
     def cancel(self):
         self.session.cancel()
@@ -267,7 +245,7 @@ class Operation:
 def call(engine, verb, question, value, controls):
     operation = Operation(engine, verb, question, value, controls)
     try:
-        while not operation.step(): time.sleep(.001)
+        while not operation.step(): operation.wait()
         return operation.result()
     finally: operation.close()
 
@@ -291,7 +269,7 @@ class AsyncCalls:
         inspect.signature(getattr(self._engine, verb)).bind(*arguments, **controls)
         operation = Operation(self._engine, verb, question, value, controls)
         try:
-            while not operation.step(): await asyncio.sleep(.001)
+            while not operation.step(): await asyncio.to_thread(operation.wait)
             return operation.result()
         except asyncio.CancelledError:
             try: operation.cancel()
@@ -319,7 +297,7 @@ class Session:
                     self._ended = True
                     operation.close()
                     raise StopIteration
-                time.sleep(.001)
+                operation.wait()
             value = operation.results[self._position]
             self._position += 1
             return value

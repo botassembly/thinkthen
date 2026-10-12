@@ -19,7 +19,7 @@ fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text()
             ],
             caption,
         );
-        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 0);
         let row: Value = serde_json::from_slice(&output.stdout).unwrap();
         assert_eq!(
             row["input"]["text"],
@@ -45,7 +45,7 @@ fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text()
         ],
         &[0xff],
     );
-    assert_eq!(output.status.code(), Some(5), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 5);
     assert!(output.stdout.is_empty());
     assert_eq!(listener.count(), before);
     let place = crate::batching::folder("image-caption-declaration");
@@ -78,7 +78,7 @@ fn scalar_image_captions_preserve_optional_blank_bytes_and_refuse_invalid_text()
             ],
             caption,
         );
-        assert_eq!(output.status.code(), Some(exit), "{}", text(&output.stderr));
+        crate::harness::exits(&output, exit);
         assert_eq!(listener.count() - before, usize::from(exit == 0));
         if exit != 0 {
             assert!(output.stdout.is_empty());
@@ -120,7 +120,7 @@ fn framed_json_captions_keep_context_originals_and_repeated_image_order() {
         ],
         input.as_bytes(),
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let rows: Vec<Value> = text(&output.stdout)
         .lines()
         .map(|row| serde_json::from_str(row).unwrap())
@@ -172,7 +172,7 @@ fn framed_choose_keeps_distinct_ordered_option_lists_with_the_same_images() {
         ],
         input,
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     assert_eq!(text(&output.stdout).lines().count(), 2);
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
@@ -224,7 +224,7 @@ fn explicit_attachment_media_validates_every_original_before_sending() {
             &[&["decide", "Is red visible?"], arguments.as_slice()].concat(),
             b"Caption",
         );
-        assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+        crate::harness::exits(&output, 2);
         assert!(output.stdout.is_empty());
         assert!(listener.requests().is_empty());
     }
@@ -243,7 +243,7 @@ fn explicit_attachment_media_validates_every_original_before_sending() {
         ],
         b"Caption",
     );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 0);
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
@@ -269,7 +269,7 @@ fn release_only_scalar_image_caption_refuses_oversized_text_without_sending() {
         ],
         &vec![b'x'; 16 * 1024 * 1024 + 1],
     );
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    crate::harness::exits(&output, 2);
     assert!(output.stdout.is_empty());
     assert_eq!(listener.count(), 0);
 }

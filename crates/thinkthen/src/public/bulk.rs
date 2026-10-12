@@ -2,6 +2,7 @@
 
 mod annotate_observation;
 mod complete;
+pub(in crate::public) use complete::count_message;
 mod details;
 pub(crate) mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
@@ -12,19 +13,18 @@ use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
 use crate::public::batch::Batch;
 use crate::public::choice::Choice;
-use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
+use crate::public::engine::{DecisionQuestion, Engine, Evidence, only};
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::pull;
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
 use crate::public::results::{
-    self, Answer, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation, Row, Written,
+    self, Answer, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation, Row,
 };
 
 /// One record's named values and bounded per-member observations.
 pub(crate) struct Values {
     pub(crate) values: Vec<(String, core::AnnotatedValue)>,
-    pub(crate) json: Written,
     pub(crate) observed: Vec<(String, ObservedQuestion)>,
 }
 
@@ -109,22 +109,10 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        self.try_filter_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Fallible input for [`Engine::filter_with`], preserving ordered matches.
-    pub fn try_filter_with<'a, I, T>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, T>
-    where
-        I: IntoIterator<Item = Result<T, Error>> + 'a,
-        T: Evidence + 'a,
-    {
+        let records = records.into_iter().map(Ok);
         Batch::of(only(question, &[Kind::Decide], "filter").and_then(|()| {
             self.try_decisions(
+                crate::InputFunction::Filter,
                 question,
                 records,
                 options,
@@ -160,26 +148,7 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        let question = question.question();
-        Batch::of(only(question, DECISIONS, "decide_many").and_then(|()| {
-            self.decisions(
-                question,
-                records,
-                options,
-                |item, (answer, yes)| match answer {
-                    Value::YesNo(value) => Ok(Some(Row::new(
-                        item,
-                        match value {
-                            Some(true) => Answer::Yes,
-                            Some(false) => Answer::No,
-                            None => Answer::Unsure,
-                        },
-                        yes,
-                    ))),
-                    _ => Err(invalid_answer()),
-                },
-            )
-        }))
+        self.try_decide_input_many_with(question, records.into_iter().map(Ok), options)
     }
 
     /// Each record's typed choice, including an unresolved `None`, in input order.
@@ -206,18 +175,7 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        Batch::of(
-            self.decisions(&question.0, records, options, |item, (answer, _)| {
-                let value = match answer {
-                    Value::Choice(Some(label)) => {
-                        Some(C::from_label(&label).ok_or_else(invalid_answer)?)
-                    }
-                    Value::Choice(None) => None,
-                    _ => return Err(invalid_answer()),
-                };
-                Ok(Some(Row::new(item, value, 0.0)))
-            }),
-        )
+        self.try_choose_input_many_with(question, records.into_iter().map(Ok), options)
     }
 
     /// Each record's position on the declared scale, in input order.
@@ -244,17 +202,7 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        Batch::of(only(question, &[Kind::Score], "score_many").and_then(|()| {
-            self.decisions(
-                question,
-                records,
-                options,
-                |item, (answer, _)| match answer {
-                    Value::Score(value) => Ok(Some(Row::new(item, value, 0.0))),
-                    _ => Err(invalid_answer()),
-                },
-            )
-        }))
+        self.try_score_input_many_with(question, records.into_iter().map(Ok), options)
     }
 
     /// Each record's labels in declared order, in input order.
@@ -281,8 +229,12 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        Batch::of(
-            self.decisions(&question.0, records, options, |item, (answer, _)| {
+        Batch::of(self.try_decisions(
+            crate::InputFunction::Tag,
+            &question.0,
+            records.into_iter().map(Ok),
+            options,
+            |item, (answer, _)| {
                 let Value::Tag(labels) = answer else {
                     return Err(invalid_answer());
                 };
@@ -291,26 +243,13 @@ impl Engine {
                     .map(|label| C::from_label(label).ok_or_else(invalid_answer))
                     .collect::<Result<Vec<_>, _>>()?;
                 Ok(Some(Row::new(item, values, 0.0)))
-            }),
-        )
-    }
-
-    fn decisions<'a, I, T: 'a>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'a>,
-        pair: Pair<I::Item, T>,
-    ) -> Result<Batch<'a, T>, Error>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.try_decisions(question, records.into_iter().map(Ok), options, pair)
+            },
+        ))
     }
 
     pub(crate) fn try_decisions<'a, I, R: super::InputEvidence + 'a, T: 'a>(
         &self,
+        function: crate::InputFunction,
         question: &Question,
         records: I,
         options: CallOptions<'a>,
@@ -319,32 +258,24 @@ impl Engine {
     where
         I: IntoIterator<Item = Result<R, Error>> + 'a,
     {
-        let setting = selected_batch(question, &options, self.batch)?;
-        let context = options.context_text().map(evidence).transpose()?;
-        let stop = Stop::begin(options)?.with_prices(self.prices);
-        let engine = self.asking(question)?;
-        let asker = Decisions::new(&engine, question, context.clone());
-        let backend = engine.backend().clone();
-        let question = question.clone();
-        let call = pull::Call {
-            packing: pull::packing(setting, context.is_some(), false),
-            engine,
-            stop,
-            most: self.most,
-        };
-        Ok(pull::try_start(
-            call,
-            asker,
-            records.into_iter(),
-            Box::new(move |stop, index, item, row| {
-                let judged = judged(stop, &question, &backend, index, row)?;
-                let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
+        crate::public::request::pull::project(
+            self,
+            function,
+            question.clone(),
+            records
+                .into_iter()
+                .map(|row| row.map(crate::public::record_input::plain)),
+            options,
+            move |original, _, canonical| {
                 pair(
-                    item,
-                    (judged.value, judged.answer.yes().unwrap_or_default()),
+                    original,
+                    (
+                        canonical.value().clone(),
+                        canonical.answer().yes().unwrap_or_default(),
+                    ),
                 )
-            }),
-        ))
+            },
+        )
     }
 }
 

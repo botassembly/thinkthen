@@ -9,7 +9,7 @@ use crate::core::{AnnotateResult, AnnotatedEntry, AnswerId, FailureId};
 pub(crate) struct Annotation {
     pub(crate) identity: ResultIdentity,
     pub(crate) source: Option<super::wire::PhysicalSource>,
-    pub(crate) legacy: AnnotateResult,
+    pub(crate) compatibility: AnnotateResult,
     pub(crate) members: Vec<(String, AnnotationMember)>,
     pub(crate) context_sha256: Option<String>,
     pub(crate) attempts: Option<Vec<crate::core::AttemptObservation>>,
@@ -17,7 +17,7 @@ pub(crate) struct Annotation {
 
 impl Annotation {
     pub(crate) fn metadata(&self) -> crate::core::MetadataFields<'_> {
-        let mut fields = self.legacy.meta.fields();
+        let mut fields = self.compatibility.meta.fields();
         fields.context = self.context_sha256.as_deref();
         fields.attempts = self.attempts.as_deref();
         fields
@@ -42,7 +42,7 @@ pub enum MemberIdentity {
 pub(crate) struct AnnotationMember {
     pub(crate) declarations: crate::core::declaration::QuestionMetadata,
     pub(crate) identity: MemberIdentity,
-    pub(crate) legacy: AnnotatedEntry,
+    pub(crate) compatibility: AnnotatedEntry,
     pub(crate) threshold: Option<crate::core::Threshold>,
     pub(crate) sources: Vec<crate::core::QuestionSource>,
     pub(crate) observations: Vec<crate::core::Observation>,
@@ -51,21 +51,21 @@ pub(crate) struct AnnotationMember {
 
 impl AnnotationMember {
     pub(crate) fn question(&self) -> &crate::core::Question {
-        match &self.legacy {
+        match &self.compatibility {
             AnnotatedEntry::Answered(entry) => &entry.question,
             AnnotatedEntry::Failed(entry) => &entry.question,
         }
     }
 
     pub(crate) fn request(&self) -> &str {
-        match &self.legacy {
+        match &self.compatibility {
             AnnotatedEntry::Answered(entry) => &entry.request,
             AnnotatedEntry::Failed(entry) => &entry.request,
         }
     }
 
     pub(crate) const fn value(&self) -> Option<&crate::core::Value> {
-        match &self.legacy {
+        match &self.compatibility {
             AnnotatedEntry::Answered(entry) => Some(&entry.value),
             AnnotatedEntry::Failed(_) => None,
         }
@@ -109,7 +109,7 @@ impl Serialize for AnnotationMember {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let question =
             crate::core::declaration::ReadableQuestion::atomic(self.question(), &self.declarations);
-        let document = match (&self.identity, &self.legacy) {
+        let document = match (&self.identity, &self.compatibility) {
             (MemberIdentity::Answered(id), AnnotatedEntry::Answered(entry)) => {
                 MemberDocument::Answered {
                     answer_id: id,
@@ -193,7 +193,7 @@ impl Annotation {
             schema: super::wire::Version::V2,
             answer_id: self.identity.answer_id(),
             input,
-            value: &self.legacy.value,
+            value: &self.compatibility.value,
             answers: Members(&self.members),
             meta: super::CompleteMeta::from_fields(self.metadata(), &self.identity),
         }
@@ -202,6 +202,6 @@ impl Annotation {
 }
 impl Serialize for Annotation {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_with_input(&self.legacy.input, serializer)
+        self.serialize_with_input(&self.compatibility.input, serializer)
     }
 }

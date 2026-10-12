@@ -2586,11 +2586,13 @@ public struct InputRequestReader: JSONRepresentable {
     }
 }
 public indirect enum InputRequestReaderFailure: JSONRepresentable {
+    case `producer`(InputRequestReaderFailureProducer)
     case `io`(InputRequestReaderFailureIo)
     case `utf8`(InputRequestReaderFailureUtf8)
     case `invalidInput`(InputRequestReaderFailureInvalidInput)
     public static func read(_ json: JSONValue) throws -> InputRequestReaderFailure {
         let object = try jsonObject(json)
+        if object["kind"] == .string("producer") { return .`producer`(try InputRequestReaderFailureProducer.read(json)) }
         if object["kind"] == .string("io") { return .`io`(try InputRequestReaderFailureIo.read(json)) }
         if object["kind"] == .string("utf8") { return .`utf8`(try InputRequestReaderFailureUtf8.read(json)) }
         if object["kind"] == .string("invalid_input") { return .`invalidInput`(try InputRequestReaderFailureInvalidInput.read(json)) }
@@ -2598,6 +2600,7 @@ public indirect enum InputRequestReaderFailure: JSONRepresentable {
     }
     public var json: JSONValue {
         switch self {
+        case .`producer`(let value): return value.json
         case .`io`(let value): return value.json
         case .`utf8`(let value): return value.json
         case .`invalidInput`(let value): return value.json
@@ -2645,6 +2648,26 @@ public struct InputRequestReaderFailureIo: JSONRepresentable {
         var object = extensions.filter { !known.contains($0.key) }
         object["kind"] = `kind`.json
         writePresence(`location`, "location", &object)
+        return .object(object)
+    }
+}
+public struct InputRequestReaderFailureProducer: JSONRepresentable {
+    public let extensions: [String: JSONValue]
+    private var _sourceJSON: JSONValue? = nil
+    public let `kind`: String
+    public init(extensions: [String: JSONValue] = [:], `kind`: String = "producer") { self.extensions = extensions; self.`kind` = `kind` }
+    public static func read(_ json: JSONValue) throws -> InputRequestReaderFailureProducer {
+        let object = try jsonObject(json)
+        let known: Set<String> = ["kind"]
+        var value = Self(extensions: object.filter { !known.contains($0.key) }, kind: try String.read(jsonRequired(object, "kind")))
+        value._sourceJSON = json
+        return value
+    }
+    public var json: JSONValue {
+        if let _sourceJSON { return _sourceJSON }
+        let known: Set<String> = ["kind"]
+        var object = extensions.filter { !known.contains($0.key) }
+        object["kind"] = `kind`.json
         return .object(object)
     }
 }

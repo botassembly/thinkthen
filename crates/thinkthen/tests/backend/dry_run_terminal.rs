@@ -112,7 +112,7 @@ assert json.loads(terminal_stdout.splitlines()[0])['input']['framing'] == 'lines
     assert!(
         output.status.success(),
         "PTY dry run failed: {}{}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
+        crate::harness::printed(&output),
+        crate::harness::said(&output)
     );
 }

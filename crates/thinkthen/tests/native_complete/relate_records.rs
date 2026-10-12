@@ -25,12 +25,8 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
         .map(move |source| source.and_then(|source| reading.compose_source(source)))
     };
     let build = || {
-        Engine::builder()
-            .base_url(listener.base())
-            .unwrap()
+        crate::api::builder(listener.base(), "complete-private")
             .model("engine-model")
-            .unwrap()
-            .api_key("complete-private")
             .unwrap()
             .profile_json(
                 r#"{"schema":"thinkthen.backend-profile/1","name":"running","max_questions":400}"#,
@@ -41,34 +37,36 @@ fn located_relations_project_saved_fields_once_and_replay_actual_original_set() 
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let held = Mutex::new(Vec::new());
     let observer = |event: RecordObservation<'_>| held.lock().unwrap().push(event.to_owned());
-    let call = engine
-        .try_relate_records_complete_with(
-            &ask,
-            records(),
-            CallOptions::new()
-                .context("Separate.")
-                .attempts(true)
-                .observe(&observer),
-        )
-        .unwrap();
+    let call = crate::api::relation(
+        &engine,
+        &ask,
+        records(),
+        CallOptions::new()
+            .context("Separate.")
+            .attempts(true)
+            .observe(&observer),
+    )
+    .unwrap();
+    let call_value = crate::api::related(&call).unwrap();
     assert_relation_call(&call, &listener);
     let replay = build().replay(&folder).unwrap().build().unwrap();
-    let again = replay
-        .try_relate_records_complete_with(
-            &ask,
-            records(),
-            CallOptions::new().context("Separate.").attempts(true),
-        )
-        .unwrap();
+    let again = crate::api::relation(
+        &replay,
+        &ask,
+        records(),
+        CallOptions::new().context("Separate.").attempts(true),
+    )
+    .unwrap();
+    let again_value = crate::api::related(&again).unwrap();
     assert_eq!(
-        again.value().result().answer_id(),
-        call.value().result().answer_id()
+        again_value.result().answer_id(),
+        call_value.result().answer_id()
     );
     assert_eq!(
-        again.value().result().identity().origin(),
+        again_value.result().identity().origin(),
         Some(Origin::Replay)
     );
-    let thinkthen::QuestionInput::Record(second) = &again.value().original()[1] else {
+    let thinkthen::QuestionInput::Record(second) = &again_value.original()[1] else {
         panic!("located original")
     };
     assert_eq!(second.location().unwrap().first_line(), Some(2));
@@ -110,28 +108,19 @@ fn complete_relation_records_keep_literal_mode_and_refuse_bad_whole_sets_before_
         .build()
         .unwrap();
     let lines = [
-        RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: r#"{"name":"literal"}"#,
-            context: None,
-            options: None,
-        },
-        RecordInput {
-            examples: None,
-            seed_spans: None,
-            original: "Other.",
-            context: None,
-            options: None,
-        },
+        crate::api::record(r#"{"name":"literal"}"#),
+        crate::api::record("Other."),
     ];
-    let call = engine
-        .relate_records_complete_with(&ask, lines, CallOptions::new())
-        .unwrap();
-    assert_eq!(call.value().result().question().fields(), None);
-    assert_eq!(call.value().original()[0], r#"{"name":"literal"}"#);
+    let call =
+        crate::api::relation(&engine, &ask, lines.into_iter().map(Ok), CallOptions::new()).unwrap();
+    let call_value = crate::api::related(&call).unwrap();
+    assert_eq!(call_value.result().question().fields(), None);
     assert_eq!(
-        call.value().result().value()[0].source().name(),
+        call_value.original()[0],
+        thinkthen::QuestionInput::Text(r#"{"name":"literal"}"#.into())
+    );
+    assert_eq!(
+        call_value.result().value()[0].source().name(),
         r#"{"name":"literal"}"#
     );
     let reading = RecordReading::new(&[], None, None).unwrap();
@@ -143,69 +132,77 @@ fn complete_relation_records_keep_literal_mode_and_refuse_bad_whole_sets_before_
             .unwrap()
     };
     assert_eq!(
-        engine
-            .relate_records_complete_with(&ask, [record(), record()], CallOptions::new())
-            .unwrap_err()
-            .kind(),
+        crate::api::relation(
+            &engine,
+            &ask,
+            ([record(), record()]).into_iter().map(Ok),
+            CallOptions::new()
+        )
+        .unwrap_err()
+        .kind(),
         ErrorKind::Usage
     );
     let invalid = reading
         .compose(RawRecord::json(r#"{"name":false,"kind":"*"}"#).unwrap())
         .unwrap();
     assert_eq!(
-        engine
-            .relate_records_complete_with(&ask, [record(), invalid], CallOptions::new())
-            .unwrap_err()
-            .stopped()
-            .at(),
+        crate::api::relation(
+            &engine,
+            &ask,
+            ([record(), invalid]).into_iter().map(Ok),
+            CallOptions::new()
+        )
+        .unwrap_err()
+        .stopped()
+        .at(),
         Some(2)
     );
-    let error = engine
-        .try_relate_records_complete_with(
-            &ask,
-            [
-                Ok(record()),
-                Err(thinkthen::Error::new(ErrorKind::Local, "reader stopped")),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap_err();
+    let error = crate::api::relation(
+        &engine,
+        &ask,
+        [
+            Ok(record()),
+            Err(thinkthen::Error::new(ErrorKind::Local, "reader stopped")),
+        ],
+        CallOptions::new(),
+    )
+    .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(error.stopped().at(), Some(2));
     assert!(error.facts().is_none());
-    let empty = engine
-        .relate_records_complete_with(
-            &ask,
-            Vec::<RecordInput<&str>>::new(),
-            CallOptions::new().attempts(true),
-        )
-        .unwrap();
-    assert_eq!(empty.value().original().len(), 0);
+    let empty = crate::api::relation(
+        &engine,
+        &ask,
+        Vec::<RecordInput<&str>>::new().into_iter().map(Ok),
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
+    let empty_value = crate::api::related(&empty).unwrap();
+    assert_eq!(empty_value.original().len(), 0);
     assert_eq!(empty.facts().records(), 0);
-    assert_eq!(empty.value().result().identity().origin(), None);
-    assert_eq!(empty.value().result().meta().attempts(), Some(&[][..]));
+    assert_eq!(empty_value.result().identity().origin(), None);
+    assert_eq!(empty_value.result().meta().attempts(), Some(&[][..]));
     assert_eq!(listener.count(), 1);
 }
 
 #[cfg(test)]
-type RelatedRecords = thinkthen::Call<
-    thinkthen::CompleteRecord<Vec<thinkthen::QuestionInput>, thinkthen::CompleteRelated>,
->;
+type RelatedRecords = thinkthen::Call<thinkthen::RequestValue>;
 #[cfg(test)]
 fn assert_relation_call(call: &RelatedRecords, listener: &Listener) {
-    assert_eq!(call.value().original().len(), 2);
-    let meta = call.value().result().meta();
+    let call_value = crate::api::related(call).unwrap();
+    assert_eq!(call_value.original().len(), 2);
+    let meta = call_value.result().meta();
     let warning = meta.profile_warning().unwrap();
     assert_eq!(warning.tuned_for(), "calibrated");
     assert_eq!(warning.running(), "running");
     assert_eq!(
-        call.value().result().question().fields(),
+        call_value.result().question().fields(),
         Some(("/person/name", "/person/kind"))
     );
-    assert_eq!(call.value().result().value()[0].source().name(), "Ada");
-    assert_eq!(call.value().result().value()[0].target().name(), "Grace");
+    assert_eq!(call_value.result().value()[0].source().name(), "Ada");
+    assert_eq!(call_value.result().value()[0].target().name(), "Grace");
     assert_eq!(
-        call.value()
+        call_value
             .result()
             .members()
             .map(|member| member.accepted())
@@ -213,12 +210,12 @@ fn assert_relation_call(call: &RelatedRecords, listener: &Listener) {
         [Some(true), Some(false)]
     );
     assert_eq!(
-        call.value().result().identity().answered_by(),
+        call_value.result().identity().answered_by(),
         Some("actual-model")
     );
     assert_eq!(call.facts().input_tokens(), Some(887));
     assert_eq!(call.facts().output_tokens(), None);
-    let document = serde_json::to_value(call.value()).unwrap();
+    let document = serde_json::to_value(call_value).unwrap();
     assert_eq!(document["schema"], "thinkthen.result/2");
     assert_eq!(
         document["input"],

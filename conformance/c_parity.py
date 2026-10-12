@@ -13,7 +13,7 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "conformance/children"))
-from children import child_env
+from children import child_env, read_process_line
 FUNCTIONS = ['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']
 ERRORS = {'usage': 1, 'backend': 2, 'local': 4, 'cancelled': 5, 'deadline': 3, 'defect': 6}
 
@@ -497,7 +497,8 @@ def main(*, consumer='c', header=None, library=None, compile_consumer=None,
     cases = {row['id']: row for row in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
     named = {row['id']: row for row in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases']}
     names = ('PATH', 'HOME', 'CARGO_HOME', 'RUSTUP_HOME', 'RUSTUP_TOOLCHAIN',
-             'RUSTFLAGS', 'CFLAGS', 'TMPDIR', 'XDG_RUNTIME_DIR',
+             'RUSTFLAGS', 'RUSTC_WRAPPER', 'CARGO_BUILD_RUSTC_WRAPPER', 'CFLAGS', 'TMPDIR', 'XDG_RUNTIME_DIR',
+             'CARGO_PROFILE_DEV_OPT_LEVEL', 'CARGO_PROFILE_DEV_DEBUG',
              'THINKTHEN_HEAVY_LOCK', 'THINKTHEN_HEAVY_LOCK_HELD')
     env = {name: value for name in names if (value := os.environ.get(name)) is not None}
     env.update(CARGO_BUILD_JOBS='1', CARGO_NET_OFFLINE='true')
@@ -597,7 +598,7 @@ def main(*, consumer='c', header=None, library=None, compile_consumer=None,
                                         assert backend.read('wait 1') == 'wait 1'
                                         running.stdin.write('!')
                                         running.stdin.flush()
-                                        assert running.stdout.readline() == 'cancel-fired\n'
+                                        assert read_process_line(running.stdout) == 'cancel-fired\n'
                                         backend.process.stdin.write('release\n')
                                         backend.process.stdin.flush()
                                         stdout,stderr=running.communicate(timeout=60)
