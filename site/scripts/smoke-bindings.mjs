@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
 import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
@@ -43,7 +44,7 @@ let door = null;
 function cDoor() {
   if (door) return door;
   const out = path.join(tmp, 'c-door');
-  const done = run('sh', ['-c', '. sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
+  const done = run('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
   if (done.status !== 0) throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
   door = out;
   return door;
@@ -72,10 +73,13 @@ const DOTNET_ENV = {
 let feed = null;
 function csharpFeed() {
   if (feed) return feed;
-  const source = path.join(tmp, 'csharp-source');
+  const root = path.join(tmp, 'csharp-source');
+  const source = path.join(root, 'libraries/csharp');
   fs.cpSync(path.join(repo, 'libraries/csharp'), source, { recursive: true, filter: (f) => !/\/(bin|obj|target)$/.test(f) });
+  fs.cpSync(path.join(repo, 'sdlc/generators/results/csharp'), path.join(root, 'sdlc/generators/results/csharp'), { recursive: true });
   const out = path.join(tmp, 'csharp-feed');
-  const done = run('dotnet', ['pack', 'ThinkThen.csproj', '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
+  const native = [`-p:ThinkThenNativeAsset=${path.join(cDoor(), 'lib/libthinkthen.so')}`, '-p:ThinkThenNativeRid=linux-x64', '-p:ThinkThenNativeName=libthinkthen.so'];
+  const done = run('dotnet', ['pack', 'ThinkThen.csproj', ...native, '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
   if (done.status !== 0) throw new Error(`dotnet pack failed\n${done.stdout}${done.stderr}`);
   feed = out;
   return feed;
@@ -86,6 +90,34 @@ const sourceArchive = (slug) => (dir) => fs.cpSync(path.join(repo, 'libraries', 
 const ARCHIVE = {
   java: (dir) => fs.cpSync(jvmJars(), path.join(dir, 'thinkthen-jvm'), { recursive: true }),
   csharp: (dir) => fs.cpSync(csharpFeed(), path.join(dir, 'thinkthen-csharp'), { recursive: true }),
+};
+// The Go archive is the module with its static native library.
+ARCHIVE.go = (dir) => {
+  const done = run('python3', [path.join(repo, 'libraries/go/fixtures/package_owned.py'), path.join(repo, 'libraries/go'), cDoor(), path.join(dir, 'thinkthen-go')]);
+  if (done.status !== 0) throw new Error(`the Go module did not stage\n${done.stdout}${done.stderr}`);
+};
+// The PHP archive is the package source with native/libthinkthen.so.
+ARCHIVE.php = (dir) => {
+  const pkg = path.join(dir, 'thinkthen-php');
+  for (const name of ['autoload.php', 'composer.json', 'LICENSE', 'README.md', 'src']) fs.cpSync(path.join(repo, 'libraries/php', name), path.join(pkg, name), { recursive: true });
+  fs.mkdirSync(path.join(pkg, 'native'));
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.so'), path.join(pkg, 'native/libthinkthen.so'));
+};
+// The Dart archive is the package source. Its build hook takes the native
+// library from native-assets/ by checksum, offline, as the package guide
+// describes for a development build.
+ARCHIVE.dart = (dir) => {
+  const source = path.join(repo, 'libraries/dart');
+  const pkg = path.join(dir, 'thinkthen-dart');
+  for (const name of ['pubspec.yaml', 'README.md', 'LICENSE', 'CHANGELOG.md', 'native-assets.json', 'lib', 'hook']) fs.cpSync(path.join(source, name), path.join(pkg, name), { recursive: true });
+  const library = fs.readFileSync(path.join(cDoor(), 'lib/libthinkthen.so'));
+  const digest = createHash('sha256').update(library).digest('hex');
+  const manifest = JSON.parse(fs.readFileSync(path.join(pkg, 'native-assets.json'), 'utf8'));
+  if (manifest.distribution !== 'development-only') throw new Error('the Dart package names a release asset');
+  manifest.assets.linux_x64.sha256 = digest;
+  fs.writeFileSync(path.join(pkg, 'native-assets.json'), `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.mkdirSync(path.join(dir, 'native-assets', digest), { recursive: true });
+  fs.writeFileSync(path.join(dir, 'native-assets', digest, manifest.assets.linux_x64.file), library);
 };
 // The Swift archive carries the C header in its system library folder.
 ARCHIVE.swift = (dir) => {
@@ -240,7 +272,7 @@ const RUBY_PREFIX = () => {
 // Dart from the pinned Flutter, as libraries/dart/check.sh finds it. Its
 // SDK folder runs no Flutter update check.
 const DART_SDK = path.join(os.homedir(), '.local/opt/flutter/bin/cache/dart-sdk/bin');
-const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}` };
+const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}`, PUB_CACHE: process.env.PUB_CACHE ?? path.join(os.homedir(), '.pub-cache') };
 const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-c', 'command -v scalac']).stdout.trim())));
 
 // Each binding: how to build it once, how to run one sample, and what it

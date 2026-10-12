@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "relate": {
+    "relations": [
+      {
+        "name": "sings",
+        "source": "singer",
+        "target": "song"
+      }
+    ]
+  }
+}

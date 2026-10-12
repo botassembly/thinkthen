@@ -1,0 +1,4 @@
+{
+  "score": "How urgent is this?",
+  "levels": ["Routine.", "Soon.", "Immediate."]
+}
