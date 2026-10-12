@@ -18,8 +18,18 @@ export default defineConfig({
     // The shell recipes moved into the Bash techniques section.
     ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
       .map((slug) => [`/how-tos/${slug}`, `/how-tos/bash/${slug}/`])),
-    ...Object.fromEntries(['shell', 'python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'duckdb', 'sqlite', 'postgresql']
+    '/shell': '/languages/bash/',
+    ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c']
+      .map((slug) => [`/${slug}`, `/languages/${slug}/`])),
+    ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql']
       .map((slug) => [`/${slug}`, `/install/${slug}/`])),
+    // The language pages moved under /languages/ on 2026-10-12, and the Bash
+    // techniques moved onto the Bash page.
+    '/install/shell': '/languages/bash/',
+    ...Object.fromEntries(['python', 'pandas', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'go', 'swift', 'zig', 'php', 'dart']
+      .map((slug) => [`/install/${slug}`, `/languages/${slug}/`])),
+    ...Object.fromEntries(['if', 'case', 'not-sure', 'threshold-band', 'while-read', 'pipeline', 'batches', 'ci-gate', 'long-lived-loop', 'judge-paragraphs', 'agent-tool-guard']
+      .map((slug) => [`/how-tos/bash/${slug}`, `/languages/bash/${slug}/`])),
     // The launch article replaced the first article on 2026-10-01.
     '/blog/code-that-understands': '/blog/introducing-thinkthen/',
     // The earlier preview kept the bench pages at /beatles-bench/.

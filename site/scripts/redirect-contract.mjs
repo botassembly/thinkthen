@@ -1,4 +1,5 @@
-// Independent compatibility inventory: 42 historical aliases and 19 moved pages.
+// Independent compatibility inventory: 42 historical aliases, 19 moved pages
+// and 33 language and Bash technique pages moved under /languages/.
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
@@ -8,7 +9,12 @@ export const ALIASES = Object.freeze({
   '/surfaces': '/install/', '/backends': '/install/backends/',
   '/tutorial': '/learn/tutorial/', '/recipes': '/how-tos/bash/',
   ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection'].map(s => [`/how-tos/${s}`, `/how-tos/bash/${s}/`])),
-  ...Object.fromEntries(['shell', 'python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'duckdb', 'sqlite', 'postgresql'].map(s => [`/${s}`, `/install/${s}/`])),
+  '/shell': '/languages/bash/',
+  ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c'].map(s => [`/${s}`, `/languages/${s}/`])),
+  ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql'].map(s => [`/${s}`, `/install/${s}/`])),
+  '/install/shell': '/languages/bash/',
+  ...Object.fromEntries(['python', 'pandas', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'go', 'swift', 'zig', 'php', 'dart'].map(s => [`/install/${s}`, `/languages/${s}/`])),
+  ...Object.fromEntries(['if', 'case', 'not-sure', 'threshold-band', 'while-read', 'pipeline', 'batches', 'ci-gate', 'long-lived-loop', 'judge-paragraphs', 'agent-tool-guard'].map(s => [`/how-tos/bash/${s}`, `/languages/bash/${s}/`])),
   '/blog/code-that-understands': '/blog/introducing-thinkthen/',
   '/beatles-bench': '/learn/beatles-bench/',
   '/beatles-bench/the-data': '/learn/beatles-bench/',

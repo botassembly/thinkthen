@@ -91,7 +91,7 @@ h1, h2, h3 { line-height: 1.2; font-weight: 700; letter-spacing: -0.01em; }
 h1 { font-size: clamp(1.9rem, 5vw, 2.9rem); margin: 0 0 .5rem; }
 /* A code pane or a slide right under the title keeps the same gap a lede
    would leave. */
-h1 + :is(.block, .example, .slide, .tabbed) { margin-top: 1.4rem; }
+h1 + :is(.block, .example, .slide) { margin-top: 1.4rem; }
 h2 { font-size: clamp(1.3rem, 3vw, 1.7rem); margin: 2.4rem 0 .7rem; }
 h3 { font-size: 1.08rem; margin: 1.6rem 0 .4rem; }
 p { margin: 0 0 1rem; }
@@ -391,23 +391,6 @@ button.copy {
   border-radius: 6px; padding: .12rem .45rem; font: inherit; font-size: .76rem; cursor: pointer;
 }
 button.copy:hover { color: var(--ink); border-color: var(--think); }
-
-/* tabs */
-.tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin: 0 0 .7rem; }
-.tabs button {
-  background: var(--card); border: 1px solid var(--line); color: var(--muted);
-  border-radius: 999px; padding: .2rem .7rem; font: inherit; font-size: .85rem; cursor: pointer;
-}
-.tabs button[aria-selected="true"] { color: var(--ground); background: var(--think); border-color: var(--think); font-weight: 600; }
-.tabs.grouped { display: grid; gap: .45rem; }
-.tab-group { display: grid; gap: .2rem; }
-.tab-group .group-name { font-size: .72rem; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
-.group-tabs { display: flex; gap: .3rem; flex-wrap: wrap; }
-@media (min-width: 720px) {
-  .tab-group { grid-template-columns: 9.5rem 1fr; align-items: baseline; gap: .6rem; }
-}
-
-.cell[hidden] { display: none; }
 
 .outcome { border: 1px solid var(--line); border-left: 4px solid; border-radius: 8px; padding: .6rem .8rem; background: var(--card); }
 .outcome.yes { border-left-color: var(--then); }

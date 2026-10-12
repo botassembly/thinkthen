@@ -23,7 +23,7 @@ Follow these rules when you write or edit any page or code example on this site.
   | A named way to reach a model, such as `typesafe` | backend |
   | The program at an address | server |
 - Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
-- Link every binding to its install page, even before that page exists (Ian, 2026-09-28). `BINDINGS` in `src/data/catalog.mjs` holds the list. The link check allows exactly the install paths of the bindings with no page yet.
+- Link every binding to its page, even before that page exists (Ian, 2026-09-28). A language's page sits at `/languages/<slug>/` and a database's at `/install/<slug>/`. `BINDINGS` in `src/data/catalog.mjs` holds the list and each route. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
 - Name the threshold in the command and in the prose. Show one band per page.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
@@ -116,7 +116,7 @@ A page may name `--details` where the reference or an edge case needs it (docs c
 
 ### Keep a function page's example short
 
-Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). The opening example in every language is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in Bash only and links the bindings (`sdlc/decisions/2026-10-12-docs-sell-one-idea.md`). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
+Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). On a language page, each function's first sample is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). A bigger sample follows it. Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in Bash only and links the bindings (`sdlc/decisions/2026-10-12-docs-sell-one-idea.md`). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
 
 ### Honest examples
 

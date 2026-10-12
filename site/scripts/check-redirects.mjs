@@ -76,7 +76,7 @@ async function proof() {
       await visit(fallback, alias, fixed);
     }
   } finally { await fallback.close(); }
-  console.log(`redirect browser: ${activeAliases.length} aliases, 61 compatibility addresses, 9 original fragment cases, 3 original direct pages, ${recipeState.index ? '1 recipe direct index' : '4 recipe fragment cases'}, ${recipeState.index ? 2 : 3} Chromium no-JavaScript fallbacks passed`);
+  console.log(`redirect browser: ${activeAliases.length} aliases, ${Object.keys(ALIASES).length} compatibility addresses, 9 original fragment cases, 3 original direct pages, ${recipeState.index ? '1 recipe direct index' : '4 recipe fragment cases'}, ${recipeState.index ? 2 : 3} Chromium no-JavaScript fallbacks passed`);
   }
 }
 try {

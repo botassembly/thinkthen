@@ -1,9 +1,9 @@
 ---
-// Goal: show one function's plain call, value, and exit code first, then
-// its own flags and more examples lower down.
+// Goal: show one function's plain call, value, and exit code in Bash first,
+// then its own flags and more examples lower down.
 import Base from '../../../layouts/Base.astro';
 import Code from '../../../components/Code.astro';
-import CrossView from '../../../components/CrossView.astro';
+import Terminal from '../../../components/Terminal.astro';
 import MoreExamples from '../../../components/MoreExamples.astro';
 import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
 import { GLOBAL_FLAGS, flagsOf, namesOf } from '../../../data/flags.mjs';
@@ -64,7 +64,8 @@ const jobsScope = name === 'annotate'
 <Base title={title} description={fn.line} image={card?.image} imageAlt={card?.alt}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1 id="opening"><code>{title}</code>: {line}</h1>
-  <CrossView fn={fn.name} />
+  {first && <Terminal run={first} caption={first.see} />}
+  <p class="pagelinks">{isFn ? <><code>{fn.name}</code> runs in every binding.</> : <>Every binding reads a question file.</>} <a href="/languages/">Find your language</a>.</p>
   {openingInputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples read`} />)}
   {fn.lede ? (
     <p class="lede" set:html={fn.lede} />

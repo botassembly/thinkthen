@@ -1,33 +1,22 @@
 ---
-// One function's further runs and bigger library samples, under a heading
-// at the level the page asks for. The function page and the reference page
-// both show them from src/data/fn-examples.mjs.
+// One function's further Bash runs, under a heading at the level the page
+// asks for, from src/data/fn-examples.mjs.
 import Terminal from './Terminal.astro';
 import Code from './Code.astro';
 import { examplesOf } from '../data/fn-examples.mjs';
 
 const { fn, level = 'h3' } = Astro.props;
-const { extra, more, moreInputs } = examplesOf(fn);
+const { extra, moreInputs } = examplesOf(fn);
 const Heading = level;
-// A file one further run reads sits directly above the first run that reads
-// it. The other files sit at the top.
-const readBy = (run) => moreInputs.filter((file) => run.command.includes(file.name));
+// A file sits directly above the first further run that reads it.
 const firstReader = new Map();
-for (const run of extra) for (const file of readBy(run)) if (!firstReader.has(file.name)) firstReader.set(file.name, run.name);
-const top = moreInputs.filter((file) => !firstReader.has(file.name));
+for (const run of extra) for (const file of moreInputs) if (run.command.includes(file.name) && !firstReader.has(file.name)) firstReader.set(file.name, run.name);
 const above = (run) => moreInputs.filter((file) => firstReader.get(file.name) === run.name);
 ---
-{(extra.length > 0 || more.length > 0) && <Heading id="more-examples">More examples</Heading>}
-{top.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples below read`} />)}
+{extra.length > 0 && <Heading id="more-examples">More examples</Heading>}
 {extra.map((run) => (
   <>
     {above(run).map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, the file the next example reads`} />)}
     <Terminal run={run} caption={run.see} />
-  </>
-))}
-{more.map((m) => (
-  <>
-    <Code code={m.code} file={m.file} caption={`${m.name}: ${m.see}`} label={`Copy the ${m.name} sample`} />
-    {m.output && <Code code={m.output} lang="output" caption={`What ${m.name} printed`} copy={false} />}
   </>
 ))}
