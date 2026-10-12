@@ -1,6 +1,6 @@
 # 0556: Wait for session results in Rust and delete binding poll loops
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -29,6 +29,8 @@ Reviews: revision ea591ef, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: Reviewed native waits passed routine installed checks in the shared batch; Apple qualification remains with the final candidate under the third amendment.)
 
 ## Outcome
 
