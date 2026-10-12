@@ -228,7 +228,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                   '--target-dir',str(source.parent.parent)]
     if compiler:
         with tempfile.TemporaryDirectory(prefix='thinkthen-0431-types-') as tmp:
-            env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS','RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
+            env=child_env(keep=('CARGO_HOME','RUSTUP_HOME','CARGO_NET_OFFLINE','CARGO_BUILD_JOBS','RUSTFLAGS','CARGO_ENCODED_RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
                                 'CARGO_PROFILE_DEV_OPT_LEVEL','CARGO_PROFILE_DEV_DEBUG'), home=tmp, LANG='C.UTF-8', LC_ALL='C.UTF-8')
             env.setdefault('CARGO_HOME',str(Path.home()/'.cargo'))
             env.setdefault('RUSTUP_HOME',str(Path.home()/'.rustup'))
