@@ -34,7 +34,7 @@ The generator repair at `d9c6a7887524296b6d2ba2b40dbc6e31bb4df6cd` adds the appr
 
 ## Binding and database limits against main
 
-The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prepared `e52ac9593` configuration raised binding limits by 1,634 lines and lowered them by 214. The third 0543 amendment adds six allowances totalling 163 lines after the C shared helper removes 23 measured lines. The resulting increases total 1,797 and the reductions remain 214. Core is separate: its matching ceiling is 187,606. The table lists every changed binding and database limit, including both prior changes and the newly approved allowances. Unlisted limits match main. Each positive change requires the fresh review specified by the amendment.
+The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prepared `e52ac9593` configuration raised binding limits by 1,634 lines and lowered them by 214. The third 0543 amendment adds six allowances totalling 163 lines after the C shared helper removes 23 measured lines. That intermediate comparison is +1,797 and −214. The subsequent C fixture include repair removes two Rust lines and lowers its matching limit, so the final increases total 1,795 and reductions remain 214. Core is separate: its matching ceiling is 187,606. The table lists every changed binding and database limit, including both prior changes and the newly approved allowances. Unlisted limits match main. Each positive change requires the fresh review specified by the amendment.
 
 | Limit file | Main | Prepared limit | Change | Cause |
 | --- | ---: | ---: | ---: | --- |
@@ -45,7 +45,7 @@ The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prep
 | `libraries/ada/ratchet.ads.json` | 8601 | 8653 | +52 | Generated canonical wait declarations and the approved named C export; the last 15 lines are the third-amendment allowance. |
 | `libraries/ada/ratchet.py.json` | 455 | 551 | +96 | Shared installed parity fixture preparation and child isolation; the last line imports the child-environment helper. |
 | `libraries/c/ratchet.c.json` | 3299 | 3395 | +96 | Immediate diagnostics and direct named-export checks; six shared assertion helpers remove 23 lines before the last 55-line allowance. |
-| `libraries/c/ratchet.json` | 31742 | 32161 | +419 | Shared Request execution, named constructor, immediate diagnostics, native wait and their retained C regressions. |
+| `libraries/c/ratchet.json` | 31742 | 32159 | +417 | Shared Request execution, named constructor, immediate diagnostics, native wait and retained C regressions; shared fixture include paths remove two further lines. |
 | `libraries/cobol/ratchet.cpy.json` | 5719 | 5728 | +9 | Generated native session wait and ABI declarations. |
 | `libraries/cobol/ratchet.py.json` | 565 | 568 | +3 | Generated constants and installed fixture preparation. |
 | `libraries/cpp/ratchet.cpp.json` | 314 | 344 | +30 | Installed session and cancellation regression fixtures. |
@@ -75,6 +75,16 @@ The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prep
 | `libraries/zig/ratchet.zig.json` | 1781 | 1796 | +15 | Direct native timed wait and installed session checks. |
 
 The Apple prerequisite experiment describes the M5's actual failure only. The third amendment assigns candidate Apple qualification to GitHub macOS workflows, where a nonzero exit or exit 77 fails the candidate. Routine installed checks establish 0556's behavior separately from that platform qualification.
+
+## Gates after approved limit changes
+
+The combined revision `243d59647e83be634467205237626e8946ae5372` passed the complete routine: 2,002 workspace cases, 21 consumer cases, 44 Python cases, one doctest and supporting schema and shell checks. Polars passed 46 cases with two release/stress cases ignored by its routine profile. Both default and minimal bundled all-targets Clippy passed. The rebuilt C archive passed all 42 installed routine cases, direct named refusals and send counts. Its SHA256 is `4c3bfbd450ea1888350a36f63a0867e2dce4d426d36f12fbac05e837d0679ec3`.
+
+The complete C gate failed one of 82 door tests: its fault-injection copy retained the new shared `check.c` include but had no fixture include search path. All 25 unit cases and the other 81 door cases passed. Separate release C checks passed two tests; their C corpus reported 55 passes and one internal invariant injection not run by the C door. That internal case is not recorded as a pass. The gate stopped before its final slide check. Repair `b3f7bdc0b1eca476f3d859e116721b00caf624c1` adds the fixture include directory for cc and MSVC and removes the redundant single-header rewrite. Its targeted fault-injection test and all 25 unit plus 82 door tests passed, preserving every injection and assertion. The C fixture count remains 3,395 and C Rust falls to 32,159.
+
+Lint setup initially put temporary Git fixtures inside the checkout, making Git discover the parent repository rather than the planted fixture. Moving those owned fixtures to external scratch restored all 54 child-guard self-tests. The isolated Cargo home also initially lacked its offline advisory snapshot. Copying the existing snapshot restored that prerequisite. Finally, a wrapper forced offline mode onto the intentional local `file://` dependency fetch used by lint's source-policy plant. Using offline configuration in the normal Cargo home, while letting the plant use its own isolated Cargo home as prescribed, restored that check without weakening the source guard or permitting registry access.
+
+After those setup repairs, lint passed privacy, all 53 binding/database limits, the root limit, formatting, Clippy, documentation, dependency checks, installer checks and workflow self-tests. It then failed the public API inventory: 74 historical declarations were missing and 76 current exports were undeclared. The inventory checked 1,963 declarations and refused all four hostile plants. This is a contract-ledger mismatch, separate from the repaired gate environment, and prevents that revision's acceptance.
 
 ## What the build taught us
 
