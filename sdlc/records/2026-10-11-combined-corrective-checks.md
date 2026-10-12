@@ -22,6 +22,10 @@ The JVM survey retained public generated Inputs and Results, active packet drain
 
 The M5 has Command Line Tools selected. `xcrun --find xcodebuild` exited 72. The actual Apple package assembler invokes `xcodebuild`; standalone Foundation execution supplies no installed Swift or Objective-C session proof. The earlier Swift script exited 1 and Objective-C script exited 77 because matching Apple packages were missing. Neither is a platform pass.
 
+The complete official routine at `ba41be5a72a58faf7896ecbcb22f4142c2856f39` subsequently exited 0: workspace tests passed 2,002 cases with 73 release-only skips; external consumers passed 21 with four skips; Python passed 44. Its doctest, schema and shell checks passed. The complete C gate at that same revision passed formatting, all-targets Clippy, 25 unit tests and 82 door tests, with two release-only cases ignored. Official lint exited 1 on 14 child-environment policy findings in campaign tests, parity tests and the Ada consumer. It stopped before reaching the binding ratchets. These completed receipts remain in `worktrees/thinkthen-0554-identity-prefix/target/0543-same-revision-gates/`.
+
+The gate owner retained two initial wrapper setup failures, an unsupported C doctest command, and a C nextest attempt with two timeouts and 80 unrun cases. The C package's prescribed gate uses `cargo test`; that command passed. No timeout cause was established, so the nextest failures are not described as repaired product defects. The whole gate's failing lint exit prevents acceptance even though its test and prescribed C checks passed.
+
 ## What the build taught us
 
 Source inspection missed a required Debug implementation until C compilation ran. Library-only Clippy missed a test-only atomic type until all-targets Clippy compiled the unit tests. Focused session checks missed frozen typed-array behavior and a parallel prefix race. A new regression can also encode the wrong contract; accepted ADRs and unchanged outside-in cases take precedence over a newly invented expectation.
