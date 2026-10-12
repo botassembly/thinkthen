@@ -61,6 +61,7 @@ def descriptor(v,home):
 
 def native_cases(binary, *, consumer=CONSUMER, invoke=None):
     CONSUMER = consumer
+    backend_path = Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend'
     inventory=parity.inventory(); rows=list(parity.required_cases(inventory,CONSUMER).values())
     if os.environ.get('THINKTHEN_' + CONSUMER.upper() + '_CASES'):
         selected=set(os.environ['THINKTHEN_' + CONSUMER.upper() + '_CASES'].split(','))
@@ -104,7 +105,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                           PATH=os.environ.get('PATH','/usr/bin:/bin'),
                           ASAN_OPTIONS='detect_leaks=1',
                           UBSAN_OPTIONS='halt_on_error=1')
-                backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
+                backend=shared.Backend(backend_path,child)
                 try:
                     child.update(THINKTHEN_BASE_URL='http://127.0.0.1:%d/%s'%(backend.port,value['arm']),THINKTHEN_API_KEY='sk-conformance-loopback',LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback')
                     shared.prepare(home,value);identities=[]
@@ -115,7 +116,7 @@ def native_cases(binary, *, consumer=CONSUMER, invoke=None):
                         if step.get('damage_store'):
                             with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get('image_variants'):
-                            backend.close();backend=shared.Backend(ROOT/'target/debug/conformance-backend',child)
+                            backend.close();backend=shared.Backend(backend_path,child)
                             child['THINKTHEN_BASE_URL']='http://127.0.0.1:%d/%s'%(backend.port,step['arm']);child['PERPLEXITY_API_KEY']='sk-conformance-loopback';shared.prepare(home,step)
                         settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{}),'base_url':child['THINKTHEN_BASE_URL']}
                         replacements={'$FOLDER':str(home/'saved'),'$REFRESH':str(home/'refreshed'),'$PROFILE':str(home/'profile.json')}
