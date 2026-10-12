@@ -1,6 +1,6 @@
 # 0553: Move the remaining Python and R request logic into Rust
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -19,6 +19,8 @@ Reviews: revision 6ce71b8b9f22bb2f36a8985cecc5a921c75b6aef, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: The accepted exact-source work landed in the shared corrective batch without a separate ticket merge.)
 
 ## Outcome
 
