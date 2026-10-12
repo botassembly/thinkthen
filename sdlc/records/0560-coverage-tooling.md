@@ -55,6 +55,8 @@ At `80a031bc4`, the routine test returned 1. The workspace passed 2,002 tests wi
 
 Lint returned 1 at the child-environment check because the R waiting-shell launcher inherited the whole environment. Later lint stages did not run. Six focused coverage regressions passed. All checkpoint children exited and were reaped.
 
+At `bec7a013b`, the repaired routine test returned 0: 2,002 workspace tests passed with 73 skipped, 21 consumer tests passed with four skipped, the doctest passed, and all 44 Python tests passed. Seven focused coverage regressions passed. The repaired R launcher passed the environment check. Lint returned 1 at the JVM fixture ratchet: 734 nonblank Python lines against its unchanged 705-line ceiling. Root dependency, formatting, clippy, documentation and API inventory stages after that failure did not run. All three check processes and their children exited and were reaped. Count-only checks found no exposed credential in tracked source or completed check logs.
+
 ## What the build taught us
 
 An installed static archive needs LLVM's runtime initializer as well as coverage sections. The initial C calls passed while producing no profile; retaining the runtime anchor before localization restored profile writes without changing ordinary archive exports.
