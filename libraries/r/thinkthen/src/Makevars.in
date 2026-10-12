@@ -1,7 +1,7 @@
 TARGET_DIR = @TARGET_DIR@
 LIBDIR = $(TARGET_DIR)/@LIBDIR@
 STATLIB = $(LIBDIR)/libthinkthen_r.a
-PKG_LIBS = -L$(LIBDIR) -lthinkthen_r @HIDE_NAMES@
+PKG_LIBS = -L$(LIBDIR) -lthinkthen_r @HIDE_NAMES@ $(THINKTHEN_COVERAGE_LIBS)
 
 all: $(SHLIB) rust_clean
 
@@ -10,6 +10,10 @@ all: $(SHLIB) rust_clean
 $(SHLIB): $(STATLIB)
 
 $(STATLIB):
+	if [ -n "$(THINKTHEN_COVERAGE_ROOT)" ]; then \
+	  separator=$$(printf '\037'); \
+	  export CARGO_ENCODED_RUSTFLAGS="$${CARGO_ENCODED_RUSTFLAGS}$${CARGO_ENCODED_RUSTFLAGS:+$$separator}--remap-path-prefix=$(CURDIR)/rust/vendor/thinkthen=$(THINKTHEN_COVERAGE_ROOT)/crates/thinkthen"; \
+	fi && \
 	@CARGO_EXPORT@export PATH="$(PATH):$(HOME)/.cargo/bin" && \
 	@PANIC_EXPORTS@RUSTFLAGS="$(RUSTFLAGS) --print=native-static-libs $(if $(filter 1,$(THINKTHEN_FULL_COMPILER)),,--remap-path-prefix=$(HOME)=/build)" cargo build @CRAN_FLAGS@ --lib @PROFILE@ --manifest-path=./rust/Cargo.toml --target-dir $(TARGET_DIR) @TARGET@ @DOC@
 

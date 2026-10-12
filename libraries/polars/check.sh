@@ -52,6 +52,11 @@ manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str
 main=consumer/'src/main.rs'
 main.write_text(main.read_text().replace('../../../rust/consumer/src/fixture.rs',str(shared/'fixture.rs')))
 RUSTFRAME
+    if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then
+        separator=$(printf '\037')
+        CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:-}${CARGO_ENCODED_RUSTFLAGS:+$separator}--remap-path-prefix=$source=$THINKTHEN_COVERAGE_ROOT/crates/thinkthen"
+        export CARGO_ENCODED_RUSTFLAGS
+    fi
     consumer="$installed/consumer/Cargo.toml"
 else
 set -- --locked --offline --package thinkthen --features polars
@@ -80,5 +85,8 @@ import sys
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
+import os
+if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
+    os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
 sys.exit(bool(run('rust-polars',[str(Path(sys.argv[2]).resolve())],root)))
 PYFRAME
