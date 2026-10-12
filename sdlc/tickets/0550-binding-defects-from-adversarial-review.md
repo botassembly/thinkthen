@@ -1,6 +1,6 @@
 # 0550: Fix the binding defects from the adversarial review
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -13,6 +13,8 @@ Reviews: revision 6712593, accept
 Reviews: revision 48b22e7, reject
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: Reviewed named fixes landed in the shared corrective batch without a ticket-specific merge; broader generated error-wrapper work remains with 0563.)
 
 ## Outcome
 
