@@ -58,6 +58,10 @@ Lint returned 1 at the child-environment check because the R waiting-shell launc
 
 At `bec7a013b`, the repaired routine test returned 0: 2,002 workspace tests passed with 73 skipped, 21 consumer tests passed with four skipped, the doctest passed, and all 44 Python tests passed. Seven focused coverage regressions passed. The repaired R launcher passed the environment check. Lint returned 1 at the JVM fixture ratchet: 734 nonblank Python lines against its unchanged 705-line ceiling. Root dependency, formatting, clippy, documentation and API inventory stages after that failure did not run. All three check processes and their children exited and were reaped. Count-only checks found no exposed credential in tracked source or completed check logs.
 
+## Compiler-backed classification probe
+
+A disposable source revision, `f07ba9714`, added two real C-library functions without changing existing tests. The production shared library retained three mapped nonblank lines for each function. The unused function had zero hits in both source-unit and external C collections. The other function had one hit per line only from its source-unit caller. That caller's three mapped test lines were absent from the production denominator. All 25 existing C source-unit cases and the added case passed. Real LLVM export and the normal reporter classified six production lines as three unobserved and three observed only by unit tests. All probe children exited and were reaped. The planted functions are experiment code and are absent from the integration branch; this probe does not establish the installed baseline or its repeatability.
+
 ## What the build taught us
 
 An installed static archive needs LLVM's runtime initializer as well as coverage sections. The initial C calls passed while producing no profile; retaining the runtime anchor before localization restored profile writes without changing ordinary archive exports.
