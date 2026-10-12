@@ -1,6 +1,7 @@
 """Focused regressions for coverage process ownership and missing profiles."""
 import json
 import os
+import plistlib
 from pathlib import Path
 import runpy
 import signal
@@ -61,6 +62,59 @@ class ManagedToolAvailability(unittest.TestCase):
                             collection = next(c for c in collections if c['name'] == 'installed-' + language)
                             with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
                                 collection['runner'](run)
+
+    def test_apple_collector_requires_matching_archive_and_retains_executables(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            native = root / 'target-c/debug/libthinkthen_c.a'
+            native.parent.mkdir(parents=True)
+            native.write_bytes(b'instrumented archive')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            header.write_bytes(b'current header')
+            package = root / 'package'
+            slice = package / 'CThinkThen.xcframework/macos-arm64'
+            (slice / 'Headers').mkdir(parents=True)
+            (slice / 'Headers/thinkthen.h').write_bytes(header.read_bytes())
+            metadata = {'AvailableLibraries': [dict(SupportedPlatform='macos', SupportedArchitectures=['arm64'],
+                         LibraryIdentifier='macos-arm64', LibraryPath='libthinkthen.a', HeadersPath='Headers')]}
+            (slice.parent / 'Info.plist').write_bytes(plistlib.dumps(metadata))
+            env = {'PATH': '/usr/bin:/bin'}
+            def command(args, cwd, settings, log, **kwargs):
+                self.assertEqual(args, ['sh', 'check.sh'])
+                self.assertEqual(settings['THINKTHEN_COVERAGE_INITIALIZER'], str(root / 'profile.o'))
+                retained = Path(settings['THINKTHEN_COVERAGE_STAGE'])
+                (retained / 'installed').mkdir(parents=True)
+                for binary in ('Owned', 'Parity'):
+                    (retained / 'installed' / binary).write_bytes(binary.encode())
+            context = dict(root=root, command=command, missing_tool=DRIVER['MissingTool'],
+                           c_target=native.parents[1], initializer=root / 'profile.o')
+            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap')
+            for name in sources:
+                original = root / 'libraries/swift' / name
+                original.parent.mkdir(parents=True, exist_ok=True)
+                original.write_bytes(b'checkout source')
+                (package / name).parent.mkdir(parents=True, exist_ok=True)
+            for mismatch in ('archive', *sources, None):
+                for name in sources:
+                    (package / name).write_bytes(b'changed source' if mismatch == name else b'checkout source')
+                (slice / 'libthinkthen.a').write_bytes(b'ordinary archive' if mismatch == 'archive' else native.read_bytes())
+                artifact = root / 'swift.tar.gz'
+                coverage_installed_managed.archive(package, artifact, ('CThinkThen.xcframework', 'Sources'))
+                stage = root / str(mismatch).replace('/', '-')
+                stage.mkdir()
+                retained = stage / 'retained'
+                with patch.dict(os.environ, THINKTHEN_SWIFT_ARTIFACT=str(artifact)), patch.object(
+                        coverage_installed_managed.platform, 'machine', return_value='arm64'), patch.object(
+                        coverage_installed_managed.shutil, 'which', return_value='/usr/bin/tool'):
+                    if mismatch:
+                        error = 'differs from the instrumented' if mismatch == 'archive' else 'source differs'
+                        with self.assertRaisesRegex(RuntimeError, error):
+                            coverage_installed_managed.apple_collection('swift', context, env, stage, retained, stage)
+                    else:
+                        coverage_installed_managed.apple_collection('swift', context, env, stage, retained, stage)
+                        self.assertEqual((retained / 'Parity').read_bytes(), b'Parity')
+
 
     def test_csharp_requires_executable_bwrap_at_the_consumer_path(self):
         with tempfile.TemporaryDirectory() as temporary:

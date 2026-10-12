@@ -39,7 +39,11 @@ with contextlib.ExitStack() as installed:
     if not (package / "CThinkThen.xcframework/Info.plist").is_file():
         print("Matching assembled Apple package with CThinkThen.xcframework is required; no native build is started", file=sys.stderr)
         sys.exit(77)
-    with tempfile.TemporaryDirectory(prefix="thinkthen-foundation-consumer-") as temporary:
+    consumer_stage = os.environ.get("THINKTHEN_COVERAGE_STAGE")
+    if consumer_stage:
+        Path(consumer_stage).mkdir(parents=True, exist_ok=True)
+    consumer = contextlib.nullcontext(consumer_stage) if consumer_stage else tempfile.TemporaryDirectory(prefix="thinkthen-foundation-consumer-")
+    with consumer as temporary:
         work = Path(temporary)
         shutil.copytree(package, work / "package", ignore=shutil.ignore_patterns("target", ".build", "checks", "Examples"))
         (work / "Sources/Consumer").mkdir(parents=True)
@@ -59,8 +63,12 @@ with contextlib.ExitStack() as installed:
      cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
      linkerSettings: [.linkedFramework("Foundation")])])
     ''')
-        env = child_env(home=work)
-        subprocess.run(["swift", "build", "--disable-sandbox", "-j", "1"], cwd=work, env=env,
+        env = child_env(keep=("LLVM_PROFILE_FILE", "CARGO_TARGET_DIR"), home=work)
+        profile_link = []
+        if os.environ.get("THINKTHEN_COVERAGE_INITIALIZER"):
+            profile_link = ["-Xlinker", os.environ["THINKTHEN_COVERAGE_INITIALIZER"],
+                            "-Xlinker", "-u", "-Xlinker", "___llvm_profile_runtime"]
+        subprocess.run(["swift", "build", "--disable-sandbox", "-j", "1"] + profile_link, cwd=work, env=env,
                        check=True, capture_output=True, timeout=60)
         barrier = work / "barrier"
         barrier.mkdir()
@@ -79,6 +87,6 @@ with contextlib.ExitStack() as installed:
 
         # Run the Objective-C inventory against the actual installed named calls.
         # The full profile removes the routine filter; it is candidate-only.
-        if not (REPO / "target/debug/conformance-backend").is_file():
+        if not (Path(os.environ.get("CARGO_TARGET_DIR", str(REPO / "target"))) / "debug/conformance-backend").is_file():
             raise RuntimeError("the recorded shared backend must be built before Foundation parity")
         native_cases(work / ".build/debug/Cases", consumer="objective-c")

@@ -11,7 +11,12 @@ Darwin)
     . "$root/sdlc/scripts/scratch.sh"
     installed_unpack
     [ -f "$scratch/CThinkThen.xcframework/Info.plist" ] || { echo 'Swift Apple package is missing its XCFramework' >&2; exit 1; }
-    scratch_dir apple_consumer
+    if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
+        apple_consumer=$THINKTHEN_COVERAGE_STAGE
+        mkdir -p "$apple_consumer"
+    else
+        scratch_dir apple_consumer
+    fi
     python3 "$here/Tests/fixtures/installed.py" --package "$scratch" --out "$apple_consumer"
     if [ "${THINKTHEN_TEST_PROFILE:-}" = full ]; then
         python3 "$here/Tests/fixtures/complete_parity.py" --binary "$apple_consumer/installed/Parity"
