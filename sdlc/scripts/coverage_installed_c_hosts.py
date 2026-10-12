@@ -26,8 +26,12 @@ def prepare(context):
     for tool in ('c++', 'cc', 'ar', 'ld', 'nm', 'objcopy', 'gprbuild', 'gnatmake', 'cobc',
                  'clang', 'node', 'flock', 'python3', 'gofmt', *tools):
         selected = env.get(tools.get(tool, ''), tool)
-        if not shutil.which(selected, path=env.get('PATH')):
+        phar = tool == 'composer' and Path(selected).suffix == '.phar' and Path(selected).is_file()
+        if not phar and not shutil.which(selected, path=env.get('PATH')):
             raise missing(f'installed C door hosts need {tool}: {selected}')
+    for tool in ('cmake', 'go', 'zig', 'php8.3'):
+        if tools[tool] in env:
+            env['PATH'] = str(Path(env[tools[tool]]).resolve().parent) + os.pathsep + env['PATH']
     # Host builds must use the profile runtime in the supplied native assets;
     # only the driver's Rust native build receives Rust instrumentation flags.
     env.pop('CARGO_ENCODED_RUSTFLAGS', None)
