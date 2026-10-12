@@ -45,12 +45,12 @@ def native_parity(consumer, command):
             value = c_parity.document(row, cases, named)
             with tempfile.TemporaryDirectory(prefix=f"thinkthen-{consumer}-parity-") as folder:
                 home = Path(folder)
-                env = child_env(home=folder,
+                env = child_env(keep=("LLVM_PROFILE_FILE",), home=folder,
                                 PATH=os.environ.get("PATH", "/usr/bin:/bin"),
                                 LC_ALL="C.UTF-8",
                                 DOTNET_CLI_TELEMETRY_OPTOUT="1",
                                 **({"LD_LIBRARY_PATH": str(native)} if native else {}))
-                backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                backend = c_parity.Backend(Path(os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))), env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
                     c_parity.prepare(home, value)
@@ -66,7 +66,7 @@ def native_parity(consumer, command):
                                 db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get("image_variants"):
                             backend.close()
-                            backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                            backend = c_parity.Backend(Path(os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))), env)
                             c_parity.prepare(home, step)
                         for key in ("paths", "image_paths"):
                             if key in step and not step.get("owned_jsonl"):

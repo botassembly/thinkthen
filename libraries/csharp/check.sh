@@ -79,7 +79,7 @@ if [ -z "${THINKTHEN_NATIVE_ASSET:-}" ]; then
     RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/Cargo.toml" --locked --offline --package conformance-backend -j2
 fi
 test -f "$native"
-test -x "$root/target/debug/conformance-backend"
+test -x "${THINKTHEN_BACKEND_BIN:-${CARGO_TARGET_DIR:-$root/target}/debug/conformance-backend}"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
 cp "$native" "$here/target/scratch/lib/libthinkthen.so"
 ln -sf libthinkthen.so "$here/target/scratch/lib/libthinkthen.so.0"

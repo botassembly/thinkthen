@@ -67,7 +67,12 @@ else
     python3 "$here/Tests/fixtures/package_local.py" --native "$root/libraries/c/target/debug/libthinkthen_c.so" --out "$package"
     python3 "$here/Tests/fixtures/guard.py" "$package_scratch/thinkthen-swift-0.2.0.tar.gz"
 fi
-scratch_dir consumer_scratch
+if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
+    consumer_scratch=$THINKTHEN_COVERAGE_STAGE
+    mkdir -p "$consumer_scratch"
+else
+    scratch_dir consumer_scratch
+fi
 python3 "$here/Tests/fixtures/installed.py" --package "$package" --out "$consumer_scratch"
 if [ "${THINKTHEN_TEST_PROFILE:-}" = full ]; then
     python3 "$here/Tests/fixtures/complete_parity.py" --binary "$consumer_scratch/installed/Parity"
