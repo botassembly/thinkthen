@@ -28,9 +28,9 @@ const call = `{
   <h2 id="tool-calls">A tool call</h2>
   <p>A <code>decide</code> call takes a question and its evidence:</p>
   <Code code={call} lang="json" caption="The arguments of one decide tool call" label="Copy the decide arguments" />
-  <p>A question can also come from a saved <a href="/functions/question-file/">question file</a> through <code>question_file</code>, or by name through <code>question_name</code>. A literal question that starts with <code>@</code> stays text and never names a file. The server creates no question files. <code>decide</code>, <code>choose</code> and <code>score</code> also take ordered PNG and JPEG images.</p>
+  <p>A question can also come from a saved <a href="/functions/question-file/">question file</a> through <code>question_file</code>, by name through <code>question_name</code>, or by an <code>@</code> reference through <code>question_reference</code>. A literal question that starts with <code>@</code> stays text and never names a file. The server creates no question files. <code>decide</code>, <code>choose</code> and <code>score</code> also take ordered PNG and JPEG images.</p>
   <p>The <a href={mcpGuide}>MCP guide</a> gives every input and a client with one method for each function. The <a href={mcpSpec}>MCP specification</a> gives the framing and size limits.</p>
 
   <h2 id="skill">The agent skill</h2>
-  <p>The <a href={skill}>ThinkThen skill</a> tells an agent which function fits a job, how to frame evidence, how to read exit codes and not sure, and how to bound requests. Copy the <code>skills/thinkthen/</code> folder into the skills folder your agent reads.</p>
+  <p>The <a href={skill}>ThinkThen skill</a> tells an agent which function fits a job, how to frame evidence, how to read exit codes and not sure, and how to bound requests. Give your agent the skill file <a href={skill}><code>skills/thinkthen/SKILL.md</code></a>.</p>
 </Base>

@@ -12,10 +12,12 @@ const first = (text) => `${plain(text).split('. ')[0].replace(/\.$/, '')}.`;
   <h1>Shell jobs</h1>
   <p class="lede">Each page does one job with ThinkThen and the tools a shell already has. The <a href="/languages/bash/#techniques">Bash techniques</a> teach the forms these jobs use.</p>
 
+  <p id="techniques">The Bash techniques live on the <a href="/languages/bash/#techniques">Bash page</a>.</p>
+
   <h2 id="shell-jobs">Shell jobs</h2>
   <ul>
     {SHELL_JOBS.map((r) => (
-      <li><a href={`/how-tos/bash/${r.slug}/`}>{r.title}</a> — {first(r.said)}</li>
+      <li><a href={`/how-tos/bash/${r.slug}/`}>{r.title}</a>: {first(r.said)}</li>
     ))}
   </ul>
 </SidePage>
