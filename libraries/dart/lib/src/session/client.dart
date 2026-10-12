@@ -283,7 +283,6 @@ final class Engine implements Finalizable {
     Object? readerFailure;
     var failed = false, readerFinished = false;
     void stop() {
-      session.cancel();
       session.close();
     }
 

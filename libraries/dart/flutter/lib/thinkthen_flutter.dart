@@ -4,6 +4,7 @@ library thinkthen_session;
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
+import 'dart:isolate';
 import 'dart:io' show IOException;
 import 'dart:typed_data';
 import 'package:thinkthen_dart/src/session/abi_generated.dart';
