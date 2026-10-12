@@ -272,17 +272,18 @@ def main():
     initializer = run / 'profile.o'
     continuous = sys.platform == 'linux'
     pattern = '%p-%m%c.profraw' if continuous else '%m.profraw'
+    remaps = [(Path.home(), '/build/home'), (ROOT, '/build/source'),
+              (Path(os.environ.get('CARGO_HOME', str(Path.home() / '.cargo'))).resolve(), '/build/cargo')]
     flags = ['-C', 'instrument-coverage',
-             f'--remap-path-prefix={Path.home()}=/build/home',
-             f'--remap-path-prefix={ROOT}=/build/source',
-             f'--remap-path-prefix={Path(os.environ.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()}=/build/cargo',
+             *[f'--remap-path-prefix={source}={destination}' for source, destination in remaps],
              '-C', f'link-arg={initializer}']
+    cflags = shlex.join([f'-ffile-prefix-map={source}={destination}' for source, destination in remaps])
     if continuous:
         flags += ['-C', 'llvm-args=-runtime-counter-relocation']
     subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
                     '-DPROFILE_PATH=' + json.dumps(str(run / 'active' / pattern)), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
-    env.update(LLVM_PROFILE_FILE=str(run / 'active' / pattern), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+    env.update(CFLAGS=' '.join(filter(None, (env.get('CFLAGS'), cflags))), LLVM_PROFILE_FILE=str(run / 'active' / pattern), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
                CARGO_ENCODED_RUSTFLAGS='\x1f'.join(flags),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
