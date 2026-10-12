@@ -14,6 +14,8 @@ Reviews: revision 52d652f, accept
 
 Reviews: revision 6712593, accept
 
+Reviews: revision c2626ca, accept
+
 ## Outcome
 
 The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 187,000 or fewer, and `sdlc/ratchet.json` falls with it. The cut comes from deleting dead code, unpublished duplicate methods and repeated test setup. Public behavior and contract coverage stay the same.
