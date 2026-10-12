@@ -22,9 +22,10 @@ const PRUNE = setting('Prune target');
 // A backend's key variables come as a list, read in order. Every other
 // name is one variable, or several that ThinkThen reads alike.
 const LOCATIONS = [
-  ['Configuration file', ['$XDG_CONFIG_HOME/thinkthen/config.json', '$HOME/.config/thinkthen/config.json'], '$HOME/Library/Application Support/thinkthen/config.json'],
-  ['Answer cache', ['$XDG_CACHE_HOME/thinkthen', '$HOME/.cache/thinkthen'], '$HOME/Library/Caches/thinkthen'],
-  ['Usage totals', ['$XDG_STATE_HOME/thinkthen', '$HOME/.local/state/thinkthen'], '$HOME/Library/Application Support/thinkthen/usage'],
+  ['Configuration file', ['$XDG_CONFIG_HOME/thinkthen/config.json', '$HOME/.config/thinkthen/config.json'], '$HOME/Library/Application Support/thinkthen/config.json', '%APPDATA%\\thinkthen\\config.json'],
+  ['Answer cache', ['$XDG_CACHE_HOME/thinkthen', '$HOME/.cache/thinkthen'], '$HOME/Library/Caches/thinkthen', '%LOCALAPPDATA%\\thinkthen\\cache'],
+  ['Usage totals', ['$XDG_STATE_HOME/thinkthen', '$HOME/.local/state/thinkthen'], '$HOME/Library/Application Support/thinkthen/usage', '%LOCALAPPDATA%\\thinkthen\\usage'],
+  ['Saved questions', ['$XDG_CONFIG_HOME/thinkthen/questions', '$HOME/.config/thinkthen/questions'], '$HOME/Library/Application Support/thinkthen/questions', '%APPDATA%\\thinkthen\\questions'],
 ];
 const ENV = [
   ['THINKTHEN_API_KEY', 'The key when no backend is named.', card('Key')],
@@ -44,7 +45,7 @@ const ENV = [
   ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and lower case. A proxy carries https requests. Under http every proxy is ignored.', null],
 ];
 ---
-<Base title="Configuration" description="Which value wins, every environment variable ThinkThen reads, and where the configuration file, the cache and the usage totals live on Linux and macOS.">
+<Base title="Configuration" description="Which value wins, every environment variable ThinkThen reads, and where the configuration file, the cache and the usage totals live on Linux, macOS and Windows.">
   <h1>Configuration</h1>
   <p class="lede">ThinkThen reads flags, environment variables, question files and one configuration file. It never writes the configuration file.</p>
 
@@ -66,11 +67,11 @@ const ENV = [
   <h2 id="locations">Where the files live</h2>
   <table>
     <tr><th>File</th><th>System</th><th>Path</th></tr>
-    {LOCATIONS.flatMap(([file, linux, mac]) => [['Linux', linux], ['macOS', [mac]]].map(([system, paths]) => (
+    {LOCATIONS.flatMap(([file, linux, mac, windows]) => [['Linux', linux], ['macOS', [mac]], ['Windows', [windows]]].map(([system, paths]) => (
       <tr><td>{file}</td><td>{system}</td><td>{paths.map((p, i) => <>{i > 0 && ', else '}<code class="path" set:html={pathHtml(p)} /></>)}</td></tr>
     )))}
   </table>
-  <p>ThinkThen has no home-folder variable of its own. <code>HOME</code> and the three XDG variables decide every location.</p>
+  <p>ThinkThen has no home-folder variable of its own. On Linux and macOS, <code>HOME</code> and the three XDG variables decide every location. Windows reads <code>APPDATA</code> and <code>LOCALAPPDATA</code>. <a href="/functions/question-file/#named-questions">Saved questions</a> sit in the folder beside the configuration file.</p>
   <Terminal run={paths} caption={paths.see} />
   <p>On Linux, set <code>XDG_CONFIG_HOME</code>, <code>XDG_CACHE_HOME</code> or <code>XDG_STATE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores the XDG variables.</p>
   <Terminal run={moved} caption={moved.see} />

@@ -99,6 +99,12 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
       <Code code={"SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');"} lang="sql" label="Copy the SQLite recognition call" />
     </>
   )}
+  {surface.windows && (
+    <>
+      <h3 id="windows">Windows</h3>
+      {surface.windows.map((text) => <p>{parts(text).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>)}
+    </>
+  )}
   {surface.uninstall && (
     <>
       <h3>Uninstall</h3>

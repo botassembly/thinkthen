@@ -366,6 +366,7 @@ export const FUNCTIONS = [
     see: {
       '1-yes': "The saved question answers true for a plain request for money back.",
       '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
+      '3-records': "--plan shows the request and sends nothing. The record's policy goes out as state. The file's readings become the criteria.",
     },
     moreSee: {
       duckdb: 'Two messages as rows of a table, asked with refund.json. The money-back message gets true. The send-back message lands inside the band and gets NULL.',
@@ -438,6 +439,12 @@ export const SURFACES = [
     install: [
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
+    ],
+    windows: [
+      'On Windows x86-64, download `https://thinkthen.dev/install.ps1`, read it, and run `.\\install.ps1` in Windows PowerShell 5.1 or PowerShell 7. It installs `thinkthen.exe` and its receipt in `%LOCALAPPDATA%\\Programs\\thinkthen`, or in the folder `THINKTHEN_INSTALL_DIR` names.',
+      'The script checks the archive against its checksum and checks the command\'s version. A checksum does not prove who published the archive.',
+      'The script changes no execution policy, profile, registry or runtime configuration. It prints the command\'s path. When the install folder is not on `PATH`, it also prints a `PATH` command for the current session.',
+      'To remove ThinkThen, delete `thinkthen.exe`, `thinkthen.install.json` and `.thinkthen-install.lock` from the install folder.',
     ],
     uninstall: {
       text: 'To remove the download, delete the binary and its receipt. If you set `THINKTHEN_INSTALL_DIR`, delete the same two files there. With Homebrew, run `brew uninstall thinkthen`.',

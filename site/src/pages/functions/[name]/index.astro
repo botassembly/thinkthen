@@ -72,7 +72,12 @@ const jobsScope = name === 'annotate'
     <p class="lede">You give it {fn.takes}. You get back {fn.gives}.</p>
   )}
   {isFn && <p>{fn.requests}</p>}
-  {name === 'question-file' && <p>Development 0.2 adds explicit named lookup, author names, wording versions and restricted item/context declarations. Per-record context stays separate from the selected evidence. The <a href="https://github.com/botassembly/thinkthen#saved-questions-and-records-in-development-02">saved-question example</a> shows the file, command, lookup rules and authored yes/no readings.</p>}
+  {name === 'question-file' && (
+    <>
+      <p>A question file can also carry an author name, a wording version, and declarations for each record and its context. <code>--context-field</code> sends each record's own context apart from its evidence. The <a href="#more-examples">records example</a> shows a file and the request it plans. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/question-file.md">question-file specification</a> gives the full grammar.</p>
+      <p id="named-questions">Save <code>refund.json</code> in the <code>questions</code> folder beside the <a href="/install/configuration/#locations">configuration file</a>, then ask for it as <code>@refund</code>. On Linux that folder is <code>$XDG_CONFIG_HOME/thinkthen/questions</code>, else <code>$HOME/.config/thinkthen/questions</code>. On macOS it is <code>$HOME/Library/Application Support/thinkthen/questions</code>. On Windows it is <code>%APPDATA%\thinkthen\questions</code>. A local entry named <code>refund</code> wins over the named file. ThinkThen never creates the folder.</p>
+    </>
+  )}
   {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
 
   <h2>Read the answer</h2>
