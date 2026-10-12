@@ -43,7 +43,7 @@ let door = null;
 function cDoor() {
   if (door) return door;
   const out = path.join(tmp, 'c-door');
-  const done = run('sh', ['-c', '. sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
+  const done = run('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
   if (done.status !== 0) throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
   door = out;
   return door;
