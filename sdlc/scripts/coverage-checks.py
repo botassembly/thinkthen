@@ -90,5 +90,27 @@ class ProfileCauses(unittest.TestCase):
             self.assertEqual(len(report['missing_child_profiles']['rust-integration']['no_normal_exit']), 2)
 
 
+class CollectionClassification(unittest.TestCase):
+    def test_c_source_units_add_unit_hits_without_test_only_denominator(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'libraries/c/src/probe.rs'
+            source.parent.mkdir(parents=True)
+            source.write_text('production one\nproduction two\ntest only\n')
+            production = f'SF:{source}\nDA:1,0\nDA:2,0\n'
+            c_units = f'SF:{source}\nDA:1,1\nDA:2,1\nDA:3,1\n'
+            outside = f'SF:{source}\nDA:1,1\nDA:2,0\n'
+            collections = {name: production for name in DRIVER['NATIVE_COLLECTIONS']}
+            collections.update({'c-source-unit': c_units, 'rust-integration': outside})
+            for name in collections:
+                (root / name).mkdir()
+            DRIVER['report'](root, root, 'probe', production, collections, 0)
+            totals = json.loads((root / 'totals.json').read_text())['totals']
+            self.assertEqual(totals['mapped_nonblank'], 2)
+            self.assertEqual(totals['c-source-unit'], 2)
+            self.assertEqual(totals['observed_unit_only'], 1)
+            self.assertEqual(totals['unobserved'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()

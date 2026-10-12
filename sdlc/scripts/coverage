@@ -17,7 +17,9 @@ import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
-from coverage_report import report
+from coverage_report import report, UNIT_COLLECTIONS
+
+NATIVE_COLLECTIONS = ('rust-integration', *UNIT_COLLECTIONS)
 
 
 class MissingTool(Exception):
@@ -94,11 +96,33 @@ def activate(run, name):
     return folder
 
 
+def test_artifacts(messages, package):
+    launch = {'CARGO_PKG_NAME': package['name'],
+              'CARGO_MANIFEST_DIR': str(Path(package['manifest_path']).parent)}
+    artifacts = []
+    for line in messages.splitlines():
+        item = json.loads(line)
+        if item.get('reason') == 'compiler-artifact' and item.get('executable'):
+            artifacts.append((item['target']['kind'], item['target']['name'], item['executable'], launch))
+    return artifacts
+
+
+def build_c_units(run, env):
+    c_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-c')}
+    metadata = json.loads(command(['cargo', 'metadata', '--manifest-path', 'libraries/c/Cargo.toml',
+                                  '--offline', '--no-deps', '--format-version', '1'],
+                                  ROOT, c_env, run / 'metadata-c.log', capture=True))
+    package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen-c')
+    messages = command(['cargo', 'test', '--manifest-path', 'libraries/c/Cargo.toml', '--offline',
+                        '--locked', '--lib', '--no-run', '--message-format=json', '-j2'],
+                       ROOT, c_env, run / 'build-c-units.log', capture=True)
+    return test_artifacts(messages, package)
+
+
 def build(run, env):
     metadata = json.loads(command(['cargo', 'metadata', '--offline', '--no-deps', '--format-version', '1'],
                                   ROOT, env, run / 'metadata.log', capture=True))
     package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen')
-    env.update(CARGO_PKG_NAME=package['name'], CARGO_MANIFEST_DIR=str(Path(package['manifest_path']).parent))
     features = set(package['features'].get('default', []))
     while True:
         expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
@@ -114,11 +138,8 @@ def build(run, env):
     for target in targets:
         args += ['--test', target]
     messages = command(args, ROOT, env, run / 'build-tests.log', capture=True)
-    artifacts = []
-    for line in messages.splitlines():
-        item = json.loads(line)
-        if item.get('reason') == 'compiler-artifact' and item.get('executable'):
-            artifacts.append((item['target']['kind'], item['target']['name'], item['executable']))
+    artifacts = test_artifacts(messages, package)
+    artifacts += build_c_units(run, env)
     command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'],
             ROOT, env, run / 'build-production.log')
     # C is a separate workspace. Keep its native production mappings even before installed collection.
@@ -127,22 +148,29 @@ def build(run, env):
     return artifacts
 
 
+def collect_tests(run, env, artifacts, name):
+    folder = activate(run, name)
+    selected = [item for item in artifacts
+                if item[0] == (['test'] if name == 'rust-integration' else ['lib'])
+                and (item[3]['CARGO_PKG_NAME'] == 'thinkthen-c') == (name == 'c-source-unit')]
+    if not selected:
+        raise RuntimeError(f'{name}: no test executables')
+    for kind, target, path, launch in selected:
+        args = [path, '--test-threads=2']
+        if name == 'cli-source':
+            args += ['cli::']
+        elif name == 'source-unit':
+            args += ['--skip', 'cli::']
+        command(args, Path(launch['CARGO_MANIFEST_DIR']), {**env, **launch},
+                folder / f'{target}.log', timeout=1800)
+
+
 def collect(run, env, artifacts):
     executable = run / 'target/debug/thinkthen'
     folder = activate(run, 'inventory')
     command([str(executable), '--version'], ROOT, env, folder / 'version.log')
-    for name in ('rust-integration', 'cli-source', 'source-unit'):
-        folder = activate(run, name)
-        selected = [item for item in artifacts if item[0] == (['test'] if name == 'rust-integration' else ['lib'])]
-        if not selected:
-            raise RuntimeError(f'{name}: no test executables')
-        for kind, target, path in selected:
-            args = [path, '--test-threads=2']
-            if name == 'cli-source':
-                args += ['cli::']
-            elif name == 'source-unit':
-                args += ['--skip', 'cli::']
-            command(args, ROOT / 'crates/thinkthen', env, folder / f'{target}.log', timeout=1800)
+    for name in NATIVE_COLLECTIONS:
+        collect_tests(run, env, artifacts, name)
     return executable
 
 
@@ -276,7 +304,7 @@ def main():
     production = export(run, llvm, production_objects, 'inventory', env)
     objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
     collections = {name: export(run, llvm, objects, name, env)
-                   for name in ('rust-integration', 'cli-source', 'source-unit')}
+                   for name in NATIVE_COLLECTIONS}
     for collection in installed:
         collections[collection['name']] = export(run, llvm,
                 list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
