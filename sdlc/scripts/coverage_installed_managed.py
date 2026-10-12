@@ -16,6 +16,24 @@ def archive(source, output, members):
             package.add(source / name, arcname='./' + name)
 
 
+def require_tools(language, env, missing):
+    tools = {'csharp': ('bwrap',), 'dart': ('node',),
+             'flutter': ('node', '/usr/bin/xvfb-run'),
+             'swift': ('node', 'bwrap', 'flock')}[language]
+    overrides = {'csharp': (('dotnet', 'THINKTHEN_DOTNET'),),
+                 'dart': (('dart', 'TT_DART'),),
+                 'flutter': (('dart', 'TT_DART'), ('flutter', 'TT_FLUTTER')),
+                 'swift': (('swift', 'THINKTHEN_SWIFT'),)}[language]
+    for tool, key in overrides:
+        selected = env.get(key) or shutil.which(tool, path=env.get('PATH'))
+        if not selected and tool in ('dart', 'flutter'):
+            selected = str(Path(env['HOME']) / '.local/opt/flutter/bin' / tool)
+        tools += (selected or tool,)
+    for tool in tools:
+        if not shutil.which(tool, path=env.get('PATH')):
+            raise missing(f'installed {language} needs {tool}')
+
+
 def prepare(context):
     root, run = context['root'], context['run']
     command, missing = context['command'], context['missing_tool']
@@ -49,6 +67,7 @@ def prepare(context):
                 raise missing('installed Objective-C Foundation needs macOS and a matching instrumented Apple package')
             if sys.platform != 'linux':
                 raise missing(f'installed {language} coverage needs the matching Linux native package')
+            require_tools(language, env, missing)
             settings = {**env, 'THINKTHEN_COVERAGE_STAGE': str(retained)}
             if language == 'csharp':
                 tree = stage / 'csharp-tree'
