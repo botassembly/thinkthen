@@ -39,13 +39,43 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-bindings-'));
 const home = path.join(tmp, 'home');
 fs.mkdirSync(home);
 
-// The C door, built once and laid out as an install would.
+// The C door, laid out as an install would. A build takes minutes, so the
+// runner keeps one per checkout under ~/.cache/thinkthen-site/c-door/, named
+// by a digest of every tracked or new file the native build reads, the Rust
+// compiler and the build flags. Any change to them builds a fresh door and
+// drops that checkout's old one; an unchanged tree reuses its door.
 let door = null;
+const DOOR_INPUTS = ['crates', 'libraries/c', 'specification', 'Cargo.lock', 'Cargo.toml', 'rust-toolchain.toml', 'sdlc/scripts/installed.sh', 'sdlc/scripts/scratch.sh'];
+function doorDigest() {
+  const files = run('git', ['ls-files', '-co', '--exclude-standard', '-z', '--', ...DOOR_INPUTS], { cwd: repo });
+  if (files.status !== 0) throw new Error(`git ls-files failed\n${files.stderr}`);
+  const hash = createHash('sha256');
+  for (const file of files.stdout.split('\0').filter(Boolean).sort()) {
+    const full = path.join(repo, file);
+    if (fs.existsSync(full)) hash.update(`${file}\0`).update(fs.readFileSync(full)).update('\0');
+  }
+  hash.update(run('rustc', ['-vV'], { cwd: repo }).stdout);
+  for (const name of ['RUSTFLAGS', 'CARGO_ENCODED_RUSTFLAGS', 'CFLAGS']) hash.update(`${name}=${process.env[name] ?? ''}\0`);
+  return hash.digest('hex').slice(0, 32);
+}
 function cDoor() {
   if (door) return door;
-  const out = path.join(tmp, 'c-door');
-  const done = run('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, out], { cwd: repo });
-  if (done.status !== 0) throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
+  const checkout = createHash('sha256').update(repo).digest('hex').slice(0, 12);
+  const root = path.join(os.homedir(), '.cache/thinkthen-site/c-door', checkout);
+  const out = path.join(root, doorDigest());
+  if (!fs.existsSync(out)) {
+    fs.mkdirSync(root, { recursive: true });
+    const partial = fs.mkdtempSync(path.join(root, 'partial-'));
+    const done = run('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, partial], { cwd: repo });
+    if (done.status !== 0) {
+      fs.rmSync(partial, { recursive: true, force: true });
+      throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
+    }
+    const pc = path.join(partial, 'lib/pkgconfig/thinkthen.pc');
+    fs.writeFileSync(pc, fs.readFileSync(pc, 'utf8').replace(/^prefix=.*$/m, `prefix=${out}`));
+    try { fs.renameSync(partial, out); } catch { fs.rmSync(partial, { recursive: true, force: true }); }
+    for (const old of fs.readdirSync(root)) if (path.join(root, old) !== out && !old.startsWith('partial-')) fs.rmSync(path.join(root, old), { recursive: true, force: true });
+  }
   door = out;
   return door;
 }
