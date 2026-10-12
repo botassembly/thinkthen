@@ -89,18 +89,27 @@ class ManagedToolAvailability(unittest.TestCase):
                     (retained / 'installed' / binary).write_bytes(binary.encode())
             context = dict(root=root, command=command, missing_tool=DRIVER['MissingTool'],
                            c_target=native.parents[1], initializer=root / 'profile.o')
-            for matches in (False, True):
-                (slice / 'libthinkthen.a').write_bytes(native.read_bytes() if matches else b'ordinary archive')
+            sources = ('Sources/Foundation/TTResult.h', 'Sources/Foundation/module.modulemap')
+            for name in sources:
+                original = root / 'libraries/swift' / name
+                original.parent.mkdir(parents=True, exist_ok=True)
+                original.write_bytes(b'checkout source')
+                (package / name).parent.mkdir(parents=True, exist_ok=True)
+            for mismatch in ('archive', *sources, None):
+                for name in sources:
+                    (package / name).write_bytes(b'changed source' if mismatch == name else b'checkout source')
+                (slice / 'libthinkthen.a').write_bytes(b'ordinary archive' if mismatch == 'archive' else native.read_bytes())
                 artifact = root / 'swift.tar.gz'
-                coverage_installed_managed.archive(package, artifact, ('CThinkThen.xcframework',))
-                stage = root / str(matches)
+                coverage_installed_managed.archive(package, artifact, ('CThinkThen.xcframework', 'Sources'))
+                stage = root / str(mismatch).replace('/', '-')
                 stage.mkdir()
                 retained = stage / 'retained'
                 with patch.dict(os.environ, THINKTHEN_SWIFT_ARTIFACT=str(artifact)), patch.object(
                         coverage_installed_managed.platform, 'machine', return_value='arm64'), patch.object(
                         coverage_installed_managed.shutil, 'which', return_value='/usr/bin/tool'):
-                    if not matches:
-                        with self.assertRaisesRegex(RuntimeError, 'differs from the instrumented'):
+                    if mismatch:
+                        error = 'differs from the instrumented' if mismatch == 'archive' else 'source differs'
+                        with self.assertRaisesRegex(RuntimeError, error):
                             coverage_installed_managed.apple_collection('swift', context, env, stage, retained, stage)
                     else:
                         coverage_installed_managed.apple_collection('swift', context, env, stage, retained, stage)

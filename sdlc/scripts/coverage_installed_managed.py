@@ -52,8 +52,9 @@ def apple_collection(language, context, env, stage, retained, folder):
     with tarfile.open(artifact) as archive:
         archive.extractall(package, filter='data')
     for source in package.rglob('*'):
-        if source.is_file() and source.suffix in ('.swift', '.m'):
-            original = root / 'libraries' / language / source.relative_to(package)
+        relative = source.relative_to(package)
+        if source.is_file() and (relative.parts[0] == 'Sources' or relative == Path('Package.swift')):
+            original = root / 'libraries' / language / relative
             if not original.is_file() or source.read_bytes() != original.read_bytes():
                 raise RuntimeError('Apple package source differs from the measured checkout')
     framework = package / 'CThinkThen.xcframework'
