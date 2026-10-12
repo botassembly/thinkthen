@@ -24,7 +24,17 @@ conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/case
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
-backend, port = shared.start_backend()
+if os.environ.get("THINKTHEN_BACKEND_BIN"):
+    backend = subprocess.Popen([os.environ["THINKTHEN_BACKEND_BIN"]],
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                               stderr=subprocess.PIPE, env=child_env(), text=True)
+    try:
+        port = int(read_process_line(backend.stdout))
+    except BaseException:
+        shared.stop_backend(backend)
+        raise
+else:
+    backend, port = shared.start_backend()
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
@@ -69,7 +79,7 @@ def native_parity(consumer, command):
                                 PATH=os.environ.get("PATH", "/usr/bin:/bin"),
                                 LC_ALL="C.UTF-8",
                                 DOTNET_CLI_TELEMETRY_OPTOUT="1")
-                backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                backend = c_parity.Backend(Path(os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))), env)
                 try:
                     env.update(THINKTHEN_API_KEY="sk-conformance-loopback", LIQUIDAI_API_KEY="sk-conformance-loopback", OPENROUTER_API_KEY="sk-conformance-loopback", PERPLEXITY_API_KEY="sk-conformance-loopback")
                     c_parity.prepare(home, value)
@@ -85,7 +95,7 @@ def native_parity(consumer, command):
                                 db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get("image_variants"):
                             backend.close()
-                            backend = c_parity.Backend(ROOT / "target/debug/conformance-backend", env)
+                            backend = c_parity.Backend(Path(os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))), env)
                             c_parity.prepare(home, step)
                         for key in ("paths", "image_paths"):
                             if key in step and not step.get("owned_jsonl"):

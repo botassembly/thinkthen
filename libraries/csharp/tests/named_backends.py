@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix="csharp-named-") as scratch:
                     NUGET_PACKAGES=os.environ.get("NUGET_PACKAGES", str(PACKAGE / "target/scratch/nuget")))
     subprocess.run([str(dotnet()), "build", str(PACKAGE / "tests/Consumer.csproj"), "--configuration", "Release",
                     "--source", str(PACKAGE / "target/scratch/managed"), "-v", "quiet"], env=env, check=True, timeout=120)
-    server = subprocess.Popen([ROOT / "target/debug/conformance-backend"],
+    server = subprocess.Popen([Path(os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend")))],
                               env=child_env(THINKTHEN_TEST_MARKERS='{"local":"tt-named-loopback"}'),
                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     try:

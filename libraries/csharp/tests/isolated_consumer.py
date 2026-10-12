@@ -36,6 +36,12 @@ shutil.copyfile(R/'tests/source/SessionChecks.cs',work/'SessionChecks.cs');shuti
 barrier=work/'barrier';barrier.mkdir();server=Backend(barrier, arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
 cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet','run','--project','/work/Installed.csproj','--configuration','Release','-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true']
 env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
+if os.environ.get('LLVM_PROFILE_FILE'):
+ observation=pathlib.Path(os.environ['LLVM_PROFILE_FILE']).parent.absolute()
+ profiles=observation.resolve(strict=True)
+ boundary=cmd.index('--')
+ cmd[boundary:boundary]=['--bind',str(profiles),str(observation)]
+ env['LLVM_PROFILE_FILE']=os.environ['LLVM_PROFILE_FILE']
 if mode=='portable': env['TT_PORTABLE_BATCH']='1'
 if mode=='sessions': env['TT_SESSIONS']='1'
 if mode.startswith('usage-'):

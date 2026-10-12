@@ -28,7 +28,12 @@ if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
   installed=$THINKTHEN_PARITY_PREPARE
   [ -d "$installed" ] || exit 2
 else
-  scratch_dir installed
+  if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
+    installed=$THINKTHEN_COVERAGE_STAGE
+    mkdir -p "$installed"
+  else
+    scratch_dir installed
+  fi
 fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Dart installed: package or C archive missing' >&2; exit 1; }

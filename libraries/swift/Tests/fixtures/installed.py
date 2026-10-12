@@ -51,8 +51,13 @@ base = [] if apple else ['bwrap', '--unshare-all', '--share-net', '--die-with-pa
         '--ro-bind', '/lib', '/lib', '--ro-bind', '/lib64', '/lib64', '--ro-bind', str(toolchain), '/swift',
         '--ro-bind', str(work / 'empty-tool'), '/usr/bin/cargo', '--ro-bind', str(work / 'empty-tool'), '/usr/bin/rustc',
         '--bind', str(work), '/work', '--proc', '/proc', '--dev', '/dev', '--tmpfs', '/tmp', '--chdir', '/work/consumer', '--']
+if os.environ.get('LLVM_PROFILE_FILE') and not apple:
+    observation = Path(os.environ['LLVM_PROFILE_FILE']).parent.absolute()
+    profiles = observation.resolve(strict=True)
+    boundary = base.index('--')
+    base[boundary:boundary] = ['--bind', str(profiles), str(observation)]
 location = str(work) if apple else '/work'
-env = child_env(home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
+env = child_env(keep=('LLVM_PROFILE_FILE',), home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
                 SWIFTPM_MODULECACHE_OVERRIDE=location + '/cache/modules', XDG_CACHE_HOME=location + '/cache', THINKTHEN_API_KEY='tt-canary-294')
 try:
     built = subprocess.run(base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'], cwd=work / 'consumer', env=env, capture_output=True, timeout=300)

@@ -71,7 +71,7 @@ def main():
         return
     dart, flutter, native, scratch, pub_cache = (Path(value).resolve() for value in sys.argv[1:])
     scratch.mkdir(parents=True, exist_ok=False)
-    env = child_env(home=scratch / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8',
+    env = child_env(keep=('LLVM_PROFILE_FILE',), home=scratch / 'home', PATH='/usr/bin:/bin', LANG='C.UTF-8',
                     PUB_CACHE=str(pub_cache), FLUTTER_SUPPRESS_ANALYTICS='true',
                     CI='true')
     packages = scratch / 'packages'
@@ -140,7 +140,11 @@ def main():
         run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
         run([str(dart), 'run', 'bin/main.dart', 'smoke'], consumer, env)
         return
-    run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
+    member = os.environ.get('THINKTHEN_INSTALLED_CONSUMER', 'both')
+    assert member in ('dart', 'flutter', 'both'), 'unknown routine consumer'
+    assert member == 'both' or not full, 'split consumer requires routine profile'
+    if member != 'flutter':
+        run([str(dart), 'run', 'bin/parser_cases.dart', str(ROOT / 'specification/fixtures/types/corpus.json')], consumer, env)
     has_flutter = (packages / 'flutter').is_dir()
     if has_flutter:
         projects = [packages / 'flutter']
@@ -148,58 +152,59 @@ def main():
             projects.append(packages / 'flutter/example')
         configure(packages / 'dart', native, projects)
         run([str(flutter), 'pub', 'get', '--offline'], packages / 'flutter', env)
-    cached.rename(cached.with_suffix('.held'))
-    run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'cache miss in offline build')
-    cached.write_bytes(b'corrupted native library')
-    run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'checksum mismatch')
-    cached.with_suffix('.held').replace(cached)
-    run([str(dart), 'run', 'bin/main.dart'], consumer, env)
-    run([str(dart), 'run', 'bin/main.dart', 'stream-regressions'], consumer, env)
-    # The same installed consumer owns tiny usage cases; it runs one local call.
-    for mode in ('written', 'failed', 'disabled'):
-        usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
-        if mode == 'disabled':
-            usage_env.pop('HOME', None)
-            usage_env.pop('XDG_STATE_HOME', None)
-        run_usage([str(dart), 'run', 'bin/main.dart', 'usage-' + mode],
-                  state=scratch / ('usage-' + mode) / 'thinkthen', mode=mode, env=usage_env,
-                  execute=lambda command, *, env: run(command, consumer, env))
-    if supplied:
-        run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
-    else:
-        # A separate installed project obtains the same pinned bytes during its build.
-        download_consumer = scratch / 'download-consumer'
-        shutil.copytree(consumer / 'bin', download_consumer / 'bin')
-        consumer = download_consumer
-        download_spec = spec.replace('offline: true', 'offline: false').replace('      asset_cache: ../packages/dart/checks/scratch/native-assets/\n', '')
-        (consumer / 'pubspec.yaml').write_text(download_spec)
-        run([str(dart), 'pub', 'get', '--offline'], consumer, env)
-        run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'no approved download URL')
-        requests = []
-        class Handler(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                requests.append(self.path)
-                self.send_response(200)
-                self.send_header('Content-Length', str(len(payload)))
-                self.send_header("Connection", "close")
-                self.end_headers()
-                self.wfile.write(payload)
-            def log_message(self, *_):
-                pass
-        server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
-        thread = threading.Thread(target=server.serve_forever)
-        thread.start()
-        try:
-            asset['url'] = f'http://127.0.0.1:{server.server_port}/native-library'
-            definition.write_text(json.dumps(manifest))
-            # Invalidate prior hook output through the changed registered definition.
+    if member != 'flutter':
+        cached.rename(cached.with_suffix('.held'))
+        run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'cache miss in offline build')
+        cached.write_bytes(b'corrupted native library')
+        run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'checksum mismatch')
+        cached.with_suffix('.held').replace(cached)
+        run([str(dart), 'run', 'bin/main.dart'], consumer, env)
+        run([str(dart), 'run', 'bin/main.dart', 'stream-regressions'], consumer, env)
+        # The same installed consumer owns tiny usage cases; it runs one local call.
+        for mode in ('written', 'failed', 'disabled'):
+            usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
+            if mode == 'disabled':
+                usage_env.pop('HOME', None)
+                usage_env.pop('XDG_STATE_HOME', None)
+            run_usage([str(dart), 'run', 'bin/main.dart', 'usage-' + mode],
+                      state=scratch / ('usage-' + mode) / 'thinkthen', mode=mode, env=usage_env,
+                      execute=lambda command, *, env: run(command, consumer, env))
+        if supplied:
             run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
-            assert requests == ['/native-library'], requests
-        finally:
-            server.shutdown()
-            thread.join()
-            server.server_close()
-        definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
+        else:
+            # A separate installed project obtains the same pinned bytes during its build.
+            download_consumer = scratch / 'download-consumer'
+            shutil.copytree(consumer / 'bin', download_consumer / 'bin')
+            consumer = download_consumer
+            download_spec = spec.replace('offline: true', 'offline: false').replace('      asset_cache: ../packages/dart/checks/scratch/native-assets/\n', '')
+            (consumer / 'pubspec.yaml').write_text(download_spec)
+            run([str(dart), 'pub', 'get', '--offline'], consumer, env)
+            run([str(dart), 'run', 'bin/main.dart'], consumer, env, 'no approved download URL')
+            requests = []
+            class Handler(http.server.BaseHTTPRequestHandler):
+                def do_GET(self):
+                    requests.append(self.path)
+                    self.send_response(200)
+                    self.send_header('Content-Length', str(len(payload)))
+                    self.send_header("Connection", "close")
+                    self.end_headers()
+                    self.wfile.write(payload)
+                def log_message(self, *_):
+                    pass
+            server = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+            thread = threading.Thread(target=server.serve_forever)
+            thread.start()
+            try:
+                asset['url'] = f'http://127.0.0.1:{server.server_port}/native-library'
+                definition.write_text(json.dumps(manifest))
+                # Invalidate prior hook output through the changed registered definition.
+                run([str(dart), 'build', 'cli', '-t', 'bin/main.dart', '-o', str(scratch / 'dart-build')], consumer, env)
+                assert requests == ['/native-library'], requests
+            finally:
+                server.shutdown()
+                thread.join()
+                server.server_close()
+            definition.write_text(json.dumps({**manifest, 'assets': {'linux_x64': {**asset, 'url': None}}}))
     if full:
         run([str(dart), 'build', 'cli', '-t', 'bin/parity_consumer.dart', '-o', str(scratch / 'parity-build')], consumer, env)
         parity_env = dict(env, THINKTHEN_PARITY_PACKAGE=str(packages / 'dart'),
@@ -208,12 +213,13 @@ def main():
             THINKTHEN_COMPLETE_LIBRARY=str(native), TT_DART=str(dart), TT_FLUTTER=str(flutter))
         if not preparing:
             run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'dart'], scratch, parity_env, timeout=None)
-    # Run the compiled bundle after the source packages and build cache move away.
-    packages.rename(scratch / 'packages-held')
-    consumer.rename(scratch / 'consumer-held')
-    run([str(scratch / 'dart-build/bundle/bin/main')], scratch / 'dart-build/bundle', env)
-    (scratch / 'packages-held').rename(packages)
-    (scratch / 'consumer-held').rename(consumer)
+    if member != 'flutter':
+        # Run the compiled bundle after the source packages and build cache move away.
+        packages.rename(scratch / 'packages-held')
+        consumer.rename(scratch / 'consumer-held')
+        run([str(scratch / 'dart-build/bundle/bin/main')], scratch / 'dart-build/bundle', env)
+        (scratch / 'packages-held').rename(packages)
+        (scratch / 'consumer-held').rename(consumer)
     if not has_flutter:
         run([sys.executable, str(ROOT / 'conformance/children/native_guard.py'), str(native), *map(str, archives)], scratch, env)
         if preparing:
