@@ -22,28 +22,40 @@ def main():
     parser.add_argument('--jars', type=Path, required=True)
     parser.add_argument('--out', type=Path, required=True)
     args = parser.parse_args()
-    args.out.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(prefix='usage-', dir=args.out) as scratch:
+    run(args.jars, args.out)
+
+
+def run(jars, out, *, language=None, profiles=None):
+    languages = (language,) if language else ('java', 'kotlin', 'scala')
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='usage-', dir=out) as scratch:
         work = Path(scratch)
         feed, app = work / 'feed', work / 'app'
         feed.mkdir(); app.mkdir()
-        for jar in args.jars.glob('*.jar'): shutil.copyfile(jar, feed / jar.name)
+        for jar in jars.glob('*.jar'): shutil.copyfile(jar, feed / jar.name)
         cp = os.pathsep.join([*(str(jar) for jar in sorted(feed.glob('*.jar'))), str(app), str(KOTLIN / 'lib/kotlin-stdlib.jar'), str(KOTLIN / 'lib/kotlinx-coroutines-core-jvm.jar'), str(SCALA / 'lib/scala.jar')])
         env = child_env(JAVA_HOME=str(JDK), JAVACMD=str(JDK / 'bin/java'))
         for extension in ('java', 'kt', 'scala'):
             shutil.copyfile(ROOT / 'libraries/jvm/tests' / ('UsageStatus.' + extension), work / ('UsageStatus.' + extension))
-        subprocess.run([str(JDK / 'bin/javac'), '--release', '22', '-cp', cp, '-d', str(app), str(work / 'UsageStatus.java')], env=env, check=True)
-        subprocess.run([str(KOTLIN / 'bin/kotlinc'), '-J-Xmx1g', '-jvm-target', '22', '-classpath', cp, str(work / 'UsageStatus.kt'), '-d', str(app)], env=env, check=True)
-        subprocess.run([str(SCALA / 'bin/scalac'), '-J-Xmx1g', '-classpath', cp, '-d', str(app), str(work / 'UsageStatus.scala')], env=env, check=True)
+        if 'java' in languages:
+            subprocess.run([str(JDK / 'bin/javac'), '--release', '22', '-cp', cp, '-d', str(app), str(work / 'UsageStatus.java')], env=env, check=True)
+        if 'kotlin' in languages:
+            subprocess.run([str(KOTLIN / 'bin/kotlinc'), '-J-Xmx1g', '-jvm-target', '22', '-classpath', cp, str(work / 'UsageStatus.kt'), '-d', str(app)], env=env, check=True)
+        if 'scala' in languages:
+            subprocess.run([str(SCALA / 'bin/scalac'), '-J-Xmx1g', '-classpath', cp, '-d', str(app), str(work / 'UsageStatus.scala')], env=env, check=True)
         from backend import Backend
         server = Backend(work)
         expected = []
         try:
             for language, mainclass in [('java', 'UsageStatus'), ('kotlin', 'UsageStatusKt'), ('scala', 'ScalaUsageStatus')]:
+                if language not in languages:
+                    continue
                 for mode in ('written', 'failed', 'disabled'):
                     home = work / (language + '-' + mode)
                     home.mkdir()
                     env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1', THINKTHEN_API_KEY='tt-canary-290')
+                    if profiles is not None:
+                        env['LLVM_PROFILE_FILE'] = str(Path(profiles).resolve() / '%m.profraw')
                     if mode == 'disabled':
                         env.update(HOME='', XDG_STATE_HOME='', APPDATA='', LOCALAPPDATA='')
                     command = [str(JDK / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-Xmx1g', '-XX:ActiveProcessorCount=2', '-cp', cp, mainclass, mode, str(home)]
@@ -53,7 +65,7 @@ def main():
                     if mode != 'disabled': expected.append('usage-' + language + '-' + mode)
                     assert server.arrivals == expected, server.arrivals
                     print(language, mode, 'PASS')
-            assert server.attempts == server.connections == len(expected) == 6
+            assert server.attempts == server.connections == len(expected) == 2 * len(languages)
             print('Installed usage states, retained facts/advice and exact requests PASS')
         finally:
             server.close()

@@ -26,65 +26,86 @@ def main():
     parser.add_argument('--out',type=Path,required=True)
     parser.add_argument('--maven',action='store_true',help='Consume the versioned local Maven files instead of development JAR names')
     args = parser.parse_args()
-    version = ET.parse(args.jars / 'pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text
-    logs = args.out.resolve()
+    run(args.jars, args.out, maven=args.maven)
+
+
+def run(jars, out, *, maven=False, language=None, profiles=None):
+    languages = (language,) if language else ('java', 'kotlin', 'scala')
+    version = ET.parse(jars / 'pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text
+    logs = out.resolve()
     logs.mkdir(parents=True,exist_ok=True)
     work = Path(tempfile.mkdtemp(prefix="installed-",dir=logs))
     feed = work / 'feed'; feed.mkdir(exist_ok=True)
-    if args.maven:
-        project = ET.parse(args.jars / 'pom.xml').getroot()
+    if maven:
+        project = ET.parse(jars / 'pom.xml').getroot()
         group, artifact = (project.find('{*}' + field).text for field in ('groupId','artifactId'))
-        repository = args.jars.parent / 'maven' / Path(*group.split('.')) / artifact / version
+        repository = jars.parent / 'maven' / Path(*group.split('.')) / artifact / version
         prefix = artifact + '-' + version
-        assert (repository / (prefix + '.pom')).read_bytes() == (args.jars / 'pom.xml').read_bytes()
-        for file in args.jars.glob('*.jar'):
+        assert (repository / (prefix + '.pom')).read_bytes() == (jars / 'pom.xml').read_bytes()
+        for file in jars.glob('*.jar'):
             kind = file.stem.removeprefix('thinkthen-')
             suffix = '' if kind == 'session' else '-' + kind
             source = repository / (prefix + suffix + '.jar')
             assert source.read_bytes() == file.read_bytes(),source
             shutil.copyfile(source,feed / file.name)
     else:
-        for file in args.jars.glob('*.jar'): shutil.copyfile(file,feed / file.name)
+        for file in jars.glob('*.jar'): shutil.copyfile(file,feed / file.name)
     for name in ('home','barrier','app'): (work / name).mkdir(exist_ok=True)
     source = ROOT / 'libraries/jvm/tests/SessionConsumer.java'
     shutil.copyfile(source,work / source.name)
     shutil.copyfile(ROOT / "libraries/jvm/tests/JsonTest.java", work / "JsonTest.java")
     jdk = Path(os.environ['THINKTHEN_JDK_HOME'])
     env = child_env(keep=('LANG','LC_ALL'),home=work / 'home', JAVA_HOME=str(jdk), JAVACMD=str(jdk / 'bin/java'))
-    subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
+    if 'java' in languages:
+        subprocess.run([str(jdk / 'bin/javac'),'--release',str(JDK_FLOOR),'-cp',str(feed / 'thinkthen-session.jar'),'-d',str(work / 'app'),str(work / source.name),str(work / "JsonTest.java")],check=True,env=env)
     kotlin = Path(os.environ['THINKTHEN_KOTLIN_HOME'])
     scala = Path(os.environ['THINKTHEN_SCALA_HOME'])
     for filename in ('SessionKotlin.kt','SessionScala.scala'):
         shutil.copyfile(ROOT / 'libraries/jvm/tests' / filename,work / filename)
     kotlin_cp = os.pathsep.join(map(str,(feed / 'thinkthen-kotlin.jar',kotlin / 'lib/kotlinx-coroutines-core-jvm.jar')))
-    subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
-    subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
+    if 'kotlin' in languages:
+        subprocess.run([str(kotlin / 'bin/kotlinc'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-jvm-target',str(JDK_FLOOR),'-classpath',kotlin_cp,str(work / 'SessionKotlin.kt'),'-d',str(work / 'app')],check=True,env=env)
+    if 'scala' in languages:
+        subprocess.run([str(scala / 'bin/scalac'),'-J-Xmx1g','-J-XX:ActiveProcessorCount=2','-classpath',str(feed / 'thinkthen-scala.jar'),'-d',str(work / 'app'),str(work / 'SessionScala.scala')],check=True,env=env)
     from backend import Backend
     server = Backend(work / 'barrier', arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
     env = child_env(home='/work/home',LANG='C.UTF-8',LC_ALL='C.UTF-8',THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',THINKTHEN_API_KEY='tt-canary-290')
     command = ['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind',str(jdk),'/jdk','--bind',str(work),'/work','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--chdir','/work','--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/*:/work/app','SessionConsumer']
+    if profiles is not None:
+        observation = Path(profiles).absolute()
+        profiles = observation.resolve()
+        # The native initializer also records process observations at its host path.
+        boundary = command.index('--')
+        command[boundary:boundary] = ['--bind', str(profiles), '/work/coverage',
+                                     '--bind', str(profiles), str(observation)]
+        env['LLVM_PROFILE_FILE'] = '/work/coverage/%m.profraw'
     try:
-        parser_result = subprocess.run(command[:-1] + ["JsonTest"], env=env, capture_output=True, timeout=5)
-        assert parser_result.returncode == 0 and b"JSON_READER_PASS" in parser_result.stdout, (parser_result.stdout, parser_result.stderr)
-        print("Installed JSON interchange regressions PASS")
-        result = subprocess.run(command,env=env,capture_output=True,timeout=50)
-        (logs / 'java-consumer.log').write_bytes(result.stdout + result.stderr)
-        print(result.stdout.decode(),end='')
-        if result.returncode:
-            print(result.stderr.decode(),file=sys.stderr)
-            raise AssertionError(f'installed JVM exit {result.returncode}')
-        assert b'INSTALLED_JVM_SESSION_PASS' in result.stdout
-        expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent']
-        assert server.arrivals == expected,server.arrivals
-        expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
-        assert server.attempts == server.connections == len(expected),server.arrivals
-        assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
-        print('Installed Java ten functions, counted zero-send refusals, held cancellation and owned results PASS')
+        expected = []
+        expected_agents = []
+        if 'java' in languages:
+            parser_result = subprocess.run(command[:-1] + ["JsonTest"], env=env, capture_output=True, timeout=5)
+            assert parser_result.returncode == 0 and b"JSON_READER_PASS" in parser_result.stdout, (parser_result.stdout, parser_result.stderr)
+            print("Installed JSON interchange regressions PASS")
+            result = subprocess.run(command,env=env,capture_output=True,timeout=50)
+            (logs / 'java-consumer.log').write_bytes(result.stdout + result.stderr)
+            print(result.stdout.decode(),end='')
+            if result.returncode:
+                print(result.stderr.decode(),file=sys.stderr)
+                raise AssertionError(f'installed JVM exit {result.returncode}')
+            assert b'INSTALLED_JVM_SESSION_PASS' in result.stdout
+            expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent']
+            assert server.arrivals == expected,server.arrivals
+            expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
+            assert server.attempts == server.connections == len(expected),server.arrivals
+            assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
+            print('Installed Java ten functions, counted zero-send refusals, held cancellation and owned results PASS')
         runtime = command[:command.index('--')]
         native_cp = ":".join("/work/feed/" + jar.name for jar in feed.glob("thinkthen-natives-*.jar"))
         for language, sdk, mainclass, runtime_cp in (
             ('kotlin',kotlin,'SessionKotlinKt','/kotlin/lib/kotlin-stdlib.jar:/kotlin/lib/kotlinx-coroutines-core-jvm.jar'),
             ('scala',scala,'SessionScala','/scala/lib/scala.jar')):
+            if language not in languages:
+                continue
             consumer = runtime + ['--ro-bind',str(sdk),'/' + language,'--','/jdk/bin/java','--enable-native-access=ALL-UNNAMED','-XX:ActiveProcessorCount=2','-Xmx1g','-cp','/work/feed/thinkthen-' + language + '.jar:/work/app:' + native_cp + ':' + runtime_cp,mainclass]
             actual = subprocess.run(consumer,env=env,capture_output=True,timeout=25)
             (logs / (language + '-consumer.log')).write_bytes(actual.stdout + actual.stderr)
