@@ -28,6 +28,7 @@ The C library exports only what the 0.2 session interface and the language libra
   - Merge `plan.rs` into the request plan export.
   - Fold `session/errors.rs` into `failures.rs` where the two repeat each other.
   - Regenerate the header, the Swift bridge, the PHP, Ada and COBOL declarations and the Zig checks.
+  - After the deletions, delete each public `Engine` wrapper that is left with no caller outside tests and did not ship in 0.1.2. Check `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` first, and move their tests to `Request` under the 0558 amendments. Idea 0559 holds whatever remains.
   - Lower each changed ratchet to its measured value.
 - Proof: these checks.
   - Every language library's routine installed checks pass.
