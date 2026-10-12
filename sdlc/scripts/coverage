@@ -255,14 +255,14 @@ def measured_export(*args):
 
 def measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous):
     completed = []
-    missing = []
+    missing = {}
     # Each runner finishes and retains its loaded native objects before switching.
     for collection in installed:
         folder = activate(run, collection['name'])
         try:
             collection['runner'](folder)
         except MissingTool as error:
-            missing.append(collection['name'])
+            missing[collection['name']] = str(error)
             (folder / 'unmeasured.txt').write_text(str(error) + '\n')
             continue
         if not collection['objects']:
@@ -280,7 +280,7 @@ def measure(run, env, llvm, executable, native, artifacts, installed, revision, 
     for collection in completed:
         collections[collection['name']] = measured_export(run, llvm,
                 list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
-    report(ROOT, run, revision, production, collections, time.monotonic() - started, missing=missing, continuous=continuous)
+    report(ROOT, run, revision, production, collections, time.monotonic() - started, missing=missing, missing_reasons=missing, continuous=continuous)
     if missing:
         raise MissingTool('unmeasured installed collections: ' + ', '.join(missing) +
                           f'; completed measurements retained in {run}')

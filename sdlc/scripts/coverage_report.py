@@ -54,7 +54,7 @@ def lines(root, lcov):
     return result
 
 
-def report(root, run, revision, production, collections, elapsed, *, missing=(), continuous=False):
+def report(root, run, revision, production, collections, elapsed, *, missing=(), missing_reasons=None, continuous=False):
     mapped = lines(root, production)
     denominator = {}
     for path, counts in mapped.items():
@@ -86,6 +86,7 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     partial = not any(name.startswith('installed-') for name in collections) or bool(missing)
     scope = 'partial coverage; installed surfaces unmeasured' if partial else 'native and installed library coverage'
     payload = {'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
+               'unmeasured_reasons': dict(missing_reasons or {}),
                'denominator': 'nonblank lines mapped by all retained production native objects',
                'profile_mode': 'continuous' if continuous else 'normal-exit',
                'totals': totals, 'files': file_totals, 'missing_child_profiles': limitations}
@@ -128,6 +129,8 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
         rows.append('')
     if missing:
         rows += ['Unmeasured collections: ' + ', '.join(missing) + '.', '']
+        for name, reason in (missing_reasons or {}).items():
+            rows += [f'{name}: {reason}', '']
     suffix = 'native' if not any(name.startswith('installed-') for name in collections) else 'installed'
     summary = root / 'sdlc/records/coverage' / f'{datetime.date.today()}-{revision[:9]}-{suffix}.md'
     summary.parent.mkdir(parents=True, exist_ok=True)

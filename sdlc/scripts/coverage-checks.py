@@ -249,7 +249,13 @@ class InstalledEvidenceRetention(unittest.TestCase):
                             sys, 'argv', ['coverage'] + (['--release'] if release else [])):
                         self.assertEqual(DRIVER['entry'](), code)
                     result = json.loads((root / 'totals.json').read_text())
+                    summary = next((root / 'sdlc/records/coverage').glob('*.json'))
+                    result = json.loads(summary.read_text())
                     self.assertEqual(result['unmeasured_collections'], ['installed-objective-c'])
+                    self.assertEqual(result['unmeasured_reasons'],
+                                     {'installed-objective-c': 'Objective-C requires macOS'})
+                    self.assertIn('installed-objective-c: Objective-C requires macOS',
+                                  summary.with_suffix('.md').read_text())
                     self.assertEqual(result['totals']['mapped_nonblank'], 1)
                     self.assertEqual(result['totals']['installed-c'], 1)
                     self.assertNotIn('installed-objective-c', result['totals'])
@@ -257,6 +263,12 @@ class InstalledEvidenceRetention(unittest.TestCase):
                     self.assertTrue((root / 'installed-c/assertions-passed').exists())
                     self.assertIn('requires macOS', (root / 'installed-objective-c/unmeasured.txt').read_text())
             self.assertNotIn('installed-objective-c', exported)
+            lcov = f'SF:{source}\nDA:1,1\n'
+            DRIVER['report'](root, root, 'labels', lcov, {'rust-integration': lcov}, 0,
+                             missing=('installed-objective-c',))
+            labels = json.loads((root / 'totals.json').read_text())
+            self.assertEqual(labels['unmeasured_collections'], ['installed-objective-c'])
+            self.assertEqual(labels['unmeasured_reasons'], {})
 
     def test_routine_failure_missing_object_and_export_failure_remain_fatal(self):
         for cause in ('assertion', 'retained object', 'empty objects', 'export', 'export exit 77'):
