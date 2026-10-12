@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558
 
+Reviews: revision 41499bf, accept
+
 ## Outcome
 
 A committed release-suite script measures how much of the Rust core and the C library each public surface reaches. The surfaces are CLI commands, the public Rust API and each installed language library. The script also measures the inside unit tests separately. Each run stores a summary under `sdlc/records/coverage/`, so later runs can be compared. The first recorded run gives the baseline that the outside-in test cleanup works from.
