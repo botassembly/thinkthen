@@ -16,15 +16,9 @@
 
 #include <thinkthen.h>
 
-static int failed;
 static thinkthen_cancel_token *tokens[3];
 
-static void check(int holds, const char *what) {
-    if (!holds) {
-        fprintf(stderr, "FAIL %s\n", what);
-        failed = 1;
-    }
-}
+#include "check.c"
 
 static int cancelled(const thinkthen_engine *tt) {
     return thinkthen_error_code(tt) == THINKTHEN_ECANCELLED &&

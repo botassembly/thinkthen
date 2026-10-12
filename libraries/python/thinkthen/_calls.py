@@ -175,8 +175,8 @@ class Operation:
                     error.kind = failure.error.kind
                     error.retryable = failure.error.retryable
                     error.facts = getattr(failure, 'facts', None)
-                    error.results = tuple(self.results)
-                    error.terminal = packet
+                    error.results, error.terminal = tuple(self.results), packet
+                    if self.producer_error is None: raise error
                     raise error from self.producer_error
                 return True
             if kind == 'row': self.results.append(packet.value)
