@@ -74,3 +74,4 @@ PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
 - 2026-10-11 landed 1e6e4b562; next: Qualify the reviewed candidate through full installed parity, stress and hosted platform checks.
 - 2026-10-11 next: Stopped rc.11 and retained its logs; land 0549 first, then 0550 through 0554 before a fresh search review and new candidate.
 - 2026-10-11 next: Retain stopped rc.11 logs, land 0549 through 0556, search every reviewed change, then qualify a fresh candidate with background runs.
+- 2026-10-11 next: Read amendments 22b005e1b and consolidate current main, 0549, 0555 and the product stack into one revision; runner-only ad4b49b4a exited 1 on a missing retained TypeScript archive, three developers now own consolidation and runner fixes, decode and direct ABI proof, and Engine regressions, with compiler checks released and no source-only acceptance permitted.
