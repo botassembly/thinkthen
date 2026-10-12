@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569
+Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569, 0573, 0574
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
@@ -85,6 +85,8 @@ PM amendment, 2026-10-12, fifth. Build in waves and test once, under the [2026-1
 - A campaign fix confined to one language reruns that language's full tier. A fix to the core or the generators reruns the full campaign.
 
 PM amendment, 2026-10-12, sixth. Two tickets join the waves. 0569 (annotate context, score levels and status) is core CLI work and joins wave 2. 0568 (language-library parity) starts once 0562 lands: its manifest, lint, typed options and size report go with the generator work, and each language's part joins that language's 0563 group in wave 4. Both close with 0560 to 0565 on the candidate SHA.
+
+PM amendment, 2026-10-12, seventh. 0573 (caller order and one aggregate packet) and 0574 (one-line answer reading) join the waves. Their engine parts join wave 2, their generator parts join 0562, and each language's part joins its 0563 group. Both close with the rest on the candidate SHA.
 
 ## Progress
 
