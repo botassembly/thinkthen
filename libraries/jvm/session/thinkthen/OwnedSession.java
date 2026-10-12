@@ -8,6 +8,9 @@ public final class OwnedSession implements AutoCloseable {
     private int waiters;
     private boolean closed;
     private java.util.concurrent.CompletableFuture<Void> inputWait, resultWait;
+    private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(2, task -> {
+        var worker = new Thread(task, "thinkthen-session-wait"); worker.setDaemon(true); return worker;
+    });
     private final Arena arena = Arena.ofShared();
     private final MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
     private final MemorySegment output = arena.allocate(ValueLayout.ADDRESS);
@@ -62,17 +65,19 @@ public final class OwnedSession implements AutoCloseable {
         var result = new java.util.concurrent.CompletableFuture<Void>();
         if (input) inputWait = result; else resultWait = result;
         result.whenComplete((value, error) -> { if (result.isCancelled()) cancel(); });
-        Thread worker = new Thread(() -> {
-            try { waitNative(input); result.complete(null); }
-            catch (RuntimeException error) { result.completeExceptionally(error); }
+        workers.execute(() -> {
+            RuntimeException failure = null;
+            try { waitNative(input); }
+            catch (RuntimeException error) { failure = error; }
             finally {
                 synchronized (this) {
                     if (input && inputWait == result) inputWait = null;
                     if (!input && resultWait == result) resultWait = null;
                 }
+                if (failure == null) result.complete(null); else result.completeExceptionally(failure);
             }
-        }, "thinkthen-session-wait");
-        worker.setDaemon(true); worker.start(); return result;
+        });
+        return result;
     }
     void waitNative(boolean input) {
         final MemorySegment retained;
@@ -91,7 +96,7 @@ public final class OwnedSession implements AutoCloseable {
     }
     @Override public synchronized void close() {
         if (closed) return;
-        cancel(); closed = true;
+        cancel(); closed = true; workers.shutdown();
         if (waiters == 0) release();
     }
 }
