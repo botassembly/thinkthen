@@ -1,0 +1,50 @@
+package main
+
+import (
+	"context"
+	"log"
+	"slices"
+
+	tt "github.com/botassembly/thinkthen/libraries/go"
+)
+
+func main() {
+	client, err := tt.NewClient(tt.EngineSettings{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer client.Close()
+	question := "Which labels fit this message?"
+	labels := tt.AuthoredLabelsArray{
+		"praise",
+		"bug",
+		"billing",
+	}
+	labelQuestion := tt.DefinedQuestion(tt.AuthoredTag{
+		Tag:    tt.AuthoredQuestionTextString(question),
+		Labels: tt.Ptr[tt.AuthoredLabels](labels),
+	})
+	message := "Love the new dashboard, " +
+		"but export crashes the app,\n" +
+		"and I was charged twice.\n"
+	call, err := client.Tag(
+		context.Background(),
+		labelQuestion,
+		message,
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var fittingLabels []string
+	for _, packet := range call.Packets {
+		row, err := packet.AsSessionPacketTagRow()
+		if err == nil {
+			fittingLabels = row.Value().Value.Value().Value
+		}
+	}
+	want := []string{"praise", "bug", "billing"}
+	if !slices.Equal(fittingLabels, want) {
+		log.Fatal("expected all three labels")
+	}
+}
