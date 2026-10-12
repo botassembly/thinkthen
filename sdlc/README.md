@@ -1,13 +1,12 @@
 # sdlc/
 
-The system of record for thinkthen. Nothing outside this repository is authoritative.
+Tickets and the notes that drive work on thinkthen. Tickets exist to drive the code; the code is what matters. pm reads and changes ticket status.
 
 | Folder | What it is |
 | --- | --- |
 | [planning/](planning/) | The design study, the Rust standards, the plan, and the architecture decision records |
-| [issues/](issues/) | Problems found and filed. An issue is not a ticket and authorizes no work |
 | [tickets/](tickets/) | Work a ticket authorizes. One file per ticket, numbered from 0001 |
-| [records/](records/) | Short notes of what landed and why |
+| [records/](records/) | Optional short notes, such as review findings and measurements |
 | [scripts/](scripts/) | The gate ladder: `install`, `lint`, `test`, `spec`, `surfaces` |
 | surfaces.txt | The nine surfaces and their state. `sdlc/scripts/surfaces` reads it |
 | ratchet.json | The source size ceiling. `sdlc/scripts/lint` reads it |
@@ -16,13 +15,11 @@ The heavy rungs `install`, `test`, `spec`, and `surfaces` honor `THINKTHEN_HEAVY
 
 Inspect capacity before substantial work; the [capacity ruling](decisions/2026-10-08-preserve-planning-rulings.md#build-capacity) gives the starting guide. Reduce compiler jobs or defer a new heavy step when the host is under pressure. A direct Linux command using a lane lock runs as `flock -o "$THINKTHEN_HEAVY_LOCK" <command>`. Without `-o`, a background `sccache` server can inherit and retain that lock. Rungs already under their own lock skip reacquiring it. M5 uses Python `fcntl` when locking is needed because `flock` is absent.
 
-A ticket numbered 0120 or higher carries a `## Evidence` section of five `-` list items labeled exactly `Starts from:`, `Keeps:`, `Changes:`, `Proof:`, and `Defers:`, each followed by text. They name the evidence it starts from, the behavior it keeps, what it deliberately changes, what proves it, and the gaps it defers. Workspace decision `2026-09-24-experiments-reduce-risk.md` sets the rule. `sdlc/scripts/tickets` enforces it from the lint rung. Earlier tickets are exempt by number. Every numbered ticket here counts as a product ticket.
-
-The destination this repository serves lives outside it, in Ian's workspace. The five factory scripts under `project/` are absent until this repository registers with the factory.
+A ticket needs an Outcome and a Proof. Add other notes only when they help the builder.
 
 ## Ticket preparation and completion
 
-Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing and finishing a ticket. Write one short record per ticket at landing. A Quick Fix gets one short landing note.
+Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing and finishing a ticket. A landing record is optional.
 
 ## Repository map
 

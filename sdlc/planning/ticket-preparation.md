@@ -1,6 +1,6 @@
 # Prepare tickets
 
-Preparation reads the code and fills the ticket's short form (`sdlc/tickets/README.md`). It does not implement the feature or change an accepted outcome. Ian can overturn this process.
+Tickets exist to drive the code. Preparation reads the code and fills the ticket's short form (`sdlc/tickets/README.md`). It does not implement the feature or change an accepted outcome. Ian can overturn this process.
 
 ## Before the build
 
@@ -26,4 +26,4 @@ Read `origin/main` at a named commit; a local `main` can lag. Verify a landed pr
 
 ## Landing
 
-Use the whole-ticket or whole-slice review rule in `AGENTS.md`. Write one short record per ticket at landing. Say what landed, why, what was checked and which gaps remain. Keep the ticket status to one or two sentences. A ticket needs no separate build-lessons section or review of its record.
+Use the whole-ticket or whole-slice review rule in `AGENTS.md`. A landing record is optional. If you write one, keep it short: what landed and what was checked. pm holds ticket status.
