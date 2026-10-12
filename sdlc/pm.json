@@ -18,6 +18,7 @@
     "values": [
       "0.1",
       "0.2",
+      "0.2.1",
       "0.3",
       "later"
     ]
@@ -33,6 +34,11 @@
   "releaseMilestones": [
     {
       "name": "0.2",
+      "targetRef": "origin/main",
+      "state": "active"
+    },
+    {
+      "name": "0.2.1",
       "targetRef": "origin/main",
       "state": "active"
     },

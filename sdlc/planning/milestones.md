@@ -134,6 +134,10 @@ The 0456 amendment defines implementation scope. [0425 completion criteria](../t
 
 [0460](../tickets/0460-conservative-repeated-input-request-plan.md) requires conservative initial-send plans while retaining runtime coalescing, caches and the C header. Byte/token previews describe uninterrupted packing. Final installed parity must cover the settled request contract and all binding migrations.
 
+## 0.2.1
+
+Outcome: the docs and site sell one idea after 0.2 ships: put Jev-class decision models in your code, whatever model, language or database you use. This is the first thing committed after 0.2 goes out, ideally a docs-only change with no new release. Jarvis owns it as the docs team; the 0.2 team does not work on it (Ian, 2026-10-12).
+
 ## 0.3
 
 Outcome: build the proxy and its business policy. All SDK architecture and Windows binding packages belong to 0.2 under Ian's later ruling.
