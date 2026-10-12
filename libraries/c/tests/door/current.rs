@@ -330,16 +330,19 @@ fn complete_author_declarations_and_explicit_object_context_keep_native_types() 
                 bodies[0]["state"],
                 serde_json::json!({"flag": false, "unselected": null})
             );
+            let selected = bodies[0]["questions"]["q1"]["instructions"]
+                .as_str()
+                .unwrap();
+            assert!(
+                selected.contains("typed evidence café 😀")
+                    && selected.contains("\"ready\":false")
+                    && selected.contains("\"extra\":null")
+            );
+            assert!(!selected.contains("private") && !selected.contains("unsent"));
             assert_eq!(bodies[1]["state"], "shared fallback");
             assert_eq!(
                 bodies[2]["state"],
                 "Each question quotes the text it asks about."
-            );
-            assert!(
-                bodies[0]["questions"]["q1"]["instructions"]
-                    .as_str()
-                    .expect("instructions")
-                    .contains("typed evidence")
             );
         }
     }

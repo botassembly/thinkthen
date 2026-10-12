@@ -16,29 +16,6 @@ pub(crate) fn ask(
     options: CallOptions<'_>,
     completed: &mut Option<Facts>,
 ) -> Result<ResultHandle, Failure> {
-    if !question.fits_complete(kind) {
-        return Err(Failure::usage(
-            "the question kind does not match the named call",
-        ));
-    }
-    let events = Mutex::new(Vec::new());
-    let observer = |event: RecordObservation<'_>| {
-        events
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(event.to_owned());
-    };
-    let options = options.observe(&observer);
-    let mut storage = Storage::default();
-    let originals = Mutex::new(Vec::new());
-    let records = source.read()?.map(|record| {
-        let record = inputs::compose(record?, kind, question.reading.as_ref())?;
-        originals
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner)
-            .push(record.original.clone());
-        Ok(record.map_original(|o| o.native))
-    });
     let request = super::request::prepare(
         kind,
         question,
@@ -50,6 +27,27 @@ pub(crate) fn ask(
         },
     )?
     .admit()?;
+    let reading = request.record_reading()?;
+    let reading = question.reading.as_ref().unwrap_or(&reading);
+    let events = Mutex::new(Vec::new());
+    let observer = |event: RecordObservation<'_>| {
+        events
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(event.to_owned());
+    };
+    let options = options.observe(&observer);
+    let mut storage = Storage::default();
+    let originals = Mutex::new(Vec::new());
+    let records = source.read()?.map(|record| {
+        let record = inputs::compose(record?, kind, Some(reading))?;
+        originals
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .push(record.original.clone());
+        Ok(record.map_original(|o| o.native))
+    });
+
     let feed = thinkthen::RequestFeed::from_records("c-complete", records);
     // Whole-set functions own count admission and must stop before an unread tail.
     let feed = if matches!(

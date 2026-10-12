@@ -1,7 +1,6 @@
 /* Actual 0456 judgments, typed object context, native loaders and staged refusal. */
 #include <thinkthen.h>
 #include <assert.h>
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -16,10 +15,7 @@
 #define JSON(s) (thinkthen_content_v1){2,STR(s)}
 static int same(thinkthen_string_v1 s,const char *v) { return s.len==strlen(v) && (s.len==0 || memcmp(s.data,v,s.len)==0); }
 static thinkthen_engine *engine(void) {
-    const char *base=getenv("THINKTHEN_BASE_URL"); assert(base && strncmp(base,"http://127.0.0.1:",17)==0);
-    char settings[4096]; int n=snprintf(settings,sizeof settings,"{\"base_url\":\"%s\",\"cache\":false,\"model\":\"jev-latest\"}",base);
-    assert(n>0 && (size_t)n<sizeof settings);
-    thinkthen_engine *e=thinkthen_engine_new_with(settings); assert(e); return e;
+    thinkthen_engine *e=thinkthen_engine_new_with("{\"cache\":false,\"model\":\"jev-latest\"}"); assert(e); return e;
 }
 static thinkthen_question_author_v1 metadata(int object_item,int object_context) {
     static thinkthen_input_property_v1 item_properties[2];
@@ -38,6 +34,7 @@ static thinkthen_question_author_v1 metadata(int object_item,int object_context)
 }
 static thinkthen_question *question(thinkthen_engine *e,thinkthen_question_author_v1 a) {
     thinkthen_question_spec_v1 spec={0}; spec.kind=1; spec.text=TEXT("Need attention?");
+    if(a.item_schema.kind==2) spec.on=(thinkthen_strings_v1){&STR("/message"),1};
     thinkthen_question *q=NULL; assert(thinkthen_question_new_authored(e,&spec,&a,&q)==0 && q); return q;
 }
 static thinkthen_source *source(thinkthen_engine *e,const thinkthen_record_v1 *records,size_t len) {
@@ -47,12 +44,13 @@ static thinkthen_controls_v1 controls(void) {
     thinkthen_controls_v1 c={0}; c.deadline_ms=-1; c.attempts=1;
     c.context=(thinkthen_optional_content_v1){1,TEXT("shared fallback")}; return c;
 }
+static const char selected_original[]="{\"message\":{\"body\":\"typed evidence café 😀\",\"ready\":false,\"extra\":null},\"private\":\"unsent\"}";
 static void success(void) {
     thinkthen_engine *e=engine(); thinkthen_result *results[3]={0}; thinkthen_controls_v1 c=controls();
     for(int at=0;at<3;++at) {
         thinkthen_question *q=question(e,metadata(at==0,at!=2));
         thinkthen_record_v1 r={0};
-        r.original=(thinkthen_optional_content_v1){1,at==0?JSON("{\"body\":\"typed evidence\",\"ready\":false}"):TEXT("typed evidence")};
+        r.original=(thinkthen_optional_content_v1){1,at==0?(thinkthen_content_v1){2,{selected_original,sizeof selected_original-1}}:TEXT("typed evidence")};
         if(at==0) r.context=(thinkthen_optional_content_v1){1,JSON("{\"flag\":false,\"unselected\":null}")};
         if(at==2) r.context=(thinkthen_optional_content_v1){1,TEXT("")};
         thinkthen_source *s=source(e,&r,1);
@@ -67,6 +65,7 @@ static void success(void) {
         if(at==0) { assert(a.item_schema.properties.len==2 && same(a.item_schema.properties.data[0].name,"body") && a.item_schema.properties.data[1].kind==3); assert(a.context_schema.required.len==1 && same(a.context_schema.required.data[0],"flag")); }
         thinkthen_summary_v1 summary={0}; assert(thinkthen_result_summary(results[at],&summary)==0);
         assert(summary.facts.value.requests_sent==1);
+        if(at==0) { thinkthen_decide_view_v1 v={0}; assert(thinkthen_result_decide(results[at],0,&v)==0); assert(v.common.input.present && same(v.common.input.value.data,selected_original)); assert(!v.common.position.present); thinkthen_row_observation_v1 row={0}; assert(thinkthen_result_row(results[at],0,&row)==0 && row.index==0); }
         for(size_t i=0;i<summary.observation_count;++i) {
             assert(thinkthen_result_observation_author(results[at],i,&a)==0);
             assert(same(a.name.value,"typed-check") && a.wording_version.value==23);
@@ -80,18 +79,19 @@ static void success(void) {
 }
 static void refused(void) {
     thinkthen_engine *e=engine(); thinkthen_controls_v1 c=controls();
-    for(int at=0;at<7;++at) {
-        thinkthen_question_author_v1 a=metadata(at==0 || at==6,at>=3);
+    for(int at=0;at<8;++at) {
+        thinkthen_question_author_v1 a=metadata(at==0 || at==6 || at==7,at>=3);
         if(at==5) a.context_schema=(thinkthen_input_declaration_v1){0};
         thinkthen_question *q=question(e,a);
-        thinkthen_record_v1 r[2]={0}; r[0].original=(thinkthen_optional_content_v1){1,at==0 || at==6?JSON("{\"body\":\"good\",\"ready\":false}"):TEXT("good")}; r[1]=r[0];
-        if(at==0) r[1].original=(thinkthen_optional_content_v1){1,JSON("{\"body\":false}")};
+        thinkthen_record_v1 r[2]={0}; r[0].original=(thinkthen_optional_content_v1){1,at==0 || at==6 || at==7?JSON("{\"message\":{\"body\":\"good\",\"ready\":false}}"):TEXT("good")}; r[1]=r[0];
+        if(at==0) r[1].original=(thinkthen_optional_content_v1){1,JSON("{\"message\":{\"body\":false}}")};
         if(at==1) r[1].original=(thinkthen_optional_content_v1){1,JSON("false")};
         if(at==2) r[1].context=(thinkthen_optional_content_v1){1,JSON("null")};
         if(at==3) r[1].context=(thinkthen_optional_content_v1){1,TEXT("{\"flag\":false}")};
         if(at==4) r[1].context=(thinkthen_optional_content_v1){1,JSON("{\"flag\":null}")};
         if(at==5) r[1].context=(thinkthen_optional_content_v1){1,JSON("{\"flag\":false}")};
         if(at==6) r[1].original=(thinkthen_optional_content_v1){1,TEXT("{\"body\":\"good\"}")};
+        if(at==7) r[1].original=(thinkthen_optional_content_v1){1,JSON("{\"message\":{\"body\":null,\"ready\":false}}")};
         thinkthen_source *s=source(e,r,2); thinkthen_result *result=(thinkthen_result *)(uintptr_t)1;
         assert(thinkthen_decide_complete(e,q,s,&c,&result)==THINKTHEN_EUSAGE && result==(thinkthen_result *)(uintptr_t)1);
         const char *message=thinkthen_error_message(e); assert(!strstr(message,"flag") && !strstr(message,"good"));
