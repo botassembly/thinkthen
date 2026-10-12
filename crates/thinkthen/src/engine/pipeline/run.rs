@@ -46,9 +46,9 @@ pub(super) struct Bounds {
     /// Whether the host takes rows past a failure. When it does not, a
     /// failed request sends nothing further, as one job would.
     pub(super) continues: bool,
-    pub(super) coalesces: bool,
     /// How long input may pause before the open request goes out.
     pub(super) pause: Duration,
+    pub(super) pending_inputs: bool,
 }
 
 pub(super) struct Run<'a, A: Asker> {
@@ -62,12 +62,12 @@ pub(super) struct Run<'a, A: Asker> {
     jobs: usize,
     continues: bool,
     pause: Duration,
+    pending_inputs: bool,
     slots: VecDeque<Slot<A>>,
     /// The place of the window's first input.
     first: usize,
     /// Each key on its way, and every input place and position it answers.
     waiting: HashMap<QuestionKey, Vec<(usize, usize)>>,
-    completed: Option<HashMap<QuestionKey, Answered>>,
     closed: VecDeque<Job>,
     busy: usize,
     reading: bool,
@@ -103,10 +103,10 @@ impl<'a, A: Asker> Run<'a, A> {
             jobs: bounds.jobs,
             continues: bounds.continues,
             pause: bounds.pause,
+            pending_inputs: bounds.pending_inputs,
             slots: VecDeque::new(),
             first: 0,
             waiting: HashMap::new(),
-            completed: bounds.coalesces.then(HashMap::new),
             closed: VecDeque::new(),
             busy: 0,
             reading: false,
@@ -178,6 +178,7 @@ impl<'a, A: Asker> Run<'a, A> {
             self.close();
         }
         while self.busy < self.jobs
+            && (!self.pending_inputs || self.exhausted || self.slots.len() + staged >= self.window)
             && let Some(job) = self.closed.pop_front()
         {
             if work.send(job).is_err() {
@@ -331,14 +332,6 @@ impl<'a, A: Asker> Run<'a, A> {
         let mut joining = Vec::new();
         let mut added = HashSet::new();
         for (position, (ask, stored)) in asks.into_iter().zip(found).enumerate() {
-            if let Some(answered) = self
-                .completed
-                .as_ref()
-                .and_then(|answers| answers.get(&ask.key))
-            {
-                slot.answer(position, answered.clone());
-                continue;
-            }
             let stored = match stored.map(|found| self.stored(&ask, found, label, cancel)) {
                 Some(Ok(answered)) => Some(answered),
                 Some(Err(Some(error))) => return engine(error),
@@ -440,11 +433,6 @@ impl<'a, A: Asker> Run<'a, A> {
     /// counts the send; a waiter that joined it shares the answer and its
     /// usage share, and sent nothing.
     fn deliver(&mut self, key: &QuestionKey, mut answered: Answered) {
-        if let Some(completed) = &mut self.completed {
-            let mut shared = answered.clone();
-            shared.requests_sent = 0;
-            completed.insert(*key, shared);
-        }
         for (place, at) in self.waiting.remove(key).unwrap_or_default() {
             if let Some(slot) = self.slot(place) {
                 slot.answer(at, answered.clone());

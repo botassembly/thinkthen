@@ -115,6 +115,7 @@ enum Due {
 pub struct CallOptions<'a> {
     pub(in crate::public) cli_text_limit: Option<usize>,
     pub(in crate::public) eager_inputs: bool,
+    pub(in crate::public) pending_inputs: bool,
     // Private projections preserve scalar metadata, SQL row-local refusals, typed
     // entity admission and legacy annotation group failures without wire controls.
     pub(in crate::public) scalar_input: bool,
@@ -173,6 +174,7 @@ impl<'a> CallOptions<'a> {
         Self {
             cli_text_limit: None,
             eager_inputs: false,
+            pending_inputs: false,
             scalar_input: false,
             recovery_rows: false,
             entity_rows: false,

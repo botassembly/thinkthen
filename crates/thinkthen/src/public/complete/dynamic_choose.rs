@@ -98,7 +98,7 @@ impl Engine {
             stop,
             packing,
             most: self.most,
-            aggregate_inputs: false,
+            pending_inputs: false,
         };
         Ok(pull::try_start_prepared(
             call,

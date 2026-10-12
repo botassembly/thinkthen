@@ -68,6 +68,7 @@ impl Engine {
     {
         let mut options = options.started()?;
         options.eager_inputs = true;
+        options.pending_inputs = true;
         let context = options.context_text().map(str::to_owned);
         self.complete_stream(
             function,

@@ -194,7 +194,7 @@ fn bulk(
         context: false,
         detailed: false,
         continues: false,
-        coalesces: false,
+        pending_inputs: false,
     };
     let host = pipeline::eager(texts.to_vec(), |row| match row {
         Ok(row) => {

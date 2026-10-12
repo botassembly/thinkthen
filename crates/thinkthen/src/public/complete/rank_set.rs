@@ -125,7 +125,7 @@ impl Engine {
                 stop,
                 packing,
                 most: self.most,
-                aggregate_inputs: options.eager_inputs,
+                pending_inputs: false,
             },
             SetRecords {
                 records: Records(Arc::clone(&engine), false),

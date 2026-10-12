@@ -1,9 +1,9 @@
-//! Eager admission shares duplicate work independently of caller observation.
+//! Completed questions follow cache eligibility independently of caller observation.
 use super::*;
 use thinkthen::{BatchSetting, RecordObservation, RequestFunction};
 
 #[test]
-fn eager_duplicates_across_the_window_keep_one_send_per_unique_question_with_every_observer() {
+fn completed_duplicates_without_cache_send_again_with_every_observer() {
     for width in [1, 2] {
         for observed in 0..3 {
             let listener = Listener::answering(|body| {
@@ -42,23 +42,32 @@ fn eager_duplicates_across_the_window_keep_one_send_per_unique_question_with_eve
             )
             .unwrap();
             assert_eq!(call.facts().records(), 21);
+            let rows = crate::api::decisions(&call).unwrap();
+            assert_ne!(
+                rows[0].result().identity().observations(),
+                rows[20].result().identity().observations()
+            );
             assert_eq!(
                 listener.questions(),
-                20,
+                21,
                 "width {width}, observed {observed}"
             );
             assert_eq!(call.facts().requests_sent(), listener.count() as u64);
             assert_eq!(
                 observed_attempts.load(Ordering::SeqCst),
-                if observed == 2 { 20 / width } else { 0 }
+                if observed == 2 {
+                    21_usize.div_ceil(width)
+                } else {
+                    0
+                }
             );
             assert_eq!(
                 call.facts().attempts().map(<[_]>::len),
-                (observed == 2).then_some(20 / width)
+                (observed == 2).then_some(21_usize.div_ceil(width))
             );
             assert_eq!(
                 listener.count(),
-                20 / width,
+                21_usize.div_ceil(width),
                 "width {width}, observed {observed}"
             );
             assert_eq!(

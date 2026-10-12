@@ -76,8 +76,7 @@ pub(crate) struct Call<'a> {
     pub(crate) stop: Stop<'a>,
     pub(crate) packing: Packing,
     pub(crate) most: Option<usize>,
-    /// Whole-set calls admit duplicates together; row streams keep batch-1 pacing.
-    pub(crate) aggregate_inputs: bool,
+    pub(crate) pending_inputs: bool,
 }
 
 /// Pull fallible originals with typed per-record preparation on their owning thread.
@@ -105,7 +104,7 @@ where
     let pause = readiness.and_then(|reader| reader.pause);
     let cancel = call.stop.shared();
     let (engine, mut packing) = (call.engine, call.packing);
-    packing.coalesces = call.aggregate_inputs;
+    packing.pending_inputs = call.pending_inputs;
     let coordinator = thread::spawn(move || {
         let ended = guarded(|| {
             engine
@@ -139,7 +138,7 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && readiness.is_none(),
+        interactive: packing.inputs == Some(1) && readiness.is_none() && !call.pending_inputs,
         pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
@@ -370,6 +369,6 @@ pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: b
         context,
         detailed: false,
         continues,
-        coalesces: false,
+        pending_inputs: false,
     }
 }

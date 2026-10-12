@@ -61,7 +61,7 @@ pub(crate) struct Cancel<'a> {
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
-    keys: Arc<AtomicUsize>,
+    keys: Arc<std::sync::atomic::AtomicUsize>,
 }
 
 /// Private transport-only handoff. Its closure never invokes a host callback.
