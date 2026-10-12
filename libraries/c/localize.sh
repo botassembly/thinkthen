@@ -21,6 +21,9 @@ names=$(nm -g --defined-only -- "$from" 2>/dev/null |
 scratch_dir work
 set --
 if [ -n "$prefix" ]; then
+	if [ -n "${THINKTHEN_COVERAGE_INITIALIZER:-}" ]; then
+		set -- "$@" -Wl,-u,___llvm_profile_runtime
+	fi
 	# Apple's linker turns every name off the list local. Rust's standard
 	# library embeds LLVM bitcode newer than Apple's tools read, and after the
 	# partial link Apple's nm and linker read the object as that bitcode. The
@@ -36,6 +39,10 @@ if [ -n "$prefix" ]; then
 	"$objcopy" --remove-section=__LLVM,__bitcode --remove-section=__LLVM,__cmdline "$work/joined.o" "$work/thinkthen.o"
 	ZERO_AR_DATE=1 ar rcs "$work/out.a" "$work/thinkthen.o"
 else
+	if [ -n "${THINKTHEN_COVERAGE_INITIALIZER:-}" ]; then
+		# Filename selection does not pull the archive member that registers the flush.
+		set -- "$@" -u __llvm_profile_runtime
+	fi
 	for name in $names; do
 		set -- "$@" -u "$name"
 	done
