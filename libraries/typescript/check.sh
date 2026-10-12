@@ -41,9 +41,12 @@ if [ "$profile" = full ] && [ -z "${THINKTHEN_ARTIFACT:-}" ] && [ -z "${THINKTHE
     [ -x "$node_home/bin/node" ] || exit 77
     PATH=$node_home/bin:$PATH
     sh build-addon.sh
-    scratch_dir packed
-    npm pack --offline --pack-destination "$packed" >/dev/null
-    THINKTHEN_ARTIFACT=$(find "$packed" -name '*.tgz' -print)
+    # Keep the exact installed input for release-pack --reuse after scratch cleanup.
+    mkdir -p target/pack
+    npm pack --offline --pack-destination target/pack >/dev/null
+    version=$(node -p 'require("./package.json").version')
+    THINKTHEN_ARTIFACT=$PWD/target/pack/thinkthen-$version.tgz
+    [ -f "$THINKTHEN_ARTIFACT" ] || fail 'npm pack did not retain the release package'
 fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared

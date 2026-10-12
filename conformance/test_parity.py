@@ -747,7 +747,7 @@ class InstalledInputs(unittest.TestCase):
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, 0)
                 with contextlib.redirect_stdout(io.StringIO()), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {}):
-                    self.assertEqual(parity.run('12345'), int(missing is not None))
+                    self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 for consumer in ('c', 'python'):
                     row = next(row for row in matrix if row['consumer'] == consumer)
@@ -761,7 +761,7 @@ class InstalledInputs(unittest.TestCase):
                 self.assertIsNone(apple['named_typed_functions'])
                 table = (Path(scratch) / 'target/parity/matrix.md').read_text()
                 self.assertIn('Apple qualification pending', table)
-                self.assertIn('Apple-only ruling 0518', table)
+                self.assertIn('no local pass', table)
 
     def test_missing_ambiguous_linked_and_non_file_inputs_refuse(self):
         for defect in ['missing', 'ambiguous', 'linked', 'directory']:

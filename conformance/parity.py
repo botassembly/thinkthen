@@ -320,7 +320,13 @@ def consumer_environment(scratch, port):
 
 def apple_pending(consumer):
     # 0518 ends GNU Objective-C support; every Foundation case still runs on Apple.
-    return consumer == 'objective-c' and sys.platform != 'darwin'
+    return (consumer == 'objective-c' and sys.platform != 'darwin'
+            or consumer == 'swift' and apple_delegated())
+
+
+def apple_delegated():
+    return (sys.platform == 'linux'
+            and os.environ.get('THINKTHEN_MACOS_APPLE_CHECKS') == 'required')
 
 
 def installed_artifacts(directory, consumers):
@@ -413,7 +419,7 @@ def support_table(parity, matrix):
         images += '; text-only: tag/filter/rank/annotate/find/recognize/relate'
         if row.get('platform_pending'):
             count = files = images = 'Apple qualification pending'
-            remaining = f'{len(gaps)} required assertions pending on macOS; Apple-only ruling 0518'
+            remaining = f'{len(gaps)} required assertions pending on macOS; no local pass'
         if rulings:
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
@@ -474,7 +480,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
         code, seen, error = None, {}, None
         setup_seconds = preparation[1] if preparation else 0
         remaining = 900 - setup_seconds
-        platform_pending = ids == ['objective-c'] and apple_pending('objective-c')
+        platform_pending = len(ids) == 1 and apple_pending(ids[0])
         execute = not platform_pending and (not baseline or set(ids) <= {'cli', 'rust', 'c'})
         if execute:
             print(f'parity consumer: {label}', flush=True)
@@ -511,7 +517,7 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
             row = summarize(consumer, required_cases(parity, consumer), code, seen, error or dependency,
                             str(log.relative_to(ROOT)) if execute else None)
             if platform_pending:
-                row['platform_pending'] = 'Apple-only ruling 0518; qualification requires macOS'
+                row['platform_pending'] = 'Apple qualification requires matching macOS checks; no local pass'
                 row['cells'] = dict.fromkeys(row['cells'], 'platform-pending')
             row['case_rulings'] = consumers[consumer].get('case_rulings', {})
             row['setup_duration_seconds'] = round(setup_seconds, 2) if execute else 0
@@ -562,7 +568,13 @@ def run_consumers(port, baseline, parity, cases, consumers, commands, output_dir
     table = support_table(parity, matrix)
     (output_dir / 'matrix.md').write_text(table)
     print(table, end='')
-    return int(any(row['baseline_exit'] != 0 or row['baseline_error'] or any(state != 'pass' for state in row['cells'].values()) for row in matrix if not row.get('platform_pending')))
+    executed = [row for row in matrix if not row.get('platform_pending')]
+    pending = [row for row in matrix if row.get('platform_pending')]
+    excluded = apple_delegated() and all(row['consumer'] in {'objective-c', 'swift'} for row in pending)
+    return int(not executed or bool(pending) and not excluded
+               or any(row['baseline_exit'] != 0 or row['baseline_error']
+                      or not row['cells'] or any(state != 'pass' for state in row['cells'].values())
+                      for row in executed))
 
 
 def main():
