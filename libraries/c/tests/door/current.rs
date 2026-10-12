@@ -1,5 +1,5 @@
 //! Public counted constructors and immutable image ownership under the existing sanitizer.
-use super::{compile, crate_dir, run_with, text};
+use super::{compile, crate_dir, run_with};
 use conformance_backend::Backend;
 #[test]
 fn public_batch_metadata_uses_header_kinds_for_setting_and_both_warning_sides() {
