@@ -101,6 +101,9 @@ end;''']
     (work / 'consumer.gpr').write_text('with "installed package/thinkthen.gpr";\nproject Consumer is\nfor Main use ("native_session.adb");\nfor Object_Dir use "objects";\npackage Compiler is\nfor Default_Switches ("Ada") use ("-gnat2022");\nend Compiler;\nend Consumer;\n')
     build = subprocess.run(['gprbuild', '-p', '-P', 'consumer.gpr', '-j2', '-cargs', '-O0'], cwd=work, env=child_env(), capture_output=True, text=True, timeout=60)
     assert build.returncode == 0, build.stdout + build.stderr
+    if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
+        stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(work / 'objects/native_session', stage / 'native_session')
     backend = subprocess.Popen([os.environ.get('THINKTHEN_BACKEND_BIN', str(ROOT / 'target/debug/conformance-backend'))], env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     try:
         port = int(backend.stdout.readline())
@@ -121,4 +124,4 @@ end;''']
         backend.wait(timeout=10)
         diagnostics = backend.stderr.read()
         assert not diagnostics, diagnostics
-    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(installed), '--ada-objects', str(installed / 'obj')], env=child_env(), check=True)
+    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(installed), '--ada-objects', str(installed / 'obj')], env=child_env(THINKTHEN_COVERAGE_STAGE=os.environ.get('THINKTHEN_COVERAGE_STAGE', '')), check=True)

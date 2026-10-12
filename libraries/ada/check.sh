@@ -17,7 +17,7 @@ scratch_dir fixture_config
 export XDG_CONFIG_HOME="$fixture_config"
 unset THINKTHEN_API_KEY
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
-export CARGO_TARGET_DIR="$REPO/libraries/c/target"
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$REPO/libraries/c/target}
 THINKTHEN_C_LIBRARY=${THINKTHEN_C_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.so}
 THINKTHEN_C_STATIC_LIBRARY=${THINKTHEN_C_STATIC_LIBRARY:-$CARGO_TARGET_DIR/debug/libthinkthen_c.a}
 THINKTHEN_BACKEND_BIN=${THINKTHEN_BACKEND_BIN:-$REPO/target/debug/conformance-backend}

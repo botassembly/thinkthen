@@ -19,7 +19,7 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
  export THINKTHEN_HEAVY_LOCK_HELD="$lock"
  exec flock -w 180 -o "$lock" sh "$repo/libraries/php/check.sh" "$@"
 fi
-CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --target-dir "$repo/target" --package conformance-backend -j2
+CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --target-dir "${CARGO_TARGET_DIR:-$repo/target}" --package conformance-backend -j2
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
 scratch_dir output

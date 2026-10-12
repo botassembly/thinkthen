@@ -22,8 +22,12 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     consumer.mkdir()
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
     shutil.copy2(Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
-    env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=str(Path(__file__).resolve().parents[3]/'target/go/cache'), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
+    env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(Path(__file__).resolve().parents[3]/'target/go/cache')), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
     subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
+    if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
+        stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
+        label = sys.argv[2] if len(sys.argv) > 2 else 'owned'
+        shutil.copy2(home/'consumer-bin', stage / (label + '-consumer'))
     linked = subprocess.check_output(['ldd', str(home/'consumer-bin')], text=True, env=env)
     assert 'libthinkthen' not in linked, linked
     barrier = home/'barrier'

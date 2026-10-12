@@ -41,8 +41,8 @@ if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
     python3 "$ROOT/checks/smoke.py"
   exit
 fi
-if [ ! -x "$REPO/target/debug/conformance-backend" ]; then
-  CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline \
+if [ ! -x "${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend" ]; then
+  CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$REPO/target}" cargo build --locked --offline \
     --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
 fi
 python3 "$ROOT/checks/exports.py" "$library" "$header" "$evidence/exports.txt" "$package"
