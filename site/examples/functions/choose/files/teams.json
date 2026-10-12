@@ -1,0 +1,8 @@
+{
+  "choose": "Which team owns this?",
+  "options": {
+    "billing": "Invoices, fees, and refunds.",
+    "shipping": "Parcels and delivery.",
+    "account": "Logins and passwords."
+  }
+}

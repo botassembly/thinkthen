@@ -21,6 +21,23 @@ export const BUILD_LINES = {
     ]],
     run: [`./${program(sample)}`],
   }),
+  cobol: ({ sample }) => ({
+    archive: 'thinkthen-cobol',
+    lines: [[
+      'cobc -x -free',
+      '-fstatic-call -fno-gen-c-decl-static-call',
+      '-I thinkthen-cobol/copybooks -I thinkthen-c/include',
+      '-A "-I $PWD/thinkthen-c/include',
+      '-include $PWD/thinkthen-cobol/src/tt_session.h',
+      '-Wno-incompatible-pointer-types"',
+      `-o ${program(sample)} ${sample}`,
+      'thinkthen-cobol/src/tt_session.c',
+      'thinkthen-cobol/src/tt_requests_generated.c',
+      '-L thinkthen-c/lib -lthinkthen',
+      '-Q "-Wl,-rpath,$PWD/thinkthen-c/lib"',
+    ]],
+    run: [`./${program(sample)}`],
+  }),
 };
 
 export function buildLines(slug, sample, offline = false) {
