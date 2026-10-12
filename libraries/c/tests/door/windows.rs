@@ -163,10 +163,6 @@ fn msvc_asan_proves_instrumentation_before_ownership_checks() {
         let source = crate_dir().join("tests/c").join(format!("{name}.c"));
         let binary = compile_mode(&source, true);
         let output = run(&binary, &format!("{}/generic/v1", backend.origin()), b"");
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new()),
-            "{name}"
-        );
+        super::successful_named(&output, name);
     }
 }

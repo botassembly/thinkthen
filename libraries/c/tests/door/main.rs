@@ -187,9 +187,13 @@ fn finished(mut child: Child) -> Output {
 
 /// Preserve the successful exit and empty sanitizer diagnostics of a C fixture.
 fn successful(output: &Output) {
+    successful_named(output, "");
+}
+fn successful_named(output: &Output, label: &str) {
     assert_eq!(
         (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
+        (Some(0), String::new()),
+        "{label}"
     );
 }
 
@@ -231,11 +235,7 @@ fn every_c_row_holds_under_the_sanitizer() {
         let base = format!("{}/generic/v1", backend.origin());
         let source = crate_dir().join("tests/c").join(format!("{name}.c"));
         let output = run(&compile(&source), &base, b"");
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new()),
-            "{name}"
-        );
+        successful_named(&output, name);
         match name {
             "nulls" => assert_eq!(backend.count(), 0, "a refusal sent a request"),
             // The parent's first call and the child's; the parent's last is cached.

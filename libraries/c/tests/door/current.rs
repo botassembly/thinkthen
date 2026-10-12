@@ -456,11 +456,7 @@ fn lazy_jsonl_batches_keep_completed_prefix_refuse_whole_bad_stages_and_join_on_
             b"",
             &[("TYPED_JSONL", &path), ("TYPED_BATCH_MODE", &mode_path)],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new()),
-            "{mode}"
-        );
+        super::successful_named(&output, mode);
         assert_eq!(
             backend.count(),
             usize::from(matches!(mode, "later" | "drop-prefix")),

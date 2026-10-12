@@ -51,12 +51,9 @@ pub(super) fn translate(request: &FrozenRequest) -> Result<AdmittedRequest, Fail
         .collect();
         RequestInput::Records { items }
     } else {
-        RequestInput::Text {
-            text: member(request, "evidence", |raw| {
-                serde_json::from_str::<String>(raw)
-            })?,
-            images: Vec::new(),
-        }
+        crate::typed::text_input(member(request, "evidence", |raw| {
+            serde_json::from_str::<String>(raw)
+        })?)
     };
     let mut options = RequestOptions {
         attempts: request.attempts,

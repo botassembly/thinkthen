@@ -88,10 +88,7 @@ pub(crate) fn decide_with_facts(
     let call = execute(
         engine,
         definition,
-        thinkthen::RequestInput::Text {
-            text: text.to_owned(),
-            images: Vec::new(),
-        },
+        text_input(text.to_owned()),
         options,
         None,
     )?;
@@ -204,10 +201,7 @@ pub(crate) fn recognize_with_facts(
     let call = execute(
         engine,
         thinkthen::RequestDefinition::Recognition(ask),
-        thinkthen::RequestInput::Text {
-            text: text.to_owned(),
-            images: Vec::new(),
-        },
+        text_input(text.to_owned()),
         options,
         None,
     )?;
@@ -340,6 +334,13 @@ pub(crate) fn executed(
     match engine.execute_request(request, environment)? {
         thinkthen::RequestOutcome::Complete(call) => Ok(call),
         thinkthen::RequestOutcome::Failed { error, .. } => Err(error),
+    }
+}
+/// Materialize one C text without inventing image attachments.
+pub(crate) fn text_input(text: String) -> thinkthen::RequestInput {
+    thinkthen::RequestInput::Text {
+        text,
+        images: Vec::new(),
     }
 }
 pub(crate) fn item(original: thinkthen::RequestOriginal) -> thinkthen::RequestItem {
