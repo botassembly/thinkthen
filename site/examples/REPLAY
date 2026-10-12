@@ -6,6 +6,7 @@ functions/annotate/ada.adb
 functions/annotate/cobol.cob
 functions/annotate/duckdb.sql
 functions/annotate/java.java
+functions/annotate/kotlin.kt
 functions/annotate/more/duckdb.sql
 functions/annotate/more/pandas.py
 functions/annotate/pandas.py
@@ -22,6 +23,7 @@ functions/choose/ada.adb
 functions/choose/cobol.cob
 functions/choose/duckdb.sql
 functions/choose/java.java
+functions/choose/kotlin.kt
 functions/choose/more/duckdb.sql
 functions/choose/more/pandas.py
 functions/choose/pandas.py
@@ -38,6 +40,7 @@ functions/decide/ada.adb
 functions/decide/cobol.cob
 functions/decide/duckdb.sql
 functions/decide/java.java
+functions/decide/kotlin.kt
 functions/decide/pandas.py
 functions/decide/php.php
 functions/decide/polars.py
@@ -52,6 +55,7 @@ functions/filter/ada.adb
 functions/filter/cobol.cob
 functions/filter/duckdb.sql
 functions/filter/java.java
+functions/filter/kotlin.kt
 functions/filter/pandas.py
 functions/filter/php.php
 functions/filter/polars.py
@@ -66,6 +70,7 @@ functions/find/ada.adb
 functions/find/cobol.cob
 functions/find/duckdb.sql
 functions/find/java.java
+functions/find/kotlin.kt
 functions/find/pandas.py
 functions/find/php.php
 functions/find/polars.py
@@ -90,6 +95,7 @@ functions/rank/ada.adb
 functions/rank/cobol.cob
 functions/rank/duckdb.sql
 functions/rank/java.java
+functions/rank/kotlin.kt
 functions/rank/pandas.py
 functions/rank/php.php
 functions/rank/polars.py
@@ -104,6 +110,7 @@ functions/recognize/ada.adb
 functions/recognize/cobol.cob
 functions/recognize/duckdb.sql
 functions/recognize/java.java
+functions/recognize/kotlin.kt
 functions/recognize/more/duckdb.sql
 functions/recognize/more/typescript.ts
 functions/recognize/pandas.py
@@ -119,6 +126,7 @@ functions/recognize/typescript.ts
 functions/relate/ada.adb
 functions/relate/duckdb.sql
 functions/relate/java.java
+functions/relate/kotlin.kt
 functions/relate/more/duckdb.sql
 functions/relate/pandas.py
 functions/relate/php.php
@@ -134,6 +142,7 @@ functions/score/ada.adb
 functions/score/cobol.cob
 functions/score/duckdb.sql
 functions/score/java.java
+functions/score/kotlin.kt
 functions/score/more/duckdb.sql
 functions/score/more/polars.py
 functions/score/pandas.py
@@ -150,6 +159,7 @@ functions/tag/ada.adb
 functions/tag/cobol.cob
 functions/tag/duckdb.sql
 functions/tag/java.java
+functions/tag/kotlin.kt
 functions/tag/pandas.py
 functions/tag/php.php
 functions/tag/polars.py
