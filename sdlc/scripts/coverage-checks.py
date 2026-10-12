@@ -142,6 +142,66 @@ class ManagedToolAvailability(unittest.TestCase):
 
 
 class ProcessOwnership(unittest.TestCase):
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux adopted-child ownership')
+    def test_orphan_disappears_before_harness_exits(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            script = """import os, pathlib, time
+print('before orphan', flush=True)
+parent = os.fork()
+if parent == 0:
+    orphan = os.fork()
+    if orphan == 0:
+        os._exit(0)
+    pathlib.Path('orphan.pid').write_text(str(orphan))
+    os._exit(0)
+os.waitpid(parent, 0)
+orphan = int(pathlib.Path('orphan.pid').read_text())
+deadline = time.monotonic() + 3
+while True:
+    try:
+        os.kill(orphan, 0)
+    except ProcessLookupError:
+        print('orphan reaped while harness alive', flush=True)
+        break
+    if time.monotonic() >= deadline:
+        raise AssertionError('orphan remains visible while harness alive')
+    time.sleep(0.01)
+"""
+            for capture in (False, True):
+                with self.subTest(capture=capture):
+                    result = DRIVER['command']([sys.executable, '-c', script], root,
+                                               {'PATH': os.defpath}, root / 'active.log',
+                                               capture=capture, timeout=5)
+                    self.assertIn('orphan reaped while harness alive', (root / 'active.log').read_text())
+                    if capture:
+                        self.assertEqual(result, b'before orphan\norphan reaped while harness alive\n')
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux adopted-child ownership')
+    def test_direct_and_foreign_wait_statuses_and_signal_mask_survive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            foreign = subprocess.Popen([sys.executable, '-c', 'import sys; sys.exit(23)'],
+                                       env={'PATH': os.defpath})
+            previous_handler = signal.getsignal(signal.SIGCHLD)
+            previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, [])
+            try:
+                for attempt in range(10):
+                    with self.assertRaisesRegex(RuntimeError, 'exit 47'):
+                        DRIVER['command']([sys.executable, '-c', 'import sys; sys.exit(47)'],
+                                          root, {'PATH': os.defpath}, root / 'immediate.log', capture=True)
+                script = "import json, signal; print(json.dumps(sorted(map(int, signal.pthread_sigmask(signal.SIG_BLOCK, [])))))"
+                result = DRIVER['command']([sys.executable, '-c', script], root,
+                                           {'PATH': os.defpath}, root / 'mask.log', capture=True)
+                self.assertEqual(json.loads(result), sorted(map(int, previous_mask)))
+                self.assertEqual(signal.getsignal(signal.SIGCHLD), previous_handler)
+                self.assertEqual(signal.pthread_sigmask(signal.SIG_BLOCK, []), previous_mask)
+                self.assertEqual(foreign.wait(timeout=3), 23)
+            finally:
+                if foreign.poll() is None:
+                    foreign.kill()
+                foreign.wait()
+
     def test_timeout_stops_and_reaps_descendants_with_diagnostics(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

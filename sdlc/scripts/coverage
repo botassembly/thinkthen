@@ -26,6 +26,25 @@ class MissingTool(Exception):
     pass
 
 
+def reap_adopted(group, excluded):
+    """Reap only adopted children from this command's Linux process group."""
+    for task in Path('/proc/self/task').iterdir():
+        children = task / 'children'
+        try:
+            values = children.read_text().split()
+        except FileNotFoundError:
+            continue
+        for value in values:
+            pid = int(value)
+            if pid in excluded:
+                continue
+            try:
+                if os.getpgid(pid) == group:
+                    os.waitpid(pid, os.WNOHANG)
+            except (ProcessLookupError, ChildProcessError):
+                pass
+
+
 def command(args, cwd, env, log, *, capture=False, timeout=None):
     """Own the harness group and reap its children, preserving exit and output."""
     if sys.platform == 'linux':
@@ -33,14 +52,37 @@ def command(args, cwd, env, log, *, capture=False, timeout=None):
         libc = ctypes.CDLL(None, use_errno=True)
         if libc.prctl(36, 1, 0, 0, 0):  # PR_SET_CHILD_SUBREAPER
             raise OSError(ctypes.get_errno(), 'cannot own coverage descendants')
+    existing = set()
+    if sys.platform == 'linux':
+        for task in Path('/proc/self/task').iterdir():
+            try:
+                existing.update(map(int, (task / 'children').read_text().split()))
+            except FileNotFoundError:
+                continue
     started = time.monotonic()
+    deadline = started + timeout if timeout is not None else None
     timed_out = False
     with log.open('wb') as output:
         child = subprocess.Popen(args, cwd=cwd, env=env, stdout=subprocess.PIPE if capture else output,
                                  stderr=output, start_new_session=True)
         try:
             try:
-                stdout, _ = child.communicate(timeout=timeout)
+                if sys.platform != 'linux':
+                    stdout, _ = child.communicate(timeout=timeout)
+                else:
+                    # A harness can check kill(pid, 0) before exiting itself.
+                    # Reap its orphaned children while it is still running.
+                    while True:
+                        reap_adopted(child.pid, existing | {child.pid})
+                        remaining = deadline - time.monotonic() if deadline is not None else None
+                        if remaining is not None and remaining <= 0:
+                            raise subprocess.TimeoutExpired(args, timeout)
+                        try:
+                            stdout, _ = child.communicate(timeout=min(0.05, remaining)
+                                                          if remaining is not None else 0.05)
+                            break
+                        except subprocess.TimeoutExpired:
+                            continue
             except subprocess.TimeoutExpired:
                 timed_out = True
                 os.killpg(child.pid, signal.SIGKILL)
