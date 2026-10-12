@@ -120,7 +120,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
             print(actual.stdout.decode(),end='')
         assert server.attempts == server.connections == len(expected),server.arrivals
         assert server.user_agents == expected_agents,server.user_agents
-        print('Installed Kotlin coroutine and Scala Future cancellation while held PASS')
+        print('Installed session checks PASS: ' + ', '.join(languages))
     finally:
         for file in (work / 'barrier').glob('arrived-*'):
             file.with_name(file.name.replace('arrived-','release-',1)).touch()
