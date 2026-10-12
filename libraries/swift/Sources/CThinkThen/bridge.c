@@ -103,6 +103,7 @@ struct native_functions {
     int (*thinkthen_session_finish)(thinkthen_session *, const char *, size_t);
     void (*thinkthen_session_free)(thinkthen_session *);
     int (*thinkthen_session_new)(const thinkthen_engine *, const char *, size_t, thinkthen_session **);
+    int (*thinkthen_session_new_named_with_surface)(const thinkthen_engine *, const thinkthen_named_request_v1 *, thinkthen_complete_utf8_v1, thinkthen_session **);
     int (*thinkthen_session_new_with_surface)(const thinkthen_engine *, const char *, size_t, const char *, size_t, thinkthen_session **);
     void (*thinkthen_session_result_free)(thinkthen_session_result *);
     int (*thinkthen_session_result_json)(const thinkthen_session_result *, const char **, size_t *);
@@ -517,6 +518,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_new) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_new, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_new_named_with_surface");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_new_named_with_surface) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_new_named_with_surface, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_new_with_surface");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_new_with_surface) == sizeof(symbol), "function pointer width");
@@ -969,6 +974,10 @@ void thinkthen_session_free(thinkthen_session * arg0) {
 int thinkthen_session_new(const thinkthen_engine * arg0, const char * arg1, size_t arg2, thinkthen_session ** arg3) {
     if (!native.thinkthen_session_new) abort();
     return native.thinkthen_session_new(arg0, arg1, arg2, arg3);
+}
+int thinkthen_session_new_named_with_surface(const thinkthen_engine * arg0, const thinkthen_named_request_v1 * arg1, thinkthen_complete_utf8_v1 arg2, thinkthen_session ** arg3) {
+    if (!native.thinkthen_session_new_named_with_surface) abort();
+    return native.thinkthen_session_new_named_with_surface(arg0, arg1, arg2, arg3);
 }
 int thinkthen_session_new_with_surface(const thinkthen_engine * arg0, const char * arg1, size_t arg2, const char * arg3, size_t arg4, thinkthen_session ** arg5) {
     if (!native.thinkthen_session_new_with_surface) abort();
