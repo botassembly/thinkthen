@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "recognize": {
+    "kinds": {
+      "person": null,
+      "product": null,
+      "place": null
+    }
+  }
+}

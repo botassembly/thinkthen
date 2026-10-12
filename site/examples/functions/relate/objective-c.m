@@ -9,13 +9,13 @@ int main(void) {
     assert(client);
     NSDictionary *relations = @{
         @"kind": @"file",
-        @"path": @"sings.json",
+        @"path": @"makes.json",
     };
     NSArray *names = @[
-        @[@"Paul McCartney", @"singer"],
-        @[@"Ringo Starr", @"singer"],
-        @[@"Yesterday", @"song"],
-        @[@"Octopus's Garden", @"song"],
+        @[@"Apple", @"company"],
+        @[@"Amazon", @"company"],
+        @[@"iPhone", @"product"],
+        @[@"Kindle", @"product"],
     ];
     NSMutableArray *entities = [NSMutableArray array];
     for (NSArray *name in names) {
@@ -28,7 +28,7 @@ int main(void) {
         @"kind": @"entities",
         @"items": entities,
     };
-    NSMutableArray *whoSings = [NSMutableArray array];
+    NSMutableArray *whoMakes = [NSMutableArray array];
     __block TTCall *answered = nil;
     dispatch_semaphore_t done =
         dispatch_semaphore_create(0);
@@ -50,19 +50,19 @@ int main(void) {
         TTSessionPacketRelateAggregate *found = packet;
         NSArray *edges = found.value.value.value.value;
         for (TTRelatedEntityEdge *edge in edges) {
-            TTResultNode *singer = edge.source.value;
-            TTResultNode *song = edge.target.value;
-            NSString *sings = [NSString stringWithFormat:
-                @"%@ sings %@",
-                singer.rawFields[@"name"],
-                song.rawFields[@"name"]];
-            [whoSings addObject:sings];
+            TTResultNode *company = edge.source.value;
+            TTResultNode *product = edge.target.value;
+            NSString *makes = [NSString stringWithFormat:
+                @"%@ makes %@",
+                company.rawFields[@"name"],
+                product.rawFields[@"name"]];
+            [whoMakes addObject:makes];
         }
     }
     NSArray *expected = @[
-        @"Paul McCartney sings Yesterday",
-        @"Ringo Starr sings Octopus's Garden",
+        @"Apple makes iPhone",
+        @"Amazon makes Kindle",
     ];
-    assert([whoSings isEqualToArray:expected]);
+    assert([whoMakes isEqualToArray:expected]);
     return 0;
 }

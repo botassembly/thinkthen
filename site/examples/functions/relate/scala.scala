@@ -8,37 +8,37 @@ import thinkthen.scala.ScalaEngine
 
 @main def relate(): Unit =
   Using.resource(new ScalaEngine()) { tt =>
-    val sings = Map("name" -> "sings",
-      "source" -> "singer", "target" -> "song",
+    val makes = Map("name" -> "makes",
+      "source" -> "company", "target" -> "product",
       "either" -> false)
     val ask = RequestQuestionDefinition().value(
       RequestDefinitionFieldsRelateVersion
         .fromJson(Map("version" -> 1, "relate" ->
-          Map("relations" -> List(sings))).asJava))
-    val paul = Map(
-      "name" -> "Paul McCartney", "kind" -> "singer")
-    val ringo = Map(
-      "name" -> "Ringo Starr", "kind" -> "singer")
-    val yesterday = Map(
-      "name" -> "Yesterday", "kind" -> "song")
-    val garden = Map(
-      "name" -> "Octopus's Garden", "kind" -> "song")
+          Map("relations" -> List(makes))).asJava))
+    val apple = Map(
+      "name" -> "Apple", "kind" -> "company")
+    val amazon = Map(
+      "name" -> "Amazon", "kind" -> "company")
+    val iphone = Map(
+      "name" -> "iPhone", "kind" -> "product")
+    val kindle = Map(
+      "name" -> "Kindle", "kind" -> "product")
     val names = RequestInputRecords().items(
-      List(paul, ringo, yesterday, garden).map { one =>
+      List(apple, amazon, iphone, kindle).map { one =>
         RequestItem().original(
           RequestOriginalJson().value(one))
       }.asJava)
     val call = tt.relate(ask, names)
-    val whoSings = Await.result(call.result, 10.seconds)
+    val whoMakes = Await.result(call.result, 10.seconds)
       .packets.collectFirst {
         case related: SessionPacketRelateAggregate =>
           related.value.value
       }.get
-    val pairs = whoSings.map { edge =>
+    val pairs = whoMakes.map { edge =>
       edge.source.json -> edge.target.json
     }
     assert(pairs == List(
-      paul.asJava -> yesterday.asJava,
-      ringo.asJava -> garden.asJava,
+      apple.asJava -> iphone.asJava,
+      amazon.asJava -> kindle.asJava,
     ))
   }

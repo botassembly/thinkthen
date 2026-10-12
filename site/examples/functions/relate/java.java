@@ -10,42 +10,42 @@ import thinkthen.Results.SessionPacketRelateAggregate;
 
 public class Relate {
     public static void main(String[] args) {
-        var sings = Map.of("name", "sings",
-            "source", "singer", "target", "song",
+        var makes = Map.of("name", "makes",
+            "source", "company", "target", "product",
             "either", false);
         var ask = new RequestQuestionDefinition().value(
             Inputs.RequestDefinitionFieldsRelateVersion
                 .fromJson(Map.of("version", 1, "relate",
-                    Map.of("relations", List.of(sings)))));
-        var paul = Map.of(
-            "name", "Paul McCartney", "kind", "singer");
-        var ringo = Map.of(
-            "name", "Ringo Starr", "kind", "singer");
-        var yesterday = Map.of(
-            "name", "Yesterday", "kind", "song");
-        var garden = Map.of(
-            "name", "Octopus's Garden", "kind", "song");
+                    Map.of("relations", List.of(makes)))));
+        var apple = Map.of(
+            "name", "Apple", "kind", "company");
+        var amazon = Map.of(
+            "name", "Amazon", "kind", "company");
+        var iphone = Map.of(
+            "name", "iPhone", "kind", "product");
+        var kindle = Map.of(
+            "name", "Kindle", "kind", "product");
         var names = new RequestInputRecords().items(
-            List.of(paul, ringo, yesterday, garden).stream()
+            List.of(apple, amazon, iphone, kindle).stream()
                 .map(one -> new RequestItem().original(
                     new RequestOriginalJson().value(one)))
                 .toList());
         var related = SessionPacketRelateAggregate.class;
         try (var tt = new Engine()) {
-            var whoSings = tt.relate(ask, names)
+            var whoMakes = tt.relate(ask, names)
                 .join().packets().stream()
                 .filter(related::isInstance)
                 .map(related::cast)
                 .findFirst().orElseThrow()
                 .value().value();
-            var pairs = whoSings.stream()
+            var pairs = whoMakes.stream()
                 .map(edge -> List.of(
                     edge.source().json(),
                     edge.target().json()))
                 .toList();
             assert pairs.equals(List.of(
-                List.of(paul, yesterday),
-                List.of(ringo, garden)));
+                List.of(apple, iphone),
+                List.of(amazon, kindle)));
         }
     }
 }

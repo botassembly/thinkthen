@@ -4,24 +4,24 @@ import {Client} from "thinkthen";
 const tt = new Client();
 try {
   const names = [
-    ["Paul McCartney", "singer"],
-    ["Ringo Starr", "singer"],
-    ["Yesterday", "song"],
-    ["Octopus's Garden", "song"],
+    ["Apple", "company"],
+    ["Amazon", "company"],
+    ["iPhone", "product"],
+    ["Kindle", "product"],
   ] as const;
-  const whoSings = (await tt.relate(
+  const whoMakes = (await tt.relate(
     {version: 1, relate: {relations: [
-      {name: "sings", source: "singer", target: "song",
+      {name: "makes", source: "company", target: "product",
        either: false}
     ]}},
     names.map(([name, kind]) => ({name, kind})),
   )).results[0].value;
-  const sings = whoSings.map((edge) => [
+  const makes = whoMakes.map((edge) => [
     edge.source.name,
     edge.target.name,
   ]);
-  assert.deepEqual(sings, [
-    ["Paul McCartney", "Yesterday"],
-    ["Ringo Starr", "Octopus's Garden"],
+  assert.deepEqual(makes, [
+    ["Apple", "iPhone"],
+    ["Amazon", "Kindle"],
   ]);
 } finally { tt.close(); }

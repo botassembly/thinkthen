@@ -5,31 +5,31 @@ use ThinkThen\Client;
 
 $client = new Client();
 $names = [
-    ['name' => 'Paul McCartney', 'kind' => 'singer'],
-    ['name' => 'Ringo Starr', 'kind' => 'singer'],
-    ['name' => 'Yesterday', 'kind' => 'song'],
-    ['name' => "Octopus's Garden", 'kind' => 'song'],
+    ['name' => 'Apple', 'kind' => 'company'],
+    ['name' => 'Amazon', 'kind' => 'company'],
+    ['name' => 'iPhone', 'kind' => 'product'],
+    ['name' => 'Kindle', 'kind' => 'product'],
 ];
-$sings = [
-    'name' => 'sings',
-    'source' => 'singer',
-    'target' => 'song',
+$makes = [
+    'name' => 'makes',
+    'source' => 'company',
+    'target' => 'product',
 ];
 $ask = [
     'version' => 1,
-    'relate' => ['relations' => [$sings]],
+    'relate' => ['relations' => [$makes]],
 ];
-$whoSings = $client->relate($ask, $names)
+$whoMakes = $client->relate($ask, $names)
     ->results[0]->value;
 $pairs = array_map(
     fn ($edge) => [
         $edge->source->name,
         $edge->target->name,
     ],
-    $whoSings,
+    $whoMakes,
 );
 assert($pairs === [
-    ['Paul McCartney', 'Yesterday'],
-    ['Ringo Starr', "Octopus's Garden"],
+    ['Apple', 'iPhone'],
+    ['Amazon', 'Kindle'],
 ]);
 $client->close();

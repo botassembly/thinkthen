@@ -3,22 +3,22 @@ import thinkthen as tt
 
 names = pl.DataFrame({
     "name": [
-        "Paul McCartney",
-        "Ringo Starr",
-        "Yesterday",
-        "Octopus's Garden",
+        "Apple",
+        "Amazon",
+        "iPhone",
+        "Kindle",
     ],
-    "kind": ["singer", "singer", "song", "song"],
+    "kind": ["company", "company", "product", "product"],
 })
-who_sings = tt.relate(
+who_makes = tt.relate(
     names.to_dicts(),
-    relations={"sings": ("singer", "song")},
+    relations={"makes": ("company", "product")},
 ).value
-sings = [
+makes = [
     (edge.source.name, edge.target.name)
-    for edge in who_sings
+    for edge in who_makes
 ]
-assert sings == [
-    ("Paul McCartney", "Yesterday"),
-    ("Ringo Starr", "Octopus's Garden"),
+assert makes == [
+    ("Apple", "iPhone"),
+    ("Amazon", "Kindle"),
 ]

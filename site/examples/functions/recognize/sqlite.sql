@@ -2,7 +2,7 @@
 
 SELECT name.text, name.kind
 FROM thinkthen_recognize(
-    'Maria Chen joined Northwind Freight, ' ||
-    'a company in Chicago.',
-    'person,organization,place'
+    'Sam Patel says his Kindle arrived broken ' ||
+    'in Denver.',
+    'person,product,place'
 ) AS name;

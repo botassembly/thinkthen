@@ -1,10 +1,10 @@
 import ThinkThen
 
 let client = try Client()
-let text = "Maria Chen joined Northwind Freight, "
-    + "a company in Chicago."
+let text = "Sam Patel says his Kindle arrived broken "
+    + "in Denver."
 let call = try await client.recognize(
-    .file("names.json"),
+    .file("kinds.json"),
     input: .text(text)
 )
 var names: [String] = []
@@ -18,8 +18,8 @@ for case .recognizeAggregate(let found) in call.packets {
     }
 }
 precondition(names == [
-    "Maria Chen (person)",
-    "Northwind Freight (organization)",
-    "Chicago (place)",
+    "Sam Patel (person)",
+    "Kindle (product)",
+    "Denver (place)",
 ])
 client.close()

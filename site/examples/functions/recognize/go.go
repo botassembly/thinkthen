@@ -14,9 +14,9 @@ func main() {
 		log.Fatal(err)
 	}
 	defer client.Close()
-	ask := tt.RequestQuestionFile{Path: "names.json"}
-	text := "Maria Chen joined Northwind Freight, " +
-		"a company in Chicago."
+	ask := tt.RequestQuestionFile{Path: "kinds.json"}
+	text := "Sam Patel says his Kindle arrived broken " +
+		"in Denver."
 	call, err := client.Recognize(
 		context.Background(),
 		ask,
@@ -42,9 +42,9 @@ func main() {
 		}
 	}
 	want := [][2]string{
-		{"Maria Chen", "person"},
-		{"Northwind Freight", "organization"},
-		{"Chicago", "place"},
+		{"Sam Patel", "person"},
+		{"Kindle", "product"},
+		{"Denver", "place"},
 	}
 	if !slices.Equal(names, want) {
 		log.Fatal("expected three names")

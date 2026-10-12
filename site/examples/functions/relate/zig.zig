@@ -13,12 +13,12 @@ pub fn main() !void {
     };
     defer engine.deinit();
 
-    const relations = "sings.json";
+    const relations = "makes.json";
     const names = [_][2][]const u8{
-        .{ "Paul McCartney", "singer" },
-        .{ "Ringo Starr", "singer" },
-        .{ "Yesterday", "song" },
-        .{ "Octopus's Garden", "song" },
+        .{ "Apple", "company" },
+        .{ "Amazon", "company" },
+        .{ "iPhone", "product" },
+        .{ "Kindle", "product" },
     };
     var entities: [4]tt.inputs.RequestItem = undefined;
     for (names, &entities) |name, *entity| {
@@ -37,7 +37,7 @@ pub fn main() !void {
 
     const observation =
         c.THINKTHEN_COMPLETE_SESSION_PACKET_OBSERVATION_V1;
-    var who_sings: std.ArrayList(u8) = .empty;
+    var who_makes: std.ArrayList(u8) = .empty;
 
     while (true) {
         var packet = switch (try call.read()) {
@@ -62,19 +62,19 @@ pub fn main() !void {
         for (edges.data[0..edges.len]) |edge| {
             const source = edge.*.source.*.data;
             const target = edge.*.target.*.data;
-            const singer = source.fields_kind_name.*.name;
-            const song = target.fields_kind_name.*.name;
-            try who_sings.print(
+            const company = source.fields_kind_name.*.name;
+            const product = target.fields_kind_name.*.name;
+            try who_makes.print(
                 allocator,
-                "{s} sings {s}. ",
+                "{s} makes {s}. ",
                 .{
-                    tt.session.bytes(singer),
-                    tt.session.bytes(song),
+                    tt.session.bytes(company),
+                    tt.session.bytes(product),
                 },
             );
         }
     }
-    std.debug.assert(std.mem.eql(u8, who_sings.items,
-        "Paul McCartney sings Yesterday. " ++
-        "Ringo Starr sings Octopus's Garden. "));
+    std.debug.assert(std.mem.eql(u8, who_makes.items,
+        "Apple makes iPhone. " ++
+        "Amazon makes Kindle. "));
 }

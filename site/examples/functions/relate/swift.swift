@@ -2,10 +2,10 @@ import ThinkThen
 
 let client = try Client()
 let names = [
-    ("Paul McCartney", "singer"),
-    ("Ringo Starr", "singer"),
-    ("Yesterday", "song"),
-    ("Octopus's Garden", "song"),
+    ("Apple", "company"),
+    ("Amazon", "company"),
+    ("iPhone", "product"),
+    ("Kindle", "product"),
 ]
 let entities = InputRequestInputEntities(items: names.map {
     let entity = JSONValue.orderedObject([
@@ -18,22 +18,22 @@ let entities = InputRequestInputEntities(items: names.map {
     )
 })
 let call = try await client.relate(
-    .file("sings.json"),
+    .file("makes.json"),
     input: .entities(entities)
 )
-var whoSings: [String] = []
+var whoMakes: [String] = []
 for case .relateAggregate(let found) in call.packets {
     for edge in found.value.value {
-        if case .alternative0(let singer) = edge.source,
-           case .alternative0(let song) = edge.target {
-            whoSings.append(
-                "\(singer.name) sings \(song.name)"
+        if case .alternative0(let company) = edge.source,
+           case .alternative0(let product) = edge.target {
+            whoMakes.append(
+                "\(company.name) makes \(product.name)"
             )
         }
     }
 }
-precondition(whoSings == [
-    "Paul McCartney sings Yesterday",
-    "Ringo Starr sings Octopus's Garden",
+precondition(whoMakes == [
+    "Apple makes iPhone",
+    "Amazon makes Kindle",
 ])
 client.close()

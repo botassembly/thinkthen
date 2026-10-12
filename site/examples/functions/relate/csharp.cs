@@ -9,23 +9,23 @@ using Named = ThinkThen.Results
 using var engine = Engine.Open();
 var names = new[]
 {
-    new { name = "Paul McCartney", kind = "singer" },
-    new { name = "Ringo Starr", kind = "singer" },
-    new { name = "Yesterday", kind = "song" },
-    new { name = "Octopus's Garden", kind = "song" },
+    new { name = "Apple", kind = "company" },
+    new { name = "Amazon", kind = "company" },
+    new { name = "iPhone", kind = "product" },
+    new { name = "Kindle", kind = "product" },
 };
-var sings = new
+var makes = new
 {
-    name = "sings",
-    source = "singer",
-    target = "song",
+    name = "makes",
+    source = "company",
+    target = "product",
 };
 var ask = engine.ParseQuestion(
     AuthoredQuestionKind.Relate,
     JsonSerializer.Serialize(new
     {
         version = 1,
-        relate = new { relations = new[] { sings } },
+        relate = new { relations = new[] { makes } },
     }));
 var entities = new InputRequestInputRecords
 {
@@ -41,15 +41,15 @@ var entities = new InputRequestInputRecords
         .ToList(),
 };
 var call = await engine.RelateAsync(ask, entities);
-var whoSings = call.Packets
+var whoMakes = call.Packets
     .OfType<SessionPacketRelateAggregate>()
     .Single()
     .Value.Value;
-var pairs = whoSings.Select(edge => (
+var pairs = whoMakes.Select(edge => (
     ((Named)edge.Source).Name,
     ((Named)edge.Target).Name));
 Trace.Assert(pairs.SequenceEqual(
 [
-    ("Paul McCartney", "Yesterday"),
-    ("Ringo Starr", "Octopus's Garden"),
+    ("Apple", "iPhone"),
+    ("Amazon", "Kindle"),
 ]));

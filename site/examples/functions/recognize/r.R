@@ -2,12 +2,12 @@ library(thinkthen)
 
 kinds <- list(
   person = NULL,
-  organization = NULL,
+  product = NULL,
   place = NULL
 )
 text <- paste0(
-  "Maria Chen joined Northwind Freight, ",
-  "a company in Chicago."
+  "Sam Patel says his Kindle arrived broken ",
+  "in Denver."
 )
 facts <- tt_recognize(
   list(version = 1, recognize = list(kinds = kinds)),
@@ -18,7 +18,7 @@ found_kinds <- vapply(facts$entities, `[[`, "", "kind")
 stopifnot(
   identical(
     entity_names,
-    c("Maria Chen", "Northwind Freight", "Chicago")
+    c("Sam Patel", "Kindle", "Denver")
   ),
   identical(found_kinds, names(kinds))
 )

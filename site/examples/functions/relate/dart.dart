@@ -7,10 +7,10 @@ typedef Named =
 Future<void> main() async {
   final engine = Engine.open();
   const names = [
-    {'name': 'Paul McCartney', 'kind': 'singer'},
-    {'name': 'Ringo Starr', 'kind': 'singer'},
-    {'name': 'Yesterday', 'kind': 'song'},
-    {'name': "Octopus's Garden", 'kind': 'song'},
+    {'name': 'Apple', 'kind': 'company'},
+    {'name': 'Amazon', 'kind': 'company'},
+    {'name': 'iPhone', 'kind': 'product'},
+    {'name': 'Kindle', 'kind': 'product'},
   ];
   final call = await engine.relate(
     InputRequestQuestionDefinition(
@@ -19,9 +19,9 @@ Future<void> main() async {
         'relate': {
           'relations': [
             {
-              'name': 'sings',
-              'source': 'singer',
-              'target': 'song',
+              'name': 'makes',
+              'source': 'company',
+              'target': 'product',
             },
           ],
         },
@@ -36,21 +36,21 @@ Future<void> main() async {
         ),
     ]),
   );
-  final whoSings = call.packets
+  final whoMakes = call.packets
       .whereType<SessionPacketRelateAggregate>()
       .single
       .value
       .value;
   final pairs = [
-    for (final edge in whoSings)
+    for (final edge in whoMakes)
       (
         (edge.source as Named).name,
         (edge.target as Named).name,
       ),
   ];
   const expected = [
-    ('Paul McCartney', 'Yesterday'),
-    ('Ringo Starr', "Octopus's Garden"),
+    ('Apple', 'iPhone'),
+    ('Amazon', 'Kindle'),
   ];
   assert(const ListEquality<(String, String)>()
       .equals(pairs, expected));

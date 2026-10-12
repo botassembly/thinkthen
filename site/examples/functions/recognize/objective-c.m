@@ -9,12 +9,12 @@ int main(void) {
     assert(client);
     NSDictionary *kinds = @{
         @"kind": @"file",
-        @"path": @"names.json",
+        @"path": @"kinds.json",
     };
     NSDictionary *text = @{
         @"kind": @"text",
-        @"text": @"Maria Chen joined Northwind Freight, "
-            @"a company in Chicago.",
+        @"text": @"Sam Patel says his Kindle "
+            @"arrived broken in Denver.",
     };
     NSMutableArray *names = [NSMutableArray array];
     __block TTCall *answered = nil;
@@ -49,9 +49,9 @@ int main(void) {
         }
     }
     NSArray *expected = @[
-        @"Maria Chen (person)",
-        @"Northwind Freight (organization)",
-        @"Chicago (place)",
+        @"Sam Patel (person)",
+        @"Kindle (product)",
+        @"Denver (place)",
     ];
     assert([names isEqualToArray:expected]);
     return 0;

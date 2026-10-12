@@ -12,15 +12,15 @@ public class Recognize {
     public static void main(String[] args) {
         var kinds = new LinkedHashMap<String, Object>();
         kinds.put("person", null);
-        kinds.put("organization", null);
+        kinds.put("product", null);
         kinds.put("place", null);
         var ask = new RequestQuestionDefinition().value(
             Inputs.RequestDefinitionFieldsRecognizeVersion
                 .fromJson(Map.of("version", 1,
                     "recognize", Map.of("kinds", kinds))));
         var text = new RequestInputText().text(
-            "Maria Chen joined Northwind Freight, "
-            + "a company in Chicago.");
+            "Sam Patel says his Kindle arrived broken "
+            + "in Denver.");
         var recognized =
             SessionPacketRecognizeAggregate.class;
         try (var tt = new Engine()) {
@@ -35,10 +35,10 @@ public class Recognize {
                 .map(one -> List.of(one.text(), one.kind()))
                 .toList();
             assert names.equals(List.of(
-                List.of("Maria Chen", "person"),
-                List.of("Northwind Freight",
-                    "organization"),
-                List.of("Chicago", "place")));
+                List.of("Sam Patel", "person"),
+                List.of("Kindle",
+                    "product"),
+                List.of("Denver", "place")));
         }
     }
 }

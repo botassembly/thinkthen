@@ -3,10 +3,10 @@
 #include <string.h>
 #include <thinkthen.h>
 
-const char *kinds = "names.json";
+const char *kinds = "kinds.json";
 const char *text =
-    "Maria Chen joined Northwind Freight, "
-    "a company in Chicago.";
+    "Sam Patel says his Kindle arrived broken "
+    "in Denver.";
 char request[512];
 snprintf(request, sizeof request,
     "{\"schema\":\"thinkthen.request/1\","
@@ -60,6 +60,6 @@ while (status != THINKTHEN_SESSION_END_V1) {
 }
 thinkthen_session_free(call);
 assert(strcmp(names,
-    "Maria Chen (person). "
-    "Northwind Freight (organization). "
-    "Chicago (place). ") == 0);
+    "Sam Patel (person). "
+    "Kindle (product). "
+    "Denver (place). ") == 0);

@@ -3,10 +3,10 @@ program-id. sample.
 data division.
 working-storage section.
 copy "tt-native-generated.cpy".
-01 names-file pic x(10) value "names.json".
-01 text-in pic x(58) value
-   "Maria Chen joined Northwind Freight, "
-   & "a company in Chicago.".
+01 names-file pic x(10) value "kinds.json".
+01 text-in pic x(51) value
+   "Sam Patel says his Kindle arrived broken "
+   & "in Denver.".
 01 row-address usage pointer based.
 01 entity-at usage pointer.
 01 entity-address usage pointer based.
@@ -68,8 +68,8 @@ procedure division.
        using by value session-owner returning omitted
     call "thinkthen_engine_free"
        using by value engine returning omitted
-    if entity-names not = "Maria Chen/person "
-       & "Northwind Freight/organization Chicago/place"
+    if entity-names not = "Sam Patel/person "
+       & "Kindle/product Denver/place"
        stop run returning 1
     end-if
     stop run.

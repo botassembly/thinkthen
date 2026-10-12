@@ -1,6 +1,6 @@
  relation | source | target | probability | either 
 ----------+--------+--------+-------------+--------
- sings    |      1 |      3 |        0.81 | f
- sings    |      2 |      4 |        0.88 | f
+ makes    |      1 |      3 |        0.97 | f
+ makes    |      2 |      4 |        0.91 | f
 (2 rows)
 

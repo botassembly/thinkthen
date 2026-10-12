@@ -8,8 +8,8 @@ with Thinkthen_Session_C; use Thinkthen_Session_C;
 
 procedure Sample is
    Text_In : constant String :=
-     "Maria Chen joined Northwind Freight, "
-     & "a company in Chicago.";
+     "Sam Patel says his Kindle arrived broken "
+     & "in Denver.";
    Request : T_RequestCall_recognize;
    Owner : Session;
    Answer : Packet;
@@ -30,7 +30,7 @@ begin
    Request.T_question :=
      (T_RequestQuestion_arm_RequestQuestion_file,
       (T_kind => <>,
-       T_path => To_Unbounded_String ("names.json")));
+       T_path => To_Unbounded_String ("kinds.json")));
    Request.T_input.V_0.T_text :=
      To_Unbounded_String (Text_In);
    Recognize (Owner, Request);
@@ -73,7 +73,7 @@ begin
       end if;
    end loop;
    pragma Assert
-     (Names = "Maria Chen/person "
-        & "Northwind Freight/organization "
-        & "Chicago/place ");
+     (Names = "Sam Patel/person "
+        & "Kindle/product "
+        & "Denver/place ");
 end Sample;

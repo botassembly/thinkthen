@@ -15,19 +15,19 @@ func main() {
 	}
 	defer client.Close()
 	names := []map[string]string{
-		{"name": "Paul McCartney", "kind": "singer"},
-		{"name": "Ringo Starr", "kind": "singer"},
-		{"name": "Yesterday", "kind": "song"},
-		{"name": "Octopus's Garden", "kind": "song"},
+		{"name": "Apple", "kind": "company"},
+		{"name": "Amazon", "kind": "company"},
+		{"name": "iPhone", "kind": "product"},
+		{"name": "Kindle", "kind": "product"},
 	}
-	sings := tt.AuthoredRelation{
-		Name:   "sings",
-		Source: tt.Ptr[tt.AuthoredName]("singer"),
-		Target: tt.Ptr[tt.AuthoredName]("song"),
+	makes := tt.AuthoredRelation{
+		Name:   "makes",
+		Source: tt.Ptr[tt.AuthoredName]("company"),
+		Target: tt.Ptr[tt.AuthoredName]("product"),
 	}
 	ask := tt.DefinedQuestion(tt.AuthoredRelate{
 		Relate: tt.AuthoredRelateRelate{
-			Relations: []tt.AuthoredRelation{sings},
+			Relations: []tt.AuthoredRelation{makes},
 		},
 	})
 	call, err := client.Relate(
@@ -58,10 +58,10 @@ func main() {
 		})
 	}
 	want := [][2]string{
-		{"Paul McCartney", "Yesterday"},
-		{"Ringo Starr", "Octopus's Garden"},
+		{"Apple", "iPhone"},
+		{"Amazon", "Kindle"},
 	}
 	if !slices.Equal(pairs, want) {
-		log.Fatal("expected two singers")
+		log.Fatal("expected two companies")
 	}
 }

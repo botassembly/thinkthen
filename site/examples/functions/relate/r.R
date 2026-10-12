@@ -2,25 +2,25 @@ library(thinkthen)
 
 entities <- data.frame(
   name = c(
-    "Paul McCartney",
-    "Ringo Starr",
-    "Yesterday",
-    "Octopus's Garden"
+    "Apple",
+    "Amazon",
+    "iPhone",
+    "Kindle"
   ),
-  kind = c("singer", "singer", "song", "song")
+  kind = c("company", "company", "product", "product")
 )
-sings <- list(
-  name = "sings",
-  source = "singer",
-  target = "song"
+makes <- list(
+  name = "makes",
+  source = "company",
+  target = "product"
 )
-who_sings <- tt_relate(
-  list(version = 1, relate = list(relations = list(sings))),
+who_makes <- tt_relate(
+  list(version = 1, relate = list(relations = list(makes))),
   entities
 )$results[[1]]$value
-singers <- vapply(who_sings, \(edge) edge$source$name, "")
-songs <- vapply(who_sings, \(edge) edge$target$name, "")
+companies <- vapply(who_makes, \(edge) edge$source$name, "")
+products <- vapply(who_makes, \(edge) edge$target$name, "")
 stopifnot(
-  identical(singers, c("Paul McCartney", "Ringo Starr")),
-  identical(songs, c("Yesterday", "Octopus's Garden"))
+  identical(companies, c("Apple", "Amazon")),
+  identical(products, c("iPhone", "Kindle"))
 )

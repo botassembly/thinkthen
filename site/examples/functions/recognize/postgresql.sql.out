@@ -1,7 +1,7 @@
-       text        |     kind     
--------------------+--------------
- Maria Chen        | person
- Northwind Freight | organization
- Chicago           | place
+   text    |  kind   
+-----------+---------
+ Sam Patel | person
+ Kindle    | product
+ Denver    | place
 (3 rows)
 

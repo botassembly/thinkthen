@@ -7,34 +7,34 @@ import thinkthen.kotlin.KotlinEngine
 import thinkthen.kotlin.Results.SessionPacketRelateAggregate
 
 suspend fun main() = KotlinEngine().use { tt ->
-    val sings = mapOf("name" to "sings",
-        "source" to "singer", "target" to "song",
+    val makes = mapOf("name" to "makes",
+        "source" to "company", "target" to "product",
         "either" to false)
     val ask = RequestQuestionDefinition().value(
         Inputs.RequestDefinitionFieldsRelateVersion
             .fromJson(mapOf("version" to 1, "relate" to
-                mapOf("relations" to listOf(sings)))))
-    val paul = mapOf(
-        "name" to "Paul McCartney", "kind" to "singer")
-    val ringo = mapOf(
-        "name" to "Ringo Starr", "kind" to "singer")
-    val yesterday = mapOf(
-        "name" to "Yesterday", "kind" to "song")
-    val garden = mapOf(
-        "name" to "Octopus's Garden", "kind" to "song")
+                mapOf("relations" to listOf(makes)))))
+    val apple = mapOf(
+        "name" to "Apple", "kind" to "company")
+    val amazon = mapOf(
+        "name" to "Amazon", "kind" to "company")
+    val iphone = mapOf(
+        "name" to "iPhone", "kind" to "product")
+    val kindle = mapOf(
+        "name" to "Kindle", "kind" to "product")
     val names = RequestInputRecords().items(
-        listOf(paul, ringo, yesterday, garden).map { one ->
+        listOf(apple, amazon, iphone, kindle).map { one ->
             RequestItem().original(
                 RequestOriginalJson().value(one))
         })
-    val whoSings = tt.relate(ask, names).packets
+    val whoMakes = tt.relate(ask, names).packets
         .filterIsInstance<SessionPacketRelateAggregate>()
         .first().value.value
-    val pairs = whoSings.map { edge ->
+    val pairs = whoMakes.map { edge ->
         edge.source.json to edge.target.json
     }
     check(pairs == listOf(
-        paul to yesterday,
-        ringo to garden,
+        apple to iphone,
+        amazon to kindle,
     ))
 }

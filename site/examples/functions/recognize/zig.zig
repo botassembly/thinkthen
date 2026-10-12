@@ -13,9 +13,9 @@ pub fn main() !void {
     };
     defer engine.deinit();
 
-    const kinds = "names.json";
-    const text = "Maria Chen joined Northwind Freight, " ++
-        "a company in Chicago.";
+    const kinds = "kinds.json";
+    const text = "Sam Patel says his Kindle " ++
+        "arrived broken in Denver.";
     var call = try tt.session.recognize(&engine, .{
         .question = .{ .file = .{ .path = kinds } },
         .input = .{ .text = .{ .text = text } },
@@ -61,7 +61,7 @@ pub fn main() !void {
         }
     }
     std.debug.assert(std.mem.eql(u8, names.items,
-        "Maria Chen (person). " ++
-        "Northwind Freight (organization). " ++
-        "Chicago (place). "));
+        "Sam Patel (person). " ++
+        "Kindle (product). " ++
+        "Denver (place). "));
 }

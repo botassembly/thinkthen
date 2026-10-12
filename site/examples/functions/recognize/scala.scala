@@ -11,7 +11,7 @@ import thinkthen.scala.ScalaEngine
   Using.resource(new ScalaEngine()) { tt =>
     val kinds = ListMap(
       "person" -> null,
-      "organization" -> null,
+      "product" -> null,
       "place" -> null,
     )
     val ask = RequestQuestionDefinition().value(
@@ -19,8 +19,8 @@ import thinkthen.scala.ScalaEngine
         .fromJson(Map("version" -> 1,
           "recognize" -> Map("kinds" -> kinds)).asJava))
     val text = RequestInputText().text(
-      "Maria Chen joined Northwind Freight, " +
-        "a company in Chicago.")
+      "Sam Patel says his Kindle arrived broken " +
+        "in Denver.")
     val call = tt.recognize(ask, text)
     val facts = Await.result(call.result, 10.seconds)
       .packets.collectFirst {
@@ -33,8 +33,8 @@ import thinkthen.scala.ScalaEngine
       case _ => Nil
     }
     assert(names == List(
-      "Maria Chen" -> "person",
-      "Northwind Freight" -> "organization",
-      "Chicago" -> "place",
+      "Sam Patel" -> "person",
+      "Kindle" -> "product",
+      "Denver" -> "place",
     ))
   }

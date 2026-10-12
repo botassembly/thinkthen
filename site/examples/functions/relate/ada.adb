@@ -23,7 +23,7 @@ procedure Sample is
    Answer : Packet;
    Read : Read_Status;
    Ready : Unsigned_32;
-   Who_Sings : Unbounded_String;
+   Who_Makes : Unbounded_String;
    Settlement : constant :=
      K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
    Settled : constant :=
@@ -33,14 +33,14 @@ procedure Sample is
    type Edge is access constant
      thinkthen_complete_related_entity_edge_v1;
 begin
-   Names.Append (Name ("Paul McCartney", "singer"));
-   Names.Append (Name ("Ringo Starr", "singer"));
-   Names.Append (Name ("Yesterday", "song"));
-   Names.Append (Name ("Octopus's Garden", "song"));
+   Names.Append (Name ("Apple", "company"));
+   Names.Append (Name ("Amazon", "company"));
+   Names.Append (Name ("iPhone", "product"));
+   Names.Append (Name ("Kindle", "product"));
    Request.T_question :=
      (T_RequestQuestion_arm_RequestQuestion_file,
       (T_kind => <>,
-       T_path => To_Unbounded_String ("sings.json")));
+       T_path => To_Unbounded_String ("makes.json")));
    Request.T_input :=
      (T_RequestInput_arm_RequestInput_entities,
       (T_items => Names, T_kind => <>));
@@ -65,10 +65,10 @@ begin
          begin
             for One of Edges loop
                Append
-                 (Who_Sings,
+                 (Who_Makes,
                   Text (One.source.data.fields_kind_name
                           .name)
-                  & " sings "
+                  & " makes "
                   & Text (One.target.data.fields_kind_name
                             .name)
                   & ". ");
@@ -77,6 +77,6 @@ begin
       end if;
    end loop;
    pragma Assert
-     (Who_Sings = "Paul McCartney sings Yesterday. "
-        & "Ringo Starr sings Octopus's Garden. ");
+     (Who_Makes = "Apple makes iPhone. "
+        & "Amazon makes Kindle. ");
 end Sample;

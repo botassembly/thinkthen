@@ -6,15 +6,15 @@ import thinkthen.kotlin.Results
 import thinkthen.kotlin.Results.RecognizeFieldsEntities
 
 suspend fun main() = KotlinEngine().use { tt ->
-    val kinds = listOf("person", "organization", "place")
+    val kinds = listOf("person", "product", "place")
         .associateWith { null }
     val ask = RequestQuestionDefinition().value(
         Inputs.RequestDefinitionFieldsRecognizeVersion
             .fromJson(mapOf("version" to 1,
                 "recognize" to mapOf("kinds" to kinds))))
     val text = RequestInputText().text(
-        "Maria Chen joined Northwind Freight, " +
-            "a company in Chicago.")
+        "Sam Patel says his Kindle arrived broken " +
+            "in Denver.")
     val facts = tt.recognize(ask, text).packets
         .filterIsInstance<
             Results.SessionPacketRecognizeAggregate>()
@@ -24,8 +24,8 @@ suspend fun main() = KotlinEngine().use { tt ->
         one.text to one.kind
     }
     check(names == listOf(
-        "Maria Chen" to "person",
-        "Northwind Freight" to "organization",
-        "Chicago" to "place",
+        "Sam Patel" to "person",
+        "Kindle" to "product",
+        "Denver" to "place",
     ))
 }

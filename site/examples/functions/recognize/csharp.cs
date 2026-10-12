@@ -5,9 +5,9 @@ using ThinkThen.Inputs;
 using ThinkThen.Results;
 
 using var engine = Engine.Open();
-string[] kinds = ["person", "organization", "place"];
-var text = "Maria Chen joined Northwind Freight, "
-    + "a company in Chicago.";
+string[] kinds = ["person", "product", "place"];
+var text = "Sam Patel says his Kindle arrived broken "
+    + "in Denver.";
 var ask = engine.ParseQuestion(
     AuthoredQuestionKind.Recognize,
     JsonSerializer.Serialize(new
@@ -32,7 +32,7 @@ var names = facts.Entities
     .Select(one => (one.Text, one.Kind));
 Trace.Assert(names.SequenceEqual(
 [
-    ("Maria Chen", "person"),
-    ("Northwind Freight", "organization"),
-    ("Chicago", "place"),
+    ("Sam Patel", "person"),
+    ("Kindle", "product"),
+    ("Denver", "place"),
 ]));

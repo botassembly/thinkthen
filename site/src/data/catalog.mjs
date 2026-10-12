@@ -304,7 +304,7 @@ export const FUNCTIONS = [
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
-      '0-kinds': 'recognize finds three names and gives each one of the three kinds: a person, an organization, and a place.',
+      '0-kinds': 'A support message names a customer, a product and a city. recognize finds all three and gives each its kind: person, product or place.',
       '1-names': 'Each --kind gives a kind a description. --plan shows the first question without sending it. The descriptions tell the model which literal spans to find; this example shows no model answer.',
     },
     moreSee: {
@@ -333,7 +333,7 @@ export const FUNCTIONS = [
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
     see: {
-      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
+      '1-makes': 'The products a support inbox names, and the companies that make them. Apple makes the iPhone, and Amazon makes the Kindle. The two wrong pairs do not reach the default threshold.',
     },
     moreSee: {
       duckdb: 'The same eight rules as rows of a table. relate reads them through a query and returns the contradicting pairs by id.',

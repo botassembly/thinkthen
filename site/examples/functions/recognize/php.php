@@ -4,9 +4,9 @@ require 'thinkthen-php/autoload.php';
 use ThinkThen\Client;
 
 $client = new Client();
-$kinds = ['person', 'organization', 'place'];
-$text = 'Maria Chen joined Northwind Freight, '
-    . 'a company in Chicago.';
+$kinds = ['person', 'product', 'place'];
+$text = 'Sam Patel says his Kindle arrived broken '
+    . 'in Denver.';
 $ask = [
     'version' => 1,
     'recognize' => [
@@ -19,8 +19,8 @@ $names = array_map(
     $facts->entities,
 );
 assert($names === [
-    ['Maria Chen', 'person'],
-    ['Northwind Freight', 'organization'],
-    ['Chicago', 'place'],
+    ['Sam Patel', 'person'],
+    ['Kindle', 'product'],
+    ['Denver', 'place'],
 ]);
 $client->close();

@@ -3,9 +3,9 @@ import 'package:thinkthen_dart/thinkthen_dart.dart';
 
 Future<void> main() async {
   final engine = Engine.open();
-  const kinds = ['person', 'organization', 'place'];
-  const text = 'Maria Chen joined Northwind Freight, '
-      'a company in Chicago.';
+  const kinds = ['person', 'product', 'place'];
+  const text = 'Sam Patel says his Kindle arrived broken '
+      'in Denver.';
   final call = await engine.recognize(
     InputRequestQuestionDefinition(
       value: InputRequestDefinition.read({
@@ -27,9 +27,9 @@ Future<void> main() async {
     for (final one in facts.entities) (one.text, one.kind),
   ];
   const expected = [
-    ('Maria Chen', 'person'),
-    ('Northwind Freight', 'organization'),
-    ('Chicago', 'place'),
+    ('Sam Patel', 'person'),
+    ('Kindle', 'product'),
+    ('Denver', 'place'),
   ];
   assert(const ListEquality<(String, String)>()
       .equals(names, expected));

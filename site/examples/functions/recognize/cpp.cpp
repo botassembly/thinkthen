@@ -8,10 +8,10 @@ using namespace tt::inputs;
 int main() {
     tt::Client client;
     auto kinds =
-        RequestQuestionFile().set_path("names.json");
+        RequestQuestionFile().set_path("kinds.json");
     auto text = RequestInputText().set_text(
-        "Maria Chen joined Northwind Freight, "
-        "a company in Chicago.");
+        "Sam Patel says his Kindle arrived broken "
+        "in Denver.");
     auto call = client.recognize(kinds, text);
     call.finish();
     std::vector<std::string> names;
@@ -31,9 +31,9 @@ int main() {
         }
     }
     std::vector<std::string> expected{
-        "Maria Chen (person)",
-        "Northwind Freight (organization)",
-        "Chicago (place)",
+        "Sam Patel (person)",
+        "Kindle (product)",
+        "Denver (place)",
     };
     assert(names == expected);
 }

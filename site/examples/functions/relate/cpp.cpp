@@ -8,12 +8,12 @@ using namespace tt::inputs;
 int main() {
     tt::Client client;
     auto relations =
-        RequestQuestionFile().set_path("sings.json");
+        RequestQuestionFile().set_path("makes.json");
     std::vector<tt::Json> names{
-        {{"name", "Paul McCartney"}, {"kind", "singer"}},
-        {{"name", "Ringo Starr"}, {"kind", "singer"}},
-        {{"name", "Yesterday"}, {"kind", "song"}},
-        {{"name", "Octopus's Garden"}, {"kind", "song"}},
+        {{"name", "Apple"}, {"kind", "company"}},
+        {{"name", "Amazon"}, {"kind", "company"}},
+        {{"name", "iPhone"}, {"kind", "product"}},
+        {{"name", "Kindle"}, {"kind", "product"}},
     };
     std::vector<RequestItem> entities;
     for (const auto& name : names) {
@@ -24,24 +24,24 @@ int main() {
         relations,
         RequestInputEntities().set_items(entities));
     call.finish();
-    std::vector<std::string> who_sings;
+    std::vector<std::string> who_makes;
     for (const auto& packet : call.collect()) {
         auto found =
             packet.as_SessionPacketRelateAggregate();
         if (!found) continue;
         auto edges = found->value().value->value().value;
         for (const auto& edge : *edges) {
-            auto singer = edge.source().value->document();
-            auto song = edge.target().value->document();
-            who_sings.push_back(
-                singer.at("name").get<std::string>() +
-                " sings " +
-                song.at("name").get<std::string>());
+            auto company = edge.source().value->document();
+            auto product = edge.target().value->document();
+            who_makes.push_back(
+                company.at("name").get<std::string>() +
+                " makes " +
+                product.at("name").get<std::string>());
         }
     }
     std::vector<std::string> expected{
-        "Paul McCartney sings Yesterday",
-        "Ringo Starr sings Octopus's Garden",
+        "Apple makes iPhone",
+        "Amazon makes Kindle",
     };
-    assert(who_sings == expected);
+    assert(who_makes == expected);
 }

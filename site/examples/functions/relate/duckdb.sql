@@ -1,13 +1,13 @@
 LOAD './thinkthen.duckdb_extension';
 
 CREATE TABLE entities AS FROM (VALUES
-    (1, 'Paul McCartney', 'singer'),
-    (2, 'Ringo Starr', 'singer'),
-    (3, 'Yesterday', 'song'),
-    (4, 'Octopus''s Garden', 'song')
+    (1, 'Apple', 'company'),
+    (2, 'Amazon', 'company'),
+    (3, 'iPhone', 'product'),
+    (4, 'Kindle', 'product')
 ) t(id, name, kind);
 
 SELECT * FROM thinkthen_relate(
     'SELECT id, name, kind FROM entities',
-    ['sings=singer:song']
-) AS sings;
+    ['makes=company:product']
+) AS makes;
