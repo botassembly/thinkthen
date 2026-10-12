@@ -30,7 +30,7 @@ if [ -n "$prefix" ]; then
 		set -- "$@" "-Wl,-u,$name"
 	done
 	cc -r -nostdlib -arch "$(lipo -archs "$from")" -Wl,-exported_symbols_list,"$work/names" "$@" \
-		-o "$work/joined.o" "$from" 2>"$work/ld.log" || { cat "$work/ld.log" >&2; exit 1; }
+		-o "$work/joined.o" ${THINKTHEN_COVERAGE_INITIALIZER:+"$THINKTHEN_COVERAGE_INITIALIZER"} "$from" 2>"$work/ld.log" || { cat "$work/ld.log" >&2; exit 1; }
 	objcopy=$(rustc --print sysroot)/lib/rustlib/$(rustc -vV | sed -n 's/^host: //p')/bin/rust-objcopy
 	[ -x "$objcopy" ] || { echo "localize.sh: no rust-objcopy at $objcopy" >&2; exit 1; }
 	"$objcopy" --remove-section=__LLVM,__bitcode --remove-section=__LLVM,__cmdline "$work/joined.o" "$work/thinkthen.o"
@@ -39,7 +39,7 @@ else
 	for name in $names; do
 		set -- "$@" -u "$name"
 	done
-	ld -r "$@" -o "$work/joined.o" "$from"
+	ld -r "$@" -o "$work/joined.o" ${THINKTHEN_COVERAGE_INITIALIZER:+"$THINKTHEN_COVERAGE_INITIALIZER"} "$from"
 	set --
 	for name in $names; do
 		set -- "$@" "--keep-global-symbol=$name"
