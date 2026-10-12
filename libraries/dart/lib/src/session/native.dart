@@ -55,11 +55,13 @@ T withBytes<T>(Object? value, T Function(Pointer<Uint8>, int) body) {
 String nativeText(Pointer<Uint8> pointer) =>
     pointer == nullptr ? '' : pointer.cast<Utf8>().toDartString();
 void checkSession(NativeAbi abi, int code) {
-  if (code != 0)
+  if (code != 0) {
+    final facts = abi.thinkthen_session_error_facts_json();
     throw NativeFailure(
       code,
-      false,
+      abi.thinkthen_session_error_retryable() != 0,
       nativeText(abi.thinkthen_session_error_message()),
-      null,
+      facts == nullptr ? null : decodeNative(nativeText(facts)),
     );
+  }
 }

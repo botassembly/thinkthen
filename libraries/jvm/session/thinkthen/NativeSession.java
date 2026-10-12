@@ -37,7 +37,10 @@ final class NativeSession {
     static void check(int code) {
         if (code == 0) return;
         MemorySegment message = (MemorySegment)call("thinkthen_session_error_message", ValueLayout.ADDRESS, new MemoryLayout[]{});
-        throw new NativeFailure(code, false, message.reinterpret(Long.MAX_VALUE).getString(0), null);
+        boolean retryable = (int)call("thinkthen_session_error_retryable", ValueLayout.JAVA_INT, new MemoryLayout[]{}) != 0;
+        var facts = (MemorySegment)call("thinkthen_session_error_facts_json", ValueLayout.ADDRESS, new MemoryLayout[]{});
+        throw new NativeFailure(code, retryable, message.reinterpret(Long.MAX_VALUE).getString(0),
+            facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
     }
     static UsagePersistence usage(MemorySegment engine, String function) {
         try (Arena outputs = Arena.ofConfined()) {

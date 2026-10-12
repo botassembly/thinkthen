@@ -98,6 +98,14 @@ external int _thinkthen_session_result_json(
     symbol: 'thinkthen_session_error_message',
     assetId: 'package:thinkthen_dart/thinkthen')
 external Pointer<Uint8> _thinkthen_session_error_message();
+@Native<Int32 Function()>(
+    symbol: 'thinkthen_session_error_retryable',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external int _thinkthen_session_error_retryable();
+@Native<Pointer<Uint8> Function()>(
+    symbol: 'thinkthen_session_error_facts_json',
+    assetId: 'package:thinkthen_dart/thinkthen')
+external Pointer<Uint8> _thinkthen_session_error_facts_json();
 @Native<
         Int32 Function(Pointer<Void>, Pointer<NativeUsageState>,
             Pointer<NativeUsageAdvice>)>(
@@ -137,6 +145,9 @@ final class NativeAbi {
   final thinkthen_session_result_free = _thinkthen_session_result_free;
   final thinkthen_session_result_json = _thinkthen_session_result_json;
   final thinkthen_session_error_message = _thinkthen_session_error_message;
+  final thinkthen_session_error_retryable = _thinkthen_session_error_retryable;
+  final thinkthen_session_error_facts_json =
+      _thinkthen_session_error_facts_json;
   final thinkthen_engine_usage_persistence_v1 =
       _thinkthen_engine_usage_persistence_v1;
   final thinkthen_engine_finish_usage_status_v1 =
@@ -155,24 +166,11 @@ enum NativeErrorKind {
   const NativeErrorKind(this.code);
 }
 
-const THINKTHEN_EBACKEND = 2;
-const THINKTHEN_ECANCELLED = 5;
-const THINKTHEN_EDEADLINE = 3;
-const THINKTHEN_EDEFECT = 6;
-const THINKTHEN_ELOCAL = 4;
-const THINKTHEN_EUSAGE = 1;
 const THINKTHEN_SESSION_ACCEPTED_V1 = 0;
 const THINKTHEN_SESSION_CLOSED_V1 = 2;
 const THINKTHEN_SESSION_END_V1 = 2;
 const THINKTHEN_SESSION_FULL_V1 = 1;
 const THINKTHEN_SESSION_PENDING_V1 = 1;
-const THINKTHEN_SESSION_READY_CANCELLED_V1 = 4;
-const THINKTHEN_SESSION_READY_CLOSED_V1 = 2;
-const THINKTHEN_SESSION_READY_END_V1 = 3;
-const THINKTHEN_SESSION_READY_INPUT_V1 = 1;
-const THINKTHEN_SESSION_READY_RESULT_V1 = 0;
-const THINKTHEN_SESSION_READY_TIMEOUT_V1 = 5;
 const THINKTHEN_SESSION_RESULT_V1 = 0;
 const THINKTHEN_SESSION_WAIT_INPUT_V1 = 1;
-const THINKTHEN_SESSION_WAIT_RESULT_V1 = 0;
 const THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 = 2;
