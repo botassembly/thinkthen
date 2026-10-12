@@ -66,7 +66,7 @@ The comparison uses main at `ac96e13f345a5b2ec468a66c4591459f1b64616f`. The prep
 | `libraries/r/ratchet.json` | 3620 | 3693 | +73 | Shared typed decoding and native session wait. |
 | `libraries/ruby/ratchet.json` | 1578 | 1629 | +51 | Shared typed Request execution and native wait with interpreter-lock release. |
 | `libraries/ruby/ratchet.rb.json` | 1805 | 1841 | +36 | Session wait integration and installed cancellation checks. |
-| `libraries/rust/ratchet.json` | 738 | 763 | +25 | Installed native session wait regression checks. |
+| `libraries/rust/ratchet.json` | 738 | 763 | +25 | Approved 0558 migration of the recognition example onto Request: 36 added and 11 removed lines. |
 | `libraries/swift/ratchet.swift.json` | 9803 | 9841 | +38 | Session waits on dispatch workers and installed scheduler/cancellation checks. |
 | `libraries/typescript/ratchet.js.json` | 2209 | 2179 | −30 | Remove binding polling and duplicated request construction. |
 | `libraries/typescript/ratchet.json` | 217 | 274 | +57 | Native wait through a libuv worker and shared named-request bridge. |
@@ -90,8 +90,55 @@ Repair `3675f6fb7e347d3d98221e92d7a73d34d29efe2d` records the approved migration
 
 The Python terminal-error fix at `3d3d60c59130b9d581b69d147c1d00c718514f25` raises the terminal error plainly when no producer failure exists and preserves explicit chaining when one exists. The current-source installed Python run passed 51 tests, two type checks and 40 shared cases each for Python, pandas and Python Polars. Its first attempt failed because the owned backend executable was absent; preparing that prerequisite restored the run without changing a test. Python's source limit remains 2,678.
 
+## Local rc.12 measurement
+
+Candidate `rc/0.2.0-rc.12` names the reviewed source `6712593f6f6005db73e8055b6d67b505e4a03a48`. Its canonical `test-full-cases --run` exited 1 after 3,321.26 measured seconds. Twenty-four local consumer rows passed. Executed parity assertions totalled 5,728 passes and one failure. C completed 255 cases with 254 passes; `selected-object-false-unicode` failed with the native Usage message `the item does not match item_schema` at position 1. Dart and Flutter asserted zero parity cells because their shared preparation failed: Flutter's library entrypoint lacked the `dart:isolate` import required by its shared session implementation's `Isolate.run` call. Earlier cache-miss, checksum and download failures in that preparation were expected negative checks, not its stopping failure.
+
+Swift and Objective-C remained explicitly delegated to hosted macOS with no local pass. Seventeen installed smokes passed and those two Apple smokes were delegated. Printed Rust test results totalled 156 passes, zero failures and two ignored tests; the C release cases were subsequently run explicitly. Package and stress did not run after the full-command failure. No hosted workflow was dispatched. All owned processes exited and the supervisor reaped 427 child statuses. The source checkout stayed clean and unchanged. This failed candidate establishes neither release qualification nor ticket completion.
+
+The measured consumer durations include preparation and execution. Dart and Flutter share the failed 193.36-second family preparation; that duration is not two independent executions. Apple consumers performed no local execution.
+
+| Consumer | Seconds | Result |
+| --- | ---: | --- |
+| Rust | 250.48 | Pass |
+| Rust Polars | 760.75 | Pass |
+| Python | 291.34 | Pass |
+| pandas | 410.55 | Pass |
+| Python Polars | 332.83 | Pass |
+| TypeScript | 274.08 | Pass |
+| JavaScript | 264.34 | Pass |
+| Java | 173.45 | Pass |
+| Kotlin | 173.12 | Pass |
+| Scala | 176.46 | Pass |
+| Dart and Flutter | 193.36 | Shared preparation failed; zero parity assertions |
+| CLI | 126.10 | Pass |
+| C | 166.03 | One required assertion failed |
+| Ruby | 83.43 | Pass |
+| R | 434.50 | Pass |
+| Go | 115.85 | Pass |
+| C# | 225.55 | Pass |
+| C++ | 236.19 | Pass |
+| Swift | 0.00 | Delegated to macOS; no local pass |
+| Zig | 251.08 | Pass |
+| Objective-C | 0.00 | Delegated to macOS; no local pass |
+| PHP | 59.91 | Pass |
+| Ada | 152.59 | Pass |
+| COBOL | 189.48 | Pass |
+| SQLite | 97.05 | Pass |
+| DuckDB | 221.76 | Pass |
+| PostgreSQL | 510.35 | Pass |
+| MCP | 133.13 | Pass |
+
 ## What the build taught us
 
 Source inspection missed a required Debug implementation until C compilation ran. Library-only Clippy missed a test-only atomic type until all-targets Clippy compiled the unit tests. Focused session checks missed frozen typed-array behavior and a parallel prefix race. A new regression can also encode the wrong contract; accepted ADRs and unchanged outside-in cases take precedence over a newly invented expectation.
 
 The runner-only campaign checked another branch. Its result cannot qualify the combined product. Each mandatory gate, acceptance verdict, candidate campaign and landing must identify the same revision. Original failures and setup failures remain evidence even when a later owning correction passes.
+
+## Final required gates and code review
+
+At `6712593f6f6005db73e8055b6d67b505e4a03a48`, the complete routine test and lint both exited zero. The routine passed 2,002 workspace cases, 21 consumer cases, 44 Python cases, one doctest and 101 schema cases. Lint checked 1,965 API declarations and refused all four hostile plants; dependency, documentation, formatting and source checks passed. Polars passed all 46 routine cases, with strict default and minimal bundled all-targets Clippy. The full C script passed formatting, Clippy, 25 unit cases, 82 door cases, both release cases and the final slide. Its corpus recorded 55 passing cases and one internal invariant injection unavailable through the C door, which is not counted as a pass. The rebuilt C archive passed 42 installed cases and the direct named refusal, find and relation checks. Its SHA256 is `a4040193b6e6993a20cbb72d5090e8b9f038ef7b1c4982c03ede5f890d0c0b25`.
+
+The first final-lint attempt found killed adopted fixture children still visible as zombies because its supervisor deferred reaping. Immediate SIGCHLD reaping restored the unchanged process-cleanup assertion. The supervisor retained the direct gate's waitpid status before its completion waiter, preventing a synthetic successful exit. The failed attempt remains a setup failure; the source stayed unchanged through the successful run.
+
+Two fresh code reviewers checked every Changes item in 0549 through 0556 and all six 0558 amendments on that exact revision. They inspected code and completed gate results without starting builds or tests. They found no concrete product defect and explicitly accepted every positive limit change. They verified the Request-construction exceptions, native wait ownership and host scheduling, pending-only reuse, overlapping-send interruption, preserved ownership and diagnostic assertions, strict tier and exit checks, and retained documented APIs. One record cause was corrected: the Rust binding's 25-line increase is the approved recognition-example Request migration, rather than wait regression code. This record correction changes no tested product source. Code acceptance does not establish candidate or hosted platform qualification.

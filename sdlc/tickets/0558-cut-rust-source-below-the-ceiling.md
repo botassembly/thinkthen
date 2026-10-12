@@ -12,6 +12,8 @@ Reviews: revision e7f771bac41dfda0199a06e11b36b03af85a7981, accept
 
 Reviews: revision 52d652f, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 The nonblank Rust line count that `sdlc/scripts/ratchet.mjs` measures falls to 187,000 or fewer, and `sdlc/ratchet.json` falls with it. The cut comes from deleting dead code, unpublished duplicate methods and repeated test setup. Public behavior and contract coverage stay the same.
@@ -99,3 +101,4 @@ PM amendment, 2026-10-11, sixth. Target ruling. The cleanup closes at 187,611, m
 - 2026-10-11 next: Checked checkpoint 9697db269 measures 187626; finish named wrapper deletions and safe cuts without changing distinct checks or formatting, then if still above 187000 stop and record the final total, cuts and retained items with reasons for the target ruling.
 - 2026-10-11 next: Stop cleanup for the target ruling: independently measured f3ab2eb93 is 187611 with the ceiling lowered to match; cuts remove dead host code, unpublished annotation and named image, decision, filter, details, rank, dynamic choose and recognition wrappers plus duplicate fixture setup; retained private production primitives preserve unchanged ownership checks, public C annotation/rank/find routes preserve group failures and raw originals, relate_complete_with preserves typed bounded admission and recoverable members without an existing equivalent carrier, and distinct parser, cancellation, secrecy, range and diagnostic checks remain intact.
 - 2026-10-11 next: Safe cleanup remains stopped at f3ab2eb93 with 187611 lines and its cuts and retained checks recorded above; separately reviewed corrective source fa83d9035 measures 187637 including shared R and PHP decoding, with core ceiling unchanged at 187611 and PHP 1916 against unchanged 1902, so no ceiling increase or closure is accepted pending the target ruling.
+- 2026-10-12 next: Frozen 6712593f6 measures core source and ceiling at 187606 with all restored coverage and the approved API inventory passing routine test and lint; fresh review accepts every cleanup amendment and affected limit, and landing awaits the same-source rc.12 campaign.

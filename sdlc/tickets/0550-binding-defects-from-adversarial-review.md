@@ -8,6 +8,8 @@ Reviews: revision f23c075965dc12a966847fee80c13bfab3b29385, accept
 
 Reviews: revision d4f576fb9ffe72557c357c900e544f7d7450aee0, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 A caller in every language sees its own producer's exception and Rust's admission message unchanged. Every binding assembles aggregate rows by one rule, treats a closed push as a stop signal and keeps the native retry signal. No dead admission code ships.
@@ -50,3 +52,4 @@ PM amendment, 2026-10-11. The C# fix may add two C exports: `thinkthen_session_e
 - 2026-10-11 next: Approved thread-local session diagnostic accessors are implemented and reviewed, with installed C and managed checks passing; whole-ticket checks and landing await the approved dependency order.
 - 2026-10-11 next: Exhaustive combined-source measurement confirms C Rust matches 32161 but C fixtures measure 3418 against unchanged 3340; the bounded survey preserves all named-export and lifetime assertions and finds only 23 safe shared-helper lines, leaving 55 excess lines that require a limit ruling rather than weakened checks.
 - 2026-10-12 next: Canonical Ada declaration repair d9c6a7887 passes generator, header, compiler ABI and unchanged archive selftest; final combined e52ac9593 has six measured source-limit failures—C fixtures 3418/3340, Java 4161/4071, Kotlin 1661/1660, Scala 1675/1674, Ada declarations 8653/8638 and Ada Python 551/550—with all assertions retained and no ceiling raised.
+- 2026-10-12 next: The six measured allowances are applied with named causes and accepted in fresh review of frozen 6712593f6 after routine test and lint, Polars and complete C gates pass; the combined source awaits rc.12 qualification and landing.

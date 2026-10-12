@@ -20,6 +20,8 @@ Reviews: revision e90429a, accept
 
 Reviews: revision cca27bf, reject
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 One `test-full-cases --run` on the Beelink runs every consumer, and no consumer fails for setup reasons. Each consumer finishes in under 900 seconds. Each consumer's duration appears in the summary.
@@ -67,3 +69,4 @@ One `test-full-cases --run` on the Beelink runs every consumer, and no consumer 
 - 2026-10-11 next: Canonical 2c5b0105 exited 1 without signals after all local parity consumers exited 0, because release smoke could not find the Python release wheel; retain the completed logs, repair package preparation in an isolated lane and review it before any new campaign or closure gates.
 - 2026-10-11 next: Fresh review accepted the corrected Python retained-wheel preparation and stale-wheel cleanup, its evidence record is committed under sdlc/records, and one canonical campaign now owns frozen ad4b49b4a in the background without active polling before exact-revision closure gates.
 - 2026-10-11 next: Runner repair ba74e4b24 preserves all 44 campaign regressions, clears child policy findings, fixes the Apple environment probe and lowers Dart to 6280, but clean-revision lint exposes stale generated Ada declarations in the archived-release selftest; a fresh developer owns that concrete repair before any acceptance.
+- 2026-10-12 next: The complete runner and generated Ada repairs are integrated in frozen 6712593f6 with routine test, lint and fresh review accepted; the four-consumer rc.12 campaign runs under an owner that preserves exit status and reaps children, and its completed consumer timings will supply the release comparison before landing.

@@ -26,6 +26,8 @@ Reviews: revision c73e198, accept
 
 Reviews: revision ea591ef, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 A binding waits for the next session result, or for room to push, through one native wait. The wait blocks for a caller-given timeout and wakes early on cancel. No binding sleeps or polls on a timer, and no binding blocks its host's scheduler.
@@ -97,3 +99,4 @@ A binding waits for the next session result, or for room to push, through one na
 - 2026-10-11 next: M5 currently has only Command Line Tools and xcrun cannot find xcodebuild (exit 72), while the actual Apple package assembler invokes xcodebuild; matching installed Swift and Objective-C checks therefore need packages assembled with full Apple tools, and neither exit 77 nor standalone carrier execution closes this ticket.
 - 2026-10-11 next: Combined corrective source a183504d7 preserves all mandatory regressions and fits core at 187608, C at 32161 and R at 1901 without raising their limits, but actual Java 4161 exceeds unchanged 4071 and Kotlin 1661/1660 plus Scala 1675/1674 remain unmatched after a source survey found no safe API or assertion-preserving deletion, so those binding limits require a ruling before qualification.
 - 2026-10-11 next: Two bounded surveys preserve generated public types, generic JSON, waiter ownership and every installed assertion but find no credible cut clearing Java 4161/4071, Kotlin 1661/1660 or Scala 1675/1674, so those unchanged limits and the missing M5 xcodebuild prerequisite require rulings before final qualification.
+- 2026-10-12 next: Frozen 6712593f6 passes routine test and lint plus installed C checks and fresh native-wait review; the third 0543 amendment delegates Swift and Objective-C candidate checks to GitHub macOS, and the accepted combined source awaits rc.12 qualification and landing.

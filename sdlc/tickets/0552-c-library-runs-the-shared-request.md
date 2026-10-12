@@ -10,6 +10,8 @@ Reviews: revision 842ef95437345568f4fb3b344d8ba947612693fe, accept
 
 Reviews: revision 0333414aa3ac33dc1d617f24344a05dad91b1186, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 Every C export that asks a question, frozen 0.1 exports included, admits and executes through `Engine::execute_request`. The C library keeps one helper for reading caller arrays. No shipped Rust type or module is named for the old "door" or "legacy" API.
@@ -38,3 +40,4 @@ Every C export that asks a question, frozen 0.1 exports included, admits and exe
 - 2026-10-11 started
 - 2026-10-11 next: Combined constructor review found frozen C input-kind selection still duplicated, so the developer is replacing it with neutral records and shared named inference before final acceptance.
 - 2026-10-11 next: The final C input-kind correction passed fresh review and all focused checks; whole-ticket checks and landing await 0549 and the accepted 0551 core slice.
+- 2026-10-12 next: Frozen 6712593f6 passes complete C checks and rebuilt installed C 42 of 42 plus routine test, lint and Polars, and fresh review accepts the shared Request routes and removal of retired names; landing awaits the combined candidate qualification.

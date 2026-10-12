@@ -30,6 +30,8 @@ Reviews: revision f23c075965dc12a966847fee80c13bfab3b29385, accept
 
 Reviews: revision 597ef8ae60b452689aa5f3813d6aea3967a5fe7b, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and the hosted rehearsal on Linux, macOS and Windows. It publishes nothing. This closes the build side of 0.2. Release QA and publication stay with 0425.
@@ -90,3 +92,5 @@ PM amendment, 2026-10-12, third. Source limits and Apple checks.
 - 2026-10-11 next: Official test on frozen ba41be5a7 exited 0 with 2002 workspace, 21 consumer and 44 Python cases; full C passed 25 unit and 82 integration cases plus installed 42/42 and Polars 46/46, but lint exited 1 on child-environment violations that the runner lane is repairing, so no acceptance or candidate qualification is recorded.
 - 2026-10-11 next: Prepared current-main combination e52ac9593 is pushed and all developers and jobs exited; routine test passed on ba41be5a7 and runner plus Ada generation repairs pass their owning checks, but final acceptance waits for unchanged C, JVM and Ada source-limit rulings, genuine matching M5 Apple packages and final same-revision gates followed by fresh review and the strict candidate campaign.
 - 2026-10-12 next: Third amendment is applied and cold C nextest timeouts reproduce on unchanged main before either C caller launches; frozen 243d59647 passed routine tests, Polars and installed C, but complete C exposed a repaired fixture include dependency and lint exposed stale public API declarations, so the API provenance repair precedes a new frozen revision and its required gates before acceptance.
+- 2026-10-12 next: Frozen 6712593f6 passes routine test and lint, Polars nextest and both Clippy configurations, complete C and installed C, and both fresh reviewers accept every assigned change and limit; rc.12 is pushed and its background local full-case, package and stress sequence precedes nonpublishing macOS and Windows qualification.
+- 2026-10-12 next: Rc.12 at 6712593f6 exited 1 with 24 local consumer rows passing, C selected-object-false-unicode refusing item_schema, and Dart plus Flutter preparation failing on the missing Flutter Isolate import; all children exited, package and stress were unrun, and two fresh developers own the retained-assertion repairs before new exact-revision gates and qualification.

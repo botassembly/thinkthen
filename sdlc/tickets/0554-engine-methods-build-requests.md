@@ -16,6 +16,8 @@ Reviews: revision 018d71671b851391aa92a5fd29057a61d46fad81, accept
 
 Reviews: revision ea591ef, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 The public Rust `Engine` admits every call through `Request`, the same as every binding. Each per-function method is a thin wrapper that builds a `Request`. The library carries no reader that only the command line uses.
@@ -54,3 +56,4 @@ The public Rust `Engine` admits every call through `Request`, the same as every 
 - 2026-10-11 next: The default routine and focused checks missed the Rust Polars feature regression in duplicate-input cost and send counts, and an unchanged test exposed two sends where eager aggregation must preserve one.
 - 2026-10-11 next: Wider unchanged C and library-only checks exposed source-prefix, sequential batch and eager-coalescing failures; the newly added completed-answer cache conflicts with accepted ADR 0123 pending-only reuse, so preserve original fixtures and restore that contract plus observer-independent pacing before testing, accepting and landing one combined revision.
 - 2026-10-11 next: Combined ba41be5a7 restores ADR 0123 pending-only reuse and unchanged prefix, rank cancellation and Polars assertions; earlier focused acceptance missed frozen C routes, parallel prefix behavior and unit-test compilation, so whole routine gates now run on this source before acceptance, with all 42 installed C and 46 Polars owning cases passed.
+- 2026-10-12 next: Frozen 6712593f6 passes routine test and lint, Polars and both Clippy configurations, complete C and installed C, and fresh review accepts the nine repair regressions, overlapping-send interruption and observer-independent pending-only reuse; the unchanged recognition tests remain covered before candidate qualification and landing.
