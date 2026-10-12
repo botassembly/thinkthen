@@ -82,3 +82,28 @@ Ranked by user gain over calling Jev directly, then by how clever the idea is. "
 48. **Per-attempt facts:** timing, status, request ID, retries. 0.1/0.2 (?).
 49. **A 50 ms pause flush** so live streams keep moving and files pack the same every run. 0.1. ADR 0053.
 50. **Limits stated up front:** "a probability of 0.98 says nothing about absent facts"; the model approved every case at 0.98 where reviewers refused 23%. 0.1. `result.md:409-411`, refusals page.
+
+## What's in it for me
+
+Ian, 2026-10-12: lead every page with the reader's gain, the way "306 titles in one request" shows batching saves tokens and money. Each line pairs a gain with its proof.
+
+1. **Pay a fraction of the tokens.** 306 song titles go out in one request: 11,468 input tokens against 88,933 one at a time, with the same accuracy (ADR 0055).
+2. **Never pay twice for the same answer.** Every question keeps its own saved answer, however records are grouped. Add 20 rows to 100 and only the 20 are asked (`records.md:106-114`).
+3. **Your code knows when the model is unsure.** Yes, no and not sure come back as exit codes 0, 1 and 3, so the unsure ones go to a person instead of becoming a coin flip (`threshold.md`).
+4. **A broken call can't pass your check.** A failure never turns into "no" or zero (`channels.md:54-67`).
+5. **Tests that cost nothing and never flake.** Replay saved answers with no key and no network (`recording.md`).
+6. **Tune for free after the first run.** Move the cut on saved answers with zero new calls; `audit` picks the cut from your own labels (`audit.md`).
+7. **Know the cost before you spend it.** `--plan` shows every request, the expected tokens and what data leaves, and sends nothing (`channels.md:96-136`).
+8. **Find the one line that answers a question, cheaply.** `find` used 20 requests and 11,063 tokens where ranking every line used 239 and 69,143, and it can say "nothing fits" (`find.md:27-37`).
+9. **Pull names and relations out of text with a model that only classifies.** `recognize` and `relate` build structure from small decisions (`recognize.md`, `relate.md`).
+10. **Get better answers by adding your own facts.** Putting the catalog in the context took Jev from 68% to about 97% on 1,075 questions (`records.md:98`).
+11. **Switch models or providers without rewriting code.** One option points the same call at TypeSafe, another provider or your own machine (`backends.md`).
+12. **Check a new provider before you trust it.** `backends check` runs fixed probes through all ten functions (`check.md`).
+13. **Send only what you mean to send.** A field pointer sends one field of each record and keeps the rest on your machine (`records.md:57-85`).
+14. **Your keys never leak.** Not in a plan, result, recording, error or redirect (`backends.md:38-47`).
+15. **Same behavior in every language, at almost no cost.** One Rust engine adds about 2 ms to a 138 ms call (`overhead.json`).
+16. **Results you can trust over time.** Answers from two model versions are never mixed, and each question carries a fingerprint (`result.md:413-415`, `question-file.md`).
+17. **Stop any time and keep what finished.** Ctrl-C lets sent requests finish and prints completed output (`channels.md`, ADR 0041).
+18. **Resume a failed run where it stopped.** Failures are never saved, so rerunning asks only what failed (`recording.md:54,66`).
+19. **Fits the tools you already use.** Plain Unix output, grep-style line numbers, and the same calls in SQL inside DuckDB, SQLite and PostgreSQL.
+20. **Honest about its limits.** "A probability of 0.98 says nothing about absent facts." The docs say what ThinkThen will not do (`result.md:409-411`, refusals page).
