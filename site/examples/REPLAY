@@ -2,6 +2,7 @@
 # smoke-bindings.mjs runs libraries; smoke-sql.mjs runs SQL. Each sample
 # compares its output or asserts its result. backend=NAME selects that backend.
 # check-binding-samples.mjs checks coverage and install package names.
+functions/annotate/ada.adb
 functions/annotate/duckdb.sql
 functions/annotate/more/duckdb.sql
 functions/annotate/more/pandas.py
@@ -14,6 +15,7 @@ functions/annotate/ruby.rb
 functions/annotate/rust.rs
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
+functions/choose/ada.adb
 functions/choose/duckdb.sql
 functions/choose/more/duckdb.sql
 functions/choose/more/pandas.py
@@ -26,6 +28,7 @@ functions/choose/ruby.rb
 functions/choose/rust.rs
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
+functions/decide/ada.adb
 functions/decide/duckdb.sql
 functions/decide/pandas.py
 functions/decide/polars.py
@@ -36,6 +39,7 @@ functions/decide/ruby.rb
 functions/decide/rust.rs
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
+functions/filter/ada.adb
 functions/filter/duckdb.sql
 functions/filter/pandas.py
 functions/filter/polars.py
@@ -46,6 +50,7 @@ functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
 functions/filter/typescript.ts
+functions/find/ada.adb
 functions/find/duckdb.sql
 functions/find/pandas.py
 functions/find/polars.py
@@ -66,6 +71,7 @@ functions/question-file/ruby.rb
 functions/question-file/rust.rs
 functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
+functions/rank/ada.adb
 functions/rank/duckdb.sql
 functions/rank/pandas.py
 functions/rank/polars.py
@@ -76,6 +82,7 @@ functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/sqlite.sql
 functions/rank/typescript.ts
+functions/recognize/ada.adb
 functions/recognize/duckdb.sql
 functions/recognize/more/duckdb.sql
 functions/recognize/more/typescript.ts
@@ -88,6 +95,7 @@ functions/recognize/ruby.rb
 functions/recognize/rust.rs
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
+functions/relate/ada.adb
 functions/relate/duckdb.sql
 functions/relate/more/duckdb.sql
 functions/relate/pandas.py
@@ -99,6 +107,7 @@ functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
+functions/score/ada.adb
 functions/score/duckdb.sql
 functions/score/more/duckdb.sql
 functions/score/more/polars.py
@@ -111,6 +120,7 @@ functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
 functions/score/typescript.ts
+functions/tag/ada.adb
 functions/tag/duckdb.sql
 functions/tag/pandas.py
 functions/tag/polars.py
