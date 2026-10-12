@@ -28,16 +28,6 @@ pub(crate) fn begin<'a>(
     source: &'a SourceHandle,
     options: CallOptions<'a>,
 ) -> Result<NativeBatch<'a>, Failure> {
-    if !question.fits_complete(kind) {
-        return Err(Failure::usage(
-            "the question kind does not match the named call",
-        ));
-    }
-    let reading = question.reading.as_ref();
-    let records = source.read()?.enumerate().map(move |(at, record)| {
-        engine.check_record_limit(at)?;
-        inputs::compose(record?, kind, reading)
-    });
     let request = super::request::prepare(
         kind,
         question,
@@ -49,6 +39,15 @@ pub(crate) fn begin<'a>(
         },
     )?
     .admit()?;
+    let reading = question
+        .reading
+        .clone()
+        .unwrap_or(request.record_reading()?);
+    let records = source.read()?.enumerate().map(move |(at, record)| {
+        engine.check_record_limit(at)?;
+        inputs::compose(record?, kind, Some(&reading))
+    });
+
     Ok(NativeBatch(
         engine.execute_request_rows(&request, records, options)?,
     ))
