@@ -57,6 +57,17 @@ PM amendment, 2026-10-11, second. One revision gets tested, accepted and landed.
 - Install the Apple packages that the Swift and Objective-C `check.sh` scripts need on the M5, then rerun both. If they need full Xcode or an Apple account, tell the PM, who will raise it with Ian. 0556 does not close on exit 77.
 - Land from the tested SHA.
 
+PM amendment, 2026-10-12, third. Source limits and Apple checks.
+- Apple: this replaces the M5 bullet above. The M5 has only Command Line Tools, so the Swift and Objective-C package checks cannot run there. Under [the 2026-10-10 ruling](../decisions/2026-10-10-drive-0-2-to-done.md), Apple runs on a GitHub macOS workflow at the candidate, and platform qualification does not hold 0556 open. 0556 closes on its routine installed checks. The candidate fails if the GitHub Swift or Objective-C run exits nonzero or 77.
+- The six binding limits that block lint at `e52ac9593` may rise only by the measured amount, and only with a named cause in the commit:
+  - Ada declarations, 8,638 to 8,653, generated from the approved named C export;
+  - Ada Python, 550 to 551, for the child-environment helper import;
+  - C examples and tests, 3,340 to the measured total after the shared helper saves its 23 lines, for the direct named-export checks this ticket required;
+  - Java, 4,071 to 4,161, plus Kotlin and Scala by one line each, for the JVM wait fixes and their regression tests.
+- Before landing, list every binding and database limit that differs from `origin/main` in the combined record, with each limit's change and its cause. The fresh reviewer accepts or rejects each raise, as `AGENTS.md` requires. Against main the binding limits rise by 1,634 lines and fall by 214. The largest raises are the C library's Rust, up 419, Python's Rust, up 205, and the C++ header, up 171. The record must not say "no limit was raised".
+- The record is the evidence. State results in its text. Drop pointers to `target/` and `builds/` directories, because sweeps delete them.
+- Explain the C nextest timeouts and the 80 unrun cases before acceptance, or show that they reproduce on `origin/main`.
+
 ## Progress
 
 - 2026-10-11 started
