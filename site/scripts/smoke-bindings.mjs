@@ -120,10 +120,22 @@ ARCHIVE.dart = (dir) => {
   fs.writeFileSync(path.join(dir, 'native-assets', digest, manifest.assets.linux_x64.file), library);
 };
 // The Swift archive carries the C header in its system library folder.
+// Its Linux bundle carries the native library as a SwiftPM resource.
 ARCHIVE.swift = (dir) => {
   sourceArchive('swift')(dir);
   fs.mkdirSync(path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include'), { recursive: true });
   fs.copyFileSync(path.join(cDoor(), 'include', 'thinkthen.h'), path.join(dir, 'thinkthen-swift/Sources/CThinkThen/include/thinkthen.h'));
+  const native = path.join(dir, 'thinkthen-swift/Sources/ThinkThen/Native/x86_64-unknown-linux-gnu');
+  fs.mkdirSync(native, { recursive: true });
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.so'), path.join(native, 'libthinkthen.so'));
+};
+// The Zig archive carries the header and static library under native/.
+ARCHIVE.zig = (dir) => {
+  sourceArchive('zig')(dir);
+  const native = path.join(dir, 'thinkthen-zig/native/x86_64-unknown-linux-gnu');
+  fs.mkdirSync(path.join(native, 'lib'), { recursive: true });
+  fs.cpSync(path.join(cDoor(), 'include'), path.join(native, 'include'), { recursive: true });
+  fs.copyFileSync(path.join(cDoor(), 'lib/libthinkthen.a'), path.join(native, 'lib/libthinkthen.a'));
 };
 // C needs only the C archive. A Rust project takes the crate from this
 // working tree through a Cargo patch, with the locked versions.
@@ -225,6 +237,7 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
         if (rel.startsWith('functions/') && FRAGMENT[slug]) FRAGMENT[slug](dir, name);
         if (slug === 'rust') rustRequirement(dir);
         const lines = buildLines(slug, name, true);
+        if (!lines) throw new Error(`src/data/build-lines.mjs has no lines for ${slug}`);
         for (const line of lines.lines) {
           const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
@@ -243,10 +256,6 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
 }
 
 const javaVersion = () => firstLine('java', ['-version']);
-// json-c from ~/.local, where the toolchain step builds it with CMake.
-const LOCAL = path.join(os.homedir(), '.local');
-const JSON_C = { PKG_CONFIG_PATH: [path.join(LOCAL, 'lib/pkgconfig'), process.env.PKG_CONFIG_PATH].filter(Boolean).join(':') };
-const jsonC = () => (run('pkg-config', ['--exists', 'json-c'], { env: { ...process.env, ...JSON_C } }).status === 0 ? null : 'json-c');
 // The run's HOME is a scratch folder, so Cargo and rustup keep their own.
 const CARGO_ENV = {
   CARGO_HOME: process.env.CARGO_HOME ?? path.join(os.homedir(), '.cargo'),
@@ -337,7 +346,7 @@ const BINDINGS = {
       };
     },
   },
-  c: withBuild({ slug: 'c', tools: ['cc', 'pkg-config'], needs: jsonC, versions: () => [firstLine('cc', ['--version']), `json-c ${run('pkg-config', ['--modversion', 'json-c'], { env: { ...process.env, ...JSON_C } }).stdout.trim()}`], buildEnv: JSON_C, env: { LD_LIBRARY_PATH: path.join(LOCAL, 'lib') } }),
+  c: withBuild({ slug: 'c', tools: ['cc'], versions: () => [firstLine('cc', ['--version'])] }),
   rust: withBuild({ slug: 'rust', tools: [], versions: () => [firstLine('cargo', ['--version'])], env: { ...CARGO_ENV, RUSTUP_TOOLCHAIN: RUST_CHANNEL(), CARGO_TARGET_DIR: path.join(repo, 'target', 'site-rust') } }),
   python: {
     build() {
@@ -387,7 +396,11 @@ const BINDINGS = {
     },
   },
   cpp: withBuild({ slug: 'cpp', tools: ['c++'], versions: () => [firstLine('c++', ['--version'])] }),
-  'objective-c': withBuild({ slug: 'objective-c', tools: ['gcc'], versions: () => [firstLine('gcc', ['--version'])] }),
+  // The 0.2 Objective-C library runs only on Apple Foundation. Elsewhere
+  // its samples report not run.
+  'objective-c': process.platform === 'darwin'
+    ? withBuild({ slug: 'objective-c', tools: ['clang'], versions: () => [firstLine('clang', ['--version'])] })
+    : { build: () => ({ missing: 'Apple Foundation: the Objective-C library runs only on macOS' }) },
   cobol: withBuild({ slug: 'cobol', tools: ['cobc'], versions: () => [firstLine('cobc', ['--version'])] }),
   ada: withBuild({ slug: 'ada', tools: ['gnatmake'], versions: () => [firstLine('gnatmake', ['--version'])] }),
   java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),

@@ -1,13 +1,46 @@
 // Retained Rust site examples build in a normal Cargo project.
 // Other language package guides own their native-bearing install commands.
-// The binding replay builds the Ada and COBOL function samples beside the
-// unpacked C archive, thinkthen-c/, and the binding's own folder.
+// The binding replay builds the C, C++, Ada and COBOL function samples
+// beside the unpacked C archive, thinkthen-c/, and the binding's folder.
 const program = sample => sample.replace(/\.[^.]+$/, '');
 const C_LIB = ['-L thinkthen-c/lib -lthinkthen', '-Wl,-rpath,"$PWD/thinkthen-c/lib"'];
 // The Go, PHP, Dart and C# lines build a function page sample beside the
 // unpacked release archive, as scripts/smoke-bindings.mjs lays it out.
 const GO_MODULE = 'github.com/botassembly/thinkthen/libraries/go';
 export const BUILD_LINES = {
+  c: ({ sample }) => ({
+    beside: 'the unpacked archive thinkthen-c/',
+    lines: [[
+      'cc -std=c11 -I thinkthen-c/include',
+      `${sample} -o ${program(sample)}`,
+      ...C_LIB,
+    ]],
+    run: [`./${program(sample)}`],
+  }),
+  // The C++ headers include <thinkthen/thinkthen.h> from the C archive.
+  cpp: ({ sample }) => ({
+    archive: 'thinkthen-cpp',
+    lines: [
+      ['cp thinkthen-c/include/thinkthen.h', 'thinkthen-cpp/include/thinkthen/'],
+      ['c++ -std=c++17', '-I thinkthen-cpp/include', `${sample} -o ${program(sample)}`, ...C_LIB],
+    ],
+    run: [`./${program(sample)}`],
+  }),
+  // The Swift and Zig packages carry their own native library, so their
+  // lines name no C archive. Package.swift builds main.swift as FirstCall;
+  // build.zig builds first-call.zig as first-call.
+  swift: () => ({
+    archive: 'thinkthen-swift',
+    beside: 'Package.swift and the unpacked package thinkthen-swift/',
+    lines: [['swift build']],
+    run: ['.build/debug/FirstCall'],
+  }),
+  zig: ({ sample }) => ({
+    archive: 'thinkthen-zig',
+    beside: 'build.zig, build.zig.zon and the unpacked package thinkthen-zig/',
+    lines: [['zig build']],
+    run: [`./zig-out/bin/${program(sample)}`],
+  }),
   rust: ({ sample }) => ({
     beside: 'Cargo.toml',
     lines: [['mkdir -p src/bin'], [`cp ${sample} src/bin/`]],
