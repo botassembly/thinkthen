@@ -166,10 +166,10 @@ def main():
     activate(run, 'build')
     initializer = run / 'profile.o'
     subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
-                    '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%p-%m.profraw')), '-o', str(initializer)], check=True)
+                    '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%m.profraw')), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
     env.update(CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
-               RUSTFLAGS=f'-C instrument-coverage -C link-arg={initializer}',
+               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '-C', f'link-arg={initializer}']),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
     artifacts = build(run, env)
