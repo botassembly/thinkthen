@@ -8,8 +8,59 @@ import sys
 import tempfile
 import subprocess
 import unittest
+from unittest.mock import patch
+
+import coverage_installed_managed
 
 DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
+
+
+class ManagedToolAvailability(unittest.TestCase):
+    def test_missing_tools_stop_collection_before_package_commands(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            header.write_text('fixture header')
+            native = root / 'libthinkthen.so'
+            native.write_bytes(b'fixture native')
+            tools = root / 'tools'
+            tools.mkdir()
+            for tool in ('node', 'bwrap', 'flock', 'configured-dotnet', 'configured-dart',
+                         'configured-flutter', 'configured-swift'):
+                binary = tools / tool
+                binary.write_text('#!/bin/sh\nexit 0\n')
+                binary.chmod(0o700)
+            env = {'HOME': str(root), 'PATH': str(tools),
+                   'THINKTHEN_DOTNET': str(tools / 'configured-dotnet'),
+                   'TT_DART': str(tools / 'configured-dart'), 'TT_FLUTTER': str(tools / 'configured-flutter'),
+                   'THINKTHEN_SWIFT': str(tools / 'configured-swift')}
+            cases = {'csharp': ('bwrap', 'dotnet'), 'dart': ('node', 'dart'),
+                     'flutter': ('node', '/usr/bin/xvfb-run', 'dart', 'flutter'),
+                     'swift': ('node', 'bwrap', 'flock', 'swift')}
+            def command(*args, **kwargs):
+                self.fail('missing tool reached a package command')
+            real_which = coverage_installed_managed.shutil.which
+            for language, requirements in cases.items():
+                for index, absent in enumerate(requirements):
+                    with self.subTest(language=language, missing=absent):
+                        run = root / f'{language}-{index}'
+                        run.mkdir()
+                        def which(tool, path=None):
+                            if tool == absent or Path(tool).name.removeprefix('configured-') == absent:
+                                return None
+                            if tool == '/usr/bin/xvfb-run':
+                                return tool
+                            return real_which(tool, path=path)
+                        with patch.dict(os.environ, env, clear=True), patch.object(
+                                coverage_installed_managed.shutil, 'which', side_effect=which), patch.object(
+                                coverage_installed_managed.sys, 'platform', 'linux'):
+                            collections = coverage_installed_managed.prepare(dict(
+                                root=root, run=run, env=env, command=command,
+                                missing_tool=DRIVER['MissingTool'], c_shared=native))
+                            collection = next(c for c in collections if c['name'] == 'installed-' + language)
+                            with self.assertRaisesRegex(DRIVER['MissingTool'], absent):
+                                collection['runner'](run)
 
 
 class ProcessOwnership(unittest.TestCase):
