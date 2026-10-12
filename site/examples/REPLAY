@@ -5,6 +5,7 @@
 functions/annotate/ada.adb
 functions/annotate/cobol.cob
 functions/annotate/duckdb.sql
+functions/annotate/java.java
 functions/annotate/more/duckdb.sql
 functions/annotate/more/pandas.py
 functions/annotate/pandas.py
@@ -20,6 +21,7 @@ functions/annotate/typescript.ts
 functions/choose/ada.adb
 functions/choose/cobol.cob
 functions/choose/duckdb.sql
+functions/choose/java.java
 functions/choose/more/duckdb.sql
 functions/choose/more/pandas.py
 functions/choose/pandas.py
@@ -35,6 +37,7 @@ functions/choose/typescript.ts
 functions/decide/ada.adb
 functions/decide/cobol.cob
 functions/decide/duckdb.sql
+functions/decide/java.java
 functions/decide/pandas.py
 functions/decide/php.php
 functions/decide/polars.py
@@ -48,6 +51,7 @@ functions/decide/typescript.ts
 functions/filter/ada.adb
 functions/filter/cobol.cob
 functions/filter/duckdb.sql
+functions/filter/java.java
 functions/filter/pandas.py
 functions/filter/php.php
 functions/filter/polars.py
@@ -61,6 +65,7 @@ functions/filter/typescript.ts
 functions/find/ada.adb
 functions/find/cobol.cob
 functions/find/duckdb.sql
+functions/find/java.java
 functions/find/pandas.py
 functions/find/php.php
 functions/find/polars.py
@@ -84,6 +89,7 @@ functions/question-file/typescript.ts
 functions/rank/ada.adb
 functions/rank/cobol.cob
 functions/rank/duckdb.sql
+functions/rank/java.java
 functions/rank/pandas.py
 functions/rank/php.php
 functions/rank/polars.py
@@ -97,6 +103,7 @@ functions/rank/typescript.ts
 functions/recognize/ada.adb
 functions/recognize/cobol.cob
 functions/recognize/duckdb.sql
+functions/recognize/java.java
 functions/recognize/more/duckdb.sql
 functions/recognize/more/typescript.ts
 functions/recognize/pandas.py
@@ -111,6 +118,7 @@ functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/ada.adb
 functions/relate/duckdb.sql
+functions/relate/java.java
 functions/relate/more/duckdb.sql
 functions/relate/pandas.py
 functions/relate/php.php
@@ -125,6 +133,7 @@ functions/relate/typescript.ts
 functions/score/ada.adb
 functions/score/cobol.cob
 functions/score/duckdb.sql
+functions/score/java.java
 functions/score/more/duckdb.sql
 functions/score/more/polars.py
 functions/score/pandas.py
@@ -140,6 +149,7 @@ functions/score/typescript.ts
 functions/tag/ada.adb
 functions/tag/cobol.cob
 functions/tag/duckdb.sql
+functions/tag/java.java
 functions/tag/pandas.py
 functions/tag/php.php
 functions/tag/polars.py
