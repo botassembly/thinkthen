@@ -18,7 +18,7 @@ usage_home
 root=$(CDPATH= cd ../.. && pwd)
 native_cases() {
     python3 - "$root" "$1" <<'RUSTNATIVE'
-import os,sys
+import os,sys,tomllib
 from pathlib import Path
 root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
@@ -26,7 +26,8 @@ binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target'))
 binary.parent.mkdir(parents=True,exist_ok=True)
 if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
     os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
-sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
+compiler_env={'RUSTUP_TOOLCHAIN':tomllib.loads((root/'rust-toolchain.toml').read_text())['toolchain']['channel']}
+sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]),extra_env=compiler_env)))
 RUSTNATIVE
 }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
