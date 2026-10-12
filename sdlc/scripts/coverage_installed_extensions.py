@@ -67,8 +67,8 @@ def prepare(context):
     command(['bash', 'libraries/r/tools/make-tarball.sh', str(stage)], tree,
             package_env, stage / 'r-package.log', timeout=300)
     r_artifact = next(stage.glob('thinkthen_*.tar.gz'))
-    sysroot = command(['rustc', '--print', 'sysroot'], root, env, stage / 'sysroot.log', capture=True).strip()
-    host = command(['rustc', '-vV'], root, env, stage / 'rustc.log', capture=True)
+    sysroot = command(['rustc', '--print', 'sysroot'], root, env, stage / 'sysroot.log', capture=True).decode().strip()
+    host = command(['rustc', '-vV'], root, env, stage / 'rustc.log', capture=True).decode()
     host = next(line.split(': ', 1)[1] for line in host.splitlines() if line.startswith('host: '))
     runtime = next((Path(sysroot) / 'lib/rustlib' / host / 'lib').glob('libprofiler_builtins-*.rlib'))
     r_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-r'), 'THINKTHEN_ARTIFACT': str(r_artifact),
