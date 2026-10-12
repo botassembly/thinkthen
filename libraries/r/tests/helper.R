@@ -12,6 +12,22 @@ rscript_args <- function(file) {
   c(shQuote(file.path(R.home("bin"), "Rscript")), "--vanilla", shQuote(file))
 }
 
+# A waiting shell owns each asynchronous R process until it exits.
+background_child <- function(command, output) {
+  pid_file <- tempfile("child-pid-")
+  launch <- paste(command, ">", shQuote(output), "2>&1 </dev/null & child=$!;",
+                  "printf '%s\\n' \"$child\" >", shQuote(pid_file), "; wait \"$child\"")
+  system(paste("sh -c", shQuote(launch), ">/dev/null 2>&1 &"))
+  for (i in 1:600) {
+    if (file.exists(pid_file) && file.info(pid_file)$size > 0) break
+    Sys.sleep(0.01)
+  }
+  pid <- as.integer(readLines(pid_file, warn = FALSE))
+  unlink(pid_file)
+  stopifnot(length(pid) == 1L, !is.na(pid))
+  pid
+}
+
 # The values a child is given: this process's address and fake key, read by
 # name, its own cache, then the caller's `NAME=value` pairs, which win.
 child_values <- function(cache, env = character()) {

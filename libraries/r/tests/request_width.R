@@ -7,9 +7,8 @@ spawn <- function(code) {
   dir.create(cache)
   writeLines(c("library(thinkthen)", code), script)
   env <- paste0("THINKTHEN_BASE_URL=", arm("arm/held/v1"))
-  pid <- system(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
-                      paste(rscript_args(script), collapse = " "),
-                      ">", shQuote(output), "2>&1 </dev/null & echo $!"), intern = TRUE)
+  pid <- background_child(paste("env", paste(clean_env(inherited, child_values(cache, env)), collapse = " "),
+                                paste(rscript_args(script), collapse = " ")), output)
   list(pid = as.integer(pid), output = output)
 }
 until <- function(predicate) {
