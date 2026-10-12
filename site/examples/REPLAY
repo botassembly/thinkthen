@@ -6,6 +6,7 @@ functions/annotate/duckdb.sql
 functions/annotate/more/duckdb.sql
 functions/annotate/more/pandas.py
 functions/annotate/pandas.py
+functions/annotate/php.php
 functions/annotate/polars.py
 functions/annotate/postgresql.sql
 functions/annotate/python.py
@@ -17,6 +18,7 @@ functions/choose/duckdb.sql
 functions/choose/more/duckdb.sql
 functions/choose/more/pandas.py
 functions/choose/pandas.py
+functions/choose/php.php
 functions/choose/polars.py
 functions/choose/postgresql.sql
 functions/choose/python.py
@@ -26,6 +28,7 @@ functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/duckdb.sql
 functions/decide/pandas.py
+functions/decide/php.php
 functions/decide/polars.py
 functions/decide/postgresql.sql
 functions/decide/python.py
@@ -35,6 +38,7 @@ functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/duckdb.sql
 functions/filter/pandas.py
+functions/filter/php.php
 functions/filter/polars.py
 functions/filter/postgresql.sql
 functions/filter/python.py
@@ -44,6 +48,7 @@ functions/filter/sqlite.sql
 functions/filter/typescript.ts
 functions/find/duckdb.sql
 functions/find/pandas.py
+functions/find/php.php
 functions/find/polars.py
 functions/find/postgresql.sql
 functions/find/python.py
@@ -63,6 +68,7 @@ functions/question-file/sqlite.sql
 functions/question-file/typescript.ts
 functions/rank/duckdb.sql
 functions/rank/pandas.py
+functions/rank/php.php
 functions/rank/polars.py
 functions/rank/postgresql.sql
 functions/rank/python.py
@@ -74,6 +80,7 @@ functions/recognize/duckdb.sql
 functions/recognize/more/duckdb.sql
 functions/recognize/more/typescript.ts
 functions/recognize/pandas.py
+functions/recognize/php.php
 functions/recognize/polars.py
 functions/recognize/postgresql.sql
 functions/recognize/python.py
@@ -84,6 +91,7 @@ functions/recognize/typescript.ts
 functions/relate/duckdb.sql
 functions/relate/more/duckdb.sql
 functions/relate/pandas.py
+functions/relate/php.php
 functions/relate/polars.py
 functions/relate/postgresql.sql
 functions/relate/python.py
@@ -95,6 +103,7 @@ functions/score/duckdb.sql
 functions/score/more/duckdb.sql
 functions/score/more/polars.py
 functions/score/pandas.py
+functions/score/php.php
 functions/score/polars.py
 functions/score/postgresql.sql
 functions/score/python.py
@@ -104,6 +113,7 @@ functions/score/sqlite.sql
 functions/score/typescript.ts
 functions/tag/duckdb.sql
 functions/tag/pandas.py
+functions/tag/php.php
 functions/tag/polars.py
 functions/tag/postgresql.sql
 functions/tag/python.py
