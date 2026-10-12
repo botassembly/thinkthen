@@ -9,6 +9,7 @@ functions/annotate/pandas.py
 functions/annotate/polars.py
 functions/annotate/postgresql.sql
 functions/annotate/python.py
+functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
 functions/annotate/sqlite.sql
@@ -20,6 +21,7 @@ functions/choose/pandas.py
 functions/choose/polars.py
 functions/choose/postgresql.sql
 functions/choose/python.py
+functions/choose/r.R
 functions/choose/ruby.rb
 functions/choose/rust.rs
 functions/choose/sqlite.sql
@@ -29,6 +31,7 @@ functions/decide/pandas.py
 functions/decide/polars.py
 functions/decide/postgresql.sql
 functions/decide/python.py
+functions/decide/r.R
 functions/decide/ruby.rb
 functions/decide/rust.rs
 functions/decide/sqlite.sql
@@ -38,6 +41,7 @@ functions/filter/pandas.py
 functions/filter/polars.py
 functions/filter/postgresql.sql
 functions/filter/python.py
+functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
 functions/filter/sqlite.sql
@@ -47,6 +51,7 @@ functions/find/pandas.py
 functions/find/polars.py
 functions/find/postgresql.sql
 functions/find/python.py
+functions/find/r.R
 functions/find/ruby.rb
 functions/find/rust.rs
 functions/find/sqlite.sql
@@ -66,6 +71,7 @@ functions/rank/pandas.py
 functions/rank/polars.py
 functions/rank/postgresql.sql
 functions/rank/python.py
+functions/rank/r.R
 functions/rank/ruby.rb
 functions/rank/rust.rs
 functions/rank/sqlite.sql
@@ -77,6 +83,7 @@ functions/recognize/pandas.py
 functions/recognize/polars.py
 functions/recognize/postgresql.sql
 functions/recognize/python.py
+functions/recognize/r.R
 functions/recognize/ruby.rb
 functions/recognize/rust.rs
 functions/recognize/sqlite.sql
@@ -87,6 +94,7 @@ functions/relate/pandas.py
 functions/relate/polars.py
 functions/relate/postgresql.sql
 functions/relate/python.py
+functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
 functions/relate/sqlite.sql
@@ -98,6 +106,7 @@ functions/score/pandas.py
 functions/score/polars.py
 functions/score/postgresql.sql
 functions/score/python.py
+functions/score/r.R
 functions/score/ruby.rb
 functions/score/rust.rs
 functions/score/sqlite.sql
@@ -107,6 +116,7 @@ functions/tag/pandas.py
 functions/tag/polars.py
 functions/tag/postgresql.sql
 functions/tag/python.py
+functions/tag/r.R
 functions/tag/ruby.rb
 functions/tag/rust.rs
 functions/tag/sqlite.sql
