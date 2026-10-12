@@ -16,6 +16,10 @@ All nine Engine repairs received owning regression coverage, including held-send
 
 The four cleanup coverage gaps were restored: the three native-feed diagnostic sentences, each filtered row's true result, direct public find count/unread-tail/16 MiB behavior, and distinct door-loop calls. A diagnostic mutation failed all three sentence checks before restoration. Completed coverage logs remain in `worktrees/thinkthen-0558-coverage-output/`.
 
+A bounded survey measured all 53 binding and database ratchets at the combined source. Unlisted ratchets matched. Dart measured 6,280 against 6,292. C example and test source measured 3,418 against 3,340. Six duplicate accumulating-check helpers could save 23 lines through one counted shared implementation, leaving 55 excess lines. The named-session fixture contains 74 nonblank lines of distinct NULL, nonzero-view, diagnostic-isolation, input-kind and lifetime checks. Other question constructors carry different authored inputs and controls. No checks or public types were deleted to satisfy a limit.
+
+The JVM survey retained public generated Inputs and Results, active packet draining, native waits, failure propagation, cancelled-call cleanup, pending-future identity and deferred free. Its generic JSON codec remains the approved exception. Existing fixture setup is shared; distinct scheduler, cancellation, ownership, admission and typed-result checks remain necessary. One unused Java import would save one line and would not clear the measured deficit. The survey made no source or ceiling changes.
+
 The M5 has Command Line Tools selected. `xcrun --find xcodebuild` exited 72. The actual Apple package assembler invokes `xcodebuild`; standalone Foundation execution supplies no installed Swift or Objective-C session proof. The earlier Swift script exited 1 and Objective-C script exited 77 because matching Apple packages were missing. Neither is a platform pass.
 
 ## What the build taught us
