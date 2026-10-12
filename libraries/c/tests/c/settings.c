@@ -4,14 +4,8 @@
 #include <string.h>
 #include <thinkthen.h>
 
-static int failed;
 
-static void check(int holds, const char *what) {
-    if (!holds) {
-        fprintf(stderr, "FAIL %s\n", what);
-        failed = 1;
-    }
-}
+#include "check.c"
 
 int main(void) {
     thinkthen_engine *old = thinkthen_engine_new();
