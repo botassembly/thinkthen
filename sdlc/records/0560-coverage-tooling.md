@@ -29,6 +29,10 @@ Java, Kotlin and Scala each passed separate session and usage validations. All s
 
 These validations preserved routine assertions and privacy guards. Final successful exports rejected no profiles. Swift's normal installed check passed 42 cases and ownership checks after the existing generator restored nine bridge lines for the current named-session export.
 
+The Apple collector repair received fresh source review and targeted package-identity checks. The first review found unchecked Foundation headers and module maps; the repair compares every packaged source file and the package manifest with the checkout. The collector requires instrumented packages with an identical host native archive and retains the final installed executables. No macOS execution or Apple profile export was measured by these local checks.
+
+Missing-tool handling now retains successful collections in explicitly partial reports. Their durable Markdown and JSON include the missing collection names and actual diagnostics. Missing collections contribute no objects to the production denominator. The command still returns 77 in plain mode or 1 in release mode; routine failures and invalid retained objects remain fatal. Fresh review and focused regressions checked those distinctions.
+
 Polars supplied twelve additional mapped core files, including 432 observed lines in frame request and typed code. Its retained executable therefore contributes to the common production denominator. Counting only the default command and C shared library would omit those mappings.
 
 The separate C source-unit validation passed 25 tests and produced two valid profiles. Its export reached 2,357 C production lines. The production-only denominator excluded 1,981 additional test-only mapped lines. C source-unit hits are classified with unit tests, separately from installed callers.
