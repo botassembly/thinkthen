@@ -26,3 +26,7 @@ A committed release-suite script measures how much of the Rust core and the C li
   - A rerun on the same revision gives the same totals.
   - A planted dead function shows as unreached, and a planted unit-only function shows as reached only by unit tests.
 - Defers: deleting or moving tests. The outside-in test cleanup ticket owns that and uses this baseline.
+
+## Progress
+
+- 2026-10-12 started
