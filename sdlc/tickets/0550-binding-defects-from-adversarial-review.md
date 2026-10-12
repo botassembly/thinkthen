@@ -12,6 +12,8 @@ Reviews: revision 6712593, accept
 
 Reviews: revision 48b22e7, reject
 
+Reviews: revision c2626ca, accept
+
 ## Outcome
 
 A caller in every language sees its own producer's exception and Rust's admission message unchanged. Every binding assembles aggregate rows by one rule, treats a closed push as a stop signal and keeps the native retry signal. No dead admission code ships.
