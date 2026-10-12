@@ -94,12 +94,16 @@ def prepare(context):
                                     THINKTHEN_DART_ARTIFACT=str(dart_archive))
                 command(['sh', 'check.sh'], root / 'libraries/dart', settings,
                         folder / 'check.log', timeout=1800)
-                shutil.copy2(retained / 'consumer/native/lib/libthinkthen.so', retained / 'libthinkthen.so')
+                bundle = 'dart-build/bundle' if language == 'dart' else 'flutter-bundle'
+                shutil.copy2(retained / 'consumer' / bundle / 'lib/libthinkthen.so', retained / 'libthinkthen.so')
             else:
                 swift = env.get('THINKTHEN_SWIFT', shutil.which('swift', path=env.get('PATH')))
                 if not swift:
                     raise missing('installed Swift needs swift')
-                settings['PATH'] = str(Path(swift).resolve().parent) + os.pathsep + env['PATH']
+                tools = stage / 'swift-tools'
+                tools.mkdir()
+                (tools / 'swift').symlink_to(Path(swift).resolve())
+                settings['PATH'] = str(tools) + os.pathsep + env['PATH']
                 package = stage / 'swift-package'
                 command(['python3', str(root / 'libraries/swift/Tests/fixtures/package_local.py'),
                          '--native', str(context['c_shared']), '--out', str(package)],
