@@ -90,5 +90,48 @@ class ProfileCauses(unittest.TestCase):
             self.assertEqual(len(report['missing_child_profiles']['rust-integration']['no_normal_exit']), 2)
 
 
+class CollectionClassification(unittest.TestCase):
+    def test_c_library_target_launches_with_its_metadata_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package_dir = root / 'libraries/c'
+            package_dir.mkdir(parents=True)
+            harness = root / 'c-harness'
+            harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
+                               "assert os.environ['CARGO_PKG_NAME'] == 'thinkthen-c'\n"
+                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                               "assert sys.argv[1:] == ['--test-threads=2']\n")
+            harness.chmod(0o700)
+            package = {'name': 'thinkthen-c', 'manifest_path': str(package_dir / 'Cargo.toml')}
+            target = {'kind': ['cdylib', 'staticlib'], 'name': 'thinkthen_c'}
+            artifact = {'reason': 'compiler-artifact', 'target': target,
+                        'executable': str(harness), 'profile': {'test': True}}
+            production = {**artifact, 'profile': {'test': False}}
+            artifacts = DRIVER['test_artifacts']('\n'.join(map(json.dumps, (artifact, production))), package)
+            self.assertEqual(len(artifacts), 1)
+            DRIVER['collect_tests'](root, {}, artifacts, 'c-source-unit')
+            self.assertTrue((root / 'c-source-unit/thinkthen_c.log').is_file())
+
+    def test_c_source_units_add_unit_hits_without_test_only_denominator(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'libraries/c/src/probe.rs'
+            source.parent.mkdir(parents=True)
+            source.write_text('production one\nproduction two\ntest only\n')
+            production = f'SF:{source}\nDA:1,0\nDA:2,0\n'
+            c_units = f'SF:{source}\nDA:1,1\nDA:2,1\nDA:3,1\n'
+            outside = f'SF:{source}\nDA:1,1\nDA:2,0\n'
+            collections = {name: production for name in DRIVER['NATIVE_COLLECTIONS']}
+            collections.update({'c-source-unit': c_units, 'rust-integration': outside})
+            for name in collections:
+                (root / name).mkdir()
+            DRIVER['report'](root, root, 'probe', production, collections, 0)
+            totals = json.loads((root / 'totals.json').read_text())['totals']
+            self.assertEqual(totals['mapped_nonblank'], 2)
+            self.assertEqual(totals['c-source-unit'], 2)
+            self.assertEqual(totals['observed_unit_only'], 1)
+            self.assertEqual(totals['unobserved'], 0)
+
+
 if __name__ == '__main__':
     unittest.main()
