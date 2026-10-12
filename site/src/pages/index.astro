@@ -15,10 +15,10 @@ const sixHowtos = HOWTOS.slice(0, 6);
 ---
 <Base title="ThinkThen">
   <h1>Code that knows what you mean.</h1>
-  <p class="lede">ThinkThen is ten functions on top of your Jev model, whatever kind of model you use: on-prem, hosted, TypeSafe or another vendor. It gives you a simple way to use these models. Hand one a message, ask "Does the customer ask for a refund?", and get back yes or no.</p>
+  <p class="lede">ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It works whether the model runs on your own servers, at TypeSafe or at another provider. ThinkThen makes these models simple to call from any language or database. Hand one a message, ask "Does the customer ask for a refund?", and get back yes or no.</p>
 
   <Terminal run={refund} caption={refund.see} />
-  <p>The same ten functions run in Python, TypeScript, SQL and the rest of the <a href="/install/">{COUNTS.bindings}</a>.</p>
+  <p>ThinkThen runs in Python, TypeScript, SQL and the rest of the <a href="/install/">{COUNTS.bindings}</a>.</p>
 
   <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. Every answer rests on the model's probabilities. On <code>decide</code>, a band sends anything between its two sides back as not sure. A person reads those.</p>
 
@@ -35,11 +35,11 @@ const sixHowtos = HOWTOS.slice(0, 6);
   <h2>Why not call the model yourself?</h2>
   <ul>
     <li>You write the question in plain words. Jev needs no labelled data ahead of time. <a href="/functions/decide/">decide</a> shows one question and its answer.</li>
-    <li>Jev is fast and cheap. On 2026-10-01 a call to Jev took a median of {jevMs} ms, and ThinkThen's own work took about 2 ms of it. <a href="/learn/overhead/">Overhead</a> gives every measurement and the published price.</li>
-    <li>ThinkThen batches for you. Hand it a list, a column or a stream, and it packs the records into as few requests as the batch settings allow. See <a href="/learn/functional/">Functional patterns</a>.</li>
-    <li>ThinkThen caches and replays. A repeated question reuses its saved answer. A test replays recorded answers with no key and no network. See <a href="/learn/caching/">Caching and replay</a>.</li>
+    <li>Jev is fast and cheap. On 2026-10-01 a call to Jev through a library took a median of {jevMs} ms. ThinkThen's own work took about 2 ms of it. <a href="/learn/overhead/">Overhead</a> gives every measurement and the published price.</li>
+    <li>ThinkThen batches for you. Hand it a list or a stream of records, and it packs the records into as few requests as the batch settings allow. See <a href="/learn/functional/">Functional patterns</a>.</li>
+    <li>ThinkThen caches and replays. A repeated question can reuse its saved answer. A test replays recorded answers with no key and no network. See <a href="/learn/caching/">Caching and replay</a>.</li>
     <li>You can swap the model and the provider. One <code>--backend</code> option points the same call at TypeSafe, another hosted vendor, or a model on your own machine. See <a href="/install/backends/">Backends</a>.</li>
-    <li>ThinkThen is yours. It runs from the command line and every binding, databases included. No single vendor's SQL function holds your logic. See <a href="/install/">Install</a>.</li>
+    <li>ThinkThen is yours under the <a href="https://github.com/botassembly/thinkthen/blob/main/LICENSE">MIT license</a>. It runs from the command line and every binding, databases included. Your questions live in your own code and SQL, not in one vendor's database function. See <a href="/install/">Install</a>.</li>
   </ul>
 
   <h2>Jobs your software can take on</h2>

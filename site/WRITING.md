@@ -116,7 +116,7 @@ A page may name `--details` where the reference or an edge case needs it (docs c
 
 ### Keep a function page's example short
 
-Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). The opening example in every language is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in every language. Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
+Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). The opening example in every language is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in Bash only and links the bindings (`sdlc/decisions/2026-10-12-docs-sell-one-idea.md`). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
 
 ### Honest examples
 
