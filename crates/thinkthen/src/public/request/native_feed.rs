@@ -97,3 +97,59 @@ pub(super) fn validate<T>(
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::public::request::RequestFunction;
+
+    #[test]
+    fn native_records_keep_function_specific_recognition_control_refusals() {
+        for (function, examples, expected) in [
+            (
+                RequestFunction::Find,
+                true,
+                "find takes one whole-set call context and no per-record controls",
+            ),
+            (
+                RequestFunction::Find,
+                false,
+                "find takes one whole-set call context and no per-record controls",
+            ),
+            (
+                RequestFunction::Relate,
+                true,
+                "relate takes one whole-set call context and no per-record controls",
+            ),
+            (
+                RequestFunction::Relate,
+                false,
+                "relate takes one whole-set call context and no per-record controls",
+            ),
+            (
+                RequestFunction::Decide,
+                true,
+                "record examples are admitted only for recognize",
+            ),
+            (
+                RequestFunction::Decide,
+                false,
+                "record seed spans are admitted only for recognize",
+            ),
+        ] {
+            let row = crate::RecordInput {
+                original: "First.",
+                context: None,
+                options: None,
+                examples: examples.then(Vec::new),
+                seed_spans: (!examples).then(Vec::new),
+            };
+            let input = QuestionInput::Text("First.".into());
+            let error = validate(function, &row, &input, None, true).expect_err("native controls");
+            assert_eq!(error.kind(), crate::ErrorKind::Usage);
+            assert_eq!(error.detail().message(), expected);
+            validate(RequestFunction::Recognize, &row, &input, None, true)
+                .expect("recognition controls");
+        }
+    }
+}

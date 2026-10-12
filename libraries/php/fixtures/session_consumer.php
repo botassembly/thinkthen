@@ -151,7 +151,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     }
     foreach (['DECIDE', 'Decide', 'missing'] as $function) {
         try { $client->start($function, 'Is it?', 'invalid-function'); throw new RuntimeException('unknown function admitted'); }
-        catch (ThinkThen\UsageFailure) {}
+        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'unknown function', 'unknown function diagnostic'); }
     }
     $cycle = new stdClass(); $cycle->self = $cycle;
     $arrayCycle = []; $arrayCycle['self'] = &$arrayCycle;

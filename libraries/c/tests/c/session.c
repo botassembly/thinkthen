@@ -139,6 +139,83 @@ static THREAD_RESULT separate_error(void *unused) {
     check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "other thread fixed diagnostic");
     return THREAD_DONE;
 }
+static thinkthen_complete_utf8_v1 counted(const char *text) {
+    thinkthen_complete_utf8_v1 view = {text, strlen(text)};
+    return view;
+}
+static int named_sessions(thinkthen_engine *engine) {
+    struct thinkthen_named_request_v1 request = {
+        counted("decide"), counted("{\"kind\":\"text\",\"text\":\"Does it pass?\"}"),
+        counted("{\"kind\":\"records\",\"items\":[]}"), counted("{}")
+    };
+    thinkthen_complete_utf8_v1 surface = counted("c");
+    thinkthen_session *out = (thinkthen_session *)(uintptr_t)7;
+    check(thinkthen_session_new_named_with_surface(engine, NULL, surface, &out) == THINKTHEN_EUSAGE, "named NULL request refuses");
+    check(out == (thinkthen_session *)(uintptr_t)7, "named NULL request preserves output");
+    thinkthen_complete_utf8_v1 *views[] = {&request.function, &request.question_json, &request.input_json, &request.options_json, &surface};
+    for (size_t i = 0; i < sizeof views / sizeof views[0]; ++i) {
+        thinkthen_complete_utf8_v1 saved = *views[i];
+        views[i]->data = NULL; views[i]->len = 1;
+        check(thinkthen_session_new_named_with_surface(engine, &request, surface, &out) == THINKTHEN_EUSAGE, "named NULL nonempty view refuses");
+        check(out == (thinkthen_session *)(uintptr_t)7, "named bad view preserves output");
+        check(strcmp(thinkthen_session_error_message(), "invalid session arguments or input") == 0, "named bad view uses fixed diagnostic");
+        *views[i] = saved;
+    }
+    request.function = counted("missing");
+    check(thinkthen_session_new_named_with_surface(engine, &request, surface, &out) == THINKTHEN_EUSAGE, "named unknown function refuses");
+    check(out == (thinkthen_session *)(uintptr_t)7, "named unknown function preserves output");
+    check(strcmp(thinkthen_session_error_message(), "unknown function") == 0 && thinkthen_session_error_retryable() == 0 && thinkthen_session_error_facts_json() == NULL, "named unknown function owns exact diagnostic without facts");
+    const char *message = thinkthen_session_error_message();
+    THREAD_TYPE thread;
+    if (fixture_start(&thread, separate_error, NULL) != 0) return 1;
+    check(fixture_join(thread) == 0 && message == thinkthen_session_error_message(), "named diagnostic remains local to calling thread");
+    if (getenv("SESSION_NAMED_REFUSALS")) { thinkthen_engine_free(engine); return failed; }
+    const char *names[] = {"find", "relate"};
+    const uint32_t kinds[] = {THINKTHEN_COMPLETE_SESSION_PACKET_FIND_AGGREGATE_V1, THINKTHEN_COMPLETE_SESSION_PACKET_RELATE_AGGREGATE_V1};
+    thinkthen_session *sessions[2] = {NULL, NULL};
+    for (size_t i = 0; i < 2; ++i) {
+        char function[7], question[256], input[256], options[3], origin[2];
+        strcpy(function, names[i]);
+        strcpy(question, i ? "{\"kind\":\"definition\",\"value\":{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"follows\",\"source\":\"*\",\"target\":\"*\",\"reads\":\"follows\"}]}}}" : "{\"kind\":\"text\",\"text\":\"Which?\"}");
+        strcpy(input, i ? "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"First\",\"kind\":\"alert\"}}},{\"original\":{\"kind\":\"json\",\"value\":{\"name\":\"Second\",\"kind\":\"alert\"}}}]}" : "{\"kind\":\"records\",\"items\":[{\"original\":{\"kind\":\"text\",\"text\":\"First unit.\"}},{\"original\":{\"kind\":\"text\",\"text\":\"Second unit.\"}}]}"); strcpy(options, "{}"); strcpy(origin, "c");
+        request.function = counted(function); request.question_json = counted(question);
+        request.input_json = counted(input); request.options_json = counted(options);
+        int code = thinkthen_session_new_named_with_surface(engine, &request, counted(origin), &sessions[i]);
+        check(code == THINKTHEN_OK, "named collection constructor succeeds");
+        if (code != THINKTHEN_OK) { thinkthen_engine_free(engine); for (size_t j = 0; j < i; ++j) thinkthen_session_free(sessions[j]); return failed; }
+        check(message == thinkthen_session_error_message(), "named success preserves immediate diagnostic");
+        memset(function, 'x', sizeof function); memset(question, 'x', sizeof question); memset(input, 'x', sizeof input); memset(options, 'x', sizeof options); memset(origin, 'x', sizeof origin);
+    }
+    thinkthen_engine_free(engine);
+    for (size_t i = 0; i < 2; ++i) {
+        int aggregate = 0, terminal = 0;
+        thinkthen_session_result *kept = NULL;
+        for (;;) {
+            uint32_t status = 99; thinkthen_session_result *packet = NULL;
+            check(thinkthen_session_try_read(sessions[i], &status, &packet) == THINKTHEN_OK, "named read survives input and engine release");
+            if (status == THINKTHEN_SESSION_END_V1) break;
+            if (status == THINKTHEN_SESSION_PENDING_V1) {
+                uint32_t ready; check(thinkthen_session_wait(sessions[i], THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "named wait succeeds");
+                continue;
+            }
+            const thinkthen_complete_session_packet_v1 *view = NULL;
+            check(thinkthen_session_result_view(packet, &view) == THINKTHEN_OK, "named typed packet");
+            if (view && view->kind == kinds[i]) { aggregate++; kept = packet; }
+            if (view && view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
+                const thinkthen_complete_session_packet_terminal_v1 *done = view->data.terminal;
+                check(done->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1 && done->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && done->facts.value->requests_sent == 1, "named collection keeps actual send facts");
+                terminal++;
+            }
+            if (packet != kept) thinkthen_session_result_free(packet);
+        }
+        check(aggregate == 1 && terminal == 1, "named records select the function collection kind");
+        thinkthen_session_free(sessions[i]);
+        const thinkthen_complete_session_packet_v1 *retained = NULL;
+        check(thinkthen_session_result_view(kept, &retained) == THINKTHEN_OK && retained && retained->kind == kinds[i], "named aggregate survives engine and session release");
+        thinkthen_session_result_free(kept);
+    }
+    return failed;
+}
 struct native_waiter {
     thinkthen_session *session;
     uint32_t ready;
@@ -158,6 +235,7 @@ int main(void) {
     thinkthen_engine *engine = thinkthen_engine_new_with("{\"cache\":false,\"max_retries\":0}");
     check(engine != NULL, "engine builds");
     if (!engine) return 1;
+    if (getenv("SESSION_NAMED")) return named_sessions(engine);
     if (getenv("SESSION_HELD")) {
         thinkthen_session *session = open_session(engine, direct);
         thinkthen_engine_free(engine);

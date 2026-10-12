@@ -101,16 +101,13 @@ impl Request {
         input: &str,
         options: &str,
     ) -> Result<Self, Error> {
-        let function = function
-            .parse()
-            .map_err(|_| Error::usage("unknown function"))?;
+        let function = function.parse()?;
         Ok(Self::for_function(
             function,
             RequestArguments {
                 question: RequestQuestion::from_json(question)?,
                 input: RequestInput::from_json(input)?,
-                options: serde_json::from_str(options)
-                    .map_err(|_| decoding::RequestDecodeCause::Malformed.error())?,
+                options: decoding::decode(options, |_| Ok(()))?,
             },
         ))
     }
@@ -166,11 +163,9 @@ impl Request {
     /// # Errors
     /// Refuses malformed, unknown, duplicate or null request controls.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|_| {
+        decoding::decode(text, |text| {
             definition::validate_wire_definition(text)
                 .and_then(|()| decoding::validate_request_contexts(text))
-                .err()
-                .unwrap_or_else(|| decoding::RequestDecodeCause::Malformed.error())
         })
     }
 
@@ -222,7 +217,7 @@ impl std::str::FromStr for RequestFunction {
             "annotate" => Ok(Self::Annotate),
             "recognize" => Ok(Self::Recognize),
             "relate" => Ok(Self::Relate),
-            _ => Err(Error::usage("invalid request function")),
+            _ => Err(Error::usage("unknown function")),
         }
     }
 }

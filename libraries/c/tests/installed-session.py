@@ -39,9 +39,19 @@ with tempfile.TemporaryDirectory(prefix='installed-c-', dir=REPO / 'libraries/c/
                            env=env, check=True, timeout=60)
             result = subprocess.run([str(binary)], env=env, capture_output=True, text=True, timeout=5)
             assert result.returncode == 0, result.stderr
+            if source == 'tests/c/session.c':
+                before = len(backend.arrivals)
+                refused = subprocess.run([str(binary)], env={**env, 'SESSION_NAMED': '1', 'SESSION_NAMED_REFUSALS': '1'},
+                                         capture_output=True, text=True, timeout=5)
+                assert refused.returncode == 0, refused.stderr
+                assert len(backend.arrivals) == before, 'named refusals sent a request'
+                named = subprocess.run([str(binary)], env={**env, 'SESSION_NAMED': '1'},
+                                       capture_output=True, text=True, timeout=5)
+                assert named.returncode == 0, named.stderr
+                assert len(backend.arrivals) == before + 2, 'named find and relate send count'
             if source.startswith('examples/'):
                 assert result.stdout == 'records=1 requests=1\n', result.stdout
-        assert len(backend.arrivals) == 2, backend.arrivals
+        assert len(backend.arrivals) == 4, backend.arrivals
         print('installed C: typed owner case and documented caller PASS')
     finally:
         backend.close()

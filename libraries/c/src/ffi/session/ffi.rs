@@ -159,6 +159,12 @@ pub struct NamedRequestV1 {
     pub options_json: crate::session::views::thinkthen_complete_utf8_v1,
 }
 
+impl std::fmt::Debug for NamedRequestV1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("NamedRequestV1(<withheld>)")
+    }
+}
+
 /// Construct one named request through Rust and create its owned native session.
 /// Components use the existing canonical question, input and options grammars.
 /// Materialized Records become find Units or relate Entities in shared Rust;

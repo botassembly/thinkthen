@@ -278,6 +278,7 @@ fn assert_seed_refusal(error: thinkthen::Error, listener: &Listener, door: &str,
     assert_eq!(listener.count(), 0, "{door}");
 }
 
+#[cfg(test)]
 fn assert_whole_seed_refusals(
     engine: &Engine,
     listener: &Listener,
@@ -286,50 +287,37 @@ fn assert_whole_seed_refusals(
     find: &Question,
     seeds: &[thinkthen::RecognitionSeedSpan],
 ) {
-    for (function, definition, doors) in [
+    for (function, definition, door) in [
         (
             thinkthen::RequestFunction::Rank,
             thinkthen::RequestDefinition::from(rank_set.clone()),
-            [
-                "rank_set_records_complete_with",
-                "try_rank_set_records_complete_with",
-            ],
+            "rank set",
         ),
         (
             thinkthen::RequestFunction::Find,
             find.clone().into(),
-            [
-                "find_records_complete_with",
-                "try_find_records_complete_with",
-            ],
+            "find",
         ),
         (
             thinkthen::RequestFunction::Relate,
             relate.clone().into(),
-            [
-                "relate_records_complete_with",
-                "try_relate_records_complete_with",
-            ],
+            "relate",
         ),
     ] {
-        for door in doors {
-            let outcome = crate::api::whole(
-                engine,
-                function,
-                definition.clone(),
-                seed_records(seeds).into_iter().map(Ok),
-                CallOptions::new(),
-            );
-            assert!(outcome.is_err(), "record seed controls must refuse");
-            if let Err(error) = outcome {
-                assert_seed_refusal(
-                    error,
-                    listener,
-                    door,
-                    "item recognition controls apply only to recognize",
-                );
-            }
-        }
+        let error = crate::api::whole(
+            engine,
+            function,
+            definition,
+            seed_records(seeds).into_iter().map(Ok),
+            CallOptions::new(),
+        )
+        .expect_err("record seed controls must refuse");
+        assert_seed_refusal(
+            error,
+            listener,
+            door,
+            "item recognition controls apply only to recognize",
+        );
     }
 }
 #[test]
@@ -406,19 +394,14 @@ fn eager_nonrecognize_records_refuse_later_seed_controls_before_sending() {
                 "item recognition controls apply only to recognize",
             );
         }
-        for door in [
-            "rank_records_complete_with",
-            "try_rank_records_complete_with",
-        ] {
-            let error =
-                crate::api::eager_rank(&engine, &rank, records(), CallOptions::new()).unwrap_err();
-            assert_seed_refusal(
-                error,
-                &listener,
-                door,
-                "item recognition controls apply only to recognize",
-            );
-        }
+        let error = crate::api::eager_rank(&engine, &rank, records(), CallOptions::new())
+            .expect_err("rank record seeds");
+        assert_seed_refusal(
+            error,
+            &listener,
+            "rank",
+            "item recognition controls apply only to recognize",
+        );
         assert_whole_seed_refusals(&engine, &listener, &rank_set, &relate, &find, &seeds);
     }
 }

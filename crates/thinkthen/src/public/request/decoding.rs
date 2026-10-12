@@ -24,6 +24,16 @@ impl RequestDecodeCause {
         )
     }
 }
+pub(super) fn decode<T: serde::de::DeserializeOwned>(
+    text: &str,
+    classify: impl FnOnce(&str) -> Result<(), Error>,
+) -> Result<T, Error> {
+    serde_json::from_str(text).map_err(|_| {
+        classify(text)
+            .err()
+            .unwrap_or_else(|| RequestDecodeCause::Malformed.error())
+    })
+}
 fn member<'a>(value: &'a Json, name: &str) -> Option<&'a Json> {
     let Json::Object(fields) = value else {
         return None;
@@ -63,11 +73,8 @@ impl RequestInput {
     /// # Errors
     /// Refuses malformed selectors and incompatible per-item context values.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|_| {
-            Json::parse(text)
-                .ok()
-                .and_then(|value| input_contexts(&value).err())
-                .unwrap_or_else(|| RequestDecodeCause::Malformed.error())
+        decode(text, |text| {
+            Json::parse(text).map_or(Ok(()), |value| input_contexts(&value))
         })
     }
 }
@@ -76,11 +83,8 @@ impl RequestItem {
     /// # Errors
     /// Refuses malformed descriptors and incompatible per-item context values.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|_| {
-            Json::parse(text)
-                .ok()
-                .and_then(|value| context(&value).err())
-                .unwrap_or_else(|| RequestDecodeCause::Malformed.error())
+        decode(text, |text| {
+            Json::parse(text).map_or(Ok(()), |value| context(&value))
         })
     }
 }
@@ -89,10 +93,6 @@ impl RequestQuestion {
     /// # Errors
     /// Refuses malformed selectors and unsupported declarations.
     pub fn from_json(text: &str) -> Result<Self, Error> {
-        serde_json::from_str(text).map_err(|_| {
-            super::definition::validate_question_definition(text)
-                .err()
-                .unwrap_or_else(|| RequestDecodeCause::Malformed.error())
-        })
+        decode(text, super::definition::validate_question_definition)
     }
 }

@@ -208,8 +208,12 @@ fn fallible_rows<'a>(
     .expect("request rows")
 }
 
-fn reader_failure<T>(mut batch: thinkthen::Batch<'_, T>, pulls: &AtomicUsize) {
-    assert!(matches!(batch.next(), Some(Ok(_))));
+fn reader_failure<T>(
+    mut batch: thinkthen::Batch<'_, T>,
+    pulls: &AtomicUsize,
+    check: impl FnOnce(&T),
+) {
+    check(&batch.next().expect("prefix").expect("answer"));
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
     let error = batch
         .next()
@@ -245,6 +249,7 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         ))
         .expect("decisions"),
         &pulls,
+        |_| {},
     );
     let pulls = AtomicUsize::new(0);
     reader_failure(
@@ -257,6 +262,7 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         ))
         .expect("filtered"),
         &pulls,
+        |row| assert!(row.result().value()),
     );
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"first":{"decide":"First?"}}}"#)
         .expect("set");
@@ -264,6 +270,7 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
     reader_failure(
         engine.try_annotate_with(&set, failing_input(&pulls), options),
         &pulls,
+        |_| {},
     );
     assert_eq!(listener.count(), 3);
 }
@@ -283,10 +290,9 @@ fn dropping_a_fallible_batch_does_not_read_the_failure_or_tail() {
         CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
     ))
     .expect("filtered");
-    assert_eq!(
-        batch.next().expect("row").expect("answer").into_parts().0,
-        "alpha"
-    );
+    let row = batch.next().expect("row").expect("answer");
+    assert_eq!(row.original(), &"alpha");
+    assert!(row.result().value());
     drop(batch);
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
     assert_eq!(listener.count(), 1);
@@ -315,15 +321,9 @@ fn reader_failure_flushes_a_partial_pack_and_drains_its_attempt() {
             .observe_attempt(&observe),
     ))
     .expect("filtered");
-    assert_eq!(
-        batch
-            .next()
-            .expect("prefix")
-            .expect("answer")
-            .into_parts()
-            .0,
-        "alpha"
-    );
+    let row = batch.next().expect("prefix").expect("answer");
+    assert_eq!(row.original(), &"alpha");
+    assert!(row.result().value());
     let error = batch.next().expect("failure").expect_err("reader failure");
     assert_eq!(error.to_string(), "later reader failure");
     assert_eq!(
