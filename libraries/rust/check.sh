@@ -26,7 +26,7 @@ binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target'))
 binary.parent.mkdir(parents=True,exist_ok=True)
 if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
     os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
-sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2])))))
+sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
 RUSTNATIVE
 }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
