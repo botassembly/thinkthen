@@ -70,6 +70,12 @@ PM amendment, 2026-10-12, third. Source limits and Apple checks.
 - The record is the evidence. State results in its text. Drop pointers to `target/` and `builds/` directories, because sweeps delete them.
 - Explain the C nextest timeouts and the 80 unrun cases before acceptance, or show that they reproduce on `origin/main`.
 
+PM amendment, 2026-10-12, fourth. Order after the [2026-10-12 ruling](../decisions/2026-10-12-solid-0-2.md).
+- Land the current batch, 0549 to 0558, from the combined revision once its gates pass, a fresh review accepts it and the third amendment's items are done, all on that same SHA. It does not need another full campaign first. Rc.12 already ran the campaign on this batch, and its two failures were repaired with targeted checks.
+- 0555's full-campaign proof moves to the final candidate. A campaign now would qualify C exports that 0561 deletes.
+- Then 0560 records the coverage baseline. Next come 0561, 0562 and 0563 in order, because they touch the same C and generated files. 0564 runs alongside them once 0560 lands.
+- The final candidate runs the full campaign once, the GitHub Apple and Windows runs, and a 0560 coverage run, all on one SHA.
+
 ## Progress
 
 - 2026-10-11 started
