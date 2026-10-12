@@ -8,11 +8,17 @@ PREFIXES = ('crates/thinkthen/src/', 'libraries/c/src/')
 
 def source_path(root, value):
     path = Path(value)
+    if path.is_relative_to('/build/source'):
+        path = root / path.relative_to('/build/source')
+    elif path.is_relative_to('/build/home'):
+        path = Path.home() / path.relative_to('/build/home')
     if not path.is_absolute():
         path = root / path
     try:
         relative = path.relative_to(root).as_posix()
         if relative.startswith(PREFIXES):
+            if not path.is_file():
+                raise RuntimeError(f'coverage source is missing: {path}')
             return relative
     except ValueError:
         pass
@@ -24,7 +30,7 @@ def source_path(root, value):
         relative = prefix + path.as_posix().rsplit(marker, 1)[1]
         canonical = root / relative
         if not canonical.is_file() or not path.is_file():
-            continue
+            raise RuntimeError(f'coverage source copy is missing: {path}; canonical {canonical}')
         if path.read_bytes() != canonical.read_bytes():
             raise RuntimeError(f'coverage source copy differs from {relative}: {path}')
         return relative
@@ -46,7 +52,7 @@ def lines(root, lcov):
     return result
 
 
-def report(root, run, revision, production, collections, elapsed, *, missing=()):
+def report(root, run, revision, production, collections, elapsed, *, missing=(), continuous=False):
     mapped = lines(root, production)
     denominator = {}
     for path, counts in mapped.items():
@@ -78,17 +84,20 @@ def report(root, run, revision, production, collections, elapsed, *, missing=())
     partial = not any(name.startswith('installed-') for name in collections) or bool(missing)
     scope = 'partial coverage; installed surfaces unmeasured' if partial else 'native and installed library coverage'
     payload = {'source': revision, 'scope': scope, 'unmeasured_collections': list(missing),
-               'denominator': 'nonblank lines mapped by non-test core/CLI and C shared-library builds',
+               'denominator': 'nonblank lines mapped by all retained production native objects',
+               'profile_mode': 'continuous' if continuous else 'normal-exit',
                'totals': totals, 'files': file_totals, 'missing_child_profiles': limitations}
     (run / 'totals.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     rows = [f'# Coverage at {revision}', '', f'Elapsed: {elapsed:.1f} seconds.', '',
             scope + '.', '',
-            'The denominator is the nonblank source lines with LLVM coverage mappings in non-test core/CLI and C builds. Each collection uses that same denominator. Test-only mappings do not enter it. Comments, declarations without mappings, disabled features and unavailable platform code are not instrumentable in this build. Zero-hit production files remain in the totals.', '',
+            'The denominator is the nonblank source lines with LLVM coverage mappings in all retained production native objects, including installed feature builds. Each collection uses that same denominator. Test-only mappings do not enter it. Comments, declarations without mappings, disabled features and unavailable platform code are not instrumentable in this build. Zero-hit production files remain in the totals.', '',
             '| Collection | Reached | Mapped nonblank | Percent |', '| --- | ---: | ---: | ---: |']
     total = totals['mapped_nonblank']
     for name in collections:
         rows.append(f'| {name} | {totals[name]} | {total} | {100 * totals[name] / total if total else 0:.2f}% |')
-    rows += ['', 'Finite RLIMIT_FSIZE children retain their product file-size limit and assertions. Only the compiler runtime writes to /dev/null. Owned limited-fsize-PID directories identify that cause. Process-PID directories without normal-exit identify children that bypassed normal exit; SIGINT, SIGTERM, other signals and _exit can do this. The inventory does not identify which signal caused an exit and cannot observe exits before its constructor. These paths are unmeasured. Zero observed hits do not establish that a path is unreached; observed unit-only hits do not establish that outside tests never reach those paths.', '']
+    rows += ['', 'Finite RLIMIT_FSIZE children retain their product file-size limit and assertions. Only the compiler runtime writes to /dev/null. Owned limited-fsize-PID directories identify that cause. Process-PID directories without normal-exit identify children that bypassed normal exit; SIGINT, SIGTERM, other signals and _exit can do this. The inventory does not identify which signal caused an exit and cannot observe exits before its constructor. Finite file-size paths are unmeasured. Zero observed hits do not establish that a path is unreached; observed unit-only hits do not establish that outside tests never reach those paths.', '']
+    rows += [('Linux continuous profiles retain counters during execution, including after _exit and signals. Each process writes its own profile. Missing normal-exit observations do not imply missing counters in this mode.' if continuous else
+              'Profiles flush at normal exit. Processes without a normal-exit observation may have unmeasured paths.'), '']
     for name, observations in limitations.items():
         rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
     rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining source units. Unit-only comparisons use the union of those two source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
