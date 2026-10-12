@@ -17,7 +17,8 @@ background_child <- function(command, output) {
   pid_file <- tempfile("child-pid-")
   launch <- paste(command, ">", shQuote(output), "2>&1 </dev/null & child=$!;",
                   "printf '%s\\n' \"$child\" >", shQuote(pid_file), "; wait \"$child\"")
-  system(paste("sh -c", shQuote(launch), ">/dev/null 2>&1 &"))
+  system2("env", c(clean_env(), shQuote(Sys.which("sh")), "-c", shQuote(launch)),
+          stdout = "/dev/null", stderr = "/dev/null", wait = FALSE)
   for (i in 1:600) {
     if (file.exists(pid_file) && file.info(pid_file)$size > 0) break
     Sys.sleep(0.01)
