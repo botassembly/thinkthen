@@ -92,6 +92,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
                 "/D_CRT_SECURE_NO_WARNINGS",
             ])
             .arg(format!("/I{}", folder.join("include").display()))
+            .arg(format!("/I{}", crate_dir().join("tests/c").display()))
             .arg(source)
             .arg(format!("/Fo{}", binary.with_extension("obj").display()))
             .arg(format!("/Fe{}", binary.display()))
