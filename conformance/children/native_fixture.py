@@ -204,6 +204,7 @@ def assert_required(packet,row,value,bodies,root):
 
 def run(consumer, command, root, extra_env=None, settings_names=None, rust_manifest=None, typescript_compiler=None):
     import os, subprocess, sys, tempfile, sqlite3
+    backend_path = Path(os.environ.get('CARGO_TARGET_DIR', str(root/'target')))/'debug/conformance-backend'
     sys.path.insert(0,str(root/'conformance'))
     import parity,c_parity,c_images
     from children import child_env, read_process_line
@@ -244,7 +245,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
             with tempfile.TemporaryDirectory(prefix='thinkthen-0431-') as tmp:
                 home=Path(tmp)
                 env=child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8', **(extra_env or {}))
-                backend=c_parity.Backend(root/'target/debug/conformance-backend',env)
+                backend=c_parity.Backend(backend_path,env)
                 try:
                     env.update(THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
                     c_parity.prepare(home,value)
@@ -287,7 +288,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
                         if step.get('damage_store'):
                             with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                         if value.get('image_variants'):
-                            backend.close();backend=c_parity.Backend(root/'target/debug/conformance-backend',env);c_parity.prepare(home,step)
+                            backend.close();backend=c_parity.Backend(backend_path,env);c_parity.prepare(home,step)
                         settings={'cache':False,'batch':1,'max_retries':0,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0',**step.get('settings',{})}
                         settings['base_url']=f'http://127.0.0.1:{backend.port}/{step.get("override_arm",step["arm"] if value.get("image_variants") else value["arm"])}'
                         for key,v in settings.items():

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Collect release-only native coverage. Installed adapters follow this slice."""
+"""Collect release-only coverage from native and installed library tests."""
 import argparse
 import datetime
 import ctypes
 import json
+import importlib
 import os
 from pathlib import Path
 import shlex
@@ -173,14 +174,52 @@ def export(run, llvm, objects, name, env):
     return payload.decode()
 
 
+def installed_helpers():
+    helpers = []
+    for name in ('coverage_installed_initial', 'coverage_installed_jvm'):
+        if (ROOT / 'sdlc/scripts' / (name + '.py')).is_file():
+            helpers.append(importlib.import_module(name))
+    expected = set()
+    for line in (ROOT / 'sdlc/surfaces.txt').read_text().splitlines():
+        fields = line.split()
+        if len(fields) < 2 or not fields[0].startswith('libraries/') or fields[1] not in ('landed', 'feature'):
+            continue
+        language = fields[0].split('/')[1]
+        names = {'python': ('python-shared', 'python', 'pandas', 'python-polars'),
+                 'jvm': ('java', 'java-usage', 'kotlin', 'kotlin-usage', 'scala', 'scala-usage')}.get(language, (language,))
+        expected.update('installed-' + name for name in names)
+    available = {name for helper in helpers for name in helper.COLLECTIONS}
+    missing = sorted(expected - available)
+    if missing:
+        raise MissingTool('unmeasured installed collections: ' + ', '.join(missing) +
+                          '; Apple Swift/Objective-C need matching platform execution; --native measures a partial slice')
+    return helpers
+
+
+def prepare_installed(run, env, initializer, native, helpers):
+    tool_env = {key: value for key, value in env.items()
+                if key not in ('CARGO_ENCODED_RUSTFLAGS', 'RUSTFLAGS', 'LLVM_PROFILE_FILE')}
+    tool_env['CARGO_TARGET_DIR'] = str(run / 'target-tools')
+    command(['cargo', 'build', '--offline', '--locked', '-p', 'conformance-backend', '-j2'],
+            ROOT, tool_env, run / 'build-backend.log')
+    runtime_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-tools')}
+    context = dict(root=ROOT, run=run, env=runtime_env, command=command, missing_tool=MissingTool,
+                   initializer=initializer, c_target=run / 'target-c', c_shared=native)
+    collections = [collection for helper in helpers for collection in helper.prepare(context)]
+    names = [collection['name'] for collection in collections]
+    declared = [name for helper in helpers for name in helper.COLLECTIONS]
+    if len(set(names)) != len(names) or set(names) != set(declared):
+        raise RuntimeError('installed helper collections differ from their declarations')
+    return collections
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true')
     parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
     parser.add_argument('--output', type=Path, help='New owned build directory (default: target/coverage/TIMESTAMP)')
     args = parser.parse_args()
-    if not args.native:
-        raise MissingTool('installed surface collection is not implemented in this slice; use --native for a partial measurement')
+    helpers = [] if args.native else installed_helpers()
     llvm = tools()
     revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT):
@@ -188,7 +227,7 @@ def main():
     started = time.monotonic()
     run = (args.output or ROOT / 'target/coverage' / datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S')).resolve()
     run.mkdir(parents=True, exist_ok=False)
-    (run / 'OWNER').write_text(f'coverage native collection\nsource {revision}\n')
+    (run / 'OWNER').write_text(f'coverage collection\nsource {revision}\n')
     activate(run, 'build')
     initializer = run / 'profile.o'
     subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
@@ -199,17 +238,29 @@ def main():
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
     artifacts = build(run, env)
-    executable = collect(run, env, artifacts)
     libraries = list((run / 'target-c/debug').glob('libthinkthen_c.*'))
     native = [path for path in libraries if path.suffix in ('.so', '.dylib', '.dll')]
     if len(native) != 1:
         raise RuntimeError('expected one instrumented C shared library')
+    installed = prepare_installed(run, env, initializer, native[0], helpers) if helpers else []
+    executable = collect(run, env, artifacts)
+    # Each runner finishes and retains its loaded native objects before switching.
+    for collection in installed:
+        folder = activate(run, collection['name'])
+        collection['runner'](folder)
+        for path in collection['objects']:
+            if not Path(path).is_file():
+                raise RuntimeError(f'{collection["name"]}: missing retained native object: {path}')
     production = export(run, llvm, [executable, *native], 'inventory', env)
     objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
     collections = {name: export(run, llvm, objects, name, env)
                    for name in ('rust-integration', 'cli-source', 'source-unit')}
+    for collection in installed:
+        collections[collection['name']] = export(run, llvm,
+                list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
     report(ROOT, run, revision, production, collections, time.monotonic() - started)
-    print(f'Partial native measurement: {run}; installed surfaces remain unmeasured')
+    print(f'Partial native measurement: {run}; installed surfaces remain unmeasured' if args.native
+          else f'Native and installed library measurement: {run}')
 
 
 if __name__ == '__main__':
