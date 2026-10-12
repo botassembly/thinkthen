@@ -1,6 +1,7 @@
 """Focused regressions for coverage process ownership and missing profiles."""
 import json
 import os
+import platform
 import plistlib
 from pathlib import Path
 import runpy
@@ -20,7 +21,8 @@ DRIVER = runpy.run_path(str(Path(__file__).with_name('coverage')))
 
 
 class InstalledScriptInvocation(unittest.TestCase):
-    @unittest.skipUnless(sys.platform == 'linux', 'Ada routine gate requires Linux')
+    @unittest.skipUnless(sys.platform == 'linux' and platform.machine() == 'x86_64',
+                         'Ada routine gate requires Linux x86_64')
     def test_ada_collector_reexecutes_with_clean_path_and_owns_its_lock(self):
         checkout = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
