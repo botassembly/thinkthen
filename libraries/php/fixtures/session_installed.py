@@ -79,7 +79,8 @@ def main():
             env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),
-                THINKTHEN_TEST_PROFILE='full' if args.parity else 'routine')
+                THINKTHEN_TEST_PROFILE='full' if args.parity else 'routine',
+                CARGO_TARGET_DIR=os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target')))
             subprocess.run([sys.executable, str(ROOT / 'conformance/children/complete_parity.py'), 'php'],
                 env=env, check=True)
         finally:

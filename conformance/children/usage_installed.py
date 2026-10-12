@@ -174,6 +174,10 @@ with tempfile.TemporaryDirectory(prefix='usage-installed-') as temporary:
                         '-o', str(work / 'cobol-consumer'), str(work / 'usage_status.cob'),
                         str(work / 'cobol/src/tt_session.c'), str(work / 'cobol/src/tt_requests_generated.c'),
                         '-Q', str(work / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'], env=child_env(), check=True, timeout=30)
+    if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
+        stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
+        for family in families:
+            shutil.copy2(work / (family + '-consumer'), stage / (family + '-consumer'))
     from backend import Backend
     server = Backend(work)
     expected = []

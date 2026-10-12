@@ -22,7 +22,8 @@ for tool in "$cmake_bin" "$python_bin"; do
  [ -x "$tool" ] || { echo 'cpp: missing tool' >&2; exit 77; }
 done
 scratch_dir output
-out=$output
+out=${THINKTHEN_COVERAGE_STAGE:-$output}
+mkdir -p "$out"
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
  [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'cpp: missing matching C archive' >&2; exit 1; }
  . "$repo/sdlc/scripts/installed.sh"

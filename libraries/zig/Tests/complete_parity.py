@@ -27,4 +27,7 @@ with tempfile.TemporaryDirectory(prefix='installed-session-', dir=ROOT / 'librar
                     '-I', str(NATIVE / 'include'), '-Mthinkthen=' + str(PACKAGE / 'src/thinkthen.zig'),
                     '-lc', '-lgcc_s', '-lutil', '-lrt', '-lpthread', '-lm', '-ldl', '-femit-bin=' + str(binary)],
                    env=env, check=True, timeout=120)
+    if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
+        stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(binary, stage / 'consumer')
     session_cases.native_cases(binary, consumer='zig')

@@ -42,7 +42,7 @@ export CARGO_NET_OFFLINE=true CARGO_BUILD_JOBS=2
 export CARGO_PROFILE_DEV_DEBUG=${CARGO_PROFILE_DEV_DEBUG:-0} CARGO_INCREMENTAL=${CARGO_INCREMENTAL:-0}
 export CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 export GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
-export GOCACHE="$repo/target/go/cache" GOMODCACHE="$repo/target/go/modcache"
+export GOCACHE="${GOCACHE:-$repo/target/go/cache}" GOMODCACHE="${GOMODCACHE:-$repo/target/go/modcache}"
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.go.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" "$repo/sdlc/generators/results/generate.py" --target go --check
