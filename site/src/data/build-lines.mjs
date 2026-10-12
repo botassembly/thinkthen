@@ -4,6 +4,9 @@
 // unpacked C archive, thinkthen-c/, and the binding's own folder.
 const program = sample => sample.replace(/\.[^.]+$/, '');
 const C_LIB = ['-L thinkthen-c/lib -lthinkthen', '-Wl,-rpath,"$PWD/thinkthen-c/lib"'];
+// The Go, PHP, Dart and C# lines build a function page sample beside the
+// unpacked release archive, as scripts/smoke-bindings.mjs lays it out.
+const GO_MODULE = 'github.com/botassembly/thinkthen/libraries/go';
 export const BUILD_LINES = {
   rust: ({ sample }) => ({
     beside: 'Cargo.toml',
@@ -37,6 +40,32 @@ export const BUILD_LINES = {
       '-Q "-Wl,-rpath,$PWD/thinkthen-c/lib"',
     ]],
     run: [`./${program(sample)}`],
+  }),
+  go: ({ sample }) => ({
+    archive: 'thinkthen-go',
+    lines: [
+      [`go mod init ${program(sample)}`],
+      ['go mod edit', `-replace=${GO_MODULE}=./thinkthen-go`],
+      ['go mod tidy'],
+      [`go build -o ${program(sample)} .`],
+    ],
+    run: [`./${program(sample)}`],
+  }),
+  php: ({ sample }) => ({
+    archive: 'thinkthen-php',
+    lines: [],
+    run: ['php -d ffi.enable=1', '-d zend.assertions=1', sample],
+  }),
+  dart: ({ sample, offline }) => ({
+    archive: 'thinkthen-dart',
+    lines: [[offline ? 'dart pub get --offline' : 'dart pub get']],
+    run: ['dart run --enable-asserts', sample],
+  }),
+  csharp: () => ({
+    archive: 'thinkthen-csharp',
+    beside: 'first-call.csproj and the unpacked archive thinkthen-csharp/',
+    lines: [['dotnet build -o bin', '--source "$PWD/thinkthen-csharp"']],
+    run: ['dotnet bin/first-call.dll'],
   }),
 };
 
