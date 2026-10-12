@@ -1224,6 +1224,13 @@ package Thinkthen_Session_C is
       error : aliased thinkthen_optional_error_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_named_request_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      question_json : aliased thinkthen_complete_utf8_v1;
+      input_json : aliased thinkthen_complete_utf8_v1;
+      options_json : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_extension_v1 is record
       name : aliased thinkthen_complete_utf8_v1;
       json : aliased thinkthen_complete_utf8_v1;
@@ -5441,6 +5448,14 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_new";
+   function thinkthen_session_new_named_with_surface
+     (engine : access constant thinkthen_engine;
+      request : access constant thinkthen_named_request_v1;
+      surface : thinkthen_complete_utf8_v1;
+      c_out : System.Address) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_new_named_with_surface";
    function thinkthen_session_new_with_surface
      (engine : access constant thinkthen_engine;
       request_json : Interfaces.C.Strings.chars_ptr;
