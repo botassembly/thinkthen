@@ -5,6 +5,8 @@ import plistlib
 from pathlib import Path
 import runpy
 import signal
+import shutil
+import time
 import sys
 import tempfile
 import subprocess
@@ -258,6 +260,91 @@ class CollectionClassification(unittest.TestCase):
             self.assertEqual(totals['c-source-unit'], 2)
             self.assertEqual(totals['observed_unit_only'], 1)
             self.assertEqual(totals['unobserved'], 0)
+
+
+class InstalledEvidenceRetention(unittest.TestCase):
+    def test_missing_surface_preserves_successes_without_its_mappings(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / 'crates/thinkthen/src/probe.rs'
+            source.parent.mkdir(parents=True)
+            source.write_text('available production\nunavailable production\n')
+            executable = root / 'native'
+            executable.touch()
+            available = root / 'available.so'
+            available.touch()
+            unavailable = root / 'unavailable.so'
+            unavailable.touch()
+            for name in ('inventory', *DRIVER['NATIVE_COLLECTIONS']):
+                (root / name).mkdir()
+            def missing(folder):
+                raise DRIVER['MissingTool']('Objective-C requires macOS')
+            def completed(folder):
+                (folder / 'assertions-passed').touch()
+            installed = [dict(name='installed-objective-c', objects=[unavailable], runner=missing),
+                         dict(name='installed-c', objects=[available], runner=completed)]
+            exported = []
+            def export(run, llvm, objects, name, env):
+                exported.append(name)
+                self.assertNotIn(unavailable, objects)
+                if name == 'inventory':
+                    self.assertIn(available, objects)
+                return f'SF:{source}\nDA:1,1\n' + ('DA:2,0\n' if unavailable in objects else '')
+            context = DRIVER['measure'].__globals__
+            with patch.dict(context, ROOT=root, export=export):
+                for release, code in ((False, 77), (True, 1)):
+                    if release:
+                        for collection in installed:
+                            shutil.rmtree(root / collection['name'])
+                    def main():
+                        DRIVER['measure'](root, {}, root, executable, [], [], installed, 'fixture',
+                                          time.monotonic(), False)
+                    with patch.dict(DRIVER['entry'].__globals__, main=main), patch.object(
+                            sys, 'argv', ['coverage'] + (['--release'] if release else [])):
+                        self.assertEqual(DRIVER['entry'](), code)
+                    result = json.loads((root / 'totals.json').read_text())
+                    summary = next((root / 'sdlc/records/coverage').glob('*.json'))
+                    result = json.loads(summary.read_text())
+                    self.assertEqual(result['unmeasured_collections'], ['installed-objective-c'])
+                    self.assertEqual(result['unmeasured_reasons'],
+                                     {'installed-objective-c': 'Objective-C requires macOS'})
+                    self.assertIn('installed-objective-c: Objective-C requires macOS',
+                                  summary.with_suffix('.md').read_text())
+                    self.assertEqual(result['totals']['mapped_nonblank'], 1)
+                    self.assertEqual(result['totals']['installed-c'], 1)
+                    self.assertNotIn('installed-objective-c', result['totals'])
+                    self.assertIn('partial', result['scope'])
+                    self.assertTrue((root / 'installed-c/assertions-passed').exists())
+                    self.assertIn('requires macOS', (root / 'installed-objective-c/unmeasured.txt').read_text())
+            self.assertNotIn('installed-objective-c', exported)
+            lcov = f'SF:{source}\nDA:1,1\n'
+            DRIVER['report'](root, root, 'labels', lcov, {'rust-integration': lcov}, 0,
+                             missing=('installed-objective-c',))
+            labels = json.loads((root / 'totals.json').read_text())
+            self.assertEqual(labels['unmeasured_collections'], ['installed-objective-c'])
+            self.assertEqual(labels['unmeasured_reasons'], {})
+
+    def test_routine_failure_missing_object_and_export_failure_remain_fatal(self):
+        for cause in ('assertion', 'retained object', 'empty objects', 'export', 'export exit 77'):
+            with self.subTest(cause=cause), tempfile.TemporaryDirectory() as temporary:
+                root = Path(temporary)
+                object_path = root / 'consumer'
+                if cause != 'retained object':
+                    object_path.touch()
+                def runner(folder):
+                    if cause == 'assertion':
+                        raise RuntimeError('consumer assertion failed')
+                installed = [dict(name='installed-c', objects=[] if cause == 'empty objects' else [object_path], runner=runner)]
+                def export(*args):
+                    if cause == 'export exit 77':
+                        raise DRIVER['MissingTool']('export exit 77')
+                    raise RuntimeError('export failed')
+                with patch.dict(DRIVER['measure'].__globals__, export=export):
+                    with self.assertRaises(RuntimeError):
+                        DRIVER['measure'](root, {}, root, object_path, [], [], installed,
+                                          'fixture', time.monotonic(), False)
+                self.assertFalse((root / 'totals.json').exists())
+                self.assertFalse((root / 'installed-c/unmeasured.txt').exists())
 
 
 if __name__ == '__main__':

@@ -246,6 +246,46 @@ def prepare_installed(run, env, initializer, native, helpers):
     return collections
 
 
+def measured_export(*args):
+    try:
+        return export(*args)
+    except MissingTool as error:
+        raise RuntimeError(f'coverage export failed: {error}') from error
+
+
+def measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous):
+    completed = []
+    missing = {}
+    # Each runner finishes and retains its loaded native objects before switching.
+    for collection in installed:
+        folder = activate(run, collection['name'])
+        try:
+            collection['runner'](folder)
+        except MissingTool as error:
+            missing[collection['name']] = str(error)
+            (folder / 'unmeasured.txt').write_text(str(error) + '\n')
+            continue
+        if not collection['objects']:
+            raise RuntimeError(f'{collection["name"]}: no retained native objects')
+        for path in collection['objects']:
+            if not Path(path).is_file():
+                raise RuntimeError(f'{collection["name"]}: missing retained native object: {path}')
+        completed.append(collection)
+    production_objects = list(dict.fromkeys([executable, *native,
+                         *[Path(path) for collection in completed for path in collection['objects']]]))
+    production = measured_export(run, llvm, production_objects, 'inventory', env)
+    objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
+    collections = {name: measured_export(run, llvm, objects, name, env)
+                   for name in NATIVE_COLLECTIONS}
+    for collection in completed:
+        collections[collection['name']] = measured_export(run, llvm,
+                list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
+    report(ROOT, run, revision, production, collections, time.monotonic() - started, missing=missing, missing_reasons=missing, continuous=continuous)
+    if missing:
+        raise MissingTool('unmeasured installed collections: ' + ', '.join(missing) +
+                          f'; completed measurements retained in {run}')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true')
@@ -294,33 +334,22 @@ def main():
         raise RuntimeError('expected one instrumented C shared library')
     installed = prepare_installed(run, env, initializer, native[0], helpers) if helpers else []
     executable = collect(run, env, artifacts)
-    # Each runner finishes and retains its loaded native objects before switching.
-    for collection in installed:
-        folder = activate(run, collection['name'])
-        collection['runner'](folder)
-        for path in collection['objects']:
-            if not Path(path).is_file():
-                raise RuntimeError(f'{collection["name"]}: missing retained native object: {path}')
-    production_objects = list(dict.fromkeys([executable, *native,
-                         *[Path(path) for collection in installed for path in collection['objects']]]))
-    production = export(run, llvm, production_objects, 'inventory', env)
-    objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
-    collections = {name: export(run, llvm, objects, name, env)
-                   for name in NATIVE_COLLECTIONS}
-    for collection in installed:
-        collections[collection['name']] = export(run, llvm,
-                list(dict.fromkeys([executable, *native, *collection['objects']])), collection['name'], env)
-    report(ROOT, run, revision, production, collections, time.monotonic() - started, continuous=continuous)
+    measure(run, env, llvm, executable, native, artifacts, installed, revision, started, continuous)
     print(f'Partial native measurement: {run}; installed surfaces remain unmeasured' if args.native
           else f'Native and installed library measurement: {run}')
 
 
-if __name__ == '__main__':
+def entry():
     try:
         main()
     except MissingTool as error:
         print(f'coverage: not run: {error}', file=sys.stderr)
-        sys.exit(1 if '--release' in sys.argv else 77)
+        return 1 if '--release' in sys.argv else 77
     except (RuntimeError, subprocess.CalledProcessError, OSError) as error:
         print(f'coverage: FAIL: {error}', file=sys.stderr)
-        sys.exit(1)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(entry())
