@@ -1,23 +1,13 @@
 //! Image admission uses image tokens rather than treating encoded pixels as text.
 use conformance_backend::{Canned, Listener};
-use thinkthen::{
-    Engine, ErrorKind, ImageEvidence, ImageInput, ImageMedia, Question, QuestionInput,
-};
+use thinkthen::{ErrorKind, ImageEvidence, ImageInput, ImageMedia, Question, QuestionInput};
 const LIQUID_DECIDE: &str =
     include_str!("../../../specification/fixtures/images/liquid-decide-reply.json");
 const RED: &[u8] = include_bytes!("../../../specification/fixtures/images/red.png");
 #[test]
 fn estimated_image_admission_is_labelled_and_refuses_before_sending() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
-    let engine = Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("d1")
-        .unwrap()
-        .api_key("sk-fake")
-        .unwrap()
+    let engine = image_builder::builder(listener.base(), "liquid", "d1", Some("sk-fake"))
         .no_cache()
         .max_estimated_input_tokens_total(Some(0))
         .build()
@@ -64,3 +54,6 @@ fn estimated_image_admission_is_labelled_and_refuses_before_sending() {
     assert!(!error.to_string().contains("encoded-body-bytes-908-v1"));
     assert_eq!(listener.count(), 0);
 }
+
+#[path = "support/image_builder.rs"]
+mod image_builder;

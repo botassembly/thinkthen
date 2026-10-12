@@ -30,21 +30,18 @@ fn bytes(path: &str) -> Vec<u8> {
 }
 fn setup(listener: &Listener, profile: &Value) -> Engine {
     if let Some(path) = profile["profile_file"].as_str() {
-        return Engine::builder()
-            .backend("llamacpp")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model(profile["model"].as_str().unwrap())
-            .unwrap()
-            .profile_json(&String::from_utf8(bytes(path)).unwrap())
-            .unwrap()
-            .api_key("fake-image-key")
-            .unwrap()
-            .no_cache()
-            .max_retries(0)
-            .build()
-            .unwrap();
+        return super::image_builder::builder(
+            listener.base(),
+            "llamacpp",
+            profile["model"].as_str().unwrap(),
+            Some("fake-image-key"),
+        )
+        .profile_json(&String::from_utf8(bytes(path)).unwrap())
+        .unwrap()
+        .no_cache()
+        .max_retries(0)
+        .build()
+        .unwrap();
     }
     let backend = if profile["model"] == "d1" {
         "liquid"

@@ -260,19 +260,16 @@ fn image_descriptors_keep_physical_provenance_out_of_model_evidence() {
         "../../../specification/fixtures/images/liquid-decide-reply.json"
     ))])
     .unwrap();
-    let engine = Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("d1")
-        .unwrap()
-        .api_key("session-image-fixture")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap();
+    let engine = image_builder::builder(
+        listener.base(),
+        "liquid",
+        "d1",
+        Some("session-image-fixture"),
+    )
+    .no_cache()
+    .max_retries(0)
+    .build()
+    .unwrap();
     let session = engine.request_session(request(feed())).unwrap();
     let source = SourceLocation::new("private-image-source.png".into(), None, None).unwrap();
     let descriptor = RequestSessionDescriptor {
@@ -868,3 +865,6 @@ fn owned_reading_retains_typed_context_and_replaces_question_fallback() {
 
 #[path = "support/api.rs"]
 mod api;
+
+#[path = "support/image_builder.rs"]
+mod image_builder;

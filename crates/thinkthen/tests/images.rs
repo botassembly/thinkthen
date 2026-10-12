@@ -58,15 +58,7 @@ fn pair() -> QuestionInput {
     reason = "invalid shared fixtures or loopback setup stop this behavioral test"
 )]
 fn engine(listener: &Listener, backend: &str, model: &str) -> Engine {
-    Engine::builder()
-        .backend(backend)
-        .expect("valid saved fixture or loopback configuration")
-        .base_url(listener.base())
-        .expect("valid saved fixture or loopback configuration")
-        .model(model)
-        .expect("valid saved fixture or loopback configuration")
-        .api_key("fake-image-key")
-        .expect("valid saved fixture or loopback configuration")
+    image_builder::builder(listener.base(), backend, model, Some("fake-image-key"))
         .no_cache()
         .max_retries(0)
         .build()
@@ -392,17 +384,7 @@ fn malformed_pixels_media_counts_and_debug_are_safe_and_send_nothing() {
 fn cache_and_strict_replay_use_original_bytes_order_and_state_without_filenames() {
     let listener = Listener::answering(|_| Canned::ok(LIQUID_DECIDE)).unwrap();
     let folder = folder();
-    let build = || {
-        Engine::builder()
-            .backend("liquid")
-            .unwrap()
-            .base_url(listener.base())
-            .unwrap()
-            .model("d1")
-            .unwrap()
-            .api_key("fake-key")
-            .unwrap()
-    };
+    let build = || image_builder::builder(listener.base(), "liquid", "d1", Some("fake-key"));
     let engine = build().cache_at(&folder).unwrap().build().unwrap();
     let first = engine.request_decide(&question(), &pair()).unwrap();
     let again = engine.request_decide(&question(), &pair()).unwrap();
@@ -450,13 +432,7 @@ fn batches_retain_inputs_and_context_and_retry_keeps_complete_images() {
         }
     })
     .unwrap();
-    let engine = Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("d1")
-        .unwrap()
+    let engine = image_builder::builder(listener.base(), "liquid", "d1", None)
         .no_cache()
         .max_retries(1)
         .build()
@@ -534,3 +510,6 @@ fn saved_0034_liquid_one_image_exchange_keeps_original_wire_and_usage() {
 
 #[path = "images/local.rs"]
 mod local;
+
+#[path = "support/image_builder.rs"]
+mod image_builder;

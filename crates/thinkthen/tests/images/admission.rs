@@ -2,7 +2,7 @@
 use super::request::ImageRequests;
 use super::{LIQUID_DECIDE, RED, engine, fixture, input, question};
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Engine, ErrorKind, InputReaderOptions, ReaderMedia, ReaderOptions, SourceUnit};
+use thinkthen::{ErrorKind, InputReaderOptions, ReaderMedia, ReaderOptions, SourceUnit};
 
 #[test]
 fn explicit_caller_limits_narrow_images() {
@@ -13,15 +13,7 @@ fn explicit_caller_limits_narrow_images() {
         .request_decide(&question(), &input(None, vec![image.clone()]))
         .unwrap();
     let base = listener.requests()[0].body.len();
-    let narrowed = Engine::builder()
-        .backend("liquid")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("d1")
-        .unwrap()
-        .api_key("sk-fake")
-        .unwrap()
+    let narrowed = super::image_builder::builder(listener.base(), "liquid", "d1", Some("sk-fake"))
         .no_cache()
         .max_request_bytes(base - 1)
         .unwrap()

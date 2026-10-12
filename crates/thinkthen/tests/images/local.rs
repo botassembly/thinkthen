@@ -188,16 +188,11 @@ fn unknown_unprofiled_incompatible_routes_and_overrides_send_nothing_while_text_
             ErrorKind::Usage
         );
     }
-    let unprofiled = Engine::builder()
-        .backend("llamacpp")
-        .unwrap()
-        .base_url(listener.base())
-        .unwrap()
-        .model("clef-local-0036")
-        .unwrap()
-        .no_cache()
-        .build()
-        .unwrap();
+    let unprofiled =
+        super::image_builder::builder(listener.base(), "llamacpp", "clef-local-0036", None)
+            .no_cache()
+            .build()
+            .unwrap();
     assert_eq!(
         unprofiled
             .request_decide(&question(), &pair())
