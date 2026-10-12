@@ -477,6 +477,7 @@ class PublicAssertions(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
             shutil.copyfile(parity.ROOT / 'sdlc/scripts/time-limit', scripts / 'time-limit')
+            shutil.copyfile(parity.ROOT / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
             (scripts / 'scratch.sh').write_text((parity.ROOT / 'sdlc/scripts/scratch.sh').read_text() + '\nusage_home() { :; }\n')
             library = root / 'libraries/rust'
             library.mkdir(parents=True)
@@ -493,11 +494,12 @@ class PublicAssertions(unittest.TestCase):
             children = root / 'conformance/children'
             children.mkdir(parents=True)
             (children / 'native_fixture.py').write_text(
-                'from pathlib import Path\n'
-                'def run(consumer, command, root, rust_manifest):\n'
+                'from pathlib import Path\nimport tomllib\n'
+                'def run(consumer, command, root, rust_manifest, extra_env):\n'
                 ' assert consumer == "rust"\n'
                 ' assert Path(command[0]).parent.is_dir()\n'
                 ' assert rust_manifest == root / "libraries/rust/consumer/Cargo.toml"\n' +
+                ' assert extra_env == {"RUSTUP_TOOLCHAIN": tomllib.loads((root / "rust-toolchain.toml").read_text())["toolchain"]["channel"]}\n' +
                 ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
                 ' return False\n')
             runner.chmod(0o755)
