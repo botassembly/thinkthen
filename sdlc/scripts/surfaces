@@ -257,7 +257,7 @@ usage_guard
 . "$(dirname -- "$0")/installed.sh"
 backend_start
 
-failed=0 skipped=
+failed=0 skipped= selected_checks=0
 if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
     mode=release
     # The public C projection does not run the C crate's private safety tests.
@@ -273,6 +273,15 @@ if [ "$parity" -eq 1 ] || [ "$profile" = full ]; then
     python3 conformance/parity.py "$port" ${parity_baseline:+"$parity_baseline"}
 else
 for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
+    if [ "$profile" = stress ]; then
+        # These check.sh scripts select existing stress cases. Other profiles
+        # cannot stand in for stress, and unsupported selection is not a pass.
+        case $surface in
+        libraries/polars | libraries/typescript | libraries/r | databases/sqlite | databases/duckdb | databases/postgresql) ;;
+        *) echo "surfaces: not selected $surface (no stress cases)"; continue ;;
+        esac
+        selected_checks=$((selected_checks + 1))
+    fi
 	if [ "$mode" = release ] && apple_delegated "$surface"; then
 		echo "surfaces: pending $surface (matching macOS qualification required)"
 		continue
@@ -287,6 +296,11 @@ for surface in $(landed sdlc/surfaces.txt) $(feature sdlc/surfaces.txt); do
 done
 fi
 [ "$failed" -eq 0 ] || exit 1
+if [ "$profile" = stress ]; then
+    [ "$selected_checks" -gt 0 ] || { echo 'surfaces: FAIL stress (no selected checks ran)' >&2; exit 1; }
+    # Stress checks produce no complete release package inputs.
+    exit 0
+fi
 # A publish packs every surface (ticket 0362), so a surface that did not run stops it.
 if [ -n "$publish_tag" ] && [ -n "$skipped" ]; then
 	echo "surfaces: FAIL publish (${skipped# } did not run)"
