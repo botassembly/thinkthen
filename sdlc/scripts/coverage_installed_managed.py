@@ -1,6 +1,8 @@
 """Collect installed routine managed consumers with their packaged native objects."""
 import os
 from pathlib import Path
+import platform
+import plistlib
 import shutil
 import sys
 import tarfile
@@ -34,6 +36,60 @@ def require_tools(language, env, missing):
             raise missing(f'installed {language} needs {tool}')
 
 
+def apple_collection(language, context, env, stage, retained, folder):
+    """Run the existing Apple packages with the exact instrumented host archive."""
+    command, missing = context['command'], context['missing_tool']
+    root = context['root']
+    for tool in ('swift', 'xcrun', 'lipo'):
+        if not shutil.which(tool, path=env.get('PATH')):
+            raise missing(f'installed {language} needs {tool}')
+    key = 'THINKTHEN_' + language.upper().replace('-', '_') + '_ARTIFACT'
+    artifact = Path(os.environ.get(key, ''))
+    if not artifact.is_file():
+        raise missing(f'installed {language} needs {key}: matching instrumented Apple package')
+    package = stage / ('apple-' + language)
+    package.mkdir()
+    with tarfile.open(artifact) as archive:
+        archive.extractall(package, filter='data')
+    for source in package.rglob('*'):
+        if source.is_file() and source.suffix in ('.swift', '.m'):
+            original = root / 'libraries' / language / source.relative_to(package)
+            if not original.is_file() or source.read_bytes() != original.read_bytes():
+                raise RuntimeError('Apple package source differs from the measured checkout')
+    framework = package / 'CThinkThen.xcframework'
+    if not (framework / 'Info.plist').is_file():
+        raise RuntimeError('instrumented Apple package is missing its XCFramework')
+    metadata = plistlib.loads((framework / 'Info.plist').read_bytes())
+    arch = platform.machine()
+    libraries = [entry for entry in metadata['AvailableLibraries']
+                 if entry['SupportedPlatform'] == 'macos'
+                 and arch in entry['SupportedArchitectures']]
+    if len(libraries) != 1:
+        raise RuntimeError('instrumented Apple package expected one matching host slice')
+    entry = libraries[0]
+    headers = framework / entry['LibraryIdentifier'] / entry['HeadersPath']
+    if (headers / 'thinkthen.h').read_bytes() != (root / 'libraries/c/include/thinkthen.h').read_bytes():
+        raise RuntimeError('Apple package header differs from the measured checkout')
+    archive = framework / entry['LibraryIdentifier'] / entry['LibraryPath']
+    if len(entry['SupportedArchitectures']) > 1:
+        thin = stage / (language + '-host.a')
+        command(['lipo', str(archive), '-thin', arch, '-output', str(thin)],
+                root, env, folder / 'host-slice.log')
+        archive = thin
+    expected = context['c_target'] / 'debug/libthinkthen_c.a'
+    if archive.read_bytes() != expected.read_bytes():
+        raise RuntimeError('Apple package host archive differs from the instrumented native archive')
+    settings = {**env, 'THINKTHEN_ARTIFACT': str(artifact),
+                'THINKTHEN_COVERAGE_STAGE': str(retained),
+                'THINKTHEN_COVERAGE_INITIALIZER': str(context['initializer'])}
+    command(['sh', 'check.sh'], root / 'libraries' / language, settings,
+            folder / 'check.log', timeout=1800)
+    binaries = ('Owned', 'Parity') if language == 'swift' else ('Consumer', 'Cases')
+    installed = retained / 'installed' if language == 'swift' else retained / '.build/debug'
+    for binary in binaries:
+        shutil.copy2(installed / binary, retained / binary)
+
+
 def prepare(context):
     root, run = context['root'], context['run']
     command, missing = context['command'], context['missing_tool']
@@ -60,8 +116,13 @@ def prepare(context):
     for name in COLLECTIONS:
         language = name.removeprefix('installed-')
         retained = run / name / 'installed'
-        objects = [retained / 'libthinkthen.so']
+        objects = ([retained / binary for binary in (('Owned', 'Parity') if language == 'swift' else ('Consumer', 'Cases'))]
+                   if sys.platform == 'darwin' and language in ('swift', 'objective-c')
+                   else [retained / 'libthinkthen.so'])
         def runner(folder, *, language=language, retained=retained):
+            if sys.platform == 'darwin' and language in ('swift', 'objective-c'):
+                apple_collection(language, context, env, stage, retained, folder)
+                return
             if language == 'objective-c':
                 # This door requires an assembled Apple XCFramework and macOS execution.
                 raise missing('installed Objective-C Foundation needs macOS and a matching instrumented Apple package')

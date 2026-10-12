@@ -60,7 +60,11 @@ location = str(work) if apple else '/work'
 env = child_env(keep=('LLVM_PROFILE_FILE',), home=location + '/home', PATH='/usr/bin:/bin' if apple else '/swift/usr/bin:/usr/bin:/bin', LANG='C.UTF-8',
                 SWIFTPM_MODULECACHE_OVERRIDE=location + '/cache/modules', XDG_CACHE_HOME=location + '/cache', THINKTHEN_API_KEY='tt-canary-294')
 try:
-    built = subprocess.run(base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'], cwd=work / 'consumer', env=env, capture_output=True, timeout=300)
+    profile_link = []
+    if apple and os.environ.get('THINKTHEN_COVERAGE_INITIALIZER'):
+        profile_link = ['-Xlinker', os.environ['THINKTHEN_COVERAGE_INITIALIZER'],
+                        '-Xlinker', '-u', '-Xlinker', '___llvm_profile_runtime']
+    built = subprocess.run(base + [str(swift) if apple else '/swift/usr/bin/swift', 'build', '--jobs', '2'] + profile_link, cwd=work / 'consumer', env=env, capture_output=True, timeout=300)
     (args.out / 'installed-build.log').write_bytes(built.stdout + built.stderr)
     assert built.returncode == 0, (built.stdout + built.stderr)[-5000:]
     resolution = json.loads((work / 'consumer/Package.resolved').read_text())
