@@ -83,10 +83,17 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ] || [ -n "${THINKTHEN_PARITY_PREPARED:-}" ]; 
     package_node=${THINKTHEN_PARITY_PREPARED:-$project}/node_modules/thinkthen
     case $resolved in "file://$package_node/"*) ;; *) fail "thinkthen resolved to $resolved, outside the fresh project" ;; esac
     export THINKTHEN_TEST_BACKEND="${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend"
+    if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
+        cp "$package_node"/*.node "$THINKTHEN_COVERAGE_OBJECT"
+    fi
     if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ]; then
     public_types
+    if [ "${THINKTHEN_PARITY_CONSUMER:-javascript}" = javascript ]; then
     (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
+    fi
+    if [ "${THINKTHEN_PARITY_CONSUMER:-typescript}" = typescript ]; then
     (cd "$project" && THINKTHEN_OWNED_MODULE=cjs node --test --test-timeout=30000 tests/owned_session.test.mjs tests/examples.test.mjs)
+    fi
     fi
     if [ -n "${THINKTHEN_PARITY_PREPARE:-}" ]; then
         cp -a "$project/." "$THINKTHEN_PARITY_PREPARE/"

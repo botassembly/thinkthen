@@ -123,7 +123,7 @@ else
 fi
 cargo fetch --locked --offline --quiet 2>/dev/null ||
   not_run "a crate is missing from Cargo's cache; fetch libraries/ruby's locked crates once, with the network"
-backend=$repo/${CARGO_TARGET_DIR:-target}/debug/conformance-backend
+backend=${THINKTHEN_TEST_BACKEND:-${CARGO_TARGET_DIR:-$repo/target}/debug/conformance-backend}
 case $backend in /*) ;; *) backend=$repo/$backend ;; esac
 [ "$profile" = smoke ] || [ -x "$backend" ] || fail "no loopback backend at $backend; the surfaces rung builds it"
 PATH=$prefix/bin:$PATH
@@ -154,6 +154,10 @@ unset RUBYLIB
   abort "loaded outside gem" unless ours.any? && ours.all? { |p| p.start_with?(ARGV[0]) }' "$scratch/gems/gems/"
 THINKTHEN_TEST_LIBRARY=$scratch/gems/gems/$(basename "$THINKTHEN_ARTIFACT" .gem)/lib
 export THINKTHEN_TEST_LIBRARY
+if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
+  extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
+  cp "$THINKTHEN_TEST_LIBRARY/thinkthen/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"
+fi
 if [ "$profile" = smoke ]; then
   smoke_guard
   "$RUBY" -e 'require "thinkthen"

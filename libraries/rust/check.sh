@@ -24,7 +24,9 @@ root=Path(sys.argv[1]);sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 binary=Path(os.environ.get('CARGO_TARGET_DIR',str(root/'libraries/rust/target')))/'debug/thinkthen-rust-consumer'
 binary.parent.mkdir(parents=True,exist_ok=True)
-sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2]))))
+if os.environ.get('THINKTHEN_COVERAGE_ROOT'):
+    os.environ['CARGO_TARGET_DIR'] = str(Path(os.environ['THINKTHEN_TEST_BACKEND']).parents[1])
+sys.exit(bool(run('rust',[str(binary)],root,rust_manifest=Path(sys.argv[2])))))
 RUSTNATIVE
 }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
@@ -41,6 +43,11 @@ shutil.copytree(root/'libraries/rust/consumer',project,dirs_exist_ok=True,ignore
 manifest=project/'Cargo.toml'
 manifest.write_text(manifest.read_text().replace('../../../crates/thinkthen',str(installed/'crate')))
 RUSTCONSUMER
+    if [ -n "${THINKTHEN_COVERAGE_ROOT:-}" ]; then
+        separator=$(printf '\037')
+        CARGO_ENCODED_RUSTFLAGS="${CARGO_ENCODED_RUSTFLAGS:-}${CARGO_ENCODED_RUSTFLAGS:+$separator}--remap-path-prefix=$installed/crate=$THINKTHEN_COVERAGE_ROOT/crates/thinkthen"
+        export CARGO_ENCODED_RUSTFLAGS
+    fi
     native_cases "$installed/consumer/Cargo.toml"
     echo 'rust: pass, installed'
     exit 0

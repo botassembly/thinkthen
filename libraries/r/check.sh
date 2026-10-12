@@ -14,7 +14,12 @@ else
 fi
 . "$root/sdlc/scripts/scratch.sh"
 usage_home
-scratch_dir scratch
+if [ -n "${THINKTHEN_COVERAGE_STAGE:-}" ]; then
+  scratch=$THINKTHEN_COVERAGE_STAGE
+  mkdir -p "$scratch"
+else
+  scratch_dir scratch
+fi
 not_run() { echo "not run: $1" >&2; exit 77; }
 command -v Rscript >/dev/null || not_run "R 4.2 or later is required"
 command -v cargo >/dev/null || not_run "cargo is required for the R source package"
@@ -34,14 +39,17 @@ else
   git -C "$root" archive HEAD | tar -x -C "$scratch/tree"
   artifact=$(CARGO_NET_OFFLINE=true "$scratch/tree/libraries/r/tools/make-tarball.sh" "$scratch/out")
 fi
+if [ "${THINKTHEN_COVERAGE_PHASE:-}" != run ]; then
 mkdir -p "$scratch/lib"
 pinned=$(sed -n 's/^channel = "\(.*\)"/\1/p' "$root/rust-toolchain.toml")
 RUSTUP_TOOLCHAIN=$pinned CARGO_NET_OFFLINE=true CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$root/target/r}" \
   R CMD INSTALL -l "$scratch/lib" "$artifact" >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
+fi
 export R_LIBS="$scratch/lib:$libs"
 Rscript --vanilla -e 'stopifnot(startsWith(find.package("thinkthen"),commandArgs(TRUE)[1]))' "$scratch/lib/"
 . "$root/sdlc/scripts/installed.sh"
 own_panic_hook "$scratch/lib/thinkthen/libs/thinkthen.so"
+[ "${THINKTHEN_COVERAGE_PHASE:-}" != prepare ] || exit 0
 # Bundled SQLite names must not bind another installed package's SQLite.
 case $(uname -s) in
   Linux) exported=$(nm -D --defined-only "$scratch/lib/thinkthen/libs/thinkthen.so") ;;
