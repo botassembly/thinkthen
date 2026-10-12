@@ -13,6 +13,7 @@ import signal
 import subprocess
 import sys
 import time
+import uuid
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
@@ -176,9 +177,8 @@ def export(run, llvm, objects, name, env):
 
 def installed_helpers():
     helpers = []
-    for name in ('coverage_installed_initial', 'coverage_installed_jvm'):
-        if (ROOT / 'sdlc/scripts' / (name + '.py')).is_file():
-            helpers.append(importlib.import_module(name))
+    for path in sorted((ROOT / 'sdlc/scripts').glob('coverage_installed_*.py')):
+        helpers.append(importlib.import_module(path.stem))
     expected = set()
     for line in (ROOT / 'sdlc/surfaces.txt').read_text().splitlines():
         fields = line.split()
@@ -186,9 +186,13 @@ def installed_helpers():
             continue
         language = fields[0].split('/')[1]
         names = {'python': ('python-shared', 'python', 'pandas', 'python-polars'),
-                 'jvm': ('java', 'java-usage', 'kotlin', 'kotlin-usage', 'scala', 'scala-usage')}.get(language, (language,))
+                 'jvm': ('java', 'java-usage', 'kotlin', 'kotlin-usage', 'scala', 'scala-usage'),
+                 'typescript': ('javascript', 'typescript'), 'dart': ('dart', 'flutter')}.get(language, (language,))
         expected.update('installed-' + name for name in names)
-    available = {name for helper in helpers for name in helper.COLLECTIONS}
+    declared = [name for helper in helpers for name in helper.COLLECTIONS]
+    available = set(declared)
+    if len(available) != len(declared):
+        raise RuntimeError('installed helpers declare duplicate collections')
     missing = sorted(expected - available)
     if missing:
         raise MissingTool('unmeasured installed collections: ' + ', '.join(missing) +
@@ -217,7 +221,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--release', action='store_true')
     parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
-    parser.add_argument('--output', type=Path, help='New owned build directory (default: target/coverage/TIMESTAMP)')
+    parser.add_argument('--output', type=Path, help='New owned build directory (installed default: /tmp; native default: target/coverage/TIMESTAMP)')
     args = parser.parse_args()
     helpers = [] if args.native else installed_helpers()
     llvm = tools()
@@ -225,7 +229,14 @@ def main():
     if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT):
         raise RuntimeError('coverage needs committed source')
     started = time.monotonic()
-    run = (args.output or ROOT / 'target/coverage' / datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S')).resolve()
+    if args.output:
+        run = args.output.resolve()
+    elif args.native:
+        run = ROOT / 'target/coverage' / datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S')
+    else:
+        run = Path('/tmp') / ('thinkthen-coverage-' + uuid.uuid4().hex)
+    if not args.native and (run == Path('/home') or Path('/home') in run.parents):
+        raise RuntimeError('installed coverage output must be outside /home to preserve package privacy')
     run.mkdir(parents=True, exist_ok=False)
     (run / 'OWNER').write_text(f'coverage collection\nsource {revision}\n')
     activate(run, 'build')
@@ -234,7 +245,10 @@ def main():
                     '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%m.profraw')), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
     env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
     env.update(LLVM_PROFILE_FILE=str(run / 'active/%m.profraw'), CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
-               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '-C', f'link-arg={initializer}']),
+               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '--remap-path-prefix=/home=/build/home',
+                    f'--remap-path-prefix={ROOT}=/build/source',
+                    f'--remap-path-prefix={Path(os.environ.get("CARGO_HOME", str(Path.home() / ".cargo"))).resolve()}=/build/cargo',
+                    '-C', f'link-arg={initializer}']),
                XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
                XDG_STATE_HOME=str(run / 'home/state'))
     artifacts = build(run, env)
@@ -251,7 +265,9 @@ def main():
         for path in collection['objects']:
             if not Path(path).is_file():
                 raise RuntimeError(f'{collection["name"]}: missing retained native object: {path}')
-    production = export(run, llvm, [executable, *native], 'inventory', env)
+    production_objects = list(dict.fromkeys([executable, *native,
+                         *[Path(path) for collection in installed for path in collection['objects']]]))
+    production = export(run, llvm, production_objects, 'inventory', env)
     objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
     collections = {name: export(run, llvm, objects, name, env)
                    for name in ('rust-integration', 'cli-source', 'source-unit')}
