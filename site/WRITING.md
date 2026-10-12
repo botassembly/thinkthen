@@ -138,19 +138,19 @@ Library examples assert the answer (Ian, 2026-10-01). The assert shows the reade
 | Ruby | `raise unless is_refund == true` after reading `.value` |
 | R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
 | Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
-| C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| C | `assert(is_refund);` after `#include <assert.h>`, with `bool is_refund` read from the decide row of the session packets |
 | Java | `assert Boolean.TRUE.equals(isRefund.value().value().value());`, run with assertions on (`java -ea`) |
 | Kotlin | `check(isRefund.value.value.value == true)` |
 | Scala | `assert(isRefund.value.value.value == true)` |
 | C# | `Trace.Assert(isRefund.OutcomeKind == Outcome.Yes);` after `using System.Diagnostics;`. Compare fields, never raw JSON text. |
-| C++ | `assert(is_refund.value.outcome == tt::Outcome::yes);` after `#include <cassert>` |
+| C++ | `assert(is_refund);` after `#include <cassert>`, with `bool is_refund` read from the decide row of `call.collect()` |
 | Go | `if isRefund.Value.Outcome != thinkthen.Yes {`, then `log.Fatal("expected yes")` in the block. Go has no assert, so `log.Fatal` ends the run |
-| Swift | `precondition(isRefund.value.outcome == .yes)` |
-| Zig | `std.debug.assert(is_refund.value.outcome == .yes);` |
+| Swift | `precondition(isRefund)`, with `isRefund` read from the `.decideRow` packet of `call.packets` |
+| Zig | `std.debug.assert(is_refund);`, with `is_refund` read from the decide row that `call.read()` returns |
 | PHP | `assert($isRefund === ThinkThen::YES);`, run with `-d zend.assertions=1` |
 | Dart | `assert(isRefund == Outcome.yes);`, run with `dart run --enable-asserts` |
 | Ada | `pragma Assert (Is_Refund.Value = Yes);`, built with `gnatmake -gnata` |
-| Objective-C | `assert(is_refund.outcome == TTOutcomeYes);` after `#include <assert.h>` |
+| Objective-C | `assert(isRefund);` after `#include <assert.h>`, with `isRefund` read from the `TTSessionPacketDecideRow` in `call.packets` |
 | COBOL | `if not is-refund-yes`, then `stop run returning 1` in the block. COBOL has no assert, so the nonzero return ends the run |
 
 A library sample prints only when the printed form is the point, such as a stream, a table, a JSON shape, or a data frame. It prints with the language's ordinary print to standard output. Its saved output sits beside it as `<sample>.out`, and the page shows it under the sample. `npm run smoke-bindings` fails a sample that prints something other than its `.out`, and a sample that prints with no `.out`. `node scripts/smoke-bindings.mjs --update <path>` writes the file. Read it before the commit. A sample that prints nothing passes on its asserts.
