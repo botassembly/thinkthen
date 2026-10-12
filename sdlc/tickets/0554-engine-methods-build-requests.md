@@ -16,6 +16,8 @@ Reviews: revision 018d71671b851391aa92a5fd29057a61d46fad81, accept
 
 Reviews: revision ea591ef, accept
 
+Reviews: revision 6712593, accept
+
 ## Outcome
 
 The public Rust `Engine` admits every call through `Request`, the same as every binding. Each per-function method is a thin wrapper that builds a `Request`. The library carries no reader that only the command line uses.
