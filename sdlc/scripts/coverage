@@ -102,7 +102,8 @@ def test_artifacts(messages, package):
     artifacts = []
     for line in messages.splitlines():
         item = json.loads(line)
-        if item.get('reason') == 'compiler-artifact' and item.get('executable'):
+        if (item.get('reason') == 'compiler-artifact' and item.get('executable')
+                and item.get('profile', {}).get('test')):
             artifacts.append((item['target']['kind'], item['target']['name'], item['executable'], launch))
     return artifacts
 
@@ -151,7 +152,7 @@ def build(run, env):
 def collect_tests(run, env, artifacts, name):
     folder = activate(run, name)
     selected = [item for item in artifacts
-                if item[0] == (['test'] if name == 'rust-integration' else ['lib'])
+                if (item[0] == ['test']) == (name == 'rust-integration')
                 and (item[3]['CARGO_PKG_NAME'] == 'thinkthen-c') == (name == 'c-source-unit')]
     if not selected:
         raise RuntimeError(f'{name}: no test executables')

@@ -91,6 +91,27 @@ class ProfileCauses(unittest.TestCase):
 
 
 class CollectionClassification(unittest.TestCase):
+    def test_c_library_target_launches_with_its_metadata_identity(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            package_dir = root / 'libraries/c'
+            package_dir.mkdir(parents=True)
+            harness = root / 'c-harness'
+            harness.write_text(f'#!{sys.executable}\n' + "import os, pathlib, sys\n"
+                               "assert os.environ['CARGO_PKG_NAME'] == 'thinkthen-c'\n"
+                               "assert pathlib.Path.cwd() == pathlib.Path(os.environ['CARGO_MANIFEST_DIR'])\n"
+                               "assert sys.argv[1:] == ['--test-threads=2']\n")
+            harness.chmod(0o700)
+            package = {'name': 'thinkthen-c', 'manifest_path': str(package_dir / 'Cargo.toml')}
+            target = {'kind': ['cdylib', 'staticlib'], 'name': 'thinkthen_c'}
+            artifact = {'reason': 'compiler-artifact', 'target': target,
+                        'executable': str(harness), 'profile': {'test': True}}
+            production = {**artifact, 'profile': {'test': False}}
+            artifacts = DRIVER['test_artifacts']('\n'.join(map(json.dumps, (artifact, production))), package)
+            self.assertEqual(len(artifacts), 1)
+            DRIVER['collect_tests'](root, {}, artifacts, 'c-source-unit')
+            self.assertTrue((root / 'c-source-unit/thinkthen_c.log').is_file())
+
     def test_c_source_units_add_unit_hits_without_test_only_denominator(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
