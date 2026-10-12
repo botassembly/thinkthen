@@ -58,7 +58,7 @@ def main():
                           PUB_CACHE=os.environ.get('PUB_CACHE',str(Path.home()/'.pub-cache')),
                           FLUTTER_SUPPRESS_ANALYTICS='true',
                           CI='true')
-                    backend=Backend(ROOT/'target/debug/conformance-backend',child)
+                    backend=Backend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend',child)
                     try:
                         child.update(THINKTHEN_BASE_URL=f'http://127.0.0.1:{backend.port}/{value["arm"]}', THINKTHEN_API_KEY='sk-conformance-loopback', LIQUIDAI_API_KEY='sk-conformance-loopback',OPENROUTER_API_KEY='sk-conformance-loopback',PERPLEXITY_API_KEY='sk-conformance-loopback')
                         prepare(home,value)
@@ -73,7 +73,7 @@ def main():
                                 import sqlite3
                                 with sqlite3.connect(home/'saved/thinkthen.sqlite') as db:db.execute("UPDATE answers SET answer='damaged fixture answer'")
                             if value.get('image_variants'):
-                                backend.close();backend=Backend(ROOT/'target/debug/conformance-backend',child)
+                                backend.close();backend=Backend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT/'target')))/'debug/conformance-backend',child)
                                 child['THINKTHEN_BASE_URL']=f'http://127.0.0.1:{backend.port}/{step["arm"]}'
                                 prepare(home,step)
                             settings={'cache':False,'model':'jev-latest' if 'steps' in value else 'jev-1.13.0','batch':1,'max_retries':0,**step.get('settings',{})}
