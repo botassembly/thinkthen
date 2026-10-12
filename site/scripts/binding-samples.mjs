@@ -45,8 +45,10 @@ export function sampleFiles(examples, rel) {
   return path.join(examples, path.dirname(rel).replace(/\/more$/, ''), 'files');
 }
 // No key, address, backend or setting from the shell may reach a sample.
+// The JVM toolchain homes name only where a compiler sits, so they may.
+const TOOLCHAIN_HOMES = new Set(['THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME']);
 export function leakedVariables(env) {
-  return Object.keys(env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
+  return Object.keys(env).filter((n) => (n.startsWith('THINKTHEN_') && !TOOLCHAIN_HOMES.has(n)) || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
 }
 
 // The library and SQL samples under examples/, outside each page's files/.
