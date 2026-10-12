@@ -56,7 +56,8 @@ function jvmJars() {
   if (jars) return jars;
   const out = path.join(tmp, 'jvm');
   fs.mkdirSync(out);
-  const done = run('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, THINKTHEN_JVM_OUT: out } });
+  const native = path.join(cDoor(), 'lib', 'libthinkthen.so');
+  const done = run('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, ...JVM_HOMES(), THINKTHEN_JVM_OUT: out, THINKTHEN_JVM_NATIVE: native } });
   if (done.status !== 0) throw new Error(`the JVM build failed\n${done.stdout}${done.stderr}`);
   jars = path.join(out, 'jars');
   return jars;
@@ -242,7 +243,40 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
   };
 }
 
-const javaVersion = () => firstLine('java', ['-version']);
+// The JDK, Kotlin and Scala homes: THINKTHEN_JDK_HOME, THINKTHEN_KOTLIN_HOME
+// and THINKTHEN_SCALA_HOME when set, as libraries/jvm/build.sh reads them,
+// or else the compilers on PATH. The JVM samples build and run on them.
+const toolHome = (variable, tool) => {
+  if (process.env[variable]) return path.resolve(process.env[variable]);
+  const found = run('sh', ['-c', `command -v ${tool}`]).stdout.trim();
+  return found ? path.dirname(path.dirname(fs.realpathSync(found))) : null;
+};
+const JVM_HOMES = () => Object.fromEntries([
+  ['THINKTHEN_JDK_HOME', 'javac'], ['THINKTHEN_KOTLIN_HOME', 'kotlinc'], ['THINKTHEN_SCALA_HOME', 'scalac'],
+].map(([variable, tool]) => [variable, toolHome(variable, tool)]).filter(([, home]) => home));
+const JVM_ENV = () => {
+  const homes = JVM_HOMES();
+  const jdk = homes.THINKTHEN_JDK_HOME;
+  const bins = [jdk, homes.THINKTHEN_KOTLIN_HOME, homes.THINKTHEN_SCALA_HOME].filter(Boolean).map((h) => path.join(h, 'bin'));
+  return {
+    PATH: [...bins, process.env.PATH].join(':'),
+    ...(jdk ? { JAVA_HOME: jdk } : {}),
+    ...(homes.THINKTHEN_KOTLIN_HOME ? { KOTLIN_HOME: homes.THINKTHEN_KOTLIN_HOME } : {}),
+    ...(homes.THINKTHEN_SCALA_HOME ? { SCALA_HOME: homes.THINKTHEN_SCALA_HOME } : {}),
+  };
+};
+const javaVersion = () => (run('java', ['-version'], { env: { ...process.env, ...JVM_ENV() } }).stderr || '').split('\n')[0].trim();
+// The JVM library needs the JDK release that libraries/jvm/pom.xml names, or later.
+const JDK_FLOOR = () => Number(fs.readFileSync(path.join(repo, 'libraries/jvm/pom.xml'), 'utf8').match(/<thinkthen\.session\.jdk>(\d+)</)[1]);
+const stableJdk = () => {
+  const shown = javaVersion().match(/version "(\d+)/);
+  return shown && Number(shown[1]) >= JDK_FLOOR() ? null : `JDK ${JDK_FLOOR()} or later; set THINKTHEN_JDK_HOME`;
+};
+// kotlinc and scalac print their version as the last line.
+const toolVersion = (tool) => {
+  const done = run(tool, ['-version'], { env: { ...process.env, ...JVM_ENV() } });
+  return `${done.stdout}${done.stderr}`.trim().split('\n').pop();
+};
 // json-c from ~/.local, where the toolchain step builds it with CMake.
 const LOCAL = path.join(os.homedir(), '.local');
 const JSON_C = { PKG_CONFIG_PATH: [path.join(LOCAL, 'lib/pkgconfig'), process.env.PKG_CONFIG_PATH].filter(Boolean).join(':') };
@@ -273,7 +307,6 @@ const RUBY_PREFIX = () => {
 // SDK folder runs no Flutter update check.
 const DART_SDK = path.join(os.homedir(), '.local/opt/flutter/bin/cache/dart-sdk/bin');
 const DART_PATH = { PATH: `${DART_SDK}:${process.env.PATH}`, PUB_CACHE: process.env.PUB_CACHE ?? path.join(os.homedir(), '.pub-cache') };
-const SCALA_HOME = () => path.dirname(path.dirname(fs.realpathSync(run('sh', ['-c', 'command -v scalac']).stdout.trim())));
 
 // Each binding: how to build it once, how to run one sample, and what it
 // builds on. A build returns null when a tool is missing.
@@ -390,9 +423,9 @@ const BINDINGS = {
   'objective-c': withBuild({ slug: 'objective-c', tools: ['gcc'], versions: () => [firstLine('gcc', ['--version'])] }),
   cobol: withBuild({ slug: 'cobol', tools: ['cobc'], versions: () => [firstLine('cobc', ['--version'])] }),
   ada: withBuild({ slug: 'ada', tools: ['gnatmake'], versions: () => [firstLine('gnatmake', ['--version'])] }),
-  java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion()] }),
-  kotlin: withBuild({ slug: 'kotlin', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('kotlinc', ['-version'])] }),
-  scala: withBuild({ slug: 'scala', tools: ['javac', 'java', 'kotlinc', 'scalac'], versions: () => [javaVersion(), firstLine('scalac', ['-version'])], env: () => ({ SCALA_HOME: SCALA_HOME() }) }),
+  java: withBuild({ slug: 'java', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion()], env: JVM_ENV }),
+  kotlin: withBuild({ slug: 'kotlin', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion(), toolVersion('kotlinc')], env: JVM_ENV }),
+  scala: withBuild({ slug: 'scala', tools: ['javac', 'java', 'kotlinc', 'scalac'], needs: stableJdk, versions: () => [javaVersion(), toolVersion('scalac')], env: JVM_ENV }),
   go: withBuild({ slug: 'go', tools: ['go', 'pkg-config'], versions: () => [firstLine('go', ['version'])], buildEnv: {
     GOCACHE: path.join(tmp, 'go-cache'), GOMODCACHE: path.join(tmp, 'go-mod'), GOPROXY: 'off', GOTOOLCHAIN: 'local', GOFLAGS: '-mod=mod -buildvcs=false', CGO_ENABLED: '1',
   } }),

@@ -7,6 +7,21 @@ const C_LIB = ['-L thinkthen-c/lib -lthinkthen', '-Wl,-rpath,"$PWD/thinkthen-c/l
 // The Go, PHP, Dart and C# lines build a function page sample beside the
 // unpacked release archive, as scripts/smoke-bindings.mjs lays it out.
 const GO_MODULE = 'github.com/botassembly/thinkthen/libraries/go';
+// The Java, Kotlin and Scala lines build a function page sample beside the
+// unpacked JVM archive, thinkthen-jvm/, which holds the session, Kotlin
+// and Scala JARs and the native JAR for this platform. They need JDK 22
+// or later, and the Kotlin and Scala lines need KOTLIN_HOME and
+// SCALA_HOME for the coroutine and Scala runtime JARs.
+const JVM = 'thinkthen-jvm';
+const NATIVE = `$(echo ${JVM}/thinkthen-natives-*.jar)`;
+const JAVA = 'java -ea --enable-native-access=ALL-UNNAMED';
+const KOTLIN_CP = [
+  `${JVM}/thinkthen-kotlin.jar`,
+  '$KOTLIN_HOME/lib/kotlinx-coroutines-core-jvm.jar',
+].join(':');
+const KOTLIN_RUN = [KOTLIN_CP, NATIVE, '$KOTLIN_HOME/lib/kotlin-stdlib.jar'].join(':');
+const SCALA_CP = `${JVM}/thinkthen-scala.jar`;
+const SCALA_RUN = [SCALA_CP, NATIVE, '$SCALA_HOME/lib/scala.jar'].join(':');
 export const BUILD_LINES = {
   rust: ({ sample }) => ({
     beside: 'Cargo.toml',
@@ -60,6 +75,32 @@ export const BUILD_LINES = {
     archive: 'thinkthen-dart',
     lines: [[offline ? 'dart pub get --offline' : 'dart pub get']],
     run: ['dart run --enable-asserts', sample],
+  }),
+  java: ({ sample }) => ({
+    archive: JVM,
+    lines: [[
+      'javac --release 22',
+      `-cp ${JVM}/thinkthen-session.jar`,
+      `-d classes ${sample}`,
+    ]],
+    run: [JAVA, `-cp "classes:${JVM}/thinkthen-session.jar:${NATIVE}"`, program(sample)],
+  }),
+  kotlin: ({ sample }) => ({
+    archive: JVM,
+    lines: [[
+      'kotlinc -jvm-target 22',
+      `-classpath "${KOTLIN_CP}"`,
+      `${sample} -d classes`,
+    ]],
+    run: [JAVA, `-cp "classes:${KOTLIN_RUN}"`, `${program(sample)}Kt`],
+  }),
+  scala: ({ sample }) => ({
+    archive: JVM,
+    lines: [
+      ['mkdir -p classes'],
+      ['scalac', `-classpath ${SCALA_CP}`, `-d classes ${sample}`],
+    ],
+    run: [JAVA, `-cp "classes:${SCALA_RUN}"`, program(sample).toLowerCase()],
   }),
   csharp: () => ({
     archive: 'thinkthen-csharp',
