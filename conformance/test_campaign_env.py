@@ -8,6 +8,7 @@ import tempfile
 import unittest
 
 from conformance import parity
+from conformance.children.children import child_env
 
 
 class CampaignEnvironment(unittest.TestCase):
@@ -35,7 +36,10 @@ keys=('RUSTFLAGS','RUSTC_WRAPPER','CARGO_BUILD_RUSTC_WRAPPER',
       'CARGO_PROFILE_DEV_OPT_LEVEL','CARGO_PROFILE_TEST_OPT_LEVEL',
       'CARGO_PROFILE_DEV_DEBUG','CARGO_PROFILE_TEST_DEBUG',
       'CFLAGS','CXXFLAGS','THINKTHEN_FULL_COMPILER')
-env=dict(os.environ)
+env={{}}
+for key in keys:
+    if key in os.environ:
+        env[key]=os.environ[key]
 if sys.argv[1]=='parity':
     with tempfile.TemporaryDirectory() as scratch:
         env=consumer_environment(scratch,'12345')
@@ -70,7 +74,7 @@ esac
                 executable = tools / name
                 executable.write_text('#!/bin/sh\nset -eu\n' + body)
                 executable.chmod(0o755)
-            env = {**os.environ, 'PATH': str(tools) + ':' + os.defpath,
+            env = child_env(home=root / 'home') | {'PATH': str(tools) + ':' + os.defpath,
                    'THINKTHEN_HEAVY_LOCK': str(root / 'lock'),
                    'THINKTHEN_FULL_COMPILER': 'ambient', 'CFLAGS': '--ambient-c-flag',
                    'CXXFLAGS': '--ambient-cxx-flag', 'RUSTFLAGS': '--ambient-flag', 'RUSTC_WRAPPER': '/ambient/rustc-wrapper',
@@ -150,7 +154,7 @@ with Path(os.environ['CAPTURE']).open('a') as out:
                     private.mkdir(exist_ok=True)
                     receipt = root / 'capture.jsonl'
                     receipt.write_text('')
-                    env = {**os.environ, 'PATH': str(tools) + ':' + os.defpath,
+                    env = child_env(home=private) | {'PATH': str(tools) + ':' + os.defpath,
                            'HOME': str(private), 'CAPTURE': str(receipt),
                            'THINKTHEN_TEST_PROFILE': profile, 'RUSTFLAGS': '--ambient',
                            'CFLAGS': '-O1', 'CXXFLAGS': '-O1'}
@@ -202,7 +206,7 @@ while True:time.sleep(60)
                     process = subprocess.Popen(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'),
                                                 '1' if cancellation is None else '60', sys.executable,
                                                 str(fixture)], stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                                               text=True, preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
+                                               env=child_env(home=Path(folder) / 'home'), text=True, preexec_fn=lambda: signal.signal(signal.SIGINT, signal.SIG_DFL))
                     descendant = int(process.stdout.readline())
                     try:
                         if cancellation is not None:
@@ -215,6 +219,7 @@ while True:time.sleep(60)
                             self.assertEqual(os.waitstatus_to_exitcode(status), -signal.SIGKILL)
                         else:
                             status = subprocess.run(['ps', '-o', 'stat=', '-p', str(descendant)],
+                                                    env=child_env(home=Path(folder) / 'home'),
                                                     capture_output=True, text=True).stdout.strip()
                             self.assertTrue(not status or status.startswith('Z'),
                                             'descendant survived helper return: ' + status)
@@ -235,5 +240,5 @@ while True:time.sleep(60)
     def test_normal_exit_retains_stdin_and_exit_code(self):
         result = subprocess.run(['sh', str(parity.ROOT / 'sdlc/scripts/time-limit'), '10',
                                  'sh', '-c', 'read value; printf "%s" "$value"; exit 7'],
-                                input='owned input\n', text=True, capture_output=True, timeout=3)
+                                env=child_env(), input='owned input\n', text=True, capture_output=True, timeout=3)
         self.assertEqual((result.returncode, result.stdout), (7, 'owned input'))

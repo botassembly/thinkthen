@@ -11,6 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from conformance import parity
+from conformance.children.children import child_env
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -38,7 +39,7 @@ class CandidatePlatforms(unittest.TestCase):
                             'consumer': consumer, 'case': case['id'], 'status': 'pass',
                             'checks': case.get('checks', ['named', 'runtime'])}) + '\n')
                     return subprocess.CompletedProcess(args, exit_code)
-                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'run', side_effect=command), patch.dict(os.environ, {'PATH': os.defpath, 'THINKTHEN_MACOS_APPLE_CHECKS': delegation}, clear=True):
+                with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.sys, 'platform', 'linux'), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(os, 'environ', {'PATH': os.defpath, 'THINKTHEN_MACOS_APPLE_CHECKS': delegation}):
                     self.assertEqual(parity.run('12345'), expected)
                 matrix = json.loads((root / 'target/parity/matrix.json').read_text())
                 self.assertTrue(any(row.get('platform_pending') for row in matrix))
@@ -114,7 +115,7 @@ printf package > "$2/thinkthen-0.2.0.tgz"
             for path in tools.iterdir():
                 path.chmod(0o755)
             (scripts / 'installed.sh').write_text('exit 91\n')
-            env = {**os.environ, 'HOME': str(root / 'home'),
+            env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
                    'PATH': str(tools) + ':' + os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)

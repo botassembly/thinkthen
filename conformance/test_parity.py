@@ -315,7 +315,7 @@ class PublicAssertions(unittest.TestCase):
             self.assertFalse((Path(env['HOME']) / '.config').exists())
 
     def test_default_tool_locations_survive_the_isolated_home(self):
-        with tempfile.TemporaryDirectory() as scratch, patch.dict(parity.os.environ, {'HOME': '/caller'}, clear=True):
+        with tempfile.TemporaryDirectory() as scratch, patch.object(parity.os, 'environ', {'HOME': '/caller'}):
             env = parity.consumer_environment(scratch, '12345')
             expected = {'THINKTHEN_TOOLCHAINS': '/caller/.cache/thinkthen-toolchains',
                         'R_LIBS_USER': '/caller/.cache/thinkthen-toolchains/r-library',
@@ -348,7 +348,7 @@ class PublicAssertions(unittest.TestCase):
             if name == 'rust':
                 finished_rust.set()
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.dict(parity.os.environ, {'THINKTHEN_HEAVY_LOCK_HELD': '/owned-lock'}, clear=True):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'THINKTHEN_HEAVY_LOCK_HELD': '/owned-lock'}):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual({row['consumer'] for row in matrix}, set(ids))
@@ -394,7 +394,7 @@ class PublicAssertions(unittest.TestCase):
             with lock:
                 active -= 1
             return subprocess.CompletedProcess(args, 0)
-        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.dict(parity.os.environ, {'PATH': os.defpath}, clear=True):
+        with tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
             self.assertEqual(parity.run('12345'), 0)
             matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
             self.assertEqual(len(prepared), 2)
@@ -417,7 +417,7 @@ class PublicAssertions(unittest.TestCase):
                 self.assertIn('THINKTHEN_PARITY_PREPARE', kwargs['env'])
                 clock[0] = 901 if failure == 0 else 2
                 return subprocess.CompletedProcess(args, failure)
-            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.dict(parity.os.environ, {'PATH': os.defpath}, clear=True):
+            with self.subTest(failure=failure), tempfile.TemporaryDirectory() as scratch, contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', Path(scratch)), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.subprocess, 'run', side_effect=command), patch.object(parity.time, 'monotonic', side_effect=lambda: clock[0]), patch.object(parity.os, 'environ', {'PATH': os.defpath}):
                 self.assertEqual(parity.run('12345'), 1)
                 matrix = json.loads((Path(scratch) / 'target/parity/matrix.json').read_text())
                 self.assertEqual({row['baseline_exit'] for row in matrix}, {failure or 124})
@@ -501,7 +501,7 @@ class PublicAssertions(unittest.TestCase):
                 ''.join(' print(' + repr(self.cell(case=case)) + ')\n' for case in self.cases) +
                 ' return False\n')
             runner.chmod(0o755)
-            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.dict(parity.os.environ, {'PATH': str(tools) + ':' + os.defpath}, clear=True):
+            with contextlib.redirect_stdout(io.StringIO()), patch.object(parity, 'ROOT', root), patch.object(parity, 'inventory', return_value=contract), patch.object(parity.os, 'environ', {'PATH': str(tools) + ':' + os.defpath}):
                 self.assertEqual(parity.run('12345'), 0)
 
     def test_full_run_fails_missing_and_exit77_without_executing_sdk(self):

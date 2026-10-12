@@ -8,6 +8,7 @@ import sys
 import tempfile
 
 import full_case
+from children import child_env
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location('shared_session_cases', ROOT / 'conformance/children/session_cases.py')
@@ -47,4 +48,4 @@ def invoke(step, settings, env, home, backend):
 with tempfile.TemporaryDirectory(prefix='thinkthen-ada-objects-') as temporary:
     binary = full_case.build(package, Path(temporary))
     shared.native_cases(Path(__file__).with_name('full_case.py'), consumer='ada', invoke=invoke)
-    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(package), '--ada-objects', str(binary.parent / 'ada-objects')], check=True)
+    subprocess.run([sys.executable, str(ROOT / 'conformance/children/usage_installed.py'), '--family', 'ada', '--ada-package', str(package), '--ada-objects', str(binary.parent / 'ada-objects')], env=child_env(home=Path(temporary) / 'usage-home', THINKTHEN_TEST_PROFILE='full'), check=True)
