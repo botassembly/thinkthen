@@ -1,6 +1,6 @@
 # 0558: Cut Rust source well below the ceiling
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -15,6 +15,8 @@ Reviews: revision 52d652f, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: Reviewed deletions and restored assertions landed in the shared batch with source and ceiling at 187606.)
 
 ## Outcome
 
