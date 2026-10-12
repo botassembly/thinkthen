@@ -11,7 +11,7 @@ const ms = (x) => (x == null ? 'none' : Math.abs(x) < 10 ? x.toFixed(1) : String
 const range = (s) => `${ms(s.p10)} to ${ms(s.p90)}`;
 const big = (n) => n.toLocaleString('en-US');
 const route = (id) => {
-  if (id.startsWith('cli')) return '/install/shell/';
+  if (id.startsWith('cli')) return '/languages/bash/';
   const slug = id === 'c-release' ? 'c' : id;
   return BINDINGS.find((b) => b.slug === slug)?.route;
 };

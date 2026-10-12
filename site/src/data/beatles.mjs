@@ -88,7 +88,7 @@ const ARTICLES = {
     label: "Functions and bindings",
     goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
     idea: [
-      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/install/shell/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
+      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/languages/bash/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
       `Bindings bring the same ten functions to ${BINDINGS.length} programming languages and databases: ${BINDINGS.map((b, i) => `${i === BINDINGS.length - 1 ? 'and ' : ''}[${b.name}](${b.route})`).join(', ')}.`,
       "To set one up, start at [Install](/install/).",
     ],
@@ -314,7 +314,7 @@ const ARTICLES = {
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
       "The script reads one song per line on standard input and asks whether a Beatle wrote each one. It passes the question and its flags on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. A probability of 0.8 or more is yes, and one under 0.2 is no. Between them is not sure. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The previous page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
-      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
+      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/languages/bash/not-sure/) teaches the same form.",
     ],
     files: {
       'setlist.sh': "setlist.sh, the script",
@@ -454,7 +454,7 @@ const ARTICLES = {
       "`decide` answers in its exit code: 0 for yes and 1 for no. With a band such as `--threshold 0.1:0.9`, not sure exits 3. Alert triage uses all three. The script pages a person, logs the alert, or queues it. Flaky test retries a flaky failure and fails the build on any other.",
       "`choose` prints its pick, and failure routing runs that kind's runbook. `filter` keeps the lines where the answer is yes. Grep by meaning keeps the log lines about an outage, whatever words they use. Sample sheet keeps the complete rows and stops before hours of compute.",
       "`score` places a login session on five levels, and the top two go to a person. `tag` labels each commit as a feature, a fix, or a breaking change, and the labels bump the version. `annotate` reads an incident email and hands its service, severity, and start time to `jq` as JSON. `rank` puts the error that hurts users most first.",
-      "[Bash techniques](/how-tos/bash/) teach these forms with real runs.",
+      "[Bash techniques](/languages/bash/#techniques) teach these forms with real runs.",
     ],
     takeaway: "An answer is an exit code or a line of output, and the shell does the rest.",
     link: REPO,

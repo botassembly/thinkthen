@@ -25,11 +25,12 @@ const DATA = ['polars', 'duckdb', 'sqlite', 'postgresql'];
 const ROUTES = {
   '/functions/': 'runs-in',
   '/install/': 'runs-in',
-  '/install/shell/': 'runs-in',
+  '/languages/': 'runs-in',
+  '/languages/bash/': 'runs-in',
   '/install/backends/': 'backends',
   '/trust/': 'audit',
-  ...Object.fromEntries(LANGUAGES.map((s) => [`/install/${s}/`, 'languages'])),
-  ...Object.fromEntries(DATA.map((s) => [`/install/${s}/`, 'data'])),
+  ...Object.fromEntries(LANGUAGES.map((s) => [`/languages/${s}/`, 'languages'])),
+  ...Object.fromEntries(DATA.map((s) => [`${s === 'polars' ? '/languages/' : '/install/'}${s}/`, 'data'])),
 };
 
 export const routeCard = (route) => (ROUTES[route] ? slideCard(ROUTES[route]) : null);

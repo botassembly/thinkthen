@@ -24,7 +24,7 @@ import { NOINDEX } from '../src/data/catalog.mjs';
 import { DIST, serveDist } from './serve-dist.mjs';
 
 const PAGES = [
-  '/', '/install/', '/install/python/', '/install/backends/typesafe/',
+  '/', '/install/', '/languages/python/', '/install/backends/typesafe/',
   '/functions/', '/functions/filter/', '/functions/decide/',
   '/learn/', '/learn/beatles-bench/strings/', '/blog/introducing-thinkthen/',
   '/learn/tutorial/', '/404.html',

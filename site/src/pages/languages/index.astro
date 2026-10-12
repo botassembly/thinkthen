@@ -1,0 +1,39 @@
+---
+// Goal: help a reader find their language, install ThinkThen there, and
+// paste a first call, with Bash and agents beside the languages.
+import Base from '../../layouts/Base.astro';
+import LinkName from '../../components/LinkName.astro';
+import InstallLine from '../../components/InstallLine.astro';
+import { SURFACES, BINDINGS, TAB_GROUPS, COUNTS } from '../../data/catalog.mjs';
+
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const plain = (text) => text.replaceAll('`', '');
+const groups = TAB_GROUPS
+  .filter((g) => g.name !== 'Command line' && g.name !== 'Databases')
+  .map((g) => ({ name: g.name, list: g.slugs.map((slug) => ({ ...SURFACES.find((s) => s.slug === slug), route: BINDINGS.find((b) => b.slug === slug).route })) }));
+const databases = BINDINGS.filter((b) => b.database);
+---
+<Base title="Languages" description="Find your language, install ThinkThen there, and paste a first call. The same ten functions run from Bash, every language binding and agents.">
+  <h1>Languages</h1>
+  <p class="lede">Find your language. Its page installs ThinkThen, makes a first call, and shows all ten functions there.</p>
+  <p class="counts">{COUNTS.functions}, <a href="/languages/bash/">{COUNTS.cli}</a>, {COUNTS.bindings}.</p>
+
+  <h2><a href="/languages/bash/">Bash</a></h2>
+  <p>{plain(shell.blurb)}</p>
+  <InstallLine line={shell.install[0][0]} caption="The download script" />
+
+  {groups.map((g) => (
+    <Fragment>
+      <h2>{g.name}</h2>
+      <ul>
+        {g.list.map((s) => <li><a href={s.route}><LinkName name={s.name} /></a>: {plain(s.blurb)}</li>)}
+      </ul>
+    </Fragment>
+  ))}
+
+  <h2><a href="/languages/agents/">Agents</a></h2>
+  <p>An agent calls the ten functions as tools through the local MCP server, and the agent skill tells it which one to pick.</p>
+
+  <h2>Databases</h2>
+  <p>Ask from SQL in {databases.map((b, i) => <>{i > 0 && (i === databases.length - 1 ? ' and ' : ', ')}<a href={b.route}>{b.name}</a></>)}.</p>
+</Base>

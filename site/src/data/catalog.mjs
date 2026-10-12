@@ -530,7 +530,7 @@ export const SURFACES = [
     errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
     settings: "`tt_engine(backend =)` configures the native engine; call controls go in `options = list()`.",
     install: [
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'Public installation remains 0.1.2 until 0.2 publishes. On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
+      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
       ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Ubuntu 26.04 (Resolute), R 4.6, x86-64 only. Use `resolute-arm64` for ARM64. Dependencies or missing binaries can fall back to source; keep source prerequisites then.'],
     ],
     particular: ["Authored lists supply questions, labels and thresholds.", "`tt_batch` streams generated results; `tt_plan` previews supported native requests."],
@@ -561,7 +561,7 @@ export const SURFACES = [
     settings: "`thinkthen_engine_new_with` forwards native settings to Rust.",
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     fragment: 'Keep the `#include` lines on top. Put the rest inside `int main(void)` and end it with `return 0;`.',
-    particular: ["New callers use generated native sessions; frozen 0.1 symbols remain deprecated compatibility.", "The C package owns the matching generated header and native library."],
+    particular: ["New callers use generated native sessions.", "The C package owns the matching generated header and native library."],
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
@@ -589,7 +589,7 @@ export const SURFACES = [
     install: [
       ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The binding\'s source, from each release.'],
     ],
-    particular: ["GNU support has ended. The package uses Apple Foundation and ARC.", "Apple SDK compilation exists; matching installed Foundation execution remains unrun."],
+    particular: ["The package uses Apple Foundation and ARC."],
   },
   {
     slug: 'cobol', name: 'COBOL', deckHeading: null,
@@ -603,7 +603,7 @@ export const SURFACES = [
     install: [
       ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybook and the called programs, from each release.'],
     ],
-    particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library; candidate checks qualify other platforms."],
+    particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library."],
   },
   {
     slug: 'ada', name: 'Ada', deckHeading: null,
@@ -632,7 +632,7 @@ export const SURFACES = [
       ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
-    particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target. Final Maven distribution and platform execution remain candidate work."],
+    particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target."],
   },
   {
     slug: 'kotlin', name: 'Kotlin', deckHeading: null,
@@ -677,7 +677,7 @@ export const SURFACES = [
       ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
       ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
     ],
-    particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup; final platform qualification runs at the candidate."],
+    particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup."],
   },
   {
     slug: 'go', name: 'Go', deckHeading: null,
@@ -750,7 +750,7 @@ export const SURFACES = [
       ['dart pub add thinkthen_dart', null],
       ['thinkthen-dart-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
-    particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route; platform distribution remains candidate qualification."],
+    particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route."],
   },
   {
     slug: 'duckdb', backends: 'sql', name: 'DuckDB', deckHeading: 'DuckDB',
@@ -817,7 +817,7 @@ export const BINDINGS = [
   ['Ruby', 'ruby'], ['Rust', 'rust'], ['Scala', 'scala'],
   ['SQLite', 'sqlite'], ['Swift', 'swift'], ['TypeScript', 'typescript'],
   ['Zig', 'zig'],
-].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: `/install/${slug}/` }));
+].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: DATABASE_SLUGS.has(slug) ? `/install/${slug}/` : `/languages/${slug}/` }));
 
 // The install paths of the bindings with no page yet.
 export const BINDING_PATHS_WITHOUT_PAGES = BINDINGS
@@ -839,19 +839,8 @@ for (const s of SURFACES) {
   if (s.backends && !['env', 'builder', 'code', 'sql', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
 }
 
-// The tabs on the home page sample, and on every code block that has variants.
-export const TABS = ['Bash', 'Python', 'TypeScript', 'Ruby', 'R', 'Rust', 'SQL'];
-
-// Which surface each tab draws from.
-export const TAB_SURFACE = {
-  Bash: 'shell', Python: 'python', TypeScript: 'typescript',
-  Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
-};
-
-// A function page groups its language tabs, so a reader finds one of 24
-// quickly on a phone or a desktop. Every surface sits in one group. A tab
-// shows when its sample file exists, or when the function names it in
-// `cannot`.
+// The surfaces by kind. /languages/ lists its languages in these groups.
+// Every surface sits in one group.
 export const TAB_GROUPS = [
   { name: 'Command line', slugs: ['shell'] },
   { name: 'Python and data', slugs: ['python', 'pandas', 'polars', 'r'] },
@@ -1076,9 +1065,10 @@ export const HOWTOS = [
   },
 ];
 
-// The Bash techniques and recipes under /how-tos/bash/. Each page runs the
-// scripts in examples/how-tos/bash/<slug>/. A technique teaches one shell
-// form. A recipe does one job with the tools you already have.
+// The Bash techniques under /languages/bash/ and the shell jobs under
+// /how-tos/bash/. Each page runs the scripts in examples/how-tos/bash/<slug>/.
+// A technique teaches one shell form. A shell job does one job with the
+// tools you already have.
 export const TECHNIQUES = [
   {
     slug: 'if', title: 'Branch with if', label: 'if',
@@ -1190,11 +1180,17 @@ export const SHELL_JOBS = [
   },
 ];
 
-// The Bash section in side-list order. Its first page is the section's index.
-export const BASH_FIRST = { slug: '', title: 'Bash techniques', label: 'Bash techniques', route: '/how-tos/bash/', group: null };
+// The Bash language page and its techniques, in side-list order. Its first
+// page is the Bash page.
+export const BASH_FIRST = { slug: '', title: 'Bash', label: 'Bash', route: '/languages/bash/', group: null };
 export const BASH = [
   BASH_FIRST,
-  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/how-tos/bash/${t.slug}/` })),
+  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/languages/bash/${t.slug}/` })),
+];
+// The shell jobs, in side-list order. Their first page is their index.
+export const SHELL_JOBS_FIRST = { slug: '', title: 'Shell jobs', label: 'Shell jobs', route: '/how-tos/bash/', group: null };
+export const SHELL_JOB_PAGES = [
+  SHELL_JOBS_FIRST,
   ...SHELL_JOBS.map((r) => ({ ...r, group: 'Shell jobs', route: `/how-tos/bash/${r.slug}/` })),
 ];
 

@@ -19,9 +19,10 @@ const lists = [
   <p>Public installation remains 0.1.2. The approved development 0.2 API has one typed function family per language under the <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/BINDING-AUTHOR.md">binding guide</a>. The <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/UPGRADING-0.2.md">upgrade guide</a> maps changed calls. Each package README gives its development API and installation evidence.</p>
   <p>The development JVM session requires stable JDK 22 or later without <code>--enable-preview</code>. The development Objective-C implementation uses Apple Foundation and ARC. Its <a href="https://github.com/botassembly/thinkthen/blob/main/libraries/objective-c/README.md">owning guide</a> distinguishes Apple SDK compile evidence from pending installed Apple Foundation execution and removed GNU support. The <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/decisions/2026-10-09-native-package-design.md">package design</a> gives intended platforms and runtime floors. Final installed and platform qualification remain required.</p>
 
-  <h2><a href="/install/shell/">The command line</a></h2>
+  <h2><a href="/languages/bash/">The command line</a></h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
+  <p>On Windows, the <a href="/languages/bash/#windows">Bash page</a> gives the install script.</p>
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--plan</code> needs no key.</p>
 
   {lists.map(([heading, list]) => (
