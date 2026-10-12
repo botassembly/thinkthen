@@ -1,0 +1,198 @@
+#!/usr/bin/env python3
+"""Collect release-only native coverage. Installed adapters follow this slice."""
+import argparse
+import datetime
+import json
+import os
+from pathlib import Path
+import shlex
+import shutil
+import subprocess
+import sys
+import time
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'sdlc/scripts'))
+from coverage_report import report
+
+
+class MissingTool(Exception):
+    pass
+
+
+def command(args, cwd, env, log, *, capture=False, timeout=None):
+    """Keep the real exit and diagnostics, including partial timeout output."""
+    started = time.monotonic()
+    with log.open('wb') as output:
+        try:
+            result = subprocess.run(args, cwd=cwd, env=env, stdout=subprocess.PIPE if capture else output,
+                                    stderr=output, timeout=timeout, check=False)
+        except subprocess.TimeoutExpired as error:
+            if error.stdout:
+                output.write(error.stdout)
+            raise RuntimeError(f'timed out: {shlex.join(args)}; see {log}') from error
+        if capture:
+            output.write(result.stdout)
+    print(f'{log.name}: exit {result.returncode}, elapsed {time.monotonic() - started:.1f}s', flush=True)
+    if result.returncode:
+        if result.returncode == 77:
+            raise MissingTool(f'{shlex.join(args)}; see {log}')
+        raise RuntimeError(f'exit {result.returncode}: {shlex.join(args)}; see {log}')
+    return result.stdout if capture else None
+
+
+def tools():
+    for name in ('cargo', 'rustc', 'cc', 'git'):
+        if not shutil.which(name):
+            raise MissingTool(name)
+    sysroot = subprocess.check_output(['rustc', '--print', 'sysroot'], cwd=ROOT, text=True).strip()
+    version = subprocess.check_output(['rustc', '-vV'], cwd=ROOT, text=True)
+    if not version.startswith('rustc 1.95.0 '):
+        raise MissingTool('Rust 1.95.0 from rust-toolchain.toml')
+    host = next(line.removeprefix('host: ') for line in version.splitlines() if line.startswith('host: '))
+    llvm = Path(sysroot) / 'lib/rustlib' / host / 'bin'
+    for name in ('llvm-profdata', 'llvm-cov'):
+        if not (llvm / name).is_file():
+            raise MissingTool(f'Rust 1.95.0 llvm-tools-preview: {name}')
+    return llvm
+
+
+def activate(run, name):
+    folder = run / name
+    folder.mkdir()
+    active = run / 'active'
+    if active.is_symlink():
+        active.unlink()
+    active.symlink_to(folder, target_is_directory=True)
+    return folder
+
+
+def build(run, env):
+    metadata = json.loads(command(['cargo', 'metadata', '--offline', '--no-deps', '--format-version', '1'],
+                                  ROOT, env, run / 'metadata.log', capture=True))
+    package = next(item for item in metadata['packages'] if item['name'] == 'thinkthen')
+    env.update(CARGO_PKG_NAME=package['name'], CARGO_MANIFEST_DIR=str(Path(package['manifest_path']).parent))
+    features = set(package['features'].get('default', []))
+    while True:
+        expanded = features | {value for feature in features for value in package['features'].get(feature, [])}
+        if expanded == features:
+            break
+        features = expanded
+    tests = [item for item in package['targets'] if item['kind'] == ['test']]
+    excluded = [item['name'] for item in tests if not set(item.get('required-features', [])).issubset(features)]
+    (run / 'excluded-targets.json').write_text(json.dumps(excluded) + '\n')
+    targets = [item['name'] for item in tests if item['name'] not in excluded]
+    args = ['cargo', 'test', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--no-run',
+            '--message-format=json', '-j2']
+    for target in targets:
+        args += ['--test', target]
+    messages = command(args, ROOT, env, run / 'build-tests.log', capture=True)
+    artifacts = []
+    for line in messages.splitlines():
+        item = json.loads(line)
+        if item.get('reason') == 'compiler-artifact' and item.get('executable'):
+            artifacts.append((item['target']['kind'], item['target']['name'], item['executable']))
+    command(['cargo', 'build', '--offline', '--locked', '-p', 'thinkthen', '--lib', '--bin', 'thinkthen', '-j2'],
+            ROOT, env, run / 'build-production.log')
+    # C is a separate workspace. Keep its native production mappings even before installed collection.
+    command(['cargo', 'build', '--manifest-path', 'libraries/c/Cargo.toml', '--offline', '--locked', '--lib', '-j2'],
+            ROOT, {**env, 'CARGO_TARGET_DIR': str(run / 'target-c')}, run / 'build-c.log')
+    return artifacts
+
+
+def collect(run, env, artifacts):
+    executable = run / 'target/debug/thinkthen'
+    folder = activate(run, 'inventory')
+    command([str(executable), '--version'], ROOT, env, folder / 'version.log')
+    for name in ('rust-integration', 'cli-source', 'source-unit'):
+        folder = activate(run, name)
+        selected = [item for item in artifacts if item[0] == (['test'] if name == 'rust-integration' else ['lib'])]
+        if not selected:
+            raise RuntimeError(f'{name}: no test executables')
+        for kind, target, path in selected:
+            args = [path, '--test-threads=2']
+            if name == 'cli-source':
+                args += ['cli::']
+            elif name == 'source-unit':
+                args += ['--skip', 'cli::']
+            command(args, ROOT / 'crates/thinkthen', env, folder / f'{target}.log', timeout=1800)
+    return executable
+
+
+def export(run, llvm, objects, name, env):
+    folder = run / name
+    valid = []
+    rejected = []
+    for index, raw in enumerate(sorted(folder.glob('*.profraw'))):
+        probe = folder / 'validate.profdata'
+        with (folder / f'profile-{index}.log').open('wb') as diagnostics:
+            result = subprocess.run([str(llvm / 'llvm-profdata'), 'merge', '-sparse', str(raw), '-o', str(probe)],
+                                    stdout=diagnostics, stderr=diagnostics, check=False)
+        if result.returncode:
+            rejected.append({'file': raw.name, 'exit': result.returncode, 'diagnostics': f'profile-{index}.log'})
+        else:
+            valid.append(str(raw))
+    (folder / 'rejected.json').write_text(json.dumps(rejected, indent=2) + '\n')
+    if not valid:
+        raise RuntimeError(f'{name}: no valid profiles; rejected profiles remain in {folder}')
+    profile = folder / 'merged.profdata'
+    command([str(llvm / 'llvm-profdata'), 'merge', '-sparse', *valid, '-o', str(profile)],
+            ROOT, env, folder / 'merge.log')
+    args = [str(llvm / 'llvm-cov'), 'export', '-format=lcov', '-instr-profile', str(profile), str(objects[0])]
+    for path in objects[1:]:
+        args += ['-object', str(path)]
+    payload = command(args, ROOT, env, folder / 'export.log', capture=True)
+    (folder / 'coverage.lcov').write_bytes(payload)
+    if rejected:
+        raise RuntimeError(f'{name}: {len(rejected)} invalid profiles retained; see {folder / "rejected.json"}')
+    return payload.decode()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--release', action='store_true')
+    parser.add_argument('--native', action='store_true', help='Run only this slice: native tests; installed surfaces are unmeasured')
+    parser.add_argument('--output', type=Path, help='New owned build directory (default: target/coverage/TIMESTAMP)')
+    args = parser.parse_args()
+    if not args.native:
+        raise MissingTool('installed surface collection is not implemented in this slice; use --native for a partial measurement')
+    llvm = tools()
+    revision = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()
+    if subprocess.check_output(['git', 'status', '--porcelain', '--untracked-files=no'], cwd=ROOT):
+        raise RuntimeError('coverage needs committed source')
+    started = time.monotonic()
+    run = (args.output or ROOT / 'target/coverage' / datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S')).resolve()
+    run.mkdir(parents=True, exist_ok=False)
+    (run / 'OWNER').write_text(f'coverage native collection\nsource {revision}\n')
+    activate(run, 'build')
+    initializer = run / 'profile.o'
+    subprocess.run(['cc', '-fPIC', '-c', str(ROOT / 'sdlc/scripts/coverage-profile.c'),
+                    '-DPROFILE_PATH=' + json.dumps(str(run / 'active/%m.profraw')), '-DPROFILE_DIR=' + json.dumps(str(run / 'active')), '-o', str(initializer)], check=True)
+    env = {name: value for name, value in os.environ.items() if not name.startswith('THINKTHEN_') and name != 'LLVM_PROFILE_FILE'}
+    env.update(CARGO_TARGET_DIR=str(run / 'target'), CARGO_NET_OFFLINE='true', RUSTC_WRAPPER='',
+               CARGO_ENCODED_RUSTFLAGS='\x1f'.join(['-C', 'instrument-coverage', '-C', f'link-arg={initializer}']),
+               XDG_CONFIG_HOME=str(run / 'home/config'), XDG_CACHE_HOME=str(run / 'home/cache'),
+               XDG_STATE_HOME=str(run / 'home/state'))
+    artifacts = build(run, env)
+    executable = collect(run, env, artifacts)
+    libraries = list((run / 'target-c/debug').glob('libthinkthen_c.*'))
+    native = [path for path in libraries if path.suffix in ('.so', '.dylib', '.dll')]
+    if len(native) != 1:
+        raise RuntimeError('expected one instrumented C shared library')
+    production = export(run, llvm, [executable, *native], 'inventory', env)
+    objects = [executable, *native, *[Path(item[2]) for item in artifacts]]
+    collections = {name: export(run, llvm, objects, name, env)
+                   for name in ('rust-integration', 'cli-source', 'source-unit')}
+    report(ROOT, run, revision, production, collections, time.monotonic() - started)
+    print(f'Partial native measurement: {run}; installed surfaces remain unmeasured')
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except MissingTool as error:
+        print(f'coverage: not run: {error}', file=sys.stderr)
+        sys.exit(1 if '--release' in sys.argv else 77)
+    except (RuntimeError, subprocess.CalledProcessError, OSError) as error:
+        print(f'coverage: FAIL: {error}', file=sys.stderr)
+        sys.exit(1)
