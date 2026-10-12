@@ -45,8 +45,9 @@ Fresh read-only reviews measured and accepted these increases for final-object r
 | PHP Python | 113 | 114 | +1 |
 | C# Python | 781 | 797 | +16 |
 | Swift Python | 284 | 289 | +5 |
+| R source and fixtures | 1901 | 1915 | +14 |
 
-The six increases total 43 lines. Go and Zig retain the exact final static consumers. Ada retains its session executable; the shared usage builder retains the other executable. PHP forwards the owned backend target. C# and Swift expose writable profile directories inside isolated consumers.
+The seven increases total 57 lines. Go and Zig retain the exact final static consumers. Ada retains its session executable; the shared usage builder retains the other executable. PHP forwards the owned backend target. C# and Swift expose writable profile directories inside isolated consumers. R adds fifteen nonblank lines for the shared waiting-shell helper, removes two duplicated launcher lines, and adds one line for readable clean environment isolation. Production R is unchanged. A fresh reviewer measured and accepted the 14-line increase without deleting assertions or changing formatting to reduce the count.
 
 ## Combined checkpoint
 
