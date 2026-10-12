@@ -83,7 +83,7 @@ def apple_collection(language, context, env, stage, retained, folder):
     settings = {**env, 'THINKTHEN_ARTIFACT': str(artifact),
                 'THINKTHEN_COVERAGE_STAGE': str(retained),
                 'THINKTHEN_COVERAGE_INITIALIZER': str(context['initializer'])}
-    command(['sh', 'check.sh'], root / 'libraries' / language, settings,
+    command(['sh', './check.sh'], root / 'libraries' / language, settings,
             folder / 'check.log', timeout=1800)
     binaries = ('Owned', 'Parity') if language == 'swift' else ('Consumer', 'Cases')
     installed = retained / 'installed' if language == 'swift' else retained / '.build/debug'
@@ -144,7 +144,7 @@ def prepare(context):
                 shutil.copytree(root / 'libraries/csharp', package,
                                 ignore=shutil.ignore_patterns('target', 'bin', 'obj', '__pycache__'))
                 settings['THINKTHEN_NATIVE_ASSET'] = str(context['c_shared'])
-                command(['sh', 'check.sh'], package, settings, folder / 'check.log', timeout=1800)
+                command(['sh', './check.sh'], package, settings, folder / 'check.log', timeout=1800)
                 retained.mkdir()
                 packed = list((package / 'target/scratch/managed').glob('*.nupkg'))
                 if len(packed) != 1:
@@ -173,7 +173,7 @@ def prepare(context):
                             packed.add(source / member, arcname='flutter/' + member)
                     settings.update(THINKTHEN_ARTIFACT=str(flutter_archive),
                                     THINKTHEN_DART_ARTIFACT=str(dart_archive))
-                command(['sh', 'check.sh'], root / 'libraries/dart', settings,
+                command(['sh', './check.sh'], root / 'libraries/dart', settings,
                         folder / 'check.log', timeout=1800)
                 bundle = 'dart-build/bundle' if language == 'dart' else 'flutter-bundle'
                 shutil.copy2(retained / 'consumer' / bundle / 'lib/libthinkthen.so', retained / 'libthinkthen.so')
@@ -191,7 +191,7 @@ def prepare(context):
                         root, settings, folder / 'package.log')
                 settings.update(THINKTHEN_ARTIFACT=str(stage / 'thinkthen-swift-0.2.0.tar.gz'),
                                 THINKTHEN_C_ARTIFACT=str(c_archive))
-                command(['sh', 'check.sh'], root / 'libraries/swift', settings,
+                command(['sh', './check.sh'], root / 'libraries/swift', settings,
                         folder / 'check.log', timeout=1800)
                 assets = list((retained / 'installed/ThinkThen_ThinkThen.bundle/Native').glob('*/libthinkthen.so'))
                 if len(assets) != 1:

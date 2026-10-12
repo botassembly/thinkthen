@@ -49,7 +49,7 @@ def prepare(context):
     for language in ('javascript', 'typescript'):
         name = 'installed-' + language
         def runner(folder, language=language):
-            command(['sh', 'check.sh'], root / 'libraries/typescript',
+            command(['sh', './check.sh'], root / 'libraries/typescript',
                     {**env, 'CARGO_TARGET_DIR': str(run / 'target-tools'),
                      'THINKTHEN_ARTIFACT': str(node_artifact), 'THINKTHEN_PARITY_CONSUMER': language,
                      'THINKTHEN_COVERAGE_OBJECT': str(folder / 'installed.node')}, folder / 'check.log', timeout=1800)
@@ -62,7 +62,7 @@ def prepare(context):
     if len(gems) != 1:
         raise RuntimeError('expected one platform Ruby gem')
     def ruby_runner(folder):
-        command(['sh', 'check.sh'], root / 'libraries/ruby',
+        command(['sh', './check.sh'], root / 'libraries/ruby',
                 {**ruby_env, 'CARGO_TARGET_DIR': str(run / 'target-tools'), 'THINKTHEN_ARTIFACT': str(gems[0]),
                  'THINKTHEN_COVERAGE_OBJECT': str(folder / 'installed-ruby.so')}, folder / 'check.log', timeout=1800)
     collections.append(dict(name='installed-ruby', objects=[run / 'installed-ruby/installed-ruby.so'], runner=ruby_runner))
@@ -82,17 +82,17 @@ def prepare(context):
     r_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-r'), 'THINKTHEN_ARTIFACT': str(r_artifact),
              'THINKTHEN_COVERAGE_STAGE': str(stage / 'r'), 'THINKTHEN_COVERAGE_ROOT': '/build/source',
              'THINKTHEN_COVERAGE_LIBS': f'{context["initializer"]} -Wl,-u,__llvm_profile_runtime {runtime}'}
-    command(['bash', 'check.sh'], root / 'libraries/r', {**r_env, 'THINKTHEN_COVERAGE_PHASE': 'prepare'},
+    command(['bash', './check.sh'], root / 'libraries/r', {**r_env, 'THINKTHEN_COVERAGE_PHASE': 'prepare'},
             stage / 'r-install.log', timeout=1800)
     def r_runner(folder):
-        command(['bash', 'check.sh'], root / 'libraries/r',
+        command(['bash', './check.sh'], root / 'libraries/r',
                 {**r_env, 'CARGO_TARGET_DIR': str(run / 'target-tools'), 'THINKTHEN_COVERAGE_PHASE': 'run'},
                 folder / 'check.log', timeout=1800)
     collections.append(dict(name='installed-r', objects=[stage / 'r/lib/thinkthen/libs/thinkthen.so'], runner=r_runner))
     for language, binary in (('rust', 'thinkthen-rust-consumer'), ('polars', 'thinkthen-polars-consumer')):
         target = run / ('target-' + language)
         def runner(folder, language=language, target=target):
-            command(['sh', 'check.sh'], root / 'libraries' / language,
+            command(['sh', './check.sh'], root / 'libraries' / language,
                     {**env, 'CARGO_TARGET_DIR': str(target), 'THINKTHEN_ARTIFACT': str(crate),
                      'THINKTHEN_TEST_BACKEND': str(run / 'target-tools/debug/conformance-backend'),
                      'THINKTHEN_COVERAGE_ROOT': '/build/source'}, folder / 'check.log', timeout=3600)
