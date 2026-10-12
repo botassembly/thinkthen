@@ -1,0 +1,21 @@
+#!/bin/sh
+# Usage: split.sh REV
+# Counts nonblank .rs lines under crates/ at REV, split into product and test.
+# Test lines: files under any tests/ or *_tests/ folder, files named tests.rs
+# or *_tests.rs, files and folders named test_*, and inline `#[cfg(test)] mod NAME { ... }` blocks in other files.
+# Everything else is product.
+git ls-tree -r --name-only "$1" -- crates | grep '\.rs$' | while read f; do
+  case "$f" in
+    */tests/*|*_tests/*|*/tests.rs|*_tests.rs|*/test_*)
+      echo "test $(git show "$1:$f" | grep -c '[^[:space:]]')";;
+    *)
+      git show "$1:$f" | awk '
+        /^[[:space:]]*$/ {next}
+        intest { t++; d+=gsub(/{/,"{"); d-=gsub(/}/,"}"); if (d<=0) intest=0; next }
+        pending && /^[[:space:]]*mod [A-Za-z_0-9]+ *\{/ { t+=2; p--; pending=0; intest=1; d=gsub(/{/,"{")-gsub(/}/,"}"); if (d<=0) intest=0; next }
+        { pending=0 }
+        /^[[:space:]]*#\[cfg\(test\)\][[:space:]]*$/ { pending=1 }
+        { p++ }
+        END { print "product", p+0; print "test", t+0 }';;
+  esac
+done | awk '{s[$1]+=$2} END{print "product", s["product"], "test", s["test"]}'
