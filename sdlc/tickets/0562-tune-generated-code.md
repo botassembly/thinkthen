@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0561
+Depends on: 0561, 0565
 
 ## Outcome
 
@@ -42,5 +42,4 @@ Lint checks every generated file against its generator. Each language carries on
   - A planted edit in any generated file fails lint.
   - Every language library's routine installed checks pass.
   - No generated public identifier is longer than 60 characters.
-  - The upgrade guide lists every renamed public generated type.
 - Defers: generic `Atomic<T>` emission, and moving Kotlin and Scala onto the Java records, which 0563 owns.

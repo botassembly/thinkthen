@@ -37,7 +37,7 @@ Unit tests in `src` stay only where no public surface can show the behavior, or 
   - Before deleting a unit module, name the outside-in test that covers each of its claims. Then delete it. Start with the modules listed above.
   - Rewrite the MCP unit tests as `thinkthen mcp` tests that drive the command over stdin. Move `ownership_tests.rs` into `tests/`.
   - Cover `RequestColumn` and `RequestQuestion::inline` through the Rust public API, or through one binding's public tests.
-  - Delete public accessors and methods that no surface uses and 0.1.2 did not ship, starting with `with_wording_version`. Give the others an outside-in test.
+  - Delete public accessors and methods that no surface uses, starting with `with_wording_version`. Give the others an outside-in test.
   - Put the refusal paths that are worth stating into one edge-case table. Leave rare I/O failures uncovered.
   - Replace the test-only hooks in `engine/usage.rs` with a real boundary, or keep them as documented exceptions.
   - In language libraries, move native-layer tests onto the installed public API. Share one privacy scanner. Delete hand-written repeats of core refusal rules that `cases.json` already replays.

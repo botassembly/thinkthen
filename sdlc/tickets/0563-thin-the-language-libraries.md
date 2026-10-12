@@ -28,7 +28,7 @@ Each language library that uses the C ABI keeps only its own idioms: futures or 
     - C# starts a new long-running thread for every 50 ms wait.
     - Ada `Start` without an engine quietly creates a default engine for each session.
     - Go has dead code: the nil-settings branch of `newNativeEngine`, and `checkedCString` on JSON from `json.Marshal`.
-- Keeps: each library's public 0.2 API and its routine installed checks, apart from the renames this ticket documents in the upgrade guide.
+- Keeps: each library's public 0.2 API and its routine installed checks. Renames need no upgrade notes.
 - Changes: these moves.
   - Add a C next-packet call that blocks until a packet is ready or the session closes, with cancellation. Each library uses it in place of its own 50 ms poll loop.
   - Move Go, and every other library that builds requests by hand, onto `thinkthen_session_new_named_with_surface`.
