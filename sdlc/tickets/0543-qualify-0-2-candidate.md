@@ -76,6 +76,14 @@ PM amendment, 2026-10-12, fourth. Order after the [2026-10-12 ruling](../decisio
 - Then 0560 records the coverage baseline. Next come 0561, 0562 and 0563 in order, because they touch the same C and generated files. 0564 runs alongside them once 0560 lands.
 - The final candidate runs the full campaign once, the GitHub Apple and Windows runs, and a 0560 coverage run, all on one SHA.
 
+PM amendment, 2026-10-12, fifth. Build in waves and test once, under the [2026-10-12 waves ruling](../decisions/2026-10-12-build-in-waves-test-once.md). This replaces the order in the fourth amendment.
+- Waves: 0560 baseline; then 0561 with 0565, alongside the Rust-only part of 0564; then 0562; then 0563 fanned out by language group, with the library part of 0564 joining each group; then the candidate.
+- All waves build on `ticket/0543-final`. Main receives the batch once, from the accepted candidate SHA.
+- Developers run only fast checks: build, lint with source limits, and routine checks of what they touch. Each wave ends with one routine suite run and a build of every language library.
+- Language developers edit only their own library directory and limit file. Only the 0562 developer edits generators and generated files. The coordinator edits shared files and batches requests for core or generator changes.
+- The fresh review is split by area on one SHA. The candidate then runs the full campaign, the GitHub Apple and Windows runs, and a coverage run that must not fall below the baseline except for deleted code. 0560 to 0565 close together on that SHA.
+- A campaign fix confined to one language reruns that language's full tier. A fix to the core or the generators reruns the full campaign.
+
 ## Progress
 
 - 2026-10-11 started
