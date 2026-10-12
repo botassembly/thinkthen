@@ -90,6 +90,45 @@ Repair `3675f6fb7e347d3d98221e92d7a73d34d29efe2d` records the approved migration
 
 The Python terminal-error fix at `3d3d60c59130b9d581b69d147c1d00c718514f25` raises the terminal error plainly when no producer failure exists and preserves explicit chaining when one exists. The current-source installed Python run passed 51 tests, two type checks and 40 shared cases each for Python, pandas and Python Polars. Its first attempt failed because the owned backend executable was absent; preparing that prerequisite restored the run without changing a test. Python's source limit remains 2,678.
 
+## Local rc.12 measurement
+
+Candidate `rc/0.2.0-rc.12` names the reviewed source `6712593f6f6005db73e8055b6d67b505e4a03a48`. Its canonical `test-full-cases --run` exited 1 after 3,321.26 measured seconds. Twenty-four local consumer rows passed. Executed parity assertions totalled 5,728 passes and one failure. C completed 255 cases with 254 passes; `selected-object-false-unicode` failed with the native Usage message `the item does not match item_schema` at position 1. Dart and Flutter asserted zero parity cells because their shared preparation failed: Flutter's library entrypoint lacked the `dart:isolate` import required by its shared session implementation's `Isolate.run` call. Earlier cache-miss, checksum and download failures in that preparation were expected negative checks, not its stopping failure.
+
+Swift and Objective-C remained explicitly delegated to hosted macOS with no local pass. Seventeen installed smokes passed and those two Apple smokes were delegated. Printed Rust test results totalled 156 passes, zero failures and two ignored tests; the C release cases were subsequently run explicitly. Package and stress did not run after the full-command failure. No hosted workflow was dispatched. All owned processes exited and the supervisor reaped 427 child statuses. The source checkout stayed clean and unchanged. This failed candidate establishes neither release qualification nor ticket completion.
+
+The measured consumer durations include preparation and execution. Dart and Flutter share the failed 193.36-second family preparation; that duration is not two independent executions. Apple consumers performed no local execution.
+
+| Consumer | Seconds | Result |
+| --- | ---: | --- |
+| Rust | 250.48 | Pass |
+| Rust Polars | 760.75 | Pass |
+| Python | 291.34 | Pass |
+| pandas | 410.55 | Pass |
+| Python Polars | 332.83 | Pass |
+| TypeScript | 274.08 | Pass |
+| JavaScript | 264.34 | Pass |
+| Java | 173.45 | Pass |
+| Kotlin | 173.12 | Pass |
+| Scala | 176.46 | Pass |
+| Dart and Flutter | 193.36 | Shared preparation failed; zero parity assertions |
+| CLI | 126.10 | Pass |
+| C | 166.03 | One required assertion failed |
+| Ruby | 83.43 | Pass |
+| R | 434.50 | Pass |
+| Go | 115.85 | Pass |
+| C# | 225.55 | Pass |
+| C++ | 236.19 | Pass |
+| Swift | 0.00 | Delegated to macOS; no local pass |
+| Zig | 251.08 | Pass |
+| Objective-C | 0.00 | Delegated to macOS; no local pass |
+| PHP | 59.91 | Pass |
+| Ada | 152.59 | Pass |
+| COBOL | 189.48 | Pass |
+| SQLite | 97.05 | Pass |
+| DuckDB | 221.76 | Pass |
+| PostgreSQL | 510.35 | Pass |
+| MCP | 133.13 | Pass |
+
 ## What the build taught us
 
 Source inspection missed a required Debug implementation until C compilation ran. Library-only Clippy missed a test-only atomic type until all-targets Clippy compiled the unit tests. Focused session checks missed frozen typed-array behavior and a parallel prefix race. A new regression can also encode the wrong contract; accepted ADRs and unchanged outside-in cases take precedence over a newly invented expectation.
