@@ -9,10 +9,22 @@ import { examplesOf } from '../data/fn-examples.mjs';
 const { fn, level = 'h3' } = Astro.props;
 const { extra, more, moreInputs } = examplesOf(fn);
 const Heading = level;
+// A file one further run reads sits directly above the first run that reads
+// it. The other files sit at the top.
+const readBy = (run) => moreInputs.filter((file) => run.command.includes(file.name));
+const firstReader = new Map();
+for (const run of extra) for (const file of readBy(run)) if (!firstReader.has(file.name)) firstReader.set(file.name, run.name);
+const top = moreInputs.filter((file) => !firstReader.has(file.name));
+const above = (run) => moreInputs.filter((file) => firstReader.get(file.name) === run.name);
 ---
 {(extra.length > 0 || more.length > 0) && <Heading id="more-examples">More examples</Heading>}
-{moreInputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples below read`} />)}
-{extra.map((run) => <Terminal run={run} caption={run.see} />)}
+{top.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the examples below read`} />)}
+{extra.map((run) => (
+  <>
+    {above(run).map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, the file the next example reads`} />)}
+    <Terminal run={run} caption={run.see} />
+  </>
+))}
 {more.map((m) => (
   <>
     <Code code={m.code} file={m.file} caption={`${m.name}: ${m.see}`} label={`Copy the ${m.name} sample`} />

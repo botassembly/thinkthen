@@ -172,6 +172,16 @@ function pages(dir, acc = []) {
   return acc;
 }
 
+// A blurb of at most 160 characters, cut at the last sentence end, else at
+// the last space.
+function shorten(text, max = 160) {
+  if (text.length <= max) return text;
+  const head = text.slice(0, max + 1);
+  const sentence = head.lastIndexOf('. ');
+  if (sentence > 40) return head.slice(0, sentence + 1);
+  return head.slice(0, head.lastIndexOf(' ')).replace(/[,;:]$/, '') + '…';
+}
+
 const found = pages(DIST).sort();
 const list = [];
 
@@ -193,7 +203,7 @@ for (const file of found) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body + '\n');
   const first = body.split('\n').find((l) => l && !l.startsWith('#')) || '';
-  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: first.slice(0, 160), body });
+  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: shorten(first), body });
 }
 
 // The home page leads both llms files.

@@ -71,7 +71,7 @@ const ENV = [
       <tr><td>{file}</td><td>{system}</td><td>{paths.map((p, i) => <>{i > 0 && ', else '}<code class="path" set:html={pathHtml(p)} /></>)}</td></tr>
     )))}
   </table>
-  <p>ThinkThen has no home-folder variable of its own. On Linux and macOS, <code>HOME</code> and the three XDG variables decide every location. Windows reads <code>APPDATA</code> and <code>LOCALAPPDATA</code>. <a href="/functions/question-file/#named-questions">Saved questions</a> sit in the folder beside the configuration file.</p>
+  <p>ThinkThen has no home-folder variable of its own. On Linux, <code>HOME</code> and the three XDG variables decide every location. macOS uses <code>HOME</code> alone. Windows reads <code>APPDATA</code> and <code>LOCALAPPDATA</code>. <a href="/functions/question-file/#named-questions">Saved questions</a> sit in the folder beside the configuration file.</p>
   <Terminal run={paths} caption={paths.see} />
   <p>On Linux, set <code>XDG_CONFIG_HOME</code>, <code>XDG_CACHE_HOME</code> or <code>XDG_STATE_HOME</code> to move the files. Each counts only when it is an absolute path. A relative path is ignored, and the location falls back to <code>HOME</code>. macOS ignores the XDG variables.</p>
   <Terminal run={moved} caption={moved.see} />

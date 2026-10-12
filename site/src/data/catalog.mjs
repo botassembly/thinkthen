@@ -441,7 +441,7 @@ export const SURFACES = [
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
     windows: [
-      'On Windows x86-64, download `https://thinkthen.dev/install.ps1`, read it, and run `.\\install.ps1` in Windows PowerShell 5.1 or PowerShell 7. It installs `thinkthen.exe` and its receipt in `%LOCALAPPDATA%\\Programs\\thinkthen`, or in the folder `THINKTHEN_INSTALL_DIR` names.',
+      'On Windows x86-64, download `https://thinkthen.dev/install.ps1`, read it, and run `.\\install.ps1` in Windows PowerShell 5.1 or PowerShell 7. It installs `thinkthen.exe` and its receipt in `%LOCALAPPDATA%\\Programs\\thinkthen`, or in the folder `THINKTHEN_INSTALL_DIR` names. That folder must be an absolute path on a local NTFS drive.',
       'The script checks the archive against its checksum and checks the command\'s version. A checksum does not prove who published the archive.',
       'The script changes no execution policy, profile, registry or runtime configuration. It prints the command\'s path. When the install folder is not on `PATH`, it also prints a `PATH` command for the current session.',
       'To remove ThinkThen, delete `thinkthen.exe`, `thinkthen.install.json` and `.thinkthen-install.lock` from the install folder.',
