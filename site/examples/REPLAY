@@ -17,6 +17,7 @@ functions/annotate/python.py
 functions/annotate/r.R
 functions/annotate/ruby.rb
 functions/annotate/rust.rs
+functions/annotate/scala.scala
 functions/annotate/sqlite.sql
 functions/annotate/typescript.ts
 functions/choose/ada.adb
@@ -34,6 +35,7 @@ functions/choose/python.py
 functions/choose/r.R
 functions/choose/ruby.rb
 functions/choose/rust.rs
+functions/choose/scala.scala
 functions/choose/sqlite.sql
 functions/choose/typescript.ts
 functions/decide/ada.adb
@@ -49,6 +51,7 @@ functions/decide/python.py
 functions/decide/r.R
 functions/decide/ruby.rb
 functions/decide/rust.rs
+functions/decide/scala.scala
 functions/decide/sqlite.sql
 functions/decide/typescript.ts
 functions/filter/ada.adb
@@ -64,6 +67,7 @@ functions/filter/python.py
 functions/filter/r.R
 functions/filter/ruby.rb
 functions/filter/rust.rs
+functions/filter/scala.scala
 functions/filter/sqlite.sql
 functions/filter/typescript.ts
 functions/find/ada.adb
@@ -79,6 +83,7 @@ functions/find/python.py
 functions/find/r.R
 functions/find/ruby.rb
 functions/find/rust.rs
+functions/find/scala.scala
 functions/find/sqlite.sql
 functions/find/typescript.ts
 functions/question-file/duckdb.sql
@@ -104,6 +109,7 @@ functions/rank/python.py
 functions/rank/r.R
 functions/rank/ruby.rb
 functions/rank/rust.rs
+functions/rank/scala.scala
 functions/rank/sqlite.sql
 functions/rank/typescript.ts
 functions/recognize/ada.adb
@@ -121,6 +127,7 @@ functions/recognize/python.py
 functions/recognize/r.R
 functions/recognize/ruby.rb
 functions/recognize/rust.rs
+functions/recognize/scala.scala
 functions/recognize/sqlite.sql
 functions/recognize/typescript.ts
 functions/relate/ada.adb
@@ -136,6 +143,7 @@ functions/relate/python.py
 functions/relate/r.R
 functions/relate/ruby.rb
 functions/relate/rust.rs
+functions/relate/scala.scala
 functions/relate/sqlite.sql
 functions/relate/typescript.ts
 functions/score/ada.adb
@@ -153,6 +161,7 @@ functions/score/python.py
 functions/score/r.R
 functions/score/ruby.rb
 functions/score/rust.rs
+functions/score/scala.scala
 functions/score/sqlite.sql
 functions/score/typescript.ts
 functions/tag/ada.adb
@@ -168,6 +177,7 @@ functions/tag/python.py
 functions/tag/r.R
 functions/tag/ruby.rb
 functions/tag/rust.rs
+functions/tag/scala.scala
 functions/tag/sqlite.sql
 functions/tag/typescript.ts
 install/duckdb/first-call.sql
