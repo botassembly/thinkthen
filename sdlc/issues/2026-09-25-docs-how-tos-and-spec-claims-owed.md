@@ -2,7 +2,7 @@ Status: open for pages 12 to 24, all after 0.1. Page 11 is done: ticket 0350 (`8
 
 Milestone: later
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future docs ticket after 0.1; the builder for page 23.
+Owner: a future docs ticket after 0.1; the builder for page 23.
 
 # Docs and how-tos owed
 

@@ -24,7 +24,7 @@ The 2026-09-21 handoffs defer to the existing [recognize](../../specification/re
 
 ## Bench evidence and fixtures
 
-The removed bench handoff's test split remains in [test-split-2026-09-30.md](../planning/test-split-2026-09-30.md): the repository checks mechanics offline, the public benchmark measures accuracy/cost/speed, and release QA qualifies releases. Loopback error-path tests remain in the repository. Count-only status fields follow [ADR 0114](../planning/adr/0114-named-backends-each-name-their-key-variable.md); tag conventions follow [worktrees.md](../planning/worktrees.md).
+The removed bench handoff's test split remains in [test-split-2026-09-30.md](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/test-split-2026-09-30.md): the repository checks mechanics offline, the public benchmark measures accuracy/cost/speed, and release QA qualifies releases. Loopback error-path tests remain in the repository. Count-only status fields follow [ADR 0114](../planning/adr/0114-named-backends-each-name-their-key-variable.md); tag conventions follow [worktrees.md](../planning/worktrees.md).
 
 Hard cases use public input and key files beside a sorted `thinkthen.jsonl`, never a committed SQLite store, headers or credentials. The recording contract governs conversion and replay; updated cache identity rules govern recorded address/model inputs. Benchmark fixture placement defaults to `specification/fixtures/<function>/bench-<case>/`, with source provenance in its README. [The relate decision run](../issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md) retains its measured result and the unrun alternate-provider cell.
 
@@ -40,4 +40,4 @@ Confirmed correctness fixes precede new controls. Cache admission settles before
 
 Ian held release management on 2026-10-08. No candidate tag, manual GitHub workflow dispatch, release branch advancement or publication proceeds without his permission. Main targets 0.2; release/0.1 stays frozen. Public install copy remains 0.1.2 until 0.2 ships. No new paid run follows from this cleanup. Final platform qualification, candidate QA and publication retain their existing approvals and owners.
 
-The configured `planning/team-0-2-2026-10-04.md` retains only its lane table until the pm layout migration. Read lanes through pm. Accepted scope and order live in [milestones.md](../planning/milestones.md) and [the 0.2 SDK rollout](../planning/0-2-sdk-rollout.md).
+The configured `planning/team-0-2-2026-10-04.md` retains only its lane table until the pm layout migration. Read lanes through pm. Accepted scope and order live in [milestones.md](../planning/milestones.md).

@@ -23,7 +23,7 @@ The design study asked ten questions and an eleventh about paid calls. It recomm
 
 **The design gets time.** Ian wants to think through the high-level design. The `specification/` folder is where he reads it, and code follows the specification.
 
-**Live testing has more budget.** Ian granted more budget for paid calls during testing and named no number. An agent set the cap at twenty million input tokens for this repository, under one dollar at the first vendor's price. `sdlc/planning/plan.md` tracks the spend. Ian raises the cap by saying so.
+**Live testing has more budget.** Ian granted more budget for paid calls during testing and named no number. An agent set the cap at twenty million input tokens for this repository, under one dollar at the first vendor's price. [`plan.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/plan.md) tracks the spend. Ian raises the cap by saying so.
 
 ## Still open
 

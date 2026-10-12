@@ -58,7 +58,7 @@ hook as plain R does: the hook runs once and the script goes on.
 
 ## Amendment, 2026-09-24: ported to main, and the R surface ticket owns it
 
-Ticket 0099 ported this ADR to main at its number from tag `surfaces-wave7-final` (`f6a7faea`). The ruling above stands as accepted. The R surface ticket (queue item 3 in `sdlc/planning/one-line-plan-2026-09-24.md`) owns it going forward. That ticket rebinds R to the public API and re-proves the tick and the three residual windows against the real engine. Ian can overturn this owner by moving the ruling to another ticket.
+Ticket 0099 ported this ADR to main at its number from tag `surfaces-wave7-final` (`f6a7faea`). The ruling above stands as accepted. The R surface ticket (queue item 3 in [`one-line-plan-2026-09-24.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/one-line-plan-2026-09-24.md)) owns it going forward. That ticket rebinds R to the public API and re-proves the tick and the three residual windows against the real engine. Ian can overturn this owner by moving the ruling to another ticket.
 
 ## Amendment, 2026-09-25: re-proved on the public API
 

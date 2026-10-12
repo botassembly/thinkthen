@@ -4,7 +4,7 @@ Status: Open. Checked 2026-09-30: `specification/annotate.md` still keeps option
 
 Milestone: later
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1.
+Owner: a future ticket after 0.1.
 
 Ian asked on 2026-09-23 how annotate picks an album when the album list lives in the user's data. Today it cannot, short of generating the question set.
 

@@ -8,7 +8,7 @@ Problems found and filed. An issue is not a ticket and authorizes no work.
 - Landing a ticket closes the issues it settles. The lander writes the closing status line and moves the file to `closed/` in the landing commit.
 - Merge before you add. A new problem that shares a fix with an open issue becomes an item in that issue.
 - An idea is an issue with `Kind: idea` and `When: <trigger>`, such as `after the 0.1 release`, and one sentence on what it would buy.
-- `../planning/issue-priorities-2026-09-30.md` orders this folder. It replaces the backlog report of 2026-09-25.
+- Read priority and order through pm.
 
 ## Debt
 

@@ -72,7 +72,7 @@ Ian set it aside and put `jq` transforms first. He named five outcomes:
 4. The transforms alone.
 5. A general way to carry transforms inside the tool.
 
-One test decides between them. The transforms are written and tried on real rows in the transforms slice of `sdlc/planning/plan.md`. A command comes back only if the transforms prove too clumsy on those rows.
+One test decides between them. The transforms are written and tried on real rows in the transforms slice of [`plan.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/plan.md). A command comes back only if the transforms prove too clumsy on those rows.
 
 The fifth outcome carries a rule of its own. It enters only when several transforms exist that people would otherwise copy and paste. One transform does not earn it.
 

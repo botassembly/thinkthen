@@ -68,7 +68,7 @@ Tag expansion, annotations, recognition stages, relation questions, packing, par
 
 - `sdlc/planning/design-study.md` says what the tool is, what version one holds, and how it fits with botassembly.
 - `sdlc/planning/rust-standards.md` says how the code is judged. Every rule names the tool that enforces it.
-- `sdlc/planning/plan.md` holds the build order and its state.
+- `sdlc/planning/milestones.md` holds what each release builds and in what order. pm holds status.
 - `sdlc/planning/adr/` holds the decisions.
 
 ## Reporting a bug

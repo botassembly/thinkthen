@@ -36,7 +36,7 @@ surfaces use for their tick.
 
 ## Amendment, 2026-09-24: ported to main, and the PostgreSQL surface ticket owns it
 
-Ticket 0099 ported this ADR to main at its number from tag `surfaces-wave7-final` (`f6a7faea`). The ruling above stands as accepted. The PostgreSQL surface ticket (queue item 3 in `sdlc/planning/one-line-plan-2026-09-24.md`) owns it going forward. That ticket rebinds PostgreSQL to the public API and re-runs the deadline-arm conformance case against the real engine. It reads the budget through ADR 0041's owner on main. Ian can overturn this owner by moving the ruling to another ticket.
+Ticket 0099 ported this ADR to main at its number from tag `surfaces-wave7-final` (`f6a7faea`). The ruling above stands as accepted. The PostgreSQL surface ticket (queue item 3 in [`one-line-plan-2026-09-24.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/one-line-plan-2026-09-24.md)) owns it going forward. That ticket rebinds PostgreSQL to the public API and re-runs the deadline-arm conformance case against the real engine. It reads the budget through ADR 0041's owner on main. Ian can overturn this owner by moving the ruling to another ticket.
 
 ## Amendment, 2026-09-24: a cancel stops every call (ticket 0111)
 

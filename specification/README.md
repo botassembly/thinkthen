@@ -10,7 +10,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 
 `RequestInput::from_json(&str) -> Result<RequestInput, Error>` decodes the existing [canonical input selector grammar](request.schema.json) beside `RequestItem::from_json` and `RequestQuestion::from_json`. It preserves serde admission and classifies failures through the shared typed context validator. Bindings retain `RequestDecodeCause` diagnostics instead of interpreting serde error text. This method changes no selector fields, optional values or null handling. [ADR 0125](../sdlc/planning/adr/0125-one-request-contract-and-native-admission.md) owns native admission. Ian can overturn this API detail.
 
-`spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of `sdlc/planning/plan.md` closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
+`spec/` holds executable pages that describe the code that has landed. `specification/` is the contract the code is moving to. Slice 3 of [`plan.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/plan.md) closes the gap between the two. The fixtures under `fixtures/` follow the landed code until a ticket changes them together with `spec/`.
 
 | Document | What it fixes | Status |
 | --- | --- | --- |

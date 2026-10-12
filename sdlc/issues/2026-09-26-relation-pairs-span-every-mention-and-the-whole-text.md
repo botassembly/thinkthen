@@ -4,7 +4,7 @@ Status: open, a post-0.1 candidate. Shortened 2026-09-30. Fix 1, merging mention
 
 Milestone: later
 
-Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0.1. Coordinator default 3 keeps the whole text for 0.1, with the limit as an opt-in; Ian can overturn.
+Owner: a future ticket after 0.1. Coordinator default 3 keeps the whole text for 0.1, with the limit as an opt-in; Ian can overturn.
 
 ## What happens today
 

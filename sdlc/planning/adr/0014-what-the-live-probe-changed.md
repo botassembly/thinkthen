@@ -35,7 +35,7 @@ No recipe reads a `choose` row or a `score` row. The probes wrote a twin of `com
 
 ## Consequences
 
-The specification pages named above change in one pass. `plan.md` marks slice 6 done and slice 11 as accepted work. The cap on questions in one request is still unmeasured and waits for `annotate`.
+The specification pages named above change in one pass. [`plan.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/plan.md) marks slice 6 done and slice 11 as accepted work. The cap on questions in one request is still unmeasured and waits for `annotate`.
 
 ## Clarifications from the coherence reading, 2026-09-19
 
@@ -43,7 +43,7 @@ The agent ruled on these, and Ian can overturn each.
 
 - `find` takes no `--threshold` in version one. The `none` option is the whole rule for "nothing fits". The test on documents of 100 to 250 lines also reports whether a floor on the winning probability would have caught any wrong pick, and the page changes only on that evidence.
 - The list of everyday options in `channels.md` names every everyday option, `--options POINTER` and `--none` included. `--jobs N` and `--cache DIR` join the advanced list with ticket 0013.
-- A slice row in `plan.md` records what the slice delivered on the day.
+- A slice row in [`plan.md`](https://github.com/botassembly/thinkthen/blob/78a11c47e/sdlc/planning/plan.md) records what the slice delivered on the day.
 - Slice 10b starts with the work of item 6.
 - No check holds a size budget on a specification page. The agent's briefs said one did, and they were wrong. The pages are short today, and a budget enters only if one grows past use.
 
