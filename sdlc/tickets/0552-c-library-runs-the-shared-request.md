@@ -1,6 +1,6 @@
 # 0552: Run every C library entry point through the shared request
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -13,6 +13,8 @@ Reviews: revision 0333414aa3ac33dc1d617f24344a05dad91b1186, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: The accepted exact-source work landed in the shared corrective batch without a separate ticket merge.)
 
 ## Outcome
 
