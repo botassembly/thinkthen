@@ -41,43 +41,26 @@ backend_say <- function(line) {
   on.exit(close(fifo))
   writeLines(line, fifo)
 }
-backend_count <- function() {
+backend_reply <- function(command, pattern, invert = FALSE) {
   out <- Sys.getenv("TT_BACKEND_OUT")
-  before <- length(grep("^wait ", readLines(out), invert = TRUE))
-  backend_say("count")
+  before <- length(grep(pattern, readLines(out), invert = invert))
+  backend_say(command)
   repeat {
-    lines <- grep("^wait ", readLines(out), invert = TRUE, value = TRUE)
-    if (length(lines) > before) return(as.integer(lines[[length(lines)]]))
+    lines <- grep(pattern, readLines(out), invert = invert, value = TRUE)
+    if (length(lines) > before) return(lines[[length(lines)]])
     Sys.sleep(0.02)
   }
 }
+backend_count <- function() as.integer(backend_reply("count", "^wait ", TRUE))
 
 # The backend's count once it reads at least n, or at 30 s, from its `wait` line.
-backend_wait <- function(n) {
-  out <- Sys.getenv("TT_BACKEND_OUT")
-  before <- length(grep("^wait ", readLines(out)))
-  backend_say(paste("wait", n))
-  repeat {
-    lines <- grep("^wait ", readLines(out), value = TRUE)
-    if (length(lines) > before) return(as.integer(sub("^wait ", "", lines[[length(lines)]])))
-    Sys.sleep(0.02)
-  }
-}
+backend_wait <- function(n) as.integer(sub("^wait ", "", backend_reply(paste("wait", n), "^wait ")))
 
 # Millisecond promises run only under the stress profile (ticket 0356).
 stress <- identical(Sys.getenv("THINKTHEN_TEST_PROFILE"), "stress")
 
 capture <- function() {
-  output <- Sys.getenv("TT_BACKEND_OUT")
-  before <- length(grep("^\\{", readLines(output)))
-  backend_say("capture")
-  repeat {
-    lines <- grep("^\\{", readLines(output), value = TRUE)
-    if (length(lines) > before) {
-      return(jsonlite::fromJSON(lines[[length(lines)]], simplifyVector = FALSE)$bodies)
-    }
-    Sys.sleep(0.02)
-  }
+  jsonlite::fromJSON(backend_reply("capture", "^\\{"), simplifyVector = FALSE)$bodies
 }
 
 # A base address on this file's backend, for an arm other than generic.

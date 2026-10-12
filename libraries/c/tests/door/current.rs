@@ -10,10 +10,7 @@ fn public_batch_metadata_uses_header_kinds_for_setting_and_both_warning_sides() 
         b"",
         &[],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 5);
 }
 #[test]
@@ -27,10 +24,7 @@ fn immutable_image_bytes_dimensions_and_filename_outlive_the_engine() {
         b"",
         &[("TYPED_IMAGE", &image), ("TYPED_JPEG", &jpeg)],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 0);
 }
 #[test]
@@ -43,10 +37,7 @@ fn all_ten_question_constructors_and_invalid_counted_descriptors_send_nothing() 
         b"",
         &[("TYPED_QUESTION", &path)],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 0);
 }
 #[test]
@@ -65,10 +56,7 @@ fn all_ten_complete_calls_expose_actual_values_identities_attempts_and_owned_vie
             b"",
             &extra,
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(backend.count(), 13);
     }
     let backend = conformance_backend::Listener::answering(|_| {
@@ -83,10 +71,7 @@ fn all_ten_complete_calls_expose_actual_values_identities_attempts_and_owned_vie
         b"",
         &[("TYPED_FIND_NONE", std::path::Path::new("1"))],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 1, "none retains one actual find request");
 }
 #[test]
@@ -109,10 +94,7 @@ fn complete_relation_counts_source_occurrences_and_stops_before_the_unread_suffi
                 ("TYPED_RELATE_BOUND", std::path::Path::new(&count)),
             ],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
     }
     assert_eq!(backend.count(), 0);
 }
@@ -138,10 +120,7 @@ fn complete_find_admits_counts_and_cancellation_before_the_unread_suffix() {
             b"",
             &extra,
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(backend.count(), 0);
     }
 }
@@ -161,10 +140,7 @@ fn complete_failure_snapshots_keep_actual_stops_and_final_joined_facts() {
             b"",
             &[("TYPED_FAILURE", &mode)],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(backend.count(), sends);
     }
 }
@@ -188,10 +164,7 @@ fn complete_record_controls_record_reread_and_cache_use_one_native_store() {
             ("TYPED_CACHE_JSON", &cache_json),
         ],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 3);
     let capture: serde_json::Value =
         serde_json::from_str(&backend.capture()).expect("captured requests");
@@ -242,10 +215,7 @@ fn complete_images_keep_order_and_execute_three_routes_and_native_file_reading()
             ("TYPED_BLUE", &fixtures.join("blue.png")),
         ],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 4);
     let requests = backend.requests();
     for request in requests.iter().take(3) {
@@ -272,10 +242,7 @@ fn complete_text_only_image_refusals_send_nothing_for_all_seven_functions() {
             ("TYPED_REFUSE", &mode),
         ],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 0);
 }
 
@@ -319,10 +286,7 @@ fn complete_native_readings_keep_projection_originals_authored_nulls_and_failed_
             b"",
             &extra,
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(backend.count(), if partial { 1 } else { 4 });
         if !partial {
             let capture: serde_json::Value =
@@ -348,10 +312,7 @@ fn complete_author_declarations_and_explicit_object_context_keep_native_types() 
             b"",
             &[("TYPED_AUTHOR_MODE", &mode)],
         );
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
         assert_eq!(backend.count(), sends);
         if sends != 0 {
             let capture: serde_json::Value =
@@ -449,10 +410,7 @@ fn complete_native_named_and_reference_loaders_execute_roles_and_hold_path_prece
             ("TYPED_WORKING_DIRECTORY", &cwd),
         ],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 11);
 }
 
@@ -466,10 +424,7 @@ fn saved_rank_sets_retain_turns_order_and_each_native_member_judgment() {
         listener.base(),
         b"",
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(listener.count(), 1);
     let body = String::from_utf8(listener.requests()[0].body.clone()).expect("request");
     assert!(
@@ -555,9 +510,6 @@ fn final_rows_retain_input_indices_after_filtering_and_ranking_and_refuse_invali
         b"",
         &[("TYPED_ROW_INDEX", std::path::Path::new("1"))],
     );
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 3);
 }

@@ -68,10 +68,7 @@ fn source_recognition_uses_one_deadline_for_every_record() {
     .arg(recognition(&paths).to_string())
     .output()
     .expect("recognition deadline");
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     let facts: Value = serde_json::from_slice(&output.stdout).expect("deadline facts");
     assert_eq!(facts["records"], 1);
     assert_eq!(facts["requests_sent"], 2);
@@ -120,10 +117,7 @@ fn source_plan_applies_count_and_aggregate_bytes_before_reading_tail() {
                 ])
                 .output()
                 .expect("plan refusal");
-        assert_eq!(
-            (output.status.code(), text(&output.stderr)),
-            (Some(0), String::new())
-        );
+        super::successful(&output);
     }
     assert_eq!(backend.count(), 0);
 }

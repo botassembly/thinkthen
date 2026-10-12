@@ -457,10 +457,7 @@ fn the_c_constructor_keeps_its_boundary_rules() {
     let base = format!("{}/generic/v1", backend.origin());
     let source = crate_dir().join("tests/c/settings.c");
     let output = run(&compile(&source), &base, b"");
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     assert_eq!(backend.count(), 0, "constructor refusals send nothing");
 }
 

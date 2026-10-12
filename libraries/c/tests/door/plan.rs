@@ -26,10 +26,7 @@ fn p1_plans_with_no_key_and_no_send_and_refusals_keep_the_outputs() {
         .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
         .output()
         .expect("the plan program ran");
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     // The exact bytes, in the crate's field order.
     let body = serde_json::to_string(BODY).expect("the body as a JSON string");
     let expected = format!(
@@ -54,10 +51,7 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
         .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
         .output()
         .expect("the canonical preview program ran");
-    assert_eq!(
-        (output.status.code(), text(&output.stderr)),
-        (Some(0), String::new())
-    );
+    super::successful(&output);
     let plan: serde_json::Value = serde_json::from_slice(&output.stdout).expect("native plan JSON");
     assert_eq!(plan["records"], 1);
     assert_eq!(plan["requests"], 1);
