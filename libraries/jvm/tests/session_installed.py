@@ -78,7 +78,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
         boundary = command.index('--')
         command[boundary:boundary] = ['--bind', str(profiles), '/work/coverage',
                                      '--bind', str(profiles), str(observation)]
-        env['LLVM_PROFILE_FILE'] = '/work/coverage/%m.profraw'
+        env['LLVM_PROFILE_FILE'] = '/work/coverage/' + Path(os.environ.get('LLVM_PROFILE_FILE', '%m.profraw')).name
     try:
         expected = []
         expected_agents = []

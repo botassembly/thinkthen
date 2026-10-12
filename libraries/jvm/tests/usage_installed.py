@@ -55,7 +55,7 @@ def run(jars, out, *, language=None, profiles=None):
                     home.mkdir()
                     env = child_env(home=home, THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1', THINKTHEN_API_KEY='tt-canary-290')
                     if profiles is not None:
-                        env['LLVM_PROFILE_FILE'] = str(Path(profiles).resolve() / '%m.profraw')
+                        env['LLVM_PROFILE_FILE'] = str(Path(profiles).resolve() / Path(os.environ.get('LLVM_PROFILE_FILE', '%m.profraw')).name)
                     if mode == 'disabled':
                         env.update(HOME='', XDG_STATE_HOME='', APPDATA='', LOCALAPPDATA='')
                     command = [str(JDK / 'bin/java'), '--enable-native-access=ALL-UNNAMED', '-Xmx1g', '-XX:ActiveProcessorCount=2', '-cp', cp, mainclass, mode, str(home)]
