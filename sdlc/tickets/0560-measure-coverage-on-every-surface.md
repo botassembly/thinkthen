@@ -30,3 +30,4 @@ A committed release-suite script measures how much of the Rust core and the C li
 ## Progress
 
 - 2026-10-12 started
+- 2026-10-12 next: The native tooling slice retains feature-selection, profile-write and launcher failures as diagnostics; finish Cargo launch metadata and source-unit classification, validate the frozen slice, then add installed C, Python and JVM collections before the full main baseline.
