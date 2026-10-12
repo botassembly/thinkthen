@@ -1,6 +1,6 @@
 # 0554: Make the Rust Engine's per-function methods build Requests
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.2
 
@@ -19,6 +19,8 @@ Reviews: revision ea591ef, accept
 Reviews: revision 6712593, accept
 
 Reviews: revision c2626ca, accept
+
+Landed: aa595d6 (fast-forward: Accepted engine repairs landed in the shared corrective batch without a separate ticket merge.)
 
 ## Outcome
 
