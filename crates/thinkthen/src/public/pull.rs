@@ -139,7 +139,7 @@ where
         fed: 0,
         completed: 0,
         most: call.most,
-        interactive: packing.inputs == Some(1) && readiness.is_none() && !call.aggregate_inputs,
+        interactive: packing.inputs == Some(1) && readiness.is_none(),
         pending_ask: false,
         deferred: false,
         coordinator: Some(coordinator),
