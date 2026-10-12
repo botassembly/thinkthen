@@ -17,7 +17,7 @@ npm run build
 `npm run build` does these things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
-2. `scripts/named-answers.test.mjs` runs named-answer fixtures, then `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page.
+2. `scripts/named-answers.test.mjs` runs named-answer fixtures, then `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, saved output for each SQL sample, whole details, no comments, and a goal on every page. `scripts/check-cases.test.mjs` runs the same-case fixtures, then `scripts/check-cases.mjs` checks that every sample of a function shows that function's one case. See "The same case in every language" below.
 3. `scripts/check-slides.mjs` checks that the Beatles Bench slides come from a deck that quotes the pinned bench.
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `scripts/check-flags.mjs` compares each function's flag data in `src/data/catalog.mjs` and `src/data/flags.mjs` with `thinkthen <fn> --help`. It fails on a flag the help shows and the data lacks, and on one the data lists and the help lacks.
@@ -204,6 +204,14 @@ Dark follows the system and is the default. The sun and moon button in the heade
 ## Languages
 
 The home page and every function page show Bash only, and each says once that the function runs in every binding (`sdlc/decisions/2026-10-12-docs-sell-one-idea.md`). Each language has its own page at `/languages/<slug>/`, drawn by `src/components/SurfacePage.astro`. It shows all ten functions in that language. A function's sample appears when `examples/functions/<fn>/<surface>.<ext>` exists, so a new sample needs no page edit. A function that a surface cannot run names that surface in its `cannot` field, with one sentence the page shows. `/languages/` lists the languages in the groups `TAB_GROUPS` in `src/data/catalog.mjs` names, such as "JVM and .NET". The database pages stay at `/install/<slug>/`.
+
+## The same case in every language
+
+Every language page shows the same ten cases, one per function, from one customer-support inbox (Ian, 2026-10-12). A case is the same question, the same choices and the same input in every language; only the language changes. `src/data/cases.mjs` holds each function's case: its question, its choices (options, labels, levels, kinds or relation parts) and its input, cut into pieces no sample splits.
+
+`scripts/check-cases.mjs` reads each function folder under `examples/functions/`. It takes the function's first Bash example and every language and SQL sample beside it. A question file in the folder's `files/` that the sample names counts as part of the sample. The check fails when a sample lacks one of its case's strings. A sample may split a long string across lines and join it with `+`, `||`, `&`, `++`, `..`, `~`, nothing, or a Bash `text+=` line; the check reads across those breaks. It undoes SQL's doubled quote and a backslash before a quote or a `$`. `scripts/check-cases.test.mjs` holds the fixtures. A sample under `more/` shows a bigger case and is not checked.
+
+To change a case, record its answers first, then change `cases.mjs` and every sample together. A language that cannot write the question inline reads the one shared question file in the function's `files/`, and its language page shows that file.
 
 ## What is not here yet
 

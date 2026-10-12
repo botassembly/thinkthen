@@ -57,6 +57,8 @@ Follow these rules when you write or edit any page or code example on this site.
 
 Every example reads top to bottom. A reader sees the question, what goes in, the call, and what came out, in that order.
 
+Every language shows the same case for a function: the same question, choices and input that `src/data/cases.mjs` holds. `scripts/check-cases.mjs` fails the build when a sample strays.
+
 ### Name the question and the choices first
 
 Put the question and the choices in variables above the call.
