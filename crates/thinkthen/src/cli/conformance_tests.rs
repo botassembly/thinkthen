@@ -1,4 +1,6 @@
-//! The shared compatibility cases, checked through the production pure core.
+//! The canonical fixture validator stays for its parser and secrecy mutation regressions.
+//! Compiled CLI tests own successful execution; these checks reject malformed fixture
+//! provenance, secret fields, and mismatched expected answers before any surface replays them.
 
 #[path = "conformance_tests/support/conformance.rs"]
 mod conformance_support;

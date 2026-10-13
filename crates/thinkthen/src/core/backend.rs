@@ -110,21 +110,6 @@ const LOOPBACK: [&str; 3] = ["localhost", "127.0.0.1", "[::1]"];
 impl Backend {
     pub(crate) const DEFAULT_REQUEST_SIZE: usize = DEFAULT_REQUEST_SIZE;
 
-    #[cfg(test)]
-    pub(crate) const fn from_parts(url: Url, model: ModelName) -> Self {
-        Self {
-            api_type: crate::core::adapters::ApiType::Primary,
-            accounting: InputAccounting::EncodedBody,
-            url,
-            model,
-            descriptions: Descriptions::Authored,
-            request_size: DEFAULT_REQUEST_SIZE,
-            explicit_request_size: false,
-            image_route: built_in::images::ImageRoute::Unsupported,
-            per_minute: None,
-        }
-    }
-
     /// Resolve the backend from the option, the environment, and the default.
     ///
     /// Every source names a base, and the request is posted to the base with

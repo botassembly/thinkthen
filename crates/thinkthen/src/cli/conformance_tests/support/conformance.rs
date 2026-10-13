@@ -197,9 +197,12 @@ pub(super) struct Success {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Counters {
-    pub(super) calls: usize,
-    pub(super) requests: u64,
-    pub(super) cache_answers: u64,
+    #[serde(rename = "calls")]
+    _calls: usize,
+    #[serde(rename = "requests")]
+    _requests: u64,
+    #[serde(rename = "cache_answers")]
+    _cache_answers: u64,
 }
 
 #[derive(Deserialize)]
