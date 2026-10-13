@@ -79,3 +79,13 @@ function typedControls() {
  void [settings,invalid,file,mixed,recognize,relate];client.close();
 }
 void typedControls;
+
+function typedPlan(client:Client) {
+ const plan:Results.NativePlan=client.plan('decide','Question?',['text']);
+ const records:number|Results.NativeNumber=plan.records;
+ const body:string|null=plan.first_body_utf8;
+ // @ts-expect-error a preview requires a complete input
+ client.plan('decide','Question?',(function*(){yield 'text';})());
+ void [records,body];
+}
+void typedPlan;

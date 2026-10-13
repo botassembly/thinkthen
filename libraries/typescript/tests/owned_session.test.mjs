@@ -285,3 +285,24 @@ test('Client retains producer exceptions and native admission messages',async t=
   `);
   assert.equal(value,true);assert.equal(await backend.count(),0);
 });
+
+
+test('Client previews complete inputs through native admission without sending',async t=>{
+  const backend=await startBackend(t);
+  const {value}=await ask(backend,`
+    const client=new tt.Client({cache:false});
+    const plan=client.plan('decide','Question?',['first','second'],{batch:1});
+    let advanced=false;const input=(function*(){advanced=true;yield 'text';})();
+    const errors=[];
+    for(const [verb,question,rows,controls] of [['decide','Question?',input,{}],['decide','Question?',['text'],{batch:0}],['recognize',{version:1,recognize:{kinds:{person:null}}},['text'],{}],['decide','Question?',['text'],{signal:AbortSignal.abort()}]]) {
+      try{client.plan(verb,question,rows,controls);throw Error('preview accepted invalid input');}
+      catch(error){if(!(error instanceof tt.ClientError))throw error;errors.push(error.kind);}
+    }
+    client.close();return {plan,advanced,errors};
+  `);
+  assert.equal(value.plan.records,2);assert.equal(value.plan.requests,2);
+  assert.ok(value.plan.token_estimate_method);assert.ok(value.plan.estimated_bytes>0);
+  assert.ok(value.plan.first_body_utf8.includes('first'));
+  assert.equal(value.advanced,false);assert.deepEqual(value.errors,['usage','usage','usage','cancelled']);
+  assert.equal(await backend.count(),0);
+});
