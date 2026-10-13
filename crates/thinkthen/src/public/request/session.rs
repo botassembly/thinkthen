@@ -253,15 +253,28 @@ impl RequestSession {
     /// # Errors
     /// Refuses non-feed sessions and malformed descriptors when intake has room.
     pub fn try_push_json(&self, text: &str) -> Result<RequestSessionPushStatus, Error> {
+        self.try_push_with(|| RequestSessionDescriptor::from_json(text))
+    }
+    /// Convert and transfer one host descriptor when the feed has room.
+    /// Native adapters use this operation to avoid inspecting borrowed payloads
+    /// on full or closed intake. Conversion runs without the queue lock; a
+    /// concurrent push or closure can discard the converted owned descriptor.
+    /// The callback runs at most once and no borrowed payload is retained.
+    /// # Errors
+    /// Refuses non-feed sessions and propagates conversion failures only when
+    /// intake has room. Adapter errors retain their own representation limits.
+    pub fn try_push_with<E: From<Error>>(
+        &self,
+        convert: impl FnOnce() -> Result<RequestSessionDescriptor, E>,
+    ) -> Result<RequestSessionPushStatus, E> {
         if !self.feed {
-            return Err(Error::usage("this session has no caller-supplied feed"));
+            return Err(Error::usage("this session has no caller-supplied feed").into());
         }
         match self.queue.capacity() {
             RequestSessionPushStatus::Accepted => {}
             status => return Ok(status),
         }
-        let descriptor = RequestSessionDescriptor::from_json(text)?;
-        Ok(match self.queue.push(descriptor) {
+        Ok(match self.queue.push(convert()?) {
             RequestSessionPush::Accepted => RequestSessionPushStatus::Accepted,
             RequestSessionPush::Full(_) => RequestSessionPushStatus::Full,
             RequestSessionPush::Closed(_) => RequestSessionPushStatus::Closed,
@@ -271,6 +284,17 @@ impl RequestSession {
     #[must_use]
     pub fn try_read(&self) -> RequestSessionRead {
         self.queue.read()
+    }
+    /// Block and transfer the next independent packet, or return End after drain.
+    /// Result interest wakes promptly on cancellation; Settlement drains final facts.
+    /// Queued output takes priority over cancellation. No provider work is joined.
+    /// # Errors
+    /// Refuses Input interest and returns cancellation when settlement is pending.
+    pub fn next_packet(
+        &self,
+        interest: RequestSessionWaitInterest,
+    ) -> Result<RequestSessionRead, Error> {
+        self.queue.next_packet(interest)
     }
     /// Block without consuming output until requested readiness or timeout.
     /// Result waits ignore input room. Settlement waits ignore cancellation so

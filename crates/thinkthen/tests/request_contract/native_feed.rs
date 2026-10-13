@@ -1,21 +1,26 @@
 //! Composed native feeds preserve caller authority and joined failure behavior.
 use super::*;
 use std::cell::Cell;
+use thinkthen::RequestFunction;
 
 #[allow(
     clippy::unwrap_used,
     reason = "fixed native fixture construction stops on an invalid setup"
 )]
 fn request() -> Request {
-    Request::new(RequestCall::Decide(args(
-        Question::decide("Fits?").unwrap().cut().into(),
-        RequestInput::Feed {
-            name: "native".into(),
-            framing: RequestFraming::Document,
-            reading: ReaderOptions::default(),
-            images: vec![],
-        },
-    )))
+    Request::named(
+        "decide",
+        args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Feed {
+                name: "native".into(),
+                framing: RequestFraming::Document,
+                reading: ReaderOptions::default(),
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
 }
 #[allow(
     clippy::unwrap_used,
@@ -41,9 +46,7 @@ fn row() -> RecordInput<QuestionInput> {
 #[test]
 fn native_record_reading_retains_authored_projection_and_refuses_saved_selectors() {
     let mut request = request();
-    let RequestCall::Decide(args) = &mut request.call else {
-        panic!("decide request")
-    };
+    let args = &mut request.call.arguments;
     args.question = RequestQuestion::Definition {
         value: Question::from_json(
             r#"{"decide":"Fits?","on":["/message"],"item_schema":{"type":"object","properties":{"ready":{"type":"boolean"},"body":{"type":"string"}},"required":["body"]}}"#,
@@ -93,9 +96,7 @@ fn native_record_reading_retains_authored_projection_and_refuses_saved_selectors
             .unwrap()
             .contains("unsent")
     );
-    let RequestCall::Decide(args) = &mut request.call else {
-        panic!("decide request")
-    };
+    let args = &mut request.call.arguments;
     args.question = RequestQuestion::File {
         path: "missing-saved-question.json".into(),
     };
@@ -163,9 +164,7 @@ fn native_feed_refuses_double_composition_and_cancellation_before_advancing() {
     let engine = engine(&listener);
     for case in 0..6 {
         let mut request = request();
-        let RequestCall::Decide(args) = &mut request.call else {
-            panic!("decide request")
-        };
+        let args = &mut request.call.arguments;
         match case {
             0 => args.options.field = Some(vec![]),
             1 => args.options.context_field = Some("/context".into()),
@@ -184,10 +183,10 @@ fn native_feed_refuses_double_composition_and_cancellation_before_advancing() {
                 .unwrap()
                 .build()
                 .unwrap();
-            request.call = RequestCall::Tag(super::args(
-                question.into(),
-                request.call.arguments().input.clone(),
-            ));
+            request.call = RequestCall::new(
+                RequestFunction::Tag,
+                super::args(question.into(), request.call.arguments().input.clone()),
+            );
         }
         let admitted = request.admit().unwrap();
         let advanced = Cell::new(false);
@@ -243,17 +242,20 @@ fn eager_native_feed_keeps_item_declarations_and_recognition_admission() {
     invalid_original.original = QuestionInput::Text("undeclared secret input".into());
     let cases = [
         (
-            RequestCall::Decide(args(
-                question.into(),
-                request().call.arguments().input.clone(),
-            )),
+            RequestCall::new(
+                RequestFunction::Decide,
+                args(question.into(), request().call.arguments().input.clone()),
+            ),
             invalid_original,
         ),
         (
-            RequestCall::Recognize(args(
-                Recognize::builder().build().unwrap().into(),
-                request().call.arguments().input.clone(),
-            )),
+            RequestCall::new(
+                RequestFunction::Recognize,
+                args(
+                    Recognize::builder().build().unwrap().into(),
+                    request().call.arguments().input.clone(),
+                ),
+            ),
             RecordInput {
                 seed_spans: Some(vec![RecognitionSeedSpan {
                     start: 1,
@@ -264,10 +266,13 @@ fn eager_native_feed_keeps_item_declarations_and_recognition_admission() {
             },
         ),
         (
-            RequestCall::Recognize(args(
-                Recognize::builder().build().unwrap().into(),
-                request().call.arguments().input.clone(),
-            )),
+            RequestCall::new(
+                RequestFunction::Recognize,
+                args(
+                    Recognize::builder().build().unwrap().into(),
+                    request().call.arguments().input.clone(),
+                ),
+            ),
             RecordInput {
                 examples: Some(vec![RecognitionExample::Brackets(
                     "[Ada | secret-kind]".into(),
@@ -315,10 +320,11 @@ fn native_choose_feed_preserves_candidate_validation_before_sends() {
         .unwrap()
         .build()
         .unwrap();
-    let admitted = Request::new(RequestCall::Choose(args(
-        question.into(),
-        request().call.arguments().input.clone(),
-    )))
+    let admitted = Request::named(
+        "choose",
+        args(question.into(), request().call.arguments().input.clone()),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let invalid = || {
@@ -378,10 +384,10 @@ fn undeclared_native_images_still_refuse_function_and_route_without_sends() {
                 .unwrap()
                 .build()
                 .unwrap();
-            request.call = RequestCall::Tag(args(
-                question.into(),
-                request.call.arguments().input.clone(),
-            ));
+            request.call = RequestCall::new(
+                RequestFunction::Tag,
+                args(question.into(), request.call.arguments().input.clone()),
+            );
         }
         let admitted = request.admit().unwrap();
         let image = ImageInput::new(

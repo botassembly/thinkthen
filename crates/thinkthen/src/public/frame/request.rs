@@ -1,5 +1,6 @@
 //! Native column conversion delegates admission and execution to Request.
 use super::column::text;
+use crate::RequestFunction;
 use crate::{
     Call, CallOptions, CompleteRecord, Engine, Error, InputEvidence, Question, QuestionInput,
     RecordInput, Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment,
@@ -20,7 +21,7 @@ pub(super) fn execute(
     engine: &Engine,
     question: &Question,
     column: &Series,
-    call: fn(RequestArguments) -> RequestCall,
+    call: crate::RequestFunction,
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
     execute_definition(engine, question.clone().into(), column, call, controls)
@@ -30,7 +31,7 @@ pub(super) fn execute_definition(
     engine: &Engine,
     definition: RequestDefinition,
     column: &Series,
-    call: fn(RequestArguments) -> RequestCall,
+    call: crate::RequestFunction,
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
     let cells = text(column)?;
@@ -49,7 +50,7 @@ pub(super) fn execute_definition(
 pub(super) fn execute_records(
     engine: &Engine,
     definition: RequestDefinition,
-    call: fn(RequestArguments) -> RequestCall,
+    call: crate::RequestFunction,
     controls: CallOptions<'_>,
     rows: impl Iterator<Item = Result<RecordInput<QuestionInput>, Error>>,
 ) -> Result<Call<RequestValue>, Error> {
@@ -66,23 +67,26 @@ pub(super) fn execute_records(
 fn execute_feed(
     engine: &Engine,
     definition: RequestDefinition,
-    call: fn(RequestArguments) -> RequestCall,
+    call: crate::RequestFunction,
     controls: CallOptions<'_>,
     feed: RequestFeed<'_>,
     complete: bool,
 ) -> Result<Call<RequestValue>, Error> {
-    let call = call(RequestArguments {
-        question: RequestQuestion::Definition { value: definition },
-        input: RequestInput::Feed {
-            name: "column".into(),
-            framing: RequestFraming::Document,
-            reading: crate::ReaderOptions::default(),
-            images: vec![],
+    let call = RequestCall::new(
+        call,
+        RequestArguments {
+            question: RequestQuestion::Definition { value: definition },
+            input: RequestInput::Feed {
+                name: "column".into(),
+                framing: RequestFraming::Document,
+                reading: crate::ReaderOptions::default(),
+                images: vec![],
+            },
+            options: RequestOptions::default(),
         },
-        options: RequestOptions::default(),
-    });
+    );
     // Typed complete filters retain every observation, including rejected rows.
-    let feed = if complete && call.function() == crate::RequestFunction::Filter {
+    let feed = if complete && call.function() == RequestFunction::Filter {
         feed.with_all_filter_results()
     } else {
         feed
@@ -146,7 +150,7 @@ pub(super) fn complete_records<T: InputEvidence, R>(
     definition: RequestDefinition,
     records: Vec<RecordInput<T>>,
     controls: CallOptions<'_>,
-    function: fn(RequestArguments) -> RequestCall,
+    function: crate::RequestFunction,
     unpack: fn(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
 ) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
     let count = records.len();
@@ -169,7 +173,7 @@ pub(super) fn complete_occurrences<T: InputEvidence, R>(
     definition: RequestDefinition,
     records: Vec<RecordInput<T>>,
     controls: CallOptions<'_>,
-    function: fn(RequestArguments) -> RequestCall,
+    function: crate::RequestFunction,
     unpack: impl FnOnce(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
 ) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
     complete_value(
@@ -207,7 +211,7 @@ pub(super) fn complete_value<T: InputEvidence, R>(
     definition: RequestDefinition,
     records: Vec<RecordInput<T>>,
     controls: CallOptions<'_>,
-    function: fn(RequestArguments) -> RequestCall,
+    function: crate::RequestFunction,
     restore: impl FnOnce(RequestValue, Vec<T>) -> Result<R, Error>,
 ) -> Result<Call<R>, Error> {
     let mut originals = Vec::with_capacity(records.len());

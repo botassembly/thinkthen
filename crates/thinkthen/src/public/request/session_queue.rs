@@ -185,13 +185,38 @@ impl Queue {
         self.wake.notify_all();
     }
     pub(super) fn read(&self) -> RequestSessionRead {
+        self.read_locked(&mut self.lock())
+    }
+    pub(super) fn next_packet(
+        &self,
+        interest: super::RequestSessionWaitInterest,
+    ) -> Result<RequestSessionRead, crate::Error> {
+        use super::RequestSessionWaitInterest as Interest;
+        if interest == Interest::Input {
+            return Err(crate::Error::usage(
+                "packet reads require result or settlement interest",
+            ));
+        }
         let mut state = self.lock();
+        loop {
+            // Consume queued output before observing cancellation.
+            let packet = self.read_locked(&mut state);
+            if !matches!(packet, RequestSessionRead::Pending) {
+                return Ok(packet);
+            }
+            if interest != Interest::Settlement && self.cancel.is_cancelled() {
+                return Err(crate::Error::cancelled());
+            }
+            state = self.wait(state);
+        }
+    }
+    fn read_locked(&self, state: &mut State) -> RequestSessionRead {
         if let Some(packet) = state.output.take() {
             self.wake.notify_all();
             RequestSessionRead::Result(packet)
         } else if let Some(terminal) = state.terminal.take() {
             RequestSessionRead::Result(RequestSessionResult::Terminal(terminal))
-        } else if state.settled {
+        } else if state.settled || state.receiver_closed {
             RequestSessionRead::End
         } else {
             RequestSessionRead::Pending

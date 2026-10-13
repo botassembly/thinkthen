@@ -1,6 +1,7 @@
 //! Typed and canonical requests share native answers, identities and wire bodies.
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
+use thinkthen::RequestFunction;
 use thinkthen::*;
 #[path = "request_contract/native_feed.rs"]
 mod native_feed;
@@ -225,60 +226,83 @@ fn every_function_keeps_native_answers_identities_and_outgoing_bodies() {
         .build()
         .unwrap();
     let cases = vec![
-        RequestCall::Decide(primitive(Question::decide("Fits?").unwrap().cut())),
-        RequestCall::Choose(primitive(choice)),
-        RequestCall::Tag(primitive(tags)),
-        RequestCall::Score(primitive(score)),
-        RequestCall::Filter(primitive(Question::decide("Fits?").unwrap().cut())),
-        RequestCall::Rank(args(
-            Question::rank("Fits?").unwrap().into(),
-            RequestInput::Records {
-                items: vec![item("Alpha.")],
-            },
-        )),
-        RequestCall::Find(args(
-            RequestDefinition::Atomic(LoadedQuestion::Question(Question::find("Which?").unwrap())),
-            RequestInput::Units {
-                items: vec![item("Alpha."), item("Beta.")],
-            },
-        )),
-        RequestCall::Annotate(args(
-            QuestionSet::builder()
-                .question("fits", Question::decide("Fits?").unwrap().cut())
-                .unwrap()
-                .build()
-                .unwrap()
-                .into(),
-            RequestInput::Records {
-                items: vec![item("Alpha.")],
-            },
-        )),
-        RequestCall::Recognize(args(
-            Recognize::builder()
-                .build()
-                .unwrap()
-                .with_examples(vec![RecognitionExample::Brackets(
-                    "[Zoë | ENTITY] met Orbit.".into(),
-                )])
-                .unwrap()
-                .into(),
-            RequestInput::Records {
-                items: vec![
-                    item("Alpha."),
-                    RequestItem {
-                        seed_spans: None,
-                        examples: Some(vec![]),
-                        ..item("Beta.")
-                    },
-                ],
-            },
-        )),
-        RequestCall::Relate(args(
-            relate.into(),
-            RequestInput::Entities {
-                items: entity_items,
-            },
-        )),
+        RequestCall::new(
+            RequestFunction::Decide,
+            primitive(Question::decide("Fits?").unwrap().cut()),
+        ),
+        RequestCall::new(RequestFunction::Choose, primitive(choice)),
+        RequestCall::new(RequestFunction::Tag, primitive(tags)),
+        RequestCall::new(RequestFunction::Score, primitive(score)),
+        RequestCall::new(
+            RequestFunction::Filter,
+            primitive(Question::decide("Fits?").unwrap().cut()),
+        ),
+        RequestCall::new(
+            RequestFunction::Rank,
+            args(
+                Question::rank("Fits?").unwrap().into(),
+                RequestInput::Records {
+                    items: vec![item("Alpha.")],
+                },
+            ),
+        ),
+        RequestCall::new(
+            RequestFunction::Find,
+            args(
+                RequestDefinition::Atomic(LoadedQuestion::Question(
+                    Question::find("Which?").unwrap(),
+                )),
+                RequestInput::Units {
+                    items: vec![item("Alpha."), item("Beta.")],
+                },
+            ),
+        ),
+        RequestCall::new(
+            RequestFunction::Annotate,
+            args(
+                QuestionSet::builder()
+                    .question("fits", Question::decide("Fits?").unwrap().cut())
+                    .unwrap()
+                    .build()
+                    .unwrap()
+                    .into(),
+                RequestInput::Records {
+                    items: vec![item("Alpha.")],
+                },
+            ),
+        ),
+        RequestCall::new(
+            RequestFunction::Recognize,
+            args(
+                Recognize::builder()
+                    .build()
+                    .unwrap()
+                    .with_examples(vec![RecognitionExample::Brackets(
+                        "[Zoë | ENTITY] met Orbit.".into(),
+                    )])
+                    .unwrap()
+                    .into(),
+                RequestInput::Records {
+                    items: vec![
+                        item("Alpha."),
+                        RequestItem {
+                            seed_spans: None,
+                            examples: Some(vec![]),
+                            ..item("Beta.")
+                        },
+                    ],
+                },
+            ),
+        ),
+        RequestCall::new(
+            RequestFunction::Relate,
+            args(
+                relate.into(),
+                RequestInput::Entities {
+                    items: entity_items,
+                },
+            ),
+        ),
     ];
     for call in cases {
         let function = call.function();
@@ -370,12 +394,16 @@ fn native_and_canonical_replays_keep_the_original_answer_identity() {
     let q = Question::decide("Fits?").unwrap().cut();
     let rows = vec![crate::api::record(QuestionInput::Text("Alpha.".into()))];
     let live = direct(&engine, RequestFunction::Decide, &q.clone().into(), rows);
-    let request = Request::new(RequestCall::Decide(args(
-        q.into(),
-        RequestInput::Records {
-            items: vec![item("Alpha.")],
-        },
-    )));
+    let request = Request::named(
+        "decide",
+        args(
+            q.into(),
+            RequestInput::Records {
+                items: vec![item("Alpha.")],
+            },
+        ),
+    )
+    .unwrap();
     for request in [
         request.clone(),
         Request::from_json(&serde_json::to_string(&request).unwrap()).unwrap(),
@@ -411,18 +439,22 @@ fn text_request_band_keeps_native_threshold_reading() {
         CallOptions::new(),
     )
     .unwrap();
-    let request = Request::new(RequestCall::Decide(RequestArguments {
-        question: RequestQuestion::Text {
-            text: "Fits?".into(),
+    let request = Request::named(
+        "decide",
+        RequestArguments {
+            question: RequestQuestion::Text {
+                text: "Fits?".into(),
+            },
+            input: RequestInput::Records {
+                items: vec![item("Alpha.")],
+            },
+            options: RequestOptions {
+                threshold: Some(RequestThreshold::Rule("0.8:0.95".into())),
+                ..RequestOptions::default()
+            },
         },
-        input: RequestInput::Records {
-            items: vec![item("Alpha.")],
-        },
-        options: RequestOptions {
-            threshold: Some(RequestThreshold::Rule("0.8:0.95".into())),
-            ..RequestOptions::default()
-        },
-    }))
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let RequestOutcome::Complete(actual) = engine
@@ -448,15 +480,19 @@ fn text_request_band_keeps_native_threshold_reading() {
 fn authorized_saved_definition_preserves_selector_and_refuses_replacement_before_sends() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let saved = Request::new(RequestCall::Decide(RequestArguments {
-        question: RequestQuestion::File {
-            path: "not-read-by-request.json".into(),
+    let saved = Request::named(
+        "decide",
+        RequestArguments {
+            question: RequestQuestion::File {
+                path: "not-read-by-request.json".into(),
+            },
+            input: RequestInput::Records {
+                items: vec![item("Alpha.")],
+            },
+            options: RequestOptions::default(),
         },
-        input: RequestInput::Records {
-            items: vec![item("Alpha.")],
-        },
-        options: RequestOptions::default(),
-    }))
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let definition: RequestDefinition = Question::decide("Fits?").unwrap().cut().into();
@@ -497,10 +533,11 @@ fn authorized_saved_definition_preserves_selector_and_refuses_replacement_before
             .kind(),
         ErrorKind::Usage
     );
-    let inline = Request::new(RequestCall::Decide(args(
-        definition.clone(),
-        RequestInput::Records { items: vec![] },
-    )))
+    let inline = Request::named(
+        "decide",
+        args(definition.clone(), RequestInput::Records { items: vec![] }),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     assert_eq!(
@@ -570,3 +607,24 @@ fn named_requests_select_function_and_collection_kind() {
 
 #[path = "support/api.rs"]
 mod api;
+
+#[test]
+fn request_calls_require_objects_before_native_execution() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let text = r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
+    let error = Request::from_json(text)
+        .and_then(Request::admit)
+        .and_then(|request| {
+            engine
+                .execute_request(&request, RequestEnvironment::default())
+                .map(|_| ())
+        })
+        .expect_err("calls require an object");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.request_decode_cause(),
+        Some(RequestDecodeCause::Malformed)
+    );
+    assert_eq!(listener.count(), 0, "a sequence call sends nothing");
+}

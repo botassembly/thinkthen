@@ -4,7 +4,7 @@ use super::{RELATE, TEXT, choice, decision, score, tags};
 use crate::core::{self, PlanSummary};
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
-use crate::{RequestCall as Call, RequestEnvironment as Environment, RequestInput as Input};
+use crate::{RequestEnvironment as Environment, RequestInput as Input};
 
 /// One line per function and the bound before retries and refusal splits.
 pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usize), Failure> {
@@ -13,27 +13,37 @@ pub(in crate::cli::check) fn prepare(inner: &Engine) -> Result<(Vec<String>, usi
     let definitions = [
         (
             "decide",
-            Call::Decide as fn(_) -> _,
+            crate::RequestFunction::Decide,
             decide.clone().into(),
             false,
         ),
         (
             "choose",
-            Call::Choose,
+            crate::RequestFunction::Choose,
             choice().map_err(invalid)?.0.into(),
             false,
         ),
-        ("tag", Call::Tag, tags().map_err(invalid)?.0.into(), false),
+        (
+            "tag",
+            crate::RequestFunction::Tag,
+            tags().map_err(invalid)?.0.into(),
+            false,
+        ),
         (
             "score",
-            Call::Score,
+            crate::RequestFunction::Score,
             score().map_err(invalid)?.into(),
             false,
         ),
-        ("filter", Call::Filter, decide.clone().into(), false),
+        (
+            "filter",
+            crate::RequestFunction::Filter,
+            decide.clone().into(),
+            false,
+        ),
         (
             "rank",
-            Call::Rank,
+            crate::RequestFunction::Rank,
             crate::Question::rank("Did the parcel arrive undamaged?")
                 .map_err(invalid)?
                 .into(),
@@ -77,7 +87,7 @@ fn staged(
     summaries: &mut Vec<(&'static str, PlanSummary)>,
 ) -> Result<(), Failure> {
     let find = admitted(
-        Call::Find,
+        crate::RequestFunction::Find,
         crate::Question::find("Which text says when the parcel arrived?")
             .map_err(invalid)?
             .into(),
@@ -93,7 +103,7 @@ fn staged(
         probe_summary(inner.backend(), summary.first_body().into_iter(), 0)?,
     ));
     let annotation = admitted(
-        Call::Annotate,
+        crate::RequestFunction::Annotate,
         crate::QuestionSet::builder()
             .question("intact", decide)
             .map_err(invalid)?
@@ -107,7 +117,7 @@ fn staged(
         .map_err(Failure::from)?;
     summaries.push(("annotate", summary));
     let recognition = admitted(
-        Call::Recognize,
+        crate::RequestFunction::Recognize,
         crate::Recognize::builder()
             .kind(crate::Kind::new("person", None).map_err(invalid)?)
             .map_err(invalid)?
@@ -136,7 +146,7 @@ fn staged(
     )?;
     summaries.push(("recognize", summary));
     let relation = admitted(
-        Call::Relate,
+        crate::RequestFunction::Relate,
         crate::Relate::from_json(RELATE).map_err(invalid)?.into(),
         Input::Entities {
             items: vec![entity("Ada")?, entity("Bo")?],
@@ -158,15 +168,18 @@ fn staged(
 }
 
 fn admitted(
-    call: fn(crate::RequestArguments) -> crate::RequestCall,
+    call: crate::RequestFunction,
     definition: crate::RequestDefinition,
     input: crate::RequestInput,
 ) -> Result<crate::AdmittedRequest, Failure> {
-    crate::Request::new(call(crate::RequestArguments {
-        question: crate::RequestQuestion::Definition { value: definition },
-        input,
-        options: crate::RequestOptions::default(),
-    }))
+    crate::Request::for_function(
+        call,
+        crate::RequestArguments {
+            question: crate::RequestQuestion::Definition { value: definition },
+            input,
+            options: crate::RequestOptions::default(),
+        },
+    )
     .admit()
     .map_err(invalid)
 }

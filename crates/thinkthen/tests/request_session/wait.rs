@@ -1,5 +1,6 @@
 //! Native wait readiness, ownership and cancellation behavior.
 use super::*;
+use thinkthen::RequestFunction;
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
 use child::ChildEnvironment as _;
@@ -22,6 +23,15 @@ fn result_wait_ignores_input_room_and_timeout_consumes_nothing() {
     );
     assert!(started.elapsed() >= Duration::from_millis(30));
     assert!(matches!(session.try_read(), RequestSessionRead::Pending));
+    assert_eq!(
+        session
+            .try_push_with(|| {
+                session.finish(None)?;
+                Ok::<_, Error>(descriptor("discarded after closure"))
+            })
+            .unwrap(),
+        RequestSessionPushStatus::Closed
+    );
     session.finish(None).unwrap();
     assert_eq!(listener.count(), 0);
 }
@@ -84,7 +94,10 @@ fn held_provider_case() {
         let arguments = framing::table_request(framing).call.arguments().clone();
         let session = Arc::new(
             engine
-                .request_session(Request::new(RequestCall::Decide(arguments)))
+                .request_session(Request::new(RequestCall::new(
+                    RequestFunction::Decide,
+                    arguments,
+                )))
                 .unwrap(),
         );
         if matches!(framing, RequestFraming::Csv) {
@@ -105,10 +118,22 @@ fn held_provider_case() {
                 other => panic!("feed closed before cancellation: {other:?}"),
             })
             .expect("held native work eventually backpressures the one input cell");
+        assert_eq!(
+            session
+                .try_push_with::<Error>(|| panic!("full intake inspected payload"))
+                .unwrap(),
+            RequestSessionPushStatus::Full
+        );
         session.finish(None).unwrap();
         assert_eq!(
             session.wait(RequestSessionWaitInterest::Input, Duration::ZERO),
             RequestSessionReady::Closed
+        );
+        assert_eq!(
+            session
+                .try_push_with::<Error>(|| panic!("closed intake inspected payload"))
+                .unwrap(),
+            RequestSessionPushStatus::Closed
         );
         session.finish(None).unwrap();
         assert_eq!(

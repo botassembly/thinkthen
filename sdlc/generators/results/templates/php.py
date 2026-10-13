@@ -1,6 +1,7 @@
 """PHP owned objects and FFI declarations from the shared native contracts."""
 import json
 import re
+from native import selected_header
 
 ROOTS = ('completesessionPacket',)
 
@@ -43,13 +44,7 @@ def outputs(definitions, header):
             # Every accessor returns presence independently of the field value.
             lines += [f'    /** @return Presence<{hint(field, definitions)}> */ public function {member}(): Presence {{ return $this->field({member!r}); }}']
         lines += ['}']
-    declarations = re.sub(r'/\*.*?\*/', '', header, flags=re.S)
-    declarations = re.sub(r'//[^\n]*', '', declarations)
-    declarations = re.sub(r'^\s*#.*$', '', declarations, flags=re.M)
-    declarations = declarations.replace('extern "C" {', '').replace('} // extern "C"', '')
-    # cbindgen closes the C++ linkage block with a bare brace.
-    declarations = re.sub(r'^}\s*$', '', declarations, flags=re.M)
-    declarations = '\n'.join(line.rstrip() for line in declarations.splitlines())
+    declarations = re.sub(r'^#.*$', '', selected_header(header, 'php'), flags=re.M)
     constants = ['<?php', '// Generated from the native C header; do not edit.',
                  'declare(strict_types=1);', 'namespace ThinkThen\\Session;']
     for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):
@@ -58,7 +53,7 @@ def outputs(definitions, header):
     constants += ['case ' + word.title() + ' = ' + value + ';' for word, value in re.findall(r'^#define THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1 (\d+)\s*$', header, flags=re.M)]
     constants += ['}']
     return {'results_generated.php': '\n'.join(lines) + '\n',
-            'graph_generated.json': json.dumps(graph, indent=2) + '\n',
+            'graph_generated.json': json.dumps({'$comment': 'Generated from the shared Rust result graph; do not edit.', **graph}, indent=2) + '\n',
             'ffi_generated.h': declarations.strip() + '\n',
             'constants_generated.php': '\n'.join(constants) + '\n'}
 
