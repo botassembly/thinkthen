@@ -67,14 +67,6 @@ namespace tt::results {
     class QuestionSource;
     class RankMember;
     class RankMemberResult;
-    class ReadableQuestion;
-    class ReadableQuestion2;
-    class ReadableQuestion3;
-    class ReadableQuestion4;
-    class ReadableQuestionChoose;
-    class ReadableQuestionDecide;
-    class ReadableQuestionScore;
-    class ReadableQuestionTag;
     class Recognition;
     class RecognitionEdgeDocument;
     class RecognitionMode;
@@ -124,17 +116,25 @@ namespace tt::results {
     class FailureCause;
     class FailureKind;
     class FindAnswer;
+    class FindQuestionDocument;
     class NameOdds;
     class PairOdds;
     class PieceOdds;
     class Place;
     class Plan;
     class ProfileWarning;
+    class QuestionDocument;
+    class QuestionDocumentChoose;
+    class QuestionDocumentDecide;
+    class QuestionDocumentScore;
+    class QuestionDocumentTag;
     class Recognize;
     class RecognizeAnswer;
+    class RecognizeQuestionDocument;
     class RecognizeEntities;
     class RecognizeModeProposals;
     class RelateFields;
+    class RelateQuestionDocument;
     class RelatedEntity;
     class RelatedEntityEdge;
     class RelationRule;
@@ -226,8 +226,8 @@ namespace tt::results {
         public: const Presence<AnswerId>& answer_id() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Observation>>>> cached_observations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Observation>>>>();
         public: const Presence<std::vector<Observation>>& observations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<QuestionSource>>>> cached_question_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<QuestionSource>>>>();
         public: const Presence<std::vector<QuestionSource>>& question_sources() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_request_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -247,8 +247,8 @@ namespace tt::results {
         public: const Presence<FailureId>& failure_id() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Observation>>>> cached_observations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Observation>>>>();
         public: const Presence<std::vector<Observation>>& observations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<QuestionSource>>>> cached_question_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<QuestionSource>>>>();
         public: const Presence<std::vector<QuestionSource>>& question_sources() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_request_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -327,8 +327,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -356,8 +356,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -385,8 +385,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -414,8 +414,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -443,8 +443,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -472,8 +472,8 @@ namespace tt::results {
         public: const Presence<std::vector<RankMember>>& members() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_name() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
@@ -661,8 +661,8 @@ namespace tt::results {
         public: const Presence<Meta>& meta() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Position>>> cached_position_ = std::make_shared<std::shared_ptr<const Presence<Position>>>();
         public: const Presence<Position>& position() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion2>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion2>>>();
-        public: const Presence<ReadableQuestion2>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<FindQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<FindQuestionDocument>>>();
+        public: const Presence<FindQuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
         public: const Presence<Version>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::nullptr_t>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<std::nullptr_t>>>();
@@ -894,8 +894,8 @@ namespace tt::results {
         public: const Presence<std::vector<Image>>& images() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Meta>>> cached_meta_ = std::make_shared<std::shared_ptr<const Presence<Meta>>>();
         public: const Presence<Meta>& meta() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
         public: const Presence<Version>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
@@ -904,221 +904,6 @@ namespace tt::results {
         public: const Presence<std::nullptr_t>& threshold() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<uint64_t>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<uint64_t>>>();
         public: const Presence<uint64_t>& value() const;
-    };
-    class ReadableQuestion : public Node {
-        public: using Node::Node;
-        std::optional<ReadableQuestionDecide> as_ReadableQuestionDecide() const;
-        std::optional<ReadableQuestionChoose> as_ReadableQuestionChoose() const;
-        std::optional<ReadableQuestionTag> as_ReadableQuestionTag() const;
-        std::optional<ReadableQuestionScore> as_ReadableQuestionScore() const;
-    };
-    class ReadableQuestion2 : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_none_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
-        public: const Presence<bool>& none() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-    };
-    class ReadableQuestion3 : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_entity_definition_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& entity_definition() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_instructions_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& instructions() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, Json>>>>> cached_kinds_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
-        Json>>>>>();
-        public: const Presence<std::vector<std::pair<std::string, Json>>>& kinds() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<RecognitionMode>>>();
-        public: const Presence<RecognitionMode>& mode() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_relation_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
-        public: const Presence<Threshold>& relation_threshold() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationRule>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationRule>>>>();
-        public: const Presence<std::vector<RelationRule>>& relations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<uint32_t>>> cached_snippet_pieces_ = std::make_shared<std::shared_ptr<const Presence<uint32_t>>>();
-        public: const Presence<uint32_t>& snippet_pieces() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionStageContext>>> cached_stage_context_ = std::make_shared<std::shared_ptr<const Presence<RecognitionStageContext>>>();
-        public: const Presence<RecognitionStageContext>& stage_context() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
-        public: const Presence<Threshold>& threshold() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Verb>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<Verb>>>();
-        public: const Presence<Verb>& verb() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-    };
-    class ReadableQuestion4 : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<RelateFields>>> cached_fields_ = std::make_shared<std::shared_ptr<const Presence<RelateFields>>>();
-        public: const Presence<RelateFields>& fields() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationRule>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationRule>>>>();
-        public: const Presence<std::vector<RelationRule>>& relations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
-        public: const Presence<Threshold>& threshold() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-    };
-    class ReadableQuestionChoose : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_options_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& options() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
-    };
-    class ReadableQuestionDecide : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_false__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& false_() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_true__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& true_() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
-    };
-    class ReadableQuestionScore : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_levels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& levels() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
-    };
-    class ReadableQuestionTag : public Node {
-        public: using Node::Node;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
-        public: const Presence<Batch>& batch() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& context_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
-        public: const Presence<InputDeclaration>& item_schema() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
-        public: const Presence<std::vector<Label>>& label_details() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& model() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
-        public: const Presence<QuestionName>& name() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& on() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& profile() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
-        public: const Presence<WordingVersion>& wording_version() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_labels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
-        public: const Presence<std::vector<std::string>>& labels() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
-        public: const Presence<Json>& text() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
-        public: const Presence<std::string>& verb() const;
     };
     class Recognition : public Node {
         public: using Node::Node;
@@ -1140,8 +925,8 @@ namespace tt::results {
         public: const Presence<Meta>& meta() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Position>>> cached_position_ = std::make_shared<std::shared_ptr<const Presence<Position>>>();
         public: const Presence<Position>& position() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion3>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion3>>>();
-        public: const Presence<ReadableQuestion3>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<RecognizeQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<RecognizeQuestionDocument>>>();
+        public: const Presence<RecognizeQuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
         public: const Presence<Version>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<PhysicalSource>>> cached_source_ = std::make_shared<std::shared_ptr<const Presence<PhysicalSource>>>();
@@ -1238,8 +1023,8 @@ namespace tt::results {
         public: const Presence<Meta>& meta() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Position>>> cached_position_ = std::make_shared<std::shared_ptr<const Presence<Position>>>();
         public: const Presence<Position>& position() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion4>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion4>>>();
-        public: const Presence<ReadableQuestion4>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<RelateQuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<RelateQuestionDocument>>>();
+        public: const Presence<RelateQuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<Version>>> cached_schema_ = std::make_shared<std::shared_ptr<const Presence<Version>>>();
         public: const Presence<Version>& schema() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>> cached_value_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelatedEntityEdge>>>>();
@@ -1292,8 +1077,8 @@ namespace tt::results {
         public: const Presence<RelationMethod>& method() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Observation>>>> cached_observations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Observation>>>>();
         public: const Presence<std::vector<Observation>>& observations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<QuestionSource>>>> cached_question_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<QuestionSource>>>>();
         public: const Presence<std::vector<QuestionSource>>& question_sources() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_reads_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1328,8 +1113,8 @@ namespace tt::results {
         public: const Presence<RelationMethod>& method() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Observation>>>> cached_observations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Observation>>>>();
         public: const Presence<std::vector<Observation>>& observations() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<QuestionSource>>>> cached_question_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<QuestionSource>>>>();
         public: const Presence<std::vector<QuestionSource>>& question_sources() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_reads_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
@@ -1589,6 +1374,33 @@ namespace tt::results {
         double>>>>>();
         public: const Presence<std::vector<std::pair<std::string, double>>>& probabilities() const;
     };
+    class FindQuestionDocument : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<bool>>> cached_none_ = std::make_shared<std::shared_ptr<const Presence<bool>>>();
+        public: const Presence<bool>& none() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
+    };
     class NameOdds : public Node {
         public: using Node::Node;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, double>>>>> cached_edges_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
@@ -1658,6 +1470,123 @@ namespace tt::results {
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_tuned_for_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& tuned_for() const;
     };
+    class QuestionDocument : public Node {
+        public: using Node::Node;
+        std::optional<QuestionDocumentDecide> as_QuestionDocumentDecide() const;
+        std::optional<QuestionDocumentChoose> as_QuestionDocumentChoose() const;
+        std::optional<QuestionDocumentTag> as_QuestionDocumentTag() const;
+        std::optional<QuestionDocumentScore> as_QuestionDocumentScore() const;
+    };
+    class QuestionDocumentChoose : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_options_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& options() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+    };
+    class QuestionDocumentDecide : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_false__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& false_() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_true__ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& true_() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+    };
+    class QuestionDocumentScore : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_levels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& levels() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+    };
+    class QuestionDocumentTag : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_labels_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& labels() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_text_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& text() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+    };
     class Recognize : public Node {
         public: using Node::Node;
         std::optional<RecognizeEntities> as_RecognizeEntities() const;
@@ -1673,6 +1602,48 @@ namespace tt::results {
         public: const Presence<std::vector<PieceOdds>>& pieces() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>> cached_proposals_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RecognitionProposal>>>>();
         public: const Presence<std::vector<RecognitionProposal>>& proposals() const;
+    };
+    class RecognizeQuestionDocument : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_entity_definition_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& entity_definition() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Json>>> cached_instructions_ = std::make_shared<std::shared_ptr<const Presence<Json>>>();
+        public: const Presence<Json>& instructions() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::pair<std::string, Json>>>>> cached_kinds_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::pair<std::string,
+        Json>>>>>();
+        public: const Presence<std::vector<std::pair<std::string, Json>>>& kinds() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionMode>>> cached_mode_ = std::make_shared<std::shared_ptr<const Presence<RecognitionMode>>>();
+        public: const Presence<RecognitionMode>& mode() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_relation_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
+        public: const Presence<Threshold>& relation_threshold() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationRule>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationRule>>>>();
+        public: const Presence<std::vector<RelationRule>>& relations() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<uint32_t>>> cached_snippet_pieces_ = std::make_shared<std::shared_ptr<const Presence<uint32_t>>>();
+        public: const Presence<uint32_t>& snippet_pieces() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<RecognitionStageContext>>> cached_stage_context_ = std::make_shared<std::shared_ptr<const Presence<RecognitionStageContext>>>();
+        public: const Presence<RecognitionStageContext>& stage_context() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
+        public: const Presence<Threshold>& threshold() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Verb>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<Verb>>>();
+        public: const Presence<Verb>& verb() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
     };
     class RecognizeEntities : public Node {
         public: using Node::Node;
@@ -1694,6 +1665,35 @@ namespace tt::results {
         public: const Presence<std::string>& kind() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& name() const;
+    };
+    class RelateQuestionDocument : public Node {
+        public: using Node::Node;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Batch>>> cached_batch_ = std::make_shared<std::shared_ptr<const Presence<Batch>>>();
+        public: const Presence<Batch>& batch() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_context_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& context_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<RelateFields>>> cached_fields_ = std::make_shared<std::shared_ptr<const Presence<RelateFields>>>();
+        public: const Presence<RelateFields>& fields() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<InputDeclaration>>> cached_item_schema_ = std::make_shared<std::shared_ptr<const Presence<InputDeclaration>>>();
+        public: const Presence<InputDeclaration>& item_schema() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<Label>>>> cached_label_details_ = std::make_shared<std::shared_ptr<const Presence<std::vector<Label>>>>();
+        public: const Presence<std::vector<Label>>& label_details() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_model_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& model() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionName>>> cached_name_ = std::make_shared<std::shared_ptr<const Presence<QuestionName>>>();
+        public: const Presence<QuestionName>& name() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<std::string>>>> cached_on_ = std::make_shared<std::shared_ptr<const Presence<std::vector<std::string>>>>();
+        public: const Presence<std::vector<std::string>>& on() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_profile_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& profile() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<RelationRule>>>> cached_relations_ = std::make_shared<std::shared_ptr<const Presence<std::vector<RelationRule>>>>();
+        public: const Presence<std::vector<RelationRule>>& relations() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<Threshold>>> cached_threshold_ = std::make_shared<std::shared_ptr<const Presence<Threshold>>>();
+        public: const Presence<Threshold>& threshold() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_verb_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
+        public: const Presence<std::string>& verb() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<WordingVersion>>> cached_wording_version_ = std::make_shared<std::shared_ptr<const Presence<WordingVersion>>>();
+        public: const Presence<WordingVersion>& wording_version() const;
     };
     class RelatedEntity : public Node {
         public: using Node::Node;
@@ -2090,8 +2090,8 @@ namespace tt::results {
         public: const Presence<std::vector<Observation>>& observations() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<SessionProbabilities>>> cached_probabilities_ = std::make_shared<std::shared_ptr<const Presence<SessionProbabilities>>>();
         public: const Presence<SessionProbabilities>& probabilities() const;
-        private: std::shared_ptr<std::shared_ptr<const Presence<ReadableQuestion>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<ReadableQuestion>>>();
-        public: const Presence<ReadableQuestion>& question() const;
+        private: std::shared_ptr<std::shared_ptr<const Presence<QuestionDocument>>> cached_question_ = std::make_shared<std::shared_ptr<const Presence<QuestionDocument>>>();
+        public: const Presence<QuestionDocument>& question() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::string>>> cached_question_sha256_ = std::make_shared<std::shared_ptr<const Presence<std::string>>>();
         public: const Presence<std::string>& question_sha256() const;
         private: std::shared_ptr<std::shared_ptr<const Presence<std::vector<QuestionSource>>>> cached_question_sources_ = std::make_shared<std::shared_ptr<const Presence<std::vector<QuestionSource>>>>();
@@ -2311,10 +2311,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_observations_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AnnotationMemberAnswerId::question() const {
+    inline const Presence<QuestionDocument>& AnnotationMemberAnswerId::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2383,10 +2383,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_observations_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AnnotationMemberFailureId::question() const {
+    inline const Presence<QuestionDocument>& AnnotationMemberFailureId::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2594,10 +2594,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicArrayOfString::question() const {
+    inline const Presence<QuestionDocument>& AtomicArrayOfString::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2698,10 +2698,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicDecideValue::question() const {
+    inline const Presence<QuestionDocument>& AtomicDecideValue::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2802,10 +2802,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicNonZeroUsize::question() const {
+    inline const Presence<QuestionDocument>& AtomicNonZeroUsize::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -2906,10 +2906,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicNullableString::question() const {
+    inline const Presence<QuestionDocument>& AtomicNullableString::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3010,10 +3010,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicBoolean::question() const {
+    inline const Presence<QuestionDocument>& AtomicBoolean::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3114,10 +3114,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& AtomicDouble::question() const {
+    inline const Presence<QuestionDocument>& AtomicDouble::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -3659,10 +3659,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_position_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion2>& Find::question() const {
+    inline const Presence<FindQuestionDocument>& Find::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion2>>(detail::member_value<ReadableQuestion2>(value_,
+            auto candidate = std::make_shared<const Presence<FindQuestionDocument>>(detail::member_value<FindQuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4254,10 +4254,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_meta_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& RankMemberResult::question() const {
+    inline const Presence<QuestionDocument>& RankMemberResult::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -4292,766 +4292,6 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
             "value"));
             if (std::atomic_compare_exchange_strong(cached_value_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline std::optional<ReadableQuestionDecide> ReadableQuestion::as_ReadableQuestionDecide() const {
-        if (detail::literal(value_, "verb", "decide")) return ReadableQuestionDecide(value_);
-        return std::nullopt;
-    }
-    inline std::optional<ReadableQuestionChoose> ReadableQuestion::as_ReadableQuestionChoose() const {
-        if (detail::literal(value_, "verb", "choose")) return ReadableQuestionChoose(value_);
-        return std::nullopt;
-    }
-    inline std::optional<ReadableQuestionTag> ReadableQuestion::as_ReadableQuestionTag() const {
-        if (detail::literal(value_, "verb", "tag")) return ReadableQuestionTag(value_);
-        return std::nullopt;
-    }
-    inline std::optional<ReadableQuestionScore> ReadableQuestion::as_ReadableQuestionScore() const {
-        if (detail::literal(value_, "verb", "score")) return ReadableQuestionScore(value_);
-        return std::nullopt;
-    }
-    inline const Presence<Batch>& ReadableQuestion2::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion2::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion2::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestion2::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion2::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestion2::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<bool>& ReadableQuestion2::none() const {
-        auto stored = std::atomic_load(cached_none_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
-            "none"));
-            if (std::atomic_compare_exchange_strong(cached_none_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestion2::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion2::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestion2::text() const {
-        auto stored = std::atomic_load(cached_text_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "text"));
-            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion2::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestion2::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestion3::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion3::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestion3::entity_definition() const {
-        auto stored = std::atomic_load(cached_entity_definition_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "entity_definition"));
-            if (std::atomic_compare_exchange_strong(cached_entity_definition_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestion3::instructions() const {
-        auto stored = std::atomic_load(cached_instructions_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "instructions"));
-            if (std::atomic_compare_exchange_strong(cached_instructions_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion3::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::pair<std::string, Json>>>& ReadableQuestion3::kinds() const {
-        auto stored = std::atomic_load(cached_kinds_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::pair<std::string, Json>>>>(detail::member_value<std::vector<std::pair<std::string,
-            Json>>>(value_, "kinds"));
-            if (std::atomic_compare_exchange_strong(cached_kinds_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestion3::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<RecognitionMode>& ReadableQuestion3::mode() const {
-        auto stored = std::atomic_load(cached_mode_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<RecognitionMode>>(detail::member_value<RecognitionMode>(value_,
-            "mode"));
-            if (std::atomic_compare_exchange_strong(cached_mode_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion3::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestion3::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestion3::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion3::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Threshold>& ReadableQuestion3::relation_threshold() const {
-        auto stored = std::atomic_load(cached_relation_threshold_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
-            "relation_threshold"));
-            if (std::atomic_compare_exchange_strong(cached_relation_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<RelationRule>>& ReadableQuestion3::relations() const {
-        auto stored = std::atomic_load(cached_relations_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
-            "relations"));
-            if (std::atomic_compare_exchange_strong(cached_relations_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<uint32_t>& ReadableQuestion3::snippet_pieces() const {
-        auto stored = std::atomic_load(cached_snippet_pieces_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
-            "snippet_pieces"));
-            if (std::atomic_compare_exchange_strong(cached_snippet_pieces_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<RecognitionStageContext>& ReadableQuestion3::stage_context() const {
-        auto stored = std::atomic_load(cached_stage_context_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<RecognitionStageContext>>(detail::member_value<RecognitionStageContext>(value_,
-            "stage_context"));
-            if (std::atomic_compare_exchange_strong(cached_stage_context_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Threshold>& ReadableQuestion3::threshold() const {
-        auto stored = std::atomic_load(cached_threshold_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
-            "threshold"));
-            if (std::atomic_compare_exchange_strong(cached_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Verb>& ReadableQuestion3::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Verb>>(detail::member_value<Verb>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestion3::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestion4::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion4::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<RelateFields>& ReadableQuestion4::fields() const {
-        auto stored = std::atomic_load(cached_fields_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<RelateFields>>(detail::member_value<RelateFields>(value_,
-            "fields"));
-            if (std::atomic_compare_exchange_strong(cached_fields_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestion4::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestion4::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion4::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestion4::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestion4::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion4::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<RelationRule>>& ReadableQuestion4::relations() const {
-        auto stored = std::atomic_load(cached_relations_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
-            "relations"));
-            if (std::atomic_compare_exchange_strong(cached_relations_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Threshold>& ReadableQuestion4::threshold() const {
-        auto stored = std::atomic_load(cached_threshold_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
-            "threshold"));
-            if (std::atomic_compare_exchange_strong(cached_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestion4::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestion4::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestionChoose::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionChoose::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionChoose::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestionChoose::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionChoose::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestionChoose::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionChoose::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionChoose::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestionChoose::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionChoose::options() const {
-        auto stored = std::atomic_load(cached_options_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "options"));
-            if (std::atomic_compare_exchange_strong(cached_options_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionChoose::text() const {
-        auto stored = std::atomic_load(cached_text_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "text"));
-            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionChoose::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestionDecide::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionDecide::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionDecide::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestionDecide::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionDecide::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestionDecide::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionDecide::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionDecide::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestionDecide::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionDecide::false_() const {
-        auto stored = std::atomic_load(cached_false__.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "false"));
-            if (std::atomic_compare_exchange_strong(cached_false__.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionDecide::text() const {
-        auto stored = std::atomic_load(cached_text_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "text"));
-            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionDecide::true_() const {
-        auto stored = std::atomic_load(cached_true__.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "true"));
-            if (std::atomic_compare_exchange_strong(cached_true__.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionDecide::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestionScore::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionScore::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionScore::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestionScore::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionScore::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestionScore::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionScore::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionScore::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestionScore::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionScore::levels() const {
-        auto stored = std::atomic_load(cached_levels_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "levels"));
-            if (std::atomic_compare_exchange_strong(cached_levels_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionScore::text() const {
-        auto stored = std::atomic_load(cached_text_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "text"));
-            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionScore::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Batch>& ReadableQuestionTag::batch() const {
-        auto stored = std::atomic_load(cached_batch_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
-            "batch"));
-            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionTag::context_schema() const {
-        auto stored = std::atomic_load(cached_context_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "context_schema"));
-            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<InputDeclaration>& ReadableQuestionTag::item_schema() const {
-        auto stored = std::atomic_load(cached_item_schema_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
-            "item_schema"));
-            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<Label>>& ReadableQuestionTag::label_details() const {
-        auto stored = std::atomic_load(cached_label_details_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
-            "label_details"));
-            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionTag::model() const {
-        auto stored = std::atomic_load(cached_model_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "model"));
-            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<QuestionName>& ReadableQuestionTag::name() const {
-        auto stored = std::atomic_load(cached_name_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
-            "name"));
-            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionTag::on() const {
-        auto stored = std::atomic_load(cached_on_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "on"));
-            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionTag::profile() const {
-        auto stored = std::atomic_load(cached_profile_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "profile"));
-            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<WordingVersion>& ReadableQuestionTag::wording_version() const {
-        auto stored = std::atomic_load(cached_wording_version_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
-            "wording_version"));
-            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::vector<std::string>>& ReadableQuestionTag::labels() const {
-        auto stored = std::atomic_load(cached_labels_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
-            "labels"));
-            if (std::atomic_compare_exchange_strong(cached_labels_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<Json>& ReadableQuestionTag::text() const {
-        auto stored = std::atomic_load(cached_text_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
-            "text"));
-            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
-        } return *stored;
-    }
-    inline const Presence<std::string>& ReadableQuestionTag::verb() const {
-        auto stored = std::atomic_load(cached_verb_.get());
-        if (!stored) {
-            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
-            "verb"));
-            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const Presence<RecognitionOdds>& Recognition::answer() const {
@@ -5126,10 +4366,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_position_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion3>& Recognition::question() const {
+    inline const Presence<RecognizeQuestionDocument>& Recognition::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion3>>(detail::member_value<ReadableQuestion3>(value_,
+            auto candidate = std::make_shared<const Presence<RecognizeQuestionDocument>>(detail::member_value<RecognizeQuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5421,10 +4661,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_position_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion4>& Relation::question() const {
+    inline const Presence<RelateQuestionDocument>& Relation::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion4>>(detail::member_value<ReadableQuestion4>(value_,
+            auto candidate = std::make_shared<const Presence<RelateQuestionDocument>>(detail::member_value<RelateQuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5564,10 +4804,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_observations_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& RelationMemberAnswerId::question() const {
+    inline const Presence<QuestionDocument>& RelationMemberAnswerId::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -5695,10 +4935,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_observations_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& RelationMemberFailureId::question() const {
+    inline const Presence<QuestionDocument>& RelationMemberFailureId::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
@@ -6292,6 +5532,102 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_probabilities_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
+    inline const Presence<Batch>& FindQuestionDocument::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& FindQuestionDocument::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& FindQuestionDocument::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& FindQuestionDocument::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& FindQuestionDocument::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& FindQuestionDocument::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<bool>& FindQuestionDocument::none() const {
+        auto stored = std::atomic_load(cached_none_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
+            "none"));
+            if (std::atomic_compare_exchange_strong(cached_none_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& FindQuestionDocument::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& FindQuestionDocument::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& FindQuestionDocument::text() const {
+        auto stored = std::atomic_load(cached_text_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "text"));
+            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& FindQuestionDocument::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& FindQuestionDocument::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
     inline const Presence<std::vector<std::pair<std::string, double>>>& NameOdds::edges() const {
         auto stored = std::atomic_load(cached_edges_.get());
         if (!stored) {
@@ -6485,6 +5821,414 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_tuned_for_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
+    inline std::optional<QuestionDocumentDecide> QuestionDocument::as_QuestionDocumentDecide() const {
+        if (detail::literal(value_, "verb", "decide")) return QuestionDocumentDecide(value_);
+        return std::nullopt;
+    }
+    inline std::optional<QuestionDocumentChoose> QuestionDocument::as_QuestionDocumentChoose() const {
+        if (detail::literal(value_, "verb", "choose")) return QuestionDocumentChoose(value_);
+        return std::nullopt;
+    }
+    inline std::optional<QuestionDocumentTag> QuestionDocument::as_QuestionDocumentTag() const {
+        if (detail::literal(value_, "verb", "tag")) return QuestionDocumentTag(value_);
+        return std::nullopt;
+    }
+    inline std::optional<QuestionDocumentScore> QuestionDocument::as_QuestionDocumentScore() const {
+        if (detail::literal(value_, "verb", "score")) return QuestionDocumentScore(value_);
+        return std::nullopt;
+    }
+    inline const Presence<Batch>& QuestionDocumentChoose::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentChoose::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentChoose::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& QuestionDocumentChoose::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentChoose::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& QuestionDocumentChoose::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentChoose::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentChoose::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& QuestionDocumentChoose::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentChoose::options() const {
+        auto stored = std::atomic_load(cached_options_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "options"));
+            if (std::atomic_compare_exchange_strong(cached_options_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentChoose::text() const {
+        auto stored = std::atomic_load(cached_text_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "text"));
+            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentChoose::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Batch>& QuestionDocumentDecide::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentDecide::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentDecide::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& QuestionDocumentDecide::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentDecide::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& QuestionDocumentDecide::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentDecide::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentDecide::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& QuestionDocumentDecide::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentDecide::false_() const {
+        auto stored = std::atomic_load(cached_false__.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "false"));
+            if (std::atomic_compare_exchange_strong(cached_false__.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentDecide::text() const {
+        auto stored = std::atomic_load(cached_text_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "text"));
+            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentDecide::true_() const {
+        auto stored = std::atomic_load(cached_true__.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "true"));
+            if (std::atomic_compare_exchange_strong(cached_true__.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentDecide::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Batch>& QuestionDocumentScore::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentScore::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentScore::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& QuestionDocumentScore::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentScore::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& QuestionDocumentScore::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentScore::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentScore::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& QuestionDocumentScore::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentScore::levels() const {
+        auto stored = std::atomic_load(cached_levels_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "levels"));
+            if (std::atomic_compare_exchange_strong(cached_levels_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentScore::text() const {
+        auto stored = std::atomic_load(cached_text_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "text"));
+            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentScore::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Batch>& QuestionDocumentTag::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentTag::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& QuestionDocumentTag::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& QuestionDocumentTag::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentTag::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& QuestionDocumentTag::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentTag::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentTag::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& QuestionDocumentTag::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& QuestionDocumentTag::labels() const {
+        auto stored = std::atomic_load(cached_labels_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "labels"));
+            if (std::atomic_compare_exchange_strong(cached_labels_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& QuestionDocumentTag::text() const {
+        auto stored = std::atomic_load(cached_text_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "text"));
+            if (std::atomic_compare_exchange_strong(cached_text_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& QuestionDocumentTag::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
     inline std::optional<RecognizeEntities> Recognize::as_RecognizeEntities() const {
         if (value_.contains("entities") && !value_.contains("mode") && !value_.contains("proposals")) return RecognizeEntities(value_);
         return std::nullopt;
@@ -6523,6 +6267,158 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<std::vector<RecognitionProposal>>>(detail::member_value<std::vector<RecognitionProposal>>(value_,
             "proposals"));
             if (std::atomic_compare_exchange_strong(cached_proposals_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Batch>& RecognizeQuestionDocument::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& RecognizeQuestionDocument::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& RecognizeQuestionDocument::entity_definition() const {
+        auto stored = std::atomic_load(cached_entity_definition_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "entity_definition"));
+            if (std::atomic_compare_exchange_strong(cached_entity_definition_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Json>& RecognizeQuestionDocument::instructions() const {
+        auto stored = std::atomic_load(cached_instructions_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
+            "instructions"));
+            if (std::atomic_compare_exchange_strong(cached_instructions_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& RecognizeQuestionDocument::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::pair<std::string, Json>>>& RecognizeQuestionDocument::kinds() const {
+        auto stored = std::atomic_load(cached_kinds_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::pair<std::string, Json>>>>(detail::member_value<std::vector<std::pair<std::string,
+            Json>>>(value_, "kinds"));
+            if (std::atomic_compare_exchange_strong(cached_kinds_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& RecognizeQuestionDocument::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<RecognitionMode>& RecognizeQuestionDocument::mode() const {
+        auto stored = std::atomic_load(cached_mode_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<RecognitionMode>>(detail::member_value<RecognitionMode>(value_,
+            "mode"));
+            if (std::atomic_compare_exchange_strong(cached_mode_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& RecognizeQuestionDocument::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& RecognizeQuestionDocument::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& RecognizeQuestionDocument::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& RecognizeQuestionDocument::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Threshold>& RecognizeQuestionDocument::relation_threshold() const {
+        auto stored = std::atomic_load(cached_relation_threshold_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
+            "relation_threshold"));
+            if (std::atomic_compare_exchange_strong(cached_relation_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<RelationRule>>& RecognizeQuestionDocument::relations() const {
+        auto stored = std::atomic_load(cached_relations_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
+            "relations"));
+            if (std::atomic_compare_exchange_strong(cached_relations_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<uint32_t>& RecognizeQuestionDocument::snippet_pieces() const {
+        auto stored = std::atomic_load(cached_snippet_pieces_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
+            "snippet_pieces"));
+            if (std::atomic_compare_exchange_strong(cached_snippet_pieces_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<RecognitionStageContext>& RecognizeQuestionDocument::stage_context() const {
+        auto stored = std::atomic_load(cached_stage_context_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<RecognitionStageContext>>(detail::member_value<RecognitionStageContext>(value_,
+            "stage_context"));
+            if (std::atomic_compare_exchange_strong(cached_stage_context_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Threshold>& RecognizeQuestionDocument::threshold() const {
+        auto stored = std::atomic_load(cached_threshold_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
+            "threshold"));
+            if (std::atomic_compare_exchange_strong(cached_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Verb>& RecognizeQuestionDocument::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Verb>>(detail::member_value<Verb>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& RecognizeQuestionDocument::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const Presence<std::vector<Entity>>& RecognizeEntities::entities() const {
@@ -6571,6 +6467,110 @@ namespace tt::results {
             auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
             "name"));
             if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Batch>& RelateQuestionDocument::batch() const {
+        auto stored = std::atomic_load(cached_batch_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
+            "batch"));
+            if (std::atomic_compare_exchange_strong(cached_batch_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& RelateQuestionDocument::context_schema() const {
+        auto stored = std::atomic_load(cached_context_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "context_schema"));
+            if (std::atomic_compare_exchange_strong(cached_context_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<RelateFields>& RelateQuestionDocument::fields() const {
+        auto stored = std::atomic_load(cached_fields_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<RelateFields>>(detail::member_value<RelateFields>(value_,
+            "fields"));
+            if (std::atomic_compare_exchange_strong(cached_fields_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<InputDeclaration>& RelateQuestionDocument::item_schema() const {
+        auto stored = std::atomic_load(cached_item_schema_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
+            "item_schema"));
+            if (std::atomic_compare_exchange_strong(cached_item_schema_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<Label>>& RelateQuestionDocument::label_details() const {
+        auto stored = std::atomic_load(cached_label_details_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
+            "label_details"));
+            if (std::atomic_compare_exchange_strong(cached_label_details_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& RelateQuestionDocument::model() const {
+        auto stored = std::atomic_load(cached_model_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "model"));
+            if (std::atomic_compare_exchange_strong(cached_model_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<QuestionName>& RelateQuestionDocument::name() const {
+        auto stored = std::atomic_load(cached_name_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
+            "name"));
+            if (std::atomic_compare_exchange_strong(cached_name_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<std::string>>& RelateQuestionDocument::on() const {
+        auto stored = std::atomic_load(cached_on_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
+            "on"));
+            if (std::atomic_compare_exchange_strong(cached_on_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& RelateQuestionDocument::profile() const {
+        auto stored = std::atomic_load(cached_profile_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "profile"));
+            if (std::atomic_compare_exchange_strong(cached_profile_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::vector<RelationRule>>& RelateQuestionDocument::relations() const {
+        auto stored = std::atomic_load(cached_relations_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
+            "relations"));
+            if (std::atomic_compare_exchange_strong(cached_relations_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<Threshold>& RelateQuestionDocument::threshold() const {
+        auto stored = std::atomic_load(cached_threshold_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
+            "threshold"));
+            if (std::atomic_compare_exchange_strong(cached_threshold_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<std::string>& RelateQuestionDocument::verb() const {
+        auto stored = std::atomic_load(cached_verb_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
+            "verb"));
+            if (std::atomic_compare_exchange_strong(cached_verb_.get(), &stored, candidate)) stored = std::move(candidate);
+        } return *stored;
+    }
+    inline const Presence<WordingVersion>& RelateQuestionDocument::wording_version() const {
+        auto stored = std::atomic_load(cached_wording_version_.get());
+        if (!stored) {
+            auto candidate = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
+            "wording_version"));
+            if (std::atomic_compare_exchange_strong(cached_wording_version_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
     inline const Presence<std::string>& RelatedEntity::kind() const {
@@ -7639,10 +7639,10 @@ namespace tt::results {
             if (std::atomic_compare_exchange_strong(cached_probabilities_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
     }
-    inline const Presence<ReadableQuestion>& SessionQuestionDetail::question() const {
+    inline const Presence<QuestionDocument>& SessionQuestionDetail::question() const {
         auto stored = std::atomic_load(cached_question_.get());
         if (!stored) {
-            auto candidate = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
+            auto candidate = std::make_shared<const Presence<QuestionDocument>>(detail::member_value<QuestionDocument>(value_,
             "question"));
             if (std::atomic_compare_exchange_strong(cached_question_.get(), &stored, candidate)) stored = std::move(candidate);
         } return *stored;
