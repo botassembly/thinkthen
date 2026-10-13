@@ -14,6 +14,8 @@ import struct
 import yaml
 import zipfile
 import unittest
+import time
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__).with_name('registry-readmes.py'))
@@ -200,6 +202,71 @@ class PackageText(unittest.TestCase):
                 readmes.check_examples(Path(scratch))
             self.assertIn('example-needs-two-functions: typescript', str(error.exception))
             self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
+
+    def test_timed_out_compiler_exits_before_another_replay_build_enters(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            root = tree / 'root'
+            (root / 'site/recordings').mkdir(parents=True)
+            shutil.copyfile(readmes.REPO / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
+            shutil.copyfile(readmes.REPO / 'site/recordings/thinkthen.jsonl', root / 'site/recordings/thinkthen.jsonl')
+            page = readmes.source('swift', root)
+            page.parent.mkdir(parents=True)
+            page.write_text('```swift\ndecide(); choose();\n```\n```text\nfixture\n```\n')
+            packages = tree / 'packages'; packages.mkdir()
+            archive(packages / ('thinkthen-swift-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'),
+                    {'README.md': readmes.source('swift').read_bytes()})
+            tools = tree / 'tools'; tools.mkdir()
+            marker = tree / 'compiler.pid'
+            compiler = tools / 'swift'
+            compiler.write_text('#!' + sys.executable + '\n' +
+                'import os, pathlib, signal, subprocess, sys, time\n' +
+                'marker = pathlib.Path(' + repr(str(marker)) + ')\n' +
+                'if pathlib.Path.cwd().name.startswith("first"):\n' +
+                '    hard = pathlib.Path.cwd().name == "first-hard"\n' +
+                '    child = None if hard else subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])\n' +
+                '    marker.with_suffix(".worker").write_text(str(child.pid if child else os.getpid()))\n' +
+                '    def stop(signum, frame): raise SystemExit(77)\n' +
+                '    signal.signal(signal.SIGTERM, signal.SIG_IGN if hard else stop)\n' +
+                '    marker.write_text(str(os.getpid()))\n' +
+                '    try: time.sleep(2)\n' +
+                '    finally:\n' +
+                '        if child: child.terminate(); child.wait()\n' +
+                '    sys.exit(77)\n' +
+                'for pid_file in (marker, marker.with_suffix(".worker")):\n' +
+                '    try: os.kill(int(pid_file.read_text()), 0)\n' +
+                '    except ProcessLookupError: pass\n' +
+                '    else: sys.exit("another compiler is still alive")\n' +
+                'out = pathlib.Path(".build/debug/RegistryExample")\n' +
+                'out.parent.mkdir(parents=True)\n' +
+                'out.write_text(' + repr('#!' + sys.executable + '\nprint("fixture")\n') + ')\n' +
+                'out.chmod(0o755)\n')
+            compiler.chmod(0o755)
+            communicate = subprocess.Popen.communicate
+            def bounded_communicate(process, input=None, timeout=None):
+                return communicate(process, input, .4 if timeout == 300 else timeout)
+            for search_path, first_name in ((str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')):
+                with self.subTest(path=search_path), patch.dict(os.environ, {
+                    'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
+                        patch.object(subprocess.Popen, 'communicate', bounded_communicate), \
+                        ThreadPoolExecutor(max_workers=2) as workers:
+                    marker.unlink(missing_ok=True)
+                    first = tree / first_name; first.mkdir(exist_ok=True)
+                    second = tree / 'second'; second.mkdir(exist_ok=True)
+                    failed = workers.submit(readmes.run_example, 'swift', packages, first, root)
+                    deadline = time.monotonic() + 3
+                    while not marker.exists() and time.monotonic() < deadline:
+                        time.sleep(.01)
+                    self.assertTrue(marker.exists(), 'first compiler did not start')
+                    contender = workers.submit(readmes.run_example, 'swift', packages, second, root)
+                    with self.assertRaises(subprocess.TimeoutExpired):
+                        failed.result(timeout=5)
+                    contender.result(timeout=5)
+                    for pid_file in (marker, marker.with_suffix('.worker')):
+                        with self.assertRaises(ProcessLookupError):
+                            os.kill(int(pid_file.read_text()), 0)
+                shutil.rmtree(first)
+                shutil.rmtree(second)
 
     def test_replay_refuses_a_command_that_does_not_run(self):
         with tempfile.TemporaryDirectory() as scratch:

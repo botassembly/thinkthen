@@ -9,10 +9,11 @@ import os
 from pathlib import Path
 import re
 import shutil
+import signal
 import subprocess
-import sys
 import tempfile
 import tarfile
+import time
 import tomllib
 import xml.etree.ElementTree as ET
 import zipfile
@@ -299,6 +300,50 @@ def unpack_example_package(family, packages, destination, selected=None):
     return pages[0].parent if len(pages) == 1 else destination
 
 
+def run_process(command, work, env, input, timeout):
+    with subprocess.Popen(command, cwd=work, env=env, stdin=subprocess.PIPE,
+                          stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                          text=True, start_new_session=True) as process:
+        try:
+            stdout, stderr = process.communicate(input, timeout=timeout)
+        except BaseException:
+            # Reap the compiler before its owner releases the lock or removes scratch.
+            # Let compilers reap their workers, then kill any unresponsive group.
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.communicate(timeout=1)
+            except subprocess.TimeoutExpired:
+                pass
+            finally:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.communicate()
+            raise
+        return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
+def run_build(command, work, env, input):
+    import fcntl
+    # The runner owns the same lock on Linux and macOS; children never inherit it.
+    lock_path = os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
+    with open(lock_path, 'a') as lock:
+        deadline = time.monotonic() + 180
+        while True:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except BlockingIOError:
+                if time.monotonic() >= deadline:
+                    raise subprocess.TimeoutExpired(command, 180)
+                time.sleep(.05)
+        return run_process(command, work, env, input, 300)
+
+
 def run_example(family, packages, work, root=REPO, selected=None):
     filename, code, expected = example(family, root)
     package = unpack_example_package(family, packages, work / 'package', selected)
@@ -321,16 +366,7 @@ def run_example(family, packages, work, root=REPO, selected=None):
             env[name] = os.environ[name]
 
     def run(command, build=False, input=None):
-        if build:
-            lock = os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
-            if shutil.which('flock', path=env['PATH']):
-                command = ['flock', '-w', '180', '-o', lock, *command]
-            else:
-                # The wrapper owns the lock; compiler children cannot inherit it.
-                wrapper = 'import fcntl,os,subprocess,sys; f=open(sys.argv[1], "a"); os.set_inheritable(f.fileno(),False); fcntl.flock(f,fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))'
-                command = [sys.executable, '-c', wrapper, lock, *command]
-        done = subprocess.run(command, cwd=work, env=env, input=input, text=True,
-                              capture_output=True, timeout=300 if build else 30)
+        done = run_build(command, work, env, input) if build else run_process(command, work, env, input, 30)
         if done.returncode:
             raise Refusal('example-did-not-run: ' + family + '\n' + (done.stdout + done.stderr)[-4000:])
         return done.stdout
