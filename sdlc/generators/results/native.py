@@ -12,7 +12,8 @@ COMMON = (
 )
 USE = {
     'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json'),
-    'swift': (*COMMON, 'thinkthen_error_retryable', 'thinkthen_free_string',
+    'swift': (*COMMON, 'thinkthen_error_retryable', 'thinkthen_error_facts_json',
+              'thinkthen_session_error_retryable', 'thinkthen_session_error_facts_json', 'thinkthen_free_string',
               'thinkthen_question_free', 'thinkthen_question_parse', 'thinkthen_request_plan_json',
               'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
               'thinkthen_session_result_json'),
