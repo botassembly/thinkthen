@@ -59,26 +59,10 @@ pub(crate) fn facts_json(facts: &Facts) -> String {
 }
 
 impl Failure {
-    /// Project a frozen sentence without changing the native diagnostic fields.
-    pub(crate) fn with_message(mut self, message: &str) -> Self {
-        self.message = message.into();
-        self
-    }
-
     /// A refusal of the interface's own argument rules.
     pub(crate) fn usage(message: impl Into<String>) -> Self {
         Self {
             code: USAGE,
-            retryable: false,
-            message: message.into(),
-            facts: None,
-        }
-    }
-
-    /// A named local question file could not supply a valid question.
-    pub(crate) fn local(message: impl Into<String>) -> Self {
-        Self {
-            code: code_of(ErrorKind::Local),
             retryable: false,
             message: message.into(),
             facts: None,
@@ -93,13 +77,6 @@ impl Failure {
             message: format!("defect: {message}"),
             facts: None,
         }
-    }
-
-    pub(crate) fn completed(mut self, facts: Option<&Facts>) -> Self {
-        if self.facts.is_none() {
-            self.facts = facts.map(|facts| Box::new(facts.clone()));
-        }
-        self
     }
 }
 
@@ -306,19 +283,6 @@ pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> 
         if let Some(held) = held {
             held.fail(Failure::defect("a panic crossed the C interface"));
         }
-        fallback
-    })
-}
-
-/// The typed facts interface retains a completed call through post-reply defects.
-pub(crate) fn guard_completed<T>(
-    held: &Held,
-    completed: &mut Option<Facts>,
-    fallback: T,
-    body: impl FnOnce(&mut Option<Facts>) -> T,
-) -> T {
-    contained(|| body(completed)).unwrap_or_else(|| {
-        held.fail(Failure::defect("a panic crossed the C interface").completed(completed.as_ref()));
         fallback
     })
 }

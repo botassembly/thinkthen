@@ -151,15 +151,7 @@ fn msvc_asan_proves_instrumentation_before_ownership_checks() {
     );
     std::fs::remove_file(probe.with_extension("obj")).expect("remove negative object");
     std::fs::remove_file(probe).expect("remove negative executable");
-    for name in [
-        "nulls",
-        "opts",
-        "threads",
-        "engines",
-        "typed_facts",
-        "session",
-        "atexit",
-    ] {
+    for name in ["session", "authored", "request_preview"] {
         let backend = Backend::start().expect("backend");
         let source = crate_dir().join("tests/c").join(format!("{name}.c"));
         let binary = compile_mode(&source, true);

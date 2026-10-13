@@ -288,7 +288,7 @@ def self_test(header):
         ('argument', r'size_t descriptor_len\b', 'uint16_t descriptor_len'),
         ('return', 'int thinkthen_session_try_read(', 'uint64_t thinkthen_session_try_read('),
         ('pointer-depth', r'(?:struct )?thinkthen_session_result \*\*out\b', 'struct thinkthen_session_result *out'),
-        ('by-value', r'uint32_t media,\s*(?:struct )?thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
+        ('by-value', r'(?:struct )?thinkthen_complete_utf8_v1 surface', 'const thinkthen_complete_utf8_v1 *surface'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
         for name, before, after in plants:

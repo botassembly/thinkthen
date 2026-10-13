@@ -198,11 +198,13 @@ fn session_cancel_and_free_return_before_the_held_provider_is_released() {
     let worker_gate = gate.clone();
     let (arrived, arrival) = std::sync::mpsc::channel();
     let (answered, answer) = std::sync::mpsc::channel();
-    let backend = conformance_backend::Listener::answering(move |body| {
+    let backend = conformance_backend::Listener::answering(move |_| {
         arrived.send(()).expect("arrival signal");
-        super::sources::all_no_answers(body)
-            .after_release(worker_gate.clone())
-            .notifying(answered.clone())
+        conformance_backend::Canned::ok(
+            r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+        )
+        .after_release(worker_gate.clone())
+        .notifying(answered.clone())
     })
     .expect("owned held listener");
     let base = backend.base().to_owned();

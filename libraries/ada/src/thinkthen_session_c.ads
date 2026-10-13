@@ -265,7 +265,6 @@ package Thinkthen_Session_C is
    K_THINKTHEN_VERSION_MINOR : constant := 2;
    K_THINKTHEN_VERSION_PATCH : constant := 0;
    K_THINKTHEN_YES : constant := 1;
-   type thinkthen_cancel_token is null record;
    type thinkthen_input_declaration_kind_v1 is
      (THINKTHEN_DECLARATION_ABSENT_V1,
       THINKTHEN_DECLARATION_STRING_V1,
@@ -289,11 +288,6 @@ package Thinkthen_Session_C is
    type thinkthen_question is null record;
    type thinkthen_session is null record;
    type thinkthen_session_result is null record;
-   type thinkthen_answer is record
-      outcome : aliased int;
-      probability : aliased double;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_usage_persistence_v1 is record
       kind : aliased Interfaces.Unsigned_32;
    end record
@@ -3831,122 +3825,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_complete_session_packet_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   function thinkthen_call (engine : access constant thinkthen_engine; request_json : Interfaces.C.Strings.chars_ptr) return Interfaces.C.Strings.chars_ptr
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_call";
-   function thinkthen_call_opts
-     (engine : access constant thinkthen_engine;
-      request_json : Interfaces.C.Strings.chars_ptr;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token) return Interfaces.C.Strings.chars_ptr
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_call_opts";
-   procedure thinkthen_cancel (token : access thinkthen_cancel_token)
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_cancel";
-   procedure thinkthen_cancel_token_free (token : access thinkthen_cancel_token)
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_cancel_token_free";
-   function thinkthen_cancel_token_new return access thinkthen_cancel_token
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_cancel_token_new";
-   function thinkthen_decide
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      text : Interfaces.C.Strings.chars_ptr;
-      text_len : Interfaces.C.size_t;
-      c_out : access thinkthen_answer) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide";
-   function thinkthen_decide_many
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      c_out : access thinkthen_answer) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_many";
-   function thinkthen_decide_many_opts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : access thinkthen_answer) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_many_opts";
-   function thinkthen_decide_many_with_facts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      c_out : access thinkthen_answer;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_many_with_facts";
-   function thinkthen_decide_many_with_facts_opts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : access thinkthen_answer;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_many_with_facts_opts";
-   function thinkthen_decide_opts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      text : Interfaces.C.Strings.chars_ptr;
-      text_len : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : access thinkthen_answer) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_opts";
-   function thinkthen_decide_with_facts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      evidence : Interfaces.C.Strings.chars_ptr;
-      evidence_len : Interfaces.C.size_t;
-      c_out : access thinkthen_answer;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_with_facts";
-   function thinkthen_decide_with_facts_opts
-     (engine : access constant thinkthen_engine;
-      question_json : Interfaces.C.Strings.chars_ptr;
-      evidence : Interfaces.C.Strings.chars_ptr;
-      evidence_len : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : access thinkthen_answer;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_with_facts_opts";
    function thinkthen_engine_finish_usage_status_v1
      (engine : access constant thinkthen_engine;
       out_state : access thinkthen_complete_usage_persistence_v1;
@@ -3993,26 +3871,10 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_free_string";
-   function thinkthen_plan_json
-     (engine : access constant thinkthen_engine;
-      plan_json : Interfaces.C.Strings.chars_ptr;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_plan_json";
    function thinkthen_question_author (owner : access constant thinkthen_question; c_out : access thinkthen_question_author_v1) return int
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_question_author";
-   function thinkthen_question_file
-     (engine : access constant thinkthen_engine;
-      path : Interfaces.C.Strings.chars_ptr;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_question_file";
    procedure thinkthen_question_free (owner : access thinkthen_question)
    with Import => True,
         Convention => C,
@@ -4025,106 +3887,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_question_parse";
-   function thinkthen_recognize
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      text : Interfaces.C.Strings.chars_ptr;
-      text_len : Interfaces.C.size_t;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_recognize";
-   function thinkthen_recognize_opts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      text : Interfaces.C.Strings.chars_ptr;
-      text_len : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_recognize_opts";
-   function thinkthen_recognize_with_facts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      evidence : Interfaces.C.Strings.chars_ptr;
-      evidence_len : Interfaces.C.size_t;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_recognize_with_facts";
-   function thinkthen_recognize_with_facts_opts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      evidence : Interfaces.C.Strings.chars_ptr;
-      evidence_len : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_recognize_with_facts_opts";
-   function thinkthen_relate
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_relate";
-   function thinkthen_relate_opts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_relate_opts";
-   function thinkthen_relate_with_facts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_relate_with_facts";
-   function thinkthen_relate_with_facts_opts
-     (engine : access constant thinkthen_engine;
-      spec_json : Interfaces.C.Strings.chars_ptr;
-      texts : System.Address;
-      lengths : access Interfaces.C.size_t;
-      count : Interfaces.C.size_t;
-      deadline_ms : Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      c_out : System.Address;
-      out_len : access Interfaces.C.size_t;
-      facts_json : System.Address;
-      facts_len : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_relate_with_facts_opts";
    function thinkthen_request_plan_json
      (engine : access constant thinkthen_engine;
       request_json : Interfaces.C.Strings.chars_ptr;
