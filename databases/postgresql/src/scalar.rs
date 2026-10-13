@@ -47,13 +47,7 @@ fn decide(
     deadline_ms: default!(Option<i64>, "NULL"),
 ) -> Option<bool> {
     call::guarded(|| {
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let held = judged(For::Decide, question, input, None, settings, named)?;
         match held.value {
             Judgment::Decision(value) => answer_value(value),
@@ -82,13 +76,7 @@ fn choose(
     deadline_ms: default!(Option<i64>, "NULL"),
 ) -> Option<String> {
     call::guarded(|| {
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let held = judged(For::Choose, question, input, members, settings, named)?;
         match held.value {
             Judgment::Choice(value) => value,
@@ -117,13 +105,7 @@ fn score(
     deadline_ms: default!(Option<i64>, "NULL"),
 ) -> Option<f64> {
     call::guarded(|| {
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let held = judged(For::Score, question, input, members, settings, named)?;
         match held.value {
             Judgment::Score(value) => Some(value),
@@ -152,13 +134,7 @@ fn tag(
     deadline_ms: default!(Option<i64>, "NULL"),
 ) -> Option<Vec<String>> {
     call::guarded(|| {
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let held = judged(For::Tag, question, input, members, settings, named)?;
         match held.value {
             Judgment::Tags(value) => Some(value),
@@ -187,13 +163,7 @@ fn details_sql(
 ) -> Option<pgrx::datum::JsonB> {
     call::guarded(|| {
         let (question, input) = (question?, input?);
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let (settings, call) = forms::controls(settings.as_ref(), named);
             let verb = forms::plan_verb(question, &settings);
         let asked = forms::question(Some(question), None, verb, &settings);
@@ -229,13 +199,7 @@ fn try_details(
         let (Some(question), Some(input)) = (question, input) else {
             return None;
         };
-        let named = Named {
-            threshold,
-            context,
-            model,
-            batch,
-            deadline_ms,
-        };
+        let named = Named::new(threshold, context, model, batch, deadline_ms);
         let result = (|| {
             let (settings, call) = forms::controls_result(settings.as_ref(), named)?;
                     let verb = forms::plan_verb_result(question, &settings)?;
