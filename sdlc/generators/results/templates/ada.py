@@ -137,7 +137,7 @@ def render(definitions, names=None, schemas=None):
             specs.append(f'type {name} is null record;')
         else:
             # Only schema-declared arbitrary JSON is transported verbatim.
-            specs.append(f'type {name} is new JSON_Value;')
+            specs.append(f'subtype {name} is JSON_Value;')
 
         return name
     for key, value in definitions.items():
@@ -146,9 +146,11 @@ def render(definitions, names=None, schemas=None):
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
+with Thinkthen.Values;
 package Thinkthen.Requests is
--- Arbitrary JSON content only; native admission owns its syntax and meaning.
-type JSON_Value is new Unbounded_String;
+-- Arbitrary values use owned native trees; Rust owns their admission.
+subtype JSON_Value is Thinkthen.Values.Value;
+use type Thinkthen.Values.Value;
 generic
    type Element is private;
 package Optional_Values is

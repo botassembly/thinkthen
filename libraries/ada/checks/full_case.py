@@ -107,11 +107,31 @@ class Reader:
                 if encode: token(value)
                 else: body.append(f'return {typ}\'Value (Get_Line (Input));')
             else:
-                if encode: self.text(json.dumps(value, ensure_ascii=False))
-                else: body.append(f'return {typ} (Read_Text);')
+                if encode: self.native_value(value)
+                else: body.append(f'return {typ} (Read_Native_Value);')
         if not encode:
             self.functions[key] = f'function {call} return {typ} is\n' + '\n'.join(declarations) + '\nbegin\n' + '\n'.join(body) + f'\nend {call};'
         return call
+
+    def native_value(self, value):
+        if value is None:
+            self.tokens.append('Null_Value')
+        elif isinstance(value, bool):
+            self.tokens.extend(['Boolean_Value', str(value)])
+        elif isinstance(value, (int, float)):
+            self.tokens.append('Number_Value')
+            self.text(json.dumps(value))
+        elif isinstance(value, str):
+            self.tokens.append('String_Value')
+            self.text(value)
+        else:
+            mapping = isinstance(value, dict)
+            self.tokens.extend(['Object_Value' if mapping else 'Array_Value', str(len(value))])
+            for item in value.items() if mapping else value:
+                if mapping:
+                    self.text(item[0])
+                    item = item[1]
+                self.native_value(item)
 
     def text(self, value):
         path = self.home / f'authored-text-{len(self.tokens)}.bin'
@@ -123,13 +143,13 @@ def build(package, home):
     reader = Reader()
     calls = []
     for verb in ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'):
-        key = 'RequestCall_' + verb
+        key = 'RequestCall'
         function = reader.value(key, definitions[key])
         calls.append(f'{"if" if not calls else "elsif"} Verb = "{verb}" then Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, {function});')
     feed = reader.value('RequestSessionDescriptor', definitions['RequestSessionDescriptor'])
     source = Path(__file__).with_name('full_case.adb').read_text()
-    source = source.replace('with Ada.Exceptions;', 'with Ada.Exceptions;\nwith Ada.Command_Line;')
-    source = source.replace('-- REQUEST', 'Input : Ada.Text_IO.File_Type;\nfunction Read_Text return Unbounded_String is begin return Fixture_Text (Get_Line (Input)); end;\n' + '\n'.join('function Read_' + name(key) + ' return ' + name(key) + ';' for key in reader.functions) + '\n' + '\n'.join(reader.functions.values()))
+    source = source.replace('with Ada.Exceptions;', 'with Ada.Exceptions;\nwith Ada.Command_Line;\nwith Thinkthen.Values;')
+    source = source.replace('-- REQUEST', 'Input : Ada.Text_IO.File_Type;\nfunction Read_Text return Unbounded_String is begin return Fixture_Text (Get_Line (Input)); end;\n' + NATIVE_READER + '\n'.join('function Read_' + name(key) + ' return ' + name(key) + ';' for key in reader.functions) + '\n' + '\n'.join(reader.functions.values()))
     source = source.replace('-- SETTINGS', 'Ada.Command_Line.Argument (2),')
     source = source.replace('Thinkthen.Sessions.Calls.CALL_NAME (Client, Owner, Request);', 'Ada.Text_IO.Open (Input, Ada.Text_IO.In_File, Ada.Command_Line.Argument (1));\ndeclare Verb : constant String := Get_Line (Input); begin\n' + '\n'.join(calls) + '\nelse raise Program_Error with "unknown fixture call"; end if; end;')
     source = source.replace('-- CANCEL', 'if Boolean\'Value (Get_Line (Input)) then Cancel (Owner); end if;')
@@ -157,7 +177,7 @@ def fixture(step, home):
     reader = Reader()
     reader.home = home
     reader.tokens = [verb]
-    key = 'RequestCall_' + verb
+    key = 'RequestCall'
     reader.value(key, definitions[key], {'function': verb, **descriptor}, True)
     reader.tokens.extend([str(cancel), str(len(feed))])
     for item in feed:
@@ -166,3 +186,38 @@ def fixture(step, home):
     path = home / 'ada-input.txt'
     path.write_text('\n'.join(reader.tokens) + '\n')
     return path
+
+
+NATIVE_READER = """
+function Read_Native_Value return Thinkthen.Values.Value is
+   use Thinkthen.Values;
+   Kind : constant Value_Kind := Value_Kind'Value (Get_Line (Input));
+begin
+   case Kind is
+      when Null_Value => return Null_Item;
+      when Boolean_Value => return Boolean_Item (Boolean'Value (Get_Line (Input)));
+      when Number_Value => return Number_Item (To_String (Read_Text));
+      when String_Value => return String_Item (To_String (Read_Text));
+      when Array_Value =>
+         declare
+            Count : constant Natural := Natural'Value (Get_Line (Input));
+            Items : Value_List (1 .. Count);
+         begin
+            for Item of Items loop Item := Read_Native_Value; end loop;
+            return Array_Item (Items);
+         end;
+      when Object_Value =>
+         declare
+            Count : constant Natural := Natural'Value (Get_Line (Input));
+            Items : Field_List (1 .. Count);
+         begin
+            for Item of Items loop
+               declare Key : constant String := To_String (Read_Text); begin
+                  Item := Named (Key, Read_Native_Value);
+               end;
+            end loop;
+            return Object_Item (Items);
+         end;
+   end case;
+end Read_Native_Value;
+"""

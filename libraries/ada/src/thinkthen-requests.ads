@@ -2,9 +2,11 @@
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
+with Thinkthen.Values;
 package Thinkthen.Requests is
--- Arbitrary JSON content only; native admission owns its syntax and meaning.
-type JSON_Value is new Unbounded_String;
+-- Arbitrary values use owned native trees; Rust owns their admission.
+subtype JSON_Value is Thinkthen.Values.Value;
+use type Thinkthen.Values.Value;
 generic
    type Element is private;
 package Optional_Values is
@@ -15,7 +17,7 @@ package Optional_Values is
       end case;
    end record;
 end Optional_Values;
-type T_JSON is new JSON_Value;
+subtype T_JSON is JSON_Value;
 package T_JSON_Options is new Optional_Values (T_JSON);
 subtype T_JSON_Optional is T_JSON_Options.Optional;
 type T_Authored_profile is new Unbounded_String;
