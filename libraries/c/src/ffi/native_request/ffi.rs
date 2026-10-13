@@ -119,14 +119,8 @@ unsafe fn borrow<'a, T>(pointer: *const T) -> Result<&'a T, CarrierError> {
     unsafe { pointer.as_ref() }.ok_or(CarrierError::Invalid)
 }
 unsafe fn extent<'a, T>(pointer: *const T, len: usize) -> Result<&'a [T], CarrierError> {
-    if len == 0 {
-        return Ok(&[]);
-    }
-    if pointer.is_null() || len > isize::MAX as usize / std::mem::size_of::<T>().max(1) {
-        return Err(CarrierError::Invalid);
-    }
-    // SAFETY: the validated counted extent is readable and belongs to the caller.
-    Ok(unsafe { std::slice::from_raw_parts(pointer, len) })
+    // SAFETY: the caller retains the aligned readable extent throughout conversion.
+    unsafe { super::current::read::slice(pointer, len) }.map_err(|_| CarrierError::Invalid)
 }
 
 unsafe fn optional<T>(

@@ -863,6 +863,227 @@ typedef struct thinkthen_request_engine_settings_v1 {
   const struct thinkthen_request_text_v1 *m_usd_per_million_output;
 } thinkthen_request_engine_settings_v1;
 
+typedef struct thinkthen_complete_attempt_outcome_v1 {
+  uint32_t kind;
+} thinkthen_complete_attempt_outcome_v1;
+
+typedef struct thinkthen_complete_utf8_presence_v1 {
+  uint32_t presence;
+  struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_utf8_presence_v1;
+
+typedef struct thinkthen_complete_sdk_request_id_v1 {
+  struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_sdk_request_id_v1;
+
+typedef struct thinkthen_complete_u64_presence_v1 {
+  uint32_t presence;
+  uint64_t value;
+} thinkthen_complete_u64_presence_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
+ */
+typedef struct thinkthen_complete_json_array_v1 {
+  /*
+   C field `data`.
+   */
+  const struct thinkthen_complete_json_v1 *const *data;
+  /*
+   C field `len`.
+   */
+  size_t len;
+} thinkthen_complete_json_array_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_entry_v1`.
+ */
+typedef struct thinkthen_complete_json_entry_v1 {
+  /*
+   C field `name`.
+   */
+  struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `value`.
+   */
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_complete_json_entry_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_object_v1`.
+ */
+typedef struct thinkthen_complete_json_object_v1 {
+  /*
+   C field `data`.
+   */
+  const struct thinkthen_complete_json_entry_v1 *data;
+  /*
+   C field `len`.
+   */
+  size_t len;
+} thinkthen_complete_json_object_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_data_v1`.
+ */
+typedef union thinkthen_complete_json_data_v1 {
+  /*
+   C field `boolean`.
+   */
+  uint32_t boolean;
+  /*
+   C field `number`.
+   */
+  struct thinkthen_complete_utf8_v1 number;
+  /*
+   C field `string`.
+   */
+  struct thinkthen_complete_utf8_v1 string;
+  /*
+   C field `array`.
+   */
+  struct thinkthen_complete_json_array_v1 array;
+  /*
+   C field `object`.
+   */
+  struct thinkthen_complete_json_object_v1 object;
+} thinkthen_complete_json_data_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_v1`.
+ */
+typedef struct thinkthen_complete_json_v1 {
+  /*
+   C field `kind`.
+   */
+  uint32_t kind;
+  /*
+   C field `data`.
+   */
+  union thinkthen_complete_json_data_v1 data;
+} thinkthen_complete_json_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_extension_v1`.
+ */
+typedef struct thinkthen_complete_extension_v1 {
+  /*
+   C field `name`.
+   */
+  struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `json`.
+   */
+  struct thinkthen_complete_utf8_v1 json;
+  /*
+   C field `value`.
+   */
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_complete_extension_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_complete_extensions_v1`.
+ */
+typedef struct thinkthen_complete_extensions_v1 {
+  /*
+   C field `data`.
+   */
+  const struct thinkthen_complete_extension_v1 *data;
+  /*
+   C field `len`.
+   */
+  size_t len;
+} thinkthen_complete_extensions_v1;
+
+typedef struct thinkthen_complete_attempt_v1 {
+  uint64_t ordinal;
+  const struct thinkthen_complete_attempt_outcome_v1 *outcome;
+  struct thinkthen_complete_utf8_presence_v1 request_id;
+  struct thinkthen_complete_utf8_v1 request_sha256;
+  const struct thinkthen_complete_sdk_request_id_v1 *sdk_request_id;
+  struct thinkthen_complete_u64_presence_v1 server_ms;
+  struct thinkthen_complete_u64_presence_v1 status;
+  uint64_t wall_ms;
+  struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_attempt_v1;
+
+typedef struct thinkthen_complete_attempt_list_v1 {
+  const struct thinkthen_complete_attempt_v1 *const *data;
+  size_t len;
+} thinkthen_complete_attempt_list_v1;
+
+typedef struct thinkthen_complete_attempt_list_presence_v1 {
+  uint32_t presence;
+  struct thinkthen_complete_attempt_list_v1 value;
+} thinkthen_complete_attempt_list_presence_v1;
+
+typedef struct thinkthen_complete_call_id_v1 {
+  struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_call_id_v1;
+
+typedef struct thinkthen_complete_call_id_presence_v1 {
+  uint32_t presence;
+  const struct thinkthen_complete_call_id_v1 *value;
+} thinkthen_complete_call_id_presence_v1;
+
+typedef struct thinkthen_complete_u32_presence_v1 {
+  uint32_t presence;
+  uint32_t value;
+} thinkthen_complete_u32_presence_v1;
+
+typedef struct thinkthen_complete_persistence_observation_v1 {
+  struct thinkthen_complete_utf8_presence_v1 advice;
+  struct thinkthen_complete_utf8_v1 observed_at;
+  const struct thinkthen_complete_usage_persistence_v1 *state;
+  struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_persistence_observation_v1;
+
+typedef struct thinkthen_complete_persistence_observation_presence_v1 {
+  uint32_t presence;
+  const struct thinkthen_complete_persistence_observation_v1 *value;
+} thinkthen_complete_persistence_observation_presence_v1;
+
+typedef struct thinkthen_complete_immediate_facts_v1 {
+  struct thinkthen_complete_attempt_list_presence_v1 attempts;
+  uint64_t cache_answers;
+  struct thinkthen_complete_call_id_presence_v1 call_id;
+  struct thinkthen_complete_utf8_presence_v1 estimated_cost_usd;
+  struct thinkthen_complete_u32_presence_v1 held_model_mismatch;
+  struct thinkthen_complete_u64_presence_v1 input_tokens;
+  uint64_t largest_request_bytes;
+  struct thinkthen_complete_u64_presence_v1 largest_request_estimated_input_tokens;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_u64_presence_v1 output_tokens;
+  uint64_t records;
+  uint64_t requests_sent;
+  double seconds;
+  struct thinkthen_complete_utf8_v1 token_estimate_method;
+  struct thinkthen_complete_persistence_observation_presence_v1 usage_persistence;
+  struct thinkthen_complete_extensions_v1 extensions;
+} thinkthen_complete_immediate_facts_v1;
+
+/*
+ C descriptor or borrowed view `thinkthen_error_view_v1`.
+ */
+typedef struct thinkthen_error_view_v1 {
+  /*
+   C field `code`.
+   */
+  int code;
+  /*
+   C field `retryable`.
+   */
+  int retryable;
+  /*
+   C field `message`.
+   */
+  struct thinkthen_complete_utf8_v1 message;
+  /*
+   C field `facts`.
+   */
+  const struct thinkthen_complete_immediate_facts_v1 *facts;
+} thinkthen_error_view_v1;
+
 /*
  C descriptor or borrowed view `StringV1`.
  */
@@ -1872,120 +2093,6 @@ typedef struct thinkthen_request_session_descriptor_v1 {
   const struct thinkthen_request_session_source_location_v1 *m_location;
 } thinkthen_request_session_descriptor_v1;
 
-/*
- C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
- */
-typedef struct thinkthen_complete_json_array_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_complete_json_v1 *const *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_complete_json_array_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_json_entry_v1`.
- */
-typedef struct thinkthen_complete_json_entry_v1 {
-  /*
-   C field `name`.
-   */
-  struct thinkthen_complete_utf8_v1 name;
-  /*
-   C field `value`.
-   */
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_json_entry_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_json_object_v1`.
- */
-typedef struct thinkthen_complete_json_object_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_complete_json_entry_v1 *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_complete_json_object_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_json_data_v1`.
- */
-typedef union thinkthen_complete_json_data_v1 {
-  /*
-   C field `boolean`.
-   */
-  uint32_t boolean;
-  /*
-   C field `number`.
-   */
-  struct thinkthen_complete_utf8_v1 number;
-  /*
-   C field `string`.
-   */
-  struct thinkthen_complete_utf8_v1 string;
-  /*
-   C field `array`.
-   */
-  struct thinkthen_complete_json_array_v1 array;
-  /*
-   C field `object`.
-   */
-  struct thinkthen_complete_json_object_v1 object;
-} thinkthen_complete_json_data_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_json_v1`.
- */
-typedef struct thinkthen_complete_json_v1 {
-  /*
-   C field `kind`.
-   */
-  uint32_t kind;
-  /*
-   C field `data`.
-   */
-  union thinkthen_complete_json_data_v1 data;
-} thinkthen_complete_json_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_extension_v1`.
- */
-typedef struct thinkthen_complete_extension_v1 {
-  /*
-   C field `name`.
-   */
-  struct thinkthen_complete_utf8_v1 name;
-  /*
-   C field `json`.
-   */
-  struct thinkthen_complete_utf8_v1 json;
-  /*
-   C field `value`.
-   */
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_extension_v1;
-
-/*
- C descriptor or borrowed view `thinkthen_complete_extensions_v1`.
- */
-typedef struct thinkthen_complete_extensions_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_complete_extension_v1 *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_complete_extensions_v1;
-
 typedef struct thinkthen_complete_answer_yes_no_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   double probability;
@@ -2067,50 +2174,10 @@ typedef struct thinkthen_complete_image_list_presence_v1 {
   struct thinkthen_complete_image_list_v1 value;
 } thinkthen_complete_image_list_presence_v1;
 
-typedef struct thinkthen_complete_u64_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_u64_presence_v1;
-
 typedef struct thinkthen_complete_json_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_json_v1 *value;
 } thinkthen_complete_json_presence_v1;
-
-typedef struct thinkthen_complete_utf8_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_utf8_presence_v1;
-
-typedef struct thinkthen_complete_attempt_outcome_v1 {
-  uint32_t kind;
-} thinkthen_complete_attempt_outcome_v1;
-
-typedef struct thinkthen_complete_sdk_request_id_v1 {
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_sdk_request_id_v1;
-
-typedef struct thinkthen_complete_attempt_v1 {
-  uint64_t ordinal;
-  const struct thinkthen_complete_attempt_outcome_v1 *outcome;
-  struct thinkthen_complete_utf8_presence_v1 request_id;
-  struct thinkthen_complete_utf8_v1 request_sha256;
-  const struct thinkthen_complete_sdk_request_id_v1 *sdk_request_id;
-  struct thinkthen_complete_u64_presence_v1 server_ms;
-  struct thinkthen_complete_u64_presence_v1 status;
-  uint64_t wall_ms;
-  struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_attempt_v1;
-
-typedef struct thinkthen_complete_attempt_list_v1 {
-  const struct thinkthen_complete_attempt_v1 *const *data;
-  size_t len;
-} thinkthen_complete_attempt_list_v1;
-
-typedef struct thinkthen_complete_attempt_list_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_attempt_list_v1 value;
-} thinkthen_complete_attempt_list_presence_v1;
 
 typedef union thinkthen_complete_batch_setting_data_v1 {
   uint64_t integer;
@@ -3089,11 +3156,6 @@ typedef struct thinkthen_complete_recognition_mode_presence_v1 {
   const struct thinkthen_complete_recognition_mode_v1 *value;
 } thinkthen_complete_recognition_mode_presence_v1;
 
-typedef struct thinkthen_complete_u32_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_u32_presence_v1;
-
 typedef struct thinkthen_complete_relation_rule_v1 {
   uint32_t either;
   struct thinkthen_complete_utf8_v1 name;
@@ -3751,22 +3813,6 @@ typedef struct thinkthen_complete_session_packet_observation_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_observation_v1;
 
-typedef struct thinkthen_complete_call_id_v1 {
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_call_id_v1;
-
-typedef struct thinkthen_complete_persistence_observation_v1 {
-  struct thinkthen_complete_utf8_presence_v1 advice;
-  struct thinkthen_complete_utf8_v1 observed_at;
-  const struct thinkthen_complete_usage_persistence_v1 *state;
-  struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_persistence_observation_v1;
-
-typedef struct thinkthen_complete_persistence_observation_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_persistence_observation_v1 *value;
-} thinkthen_complete_persistence_observation_presence_v1;
-
 typedef struct thinkthen_complete_facts_v1 {
   struct thinkthen_complete_attempt_list_presence_v1 attempts;
   uint64_t cache_answers;
@@ -4056,6 +4102,18 @@ const char *thinkthen_error_message(const struct thinkthen_engine *engine);
 int thinkthen_error_retryable(const struct thinkthen_engine *engine);
 
 /*
+ Borrow the immutable last engine/thread failure, or constructor failure for NULL.
+ NULL means that slot holds no failure. Getters and successful engine calls preserve
+ the view, including code, safe message, retryability and typed optional facts.
+ Root and every nested value remain stable until this thread next fails on this
+ engine, engine_free or thread exit. A NULL-engine view ends at the next constructor.
+ Other threads cannot replace or move this thread slot.
+ # Safety
+ engine is NULL or live for the call and every borrowed engine view.
+ */
+const struct thinkthen_error_view_v1 *thinkthen_error_view(const struct thinkthen_engine *engine);
+
+/*
  Free a string the interface returned; null is ignored.
 
  # Safety
@@ -4066,29 +4124,27 @@ int thinkthen_error_retryable(const struct thinkthen_engine *engine);
 void thinkthen_free_string(char *text);
 
 /*
- Borrow the native author snapshot owned by this question.
+ Borrow immutable metadata until question_free; publish only on success.
  # Safety
- Question and output obey the header's lifetime/storage contract.
- Borrow metadata owned by this immutable question until question_free.
+ owner is live and out is aligned writable storage.
  */
 int thinkthen_question_author(const struct thinkthen_question *owner,
                               struct thinkthen_question_author_v1 *out);
 
 /*
- Free the owned handle; NULL is harmless.
+ Free the question owner after every borrower finishes; NULL is ignored.
  # Safety
- A nonnull handle is live, freed once, with no concurrent borrowers.
+ owner is NULL or a live unfreed question no concurrent call uses.
  */
 void thinkthen_question_free(struct thinkthen_question *owner);
 
 /*
- Import counted saved-question grammar through an explicitly selected native parser.
+ Import counted saved-question grammar through the explicitly chosen native role.
+ Grammar failures return EUSAGE; no guessing or parser fallback. The immutable
+ owner copies every byte and does not judge. Engine-thread failures stay independent
+ from immediate session and constructor slots.
  # Safety
- Counted bytes and output obey the header's storage contract.
- Import saved question-file JSON through an explicit native grammar role.
- This imports a question only; judgment calls and result fields remain typed.
- Inline grammar failures return EUSAGE; no role guessing or parser fallback.
- The immutable handle owns every byte independently of json's lifetime.
+ engine is live; json has readable counted UTF-8; out is aligned writable storage.
  */
 int thinkthen_question_parse(const struct thinkthen_engine *engine,
                              uint32_t role,
@@ -4153,6 +4209,14 @@ const char *thinkthen_session_error_message(void);
  Returns zero before a failure. Success and engine construction preserve it.
  */
 int thinkthen_session_error_retryable(void);
+
+/*
+ Borrow the calling thread immediate session failure, or NULL before failure.
+ Success, getters, engine calls and terminal packets preserve this independent slot.
+ The root, safe message and every typed optional fact remain valid until the next
+ immediate session failure on this thread or thread exit.
+ */
+const struct thinkthen_error_view_v1 *thinkthen_session_error_view(void);
 
 /*
  Fix input EOF or a canonical closed reader failure. NULL with zero means EOF;

@@ -6,19 +6,18 @@ The development Composer package carries the native library and targets PHP 8.3 
 require 'vendor/autoload.php';
 $client = new ThinkThen\Client(['cache' => false]);
 try {
-    $call = $client->decide('Does this ask for a refund?', 'Please refund my order.');
-    $answer = $call->results[0]->value();
-    if ($answer->present && $answer->value === true) echo "refund requested\n";
+    $answer = $client->decide('Does this ask for a refund?', 'Please refund my order.')->decideAnswer();
+    if ($answer === true) echo "refund requested\n";
 } finally { $client->close(); }
 ```
 
 Run PHP with `php -d ffi.enable=1 app.php`. The client loads `native/libthinkthen.so` from its package. Its optional second constructor argument selects an explicit native library. It does not download libraries or search system paths.
 
-`Client` provides `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each accepts literal question text or a PHP question-definition array/object, input values and optional native call settings. `questionJson` retains authored JSON bytes, including duplicate members and numeric forms, for native validation. `questionFile`, `questionNamed` and `questionReference` select native question loaders explicitly. No text is inferred to be a path.
+`Client` provides `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. Each accepts literal question text or a PHP question-definition array/object, input values and optional native call settings. `questionFile`, `questionNamed` and `questionReference` select native question loaders explicitly. No text is inferred to be a path.
 
 A PHP list supplies several records. `Client::item($value, $fields)` wraps one JSON item and carries per-item context, replacement options or images. `Client::images($attachments)` supplies image-only evidence. Attachments use the shared native descriptors. `Client::files($paths, $reading, $framing, $media)` selects native file reading, including JSONL framing and whole-file image media. A fresh `Traversable` supplies a bounded feed. Native code owns admission, file reading, cache, replay and route selection.
 
-Results use generated PHP classes. A field accessor returns `Presence` with separate `present` and `value` members; absent, null and false differ. Property access returns the field value. `has()` checks unknown extensions, and `toObject()` retains their PHP representation. Objects remain `stdClass` and lists remain arrays. Wide integers become exact decimal strings. `Completed::packets` retains every native packet, and `nativeJson()` retains its original numeric types. Read answer values explicitly: PHP treats result objects as true. Owned results survive client and operation closure.
+Results use generated PHP classes. A field accessor returns `Presence` with separate `present` and `value` members; absent, null and false differ. Property access returns the field value. `has()` checks unknown extensions, and `toObject()` retains their PHP representation. Objects remain `stdClass` and lists remain arrays. Wide integers become exact decimal strings. `Completed::packets` retains every native packet. Rust decodes the packet once; generated PHP readers copy its native values. Use the named answer accessor to read a scalar or a plain rank/filter list. The recognize and relate example constructs generated question types and reads edge names directly. Owned results survive client and operation closure.
 
 Failures throw `UsageFailure`, `BackendFailure`, `DeadlineFailure`, `LocalFailure`, `CancelledFailure` or `DefectFailure`. Started failures retain typed `failure`, `terminal`, completed `results`, packets and `facts()`. Admission failures have no invented facts. Pass a `Cancellation` as the fourth argument, or use `start()`, `poll()`, `cancel()` and `close()`. PHP calls block the ordinary VM. Polling advances at most one producer item. A client destructor closes open operations before freeing its engine and does not wait for a provider reply.
 
