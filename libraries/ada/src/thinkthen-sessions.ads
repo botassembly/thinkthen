@@ -3,25 +3,24 @@ with Interfaces;
 with Interfaces.C;
 with Thinkthen.Requests;
 with Thinkthen_Session_C;
+with Thinkthen_Kinds;
 package Thinkthen.Sessions is
    type Session is new Ada.Finalization.Limited_Controlled with private;
    type Packet is new Ada.Finalization.Limited_Controlled with private;
    type Read_Status is (Result, Pending, Finished);
    type Push_Status is (Accepted, Full, Closed);
    type Presence is (Missing, Null_Value, Present);
-   type Error_Status is (Success, Usage, Backend, Deadline, Local, Cancelled, Defect);
-   for Error_Status use (Success => 0, Usage => 1, Backend => 2, Deadline => 3,
-                        Local => 4, Cancelled => 5, Defect => 6);
-   Native_Error : exception;
-   Usage_Error : exception;
-   Backend_Error : exception;
-   Deadline_Error : exception;
-   Local_Error : exception;
-   Cancelled_Error : exception;
-   Defect_Error : exception;
+   type Error_Status is new Thinkthen_Kinds.Error_Status;
+   Native_Error : exception renames Thinkthen_Kinds.Native_Error;
+   Usage_Error : exception renames Thinkthen_Kinds.Usage_Error;
+   Backend_Error : exception renames Thinkthen_Kinds.Backend_Error;
+   Deadline_Error : exception renames Thinkthen_Kinds.Deadline_Error;
+   Local_Error : exception renames Thinkthen_Kinds.Local_Error;
+   Cancelled_Error : exception renames Thinkthen_Kinds.Cancelled_Error;
+   Defect_Error : exception renames Thinkthen_Kinds.Defect_Error;
    Representation_Overflow : exception;
-   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request);
-   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request);
+   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String);
+   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String);
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;
                    Status : out Push_Status);
    procedure Finish (Owner : in out Session);
@@ -32,6 +31,9 @@ package Thinkthen.Sessions is
    -- Generated native constants name Result/Input/Settlement interests and readiness.
    procedure Wait (Owner : Session'Class; Interest : Interfaces.Unsigned_32;
                    Timeout_Ms : Interfaces.Unsigned_32; Ready : out Interfaces.Unsigned_32);
+   -- Block until one packet arrives or settlement completes.
+   procedure Next_Packet (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status;
+                          Interest : Interfaces.Unsigned_32 := Thinkthen_Session_C.K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1);
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status);
    procedure Close (Value : in out Packet);
    -- Every nested pointer shares Value's lifetime. Join tasks before closing owners.

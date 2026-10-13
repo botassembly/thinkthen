@@ -169,8 +169,10 @@ fn locations(definitions: &mut Map<String, Value>) {
     for endpoint in ["source", "target"] {
         definitions
             .get_mut("completerelatedEntityEdge")
-            .expect("relation edge")["properties"][endpoint] =
-            super::any_of(&["completerelatedEntity", "completesourceRelationEndpoint"]);
+            .expect("relation edge")["properties"][endpoint] = json!({"title":"completeRelationEndpoint","anyOf":[
+            {"$ref":"#/$defs/completerelatedEntity"},
+            {"$ref":"#/$defs/completesourceRelationEndpoint"}
+        ]});
     }
     definitions.insert("completePosition".into(), definitions["Position"].clone());
     strict::graph(definitions, "completePosition");

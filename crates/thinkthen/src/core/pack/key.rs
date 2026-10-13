@@ -1,10 +1,9 @@
-//! Released question/1 and versioned question/2 input digests.
+//! Current question input digests.
 use crate::core::adapters::built_in;
 use crate::core::{Url, hex};
-use sha2::{Digest as _, Sha256};
 use std::fmt;
 
-/// Released LF-framed v1 and versioned v2 question identities. V2 includes
+/// Current question identities include
 /// both requested and reported models with length-prefixed UTF-8 parts.
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub(crate) struct QuestionKey([u8; 32]);
@@ -87,31 +86,6 @@ impl QuestionKey {
             ],
         );
         Self(bytes)
-    }
-
-    /// Hash the five parts. `model`, `state` and `question` are compact JSON,
-    /// so none holds a raw line feed, and the address refuses control bytes.
-    pub(crate) fn of(url: &Url, model: &str, state: &str, question: &str) -> Self {
-        Self::of_parts(Sha256::new(), url, model, state, question)
-    }
-
-    pub(crate) fn images_of(url: &Url, model: &str, state: &str, question: &str) -> Self {
-        let mut hasher = Sha256::new();
-        hasher.update(b"thinkthen.image-question/1\n");
-        Self::of_parts(hasher, url, model, state, question)
-    }
-
-    fn of_parts(mut hasher: Sha256, url: &Url, model: &str, state: &str, question: &str) -> Self {
-        for (place, part) in [built_in::NAME, url.as_str(), model, state, question]
-            .into_iter()
-            .enumerate()
-        {
-            if place > 0 {
-                hasher.update(b"\n");
-            }
-            hasher.update(part.as_bytes());
-        }
-        Self(hasher.finalize().into())
     }
 
     pub(crate) const fn bytes(&self) -> &[u8; 32] {

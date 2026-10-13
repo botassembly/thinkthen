@@ -14,7 +14,7 @@ HERE = Path(__file__).resolve().parent
 PACKAGE = HERE.parents[1]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
-from backend import Backend
+from backend import Backend, QUOTED_STATE
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--package', type=Path, required=True)
@@ -26,17 +26,19 @@ package = work / 'package'
 shutil.copytree(args.package, package)
 apple = sys.platform == 'darwin'
 version = tomllib.loads((ROOT / 'crates/thinkthen/Cargo.toml').read_text())['package']['version']
-for name in ('home', 'cache', 'barrier', 'consumer/Sources/Owned', 'consumer/Sources/Parity'):
+for name in ('home', 'cache', 'barrier', 'consumer/Sources/Owned', 'consumer/Sources/Parity', 'consumer/Sources/Example'):
     (work / name).mkdir(parents=True, exist_ok=True)
 shutil.copyfile(HERE / 'owned_consumer.swift', work / 'consumer/Sources/Owned/main.swift')
 shutil.copyfile(PACKAGE / 'Tests/TypeCase/main.swift', work / 'consumer/Sources/Parity/main.swift')
+shutil.copyfile(PACKAGE / 'Examples/main.swift', work / 'consumer/Sources/Example/main.swift')
 (work / 'consumer/Package.swift').write_text('''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "InstalledConsumer", platforms: [.macOS(.v15)], dependencies: [
     .package(url: "''' + (package.as_uri() if apple else 'file:///work/package') + '''", exact: "''' + version + '''")
 ], targets: [
     .executableTarget(name: "Owned", dependencies: [.product(name: "ThinkThen", package: "package")]),
-    .executableTarget(name: "Parity", dependencies: [.product(name: "ThinkThen", package: "package")])
+    .executableTarget(name: "Parity", dependencies: [.product(name: "ThinkThen", package: "package")]),
+    .executableTarget(name: "Example", dependencies: [.product(name: "ThinkThen", package: "package")])
 ])
 ''')
 env = child_env(home=work / 'home', PATH=os.environ.get('PATH', '/usr/bin:/bin'), LANG='C.UTF-8')
@@ -75,7 +77,7 @@ try:
         result = subprocess.run(base + [location + '/consumer/.build/debug/Owned', settings, location + '/barrier'], env=env, capture_output=True, timeout=30)
         (args.out / 'installed-owned.log').write_bytes(result.stdout + result.stderr)
         assert result.returncode == 0 and b'OWNED_SWIFT_PASS' in result.stdout, (result.stdout, result.stderr)
-        assert server.arrivals == ['hold-owned-swift', 'owned-swift', 'status-401'] and server.attempts == server.connections == 3, server.arrivals
+        assert server.arrivals[:8] == ['hold-owned-swift', 'owned-swift', QUOTED_STATE, 'unsure', 'uncertain-choice', 'authored-null', 'hold-explicit-swift', 'status-401'] and server.attempts == server.connections == 10, server.arrivals
         print(result.stdout.decode(), end='')
         if not apple:
             asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
@@ -86,16 +88,34 @@ try:
             try:
                 refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
                 assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
-                assert server.attempts == 3, server.arrivals
+                assert server.attempts == 10, server.arrivals
                 print('Missing bundled native asset refuses locally with zero extra requests')
             finally:
                 hidden.rename(asset)
     finally:
         (work / 'barrier/release-hold-owned-swift').touch()
+        (work / 'barrier/release-hold-explicit-swift').touch()
         server.close()
+    examples = Backend(key='tt-canary-examples')
+    try:
+        example_env = env | {'THINKTHEN_API_KEY': 'tt-canary-examples', 'THINKTHEN_BASE_URL': f'http://127.0.0.1:{examples.server_port}/generic/v1'}
+        replayed = subprocess.run(base + [location + '/consumer/.build/debug/Example'], env=example_env, capture_output=True, timeout=30)
+        (args.out / 'installed-example.log').write_bytes(replayed.stdout + replayed.stderr)
+        assert replayed.returncode == 0, (replayed.stdout, replayed.stderr)
+        assert len(replayed.stdout.splitlines()) >= 10 and examples.attempts == 10, (examples.attempts, examples.arrivals)
+        expected_options = ['billing', 'shipping', 'account', 'fraud', 'returns']
+        expected_kinds = ['person', 'organization', 'location', 'product', 'event']
+        criteria = [list(question.get('criteria', {})) for request in examples.requests for question in request['questions'].values()]
+        assert any([key for key in keys if key in expected_options] == expected_options for keys in criteria), criteria
+        assert any([key for key in keys if key in expected_kinds] == expected_kinds for keys in criteria), criteria
+        authored = [question['instructions'] for request in examples.requests for question in request['questions'].values() if any('Is ' + key + '?' in question.get('instructions', '') for key in expected_options)]
+        assert len(authored) == 5 and all('Is ' + key + '?' in text for key, text in zip(expected_options, authored)), authored
+        print('SWIFT_EXAMPLE_PASS ten typed answer calls and direct edge names')
+    finally:
+        examples.close()
     # Retain the installed executable and its resource bundle for shared cases.
     installed = args.out / 'installed'
     shutil.copytree(work / 'consumer/.build/debug', installed, symlinks=False)
-    print('Installed versioned SwiftPM dependency PASS; bundled native loading, three counted requests')
+    print('Installed versioned SwiftPM dependency PASS; bundled native loading, ten counted requests')
 finally:
     shutil.rmtree(work)

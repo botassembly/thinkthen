@@ -243,12 +243,12 @@ module ThinkThen
       define_method('media') { self['media'] }
       define_method('width') { self['width'] }
     end
-    class NativeInputDeclarationObject < Native::Result
+    class NativeInputDeclarationObjectRoot < Native::Result
       define_method('properties') { self['properties'] }
       define_method('required') { self['required'] }
       define_method('type') { self['type'] }
     end
-    class NativeInputDeclarationString < Native::Result
+    class NativeInputDeclarationStringRoot < Native::Result
       define_method('type') { self['type'] }
     end
     class NativeInputPropertyTypeArray < Native::Result
@@ -465,13 +465,13 @@ module ThinkThen
       define_method('source') { self['source'] }
       define_method('target') { self['target'] }
     end
-    class NativeRecognitionOddsFieldsNamesPairsPiecesProposals < Native::Result
-      define_method('names') { self['names'] }
-      define_method('pairs') { self['pairs'] }
+    class NativeRecognitionOddsBoundaryOdds < Native::Result
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
-    class NativeRecognitionOddsFieldsPiecesProposals < Native::Result
+    class NativeRecognitionOddsRecognizeAnswer < Native::Result
+      define_method('names') { self['names'] }
+      define_method('pairs') { self['pairs'] }
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
@@ -503,6 +503,19 @@ module ThinkThen
       define_method('question') { self['question'] }
       define_method('schema') { self['schema'] }
       define_method('value') { self['value'] }
+    end
+    class NativeRelationEndpointRelatedEntity < Native::Result
+      define_method('kind') { self['kind'] }
+      define_method('name') { self['name'] }
+    end
+    class NativeRelationEndpointSource < Native::Result
+      define_method('file') { self['file'] }
+      define_method('first_line') { self['first_line'] }
+      define_method('kind') { self['kind'] }
+      define_method('last_line') { self['last_line'] }
+      define_method('name') { self['name'] }
+      define_method('ordinal') { self['ordinal'] }
+      define_method('record') { self['record'] }
     end
     class NativeRelationMemberAnswerId < Native::Result
       define_method('direction') { self['direction'] }
@@ -647,11 +660,11 @@ module ThinkThen
       define_method('pieces') { self['pieces'] }
       define_method('proposals') { self['proposals'] }
     end
-    class NativeRecognizeFieldsEntities < Native::Result
+    class NativeRecognizeEntities < Native::Result
       define_method('entities') { self['entities'] }
       define_method('relations') { self['relations'] }
     end
-    class NativeRecognizeFieldsModeProposals < Native::Result
+    class NativeRecognizeModeProposals < Native::Result
       define_method('mode') { self['mode'] }
       define_method('proposals') { self['proposals'] }
     end
@@ -669,19 +682,6 @@ module ThinkThen
       define_method('relation') { self['relation'] }
       define_method('source') { self['source'] }
       define_method('target') { self['target'] }
-    end
-    class NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord < Native::Result
-      define_method('file') { self['file'] }
-      define_method('first_line') { self['first_line'] }
-      define_method('kind') { self['kind'] }
-      define_method('last_line') { self['last_line'] }
-      define_method('name') { self['name'] }
-      define_method('ordinal') { self['ordinal'] }
-      define_method('record') { self['record'] }
-    end
-    class NativeRelatedEntityEdgePropertiesSourceFieldsKindName < Native::Result
-      define_method('kind') { self['kind'] }
-      define_method('name') { self['name'] }
     end
     class NativeRelationRule < Native::Result
       define_method('either') { self['either'] }

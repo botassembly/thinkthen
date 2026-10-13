@@ -8,71 +8,11 @@ use serde::de::{MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
 use serde_json::value::RawValue;
 use std::any::Any;
-use std::ffi::c_char;
 use thinkthen::ErrorKind;
 
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_utf8_v1 {
-    pub data: *const c_char,
-    pub len: usize,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_extension_v1 {
-    pub name: thinkthen_complete_utf8_v1,
-    pub json: thinkthen_complete_utf8_v1,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_extensions_v1 {
-    pub data: *const thinkthen_complete_extension_v1,
-    pub len: usize,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_entry_v1 {
-    pub name: thinkthen_complete_utf8_v1,
-    pub value: *const thinkthen_complete_json_v1,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_array_v1 {
-    pub data: *const *const thinkthen_complete_json_v1,
-    pub len: usize,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_object_v1 {
-    pub data: *const thinkthen_complete_json_entry_v1,
-    pub len: usize,
-}
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub union thinkthen_complete_json_data_v1 {
-    pub boolean: u32,
-    pub number: thinkthen_complete_utf8_v1,
-    pub string: thinkthen_complete_utf8_v1,
-    pub array: thinkthen_complete_json_array_v1,
-    pub object: thinkthen_complete_json_object_v1,
-}
-impl std::fmt::Debug for thinkthen_complete_json_data_v1 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("JSON payload")
-    }
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_v1 {
-    pub kind: u32,
-    pub data: thinkthen_complete_json_data_v1,
-}
-pub const THINKTHEN_COMPLETE_JSON_NULL_V1: u32 = 1;
-pub const THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: u32 = 2;
-pub const THINKTHEN_COMPLETE_JSON_NUMBER_V1: u32 = 3;
-pub const THINKTHEN_COMPLETE_JSON_STRING_V1: u32 = 4;
-pub const THINKTHEN_COMPLETE_JSON_ARRAY_V1: u32 = 5;
-pub const THINKTHEN_COMPLETE_JSON_OBJECT_V1: u32 = 6;
+#[path = "primitives_generated.rs"]
+mod primitives;
+pub use primitives::*;
 
 #[derive(Default)]
 pub(crate) struct Storage {
@@ -118,12 +58,29 @@ impl Storage {
                 values.push(thinkthen_complete_extension_v1 {
                     name: self.text(name),
                     json: self.text(node.raw.get()),
+                    value: read_json(node, self)?,
                 });
             }
         }
         let (data, len) = self.slice(values);
         Ok(thinkthen_complete_extensions_v1 { data, len })
     }
+}
+
+pub(crate) fn read_text(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_utf8_v1, ErrorKind> {
+    Ok(store.text(node.text()?))
+}
+pub(crate) fn read_boolean(node: &Node, _store: &mut Storage) -> Result<u32, ErrorKind> {
+    node.boolean()
+}
+pub(crate) fn read_number<T: std::str::FromStr>(
+    node: &Node,
+    _store: &mut Storage,
+) -> Result<T, ErrorKind> {
+    node.number()
 }
 
 /// Presence belongs to result conversion, independently of scalar conversion.

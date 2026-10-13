@@ -2,6 +2,8 @@
 import json
 import re
 from csharp import shape, nullable, enum_values
+from host_answers import named_object_fields
+from jvm_host import answers
 
 ROOTS = ('completesessionPacket', 'completeplan')
 
@@ -101,7 +103,10 @@ def render(definitions):
         else:
             target, decode = conversion(source, definitions, 'json()')
             lines.append(f'public {target} value() {{ return {decode}; }}')
+        for field in named_object_fields(source, definitions):
+            lines.append(f'public String {member(field)}Name() {{ return (String)Values.object(required({json.dumps(field)})).get("name"); }}')
         lines.append('}')
+    lines.append(answers(definitions))
     return '\n'.join(lines + ['}']) + '\n'
 
 INPUT_ROOTS = ('Request', 'EngineSettings', 'RequestSessionDescriptor', 'RequestReaderFailure')

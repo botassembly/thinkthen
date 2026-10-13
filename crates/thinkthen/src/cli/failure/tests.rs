@@ -1,5 +1,5 @@
 use super::{Failure, report};
-use crate::core::recording::{Entry, Exchange as Recorded};
+use crate::core::recording::Exchange as Recorded;
 use crate::core::{
     LimitKind, ProfileError, ProfileLimit, ProfileName, QuestionSetError, RecordError, Url,
 };
@@ -26,11 +26,6 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     let body = format!(r#"{{"state":"{EVIDENCE}"}}"#);
     let url = Url::new("http://127.0.0.1:1/v1/systemone").expect("an address");
     let recorded = Recorded::new(&url, body.as_bytes());
-    let entry: Entry = serde_json::from_str(&format!(
-        r#"{{"schema":"thinkthen.recording/1","adapter":"systemone","url":"{}","request":{body},"response":{body}}}"#,
-        url.as_str()
-    ))
-    .expect("an old entry, as cache convert reads one");
     let exchange = crate::engine::http::Exchange {
         url: url.as_str(),
         body: body.as_bytes(),
@@ -73,7 +68,7 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
     // `relate` reads its evidence as entity names and kinds.
     let entity = crate::core::RelationEntity::new(EVIDENCE, EVIDENCE).expect("an entity");
     let shown = format!(
-        "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} {entry:?} \
+        "{key:?} {exchange:?} {judged:?} {client:?} {recorded:?} \
              {ordered:?} {entity:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?} {:?}",
         Failure::NoKey("THINKTHEN_API_KEY".to_owned()),
         Failure::Status(401),

@@ -78,9 +78,9 @@ fn recognize(
     }
     properties.insert(
         "recognize".into(),
-        json!({"type":"object","additionalProperties":false,
+        json!({"title":"RecognizeQuestion","type":"object","additionalProperties":false,
         "properties":{
-            "kinds":{"type":"object","additionalProperties":reference("description")},
+            "kinds":{"type":"object","additionalProperties":reference("description"),"x-preserve-order":true},
             "relations":{"type":"array","items":reference("relation")},
             "instructions":reference("questionText"),
             "entity_definition":reference("questionText"),
@@ -89,7 +89,7 @@ fn recognize(
             "mode": mode
         }}),
     );
-    json!({"type":"object","required":["version","recognize"],
+    json!({"title":"RecognizeDefinition","type":"object","required":["version","recognize"],
         "additionalProperties":false,"properties":properties})
 }
 fn set(definitions: &serde_json::Map<String, Value>) -> Value {
@@ -102,11 +102,11 @@ fn set(definitions: &serde_json::Map<String, Value>) -> Value {
         }
         member
     });
-    json!({"type":"object","required":["version","questions"],"additionalProperties":false,
+    json!({"title":"AnnotateDefinition","type":"object","required":["version","questions"],"additionalProperties":false,
     "properties":{
         "version":{"const":1},"threshold":reference("threshold"),"profile":reference("profile"),
         "batch":{},
-        "questions":{"type":"object","minProperties":1,
-            "additionalProperties":{"anyOf":members}}
+        "questions":{"type":"object","minProperties":1,"x-preserve-order":true,
+            "additionalProperties":{"title":"AnnotateQuestion","anyOf":members}}
     }})
 }

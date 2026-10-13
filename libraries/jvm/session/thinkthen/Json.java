@@ -12,7 +12,7 @@ import java.util.Map;
  * A value reads as a Map in member order, a List, a String, a BigDecimal, a
  * Boolean or null. A reader ignores members it does not know.
  */
-public final class Json {
+final class Json {
     private Json() {}
 
     private static final class Reader {

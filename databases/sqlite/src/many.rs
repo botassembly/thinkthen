@@ -177,21 +177,24 @@ fn lookup(value: ValueRef<'_>) -> Option<String> {
     }
 }
 
-fn answer_columns(detail: &thinkthen::Details, kind: &str) -> Result<(Value, Value), Failure> {
-    match detail.value() {
+fn answer_columns(
+    detail: &crate::request::JudgmentRow,
+    kind: &str,
+) -> Result<(Value, Value), Failure> {
+    match &detail.value {
         Judgment::Decision(answer) if kind == "thinkthen_decide_many" => {
             let value = match answer {
                 thinkthen::Answer::Yes => Value::Integer(1),
                 thinkthen::Answer::No => Value::Integer(0),
                 thinkthen::Answer::Unsure => Value::Null,
             };
-            let Probabilities::YesNo { yes } = detail.probabilities() else {
+            let Probabilities::YesNo { yes } = &detail.probabilities else {
                 return Err(Failure::defect("a decide answer held no yes probability"));
             };
             Ok((value, Value::Real(*yes)))
         }
         Judgment::Choice(label) if kind == "thinkthen_choose_many" => {
-            let probability = match (label, detail.probabilities()) {
+            let probability = match (label, &detail.probabilities) {
                 (Some(label), Probabilities::Named(named)) => named
                     .iter()
                     .find(|item| item.name() == label)
@@ -336,7 +339,6 @@ fn answered(
             &held,
             texts.into_iter().map(crate::request::text).collect(),
             options,
-            true,
         )?
         .iter()
         .map(|row| answer_columns(row, kind))

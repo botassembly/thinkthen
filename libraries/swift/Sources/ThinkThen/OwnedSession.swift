@@ -5,22 +5,14 @@ public struct SessionBoundaryFailure: Error, Sendable, CustomStringConvertible {
     public let code: Int32
     public let message: String
     public var retryable = false
+    public var facts: String? = nil
     public var description: String { message }
-    public var kind: OwnedFailureKind {
-        switch code {
-        case Int32(THINKTHEN_EUSAGE): return .usage
-        case Int32(THINKTHEN_EBACKEND): return .backend
-        case Int32(THINKTHEN_EDEADLINE): return .deadline
-        case Int32(THINKTHEN_ELOCAL): return .local
-        case Int32(THINKTHEN_ECANCELLED): return .cancelled
-        case Int32(THINKTHEN_EDEFECT): return .defect
-        default: return .unknown(String(code))
-        }
-    }
+    public var kind: OwnedFailureKind { nativeFailureKind(code) }
+
 }
 
 func sessionCheck(_ code: Int32) throws {
-    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message())) }
+    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: thinkthen_session_error_facts_json().map { String(cString: $0) }) }
 }
 
 private final class SessionOwner: @unchecked Sendable {
@@ -35,6 +27,7 @@ public final class Session: @unchecked Sendable {
     private var owner: SessionOwner?
     private var reading = false
     private var producing = false
+    private var cancelled = false
     init(_ handle: OpaquePointer) { owner = SessionOwner(handle) }
     deinit { close() }
     private func lease() throws -> SessionOwner {
@@ -52,7 +45,7 @@ public final class Session: @unchecked Sendable {
     }
     private func end(reader: Bool) { lock.withLock { if reader { reading = false } else { producing = false } } }
     public func cancel() {
-        let current = lock.withLock { owner }
+        let current = lock.withLock { cancelled = true; return owner }
         if let current { withExtendedLifetime(current) { thinkthen_session_cancel(current.handle) } }
     }
     /// Detach ownership without waiting for native settlement or a blocked provider.
@@ -71,78 +64,66 @@ public final class Session: @unchecked Sendable {
             } else { try sessionCheck(thinkthen_session_finish(current.handle, nil, 0)) }
         }
     }
-    private func wait(input: Bool) async throws {
-        let current = try lease()
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, any Error>) in
-            DispatchQueue.global(qos: .userInitiated).async {
-                do {
-                    try withExtendedLifetime(current) {
-                        var ready: UInt32 = 0
-                        try sessionCheck(thinkthen_session_wait(current.handle,
-                            input ? UInt32(THINKTHEN_SESSION_WAIT_INPUT_V1) : UInt32(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1), 50, &ready))
-                    }
-                    continuation.resume()
-                } catch { continuation.resume(throwing: error) }
-            }
-        }
-    }
     public func push(_ descriptor: InputRequestSessionDescriptor) async throws -> Bool {
         try begin(reader: false)
         defer { end(reader: false) }
         let bytes = try descriptor.json.data()
         return try await withTaskCancellationHandler {
-            while true {
-                try Task.checkCancellation()
-                let current = try lease()
-                var status: UInt32 = 0
-                try withExtendedLifetime(current) {
-                    try bytes.withUnsafeBytes { raw in
-                        try sessionCheck(thinkthen_session_try_push(current.handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, &status))
-                    }
-                }
-                try Task.checkCancellation()
-                switch status {
-                case UInt32(THINKTHEN_SESSION_ACCEPTED_V1): return true
-                case UInt32(THINKTHEN_SESSION_CLOSED_V1): return false
-                case UInt32(THINKTHEN_SESSION_FULL_V1): try await wait(input: true)
-                default: throw JSONConversionError("Invalid native push status")
+            try Task.checkCancellation()
+            let current = try lease()
+            let observed: Result<Bool, any Error> = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        var status: UInt32 = 0
+                        try withExtendedLifetime(current) {
+                            try bytes.withUnsafeBytes { raw in
+                                try sessionCheck(thinkthen_session_push(current.handle, raw.bindMemory(to: CChar.self).baseAddress, raw.count, &status))
+                            }
+                        }
+                        continuation.resume(returning: .success(status == UInt32(THINKTHEN_SESSION_ACCEPTED_V1)))
+                    } catch { continuation.resume(returning: .failure(error)) }
                 }
             }
+            try Task.checkCancellation()
+            return try observed.get()
         } onCancel: { self.cancel() }
     }
+    /// Read a packet, including terminal settlement after an explicit cancel.
     public func read() async throws -> OwnedSessionPacket? {
         try begin(reader: true)
         defer { end(reader: true) }
         return try await withTaskCancellationHandler {
-            while true {
-                try Task.checkCancellation()
-                let current = try lease()
-                var status: UInt32 = 0
-                var packet: OpaquePointer?
-                let bytes: Data? = try withExtendedLifetime(current) {
-                    try sessionCheck(thinkthen_session_try_read(current.handle, &status, &packet))
-                    guard let packet else { return nil }
-                    defer { thinkthen_session_result_free(packet) }
-                    var pointer: UnsafePointer<CChar>?
-                    var length = 0
-                    try sessionCheck(thinkthen_session_result_json(packet, &pointer, &length))
-                    guard let pointer else { throw JSONConversionError("Missing native packet bytes") }
-                    return Data(bytes: pointer, count: length)
-                }
-                try Task.checkCancellation()
-                switch status {
-                case UInt32(THINKTHEN_SESSION_RESULT_V1):
-                    guard let bytes else { throw JSONConversionError("Missing native packet") }
-                    let result = try OwnedSessionPacket.read(JSONValue.parse(bytes))
-                    try Task.checkCancellation()
-                    return result
-                case UInt32(THINKTHEN_SESSION_END_V1): return nil
-                case UInt32(THINKTHEN_SESSION_PENDING_V1): try await wait(input: false)
-                default: throw JSONConversionError("Invalid native read status")
+            try Task.checkCancellation()
+            let current = try lease()
+            let interest = lock.withLock { cancelled ? UInt32(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) : UInt32(THINKTHEN_SESSION_WAIT_RESULT_V1) }
+            try Task.checkCancellation()
+            let observed: Result<Data?, any Error> = await withCheckedContinuation { continuation in
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        let copied: Data? = try withExtendedLifetime(current) {
+                            var status: UInt32 = 0
+                            var packet: OpaquePointer?
+                            try sessionCheck(thinkthen_session_next_packet(current.handle, interest, &status, &packet))
+                            guard let packet else {
+                                guard status == UInt32(THINKTHEN_SESSION_END_V1) else { throw JSONConversionError("Missing native packet") }
+                                return nil
+                            }
+                            defer { thinkthen_session_result_free(packet) }
+                            var pointer: UnsafePointer<CChar>?
+                            var length = 0
+                            try sessionCheck(thinkthen_session_result_json(packet, &pointer, &length))
+                            guard let pointer else { throw JSONConversionError("Missing native packet bytes") }
+                            return Data(bytes: pointer, count: length)
+                        }
+                        continuation.resume(returning: .success(copied))
+                    } catch { continuation.resume(returning: .failure(error)) }
                 }
             }
+            try Task.checkCancellation()
+            return try observed.get().map { try OwnedSessionPacket.read(JSONValue.parse($0)) }
         } onCancel: { self.cancel() }
     }
+
 }
 
 public struct OwnedCall: Sendable {
@@ -187,7 +168,7 @@ public final class Client: @unchecked Sendable {
         let handle = Array(bytes).map { CChar(bitPattern: $0) } + [0]
         let pointer = handle.withUnsafeBufferPointer { thinkthen_engine_new_with($0.baseAddress) }
         guard let pointer else {
-            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0)
+            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: thinkthen_error_facts_json(nil).map { String(cString: $0) })
         }
         owner = ClientOwner(pointer)
     }
@@ -238,7 +219,7 @@ public final class Client: @unchecked Sendable {
                 try bytes.withUnsafeBytes { raw in
                     let code = thinkthen_question_parse(handle, grammar.rawValue, thinkthen_string_v1(data: raw.bindMemory(to: CChar.self).baseAddress, len: raw.count), &question)
                     if code != 0 {
-                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0)
+                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: thinkthen_error_facts_json(handle).map { String(cString: $0) })
                     }
                 }
             }
@@ -278,9 +259,14 @@ public final class Client: @unchecked Sendable {
         return try await withTaskCancellationHandler {
             do {
                 let call = try await collect(session)
+                producer.cancel()
+                await producer.value
                 try failure.check()
                 return call
             } catch {
+                producer.cancel()
+                session.cancel()
+                await producer.value
                 try Task.checkCancellation()
                 try failure.check()
                 throw error
@@ -300,42 +286,7 @@ public final class Client: @unchecked Sendable {
         if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: call) }
         return call
     }
-    private func call(_ call: InputRequestCall) async throws -> OwnedCall {
-        try await execute(InputRequest(call: call, schema: .unknown(ownedRequestVersion)))
-    }
-    public func decide(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.decide(InputRequestCallDecide(input: input, options: options, question: question)))
-    }
-    public func choose(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.choose(InputRequestCallChoose(input: input, options: options, question: question)))
-    }
-    public func tag(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.tag(InputRequestCallTag(input: input, options: options, question: question)))
-    }
-    public func score(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.score(InputRequestCallScore(input: input, options: options, question: question)))
-    }
-    public func filter(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.filter(InputRequestCallFilter(input: input, options: options, question: question)))
-    }
-    public func rank(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.rank(InputRequestCallRank(input: input, options: options, question: question)))
-    }
-    public func find(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.find(InputRequestCallFind(input: input, options: options, question: question)))
-    }
-    public func annotate(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.annotate(InputRequestCallAnnotate(input: input, options: options, question: question)))
-    }
-    public func recognize(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.recognize(InputRequestCallRecognize(input: input, options: options, question: question)))
-    }
-    public func relate(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.relate(InputRequestCallRelate(input: input, options: options, question: question)))
-    }
-    public func usagePersistence() throws -> OwnedUsagePersistenceStatus { try usage(thinkthen_engine_usage_persistence_v1) }
-    public func finishUsageStatus() throws -> OwnedUsagePersistenceStatus { try usage(thinkthen_engine_finish_usage_status_v1) }
-    private func usage(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> OwnedUsagePersistenceStatus {
+    func usage(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> OwnedUsagePersistenceStatus {
         try live { handle in
             var state = thinkthen_complete_usage_persistence_v1()
             var advice = thinkthen_complete_utf8_v1()

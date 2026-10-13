@@ -13,6 +13,9 @@
 \alias{tt_plan}
 \alias{tt_input}
 \alias{tt_batch}
+\alias{tt_options}
+\alias{tt_recognize_question}
+\alias{tt_relate_question}
 \title{Named native typed judging calls}
 \usage{
 tt_decide(question, input, options = list(), deadline_ms = NULL, completion = NULL)
@@ -31,6 +34,6 @@ tt_batch(function_name, question, input, options = list())
 \item{kind, ...}{An explicit canonical input descriptor, without host validation.}
 \item{function_name}{The native named judging function.}
 }
-\value{Calls return thinkthen_Call objects with generated results and native facts. Fields support ordinary R indexing and comparison. A batch provides next_result, poll, cancel, close and facts functions. A plan provides native packing estimates.}
+\value{Calls return thinkthen_Call objects with generated results and native facts. The answer field provides the generated typed answer view. Fields support ordinary R indexing and comparison. A batch provides next_result, poll, cancel, close and facts functions. A plan provides native packing estimates.}
 \description{Rust admits every question, input and control. R converts ordinary values and delivers native conditions, interruption and cleanup.}
 \details{Generated optional fields distinguish thinkthen_absent from explicit NULL. Native indexes and offsets remain zero-based. Objects print summaries that withhold content. Failed streamed calls retain their completed prefix and available terminal facts.}

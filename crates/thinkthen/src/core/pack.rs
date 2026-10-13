@@ -321,21 +321,6 @@ pub(crate) fn wire_count(question: &Question) -> usize {
 /// cause that failed it.
 pub(crate) type Stored<'a> = Result<&'a str, BackendFailureCause>;
 
-/// One outcome per logical question from its wire answers, in order. A
-/// logical question fails with its first failed wire answer's cause.
-pub(crate) fn read(
-    questions: &[Question],
-    answers: &[Stored<'_>],
-    model: &str,
-) -> Result<Vec<AnswerOutcome>, DecodeError> {
-    read_for(
-        crate::core::adapters::ApiType::Primary,
-        questions,
-        answers,
-        model,
-    )
-}
-
 pub(crate) fn read_for(
     api: crate::core::adapters::ApiType,
     questions: &[Question],

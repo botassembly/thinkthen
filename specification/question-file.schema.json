@@ -314,7 +314,8 @@
                 "kind": {
                   "type": "string"
                 }
-              }
+              },
+              "title": "RelateFields"
             },
             "relations": {
               "type": "array",
@@ -323,7 +324,8 @@
                 "$ref": "#/$defs/relation"
               }
             }
-          }
+          },
+          "title": "RelateQuestion"
         },
         "threshold": {
           "$ref": "#/$defs/cut"
@@ -452,7 +454,8 @@
             "$ref": "#/$defs/description"
           },
           "minProperties": 2,
-          "maxProperties": 255
+          "maxProperties": 255,
+          "x-preserve-order": true
         }
       ]
     },

@@ -82,7 +82,7 @@ impl Storage {
                         },
                     })
                     .collect();
-                let (data, len) = self.array(properties);
+                let (data, len) = self.slice(properties);
                 InputDeclarationV1 {
                     kind: abi::DECLARATION_OBJECT_V1,
                     properties: InputPropertiesV1 { data, len },
@@ -101,10 +101,5 @@ impl Storage {
             item_schema: self.declaration(data.item.as_ref()),
             context_schema: self.declaration(data.context.as_ref()),
         }
-    }
-    pub(crate) fn row_author(&mut self, author: &Author, members: Vec<QuestionAuthorV1>) {
-        let author = self.author(author);
-        self.3.push(author);
-        self.4.push(members);
     }
 }

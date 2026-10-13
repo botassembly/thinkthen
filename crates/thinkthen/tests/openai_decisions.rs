@@ -148,7 +148,7 @@ fn primitive_text_functions_keep_distributions_usage_and_secrecy() {
 }
 #[test]
 fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
-    use thinkthen::{Entity, Kind, Recognize, Relate, RelationRule};
+    use thinkthen::{Kind, Recognize, Relate, RelationRule};
     let listener = Listener::answering(response).unwrap();
     let engine = builder(&listener).no_cache().build().unwrap();
     let decide = Question::decide("Good?").unwrap().cut();
@@ -204,16 +204,22 @@ fn composed_text_functions_share_the_decisions_route_and_existing_planners() {
         .unwrap()
         .build()
         .unwrap();
-    engine
-        .relate_complete_with(
-            &relate,
-            [
-                Entity::new("Ada", "person").unwrap(),
-                Entity::new("Grace", "person").unwrap(),
-            ],
-            CallOptions::new(),
-        )
-        .unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
+    crate::api::relation(
+        &engine,
+        &relate,
+        [
+            r#"{"name":"Ada","kind":"person"}"#,
+            r#"{"name":"Grace","kind":"person"}"#,
+        ]
+        .map(|json| {
+            Ok(reading
+                .compose(thinkthen::RawRecord::json(json).unwrap())
+                .unwrap())
+        }),
+        CallOptions::new(),
+    )
+    .unwrap();
     assert_routes(&listener);
 }
 #[cfg(test)]

@@ -26,7 +26,7 @@ begin
    declare
       Client : Engine;
       Error : Failure;
-      Request : T_RequestCall_decide;
+      Request : T_RequestCall;
    begin
       Configure (Client, "{""cache"":false,""max_retries"":0}", Error);
       Require (Error.Kind = None);
@@ -37,17 +37,13 @@ begin
          return;
       end if;
       Require (Usage_Persistence (Client).State = Written);
-      Request.T_question.V_0.T_text := T_RequestQuestion_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("Is it?"));
-      Request.T_input.V_0.T_text := T_RequestInput_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("usage-ada-" & Mode));
+      Request.T_question.V_0.T_text := T_Text (Ada.Strings.Unbounded.To_Unbounded_String ("Is it?"));
+      Request.T_input.V_0.T_text := T_Text (Ada.Strings.Unbounded.To_Unbounded_String ("usage-ada-" & Mode));
       Thinkthen.Sessions.Calls.Decide (Client, Owner, Request);
       Finish (Owner);
       loop
-         Try_Read (Owner, Output, Read);
-         if Read = Pending then declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+         Next_Packet (Owner, Output, Read);
+         if Read = Pending then raise Program_Error with "blocking read returned pending";
          elsif Read = Result then
             if View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1 then exit; end if;
          else raise Program_Error with "missing owned answer";
@@ -55,12 +51,8 @@ begin
       end loop;
       Require (View (Output).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1);
       loop
-         Try_Read (Owner, Terminal, Read);
-         if Read = Pending then declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+         Next_Packet (Owner, Terminal, Read);
+         if Read = Pending then raise Program_Error with "blocking read returned pending";
          elsif Read = Result then
             if View (Terminal).kind = K_THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1 then exit; end if;
          else raise Program_Error with "missing terminal facts";

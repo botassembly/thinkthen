@@ -371,6 +371,9 @@ fn message(error: &EngineError) -> String {
         EngineError::StoreHotJournal => {
             "the replay folder holds an unfinished write; open it once with write access"
         }
+        EngineError::StoreVersion(file) => {
+            return format!("{file} uses an old store format; delete it");
+        }
         EngineError::Entry(..) | EngineError::CacheEntry => {
             "the cache or recording folder holds a malformed entry"
         }

@@ -1,0 +1,1247 @@
+{
+  "version": 1,
+  "authority": {
+    "request": "specification/request.schema.json",
+    "result": "specification/result.schema.json"
+  },
+  "helpers": {
+    "plan": "call",
+    "question_file": "builder",
+    "question_name": "builder",
+    "question_reference": "builder",
+    "item": "builder",
+    "files": "builder",
+    "usage_persistence": "call",
+    "finish_usage_status": "call"
+  },
+  "categories": {
+    "lifecycle": [
+      "Engine",
+      "Client",
+      "Session",
+      "Operation",
+      "Completed",
+      "OwnedCall",
+      "OwnedSession",
+      "Presence",
+      "Result",
+      "UsageStatus",
+      "CancelToken",
+      "ABSENT",
+      "InputPresence",
+      "InputDocument",
+      "QuestionSource",
+      "Item",
+      "Files",
+      "Records",
+      "Image",
+      "Source",
+      "Question",
+      "Input",
+      "QuestionFile",
+      "ImageBytes",
+      "ItemFields",
+      "Controls",
+      "FileSelection",
+      "SourceRecord"
+    ],
+    "errors": [
+      "ThinkThenError",
+      "UsageError",
+      "BackendError",
+      "LocalError",
+      "Cancelled",
+      "DeadlineError",
+      "DefectError",
+      "ClientError",
+      "Failure",
+      "FailureKind",
+      "SessionFailure",
+      "NativeFailure",
+      "UsageFailure",
+      "BackendFailure",
+      "LocalFailure",
+      "DeadlineFailure",
+      "DefectFailure",
+      "CancelledFailure"
+    ],
+    "lifecycle_members": [
+      "new",
+      "init",
+      "init_with_settings",
+      "close",
+      "free",
+      "cancel",
+      "start",
+      "iterate",
+      "finish",
+      "try_read",
+      "try_push",
+      "read",
+      "push",
+      "wait",
+      "wait_native",
+      "next",
+      "result",
+      "return",
+      "usage",
+      "asyncio",
+      "dispose",
+      "deinit",
+      "constructor",
+      "__init__"
+    ],
+    "representation_members": [
+      "value",
+      "state",
+      "advice",
+      "is_present",
+      "from_document",
+      "to_document",
+      "write",
+      "encode",
+      "decode",
+      "read",
+      "json_serialize",
+      "debug_info",
+      "ptr"
+    ],
+    "lifecycle_fields": [
+      "value",
+      "state",
+      "advice",
+      "is_present",
+      "results",
+      "terminal",
+      "facts",
+      "kind",
+      "retryable",
+      "complete",
+      "signal",
+      "packets",
+      "code",
+      "message",
+      "error",
+      "detail",
+      "engine",
+      "call",
+      "status",
+      "found",
+      "ended",
+      "token",
+      "asyncio"
+    ]
+  },
+  "exceptions": {
+    "python": {
+      "name": "dataframe and pydantic adapters",
+      "paths": [
+        "libraries/python/thinkthen/pandas.py",
+        "libraries/python/thinkthen/pandas.pyi",
+        "libraries/python/thinkthen/polars.py",
+        "libraries/python/thinkthen/polars.pyi",
+        "libraries/python/thinkthen/pydantic.py",
+        "libraries/python/thinkthen/_pandas_calls.pyi",
+        "libraries/python/thinkthen/_polars_calls.pyi",
+        "libraries/python/thinkthen/_frame_calls.pyi",
+        "libraries/python/thinkthen/_pandas_calls.py",
+        "libraries/python/thinkthen/_polars_calls.py",
+        "libraries/python/thinkthen/_frame_calls.py",
+        "libraries/python/thinkthen/_frames.py"
+      ],
+      "names": [
+        "on",
+        "kinds",
+        "relations",
+        "either",
+        "descriptions",
+        "instructions",
+        "entity_definition"
+      ]
+    }
+  },
+  "libraries": {
+    "python": {
+      "root": "libraries/python",
+      "language": "python",
+      "naming": "snake",
+      "declarations": [
+        "libraries/python/thinkthen/__init__.py",
+        "libraries/python/thinkthen/__init__.pyi",
+        "libraries/python/thinkthen/_calls.pyi",
+        "libraries/python/thinkthen/_inputs.py",
+        "libraries/python/thinkthen/_native_results.pyi",
+        "libraries/python/thinkthen/files.py"
+      ],
+      "option_containers": [
+        "Engine.*"
+      ],
+      "setting_containers": [
+        "Engine.__init__"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "QuestionSource.path",
+        "question_name": "QuestionSource.name",
+        "question_reference": "QuestionSource.reference",
+        "item": "Item",
+        "files": "Files"
+      },
+      "representation_types": [
+        "Absent",
+        "AsyncCalls",
+        "Session",
+        "Call",
+        "UsageStatus"
+      ],
+      "representation_calls": [
+        "read_files"
+      ],
+      "field_adapters": {
+        "QuestionSource": {
+          "contract": "request",
+          "type": "RequestQuestion",
+          "aliases": {
+            "body": "value",
+            "raw": "value",
+            "none": "kind"
+          }
+        },
+        "Image": {
+          "contract": "request",
+          "type": "RequestImage",
+          "aliases": {
+            "data": "bytes"
+          }
+        },
+        "Item": {
+          "contract": "request",
+          "type": "RequestItem",
+          "aliases": {
+            "value": "original",
+            "text": "original",
+            "image_only": "original"
+          }
+        },
+        "Records": {
+          "contract": "request",
+          "type": "RequestInput",
+          "aliases": {
+            "items": "items"
+          }
+        },
+        "Files": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {
+            "jsonl": "framing"
+          }
+        },
+        "FileSelection": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {}
+        },
+        "SourceRecord": {
+          "contract": "result",
+          "type": "completePhysicalSource",
+          "aliases": {
+            "record": "file"
+          }
+        },
+        "read_files": {
+          "contract": "request",
+          "type": "RequestReader",
+          "aliases": {}
+        }
+      },
+      "wrapper_members": {
+        "Result": [
+          "function",
+          "scalar",
+          "detailed",
+          "probability",
+          "details",
+          "facts",
+          "to_dict"
+        ],
+        "Session": [
+          "facts",
+          "terminal"
+        ],
+        "CancelToken": [
+          "cancelled"
+        ],
+        "": [
+          "usage"
+        ]
+      },
+      "question_schema_aliases": {
+        "filter": "decide",
+        "rank": "decide"
+      },
+      "function_containers": [
+        "Engine"
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session",
+        "Call",
+        "CancelToken",
+        "AsyncCalls"
+      ],
+      "representation_owners": [
+        "Result",
+        "Presence",
+        "UsageStatus",
+        "Absent"
+      ]
+    },
+    "typescript": {
+      "root": "libraries/typescript",
+      "language": "typescript",
+      "naming": "camel",
+      "declarations": [
+        "libraries/typescript/native.d.ts",
+        "libraries/typescript/results_generated.d.ts",
+        "libraries/typescript/index.d.ts"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "representation_types": [
+        "Results"
+      ],
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [],
+      "wrapper_members": {
+        "ClientError": [
+          "constructor"
+        ]
+      }
+    },
+    "ruby": {
+      "root": "libraries/ruby",
+      "language": "ruby",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ruby/lib/**/*.rb"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [
+        "Completed"
+      ]
+    },
+    "r": {
+      "root": "libraries/r",
+      "language": "r",
+      "naming": "snake",
+      "declarations": [
+        "libraries/r/thinkthen/NAMESPACE",
+        "libraries/r/thinkthen/R/*.R"
+      ],
+      "option_containers": [
+        "tt_request_options"
+      ],
+      "setting_containers": [
+        "tt_engine"
+      ],
+      "function_prefix": "tt_",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "function_containers": [
+        ""
+      ],
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
+    },
+    "c": {
+      "root": "libraries/c",
+      "language": "c",
+      "naming": "snake",
+      "declarations": [
+        "libraries/c/include/thinkthen.h"
+      ],
+      "option_containers": [
+        "thinkthen_request_options_v1"
+      ],
+      "setting_containers": [
+        "thinkthen_engine_settings_v1"
+      ],
+      "function_prefix": "thinkthen_",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "usage_persistence": "thinkthen_engine_usage_persistence_v1",
+        "finish_usage_status": "thinkthen_engine_finish_usage_status_v1",
+        "plan": "thinkthen_request_plan_json"
+      },
+      "function_containers": [
+        ""
+      ],
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
+    },
+    "cpp": {
+      "root": "libraries/cpp",
+      "language": "cpp",
+      "naming": "snake",
+      "declarations": [
+        "libraries/cpp/include/thinkthen/*.hpp"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Call",
+        "AnswerCall"
+      ],
+      "representation_owners": [
+        "Json",
+        "Node",
+        ""
+      ],
+      "lifecycle_members": {
+        "Call": [
+          "poll",
+          "collect",
+          "input_closed"
+        ],
+        "AnswerCall": [
+          "answer"
+        ]
+      },
+      "representation_types": [
+        "Call",
+        "AnswerCall",
+        "Poll",
+        "PollState",
+        "PresenceState",
+        "Json",
+        "Node"
+      ],
+      "representation_members": {
+        "Json": [
+          "at",
+          "begin",
+          "contains",
+          "dump",
+          "end",
+          "get",
+          "is_array",
+          "is_boolean",
+          "is_null",
+          "is_number",
+          "is_object",
+          "is_string",
+          "object",
+          "parse"
+        ],
+        "Node": [
+          "document"
+        ],
+        "": [
+          "encode",
+          "decode"
+        ]
+      },
+      "wrapper_members": {
+        "Json": [
+          "Array",
+          "Object"
+        ],
+        "Poll": [
+          "packet"
+        ],
+        "PollState": [
+          "pending",
+          "result",
+          "end"
+        ],
+        "PresenceState": [
+          "absent",
+          "null"
+        ],
+        "SessionFailure": [
+          "failure"
+        ]
+      }
+    },
+    "csharp": {
+      "root": "libraries/csharp",
+      "language": "csharp",
+      "naming": "pascal",
+      "declarations": [
+        "libraries/csharp/src/*.cs",
+        "sdlc/generators/results/csharp/CompleteFacts.g.cs"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "function_suffix": "Async",
+      "function_containers": [
+        "Engine"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestionFile",
+        "question_name": "InputRequestQuestionName",
+        "question_reference": "InputRequestQuestionReference",
+        "item": "InputRequestItem",
+        "files": "InputRequestSource"
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession"
+      ],
+      "representation_owners": [],
+      "lifecycle_members": {
+        "Engine": [
+          "open",
+          "parse_question",
+          "start_session",
+          "execute"
+        ]
+      },
+      "field_adapters": {
+        "Failure": {
+          "contract": "result",
+          "type": "completeCallError",
+          "aliases": {
+            "FactsJson": "facts"
+          }
+        },
+        "SessionFailure": {
+          "contract": "result",
+          "type": "completesessionPacket",
+          "aliases": {}
+        }
+      }
+    },
+    "go": {
+      "root": "libraries/go",
+      "language": "go",
+      "naming": "pascal",
+      "declarations": [
+        "libraries/go/*.go"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "representation_types": [
+        "Error",
+        "ErrorKind",
+        "SessionError",
+        "PresenceState",
+        "UsagePersistenceState",
+        "OwnedPresence",
+        "JSONValue",
+        "Producer"
+      ],
+      "representation_calls": [
+        "NewClient",
+        "TextQuestion",
+        "DefinedQuestion",
+        "TextItem",
+        "JSONItem",
+        "BytesImage",
+        "String",
+        "Boolean",
+        "Value",
+        "MarshalJSON",
+        "UnmarshalJSON",
+        "Error",
+        "KindUsage",
+        "KindBackend",
+        "KindLocal",
+        "KindDeadline",
+        "KindCancelled",
+        "KindDefect",
+        "Absent",
+        "Present",
+        "Null",
+        "GoString",
+        "JSONValue",
+        "Ptr"
+      ],
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "OwnedCall",
+        "OwnedSession"
+      ],
+      "representation_owners": [
+        "Presence",
+        "OwnedPresence",
+        "JSONValue",
+        "UsageStatus",
+        "Error",
+        "ErrorKind",
+        "SessionError"
+      ],
+      "representation_embedded_members": {
+        "ownedJSON": [
+          "Boolean",
+          "JSONValue",
+          "String",
+          "GoString",
+          "MarshalJSON",
+          "UnmarshalJSON"
+        ]
+      }
+    },
+    "jvm": {
+      "root": "libraries/jvm",
+      "language": "java",
+      "naming": "camel",
+      "declarations": [
+        "libraries/jvm/session/thinkthen/*.java",
+        "libraries/jvm/session/kotlin/*.kt",
+        "libraries/jvm/session/scala/*.scala"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Engine"
+      ],
+      "facades": {
+        "kotlin": "KotlinEngine",
+        "scala": "ScalaEngine"
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "KotlinEngine",
+        "ScalaEngine",
+        "OwnedSession",
+        "OwnedCall",
+        "Read",
+        "SessionFailure",
+        "NativeFailure"
+      ],
+      "representation_owners": [
+        "Presence",
+        "UsageStatus",
+        "UsagePersistence",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "lifecycle_members": {
+        "Engine": [
+          "execute",
+          "start_session"
+        ],
+        "KotlinEngine": [
+          "execute",
+          "start_session"
+        ],
+        "ScalaEngine": [
+          "execute",
+          "start_session"
+        ],
+        "OwnedCall": [
+          "packets",
+          "terminal"
+        ],
+        "OwnedSession": [
+          "next_packet",
+          "next_packet_async",
+          "wait_ready"
+        ],
+        "Read": [
+          "ended",
+          "packet"
+        ],
+        "SessionFailure": [
+          "call",
+          "failure"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      },
+      "representation_types": [
+        "KotlinEngine",
+        "ScalaEngine",
+        "Call",
+        "Read",
+        "Surface",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "representation_members": {
+        "Values": [
+          "freeze",
+          "integer",
+          "json",
+          "object",
+          "list",
+          "map"
+        ],
+        "Builder": [
+          "extension",
+          "json"
+        ],
+        "View": [
+          "json"
+        ]
+      },
+      "wrapper_members": {
+        "State": [
+          "MISSING",
+          "NULL"
+        ],
+        "Surface": [
+          "JAVA",
+          "KOTLIN",
+          "SCALA"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      }
+    },
+    "swift": {
+      "root": "libraries/swift",
+      "language": "swift",
+      "naming": "camel",
+      "declarations": [
+        "libraries/swift/Sources/ThinkThen/*.swift"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestion.file",
+        "question_name": "InputRequestQuestion.name",
+        "question_reference": "InputRequestQuestion.reference",
+        "item": "InputRequestItem.text",
+        "files": "InputRequestInput.files"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Session"
+      ],
+      "representation_owners": [
+        "Presence",
+        "OwnedUsagePersistenceStatus",
+        "Array",
+        "Bool",
+        "Dictionary",
+        "Double",
+        "Int64",
+        "JSONValue",
+        "Optional",
+        "String",
+        "UInt64"
+      ]
+    },
+    "zig": {
+      "root": "libraries/zig",
+      "language": "zig",
+      "naming": "camel",
+      "declarations": [
+        "libraries/zig/src/*.zig"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        ""
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session",
+        "Packet",
+        "Plan",
+        "Question",
+        "Request",
+        "UsageStatus"
+      ],
+      "representation_owners": [
+        "Presence",
+        "InputDocument"
+      ]
+    },
+    "php": {
+      "root": "libraries/php",
+      "language": "php",
+      "naming": "snake",
+      "declarations": [
+        "libraries/php/src/session/*.php"
+      ],
+      "option_containers": [
+        "Options"
+      ],
+      "setting_containers": [
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionNamed",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus"
+      },
+      "function_containers": [
+        "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation",
+        "Cancellation"
+      ],
+      "representation_owners": [],
+      "representation_types": [
+        "CallFailure",
+        "Cancellation",
+        "Document",
+        "Node"
+      ],
+      "wrapper_members": {
+        "CallFailure": [
+          "facts",
+          "failure"
+        ],
+        "Client": [
+          "images"
+        ],
+        "Completed": [
+          "facts"
+        ],
+        "Node": [
+          "field",
+          "has",
+          "toObject"
+        ],
+        "Operation": [
+          "poll"
+        ],
+        "Item": [
+          "fields",
+          "original"
+        ],
+        "Presence": [
+          "present"
+        ],
+        "Cancellation": [
+          "cancelled"
+        ],
+        "Document": [
+          "jsonSerialize"
+        ]
+      },
+      "field_adapters": {
+        "Files": {
+          "contract": "request",
+          "type": "RequestSource"
+        }
+      }
+    },
+    "dart": {
+      "root": "libraries/dart",
+      "language": "dart",
+      "naming": "camel",
+      "declarations": [
+        "libraries/dart/lib/**/*.dart"
+      ],
+      "option_containers": [
+        "InputRequestOptions"
+      ],
+      "setting_containers": [
+        "InputEngineSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples",
+        "test",
+        "example"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestionFile",
+        "question_name": "InputRequestQuestionName",
+        "question_reference": "InputRequestQuestionReference",
+        "item": "InputRequestItem",
+        "files": "InputRequestSource"
+      },
+      "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
+      "function_containers": [
+        "Engine"
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession",
+        "Cancellation",
+        "NativeOwner"
+      ],
+      "representation_owners": []
+    },
+    "ada": {
+      "root": "libraries/ada",
+      "language": "ada",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ada/src/*.ads"
+      ],
+      "option_containers": [
+        "T_RequestOptions"
+      ],
+      "setting_containers": [
+        "T_EngineSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "function_containers": [
+        ""
+      ],
+      "helper_names": {
+        "question_file": "T_RequestQuestion_file",
+        "question_name": "T_RequestQuestion_name",
+        "question_reference": "T_RequestQuestion_reference",
+        "item": "T_RequestItem",
+        "files": "T_RequestSource"
+      },
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": [
+        ""
+      ]
+    },
+    "objc": {
+      "root": "libraries/objective-c",
+      "language": "objc",
+      "naming": "camel",
+      "declarations": [
+        "libraries/objective-c/Sources/Foundation/ThinkThenFoundation.h",
+        "libraries/objective-c/Sources/Foundation/TTResult.h",
+        "libraries/objective-c/Sources/Foundation/TTResults.g.h"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "function_containers": [
+        "TTFoundationClient"
+      ],
+      "lifecycle_owners": [
+        "TTFoundationClient",
+        "TTSession",
+        "TTTask",
+        "TTUsagePersistenceStatus"
+      ],
+      "representation_owners": [
+        "TTPresence",
+        "TTUsagePersistenceStatus"
+      ]
+    },
+    "cobol": {
+      "root": "libraries/cobol",
+      "language": "cobol",
+      "naming": "upper",
+      "declarations": [
+        "libraries/cobol/copybooks/*.cpy",
+        "libraries/cobol/src/*.h"
+      ],
+      "option_containers": [
+        "tt-n-cobol-RequestOptions"
+      ],
+      "setting_containers": [
+        "tt-n-cobol-EngineSettings"
+      ],
+      "function_prefix": "TT_SESSION_",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ],
+      "helper_names": {
+        "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
+        "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS",
+        "question_file": "tt-n-cobol-RequestQuestion-file",
+        "question_name": "tt-n-cobol-RequestQuestion-name",
+        "question_reference": "tt-n-cobol-RequestQuestion-reference",
+        "item": "tt-n-cobol-RequestItem",
+        "files": "tt-n-cobol-RequestSource"
+      },
+      "function_containers": [
+        ""
+      ],
+      "field_prefix": "v-m-",
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
+    }
+  }
+}

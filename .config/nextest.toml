@@ -1,4 +1,5 @@
 # Routine tests must finish within the accepted boundary on a quiet machine.
 [profile.default]
+fail-fast = false
 test-threads = 2
 slow-timeout = { period = "5s", terminate-after = 1 }

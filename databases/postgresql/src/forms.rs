@@ -16,6 +16,24 @@ pub(crate) struct Named<'a> {
     pub(crate) deadline_ms: Option<i64>,
 }
 
+impl<'a> Named<'a> {
+    pub(crate) const fn new(
+        threshold: Option<&'a str>,
+        context: Option<&'a str>,
+        model: Option<&'a str>,
+        batch: Option<&'a str>,
+        deadline_ms: Option<i64>,
+    ) -> Self {
+        Self {
+            threshold,
+            context,
+            model,
+            batch,
+            deadline_ms,
+        }
+    }
+}
+
 fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Error> {
     let original = raw.map_or("{}", |value| value.0.as_str());
     // The engine constructor accepts this 0299 key, but this host has no
@@ -114,11 +132,11 @@ pub(crate) fn question_result(
     verb: For,
     settings: &Settings,
 ) -> Result<LoadedQuestion, Error> {
-    let key = match verb {
-        For::Decide => "",
-        For::Choose => "options",
-        For::Score => "levels",
-        For::Tag => "labels",
+    let (key, wanted) = match verb {
+        For::Decide => ("", QuestionKind::Decide),
+        For::Choose => ("options", QuestionKind::Choose),
+        For::Score => ("levels", QuestionKind::Score),
+        For::Tag => ("labels", QuestionKind::Tag),
         For::Find | For::Rank => {
             return Err(call::usage(format!(
                 "{} is not a judgment question",
@@ -132,18 +150,6 @@ pub(crate) fn question_result(
         .and_then(|given| given.with_settings(settings, verb))
         .and_then(|given| given.parse(Question::from_json))?;
     let kind = asked.kind();
-    let wanted = match verb {
-        For::Decide => QuestionKind::Decide,
-        For::Choose => QuestionKind::Choose,
-        For::Score => QuestionKind::Score,
-        For::Tag => QuestionKind::Tag,
-        For::Find | For::Rank => {
-            return Err(call::usage(format!(
-                "{} is not a judgment question",
-                key_for(verb)
-            )));
-        }
-    };
     if kind != wanted {
         return Err(call::usage(format!(
             "a {} call takes a {} question",

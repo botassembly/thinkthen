@@ -5,10 +5,11 @@ namespace ThinkThen;
 /** Native sessions own admission, scheduling, cache and every reading rule. */
 final class Client
 {
+    use NamedCalls;
     private \FFI $ffi;
     private ?\FFI\CData $engine = null;
     private \WeakMap $operations;
-    public function __construct(array $settings = [], ?string $library = null)
+    public function __construct(array|\ThinkThen\Inputs\Settings $settings = [], ?string $library = null)
     {
         $this->operations = new \WeakMap();
         $library ??= dirname(__DIR__, 2).'/native/libthinkthen.so';
@@ -17,34 +18,21 @@ final class Client
             if ($declarations === false) throw new \RuntimeException('native declarations are missing');
             $this->ffi = \FFI::cdef($declarations, $library);
         } catch (\Throwable $error) { throw new LocalFailure('native library could not be loaded', previous: $error); }
-        $engine = $this->ffi->thinkthen_engine_new_with(self::json((object)$settings));
+        $engine = $this->ffi->thinkthen_engine_new_with(\ThinkThen\Internal\Encoder::encode(is_array($settings) ? (object)$settings : $settings));
         if ($engine === null || \FFI::isNull($engine)) {
             $code = $this->ffi->thinkthen_error_code(null);
-            self::throwImmediate($code, self::text($this->ffi->thinkthen_error_message(null)));
+            \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, false);
         }
         $this->engine = $engine;
     }
-    public static function text(mixed $value): string { return is_string($value) ? $value : \FFI::string($value); }
-    public static function json(mixed $value): string
-    {
-        return \ThinkThen\Inputs\Encoder::encode($value);
-    }
-    public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
-    public static function questionJson(string $json): QuestionInput { return new QuestionInput(['kind' => 'definition'], $json); }
-    public static function questionFile(string $path): QuestionInput { return new QuestionInput(['kind' => 'file', 'path' => $path]); }
-    public static function questionNamed(string $name): QuestionInput { return new QuestionInput(['kind' => 'name', 'name' => $name]); }
-    public static function questionReference(string $reference): QuestionInput { return new QuestionInput(['kind' => 'reference', 'reference' => $reference]); }
-    public static function images(array $images): ItemInput { return new ItemInput(null, ['images' => $images], false); }
-    public static function item(mixed $value, array $fields = []): ItemInput { return new ItemInput($value, $fields); }
-    public static function descriptor(mixed $value): array
-    {
-        $fields = $value instanceof ItemInput ? $value->fields : [];
-        $original = !($value instanceof ItemInput) || $value->original;
-        if ($value instanceof ItemInput) $value = $value->value;
-        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
-    }
-    public function start(string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
-        array $options = [], ?Cancellation $cancel = null): Operation
+    public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): Files { return new Files($paths, $reading, $framing, $media); }
+    public static function questionFile(string $path): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionFile($path); }
+    public static function questionNamed(string $name): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionName($name); }
+    public static function questionReference(string $reference): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionReference($reference); }
+    public static function images(array $images): Item { return new Item(null, ['images' => $images], false); }
+    public static function item(mixed $value, array $fields = []): Item { return new Item($value, $fields); }
+    public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): Operation
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
         if ($cancel?->cancelled) throw new CancelledFailure('the call was cancelled');
@@ -52,22 +40,12 @@ final class Client
         $this->operations[$operation] = true;
         return $operation;
     }
-    private function call(string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
-        array $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
+    private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        array|\ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
     {
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
     }
-    public function decide(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('decide', $question, $input, $options, $cancel); }
-    public function choose(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('choose', $question, $input, $options, $cancel); }
-    public function tag(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('tag', $question, $input, $options, $cancel); }
-    public function score(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('score', $question, $input, $options, $cancel); }
-    public function filter(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('filter', $question, $input, $options, $cancel); }
-    public function rank(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('rank', $question, $input, $options, $cancel); }
-    public function find(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('find', $question, $input, $options, $cancel); }
-    public function annotate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
-    public function recognize(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
-    public function relate(string|array|\stdClass|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
     public function usagePersistence(): UsageStatus { return $this->usageStatus(false); }
     public function finishUsageStatus(): UsageStatus { return $this->usageStatus(true); }
     private function usageStatus(bool $finish): UsageStatus
@@ -78,7 +56,7 @@ final class Client
         $code = $finish
             ? $this->ffi->thinkthen_engine_finish_usage_status_v1($this->engine, \FFI::addr($state), \FFI::addr($advice))
             : $this->ffi->thinkthen_engine_usage_persistence_v1($this->engine, \FFI::addr($state), \FFI::addr($advice));
-        if ($code !== 0) self::throwImmediate($code, self::text($this->ffi->thinkthen_session_error_message()));
+        if ($code !== 0) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
         return new UsageStatus(UsagePersistenceState::from($state->kind),
             \FFI::isNull($advice->data) ? null : \FFI::string($advice->data, $advice->len));
     }
@@ -91,25 +69,14 @@ final class Client
         }
     }
     public function __destruct() { $this->close(); }
-    public static function throwImmediate(int $code, string $message): never
-    {
-        $class = match ($code) {
-            \ThinkThen\Session\THINKTHEN_EUSAGE => UsageFailure::class,
-            \ThinkThen\Session\THINKTHEN_EBACKEND => BackendFailure::class,
-            \ThinkThen\Session\THINKTHEN_EDEADLINE => DeadlineFailure::class,
-            \ThinkThen\Session\THINKTHEN_ELOCAL => LocalFailure::class,
-            \ThinkThen\Session\THINKTHEN_ECANCELLED => CancelledFailure::class, default => DefectFailure::class,
-        };
-        throw new $class($message);
-    }
     public function __debugInfo(): array { return ['type' => self::class]; }
 }
 
-final readonly class FileInput
+final readonly class Files
 {
     public function __construct(public array $paths, public array $reading = [], public ?string $framing = null, public ?string $media = null) {}
 }
-final readonly class ItemInput
+final readonly class Item
 {
     public function __construct(public mixed $value, public array $fields = [], public bool $original = true) {}
 }
@@ -117,15 +84,4 @@ final readonly class ItemInput
 final readonly class UsageStatus
 {
     public function __construct(public UsagePersistenceState $state, public ?string $advice) {}
-}
-
-final readonly class QuestionInput
-{
-    public function __construct(public array $descriptor, public ?string $definitionJson = null)
-    {
-        if ($definitionJson === null) return;
-        // Validate one JSON value before inserting its original bytes into the request.
-        try { json_decode($definitionJson, flags: JSON_THROW_ON_ERROR); }
-        catch (\JsonException $error) { throw new UsageFailure('question is not one JSON value', previous: $error); }
-    }
 }

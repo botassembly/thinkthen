@@ -115,7 +115,24 @@ pub(crate) fn request(
     input: thinkthen::RequestInput,
     environment: thinkthen::RequestEnvironment<'_>,
 ) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
-    let request = admitted(function, definition, input)?;
+    request_question(
+        engine,
+        function,
+        thinkthen::RequestQuestion::Definition { value: definition },
+        input,
+        environment,
+    )
+}
+
+/// Collect any public Request question, retaining its native values and failures.
+pub(crate) fn request_question(
+    engine: &Engine,
+    function: thinkthen::RequestFunction,
+    question: thinkthen::RequestQuestion,
+    input: thinkthen::RequestInput,
+    environment: thinkthen::RequestEnvironment<'_>,
+) -> Result<thinkthen::Call<thinkthen::RequestValue>, thinkthen::Error> {
+    let request = admitted(function, question, input)?;
     match engine.execute_request(&request, environment)? {
         thinkthen::RequestOutcome::Complete(call) => Ok(call),
         thinkthen::RequestOutcome::Failed { error, .. } => Err(error),
@@ -214,13 +231,13 @@ pub(crate) fn found(
 
 fn admitted(
     function: thinkthen::RequestFunction,
-    definition: thinkthen::RequestDefinition,
+    question: thinkthen::RequestQuestion,
     input: thinkthen::RequestInput,
 ) -> Result<thinkthen::AdmittedRequest, thinkthen::Error> {
     thinkthen::Request::for_function(
         function,
         thinkthen::RequestArguments {
-            question: thinkthen::RequestQuestion::Definition { value: definition },
+            question,
             input,
             options: thinkthen::RequestOptions::default(),
         },
@@ -242,7 +259,7 @@ where
 {
     let request = admitted(
         function,
-        definition,
+        thinkthen::RequestQuestion::Definition { value: definition },
         thinkthen::RequestInput::Feed {
             name: "rows".into(),
             framing: thinkthen::RequestFraming::Document,

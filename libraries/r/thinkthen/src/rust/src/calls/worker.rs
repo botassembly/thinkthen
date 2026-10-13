@@ -3,17 +3,17 @@
 use std::sync::Arc;
 
 use std::thread;
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use thinkthen::fork_safe::{Receiver, RecvTimeoutError, channel};
-use thinkthen::{CallOptions, CancelToken, Engine, Error};
+use thinkthen::{CallOptions, CancelToken, Engine};
 
 use super::account::{Account, Completed};
 use super::receipt::Receipt;
-use crate::{carry, defect, engine, interrupted, usage};
+use crate::{defect, engine, interrupted};
 
 /// How long the main thread waits between R's interrupt checks.
-const TICK: Duration = Duration::from_millis(100);
+const TICK: Duration = Duration::from_millis(50);
 
 /// R's guarded interrupt check, run on the main thread.
 pub(crate) type Pending<'a> = &'a dyn Fn() -> bool;
@@ -31,86 +31,43 @@ impl Drop for Stop {
     }
 }
 
-fn call_with_receipt<T: Send + 'static>(
-    deadline: Option<f64>,
-    pending: Pending<'_>,
-    receipt: Option<Arc<Receipt>>,
-    work: impl FnOnce(&Engine, CallOptions<'_>) -> Result<T, Error> + Send + 'static,
-) -> Crossed<T> {
-    if pending() {
-        return Err(interrupted());
-    }
-    let due = due(deadline)?;
-    let engine = engine()?;
-    let token = CancelToken::new();
-    let held = token.clone();
-    on_worker_with_receipt(token, pending, receipt, move || {
-        let options = CallOptions::new().cancel(&held);
-        let options = due.map_or(options, |at| options.deadline_at(at));
-        work(&engine, options).map_err(|error| carry(&error))
-    })
-}
-
 /// One worker result keeps its complete account even when the Rust call failed.
 /// The receipt owns no R object and can outlive the caller's prompt interrupt.
 pub(crate) fn call_owned<T: Send + 'static>(
-    deadline: Option<f64>,
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
     positions: Option<Vec<usize>>,
-    work: impl FnOnce(&Engine, CallOptions<'_>, &Account) -> Result<T, crate::NativeError>
+    work: impl FnOnce(
+        &Engine,
+        CallOptions<'_>,
+        &Account,
+    ) -> Result<(T, &'static str), crate::NativeError>
     + Send
     + 'static,
 ) -> Crossed<Completed<T>> {
-    call_with_receipt(
-        deadline,
-        pending,
-        receipt.clone(),
-        move |engine, options| {
-            let account = Account::new(positions);
-            let observer = |event: thinkthen::RecordObservation<'_>| account.observe(event, None);
-            let result = work(engine, options.observe(&observer), &account)
-                .and_then(|value| account.written().map(|()| value));
-            let snapshot = account.finish();
-            if let Some(held) = &receipt {
-                let kind = result
-                    .as_ref()
-                    .map_or_else(|error| error.kind.clone(), |_| "success".to_owned());
-                held.settle(kind, snapshot.clone());
-            }
-            Ok(Completed { result })
-        },
-    )
-}
-
-/// The deadline as one instant, fixed before the call starts, so every
-/// engine call a verb makes shares it. The host boundary uses whole
-/// milliseconds, with `-1` for none.
-fn due(deadline: Option<f64>) -> Crossed<Option<Instant>> {
-    let Some(milliseconds) = deadline else {
-        return Ok(None);
-    };
-    if milliseconds == -1.0 {
-        return Ok(None);
+    if pending() {
+        return Err(interrupted());
     }
-    if !milliseconds.is_finite()
-        || milliseconds.fract() != 0.0
-        || !(0.0..=4_294_967_295_000.0).contains(&milliseconds)
-    {
-        return Err(usage(
-            "deadline_ms is -1, 0, or at most 4294967295000 milliseconds",
-        ));
-    }
-    let late = || {
-        usage(&format!(
-            "a deadline of {milliseconds} milliseconds does not fit this clock"
-        ))
-    };
-    let budget = Duration::try_from_secs_f64(milliseconds / 1000.0).map_err(|_| late())?;
-    Instant::now()
-        .checked_add(budget)
-        .map(Some)
-        .ok_or_else(late)
+    let engine = engine()?;
+    let token = CancelToken::new();
+    let held = token.clone();
+    on_worker_with_receipt(token, pending, receipt.clone(), move || {
+        let options = CallOptions::new().cancel(&held);
+        let account = Account::new(positions);
+        let observer = |event: thinkthen::RecordObservation<'_>| account.observe(event, None);
+        let result = work(&engine, options.observe(&observer), &account)
+            .and_then(|value| account.written().map(|()| value));
+        let snapshot = account.finish();
+        if let Some(held) = &receipt {
+            let kind = result
+                .as_ref()
+                .map_or_else(|error| error.kind.clone(), |(_, kind)| (*kind).to_owned());
+            held.settle(kind, snapshot.clone());
+        }
+        Ok(Completed {
+            result: result.map(|(value, _)| value),
+        })
+    })
 }
 
 /// Run `body` on a new thread and wait for it in ticks.

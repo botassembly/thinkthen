@@ -140,7 +140,9 @@ class Check:
         (self.sample / "question.txt").write_text(QUESTION)
         settings = {"replay": str(self.sample / "recording"), "cache": False}
         (self.root / "settings.json").write_text(json.dumps(settings))
-        request = {"decide": QUESTION, "evidence": (self.sample / "report.txt").read_text()}
+        request = {"schema": "thinkthen.request/1", "call": {"function": "decide",
+                   "question": {"kind": "text", "text": QUESTION},
+                   "input": {"kind": "text", "text": (self.sample / "report.txt").read_text()}}}
         (self.root / "request.json").write_text(json.dumps(request))
 
     def c_archive(self):

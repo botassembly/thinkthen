@@ -17292,26 +17292,6 @@
         ]
       },
       {
-        "id": "type-recognize-details",
-        "verb": "decide",
-        "kind": "type-fixture",
-        "input": {
-          "fixture": "specification/fixtures/types/corpus.json",
-          "case_ref": "recognize-details"
-        },
-        "expect": {
-          "fixture_ref": "recognize-details",
-          "schema": "specification/result.schema.json",
-          "schema_version": "landed result/1"
-        },
-        "preconditions": [],
-        "checks": [
-          "named",
-          "compile",
-          "runtime"
-        ]
-      },
-      {
         "id": "type-relate-details",
         "verb": "decide",
         "kind": "type-fixture",

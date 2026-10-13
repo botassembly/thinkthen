@@ -61,7 +61,10 @@ pub(crate) fn view(value: Robj, view: Option<thinkthen::RequestColumnView>) -> C
     let list =
         List::try_from(value).map_err(|_| crate::defect("native presentation is not an R list"))?;
     let class = list.get_attrib("class");
-    let mut fields = list.iter().collect::<Vec<_>>();
+    let mut fields = list
+        .iter()
+        .filter(|(name, _)| *name != "answer")
+        .collect::<Vec<_>>();
     let values: Robj = match view.values {
         RequestColumnValues::Decisions(values) => values
             .into_iter()
@@ -82,6 +85,7 @@ pub(crate) fn view(value: Robj, view: Option<thinkthen::RequestColumnView>) -> C
             List::from_values(values.into_iter().map(Robj::from)).into()
         }
     };
+    fields.push(("answer", values.clone()));
     fields.push(("value", values));
     if let Some(values) = view.probability {
         fields.push((

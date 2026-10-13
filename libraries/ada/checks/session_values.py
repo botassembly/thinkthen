@@ -13,7 +13,10 @@ spec.loader.exec_module(template)
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
 schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
 definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
-name = template.identifier
+type_names = {}
+template.render(definitions, type_names)
+def name(key):
+    return type_names.get(key, template.identifier(key))
 
 
 def matches(source, value):
@@ -62,13 +65,28 @@ def construct(key, source, value):
     if '$ref' in source:
         original = source['$ref'].removeprefix('#/$defs/')
         return construct(original, definitions[original], value)
+    if key == 'RequestQuestion' and isinstance(value, dict):
+        helpers = {'text': ('Text_Question', 'text'), 'file': ('Question_File', 'path'),
+                   'name': ('Question_Name', 'name'), 'reference': ('Question_Reference', 'reference')}
+        helper = helpers.get(value.get('kind'))
+        if helper and value.keys() <= {'kind', helper[1]}:
+            return helper[0] + ' (' + 'Ada.Strings.Unbounded.To_String (' + ada_text(value[helper[1]]) + ')'  + ')'
+        if value.get('kind') == 'definition':
+            definition = value['value']
+            for function, question_type in [('recognize','RecognizeQuestion'), ('relate','RelateQuestion')]:
+                if function in definition:
+                    branch = next(key for key, _ in definitions['RequestDefinition']['variants'] if function in definitions[key].get('properties', {}))
+                    return function.title() + '_Question (' + construct(branch, definitions[branch], definition) + ')'
+    values = template.enum_values(source)
+    if values:
+        return template.identifier(key + '_' + value)
     variants = source.get('variants')
     alternatives = source.get('anyOf', source.get('oneOf'))
     if isinstance(source.get('type'), list):
         alternatives = [{**source, 'type': k} for k in source['type']]
     if variants:
         index, (branch, _) = next((i, pair) for i, pair in enumerate(variants) if matches(definitions[pair[0]], value))
-        return f"{typ}'(Kind => {name(key + '_arm_' + branch)}, V_{index} => " + construct(branch, definitions[branch], value) + ')'
+        return f"{typ}'(Kind => {template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))}, V_{index} => " + construct(branch, definitions[branch], value) + ')'
     if alternatives and len(alternatives) > 1:
         index, branch = next((i, branch) for i, branch in enumerate(alternatives) if matches(branch, value))
         return f"{typ}'(Kind => {name(key + '_arm_' + str(index))}, V_{index} => " + construct(key + '_value_' + str(index), branch, value) + ')'
@@ -88,9 +106,9 @@ def construct(key, source, value):
                     expression = '(Present => True, Value => ' + expression + ')'
             fields.append(field + ' => ' + expression)
         return f"{typ}'(" + (', '.join(fields) if fields else 'null record') + ')'
-    if source.get('type') == 'array' or source.get('type') == 'object' and isinstance(source.get('additionalProperties'), dict):
+    if source.get('type') == 'array' or source.get('type') == 'object':
         mapping = source.get('type') == 'object'
-        values = ['(Key => ' + ada_text(k) + ', Value => ' + construct(key + '_element', source['additionalProperties'], v) + ')' for k, v in value.items()] if mapping else [construct(key + '_element', source.get('items', {}), item) for item in value]
+        values = ['(Key => ' + ada_text(k) + ', Value => ' + construct(key + '_element', source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}, v) + ')' for k, v in value.items()] if mapping else [construct(key + '_element', source.get('items', {}), item) for item in value]
         return f"{typ}'[" + ', '.join(values) + ']'
     if 'const' in source or source.get('type') == 'null':
         return f"{typ}'(null record)"
@@ -109,7 +127,7 @@ def construct(key, source, value):
 def cases():
     corpus = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
     result = []
-    for verb in (arm['properties']['function']['const'] for arm in schema['$defs']['RequestCall']['oneOf']):
+    for verb in template.enum_values(schema['$defs']['RequestFunction']):
         case = next(case for case in corpus if case['verb'] == verb)
         question = dict(case.get('question', case.get('question_set', {})))
         question.pop('relation_threshold', None)
@@ -129,6 +147,6 @@ def cases():
             value['options']['details'] = True
         if none is not None:
             value['options']['none'] = none
-        key = 'RequestCall_' + verb
+        key = 'RequestCall'
         result.append((verb, case['id'], construct(key, definitions[key], value)))
     return result

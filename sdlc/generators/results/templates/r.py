@@ -1,7 +1,7 @@
 """Native R representation conversions over the shared result graph."""
 import json
 
-ROOTS = ('completeFacts', 'completeCallError', 'completeAtomic_DecideValue',
+ROOTS = ('completesessionPacket', 'completeFacts', 'completeCallError', 'completeAtomic_DecideValue',
          'completeAtomic_Nullable_string', 'completeAtomic_Array_of_string',
          'completeAtomic_double', 'completeAtomic_boolean', 'completeAtomic_NonZeroUsize',
          'completeFind', 'completeAnnotation', 'completeRecognition', 'completeRelation')
@@ -98,4 +98,61 @@ def render(definitions):
             lines.append(expression(source))
         lines.append('},')
     lines += ['_ => Err(crate::defect("unknown generated R result type")),', '}', '}']
-    return ('\n'.join(lines) + '\n').replace('|value| plain(value)', 'plain')
+    return ('\n'.join(lines) + '\n' + answer_helpers(definitions)).replace('|value| plain(value)', 'plain')
+
+
+def inputs(schema):
+    """Derive explicit R controls and authored recognition builders."""
+    definitions = schema['$defs']
+    lines = ['# Generated from the canonical request schema; do not edit.']
+    for name, key in [('tt_options', 'RequestOptions'), ('.tt_engine_settings', 'EngineSettings')]:
+        fields = list(definitions[key]['properties'])
+        lines += [name + ' <- function(' + ', '.join(field + ' = NULL' for field in fields) + ') {',
+                  '  values <- list(' + ', '.join(field + ' = ' + field for field in fields) + ')',
+                  ('  values[c(' + ', '.join('!' + 'missing(' + field + ')' for field in fields) + ')]' if name == 'tt_options' else '  values[!vapply(values, is.null, TRUE)]'), '}']
+    for alternative in definitions['RequestFunction']['oneOf']:
+        function = alternative['const']
+        lines.append('tt_' + function + ' <- function(question, input, options = tt_options(), deadline_ms = NULL, completion = NULL) .tt_named_call("' + function + '", question, input, options, deadline_ms, completion)')
+    order = ['base_url', 'model', 'throttle', 'max_requests', 'max_requests_total', 'max_request_bytes', 'cache', 'timeout', 'max_retries', 'record', 'replay', 'profile', 'batch']
+    extra = [name for name in definitions['EngineSettings']['properties'] if name not in order]
+    fields = order + extra
+    lines += ['tt_engine <- function(' + ', '.join(name + ' = ' + ('FALSE' if name == 'refresh_cache' else 'NULL') for name in order) + ', ..., ' + ', '.join(name + ' = ' + ('FALSE' if name == 'refresh_cache' else 'NULL') for name in extra) + ') {',
+              '  if (length(list(...))) .tt_unknown(...)',
+              '  settings <- .tt_engine_settings(' + ', '.join(name + ' = ' + name for name in fields) + ')',
+              '  .tt_call(tt_engine_set(if (length(settings)) .tt_json(settings) else "{}"))',
+              '  invisible(NULL)', '}']
+    recognition = next(value['properties']['recognize'] for value in definitions['RequestDefinition']['anyOf']
+                       if 'recognize' in value.get('properties', {}))
+    for function, fields in [('recognize', recognition['properties']),
+                             ('relate', definitions['Authored_relate']['properties']['relate']['properties'])]:
+        names = list(fields)
+        lines += ['tt_' + function + '_question <- function(' + ', '.join(field + ' = NULL' for field in names) + ') {',
+                  '  values <- list(' + ', '.join(field + ' = ' + field for field in names) + ')',
+                  '  tt_question(list(version = 1L, ' + function + ' = values[!vapply(values, is.null, TRUE)]))', '}']
+    return '\n'.join(lines) + '\n'
+
+
+def answer_helpers(definitions):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location('host_answers', Path(__file__).with_name('host_answers.py'))
+    target = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(target)
+    aggregate_answers = target.aggregate_answers
+    lines = ['pub(crate) fn request_answer(function: &str, rows: &Value) -> Crossed<Robj> {', 'match function {']
+    for function, _, payload in aggregate_answers(definitions):
+        if payload.get('type') == 'array':
+            item = payload['items']
+            key = item['$ref'].split('/')[-1]
+            source = definitions[key]
+            if function in ('filter', 'rank'):
+                read = expression(item, 'row')
+            else:
+                read = expression(source['properties']['value'], 'row.get("value").ok_or_else(|| crate::defect("native answer has no value"))?')
+            body = 'array(rows, |row| ' + read + ')'
+        else:
+            key = payload['$ref'].split('/')[-1]
+            body = expression(payload, 'rows') if function == 'find' else expression(definitions[key]['properties']['value'], 'rows.get("value").ok_or_else(|| crate::defect("native answer has no value"))?')
+        lines.append(json.dumps(function) + ' => ' + body + ',')
+    lines += ['_ => Err(crate::defect("native result has no named answer")),', '}', '}']
+    return '\n'.join(lines) + '\n'

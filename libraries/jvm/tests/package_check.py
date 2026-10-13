@@ -54,6 +54,34 @@ def reject(label, action):
 
 
 
+def example_check(inventory):
+    inventory.check_jvm_examples(TARGET)
+    with tempfile.TemporaryDirectory(prefix='jvm-example-inventory-') as folder:
+        package = Path(folder)
+        for name in inventory.jvm_inventory()['examples']:
+            destination = package / name
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            destination.write_bytes((ROOT / name).read_bytes())
+        inventory.check_jvm_examples(package)
+        sample = package / inventory.jvm_inventory()['examples'][0]
+        original = sample.read_bytes()
+        for label in ('stale', 'missing', 'extra'):
+            if label == 'stale':
+                sample.write_bytes(original + b'changed')
+            elif label == 'missing':
+                sample.unlink()
+            else:
+                (package / 'examples/unlisted.java').write_text('extra')
+            try:
+                inventory.check_jvm_examples(package)
+            except ValueError:
+                print('planted ' + label + ' example: rejected')
+            else:
+                raise AssertionError('planted ' + label + ' example: accepted')
+            sample.write_bytes(original)
+    print('JVM copied examples: source inventory and bytes PASS')
+
+
 def session_abi_check(header, jar, library):
     """Compile the layout expressions at actual session call sites, without calling them."""
     spec = importlib.util.spec_from_file_location('c_abi', ROOT.parents[1] / 'sdlc/scripts/check-c-exports.py')
@@ -145,6 +173,7 @@ def main():
     inventory = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(inventory)
     definition = inventory.jvm_inventory(TARGET)
+    example_check(inventory)
     assert json.loads((TARGET / 'jars/product-inventory.json').read_text()) == definition, 'stale generated JVM inventory'
     for name, filename in definition['jars'].items():
         jar = TARGET / "jars" / filename

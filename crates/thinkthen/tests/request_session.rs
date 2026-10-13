@@ -3,21 +3,27 @@ use conformance_backend::{Canned, Listener, Rendezvous};
 use serde_json::{Value, json};
 use std::sync::{Arc, mpsc};
 use std::time::{Duration, Instant};
+use thinkthen::RequestFunction;
 use thinkthen::*;
 
 #[path = "request_session/framing.rs"]
 mod framing;
+#[path = "request_session/push.rs"]
+mod push;
 #[path = "request_session/wait.rs"]
 mod wait;
 
 fn request(input: RequestInput) -> Request {
-    Request::new(RequestCall::Decide(RequestArguments {
-        question: RequestQuestion::Text {
-            text: "Does it pass?".into(),
+    Request::new(RequestCall::new(
+        RequestFunction::Decide,
+        RequestArguments {
+            question: RequestQuestion::Text {
+                text: "Does it pass?".into(),
+            },
+            input,
+            options: RequestOptions::default(),
         },
-        input,
-        options: RequestOptions::default(),
-    }))
+    ))
 }
 
 fn feed() -> RequestInput {
@@ -235,7 +241,10 @@ fn empty_success_and_idle_producer_deadline_keep_actual_native_facts() {
     let mut arguments = request(feed()).call.arguments().clone();
     arguments.options.deadline_ms = Some(20);
     let deadline = engine
-        .request_session(Request::new(RequestCall::Decide(arguments)))
+        .request_session(Request::new(RequestCall::new(
+            RequestFunction::Decide,
+            arguments,
+        )))
         .unwrap();
     let packets = drain(&deadline);
     let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
@@ -335,7 +344,10 @@ fn whole_set_requests_publish_one_aggregate_then_truthful_terminal() {
         options: RequestOptions::default(),
     };
     let session = engine(&listener)
-        .request_session(Request::new(RequestCall::Rank(arguments)))
+        .request_session(Request::new(RequestCall::new(
+            RequestFunction::Rank,
+            arguments,
+        )))
         .unwrap();
     let packets = drain(&session);
     let aggregates = packets
@@ -377,6 +389,119 @@ fn whole_set_requests_publish_one_aggregate_then_truthful_terminal() {
     assert_eq!(terminal.facts.as_ref().unwrap().records(), 2);
 }
 
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "malformed owned recognition request fixtures stop the behavior test"
+)]
+fn recognition_response(body: &[u8], failure: Option<&str>) -> Canned {
+    let request: Value = serde_json::from_slice(body).unwrap();
+    if request.to_string().contains("second") && failure == Some("provider") {
+        return Canned::ok("{}");
+    }
+    let answers = request["questions"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(name, q)| {
+            let probabilities = q["criteria"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(|label| (label.clone(), json!(u8::from(label == "OUT"))))
+                .collect::<serde_json::Map<_, _>>();
+            (
+                name.clone(),
+                json!({"type":"choice","probabilities":probabilities}),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
+}
+
+#[test]
+fn recognition_publishes_one_ordered_aggregate_even_after_later_failure() {
+    for (count, failure) in [
+        (0, None),
+        (2, None),
+        (1, Some("reader")),
+        (1, Some("provider")),
+    ] {
+        let listener =
+            Listener::answering(move |body| recognition_response(body, failure)).unwrap();
+        let ask = Recognize::builder()
+            .kind(Kind::new("person", None).unwrap())
+            .unwrap()
+            .build()
+            .unwrap();
+        let input_count = count + usize::from(failure == Some("provider"));
+        let input = if failure == Some("reader") {
+            feed()
+        } else {
+            RequestInput::Records {
+                items: ["first", "second"]
+                    .into_iter()
+                    .take(input_count)
+                    .map(|text| descriptor(text).item)
+                    .collect(),
+            }
+        };
+        let session = engine(&listener)
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Recognize,
+                RequestArguments {
+                    question: RequestQuestion::Definition { value: ask.into() },
+                    input,
+                    options: RequestOptions::default(),
+                },
+            )))
+            .unwrap();
+        if failure == Some("reader") {
+            assert!(matches!(
+                session.try_push(descriptor("first")).unwrap(),
+                RequestSessionPush::Accepted
+            ));
+            session
+                .finish(Some(RequestReaderFailure::Producer))
+                .unwrap();
+        }
+        let packets = drain(&session);
+        let aggregates = packets
+            .iter()
+            .filter_map(|packet| match packet {
+                RequestSessionResult::Aggregate(RequestValue::Recognized(rows)) => Some(rows),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(aggregates.len(), 1);
+        let rows = aggregates[0];
+        assert_eq!(rows.len(), count);
+        for (index, row) in rows.iter().enumerate() {
+            assert_eq!(row.ordinal(), index);
+            let document = serde_json::to_value(row.original()).unwrap();
+            assert!(document.to_string().contains(["first", "second"][index]));
+        }
+        assert!(matches!(
+            packets[packets.len() - 2],
+            RequestSessionResult::Aggregate(_)
+        ));
+        assert_eq!(
+            packets
+                .iter()
+                .filter(|p| matches!(p, RequestSessionResult::Terminal(_)))
+                .count(),
+            1
+        );
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("actual terminal")
+        };
+        assert_eq!(terminal.error.is_some(), failure.is_some());
+        let facts = terminal.facts.as_ref().unwrap();
+        assert_eq!(facts.records(), count as u64);
+        assert_eq!(facts.requests_sent(), listener.requests().len() as u64);
+    }
+}
+
 #[test]
 fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
     let listener = Listener::answering(response).unwrap();
@@ -386,7 +511,7 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
         arguments.options.threshold = Some(RequestThreshold::Cut(threshold));
         arguments.options.files_only = true;
         assert_eq!(
-            Request::new(RequestCall::Filter(arguments.clone()))
+            Request::new(RequestCall::new(RequestFunction::Filter, arguments.clone()))
                 .admit()
                 .unwrap_err()
                 .detail()
@@ -394,7 +519,10 @@ fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
             "files_only requires filter source input"
         );
         let session = engine
-            .request_session(Request::new(RequestCall::Filter(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Filter,
+                arguments,
+            )))
             .unwrap();
         let until = Instant::now() + Duration::from_secs(5);
         for text in ["first", "second"] {
@@ -479,7 +607,10 @@ fn file_selection_refuses_locationless_descriptors_before_sending_them() {
             *declared = framing;
         }
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Filter(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Filter,
+                arguments,
+            )))
             .unwrap();
         if matches!(framing, RequestFraming::Csv) {
             framing::push(&session, descriptor("body\n"));
@@ -535,7 +666,10 @@ fn inline_provider_failure_preserves_completed_rows_and_final_facts() {
     .clone();
     arguments.options.batch = Some(RequestBatch::Count(1));
     let session = engine(&listener)
-        .request_session(Request::new(RequestCall::Decide(arguments)))
+        .request_session(Request::new(RequestCall::new(
+            RequestFunction::Decide,
+            arguments,
+        )))
         .unwrap();
     let packets = drain(&session);
     let rows = packets
@@ -638,15 +772,18 @@ fn question_packets_preserve_unresolved_null_authored_readings_and_partial_usage
         .unwrap();
         let question = Question::from_json(r#"{"decide":"Does it pass?","true":null,"false":{"reading":"no"},"threshold":"0.2:0.8","name":"gate","wording_version":4,"model":"fixed","batch":1}"#).unwrap();
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Decide(RequestArguments {
-                question: RequestQuestion::Definition {
-                    value: question.into(),
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Decide,
+                RequestArguments {
+                    question: RequestQuestion::Definition {
+                        value: question.into(),
+                    },
+                    input: RequestInput::Records {
+                        items: vec![descriptor("first").item],
+                    },
+                    options: RequestOptions::default(),
                 },
-                input: RequestInput::Records {
-                    items: vec![descriptor("first").item],
-                },
-                options: RequestOptions::default(),
-            })))
+            )))
             .unwrap();
         let packets = drain(&session);
         let event = packets
@@ -685,13 +822,16 @@ fn annotation_question_packets_preserve_actual_failed_members() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1.0}},"q3":{"type":"noul","noul":0.5}},"usage":{"output_tokens":0}}"#)).unwrap();
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?"},"failed":{"decide":"Fails?","threshold":0.7},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
     let session = engine(&listener)
-        .request_session(Request::new(RequestCall::Annotate(RequestArguments {
-            question: RequestQuestion::Definition { value: set.into() },
-            input: RequestInput::Records {
-                items: vec![descriptor("original").item],
+        .request_session(Request::new(RequestCall::new(
+            RequestFunction::Annotate,
+            RequestArguments {
+                question: RequestQuestion::Definition { value: set.into() },
+                input: RequestInput::Records {
+                    items: vec![descriptor("original").item],
+                },
+                options: RequestOptions::default(),
             },
-            options: RequestOptions::default(),
-        })))
+        )))
         .unwrap();
     let packets = drain(&session);
     let detail = packets
@@ -769,13 +909,16 @@ fn recognition_packets_keep_native_whole_and_boundary_alternatives() {
             .unwrap()
             .with_mode(mode);
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Recognize(RequestArguments {
-                question: RequestQuestion::Definition { value: ask.into() },
-                input: RequestInput::Records {
-                    items: vec![descriptor("Ada").item],
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Recognize,
+                RequestArguments {
+                    question: RequestQuestion::Definition { value: ask.into() },
+                    input: RequestInput::Records {
+                        items: vec![descriptor("Ada").item],
+                    },
+                    options: RequestOptions::default(),
                 },
-                options: RequestOptions::default(),
-            })))
+            )))
             .unwrap();
         let packets = drain(&session);
         let document = packets
@@ -825,13 +968,16 @@ fn owned_reading_retains_typed_context_and_replaces_question_fallback() {
         .cut()
         .with_context_schema(schema.clone())
         .unwrap();
-    let request = Request::new(RequestCall::Decide(RequestArguments {
-        question: RequestQuestion::Definition {
-            value: question.into(),
+    let request = Request::new(RequestCall::new(
+        RequestFunction::Decide,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: question.into(),
+            },
+            input: feed(),
+            options: RequestOptions::default(),
         },
-        input: feed(),
-        options: RequestOptions::default(),
-    }));
+    ));
     let reading = RecordReading::new(&["/body"], Some("/policy"), None)
         .unwrap()
         .with_context_schema(schema);

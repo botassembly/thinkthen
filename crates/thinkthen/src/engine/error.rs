@@ -61,6 +61,8 @@ pub(crate) enum Error {
     StoreAmbiguous,
     /// A read-only replay met a write that did not finish.
     StoreHotJournal,
+    /// A named store file predates the current format.
+    StoreVersion(String),
     Entry(String, String),
     RecordingStorage,
     RecordingForbidden,
@@ -170,6 +172,7 @@ impl Error {
             Self::QuestionMiss(_)
             | Self::StoreAmbiguous
             | Self::StoreHotJournal
+            | Self::StoreVersion(_)
             | Self::Entry(_, _)
             | Self::RecordingStorage
             | Self::RecordingForbidden

@@ -276,18 +276,33 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
     .expect("listener");
     let engine = engine(listener.base());
     let question = Question::decide("Refund?").expect("question").cut();
-    let rows = engine
-        .decide_many(&question, ["a low one", "a high one"])
-        .collect::<Result<Vec<_>, _>>()
-        .expect("rows");
-    let read: Vec<f64> = rows.iter().map(thinkthen::Row::probability).collect();
+    let rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["a low one", "a high one"]),
+        thinkthen::CallOptions::new(),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("rows");
+    let read: Vec<f64> = rows
+        .iter()
+        .map(|row| {
+            let Probabilities::YesNo { yes } = row.result().probabilities() else {
+                panic!("a yes or no answer");
+            };
+            yes
+        })
+        .collect();
     assert_eq!(read, [0.3, 0.8]);
     for row in &rows {
-        let details = engine.details(&question, row.input()).expect("details");
+        let details = engine.details(&question, row.original()).expect("details");
         let Probabilities::YesNo { yes } = details.value().probabilities() else {
             panic!("a yes or no answer");
         };
-        assert_eq!(*yes, row.probability());
+        let Probabilities::YesNo { yes: batch_yes } = row.result().probabilities() else {
+            panic!("a yes or no answer");
+        };
+        assert_eq!(*yes, batch_yes);
     }
     let requests = listener.requests();
     assert_eq!(requests.len(), 3, "one packed call and two details calls");

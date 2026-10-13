@@ -5,7 +5,33 @@ import re
 
 def ident(value):
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', value.removeprefix('complete'))
-    return 'thinkthen_complete_' + '_'.join(word.lower() for word in words) + '_v1'
+    semantic = '_'.join(word.lower() for word in words)
+    semantic = semantic.replace('recognition_edge_document', 'recognition_edge')
+    semantic = semantic.replace('estimated_input_denial', 'input_denial').replace('send_budget_denial', 'send_denial')
+    return 'thinkthen_complete_' + semantic + '_v1'
+
+
+def container_key(schema, path):
+    """Name a sequence or mapping for its resolved element value type."""
+    mapping = schema.get('type') == 'object'
+    element = normalized(schema.get('additionalProperties') if mapping else schema.get('items', {}))
+    if '$ref' in element:
+        value = element['$ref'].removeprefix('#/$defs/')
+    elif element.get('type') in ('string', 'boolean', 'integer', 'number'):
+        value = element['type']
+    elif not element or element.get('type') == 'null':
+        value = 'json'
+    else:
+        value = path.rsplit('_field_', 1)[-1]
+    return value + ('_map' if mapping else '_list')
+
+
+def variant_member(parent, child):
+    member = child.removeprefix(parent + '_').removeprefix('complete')
+    parent = parent.removeprefix('complete')
+    if member.lower().endswith(parent.lower()) and len(member) > len(parent):
+        member = member[:-len(parent)]
+    return '_'.join(word.lower() for word in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', member))
 
 
 def field(value):
@@ -102,13 +128,16 @@ class Target:
             return '*const ' + name, 'read_' + name + '(' + node + ', store).map(|value| store.hold(value))?' 
         kind = schema.get('type')
         if kind == 'string' or isinstance(schema.get('const'), str):
-            return 'thinkthen_complete_utf8_v1', 'store.text(' + node + '.text()?)'
+            return 'thinkthen_complete_utf8_v1', 'read_text(' + node + ', store)?'
         if kind == 'boolean':
-            return 'u32', node + '.boolean()?'
+            return 'u32', 'read_boolean(' + node + ', store)?'
         if kind in ('integer', 'number'):
             typ = 'f64' if kind == 'number' else ('u64' if schema.get('minimum', -1) >= 0 or schema.get('format', '').startswith('uint') else 'i64')
-            return typ, node + '.number()?'
+            return typ, 'read_number(' + node + ', store)?'
+        path = container_key(schema, path)
         name = ident(path)
+        if name in self.names:
+            return name, 'read_' + name + '(' + node + ', store)?'
         if kind == 'array':
             typ, read = self.shape(schema['items'], path + '_item', 'item')
             self.structure(name, [('data', '*const ' + typ), ('len', 'usize')])
@@ -162,7 +191,7 @@ class Target:
                                         ['node.member(' + literal(k) + ').is_none()' for k in value['excluded']])
                 else:
                     raise ValueError(mode)
-                alternatives.append((child.removeprefix(key + '_'), check, '*const ' + ident(child),
+                alternatives.append((variant_member(key, child), check, '*const ' + ident(child),
                                      'read_' + ident(child) + '(node, store).map(|value| store.hold(value))?' ))
             self.union(key, alternatives)
         elif 'primitive_variants' in source:
@@ -189,8 +218,11 @@ class Target:
                 optional = member not in required
                 null = optional or nullable(schema, self.definitions)
                 if optional or null:
-                    presence = ident(path + '_presence')
-                    self.structure(presence, [('presence', 'u32'), ('value', typ)])
+                    presence = (typ.removeprefix('*const ').removesuffix('_v1') + '_presence_v1'
+                                if typ.startswith(('thinkthen_', '*const thinkthen_')) else
+                                'thinkthen_complete_' + typ + '_presence_v1')
+                    if presence not in self.names:
+                        self.structure(presence, [('presence', 'u32'), ('value', typ)])
                     members.append((member, presence))
                     mandatory = 'false' if optional else 'true'
                     decode = read[:-1] if read.endswith('?') else 'Ok(' + read + ')'
@@ -217,7 +249,7 @@ def render(definitions):
         target.definition(key, source)
     return '''// Generated from Rust-derived complete result schema; do not edit.
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned C schema objects and tagged alternatives")]
-use super::views::{Node, Storage, read_json, read_presence};
+use super::views::{Node, Storage, read_json, read_presence, read_text, read_boolean, read_number};
 use super::views::{thinkthen_complete_utf8_v1, thinkthen_complete_json_v1, thinkthen_complete_extensions_v1};
 use thinkthen::ErrorKind;
 pub const THINKTHEN_COMPLETE_PRESENCE_MISSING_V1: u32 = 0;

@@ -104,6 +104,8 @@ def fixture(base):
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
         "libraries/jvm/pom.xml": (HELPER.parents[2] / "libraries/jvm/pom.xml").read_bytes(),
     }
+    source.update({"libraries/jvm/" + path.relative_to(HELPER.parents[2] / "libraries/jvm").as_posix(): path.read_bytes()
+                   for path in (HELPER.parents[2] / "libraries/jvm/examples").rglob("*") if path.is_file()})
     write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
     c_name = f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
@@ -142,12 +144,12 @@ def fixture(base):
         managed[kind] = sha(path.read_bytes())
     spec = importlib.machinery.SourceFileLoader('package_inventory', str(HELPER.with_name('package-inventory.py'))).load_module()
     definition = spec.jvm_inventory()
-    session = jars / 'thinkthen-session.jar'
-    files = read_zip(session.read_bytes())
-    files.pop('META-INF/MANIFEST.MF')
-    files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
-    write_zip(session, files)
-    managed['session'] = sha(session.read_bytes())
+    for kind, name in definition['jars'].items():
+        path = jars / name
+        files = read_zip(path.read_bytes())
+        files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
+        write_zip(path, files)
+        managed[kind] = sha(path.read_bytes())
     classifier, asset = next((name, asset) for name, asset in definition['native'].items() if asset['target'] == TARGET)
     path = jars / asset['jar']
     write_zip(path, {name: b'fixture shared library' for name in asset['files']})
@@ -364,6 +366,14 @@ def main():
     case("changed inner JAR and outer hash", jar_attack)
     case("changed POM and outer hash", lambda base, source: mutate_outer(
         base, "jvm", lambda files: files.__setitem__("pom.xml", b"<project/>")))
+    examples = sorted(path.relative_to(HELPER.parents[2] / "libraries/jvm").as_posix()
+                      for path in (HELPER.parents[2] / "libraries/jvm/examples").rglob("*") if path.is_file())
+    case("missing JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.pop(examples[0])))
+    case("stale JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.__setitem__(examples[0], b"stale")))
+    case("extra JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.__setitem__("examples/extra.txt", b"extra")))
     case("missing wrapper member", lambda base, source: mutate_outer(
         base, "jvm", lambda files: files.pop("thinkthen-scala.jar")))
     case("extra wrapper member", lambda base, source: mutate_outer(
@@ -371,6 +381,15 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    for kind in ("session", "kotlin", "scala"):
+        def stale_inventory(data):
+            members = read_zip(data)
+            members["META-INF/thinkthen/product-inventory.json"] = b"{}"
+            buffer = io.BytesIO()
+            write_zip(buffer, members)
+            return buffer.getvalue()
+        inner_rejection(f"stale {kind} embedded inventory", kind, stale_inventory,
+                        "JAR product inventory differs")
     inner_rejection("missing NuGet native asset", "nupkg",
                     lambda data: changed_zip(data, remove="runtimes/linux-x64/native/libthinkthen.so"),
                     "nupkg inventory differs")

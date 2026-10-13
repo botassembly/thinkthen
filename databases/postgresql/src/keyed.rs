@@ -3,7 +3,7 @@
 
 use pgrx::datum::JsonB;
 use pgrx::prelude::*;
-use thinkthen::{Details, For, Judgment, Probabilities, Question};
+use thinkthen::{For, Judgment, Probabilities, Question};
 
 use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
@@ -14,7 +14,7 @@ fn answered(
     question: Option<&str>,
     input: Option<JsonB>,
     settings: Option<RawJson>,
-) -> Vec<(String, Details)> {
+) -> Vec<(String, crate::request::JudgmentRow)> {
     let (Some(question), Some(input)) = (question, input) else {
         return Vec::new();
     };
@@ -29,14 +29,13 @@ fn answered(
             &question,
             texts.into_iter().map(crate::request::text).collect(),
             options,
-            true,
         )
     });
     keys.into_iter().zip(answers).collect()
 }
 
-fn probability(detail: &Details) -> Option<f64> {
-    match (detail.value(), detail.probabilities()) {
+fn probability(detail: &crate::request::JudgmentRow) -> Option<f64> {
+    match (&detail.value, &detail.probabilities) {
         (Judgment::Decision(_), Probabilities::YesNo { yes }) => Some(*yes),
         (Judgment::Choice(Some(label)), Probabilities::Named(choices)) => choices
             .iter()
@@ -66,7 +65,7 @@ fn decide_many(
         let rows = answered(For::Decide, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Decision(answer) => crate::answer_value(*answer),
                     _ => call::raise(call::usage("thinkthen_decide_many takes a decide question")),
                 };
@@ -104,7 +103,7 @@ fn choose_many(
         let rows = answered(For::Choose, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Choice(value) => value.clone(),
                     _ => call::raise(call::usage("thinkthen_choose_many takes a choose question")),
                 };
@@ -128,7 +127,7 @@ fn score_many(
         let rows = answered(For::Score, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Score(value) => *value,
                     _ => call::raise(call::usage("thinkthen_score_many takes a score question")),
                 };
@@ -152,7 +151,7 @@ fn tag_many(
         let rows = answered(For::Tag, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Tags(value) => value.clone(),
                     _ => call::raise(call::usage("thinkthen_tag_many takes a tag question")),
                 };

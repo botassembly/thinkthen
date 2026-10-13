@@ -3,7 +3,7 @@ use serde::Deserialize;
 use serde_json::{Map, Value, value::RawValue};
 use thinkthen::{
     AdmittedRequest, Call, Engine, EngineBuilder, Error, ErrorKind, Facts, InputEvidence,
-    InputReaderOptions, QuestionInput, Request, RequestCall, RequestInput, RequestOptions,
+    InputReaderOptions, QuestionInput, Request, RequestInput, RequestOptions,
     RequestQuestion, SourceItem,
 };
 
@@ -97,7 +97,7 @@ pub(super) fn inputs<'a>(request: &'a AdmittedRequest) -> Result<Inputs<'a>, Err
         | RequestInput::Units { items }
         | RequestInput::Entities { items } => Ok(Box::new(items.iter().map(move |item| {
             let mut row = item.compose_record(&reading)?;
-            if matches!(request.request().call, RequestCall::Annotate(_))
+            if request.request().call.function() == thinkthen::RequestFunction::Annotate
                 && item.images.is_empty()
                 && let Some(thinkthen::RequestOriginal::Text { text }) = &item.original
             {

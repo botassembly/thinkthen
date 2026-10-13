@@ -1,10 +1,9 @@
 {
   "directory": [
     "thinkthen/R",
-    "thinkthen/tools",
-    "tests",
-    "examples"
+    "thinkthen/tools"
   ],
   "extension": ".R",
-  "max": 1915
+  "max": 487,
+  "scope": "handwritten-production"
 }

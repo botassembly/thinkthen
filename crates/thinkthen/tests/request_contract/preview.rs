@@ -1,5 +1,6 @@
 //! Canonical previews retain native evidence and controls without executing.
 use super::*;
+use thinkthen::RequestFunction;
 
 #[test]
 fn canonical_preview_resolves_question_files_and_ordered_duplicate_sources() {
@@ -17,20 +18,24 @@ fn canonical_preview_resolves_question_files_and_ordered_duplicate_sources() {
     let source_path = folder.join("evidence.txt");
     std::fs::write(&question_path, r#"{"decide":"Fits?"}"#).unwrap();
     std::fs::write(&source_path, "Alpha.\nBeta.\n").unwrap();
-    let request = Request::new(RequestCall::Decide(RequestArguments {
-        question: RequestQuestion::File {
-            path: question_path,
-        },
-        input: RequestInput::Source {
-            source: RequestSource {
-                framing: None,
-                paths: vec![source_path.clone(), source_path],
-                reading: ReaderOptions::default(),
-                media: ReaderMedia::Text,
+    let request = Request::named(
+        "decide",
+        RequestArguments {
+            question: RequestQuestion::File {
+                path: question_path,
             },
+            input: RequestInput::Source {
+                source: RequestSource {
+                    framing: None,
+                    paths: vec![source_path.clone(), source_path],
+                    reading: ReaderOptions::default(),
+                    media: ReaderMedia::Text,
+                },
+            },
+            options: RequestOptions::default(),
         },
-        options: RequestOptions::default(),
-    }))
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let actual = engine
@@ -77,10 +82,10 @@ fn canonical_atomic_previews_match_existing_plans_without_a_key() {
         arguments.options.model = Some("override".into());
         arguments.options.max_requests_total = Some(0);
         let call = match question.kind() {
-            QuestionKind::Decide => RequestCall::Decide(arguments),
-            QuestionKind::Choose => RequestCall::Choose(arguments),
-            QuestionKind::Tag => RequestCall::Tag(arguments),
-            QuestionKind::Score => RequestCall::Score(arguments),
+            QuestionKind::Decide => RequestCall::new(RequestFunction::Decide, arguments),
+            QuestionKind::Choose => RequestCall::new(RequestFunction::Choose, arguments),
+            QuestionKind::Tag => RequestCall::new(RequestFunction::Tag, arguments),
+            QuestionKind::Score => RequestCall::new(RequestFunction::Score, arguments),
             _ => panic!("atomic fixture"),
         };
         let request = Request::new(call).admit().unwrap();
@@ -118,18 +123,24 @@ fn filter_and_rank_previews_reuse_decide_packing_without_sending() {
         )
         .unwrap();
     for call in [
-        RequestCall::Filter(args(
-            Question::decide("Fits?").unwrap().cut().into(),
-            RequestInput::Records {
-                items: vec![item("Alpha."), item("Beta.")],
-            },
-        )),
-        RequestCall::Rank(args(
-            Question::rank("Fits?").unwrap().into(),
-            RequestInput::Records {
-                items: vec![item("Alpha."), item("Beta.")],
-            },
-        )),
+        RequestCall::new(
+            RequestFunction::Filter,
+            args(
+                Question::decide("Fits?").unwrap().cut().into(),
+                RequestInput::Records {
+                    items: vec![item("Alpha."), item("Beta.")],
+                },
+            ),
+        ),
+        RequestCall::new(
+            RequestFunction::Rank,
+            args(
+                Question::rank("Fits?").unwrap().into(),
+                RequestInput::Records {
+                    items: vec![item("Alpha."), item("Beta.")],
+                },
+            ),
+        ),
     ] {
         let estimate = engine
             .plan_request(
@@ -146,15 +157,19 @@ fn filter_and_rank_previews_reuse_decide_packing_without_sending() {
 fn canonical_preview_keeps_native_cancellation_and_reader_failures() {
     let listener = Listener::answering(response).unwrap();
     let engine = engine(&listener);
-    let request = Request::new(RequestCall::Decide(args(
-        Question::decide("Fits?").unwrap().cut().into(),
-        RequestInput::Feed {
-            name: "input".into(),
-            framing: RequestFraming::Document,
-            reading: ReaderOptions::default(),
-            images: vec![],
-        },
-    )))
+    let request = Request::named(
+        "decide",
+        args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Feed {
+                name: "input".into(),
+                framing: RequestFraming::Document,
+                reading: ReaderOptions::default(),
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let token = CancelToken::new();
@@ -239,13 +254,17 @@ fn canonical_image_preview_keeps_order_duplicates_and_native_wire_bytes() {
                 bytes: bytes.to_vec(),
             })
             .to_vec();
-        let request = Request::new(RequestCall::Decide(args(
-            Question::decide("Compare originals.").unwrap().cut().into(),
-            RequestInput::Text {
-                text: "Caption.".into(),
-                images,
-            },
-        )))
+        let request = Request::named(
+            "decide",
+            args(
+                Question::decide("Compare originals.").unwrap().cut().into(),
+                RequestInput::Text {
+                    text: "Caption.".into(),
+                    images,
+                },
+            ),
+        )
+        .unwrap()
         .admit()
         .unwrap();
         let estimate = engine
@@ -309,15 +328,19 @@ fn preview_retains_json_context_shortlists_and_matches_execution() {
 fn unsupported_preview_refuses_before_advancing_the_feed() {
     let listener = Listener::answering(response).unwrap();
     let mut advanced = false;
-    let request = Request::new(RequestCall::Find(args(
-        Question::find("Fits?").unwrap().into(),
-        RequestInput::Feed {
-            name: "input".into(),
-            framing: RequestFraming::Document,
-            reading: ReaderOptions::default(),
-            images: vec![],
-        },
-    )))
+    let request = Request::named(
+        "find",
+        args(
+            Question::find("Fits?").unwrap().into(),
+            RequestInput::Feed {
+                name: "input".into(),
+                framing: RequestFraming::Document,
+                reading: ReaderOptions::default(),
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let error = engine(&listener)
@@ -417,7 +440,8 @@ fn release_only_canonical_source_preview_bounds_originals_before_projection_and_
             },
         );
         arguments.options.field = Some(vec!["/body".into()]);
-        let request = Request::new(RequestCall::Decide(arguments))
+        let request = Request::named("decide", arguments)
+            .unwrap()
             .admit()
             .unwrap();
         let error = engine

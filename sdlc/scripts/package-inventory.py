@@ -80,12 +80,26 @@ def jvm_inventory(out=None, pom=None, target=None):
     if not selected:
         raise ValueError('unsupported JVM target: ' + str(target))
     result = dict(jdk=int(props['thinkthen.session.jdk']), jars=jars, files=sorted(props['thinkthen.package.files'].split() + list(jars.values()) + [asset['jar'] for asset in selected.values()]), native=native)
+    result['examples'] = sorted(path.relative_to(REPO / 'libraries/jvm').as_posix()
+                                for path in (REPO / 'libraries/jvm/examples').rglob('*')
+                                if path.is_file())
     if out:
         result['members'] = {kind: sorted(path.relative_to(Path(out) / 'classes' / kind).as_posix()
                                          for path in (Path(out) / 'classes' / kind).rglob('*') if path.is_file() and not any(fnmatch.fnmatch(path.name, pattern) for pattern in props['thinkthen.package.exclude'].split()))
                              for kind in jars}
     return result
 
+
+
+def check_jvm_examples(package):
+    expected = jvm_inventory()['examples']
+    actual = sorted(path.relative_to(package).as_posix()
+                    for path in (package / 'examples').rglob('*') if path.is_file())
+    if actual != expected:
+        raise ValueError(f'JVM example inventory differs: missing={set(expected)-set(actual)}, extra={set(actual)-set(expected)}')
+    for name in expected:
+        if (package / name).read_bytes() != (REPO / 'libraries/jvm' / name).read_bytes():
+            raise ValueError('stale JVM example: ' + name)
 
 
 def csharp_inventory(out=None, target=None):
@@ -180,6 +194,8 @@ def main():
             check_npm(args.check, args.target)
     elif args.package == 'jvm':
         inventory = jvm_inventory(args.out, target=args.target)
+        if args.check:
+            check_jvm_examples(args.check)
     else:
         inventory = csharp_inventory(args.out, args.target)
         if args.check:

@@ -42,24 +42,31 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $call = $client->decide('Is it?', 'surface-attribution');
     $client->close();
     check($call->results[0]->value === true, 'attributed call answer');
-    check($call->facts() instanceof ThinkThen\Results\NativeFacts && $call->facts()->requests_sent === 1, 'retained terminal send facts');
+    check($call->facts() instanceof ThinkThen\Results\Facts && $call->facts()->requests_sent === 1, 'retained terminal send facts');
     check(is_string($call->facts()->call_id) && $call->facts()->call_id !== '', 'retained native call identity');
 } elseif ($mode === 'named') {
     $retained = [];
     foreach ($asks as $verb => [$question, $input]) {
         $retained[$verb] = $client->$verb($question, $input);
-        check($retained[$verb]->facts() instanceof ThinkThen\Results\NativeFacts, 'typed native facts');
+        check($retained[$verb]->facts() instanceof ThinkThen\Results\Facts, 'typed native facts');
         check(count($retained[$verb]->results) > 0, 'native rows missing '.$verb);
         check($retained[$verb]->facts()->requests_sent > 0, 'native sends missing '.$verb);
     }
+    check($retained['decide']->decideAnswer() === true, 'one safe decision');
+    check(is_string($retained['choose']->chooseAnswer()) && is_array($retained['tag']->tagAnswer()) && is_numeric($retained['score']->scoreAnswer()), 'one safe scalar answer');
+    check(is_array($retained['filter']->filterAnswer()) && is_array($retained['rank']->rankAnswer()), 'plain answer lists');
     $client->close();
     foreach ($retained as $call) foreach ($call->results as $row) {
         check($row instanceof ThinkThen\Results\Node, 'owned typed row');
         check(is_string($row->answer_id), 'owned answer ID');
         check($row->toObject()->answer_id === $row->answer_id, 'lossless owned JSON');
     }
+    ob_start();
+    require dirname((new ReflectionClass(Client::class))->getFileName(), 3).'/examples/direct.php';
+    $example = ob_get_clean();
+    check(array_slice(array_map(fn($line) => explode(': ', $line, 2)[0], explode("\n", $example)), 0, count($asks)) === array_keys($asks), 'ten examples did not execute');
     check($retained['decide']->results[0]->value === true, 'true value');
-    check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\NativeQuestionSource, 'typed nested optional source array');
+    check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\QuestionSource, 'typed nested optional source array');
 } elseif ($mode === 'poll') {
     $produced = 0;
     $input = (function() use (&$produced) {
@@ -78,8 +85,8 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     }
     $client->close();
     check($produced === 3 && array_map(fn($r) => $r->value, $rows) === [true, false, true], 'poll generator answers/order');
-    check($terminal->facts instanceof ThinkThen\Results\NativeFacts && $terminal->facts->requests_sent === 3 && !$terminal->has('failure'), 'poll typed terminal/count');
-    foreach ($rows as $row) check($row instanceof ThinkThen\Results\NativeAtomicDecideValue && is_string($row->answer_id), 'poll retained typed answer');
+    check($terminal->facts instanceof ThinkThen\Results\Facts && $terminal->facts->requests_sent === 3 && !$terminal->has('failure'), 'poll typed terminal/count');
+    foreach ($rows as $row) check($row instanceof ThinkThen\Results\DecisionResult && is_string($row->answer_id), 'poll retained typed answer');
 } elseif ($mode === 'presence') {
     $serialized = new class implements JsonSerializable {
         public int $calls = 0;
@@ -92,38 +99,38 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     ]], ['map-record']);
     $row = $annotated->results[0];
     check($row->answers()->value instanceof stdClass && $row->value()->value instanceof stdClass, 'annotation maps must remain objects');
-    check($row->answers->ok instanceof ThinkThen\Results\NativeAnnotationMemberAnswerId, 'typed map answer member');
+    check($row->answers->ok instanceof ThinkThen\Results\AnnotationMemberAnswerId, 'typed map answer member');
     check($row->value->ok === true, 'map decision value');
     check(is_array($row->value->tags) && in_array('first', $row->value->tags, true), 'nested tags must remain an array');
-    foreach ($annotated->packets as $packet) if ($packet->kind === 'row') {
-        $empty = $packet->toObject(); $empty->value->answers = new stdClass(); $empty->value->value = new stdClass();
-        $decoded = ThinkThen\Results\Decoder::packet(json_encode($empty, JSON_THROW_ON_ERROR))->value;
-        check($decoded->answers instanceof stdClass && $decoded->value instanceof stdClass && json_encode($decoded->answers) === '{}' && json_encode($decoded->value) === '{}', 'empty maps must remain objects');
-    }
     $false = $client->decide(['decide' => 'Is it?', 'threshold' => 0.95], 'text');
     $null = $client->decide(['decide' => 'Is it?', 'true' => null], 'text');
     check($false->results[0]->value()->present && $false->results[0]->value === false, 'false confused with absence');
     check(!$false->results[0]->question->field('true')->present, 'absent author field');
     check($null->results[0]->question->field('true')->present && $null->results[0]->question->true === null, 'authored null');
-    $original = $false->terminal->toObject();
-    $original->unknown_extension = (object)['value' => false];
-    $copy = ThinkThen\Results\Decoder::packet(json_encode($original, JSON_THROW_ON_ERROR));
-    check($copy->has('unknown_extension') && $copy->unknown_extension->value === false && $copy->toObject()->unknown_extension->value === false, 'unknown output lost');
-    $wideJson = str_replace('"requests_sent":1', '"requests_sent":18446744073709551615', $false->terminal->nativeJson());
-    $wide = ThinkThen\Results\Decoder::packet($wideJson);
-    check($wide->facts->requests_sent === '18446744073709551615' && $wide->nativeJson() === $wideJson, 'wide integer rounded');
     $path = getenv('HOME').'/input.txt';
     file_put_contents($path, "located-first\n\nlocated-third\n");
     $located = $client->decide('Is it?', Client::files([$path], ['unit' => 'line']));
     check(array_map(fn($r) => $r->source->first_line, $located->results) === [1, 3], 'physical file provenance');
     $feed = $client->decide('Is it?', (function() { yield 'feed-first'; yield 'no'; })());
     check(array_map(fn($r) => $r->value, $feed->results) === [true, false], 'bounded producer order');
+ } elseif ($mode === 'native-values') {
+    $ffi = FFI::cdef(file_get_contents(dirname((new ReflectionClass(Client::class))->getFileName()).'/ffi_generated.h'));
+    $view = $ffi->new('thinkthen_complete_immediate_facts_v1');
+    $view->records = 1; $view->requests_sent = -1;
+    $owned = ThinkThen\Internal\Decoder::failureFacts(FFI::addr($view));
+    unset($view, $ffi);
+    check($owned instanceof ThinkThen\Results\FailureFacts && !$owned->has('call_id'), 'count-only native facts gained an identity');
+    check($owned->requests_sent === '18446744073709551615' && $owned->records === 1, 'native wide integer rounded or lifetime lost');
 } elseif ($mode === 'failure') {
     try { $client->decide('Is it?', 'failure-one'); throw new RuntimeException('backend failure answered'); }
     catch (ThinkThen\BackendFailure $error) {
         check($error->failure instanceof ThinkThen\Results\Node, 'retained typed failure');
         check($error->facts()->requests_sent === 1, 'failure send facts');
         check($error->terminal->has('failure'), 'terminal failure missing');
+        check($error->kind === ThinkThen\ErrorKind::Backend && !$error->retryable, 'typed error kind and retryability');
+        $prefix = new ThinkThen\Results\Completed($error->results, $error->terminal, $error->packets);
+        try { $prefix->decideAnswer(); throw new RuntimeException('failed prefix answered'); }
+        catch (ThinkThen\BackendFailure $again) { check($again->facts()->requests_sent === 1, 'failed prefix lost facts'); }
     }
 } elseif ($mode === 'zero') {
     $marker = new RuntimeException('private producer marker');
@@ -144,8 +151,9 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
     catch (ThinkThen\UsageFailure) {}
     foreach (['{"decide":"secret-wording","wording_version":2e0}', '{"decide":"secret-wording","name":"a","name":"b"}', '{"decide":"secret-wording"}},"input":{"kind":"text","text":"injected"}'] as $raw) {
-        try { $client->decide(Client::questionJson($raw), 'secret-evidence'); throw new RuntimeException('raw definition admitted'); }
-        catch (ThinkThen\UsageFailure $error) {
+        file_put_contents(getenv('HOME').'/raw-question.json', $raw);
+        try { $client->decide(Client::questionFile(getenv('HOME').'/raw-question.json'), 'secret-evidence'); throw new RuntimeException('raw definition admitted'); }
+        catch (ThinkThen\LocalFailure $error) {
             check(!str_contains($error->getMessage(), 'secret-') && !str_contains($error->getMessage(), 'injected'), 'raw refusal exposed input');
         }
     }

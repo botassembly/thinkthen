@@ -12,7 +12,56 @@ use std::net::TcpListener;
 use std::path::Path;
 use std::process::Command;
 
-use conformance_backend::Backend;
+use conformance_backend::{Backend, Canned, Listener};
+
+#[test]
+fn filter_example_prints_only_yes_records() {
+    let backend = Listener::answering(|_|
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.1},"q2":{"type":"noul","noul":0.9}}}"#))
+    .expect("a mixed-answer loopback backend");
+    let deps = std::env::current_exe().expect("the test binary");
+    let built = deps
+        .parent()
+        .and_then(Path::parent)
+        .expect("the profile folder");
+    let cache = Path::new(env!("CARGO_TARGET_TMPDIR")).join("cache-filter-mixed");
+    let _absent = std::fs::remove_dir_all(&cache);
+    let output = Command::new(
+        built
+            .join("examples")
+            .join(format!("filter{}", std::env::consts::EXE_SUFFIX)),
+    )
+    .env_clear()
+    .env("THINKTHEN_BASE_URL", backend.base())
+    .env("THINKTHEN_API_KEY", "sk-examples-loopback")
+    .env("THINKTHEN_CACHE", &cache)
+    .output()
+    .expect("the filter example ran");
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "filter: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        backend.count(),
+        1,
+        "filter sends one batch for both records"
+    );
+    let requests = backend.requests();
+    let body = String::from_utf8_lossy(&requests.first().expect("the batch request").body);
+    let first = body
+        .find("Arrived a day early. Thank you!")
+        .expect("the first original record");
+    let second = body
+        .find("The zipper broke the first time I used it.")
+        .expect("the second original record");
+    assert!(first < second, "filter sends the records in input order");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stdout),
+        "The zipper broke the first time I used it.\n",
+        "filter prints only the original record whose answer is yes"
+    );
+}
 
 #[test]
 fn every_example_prints_its_pinned_answer() {

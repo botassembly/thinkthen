@@ -2,14 +2,14 @@
 
 use super::*;
 
+const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+
 pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
     let [first, second, cache] = argument.splitn(3, '|').collect::<Vec<_>>()[..] else {
         panic!("two endpoint addresses and the default cache folder");
     };
     let cache = Path::new(cache);
-    let question = Question::decide("asks for a refund")
-        .expect("question")
-        .cut();
+    let question = refund_question();
     let build = |base: &str, key: bool| {
         let builder = Engine::builder()
             .base_url(base)
@@ -63,9 +63,8 @@ pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
 #[cfg(unix)]
 #[test]
 fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
-    const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
-    let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
-    let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
+    let first = crate::api::answering(ANSWER);
+    let second = crate::api::answering(ANSWER);
     for (sent, (name, present)) in [("absent", false), ("present-empty", true)]
         .into_iter()
         .enumerate()
@@ -74,12 +73,9 @@ fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
         let cache = crate::child::Folder::Cache.under(&home);
         if present {
             fs::create_dir_all(&cache).expect("empty cache");
-            #[cfg(unix)]
-            {
-                use std::os::unix::fs::PermissionsExt as _;
-                fs::set_permissions(&cache, fs::Permissions::from_mode(0o700))
-                    .expect("private default cache");
-            }
+            use std::os::unix::fs::PermissionsExt as _;
+            fs::set_permissions(&cache, fs::Permissions::from_mode(0o700))
+                .expect("private default cache");
         }
         let addresses = format!("{}|{}|{}", first.base(), second.base(), cache.display());
         let moved = crate::child::Folder::Cache.variable(&home);
@@ -99,32 +95,21 @@ fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
     }
 }
 
-/// ADR 0111 section 3 withdrew the folder marker: the address sits in every
-/// question key. A folder another address filled, an old entry and a bad
-/// marker all miss, so a zero budget refuses before any key read or send.
+/// Another address and a bad marker miss; an old store refuses before budget
+/// admission. None sends or changes old files.
 #[test]
 fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
-    const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
-    let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
-    let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
-    let question = Question::decide("asks for a refund")
-        .expect("question")
-        .cut();
-    let budget = SendBudget::new();
-    let engine = |base: &str, path: &Path, key: &str| {
-        crate::api::builder(base, key)
-            .model("local-1")
-            .and_then(|builder| builder.cache_at(path))
-            .and_then(EngineBuilder::build)
-            .expect("engine")
-    };
+    let first = crate::api::answering(ANSWER);
+    let second = crate::api::answering(ANSWER);
+    let question = refund_question();
     let other = folder("zero-budget-other-address");
-    engine(first.base(), &other, "sk-test")
+    cache_engine(first.base(), &other, "sk-test")
         .decide(&question, EVIDENCE)
         .expect("first address fills cache");
     let old = folder("zero-budget-old-entry");
     fs::create_dir_all(&old).expect("old folder");
-    fs::write(old.join(format!("{}.json", "a".repeat(64))), b"old entry").expect("old entry");
+    let old_file = old.join(format!("{}.json", "a".repeat(64)));
+    fs::write(&old_file, b"old entry").expect("old entry");
     let marked = folder("zero-budget-bad-marker");
     fs::create_dir_all(&marked).expect("marked folder");
     fs::write(
@@ -133,21 +118,30 @@ fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
     )
     .expect("bad marker");
     for (name, path) in [("other", &other), ("old", &old), ("marked", &marked)] {
-        let denied = engine(second.base(), path, "first\nsecond")
-            .decide_with(
-                &question,
-                EVIDENCE,
-                CallOptions::new().send_budget(&budget, Some(0)),
-            )
-            .expect_err("a zero budget refuses the miss");
-        assert_eq!(denied.kind(), ErrorKind::Usage, "{name}");
+        let denied = denied_cache(second.base(), path);
+        let (kind, denial) = if name == "old" {
+            assert_eq!(
+                denied.to_string(),
+                format!(
+                    "{}.json uses an old store format; delete it",
+                    "a".repeat(64)
+                )
+            );
+            (ErrorKind::Local, None)
+        } else {
+            (ErrorKind::Usage, Some(SendBudgetDenial::BeforeFirstSend))
+        };
+        assert_eq!(denied.kind(), kind, "{name}");
+        assert_eq!(denied.send_budget_denial(), denial, "{name}");
         assert_eq!(
-            denied.send_budget_denial(),
-            Some(SendBudgetDenial::BeforeFirstSend),
+            denied.facts().expect("started call").requests_sent(),
+            0,
             "{name}"
         );
         assert!(!denied.to_string().contains("secret"), "{name}");
     }
+    assert_eq!(fs::read(&old_file).expect("old entry"), b"old entry");
+    assert_eq!(entries(&old), 1);
     assert_eq!(first.count(), 1);
     assert_eq!(second.count(), 0);
     assert_eq!(
@@ -160,22 +154,7 @@ fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
 fn zero_budget_still_precedes_a_line_break_key_on_first_use() {
     let listener = Listener::answering(|_| Canned::ok("unused")).expect("listener");
     let cache = folder("zero-budget-line-break-key");
-    let question = Question::decide("asks for a refund")
-        .expect("question")
-        .cut();
-    let engine = crate::api::builder(listener.base(), "first\nsecond")
-        .model("local-1")
-        .and_then(|builder| builder.cache_at(&cache))
-        .and_then(EngineBuilder::build)
-        .expect("engine");
-    let budget = SendBudget::new();
-    let denied = engine
-        .decide_with(
-            &question,
-            EVIDENCE,
-            CallOptions::new().send_budget(&budget, Some(0)),
-        )
-        .expect_err("zero budget wins before writable admission");
+    let denied = denied_cache(listener.base(), &cache);
     assert_eq!(denied.kind(), ErrorKind::Usage);
     assert_eq!(
         denied.send_budget_denial(),
@@ -183,4 +162,29 @@ fn zero_budget_still_precedes_a_line_break_key_on_first_use() {
     );
     assert!(!cache.exists());
     assert_eq!(listener.count(), 0);
+}
+
+fn denied_cache(base: &str, cache: &Path) -> Error {
+    let budget = SendBudget::new();
+    cache_engine(base, cache, "first\nsecond")
+        .decide_with(
+            &refund_question(),
+            EVIDENCE,
+            CallOptions::new().send_budget(&budget, Some(0)),
+        )
+        .expect_err("cache admission or zero budget refuses before the key read")
+}
+
+fn refund_question() -> Question {
+    Question::decide("asks for a refund")
+        .expect("question")
+        .cut()
+}
+
+fn cache_engine(base: &str, cache: &Path, key: &str) -> Engine {
+    crate::api::builder(base, key)
+        .model("local-1")
+        .and_then(|builder| builder.cache_at(cache))
+        .and_then(EngineBuilder::build)
+        .expect("engine")
 }

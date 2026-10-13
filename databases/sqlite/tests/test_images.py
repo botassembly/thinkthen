@@ -26,19 +26,21 @@ def test_stored_order_duplicate_scalars_details_cache_and_replay():
     with ImageBackend() as backend:
         env = environment(None, THINKTHEN_BASE_URL=backend.base, THINKTHEN_API_KEY='fake-sql-image-key', LIQUIDAI_API_KEY='fake-sql-image-key', THINKTHEN_BACKEND='liquid')
         record = str(pathlib.Path(env['SCRATCH']) / 'record')
-        code = STORED + f'''
+        got = child(STORED + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","record":{record!r}}}),))
-answers = {{}}
-for verb, question in {ASK!r}.items():
-    answers[verb] = run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.'))
-detail = run(db, 'SELECT thinkthen_details_images(?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.'))
-say(answers=answers, detail=detail)
-'''
-        got = child(code, env)
+answers = {{verb: run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.'))
+           for verb, question in {ASK!r}.items()}}
+detail = json.loads(run(db, 'SELECT thinkthen_details_images(?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.'))[0][0])
+context_detail = json.loads(run(db, 'SELECT thinkthen_details_images(?, ?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.', json.dumps({{"context":"Separate context."}})))[0][0])
+say(answers=answers, details=[detail, context_detail])
+''', env)
         expect(got['answers'], {'decide': [[1]], 'choose': [['red']], 'score': [[0.8]]}, 'three native scalar answers')
-        detail = json.loads(got['detail'][0][0])
-        expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, 'complete probabilities')
-        expect(backend.bodies, [expected_body(verb) for verb in (*ASK, 'choose')], 'independent ordered original bodies and one evaluation per public call while recording')
+        for label, detail in zip(('ordinary', 'contextual'), got['details'], strict=True):
+            expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, label + ' complete probabilities')
+            expect('input' in detail, False, label + ' image details omit original evidence')
+        expected = [expected_body(verb) for verb in (*ASK, 'choose', 'choose')]
+        expected[-1]['state'] = {'context': 'Separate context.', 'text': 'Compare originals.'}
+        expect(backend.bodies, expected, 'independent ordered original bodies and one evaluation per public call while recording')
         replay = child(STORED.replace('images.sqlite', 'images-replay.sqlite') + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"replay":{record!r}}}),))
 say(values=[run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.')) for verb, question in {ASK!r}.items()])
@@ -49,19 +51,17 @@ db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":F
 say(error=run(db, 'SELECT thinkthen_decide_images(?, ?, ?)', ('A different question?', packed, 'Compare originals.')))
 ''', {**env, 'THINKTHEN_MAX_REQUESTS_TOTAL':'0'})
         expect(miss['error'], 'thinkthen local: the replay folder holds no answer for this question (retryable: no)', 'strict miss never becomes unsure')
-        expect(backend.count(), 4, 'replay and misses send nothing')
+        expect(backend.count(), 5, 'replay and misses send nothing')
 
 
 def test_complete_decide_accepts_stored_blob_and_strict_replay():
     with ImageBackend() as backend:
         env = environment(None, THINKTHEN_BASE_URL=backend.base, THINKTHEN_BACKEND='liquid', LIQUIDAI_API_KEY='fake-sql-image-key')
         record = str(pathlib.Path(env['SCRATCH']) / 'complete-record')
-        code = STORED + f'''
+        got = child(STORED + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"record":{record!r}}}),))
-value = json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0])
-say(value=value)
-'''
-        got = child(code, env)['value']
+say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0]))
+''', env)['value']
         expect(got['ordinals'], [0], 'one native image record')
         expect(got['native']['value'][0]['value'], True, 'complete native decision')
         expect(got['native']['facts']['requests_sent'], 1, 'one complete image evaluation')

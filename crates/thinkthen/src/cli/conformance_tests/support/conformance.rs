@@ -197,9 +197,12 @@ pub(super) struct Success {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct Counters {
-    pub(super) calls: usize,
-    pub(super) requests: u64,
-    pub(super) cache_answers: u64,
+    #[serde(rename = "calls")]
+    _calls: usize,
+    #[serde(rename = "requests")]
+    _requests: u64,
+    #[serde(rename = "cache_answers")]
+    _cache_answers: u64,
 }
 
 #[derive(Deserialize)]
@@ -458,7 +461,7 @@ fn captured(fixture: &str, exchange: &Exchange) -> Result<(), String> {
         }
     }
     let url = crate::core::Url::new("https://api.typesafe.ai/v1/systemone").map_err(|_| "URL")?;
-    for (place, key) in legacy_question_keys(&url, &exchange.request)
+    for (place, key) in current_question_keys(&url, &exchange.request, &response.model)
         .iter()
         .enumerate()
     {
@@ -476,8 +479,8 @@ fn captured(fixture: &str, exchange: &Exchange) -> Result<(), String> {
     Ok(())
 }
 
-/// Original v1 question keys validate historical fixture bytes before rekeying.
-fn legacy_question_keys(url: &crate::core::Url, body: &str) -> Vec<String> {
+/// Current question keys validate captured request and reported model identity.
+fn current_question_keys(url: &crate::core::Url, body: &str, reported: &str) -> Vec<String> {
     #[derive(Deserialize)]
     struct Parts<'a> {
         #[serde(borrow)]
@@ -497,9 +500,10 @@ fn legacy_question_keys(url: &crate::core::Url, body: &str) -> Vec<String> {
     questions
         .into_iter()
         .map(|(_, question)| {
-            crate::core::pack::QuestionKey::of(
+            crate::core::pack::QuestionKey::complete(
                 url,
                 parts.model.get(),
+                &serde_json::to_string(reported).expect("reported model"),
                 parts.state.get(),
                 question.get(),
             )

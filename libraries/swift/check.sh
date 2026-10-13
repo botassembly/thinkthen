@@ -34,7 +34,6 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
 fi
 . "$root/sdlc/scripts/scratch.sh"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
-node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
 for mode in '' --inputs --bridge; do
     python3 -I "$root/sdlc/generators/results/generate.py" --target swift ${mode:+"$mode"} --check
 done

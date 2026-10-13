@@ -1,8 +1,8 @@
 {
   "directory": [
-    "src",
-    "tests"
+    "src"
   ],
   "extension": ".rs",
-  "max": 32157
+  "max": 1934,
+  "scope": "handwritten-production"
 }

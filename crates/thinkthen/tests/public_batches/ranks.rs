@@ -55,22 +55,24 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
             assert!(n < 3, "tail stays unread");
             Some(Ok("alpha"))
         });
-        let error = if route == "rank" {
+        let error = if route == "direct find" {
             limited
-                .try_rank_with(&ranked, input, CallOptions::new())
-                .expect_err("rank cap")
-        } else if route == "direct find" {
-            limited
-                .try_find_with(&found, input, CallOptions::new())
+                .find_with(&found, input.map(Result::unwrap), CallOptions::new())
                 .expect_err("direct find cap")
         } else {
-            crate::api::find(
+            let (function, question) = if route == "rank" {
+                (thinkthen::RequestFunction::Rank, &ranked)
+            } else {
+                (thinkthen::RequestFunction::Find, &found)
+            };
+            crate::api::whole(
                 &limited,
-                &found,
+                function,
+                question.clone().into(),
                 input.map(|row| row.map(crate::api::record)),
                 CallOptions::new(),
             )
-            .expect_err("find cap")
+            .expect_err("record cap")
         };
         assert_eq!(
             error.to_string(),
@@ -97,7 +99,7 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
             });
             let error = if direct {
                 engine
-                    .try_find_with(&asked, input, CallOptions::new())
+                    .find_with(&asked, input.map(Result::unwrap), CallOptions::new())
                     .expect_err("find count")
             } else {
                 crate::api::find(
@@ -112,16 +114,18 @@ fn fallible_complete_sets_stop_at_admission_failure_before_any_send() {
             assert_eq!(pulls.load(Ordering::SeqCst), maximum + 1);
         }
     }
-    let error = engine
-        .try_rank_with(
-            &ranked,
-            [
-                Ok("alpha"),
-                Err(Error::new(ErrorKind::Local, "reader failed")),
-            ],
-            CallOptions::new(),
-        )
-        .expect_err("reader");
+    let error = crate::api::whole(
+        &engine,
+        thinkthen::RequestFunction::Rank,
+        ranked.clone().into(),
+        [
+            Ok("alpha"),
+            Err(Error::new(ErrorKind::Local, "reader failed")),
+        ]
+        .map(|row| row.map(crate::api::record)),
+        CallOptions::new(),
+    )
+    .expect_err("reader");
     assert_eq!(error.to_string(), "reader failed");
     assert_eq!(listener.count(), 0);
 }
@@ -232,7 +236,7 @@ fn release_only_find_complete_set_stops_at_aggregate_byte_limit_before_any_send(
         });
         let error = if direct {
             engine
-                .try_find_with(&found, input, CallOptions::new())
+                .find_with(&found, input.map(Result::unwrap), CallOptions::new())
                 .expect_err("direct find bytes")
         } else {
             crate::api::find(

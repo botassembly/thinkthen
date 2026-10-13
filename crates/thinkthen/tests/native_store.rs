@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 use sha2::{Digest as _, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use thinkthen::{BatchSetting, CallOptions, ErrorKind, Observation, Origin, Question};
+use thinkthen::{BatchSetting, CallOptions, ErrorKind, Origin, Question};
 
 const STATE: &str = "\"Each question quotes the text it asks about.\"";
 const QUESTION: &str = r#"{"type":"noul","instructions":"The text is \"Refund me.\". Refund?"}"#;
@@ -55,20 +55,6 @@ fn legacy_key(url: &str) -> String {
 }
 
 #[cfg(test)]
-fn compatibility_observation(key: &str, origin: &str) -> String {
-    framed(
-        "thinkthen.legacy-observation/1",
-        &[
-            key,
-            r#"{"kind":"yes_no","probability":0.9}"#,
-            &format!(
-                r#"{{"answered_by":"fixed","input_tokens":887,"output_tokens":null,"taken_at":0,"origin":"{origin}"}}"#
-            ),
-        ],
-    )
-}
-
-#[cfg(test)]
 fn legacy(place: &Path, url: &str, reported: &str) -> String {
     let key = legacy_key(url);
     let state = Sha256::digest(STATE);
@@ -112,110 +98,79 @@ fn stored_metadata(db: &Connection) -> (String, u32, String, String, Option<u32>
 }
 
 #[test]
-fn validated_v1_replay_is_read_only_and_atomic_upgrade_preserves_legacy_identity() {
-    for origin in ["converted", "fixture"] {
-        upgrade_legacy_origin(origin);
-    }
-}
-
-#[cfg(test)]
-fn upgrade_legacy_origin(origin: &str) {
-    let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
-    let place = folder();
-    let url = format!("{}/systemone", listener.base());
-    let key = legacy(&place, &url, "fixed");
-    let database = place.join("thinkthen.sqlite");
-    let db = Connection::open(&database).unwrap();
-    db.execute("UPDATE answers SET origin=?1", [origin])
+fn old_store_refuses_every_mode_without_sends_or_file_changes() {
+    for (mode, format) in ["cache", "refresh", "record", "replay"]
+        .into_iter()
+        .flat_map(|mode| {
+            ["sqlite", "sqlite-unversioned", "jsonl", "digest"].map(|format| (mode, format))
+        })
+    {
+        let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
+        let place = folder();
+        let url = format!("{}/systemone", listener.base());
+        let database = match format {
+            "sqlite" | "sqlite-unversioned" => {
+                legacy(&place, &url, "fixed");
+                if format == "sqlite-unversioned" {
+                    Connection::open(place.join("thinkthen.sqlite"))
+                        .unwrap()
+                        .execute_batch("PRAGMA user_version=0;")
+                        .unwrap();
+                }
+                place.join("thinkthen.sqlite")
+            }
+            "jsonl" => {
+                let digest: String = Sha256::digest(STATE)
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect();
+                let state = json!({"sha256":digest,"state":STATE});
+                let answer = json!({"key":legacy_key(&url),"url":url,"model":"fixed","state":digest,"question":QUESTION,"answer":ANSWER,"answered_by":"fixed","input_tokens":null,"output_tokens":null,"taken_at":0,"origin":"fixture"});
+                let path = place.join("thinkthen.jsonl");
+                std::fs::write(&path, format!("{state}\n{answer}\n")).unwrap();
+                path
+            }
+            "digest" => {
+                let path = place.join(format!("{}.json", "a".repeat(64)));
+                std::fs::write(&path, "PRIVATE_OLD_FILE").unwrap();
+                path
+            }
+            _ => unreachable!(),
+        };
+        let original = std::fs::read(&database).unwrap();
+        let modified = std::fs::metadata(&database).unwrap().modified().unwrap();
+        let builder = build(&listener);
+        let engine = match mode {
+            "cache" => builder.cache_at(&place).unwrap(),
+            "refresh" => builder.cache_at(&place).unwrap().refresh_cache(true),
+            "record" => builder.record(&place).unwrap(),
+            "replay" => builder.replay(&place).unwrap(),
+            _ => unreachable!(),
+        }
+        .build()
         .unwrap();
-    drop(db);
-    let original = std::fs::read(&database).unwrap();
-    let modified = std::fs::metadata(&database).unwrap().modified().unwrap();
-    let question = Question::decide("Refund?").unwrap().cut();
-    let replay = build(&listener).replay(&place).unwrap().build().unwrap();
-    let historical = replay.details(&question, "Refund me.").unwrap();
-    assert_eq!(listener.count(), 0);
-    assert_eq!(std::fs::read(&database).unwrap(), original);
-    assert_eq!(
-        std::fs::metadata(&database).unwrap().modified().unwrap(),
-        modified
-    );
-    let expected_id = compatibility_observation(&key, origin);
-    assert_eq!(
-        historical.value().observations(),
-        &[Observation::Answered {
-            observation_id: expected_id.parse().unwrap()
-        }]
-    );
-    assert_eq!(
-        historical.value().question_sources()[0].origin(),
-        Origin::Replay
-    );
-    assert_eq!(historical.value().question_sources()[0].batch_size(), None);
-    assert_eq!(
-        historical.value().reported_usage().unwrap().input_tokens(),
-        Some(887)
-    );
-    assert_eq!(
-        historical.value().reported_usage().unwrap().output_tokens(),
-        None
-    );
-    let working = build(&listener).cache_at(&place).unwrap().build().unwrap();
-    let held = working.details(&question, "Refund me.").unwrap();
-    assert_eq!(listener.count(), 0);
-    assert_eq!(
-        held.value().observations(),
-        historical.value().observations()
-    );
-    assert_eq!(held.value().question_sources()[0].origin(), Origin::Cache);
-    let db = Connection::open(&database).unwrap();
-    let expected_key = upgraded_metadata(&db, &url, origin, &expected_id);
-    assert_eq!(held.value().requests(), &[expected_key]);
-    let after = std::fs::read(&database).unwrap();
-    working.details(&question, "Refund me.").unwrap();
-    assert_eq!(std::fs::read(&database).unwrap(), after);
-    drop(db);
-    drop(working);
-    drop(replay);
-    let reopened = build(&listener).replay(&place).unwrap().build().unwrap();
-    let retained = reopened.details(&question, "Refund me.").unwrap();
-    assert_eq!(retained.value().value(), historical.value().value());
-    assert_eq!(
-        retained.value().observations(),
-        historical.value().observations()
-    );
-    assert_eq!(
-        retained.value().question_sources()[0].origin(),
-        Origin::Replay
-    );
-    assert_eq!(std::fs::read(&database).unwrap(), after);
-    assert_eq!(listener.count(), 0);
-    drop(reopened);
-    std::fs::remove_dir_all(place).unwrap();
-}
-
-#[cfg(test)]
-fn upgraded_metadata(db: &Connection, url: &str, origin: &str, observation: &str) -> String {
-    assert_eq!(
-        db.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
-            .unwrap(),
-        2
-    );
-    assert_eq!(
-        db.query_row("SELECT origin FROM answers", [], |row| row
-            .get::<_, String>(0))
-            .unwrap(),
-        origin
-    );
-    let key = framed(
-        "thinkthen.question-key/2",
-        &["systemone", url, "\"fixed\"", "\"fixed\"", STATE, QUESTION],
-    );
-    assert_eq!(
-        stored_metadata(db),
-        (key.clone(), 2, "systemone".into(), observation.into(), None)
-    );
-    key
+        let error = engine
+            .details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+            .unwrap_err();
+        assert_eq!(error.kind(), ErrorKind::Local);
+        assert_eq!(
+            error.to_string(),
+            format!(
+                "{} uses an old store format; delete it",
+                database.file_name().unwrap().to_str().unwrap()
+            )
+        );
+        assert_eq!(listener.count(), 0);
+        assert!(!format!("{error:?} {error}").contains("PRIVATE_OLD_FILE"));
+        assert_eq!(std::fs::read_dir(&place).unwrap().count(), 1);
+        assert_eq!(std::fs::read(&database).unwrap(), original);
+        assert_eq!(
+            std::fs::metadata(&database).unwrap().modified().unwrap(),
+            modified
+        );
+        drop(engine);
+        std::fs::remove_dir_all(place).unwrap();
+    }
 }
 
 #[test]
@@ -249,14 +204,14 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
             .iter()
             .map(|letter| char::from(*letter).to_string())
             .collect();
-        let rows = engine
-            .details_many_with(
-                &question,
-                records,
-                CallOptions::new().batch(BatchSetting::Max),
-            )
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
+        let rows = crate::api::pull_decisions(
+            &engine,
+            &question,
+            crate::api::plain_records(records),
+            CallOptions::new().batch(BatchSetting::Max),
+        )
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
         let requests = listener.requests();
         assert_eq!(requests.len(), 1);
         let expected_questions: serde_json::Map<String,Value> = missing.iter().enumerate().map(|(at,letter)| (format!("q{}",at+1),json!({"type":"noul","instructions":format!("The text is \"{}\". Refund?",char::from(*letter))}))).collect();
@@ -265,23 +220,29 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
             json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":expected_questions})
         );
         for row in rows {
-            let detail = row.value();
-            let source = &detail.question_sources()[0];
+            let detail = row.result();
+            let source = &detail.identity().question_sources()[0];
             if missing
                 .iter()
-                .any(|letter| row.input() == &char::from(*letter).to_string())
+                .any(|letter| row.original() == &char::from(*letter).to_string())
             {
                 assert_eq!(source.origin(), Origin::Live);
                 assert_eq!(source.batch_size(), Some(missing.len() as u32));
                 identities.insert(
-                    row.input().clone(),
-                    (detail.observations().to_vec(), source.batch_size()),
+                    row.original().clone(),
+                    (
+                        detail.identity().observations().to_vec(),
+                        source.batch_size(),
+                    ),
                 );
             } else {
                 assert_eq!(source.origin(), Origin::Cache);
                 assert_eq!(
-                    &(detail.observations().to_vec(), source.batch_size()),
-                    identities.get(row.input()).unwrap()
+                    &(
+                        detail.identity().observations().to_vec(),
+                        source.batch_size()
+                    ),
+                    identities.get(row.original()).unwrap()
                 );
             }
         }
@@ -305,7 +266,11 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
         for column in ["answer", "origin"] {
             let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
             let place = folder();
-            legacy(&place, &format!("{}/systemone", listener.base()), "fixed");
+            let seed = build(&listener).record(&place).unwrap().build().unwrap();
+            seed.details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+                .unwrap();
+            drop(seed);
+            let _ = listener.requests();
             let database = place.join("thinkthen.sqlite");
             let db = Connection::open(&database).unwrap();
             db.execute(
@@ -330,7 +295,7 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
                 .unwrap_err();
             assert_eq!(error.kind(), ErrorKind::Local);
             assert!(!format!("{error:?} {error}").contains("PRIVATE_DAMAGED"));
-            assert_eq!(listener.count(), 0);
+            assert_eq!(listener.count(), 1);
             assert_eq!(std::fs::read(&database).unwrap(), original);
             drop(engine);
             std::fs::remove_dir_all(place).unwrap();

@@ -7,7 +7,10 @@ use super::{
 };
 use crate::{CallOptions, Engine, Error, SourceLocation, Surface};
 use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    sync::{Arc, Mutex},
+};
 
 /// Owned input content and physical provenance, separate from selected evidence.
 #[derive(Debug, Clone)]
@@ -250,24 +253,65 @@ impl RequestSession {
     /// # Errors
     /// Refuses non-feed sessions and malformed descriptors when intake has room.
     pub fn try_push_json(&self, text: &str) -> Result<RequestSessionPushStatus, Error> {
+        self.try_push_with(|| RequestSessionDescriptor::from_json(text))
+    }
+    /// Convert and transfer one host descriptor when the feed has room.
+    /// Native adapters use this operation to avoid inspecting borrowed payloads
+    /// on full or closed intake. Conversion runs without the queue lock; a
+    /// concurrent push or closure can discard the converted owned descriptor.
+    /// The callback runs at most once and no borrowed payload is retained.
+    /// # Errors
+    /// Refuses non-feed sessions and propagates conversion failures only when
+    /// intake has room. Adapter errors retain their own representation limits.
+    pub fn try_push_with<E: From<Error>>(
+        &self,
+        convert: impl FnOnce() -> Result<RequestSessionDescriptor, E>,
+    ) -> Result<RequestSessionPushStatus, E> {
         if !self.feed {
-            return Err(Error::usage("this session has no caller-supplied feed"));
+            return Err(Error::usage("this session has no caller-supplied feed").into());
         }
         match self.queue.capacity() {
             RequestSessionPushStatus::Accepted => {}
             status => return Ok(status),
         }
-        let descriptor = RequestSessionDescriptor::from_json(text)?;
-        Ok(match self.queue.push(descriptor) {
+        Ok(match self.queue.push(convert()?) {
             RequestSessionPush::Accepted => RequestSessionPushStatus::Accepted,
             RequestSessionPush::Full(_) => RequestSessionPushStatus::Full,
             RequestSessionPush::Closed(_) => RequestSessionPushStatus::Closed,
         })
     }
+    /// Wait for input room and transfer one descriptor without consuming output.
+    /// Convert at most once, outside the queue lock, only after intake has room.
+    /// Closure or cancellation wakes the producer and retains nothing.
+    /// # Errors
+    /// Refuses non-feed sessions and propagates conversion failures on this caller.
+    pub fn push_with<E: From<Error>>(
+        &self,
+        convert: impl FnOnce() -> Result<RequestSessionDescriptor, E>,
+    ) -> Result<RequestSessionPushStatus, E> {
+        if !self.feed {
+            return Err(Error::usage("this session has no caller-supplied feed").into());
+        }
+        if !self.queue.input_room() {
+            return Ok(RequestSessionPushStatus::Closed);
+        }
+        Ok(self.queue.push_wait(convert()?))
+    }
     /// Read one packet without waiting for native work.
     #[must_use]
     pub fn try_read(&self) -> RequestSessionRead {
         self.queue.read()
+    }
+    /// Block and transfer the next independent packet, or return End after drain.
+    /// Result interest wakes promptly on cancellation; Settlement drains final facts.
+    /// Queued output takes priority over cancellation. No provider work is joined.
+    /// # Errors
+    /// Refuses Input interest and returns cancellation when settlement is pending.
+    pub fn next_packet(
+        &self,
+        interest: RequestSessionWaitInterest,
+    ) -> Result<RequestSessionRead, Error> {
+        self.queue.next_packet(interest)
     }
     /// Block without consuming output until requested readiness or timeout.
     /// Result waits ignore input room. Settlement waits ignore cancellation so
@@ -422,7 +466,13 @@ fn run(
     };
     let files = Mutex::new(std::collections::BTreeSet::new());
     let files_only = request.request.call.arguments().options.files_only;
-    let sink = |value| publish_rows(queue, value, files_only, &files, options.all_filter_results);
+    // Recognition completes records incrementally, but exposes one whole-request packet.
+    // Keep its completed prefix until the native invocation settles, including a failure.
+    let recognized = RefCell::new(Vec::new());
+    let sink = |value| match value {
+        RequestValue::Recognized(rows) => recognized.borrow_mut().extend(rows),
+        value => publish_rows(queue, value, files_only, &files, options.all_filter_results),
+    };
     let feed = match &request.request.call.arguments().input {
         RequestInput::Feed { name, .. } => {
             Some(configured_feed(name.clone(), Arc::clone(queue), &options))
@@ -441,13 +491,7 @@ fn run(
         Ok(RequestOutcome::Complete(call)) => {
             let facts = call.facts().clone();
             queue.close_intake();
-            publish_rows(
-                queue,
-                call.into_value(),
-                files_only,
-                &files,
-                options.all_filter_results,
-            );
+            sink(call.into_value());
             RequestSessionTerminal {
                 facts: Some(facts),
                 error: None,
@@ -455,13 +499,7 @@ fn run(
         }
         Ok(RequestOutcome::Failed { completed, error }) => {
             queue.close_intake();
-            publish_rows(
-                queue,
-                completed,
-                files_only,
-                &files,
-                options.all_filter_results,
-            );
+            sink(completed);
             RequestSessionTerminal::failed(error)
         }
         Err(error) => {
@@ -469,6 +507,11 @@ fn run(
             RequestSessionTerminal::failed(error)
         }
     };
+    if function == super::RequestFunction::Recognize {
+        queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
+            recognized.into_inner(),
+        )));
+    }
     queue.settle(terminal);
 }
 

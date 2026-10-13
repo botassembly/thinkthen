@@ -6,9 +6,9 @@ use base64::{Engine as _, engine::general_purpose::STANDARD};
 use serde::Deserialize;
 
 use super::{Answer, Entries, JSONL};
-use crate::core::adapters::{ApiType, built_in};
+use crate::core::adapters::ApiType;
 use crate::core::pack::{self, QuestionKey, State, model_json};
-use crate::core::{AnswerOutcome, Json, ModelName, ObservationId, Url, bytes_sha256, hex};
+use crate::core::{AnswerOutcome, Json, ModelName, Url, bytes_sha256, hex};
 use crate::engine::error::Error;
 
 pub(super) fn invalid() -> Error {
@@ -22,26 +22,9 @@ pub(super) fn invalid() -> Error {
 pub(super) fn sqlite_error(error: Error) -> Error {
     match error {
         Error::Entry(_, why) => Error::Entry(super::SQLITE.to_owned(), why),
+        Error::StoreVersion(_) => Error::StoreVersion(super::SQLITE.to_owned()),
         other => other,
     }
-}
-
-pub(super) fn legacy_id(
-    answer: &Answer,
-    state: &str,
-    source: Option<&Json>,
-) -> Result<ObservationId, Error> {
-    let (_, canonical_answer) = canonical_parts(answer, state)?;
-    let present = |name| source.is_none_or(|source| source.member(name).is_some());
-    let metadata = crate::core::CompatibilityMetadata {
-        answered_by: Some(&answer.answered_by),
-        input_tokens: present("input_tokens").then_some(answer.input_tokens),
-        output_tokens: present("output_tokens").then_some(answer.output_tokens),
-        taken_at: Some(answer.taken_at),
-        origin: Some(&answer.origin),
-    };
-    crate::core::compatibility_observation(&answer.key, &canonical_answer, &metadata)
-        .map_err(|_| invalid())
 }
 
 impl Entries {
@@ -56,47 +39,22 @@ impl Entries {
         let mut normalized = BTreeMap::new();
         for (_, mut answer) in self.answers {
             let state = self.states.get(&answer.state).ok_or_else(invalid)?;
-            let compatibility = super::fixture::key_of(&answer, state).ok_or_else(invalid)?;
-            let version = answer.key_version.unwrap_or(1);
-            if !matches!(version, 1 | 2)
-                || answer
-                    .adapter
-                    .as_deref()
-                    .is_some_and(|adapter| ApiType::from_name(adapter).is_none())
-            {
-                return Err(invalid());
-            }
-            if version == 1
-                && (compatibility.hex() != answer.key
-                    || answer
-                        .adapter
-                        .as_deref()
-                        .is_some_and(|name| name != built_in::NAME))
-            {
-                return Err(invalid());
+            if answer.key_version != Some(2) {
+                return Err(Error::StoreVersion(JSONL.to_owned()));
             }
             let key = complete_key(&answer, state, &answer.answered_by)?;
             let url = crate::core::posting_address(&answer.url).map_err(|_| invalid())?;
-            if version == 1 && answer.observation_id.is_none() {
-                answer.observation_id = Some(legacy_id(&answer, state, None)?);
-            }
-            if version == 2
-                && (answer
-                    .adapter
-                    .as_deref()
-                    .and_then(ApiType::from_name)
-                    .is_none()
-                    || answer.observation_id.is_none()
-                    || key.hex() != answer.key)
+            if answer
+                .adapter
+                .as_deref()
+                .and_then(ApiType::from_name)
+                .is_none()
+                || answer.observation_id.is_none()
+                || key.hex() != answer.key
             {
                 return Err(invalid());
             }
-            answer.key = key.hex();
             answer.url = url.as_str().to_owned();
-            answer.key_version = Some(2);
-            if version == 1 {
-                answer.adapter = Some(built_in::NAME.to_owned());
-            }
             if let Some(held) = normalized.insert(answer.key.clone(), answer.clone())
                 && held != answer
             {
@@ -223,9 +181,9 @@ pub(super) fn canonical_state(digest: &str, state: &str) -> Result<String, Error
 }
 
 fn adapter(answer: &Answer) -> Result<ApiType, Error> {
-    match (answer.key_version.unwrap_or(1), answer.adapter.as_deref()) {
-        (1, None) => Ok(ApiType::Primary),
-        (_, Some(name)) => ApiType::from_name(name).ok_or_else(invalid),
-        _ => Err(invalid()),
-    }
+    answer
+        .adapter
+        .as_deref()
+        .and_then(ApiType::from_name)
+        .ok_or_else(invalid)
 }
