@@ -403,6 +403,27 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
 
 #[test]
 fn maintenance_refuses_old_files_without_sends_or_data_changes() {
+    let snapshot = |folder: &Path, file: &str| {
+        let mut names: Vec<_> = fs::read_dir(&folder)
+            .expect("folder")
+            .map(|item| item.expect("entry").file_name())
+            .collect();
+        names.sort();
+        let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(&file)]
+            .into_iter()
+            .filter(|path| path.exists())
+            .map(|path| {
+                (
+                    fs::read(&path).expect("bytes"),
+                    fs::metadata(path)
+                        .expect("metadata")
+                        .modified()
+                        .expect("mtime"),
+                )
+            })
+            .collect();
+        ((!file.ends_with(".sqlite")).then_some(names), contents)
+    };
     for old in [
         "sqlite",
         "wal",
@@ -431,28 +452,7 @@ fn maintenance_refuses_old_files_without_sends_or_data_changes() {
             let (file, held) = old_store(&folder, old).expect("old store fixture");
             let used = folder.with_extension("used");
             fs::write(&used, "").expect("used list");
-            let snapshot = || {
-                let mut names: Vec<_> = fs::read_dir(&folder)
-                    .expect("folder")
-                    .map(|item| item.expect("entry").file_name())
-                    .collect();
-                names.sort();
-                let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(&file)]
-                    .into_iter()
-                    .filter(|path| path.exists())
-                    .map(|path| {
-                        (
-                            fs::read(&path).expect("bytes"),
-                            fs::metadata(path)
-                                .expect("metadata")
-                                .modified()
-                                .expect("mtime"),
-                        )
-                    })
-                    .collect();
-                ((!file.ends_with(".sqlite")).then_some(names), contents)
-            };
-            let before = snapshot();
+            let before = snapshot(&folder, &file);
             let listener = Listener::serving(vec![]).expect("listener");
             let path = folder.to_str().expect("folder");
             let used = used.to_str().expect("used");
@@ -482,7 +482,7 @@ fn maintenance_refuses_old_files_without_sends_or_data_changes() {
                 format!("thinkthen: {file} uses an old store format; delete it\n")
             );
             assert!(
-                snapshot() == before,
+                snapshot(&folder, &file) == before,
                 "{old} {arguments:?} changed preserved files"
             );
             assert!(listener.requests().is_empty());
