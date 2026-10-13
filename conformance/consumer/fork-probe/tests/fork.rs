@@ -55,8 +55,8 @@ fn decide() -> Question {
     )
 }
 
-fn answer(call: Result<thinkthen::Call<Answer>, thinkthen::Error>) -> Option<Answer> {
-    call.ok().map(thinkthen::Call::into_value)
+fn answer(call: Result<thinkthen::Call<Answer>, thinkthen::Error>) -> Answer {
+    call.expect("a successful answer").into_value()
 }
 
 #[test]
@@ -67,11 +67,11 @@ fn a_warm_parent_engine_and_its_clone_answer_in_the_child() {
     let backend = Backend::start().expect("backend");
     let engine =
         engine(&format!("{}/generic/v1", backend.origin()), None).expect("a loopback engine");
-    assert_eq!(answer(engine.decide(&decide(), "warm")), Some(Answer::Yes));
+    assert_eq!(answer(engine.decide(&decide(), "warm")), Answer::Yes);
     let clone = engine.clone();
     in_child(|| {
         let before = engine.usage().requests_sent();
-        let answered = answer(clone.decide(&decide(), "in the child")) == Some(Answer::Yes);
+        let answered = answer(clone.decide(&decide(), "in the child")) == Answer::Yes;
         answered && engine.usage().requests_sent() == before + 1
     })
     .expect("the child answered, and the clone counted on its source");
@@ -100,7 +100,7 @@ fn an_inherited_engine_and_a_child_engine_share_one_request_total() {
     };
     let inherited = capped().expect("the parent's capped engine");
     in_child(|| {
-        let sent = answer(inherited.decide(&decide(), "inherited")) == Some(Answer::Yes);
+        let sent = answer(inherited.decide(&decide(), "inherited")) == Answer::Yes;
         let own = capped().expect("the child's capped engine");
         let refused = own.decide(&decide(), "own").err();
         sent && refused.and_then(|error| error.send_budget_denial())
@@ -137,11 +137,11 @@ fn a_call_total_counts_every_engine_of_the_process() {
             result.err().and_then(|error| error.send_budget_denial())
                 == Some(thinkthen::SendBudgetDenial::BeforeFirstSend)
         };
-        answer(call(&first, "a", None)) == Some(Answer::Yes)
-            && answer(call(&second, "b", Some(9))) == Some(Answer::Yes)
+        answer(call(&first, "a", None)) == Answer::Yes
+            && answer(call(&second, "b", Some(9))) == Answer::Yes
             && denied(call(&first, "c", Some(2)))
             && denied(call(&second, "d", Some(2)))
-            && answer(call(&first, "e", Some(3))) == Some(Answer::Yes)
+            && answer(call(&first, "e", Some(3))) == Answer::Yes
             && denied(call(&second, "f", Some(9)))
             && thinkthen::process_requests_sent() == 3
     })
@@ -248,7 +248,7 @@ fn a_forked_child_keeps_parsed_tls_roots_after_the_file_changes() {
         .build()
         .expect("parsed roots in the parent");
     std::fs::write(&cert, b"this is no longer a certificate").expect("change source file");
-    in_child(|| answer(engine.decide(&decide(), "after fork")) == Some(Answer::Yes))
+    in_child(|| answer(engine.decide(&decide(), "after fork")) == Answer::Yes)
         .expect("forked child used the retained roots");
     let requests = served.join().expect("the TLS responder");
     assert_eq!(
@@ -281,11 +281,11 @@ fn a_child_of_a_busy_parent_gets_its_own_permits() {
             .map(|at| scope.spawn(move || answer(held.decide(&decide(), &format!("held {at}")))))
             .collect();
         assert_eq!(backend.wait(4), 4, "every permit is in flight");
-        let child = in_child(|| answer(open.decide(&decide(), "the child")) == Some(Answer::Yes));
+        let child = in_child(|| answer(open.decide(&decide(), "the child")) == Answer::Yes);
         backend.release();
         child.expect("the child sent past the parent's full gate");
         for call in calls {
-            assert_eq!(call.join().expect("a parent call"), Some(Answer::Yes));
+            assert_eq!(call.join().expect("a parent call"), Answer::Yes);
         }
     });
     assert_eq!(backend.count(), 5);
@@ -350,10 +350,10 @@ fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
         thread::sleep(Duration::from_millis(200));
         let released = Instant::now();
         backend.release();
-        assert_eq!(owner.join().expect("the owner"), Some(Answer::Yes));
+        assert_eq!(owner.join().expect("the owner"), Answer::Yes);
         let (answer, done) = waiter.join().expect("the waiter");
         std::fs::write(&gate, "done").expect("the child's gate");
-        assert_eq!(answer, Some(Answer::Yes));
+        assert_eq!(answer, Answer::Yes);
         assert!(
             done - released < Duration::from_secs(30),
             "the waiter waited for the child: {:?}",
@@ -402,10 +402,7 @@ fn environment_engine_child() {
         return;
     }
     let engine = Engine::from_env().expect("environment engine");
-    assert_eq!(
-        answer(engine.decide(&decide(), "parent")),
-        Some(Answer::Yes)
-    );
-    in_child(|| answer(engine.decide(&decide(), "child")) == Some(Answer::Yes))
+    assert_eq!(answer(engine.decide(&decide(), "parent")), Answer::Yes);
+    in_child(|| answer(engine.decide(&decide(), "child")) == Answer::Yes)
         .expect("the process engine answered in the child");
 }

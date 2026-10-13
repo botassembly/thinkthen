@@ -101,14 +101,22 @@ fn stored_metadata(db: &Connection) -> (String, u32, String, String, Option<u32>
 fn old_store_refuses_every_mode_without_sends_or_file_changes() {
     for (mode, format) in ["cache", "refresh", "record", "replay"]
         .into_iter()
-        .flat_map(|mode| ["sqlite", "jsonl", "digest"].map(|format| (mode, format)))
+        .flat_map(|mode| {
+            ["sqlite", "sqlite-unversioned", "jsonl", "digest"].map(|format| (mode, format))
+        })
     {
         let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
         let place = folder();
         let url = format!("{}/systemone", listener.base());
         let database = match format {
-            "sqlite" => {
+            "sqlite" | "sqlite-unversioned" => {
                 legacy(&place, &url, "fixed");
+                if format == "sqlite-unversioned" {
+                    Connection::open(place.join("thinkthen.sqlite"))
+                        .unwrap()
+                        .execute_batch("PRAGMA user_version=0;")
+                        .unwrap();
+                }
                 place.join("thinkthen.sqlite")
             }
             "jsonl" => {

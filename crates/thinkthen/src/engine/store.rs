@@ -352,22 +352,15 @@ impl Store {
         make_folder(&self.folder)?;
         let connection = opening::create(&sqlite)?;
         connection.busy_timeout(Duration::ZERO).map_err(storage)?;
-        let version: i64 = self.waiting(cancel, || {
-            connection.query_row("PRAGMA user_version", [], |row| row.get(0))
+        // Read both values in one snapshot while another writer can initialize.
+        let (version, tables): (i64, i64) = self.waiting(cancel, || {
+            connection.query_row(
+                "SELECT user_version, (SELECT count(*) FROM sqlite_schema WHERE type='table') FROM pragma_user_version",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
         })?;
-        if version == 0 {
-            let tables: i64 = self.waiting(cancel, || {
-                connection.query_row(
-                    "SELECT count(*) FROM sqlite_schema WHERE type='table'",
-                    [],
-                    |row| row.get(0),
-                )
-            })?;
-            if tables != 0 {
-                return Err(Error::StoreVersion(SQLITE.to_owned()));
-            }
-        }
-        if version != 0 && version != 2 {
+        if (version == 0 && tables != 0) || (version != 0 && version != 2) {
             return Err(Error::StoreVersion(SQLITE.to_owned()));
         }
         self.waiting(cancel, || {
