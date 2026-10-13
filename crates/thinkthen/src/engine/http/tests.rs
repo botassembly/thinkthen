@@ -394,11 +394,10 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     assert!(budget.reserve(Some(2), None).is_err());
 }
 
-/// Port zero can never listen, so the refusal is deterministic.
 // Windows reports a refused loopback port as unreachable (sdlc/planning/windows.md).
 #[cfg(unix)]
 #[test]
-fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
+fn a_connection_that_never_opened_is_retried_once_and_keeps_the_refused_kind() {
     let key = Key::of("sk-test-value");
     let client = Client::new(
         Duration::from_secs(4),
@@ -428,10 +427,10 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         observed.set(observed.get() + 1)
     });
 
-    assert_eq!(observed.get(), 1);
-    assert_eq!(counts.snapshot().requests_sent, 1);
-    assert_eq!(counts.snapshot().retries, 0);
-    assert_eq!(facts.snapshot().requests_sent, 1);
+    assert_eq!(observed.get(), 2);
+    assert_eq!(counts.snapshot().requests_sent, 2);
+    assert_eq!(counts.snapshot().retries, 1);
+    assert_eq!(facts.snapshot().requests_sent, 2);
     assert!(matches!(
         result,
         Err(Error::Transport(TransportKind::Refused))
