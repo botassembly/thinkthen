@@ -14,6 +14,7 @@ copy "tt-native-generated.cpy".
 01 status-code usage binary-long signed.
 01 read-status usage binary-long unsigned.
 01 question-text pic x(8192).
+01 question-length usage binary-double unsigned.
 01 evidence-text pic x(8193).
 01 evidence-length usage binary-double unsigned.
 01 expected-failure pic x.
@@ -41,31 +42,20 @@ procedure division.
     move low-values to tt-n-cobol-RequestCall
        tt-n-cobol-RequestQuestionFile tt-n-cobol-RequestInputRecords
        tt-n-cobol-RequestItem tt-n-cobol-RequestOriginalText
-    move tt-n-cobol-requestquestionfile-kind-k
-       to v-kind of tt-n-cobol-RequestQuestion
-    set v-value of tt-n-cobol-RequestQuestion
-       to address of tt-n-cobol-RequestQuestionFile
-    set v-data of tt-n-cobol-RequestQuestionFilePath
-       to address of question-text
-    move function length(function trim(question-text trailing))
-       to v-len of tt-n-cobol-RequestQuestionFilePath
-    set v-m-path of tt-n-cobol-RequestQuestionFile
-       to address of tt-n-cobol-RequestQuestionFilePath
+    move function length(function trim(question-text trailing)) to question-length
+    call "TT_QUESTION_FILE" using
+       by reference tt-n-cobol-RequestQuestion tt-n-cobol-RequestQuestionFile
+          tt-n-cobol-RequestQuestionFilePath question-text
+       by value question-length
+       returning status-code
     move tt-n-cobol-requestinputrecords-kind-k
        to v-kind of tt-n-cobol-RequestInput
     set v-value of tt-n-cobol-RequestInput
        to address of tt-n-cobol-RequestInputRecords
-    set v-data of tt-n-cobol-RequestOriginalTextText
-       to address of evidence-text
-    move evidence-length to v-len of tt-n-cobol-RequestOriginalTextText
-    set v-m-text of tt-n-cobol-RequestOriginalText
-       to address of tt-n-cobol-RequestOriginalTextText
-    move tt-n-cobol-requestoriginaltext-kind-k
-       to v-kind of tt-n-cobol-RequestOriginal
-    set v-value of tt-n-cobol-RequestOriginal
-       to address of tt-n-cobol-RequestOriginalText
-    set v-m-original of tt-n-cobol-RequestItem
-       to address of tt-n-cobol-RequestOriginal
+    call "TT_TEXT_ITEM" using
+       by reference tt-n-cobol-RequestItem tt-n-cobol-RequestOriginal
+          tt-n-cobol-RequestOriginalText tt-n-cobol-RequestOriginalTextText
+          evidence-text by value evidence-length returning status-code
     set record-address to address of tt-n-cobol-RequestItem
     set v-data of tt-n-cobol-RequestInputRecordsItems
        to address of record-address

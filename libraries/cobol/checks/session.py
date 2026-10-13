@@ -49,6 +49,35 @@ with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/
                             '-Q', str(root / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'],
                            env=env, check=True, timeout=30)
         template = (installed / 'examples/session.cob').read_text()
+        # The plan caller exercises generated counted mapping without a session.
+        plan = template[:template.index('    if status-code not = 0\n')]
+        plan = plan.replace('01 engine usage pointer.', '01 engine usage pointer.\n01 plan-owner usage pointer.\n01 plan-length usage binary-double unsigned.')
+        plan = plan.replace('call "TT_SESSION_DECIDE" using by value engine\n       by reference tt-n-cobol-RequestCall session-owner',
+                            'call "TT_PLAN" using by value engine\n       by reference "decide" by value 6\n       by reference tt-n-cobol-RequestCall plan-owner plan-length')
+        plan += '''    call "thinkthen_engine_free" using by value engine returning omitted
+    if status-code not = 0 move 20 to return-code goback end-if
+    allocate tt-n-complete-utf8-v1
+    set v-data of tt-n-complete-utf8-v1 to plan-owner
+    move plan-length to v-len of tt-n-complete-utf8-v1
+    call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
+       output-text written returning status-code
+    call "thinkthen_free_string" using by value plan-owner returning omitted
+    free tt-n-complete-utf8-v1
+    if status-code not = 0 or written not = plan-length
+       move 21 to return-code goback end-if
+    display function trim(output-text trailing)
+    move 0 to return-code goback.
+'''
+        plan_source = root / 'plan.cob'; plan_source.write_text(plan)
+        compile_caller(plan_source, root / 'plan')
+        plan_question = root / 'plan-question.json'; plan_question.write_text(json.dumps(questions['decide']))
+        before = len(backend.arrivals)
+        result = subprocess.run([str(root / 'plan')], env=dict(env, TT_SESSION_QUESTION_FILE=str(plan_question),
+                                TT_SESSION_EVIDENCE='Refund me.', TT_SESSION_EXPECT_FAILURE='N'),
+                                capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0 and not result.stderr, (result.returncode, result.stdout, result.stderr)
+        assert json.loads(result.stdout)['records'] == 1, result.stdout
+        assert len(backend.arrivals) == before, 'COBOL typed plan sent a request'
         for function, question in questions.items():
             source = root / (function + '.cob')
             caller = template.replace('TT_SESSION_DECIDE', 'TT_SESSION_' + function.upper())
@@ -58,7 +87,7 @@ with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/
             if function == 'find':
                 caller = caller.replace('01 record-address usage pointer.', '01 record-address.\n 02 first-record usage pointer.\n 02 second-record usage pointer.').replace('set record-address to address of tt-n-cobol-RequestItem', 'set first-record second-record to address of tt-n-cobol-RequestItem').replace('move 1 to v-len of tt-n-cobol-RequestInputUnitsItems', 'move 2 to v-len of tt-n-cobol-RequestInputUnitsItems')
             if function == 'relate':
-                caller = caller.replace('RequestOriginalTextText', 'RequestOriginalJsonValue').replace('RequestOriginalText', 'RequestOriginalJson').replace('requestoriginaltext', 'requestoriginaljson').replace('v-m-text of tt-n-cobol-RequestOriginalJson', 'v-m-value of tt-n-cobol-RequestOriginalJson')
+                caller = caller.replace('TT_TEXT_ITEM', 'TT_JSON_ITEM').replace('RequestOriginalTextText', 'RequestOriginalJsonValue').replace('RequestOriginalText', 'RequestOriginalJson').replace('requestoriginaltext', 'requestoriginaljson').replace('v-m-text of tt-n-cobol-RequestOriginalJson', 'v-m-value of tt-n-cobol-RequestOriginalJson')
             source.write_text(caller)
             executable = root / function
             compile_caller(source, executable)
@@ -148,7 +177,7 @@ procedure division.
         assert result.returncode == 0 and 'ERROR_KIND 0000000003' in result.stdout, (result.stdout, result.stderr)
         assert len(backend.arrivals) == before, backend.arrivals
         source = root / 'invalid.cob'
-        source.write_text(template.replace('RequestQuestionFilePath', 'RequestQuestionTextText')
+        source.write_text(template.replace('TT_QUESTION_FILE', 'TT_QUESTION_TEXT').replace('RequestQuestionFilePath', 'RequestQuestionTextText')
                           .replace('RequestQuestionFile', 'RequestQuestionText')
                           .replace('requestquestionfile', 'requestquestiontext')
                           .replace('v-m-path', 'v-m-text'))

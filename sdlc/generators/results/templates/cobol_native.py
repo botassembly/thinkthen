@@ -98,6 +98,7 @@ def render(definitions, old_nodes):
              'release(&a); return code;', '}']
     for function in functions:
         code += [f'int TT_SESSION_{function.upper()}(const void *engine,const thinkthen_cobol_RequestCall *input,void **out) {{', f'return start(engine,input,out,"{function}",{len(function)});', '}']
+    code += [PLAN]
     code += [NEXT_PACKET, USAGE_STATUS]
     return '\n'.join(code) + '\n'
 
@@ -125,3 +126,67 @@ static void release(arena *a) {
 NEXT_PACKET = 'int TT_SESSION_NEXT(thinkthen_session *session,uint32_t *status,thinkthen_session_result **out) {\n    return thinkthen_session_next_packet(session,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,status,out);\n}\n'
 
 USAGE_STATUS = 'static int usage_status(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                        char *advice,uint64_t *written,int finish) {\n    if(!state || !advice || !written) return THINKTHEN_COBOL_REPRESENTATION;\n    thinkthen_complete_usage_persistence_v1 observed;\n    thinkthen_complete_utf8_v1 text;\n    int code=finish ? thinkthen_engine_finish_usage_status_v1(engine,&observed,&text)\n                    : thinkthen_engine_usage_persistence_v1(engine,&observed,&text);\n    if(code) return code;\n    code=TT_SESSION_TEXT(&text,advice,written);\n    if(code) return code;\n    *state=observed;\n    return 0;\n}\nint TT_ENGINE_USAGE_PERSISTENCE(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                              char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,0);\n}\nint TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                                char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,1);\n}\n'
+
+
+PLAN = r'''int TT_PLAN(const void *engine,const char *function,uint64_t length,
+            const thinkthen_cobol_RequestCall *input,char **out,uint64_t *written) {
+    arena a={0};
+    const thinkthen_request_arguments_v1 *arguments=convert_RequestCall_RequestArguments(&a,input);
+    int code=a.code ? a.code : thinkthen_request_plan_typed_json(engine,
+        (thinkthen_complete_utf8_v1){function,length},arguments,
+        (thinkthen_complete_utf8_v1){"cobol",5},out,written);
+    release(&a); return code;
+}
+'''
+
+
+def builders(definitions):
+    """Fill existing caller-owned typed records without admission or allocation."""
+    declarations, bodies = [], []
+    for index, (branch, _) in enumerate(definitions['RequestQuestion']['variants'], 1):
+        kind = branch.removeprefix('RequestQuestion_')
+        if kind == 'definition':
+            continue
+        member = next(key for key in definitions[branch]['properties'] if key != 'kind')
+        scalar = branch + '_member_' + member
+        signature = f'int TT_QUESTION_{kind.upper()}(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_{branch} *arm,thinkthen_cobol_{scalar} *scalar,const char *data,uint64_t length)'
+        declarations.append(signature + ';')
+        bodies += [signature + ' {', 'if(!selector || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;',
+                   f'*scalar=(thinkthen_cobol_{scalar}){{data,length}};',
+                   f'*arm=(thinkthen_cobol_{branch}){{.m_{member}=scalar}};',
+                   f'*selector=(thinkthen_cobol_RequestQuestion){{.kind={index},.value=arm}};', 'return 0;', '}']
+    for index, (branch, _) in enumerate(definitions['RequestDefinition']['variants'], 1):
+        for function in ('recognize','relate'):
+            if function not in definitions[branch].get('properties', {}):
+                continue
+            definition_index = next(i for i, (key, _) in enumerate(definitions['RequestQuestion']['variants'], 1) if key == 'RequestQuestion_definition')
+            signature = f'int TT_QUESTION_{function.upper()}(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestion_definition *arm,thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_{branch} *value)'
+            declarations.append(signature + ';')
+            bodies += [signature + ' {', 'if(!selector || !arm || !definition || !value) return THINKTHEN_COBOL_REPRESENTATION;',
+                       f'*definition=(thinkthen_cobol_RequestDefinition){{.kind={index},.value=value}};',
+                       '*arm=(thinkthen_cobol_RequestQuestion_definition){.m_value=definition};',
+                       f'*selector=(thinkthen_cobol_RequestQuestion){{.kind={definition_index},.value=arm}};', 'return 0;', '}']
+    for original_index, (branch, _) in enumerate(definitions['RequestOriginal']['variants'], 1):
+        kind = branch.removeprefix('RequestOriginal_')
+        member = 'text' if kind == 'text' else 'value'
+        scalar_key = branch + '_member_' + member
+        signature = f'int TT_{kind.upper()}_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,thinkthen_cobol_{branch} *arm,thinkthen_cobol_{scalar_key} *scalar,const char *data,uint64_t length)'
+        declarations.append(signature + ';')
+        bodies += [signature + ' {', 'if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;',
+                   f'*scalar=(thinkthen_cobol_{scalar_key}){{data,length}};',
+                   f'*arm=(thinkthen_cobol_{branch}){{.m_{member}=scalar}};',
+                   f'*original=(thinkthen_cobol_RequestOriginal){{.kind={original_index},.value=arm}};',
+                   '*item=(thinkthen_cobol_RequestItem){.m_original=original};', 'return 0;', '}']
+    source_index = next(i for i, (key, _) in enumerate(definitions['RequestInput']['variants'], 1) if key == 'RequestInput_source')
+    source_key = definitions['RequestInput_source']['properties']['source']['$ref'].removeprefix('#/$defs/')
+    list_key = source_key + '_member_paths'
+    scalar_key = list_key + '_item'
+    signature = f'int TT_FILE_INPUT(thinkthen_cobol_RequestInput *selector,thinkthen_cobol_RequestInput_source *arm,thinkthen_cobol_{source_key} *source,thinkthen_cobol_{list_key} *paths,thinkthen_cobol_{scalar_key} *path,const void **slots,const char *data,uint64_t length)'
+    declarations.append(signature + ';')
+    bodies += [signature + ' {', 'if(!selector || !arm || !source || !paths || !path || !slots) return THINKTHEN_COBOL_REPRESENTATION;',
+               f'*path=(thinkthen_cobol_{scalar_key}){{data,length}}; slots[0]=path;',
+               f'*paths=(thinkthen_cobol_{list_key}){{.data=slots,.len=1}};',
+               f'*source=(thinkthen_cobol_{source_key}){{.m_paths=paths}};',
+               '*arm=(thinkthen_cobol_RequestInput_source){.m_source=source};',
+               f'*selector=(thinkthen_cobol_RequestInput){{.kind={source_index},.value=arm}};', 'return 0;', '}']
+    return declarations, '\n'.join(bodies)
