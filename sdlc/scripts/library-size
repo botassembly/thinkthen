@@ -10,7 +10,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / 'conformance/library-surface.json'
-EXTENSIONS = {'.rs', '.py', '.pyi', '.js', '.ts', '.rb', '.R', '.c', '.h', '.cpp',
+EXTENSIONS = {'.rs', '.py', '.pyi', '.js', '.mjs', '.cjs', '.ts', '.mts', '.cts', '.rb', '.R', '.c', '.h', '.cpp',
               '.hpp', '.cc', '.cs', '.go', '.java', '.kt', '.scala', '.swift', '.zig',
               '.php', '.dart', '.ads', '.adb', '.cob', '.cbl', '.cpy', '.m'}
 # These declarations come from real tool invocations rather than the schema generator.
@@ -52,7 +52,7 @@ def classification(path, name, manifest, generated):
     parts = Path(path).parts
     if path in generated or path in TOOL_GENERATED:
         return 'generated'
-    if any(folder in parts for folder in config['test_folders']):
+    if Path(path).name == 'tests.rs' or any(folder in parts for folder in config['test_folders']):
         return 'test'
     return 'handwritten'
 
@@ -106,7 +106,8 @@ def measure(root, manifest, since):
         if kind == 'handwritten' and path in exception.get('paths', []):
             row['exception'] += total
         if name == 'jvm':
-            language = {'.java': 'java', '.kt': 'kotlin', '.scala': 'scala'}.get(Path(path).suffix, 'native')
+            language = {'.java': 'java', '.kt': 'kotlin', '.scala': 'scala', '.py': 'python',
+                        '.rs': 'rust', '.c': 'c', '.h': 'c'}.get(Path(path).suffix, Path(path).suffix.lstrip('.'))
             languages = row['languages'].setdefault(language, dict(handwritten=0, generated=0, test=0))
             languages[kind] += total
     medians = {kind: statistics.median(row[kind] for row in counts.values())
