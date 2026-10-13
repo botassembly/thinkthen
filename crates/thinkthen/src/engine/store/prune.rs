@@ -65,7 +65,7 @@ pub(crate) struct Counts {
     pub(crate) answers: u64,
     /// The file's allocated bytes.
     pub(crate) bytes: u64,
-    /// Old digest-named entries the store ignores until `cache convert`.
+    /// Old digest-named entries; admitted folders have none.
     pub(crate) old_entries: u64,
 }
 
@@ -144,6 +144,7 @@ pub(crate) fn unused(folder: &Path, used: &HashSet<String>) -> Result<Vec<String
     if !metadata.is_dir() {
         return Err(Error::RecordingStorage);
     }
+    super::convert::refuse_old_files(folder)?;
     let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
     let keys: Vec<String> = match (exists(&sqlite)?, exists(&jsonl)?) {
         (true, true) => return Err(Error::StoreAmbiguous),
@@ -177,16 +178,8 @@ pub(crate) fn counts(folder: &Path, private: bool) -> Result<Counts, Error> {
     if private {
         super::require_private(folder)?;
     }
-    let mut old_entries = 0;
-    for item in fs::read_dir(folder).map_err(|_| Error::RecordingStorage)? {
-        let name = item.map_err(|_| Error::RecordingStorage)?.file_name();
-        old_entries += u64::from(name.to_str().is_some_and(super::convert::digest_named));
-    }
     let Some(connection) = open(folder, false)? else {
-        return Ok(Counts {
-            old_entries,
-            ..Counts::default()
-        });
+        return Ok(Counts::default());
     };
     let cancel = Cancel::default();
     let answers: i64 = waiting(BUSY, &cancel, || {
@@ -195,7 +188,7 @@ pub(crate) fn counts(folder: &Path, private: bool) -> Result<Counts, Error> {
     Ok(Counts {
         answers: u64::try_from(answers).map_err(|_| Error::RecordingStorage)?,
         bytes: file_bytes(&connection)?,
-        old_entries,
+        old_entries: 0,
     })
 }
 
@@ -256,32 +249,40 @@ fn open(folder: &Path, writable: bool) -> Result<Option<Connection>, Error> {
     if !metadata.is_dir() {
         return Err(Error::RecordingStorage);
     }
+    super::convert::refuse_old_files(folder)?;
     let path = folder.join(SQLITE);
     if !exists(&path)? {
         return Ok(None);
     }
-    let flags = if writable {
-        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX
-    } else {
-        OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX
-    };
-    let connection = super::opening::open(&path, flags)?;
-    connection.busy_timeout(Duration::ZERO).map_err(storage)?;
+    let connection = super::read_only(&path)?;
     let cancel = Cancel::default();
-    if writable {
-        run_sql(
-            &cancel,
-            &connection,
-            "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON;",
-        )?;
+    current(&connection, &cancel)?;
+    if !writable {
+        return Ok(Some(connection));
     }
-    let version: i64 = waiting(BUSY, &cancel, || {
+    drop(connection);
+    let connection = super::opening::open(
+        &path,
+        OpenFlags::SQLITE_OPEN_READ_WRITE | OpenFlags::SQLITE_OPEN_NO_MUTEX,
+    )?;
+    connection.busy_timeout(Duration::ZERO).map_err(storage)?;
+    current(&connection, &cancel)?;
+    run_sql(
+        &cancel,
+        &connection,
+        "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON;",
+    )?;
+    Ok(Some(connection))
+}
+
+fn current(connection: &Connection, cancel: &Cancel) -> Result<(), Error> {
+    let version: i64 = waiting(BUSY, cancel, || {
         connection.query_row("PRAGMA user_version", [], |row| row.get(0))
     })?;
-    if !matches!(version, 1 | 2) {
-        return Err(Error::RecordingStorage);
+    if version != 2 {
+        return Err(Error::StoreVersion(SQLITE.to_owned()));
     }
-    Ok(Some(connection))
+    Ok(())
 }
 
 fn run_sql(cancel: &Cancel, connection: &Connection, sql: &str) -> Result<(), Error> {

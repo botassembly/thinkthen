@@ -262,7 +262,7 @@ fn prune_shrinks_the_store_file_and_takes_the_oldest_answer_first() {
 }
 
 #[test]
-fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
+fn older_than_selects_by_taken_at_and_keeps_unrelated_files() {
     let folder = folder("prune-older-than");
     let filled = fill(
         &folder,
@@ -273,12 +273,26 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
         ],
     );
     taken_at(&folder, &[(&filled[0], 0)]);
-    // Prune reads only the store; an old digest-named entry, a stray file
-    // and a directory are the owner's, and stay byte for byte.
-    let old = format!("{}.json", "0".repeat(64));
-    fs::write(folder.join(&old), b"an old entry").expect("old entry");
     fs::write(folder.join("sentinel"), b"keep me").expect("sentinel");
-    fs::create_dir(folder.join(format!("{}.json", "f".repeat(64)))).expect("directory");
+    // A current version can live in WAL while the database header remains old.
+    let writer = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("writer");
+    writer.execute_batch("PRAGMA user_version = 1; PRAGMA journal_mode = WAL; PRAGMA user_version = 2; BEGIN IMMEDIATE;").expect("current WAL");
+    let preview = prune(&folder, &["--older-than", "1d", "--dry-run"]);
+    assert_eq!(preview.status.code(), Some(0), "{preview:?}");
+    assert!(crate::harness::printed(&preview).starts_with("selected 1 answers"));
+    let mut expected = filled.clone();
+    expected.sort();
+    assert_eq!(held(&folder), expected);
+    let status = run(
+        &["status", "--json"],
+        &[("THINKTHEN_CACHE", folder.to_str().expect("folder"))],
+    )
+    .expect("WAL status");
+    assert_eq!(status.status.code(), Some(0), "{status:?}");
+    let status: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
+    assert_eq!(status["cache"]["entries"], 2);
+    drop(writer);
+
     let before = store_bytes(&folder);
     let output = prune(&folder, &["--older-than", "1d"]);
     assert_eq!(output.status.code(), Some(0));
@@ -288,7 +302,6 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
         removed(1, 1, before, store_bytes(&folder))
     );
     assert_eq!(held(&folder), [filled[1].clone()]);
-    assert_eq!(fs::read(folder.join(old)).expect("old"), b"an old entry");
     assert_eq!(fs::read(folder.join("sentinel")).expect("kept"), b"keep me");
     // A multi-byte last character is a typo, not a panic.
     let typo = prune(&folder, &["--older-than", "5\u{e9}"]);
@@ -329,5 +342,99 @@ fn an_unreadable_folder_fails_prune_before_any_change() {
             fs::read(folder.join("thinkthen.sqlite")).expect("after"),
             before
         );
+    }
+}
+
+#[test]
+fn maintenance_refuses_old_files_without_sends_or_changes() {
+    for old in ["sqlite", "wal", "digest"] {
+        let folder = folder(&format!("maintenance-old-{old}"));
+        fill(
+            &folder,
+            EVIDENCE,
+            &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+        );
+        let database = folder.join("thinkthen.sqlite");
+        let mut held = None;
+        let file = if old != "digest" {
+            let connection = rusqlite::Connection::open(&database).expect("store");
+            connection
+                .execute_batch("PRAGMA user_version = 1;")
+                .expect("old store");
+            if old == "wal" {
+                connection
+                    .execute_batch(
+                        "PRAGMA journal_mode = WAL; PRAGMA user_version = 1; BEGIN IMMEDIATE;",
+                    )
+                    .expect("held WAL");
+                held = Some(connection);
+            }
+            "thinkthen.sqlite".to_owned()
+        } else {
+            let file = format!("{}.json", "a".repeat(64));
+            fs::write(folder.join(&file), b"PRIVATE_OLD_FILE").expect("old file");
+            file
+        };
+        let used = folder.with_extension("used");
+        fs::write(&used, "").expect("used list");
+        let snapshot = || {
+            let mut names: Vec<_> = fs::read_dir(&folder)
+                .expect("folder")
+                .map(|item| item.expect("entry").file_name())
+                .collect();
+            names.sort();
+            let contents: Vec<_> = [&database, &folder.join(&file)]
+                .into_iter()
+                .map(|path| {
+                    (
+                        fs::read(path).expect("bytes"),
+                        fs::metadata(path)
+                            .expect("metadata")
+                            .modified()
+                            .expect("mtime"),
+                    )
+                })
+                .collect();
+            (names, contents)
+        };
+        let before = snapshot();
+        let listener = Listener::serving(vec![]).expect("listener");
+        let path = folder.to_str().expect("folder");
+        let used = used.to_str().expect("used");
+        for (command, extra) in [
+            ("prune", vec!["--max-size", "1"]),
+            ("prune", vec!["--max-size", "1", "--dry-run"]),
+            ("unused", vec!["--used", used]),
+            ("status", vec!["--json"]),
+        ] {
+            let mut arguments = if command == "status" {
+                vec![command]
+            } else {
+                vec!["cache", command, path]
+            };
+            arguments.extend(extra);
+            let output = run(
+                &arguments,
+                &[
+                    ("THINKTHEN_CACHE", path),
+                    ("THINKTHEN_BASE_URL", listener.base()),
+                    ("THINKTHEN_API_KEY", "test-key"),
+                ],
+            )
+            .expect("maintenance");
+            let code = output.status.code();
+            assert_eq!(code, Some(5), "{old} {arguments:?} {output:?}");
+            assert!(output.stdout.is_empty());
+            assert_eq!(
+                crate::harness::said(&output),
+                format!("thinkthen: {file} uses an old store format; delete it\n")
+            );
+            assert!(
+                snapshot() == before,
+                "{old} {arguments:?} changed the folder"
+            );
+            assert!(listener.requests().is_empty());
+        }
+        drop(held);
     }
 }
