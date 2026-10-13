@@ -83,3 +83,36 @@ pub unsafe extern "C" fn thinkthen_error_code(
     let held = unsafe { super::held(engine) };
     super::guard(held, super::DEFECT, || failures::code(held))
 }
+
+/// Free an engine; null is ignored.
+///
+/// # Safety
+///
+/// `engine` is null or a live engine no other call is using.
+/// Free an engine. NULL is accepted and ignored. Free it only after every
+/// call on it has returned.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut crate::EngineHandle) {
+    super::guard(None, (), || {
+        if !engine.is_null() {
+            // SAFETY: the owner came from this allocator and all borrowers have finished.
+            drop(unsafe { Box::from_raw(engine) });
+        }
+    })
+}
+
+/// Free a string the interface returned; null is ignored.
+///
+/// # Safety
+///
+/// `text` is null or a string the interface returned and has not freed.
+/// Free the owned JSON returned by thinkthen_request_plan_json. NULL is accepted.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_free_string(text: *mut std::ffi::c_char) {
+    super::guard(None, (), || {
+        if !text.is_null() {
+            // SAFETY: the owner came from this allocator and all borrowers have finished.
+            drop(unsafe { std::ffi::CString::from_raw(text) });
+        }
+    })
+}

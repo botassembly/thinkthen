@@ -10,7 +10,7 @@
 #[path = "ffi/operations_generated.rs"]
 mod operations;
 pub use operations::*;
-use std::ffi::{CStr, CString, c_char};
+use std::ffi::{CStr, c_char};
 
 /// Canonical counted descriptors and borrowed carrier layouts.
 pub mod carriers;
@@ -149,37 +149,4 @@ pub unsafe extern "C" fn thinkthen_engine_new_with(
             Box::into_raw(Box::new(EngineHandle(Held::new(engine))))
         })
     })
-}
-
-/// Free an engine; null is ignored.
-///
-/// # Safety
-///
-/// `engine` is null or a live engine no other call is using.
-/// Free an engine. NULL is accepted and ignored. Free it only after every
-/// call on it has returned.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_free(engine: *mut EngineHandle) {
-    guard(None, (), || {
-        if !engine.is_null() {
-            // SAFETY: `thinkthen_engine_new` boxed it, and no call uses it.
-            drop(unsafe { Box::from_raw(engine) });
-        }
-    });
-}
-
-/// Free a string the interface returned; null is ignored.
-///
-/// # Safety
-///
-/// `text` is null or a string the interface returned and has not freed.
-/// Free the owned JSON returned by thinkthen_request_plan_json. NULL is accepted.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_free_string(text: *mut c_char) {
-    guard(None, (), || {
-        if !text.is_null() {
-            // SAFETY: the interface made it with `CString::into_raw`, and it is freed once.
-            drop(unsafe { CString::from_raw(text) });
-        }
-    });
 }

@@ -28,6 +28,7 @@ class Operation:
     result: str = 'std::ffi::c_int'
     fallback: str | None = None
     native_unsafe: bool = False
+    foreign_unsafe: bool = True
 
 
 OPERATIONS = (
@@ -160,6 +161,36 @@ OPERATIONS = (
             Argument('surface_name', 'thinkthen_complete_utf8_v1', 'input', None),
             Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
         ), 'typed_session', ('engine', 'function', 'arguments', 'surface_name'), ('out',), 'session_native_call', native_unsafe=True),
+
+    Operation('session', 'thinkthen_session_cancel', '/// Signal cancellation without waiting for a provider or final facts. NULL is ignored.\n/// # Safety\n/// session is NULL or live throughout the call.\n',
+        (
+            Argument('session', '*mut SessionHandle', 'nullable-borrow'),
+        ), 'cancel_session', ('session',), (), 'session_guard', '()', '()', native_unsafe=True, foreign_unsafe=True),
+    Operation('session', 'thinkthen_session_free', '/// Close the output receiver and release this owner without joining native work.\n/// NULL is ignored. Free once after all concurrent operations return.\n/// # Safety\n/// session is NULL or an unfreed owner no operation is using.\n',
+        (
+            Argument('session', '*mut SessionHandle', 'consume-nullable'),
+        ), 'release_box', ('session',), (), 'session_guard', '()', '()', native_unsafe=False, foreign_unsafe=True),
+    Operation('session', 'thinkthen_session_result_free', '/// Release an independent packet owner. NULL is ignored.\n/// # Safety\n/// result is NULL or an unfreed owner no operation or borrowed view is using.\n',
+        (
+            Argument('result', '*mut SessionResultHandle', 'consume-nullable'),
+        ), 'release_box', ('result',), (), 'session_guard', '()', '()', native_unsafe=False, foreign_unsafe=True),
+    Operation('session', 'thinkthen_session_error_message', '/// Borrow a safe UTF-8 immediate diagnostic, never NULL. Success preserves\n/// it; the next immediate session failure or thread exit ends its validity.\n/// Execution failures arrive as terminal packets and never change this slot.\n',
+        (
+        ), 'failures::session_message', (), (), 'session_guard', '*const c_char', 'c"defect: a session operation failed".as_ptr()', native_unsafe=False, foreign_unsafe=False),
+    Operation('session', 'thinkthen_session_error_retryable', "/// Read the retry signal of the calling thread's last immediate session failure.\n/// Returns zero before a failure. Success and engine construction preserve it.\n",
+        (
+        ), 'failures::session_retryable', (), (), 'session_guard', 'std::ffi::c_int', '0', native_unsafe=False, foreign_unsafe=False),
+    Operation('session', 'thinkthen_session_error_facts_json', '/// Borrow the native facts JSON of the last immediate session failure, or NULL.\n/// The calling thread owns these bytes until its next immediate session failure\n/// or thread exit. Success and engine construction preserve the same pointer.\n',
+        (
+        ), 'failures::session_facts', (), (), 'session_guard', '*const c_char', 'std::ptr::null()', native_unsafe=False, foreign_unsafe=False),
+    Operation('engine', 'thinkthen_engine_free', '/// Free an engine; null is ignored.\n///\n/// # Safety\n///\n/// `engine` is null or a live engine no other call is using.\n/// Free an engine. NULL is accepted and ignored. Free it only after every\n/// call on it has returned.\n',
+        (
+            Argument('engine', '*mut EngineHandle', 'consume-nullable'),
+        ), 'release_box', ('engine',), (), 'constructor_guard', '()', '()', native_unsafe=False, foreign_unsafe=True),
+    Operation('engine', 'thinkthen_free_string', '/// Free a string the interface returned; null is ignored.\n///\n/// # Safety\n///\n/// `text` is null or a string the interface returned and has not freed.\n/// Free the owned JSON returned by thinkthen_request_plan_json. NULL is accepted.\n',
+        (
+            Argument('text', '*mut c_char', 'consume-nullable'),
+        ), 'release_cstring', ('text',), (), 'constructor_guard', '()', '()', native_unsafe=False, foreign_unsafe=True),
 
 )
 

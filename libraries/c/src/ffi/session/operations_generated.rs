@@ -468,3 +468,69 @@ pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
         Ok(())
     })
 }
+
+/// Signal cancellation without waiting for a provider or final facts. NULL is ignored.
+/// # Safety
+/// session is NULL or live throughout the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_cancel(session: *mut crate::session::SessionHandle) {
+    failures::session_guard((), || {
+        // SAFETY: the caller retains the nullable owner throughout the helper.
+        unsafe { super::cancel_session(session) }
+    })
+}
+
+/// Close the output receiver and release this owner without joining native work.
+/// NULL is ignored. Free once after all concurrent operations return.
+/// # Safety
+/// session is NULL or an unfreed owner no operation is using.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_free(session: *mut crate::session::SessionHandle) {
+    failures::session_guard((), || {
+        if !session.is_null() {
+            // SAFETY: the owner came from this allocator and all borrowers have finished.
+            drop(unsafe { Box::from_raw(session) });
+        }
+    })
+}
+
+/// Release an independent packet owner. NULL is ignored.
+/// # Safety
+/// result is NULL or an unfreed owner no operation or borrowed view is using.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_result_free(
+    result: *mut crate::session::SessionResultHandle,
+) {
+    failures::session_guard((), || {
+        if !result.is_null() {
+            // SAFETY: the owner came from this allocator and all borrowers have finished.
+            drop(unsafe { Box::from_raw(result) });
+        }
+    })
+}
+
+/// Borrow a safe UTF-8 immediate diagnostic, never NULL. Success preserves
+/// it; the next immediate session failure or thread exit ends its validity.
+/// Execution failures arrive as terminal packets and never change this slot.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_message() -> *const std::ffi::c_char {
+    failures::session_guard(
+        c"defect: a session operation failed".as_ptr(),
+        failures::session_message,
+    )
+}
+
+/// Read the retry signal of the calling thread's last immediate session failure.
+/// Returns zero before a failure. Success and engine construction preserve it.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_retryable() -> std::ffi::c_int {
+    failures::session_guard(0, failures::session_retryable)
+}
+
+/// Borrow the native facts JSON of the last immediate session failure, or NULL.
+/// The calling thread owns these bytes until its next immediate session failure
+/// or thread exit. Success and engine construction preserve the same pointer.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_facts_json() -> *const std::ffi::c_char {
+    failures::session_guard(std::ptr::null(), failures::session_facts)
+}

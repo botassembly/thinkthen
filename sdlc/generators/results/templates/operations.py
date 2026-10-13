@@ -19,7 +19,7 @@ def render(operations, statuses=(), projections=()):
     lines = ['//! Generated native operation transport. Do not edit.',
              '#![allow(unsafe_code, reason = "foreign slots follow the operation ownership contract")]',
              '#![deny(unsafe_op_in_unsafe_fn)]', 'use crate::failures;']
-    if any(operation.diagnostic != 'engine_guard' for operation in operations):
+    if any(operation.diagnostic in ('session_call', 'session_native_call') for operation in operations):
         lines.append('use thinkthen::ErrorKind;')
     for name, value, documentation in statuses:
         lines.extend(['/// ' + documentation, 'pub const ' + name + ': u32 = ' + str(value) + ';'])
@@ -35,15 +35,40 @@ def render(operations, statuses=(), projections=()):
         if not set(operation.outputs) <= names:
             raise ValueError('operation output has no ABI argument')
         lines.extend(operation.documentation.rstrip().splitlines())
-        lines.extend(['#[unsafe(no_mangle)]', 'pub unsafe extern "C" fn ' + operation.name + '('])
+        lines.extend(['#[unsafe(no_mangle)]', 'pub ' + ('unsafe ' if operation.foreign_unsafe else '') + 'extern "C" fn ' + operation.name + '('])
         lines.extend('    ' + argument.name + ': ' + abi_type(argument.abi) + ',' for argument in operation.arguments)
-        lines.append(') -> ' + abi_type(operation.result) + ' {')
+        lines.append(')' + ('' if operation.result == '()' else ' -> ' + abi_type(operation.result)) + ' {')
         if operation.diagnostic == 'engine_guard':
             if operation.fallback not in ('NO_MESSAGE.as_ptr()', 'std::ptr::null()', '0', 'DEFECT'):
                 raise ValueError('unknown engine diagnostic fallback')
             lines.extend(['        // SAFETY: the caller retains its nullable engine owner.',
                           '        let held = unsafe { super::held(engine) };',
                           '        super::guard(held, ' + ('super::' + operation.fallback if operation.fallback in ('NO_MESSAGE.as_ptr()', 'DEFECT') else operation.fallback) + ', || failures::' + operation.native + '(held))', '}', ''])
+            continue
+        if operation.diagnostic in ('session_guard', 'constructor_guard'):
+            if operation.fallback not in ('()', '0', 'std::ptr::null()', 'c"defect: a session operation failed".as_ptr()'):
+                raise ValueError('unknown ownership or diagnostic fallback')
+            guard = 'failures::session_guard(' if operation.diagnostic == 'session_guard' else 'super::guard(None, '
+            if not operation.arguments and operation.native.startswith('failures::'):
+                lines.extend(['    ' + guard + operation.fallback + ', ' + operation.native + ')', '}', ''])
+                continue
+            lines.append('    ' + guard + operation.fallback + ', || {')
+            if operation.native in ('release_box', 'release_cstring'):
+                if len(operation.arguments) != 1 or operation.arguments[0].ownership != 'consume-nullable':
+                    raise ValueError('release requires one transferred nullable owner')
+                owner = operation.arguments[0].name
+                allocator = 'Box' if operation.native == 'release_box' else 'std::ffi::CString'
+                lines.extend(['        if !' + owner + '.is_null() {',
+                    '            // SAFETY: the owner came from this allocator and all borrowers have finished.',
+                    '            drop(unsafe { ' + allocator + '::from_raw(' + owner + ') });', '        }'])
+            else:
+                native = operation.native if operation.native.startswith('failures::') else 'super::' + operation.native
+                call = native + '(' + ', '.join(operation.inputs) + ')'
+                if operation.native_unsafe:
+                    lines.append('        // SAFETY: the caller retains the nullable owner throughout the helper.')
+                    call = 'unsafe { ' + call + ' }'
+                lines.append('        ' + call)
+            lines.extend(['    })', '}', ''])
             continue
         lines.append('    failures::' + operation.diagnostic + '(|| {')
         usage = 'ErrorKind::Usage' + ('.into()' if operation.diagnostic == 'session_native_call' else '')
