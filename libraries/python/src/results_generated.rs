@@ -498,6 +498,7 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         "completepairOdds" => object(py, "NativePairOdds", "completepairOdds", value),
         "completepieceOdds" => object(py, "NativePieceOdds", "completepieceOdds", value),
         "completeplace" => object(py, "NativePlace", "completeplace", value),
+        "completeplan" => object(py, "NativePlan", "completeplan", value),
         "completeprofileWarning" => {
             object(py, "NativeProfileWarning", "completeprofileWarning", value)
         }
@@ -986,6 +987,7 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             value,
         ),
         "completethreshold" => plain(py, value),
+        "completetokenBand" => object(py, "NativeTokenBand", "completetokenBand", value),
         "completetokenUsage" => object(py, "NativeTokenUsage", "completetokenUsage", value),
         "completevalue" => plain(py, value),
         _ => Err(crate::defect(py, "unknown generated Python result type")),
@@ -1767,6 +1769,15 @@ pub(crate) fn field(
         ("completepieceOdds", "tags") => mapping(py, value, |value| plain(py, value)),
         ("completeplace", "end") => plain(py, value),
         ("completeplace", "start") => plain(py, value),
+        ("completeplan", "estimated_bytes") => plain(py, value),
+        ("completeplan", "estimated_input_tokens") => convert(py, "completetokenBand", value),
+        ("completeplan", "first_body_utf8") => plain(py, value),
+        ("completeplan", "largest_request_bytes") => plain(py, value),
+        ("completeplan", "largest_request_estimated_input_tokens") => plain(py, value),
+        ("completeplan", "records") => plain(py, value),
+        ("completeplan", "requests") => plain(py, value),
+        ("completeplan", "token_estimate_method") => plain(py, value),
+        ("completeplan", "upper_bound") => plain(py, value),
         ("completeprofileWarning", "running") => plain(py, value),
         ("completeprofileWarning", "tuned_for") => plain(py, value),
         ("completequestionDocument_choose", "batch") => {
@@ -2360,6 +2371,8 @@ pub(crate) fn field(
         ("completesourceRelationEndpoint", "name") => plain(py, value),
         ("completesourceRelationEndpoint", "ordinal") => plain(py, value),
         ("completesourceRelationEndpoint", "record") => plain(py, value),
+        ("completetokenBand", "lower") => plain(py, value),
+        ("completetokenBand", "upper") => plain(py, value),
         ("completetokenUsage", "input_tokens") => plain(py, value),
         ("completetokenUsage", "output_tokens") => plain(py, value),
         _ => plain(py, value),

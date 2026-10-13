@@ -1,6 +1,6 @@
 """Named calls keep credentials private, native limits and actual settlement."""
 import pytest
-from conftest import child_env, run, FAKE, REPO
+from conftest import child_env, clean_env, run, FAKE, REPO
 
 @pytest.mark.parametrize('arm', ['arm/401', 'arm/503', 'arm/refuse'])
 def test_named_failure_messages_and_result_reprs_do_not_expose_credentials(backend,tmp_path,arm):
@@ -148,4 +148,31 @@ def test_native_typed_controls_preview_and_null_refusals_send_nothing(backend, t
         print('typed controls')
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['typed controls']
+    assert backend.count() == 0
+
+
+def test_native_plan_exposes_generated_estimates_without_a_key_or_send(backend, tmp_path):
+    output = run('''
+        import pickle
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        plan = engine.plan('decide', 'Late?', ['note', 'later'], batch=1)
+        assert isinstance(plan, tt.Plan)
+        assert plan.records == plan.requests == 2
+        assert plan.estimated_bytes > plan.largest_request_bytes > 0
+        assert plan.largest_request_estimated_input_tokens > 0
+        assert plan.estimated_input_tokens.lower > 0
+        assert plan.estimated_input_tokens.upper >= plan.estimated_input_tokens.lower
+        assert plan.token_estimate_method
+        assert plan.upper_bound is False
+        assert isinstance(plan.first_body_utf8, str)
+        assert 'first_body' not in plan
+        assert 'note' not in repr(plan)
+        assert pickle.loads(pickle.dumps(plan)) == plan
+        empty = engine.plan('decide', 'Late?', [], batch=1)
+        assert empty.records == empty.requests == empty.estimated_bytes == 0
+        assert empty.first_body_utf8 is None
+        print('native plan')
+    ''', clean_env(home=tmp_path, THINKTHEN_BASE_URL=backend.base(), THINKTHEN_CACHE=str(tmp_path / 'cache')))
+    assert output.splitlines() == ['native plan']
     assert backend.count() == 0

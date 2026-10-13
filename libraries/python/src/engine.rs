@@ -40,14 +40,14 @@ impl Engine {
         crate::request::Session::start(py, &self.0, request, selected)
     }
 
-    fn _plan<'py>(
+    fn _plan(
         &self,
-        py: Python<'py>,
+        py: Python<'_>,
         function: &str,
         question: &Bound<'_, PyAny>,
         source: &Bound<'_, PyAny>,
         options: &Bound<'_, PyAny>,
-    ) -> PyResult<Bound<'py, PyDict>> {
+    ) -> PyResult<Py<PyAny>> {
         guard(py, || {
             let admitted = crate::inputs::request(py, function, question, source, options, false)?
                 .admit()
@@ -58,14 +58,9 @@ impl Engine {
                         .plan_request(&admitted, RequestEnvironment::default())
                 })
                 .map_err(|e| raised(py, &e))?;
-            let value = PyDict::new(py);
-            value.set_item("records", plan.records())?;
-            value.set_item("requests", plan.requests())?;
-            value.set_item("estimated_bytes", plan.estimated_bytes())?;
-            value.set_item("estimated_input_tokens", plan.estimated_input_tokens())?;
-            value.set_item("upper_bound", plan.upper_bound())?;
-            value.set_item("first_body", plan.first_body())?;
-            Ok(value)
+            let value = serde_json::to_value(plan)
+                .map_err(|_| crate::defect(py, "native plan could not be serialized"))?;
+            crate::results_generated::convert(py, "completeplan", &value)
         })
     }
 

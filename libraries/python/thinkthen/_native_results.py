@@ -311,6 +311,10 @@ class NativePlace(_NativeResult):
     __slots__ = ()
 
 
+class NativePlan(_NativeResult):
+    __slots__ = ()
+
+
 class NativeProfileWarning(_NativeResult):
     __slots__ = ()
 
@@ -516,6 +520,10 @@ class NativeSessionRelationEdge(_NativeResult):
 
 
 class NativeSourceRelationEndpoint(_NativeResult):
+    __slots__ = ()
+
+
+class NativeTokenBand(_NativeResult):
     __slots__ = ()
 
 

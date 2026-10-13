@@ -1,7 +1,7 @@
 """Python result carriers and native conversion from the shared result graph."""
 import json
 
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 
 
 def name(key):

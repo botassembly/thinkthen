@@ -30,3 +30,11 @@ def controls() -> None:
 async def awaiting(engine: tt.Engine) -> None:
     done: tt.Result[object] = await engine.asyncio.decide("Late?", "text", batch=1)
     await engine.asyncio.recognize("Ada", mode="boundary_only", kinds=["person"])
+
+
+def preview(engine: tt.Engine) -> None:
+    plan: tt.Plan = engine.plan("decide", "Late?", ["note"], batch=1)
+    records: int = plan.records
+    largest: int = plan.largest_request_bytes
+    estimate: int = plan.estimated_input_tokens.lower
+    text: str | None = plan.first_body_utf8
