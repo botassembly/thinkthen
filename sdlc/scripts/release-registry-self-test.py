@@ -83,6 +83,7 @@ def tree(root, plant):
     for path in TREE:
         (root / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / path, root / path)
+    shutil.copytree(REPO / "libraries/jvm/examples", root / "libraries/jvm/examples")
     (root / "sdlc/scripts").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(REPO / "sdlc/scripts/release-registry.py", root / "sdlc/scripts/release-registry.py")
     v = version()
@@ -100,6 +101,7 @@ def tree(root, plant):
     spec = importlib.util.spec_from_file_location('inventory', REPO / 'sdlc/scripts/package-inventory.py')
     inventory = importlib.util.module_from_spec(spec); spec.loader.exec_module(inventory)
     definition = inventory.jvm_inventory()
+    files['jvm'].update({name: (REPO / 'libraries/jvm' / name).read_bytes() for name in definition['examples']})
     for classifier, asset in definition['native'].items():
         library = asset['files'][0].rsplit('/', 1)[-1]
         native = ('native-' + asset['target']).encode()
@@ -118,7 +120,7 @@ def tree(root, plant):
         (platform / name).write_text("0" * 64 + (platform / name).read_text()[64:])
     git = ["git", "-c", "user.name=t", "-c", "user.email=t@invalid", "-c", "commit.gpgsign=false"]
     subprocess.run(["git", "init", "-q", str(root)], check=True)
-    subprocess.run([*git, "-C", str(root), "add", "-A", "--", *TREE, "sdlc"], check=True)
+    subprocess.run([*git, "-C", str(root), "add", "-A", "--", *TREE, "libraries/jvm/examples", "sdlc"], check=True)
     subprocess.run([*git, "-C", str(root), "commit", "-qm", "fixture"], check=True)
     return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
@@ -393,6 +395,8 @@ def main():
          "nupkg identity differs"),
         ("nupkg-version", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", "9.9.9")}),
          "nupkg identity differs"),
+        ("missing-jvm-example", lambda r, f: f["jvm"].pop(next(name for name in f["jvm"] if name.startswith("examples/"))),
+         "JVM archive lacks " + next(path.relative_to(REPO / 'libraries/jvm').as_posix() for path in sorted((REPO / 'libraries/jvm/examples').rglob('*')) if path.is_file())),
         ("pom-group", lambda r, f: f["jvm"].update({"pom.xml": f["jvm"]["pom.xml"].replace(b"io.github.botassembly", b"io.github.other")}),
          "POM identity differs"),
         ("pom-scm", lambda r, f: f["jvm"].update({"pom.xml": f["jvm"]["pom.xml"].replace(b"<scm>", b"<x>").replace(b"</scm>", b"</x>")}),

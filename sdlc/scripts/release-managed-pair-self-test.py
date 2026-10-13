@@ -104,6 +104,8 @@ def fixture(base):
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
         "libraries/jvm/pom.xml": (HELPER.parents[2] / "libraries/jvm/pom.xml").read_bytes(),
     }
+    source.update({"libraries/jvm/" + path.relative_to(HELPER.parents[2] / "libraries/jvm").as_posix(): path.read_bytes()
+                   for path in (HELPER.parents[2] / "libraries/jvm/examples").rglob("*") if path.is_file()})
     write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
     c_name = f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
@@ -364,6 +366,14 @@ def main():
     case("changed inner JAR and outer hash", jar_attack)
     case("changed POM and outer hash", lambda base, source: mutate_outer(
         base, "jvm", lambda files: files.__setitem__("pom.xml", b"<project/>")))
+    examples = sorted(path.relative_to(HELPER.parents[2] / "libraries/jvm").as_posix()
+                      for path in (HELPER.parents[2] / "libraries/jvm/examples").rglob("*") if path.is_file())
+    case("missing JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.pop(examples[0])))
+    case("stale JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.__setitem__(examples[0], b"stale")))
+    case("extra JVM example", lambda base, source: mutate_outer(
+        base, "jvm", lambda files: files.__setitem__("examples/extra.txt", b"extra")))
     case("missing wrapper member", lambda base, source: mutate_outer(
         base, "jvm", lambda files: files.pop("thinkthen-scala.jar")))
     case("extra wrapper member", lambda base, source: mutate_outer(
