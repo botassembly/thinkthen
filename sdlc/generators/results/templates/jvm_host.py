@@ -16,9 +16,39 @@ def named_calls(definitions):
     return lines + ['}']
 
 
+def valid_shape(source, definitions, expression, depth=0):
+    """Validate required answer fields without restating the Rust shapes."""
+    from csharp import enum_values, shape
+    source = shape(source)
+    if '$ref' in source:
+        return valid_shape(definitions[source['$ref'].split('/')[-1]], definitions, expression, depth)
+    values = enum_values(source)
+    if values:
+        return '(' + ' || '.join(json.dumps(value) + '.equals(' + expression + ')' for value in values) + ')'
+    kind = source.get('type')
+    if kind == 'object':
+        var = 'object' + str(depth)
+        checks = [f'{expression} instanceof Map<?,?> {var}']
+        checks += [valid_shape(source['properties'][field], definitions, f'{var}.get({json.dumps(field)})', depth + 1)
+                   for field in source.get('required', [])]
+        return '(' + ' && '.join(checks) + ')'
+    if kind == 'array':
+        var = 'list' + str(depth)
+        item = 'element' + str(depth)
+        child = valid_shape(source['items'], definitions, item, depth + 1)
+        return f'({expression} instanceof List<?> {var} && {var}.stream().allMatch({item} -> {child}))'
+    carrier = {'boolean': 'Boolean', 'string': 'String', 'number': 'BigDecimal', 'integer': 'BigDecimal'}.get(kind)
+    return f'{expression} instanceof {carrier}' if carrier else f'{expression} != null'
+
+
 def answers(definitions):
     from jvm import conversion
     route, guards = judgment_route(definitions)
+    from csharp import shape
+    terminal_shape = next(source for source in definitions.values()
+                          if source.get('properties', {}).get('kind', {}).get('const') == 'terminal')
+    call_error = definitions[shape(terminal_shape['properties']['failure'])['$ref'].split('/')[-1]]
+    error_check = valid_shape(call_error['properties']['error'], definitions, 'failure.get("error")')
     path = lambda parts: 'new String[]{' + ', '.join(json.dumps(part) for part in parts) + '}'
     guard = ' && '.join(f'{json.dumps(value)}.equals(path(packet, {path(parts)}))' for parts, value in guards)
     lines = ['public static final class CallAnswers {', 'private CallAnswers() {}',
@@ -32,7 +62,7 @@ def answers(definitions):
              'Map<String,Object> terminal = Values.object(call.terminal().json());',
              'if (!"terminal".equals(terminal.get("kind"))) throw new CardinalityFailure(call);',
              'if (terminal.containsKey("failure")) {',
-             'if (!(terminal.get("failure") instanceof Map<?,?> failure) || !(failure.get("error") instanceof Map<?,?> error) || !(error.get("message") instanceof String)) throw new CardinalityFailure(call);',
+             f'if (!(terminal.get("failure") instanceof Map<?,?> failure) || !{error_check}) throw new CardinalityFailure(call);',
              'throw new Engine.SessionFailure(call);', '}', '}',
              'private static Object scalar(Engine.OwnedCall call, String function, String kind, boolean nullable) {',
              'terminal(call); Object answer = null; int count = 0;',
@@ -65,6 +95,7 @@ def answers(definitions):
         lines += [f'public static {typ} {function}(Engine.OwnedCall call) {{',
                   f'Object value = scalar(call, {json.dumps(function)}, {json.dumps(kind)}, {str(nil).lower()});',
                   ('if (value == null) return null;' if nil else ''),
+                  f'if (!({valid_shape(source, definitions, "value")})) throw new CardinalityFailure(call);',
                   f'return {decode};', '}']
     for function, _, payload in aggregate_answers(definitions):
         if function in scalar_functions: continue
@@ -76,3 +107,22 @@ def answers(definitions):
                   f'Object value = collection(call, {json.dumps(function)}, {str(array).lower()}, {str(rows).lower()});',
                   f'return {decode};', '}']
     return '\n'.join(line for line in lines + ['}'] if line)
+
+
+def facade_calls(definitions, language):
+    from csharp import enum_values
+    lines = ['// Generated from the shared Rust request graph. Do not edit.',
+             f'package thinkthen.{language}', 'import thinkthen.Engine', 'import thinkthen.Inputs',
+             'import java.util.concurrent.CompletableFuture']
+    if language == 'kotlin':
+        lines += ['abstract class KotlinNamedCalls(protected val namedEngine: Engine) {',
+                  'protected abstract suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): Engine.OwnedCall']
+        for function in enum_values(definitions['RequestFunction']):
+            lines.append(f'suspend fun {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): Engine.OwnedCall = await {{ namedEngine.{function}(question, input, options) }}')
+    else:
+        lines += ['abstract class ScalaNamedCalls(protected val namedEngine: Engine) {',
+                  'protected def run(native: CompletableFuture[Engine.OwnedCall]): Call']
+        for function in enum_values(definitions['RequestFunction']):
+            lines += [f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call = {function}(question, input, null)',
+                      f'final def {function}(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call = run(namedEngine.{function}(question, input, options))']
+    return lines + ['}']

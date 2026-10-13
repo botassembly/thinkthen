@@ -4148,7 +4148,8 @@ public final class Results {
             if (!"terminal".equals(terminal.get("kind"))) throw new CardinalityFailure(call);
             if (terminal.containsKey("failure")) {
                 if (!(terminal.get("failure") instanceof Map<?,?> failure) || !(failure.get("error") instanceof Map<?,
-                ?> error) || !(error.get("message") instanceof String)) throw new CardinalityFailure(call);
+                ?> object0 && ("usage".equals(object0.get("kind")) || "backend".equals(object0.get("kind")) || "local".equals(object0.get("kind")) || "cancelled".equals(object0.get("kind")) || "deadline".equals(object0.get("kind")) || "defect".equals(object0.get("kind"))) && object0.get("message") instanceof String && object0.get("retryable") instanceof Boolean && (object0.get("stopped") instanceof Map<?,
+                ?> object1 && ("usage".equals(object1.get("cause")) || "local".equals(object1.get("cause")) || "no_key".equals(object1.get("cause")) || "transport".equals(object1.get("cause")) || "status".equals(object1.get("cause")) || "too_large".equals(object1.get("cause")) || "reply".equals(object1.get("cause")) || "backend".equals(object1.get("cause")) || "cancelled".equals(object1.get("cause")) || "deadline".equals(object1.get("cause")) || "defect".equals(object1.get("cause"))) && object1.get("retryable") instanceof Boolean))) throw new CardinalityFailure(call);
                 throw new Engine.SessionFailure(call);
             }
         }
@@ -4207,19 +4208,23 @@ public final class Results {
         public static Boolean decide(Engine.OwnedCall call) {
             Object value = scalar(call, "decide", "decision", true);
             if (value == null) return null;
+            if (!(value instanceof Boolean)) throw new CardinalityFailure(call);
             return (Boolean)value;
         }
         public static String choose(Engine.OwnedCall call) {
             Object value = scalar(call, "choose", "choice", true);
             if (value == null) return null;
+            if (!(value instanceof String)) throw new CardinalityFailure(call);
             return (String)value;
         }
         public static BigDecimal score(Engine.OwnedCall call) {
             Object value = scalar(call, "score", "score", false);
+            if (!(value instanceof BigDecimal)) throw new CardinalityFailure(call);
             return (BigDecimal)value;
         }
         public static List<String> tag(Engine.OwnedCall call) {
             Object value = scalar(call, "tag", "tags", false);
+            if (!((value instanceof List<?> list0 && list0.stream().allMatch(element0 -> element0 instanceof String)))) throw new CardinalityFailure(call);
             return Values.list(value, item0 -> (String)item0);
         }
         public static List<AtomicBoolean> filter(Engine.OwnedCall call) {

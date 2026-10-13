@@ -2,7 +2,7 @@
 import importlib.util
 import json
 import re
-from jvm_host import named_calls
+from jvm_host import named_calls, facade_calls
 
 
 def outputs(root):
@@ -114,5 +114,5 @@ def outputs(root):
                     'NativeSession.check((int)NativeSession.call("thinkthen_session_new_named_with_surface", ValueLayout.JAVA_INT,',
                     'new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, MemoryLayout.structLayout(ValueLayout.ADDRESS, NativeSession.SIZE), ValueLayout.ADDRESS}, engine, request, token, output));',
                     'return output.get(ValueLayout.ADDRESS, 0);', '}', '}', '}']
-    return {'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+    return {'kotlin/KotlinNamedCalls.kt': facade_calls(request_schema['$defs'], 'kotlin'), 'scala/ScalaNamedCalls.scala': facade_calls(request_schema['$defs'], 'scala'), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}
