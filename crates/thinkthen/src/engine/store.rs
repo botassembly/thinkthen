@@ -25,12 +25,12 @@ mod fixture;
 mod images;
 mod rows;
 use rows::{found, insert, signed};
-mod migration;
 mod mismatch;
 mod opening;
 mod original;
 mod policy;
 mod timing;
+mod validation;
 mod versioned;
 pub(crate) use original::Original;
 mod probe;
@@ -157,6 +157,7 @@ impl Store {
         if fs::metadata(folder).is_ok_and(|metadata| metadata.is_file()) {
             return Err(Error::RecordingPathIsFile);
         }
+        convert::refuse_old_files(folder)?;
         let mut store = Self {
             folder: folder.to_owned(),
             mode,
@@ -196,7 +197,7 @@ impl Store {
         Ok(store)
     }
 
-    /// Writing modes validate/upgrade an existing store even when refresh skips lookup.
+    /// Writing modes validate an existing store even when refresh skips lookup.
     pub(crate) fn prepared(mut self, cancel: &Cancel) -> Result<Self, Error> {
         if self.writes()
             && (exists(&self.folder.join(SQLITE))? || exists(&self.folder.join(JSONL))?)
@@ -225,7 +226,7 @@ impl Store {
             {
                 self.validation_scans += 1;
             }
-            self.validated_version = Some(self.migrate(connection, cancel)?);
+            self.validated_version = Some(self.validate(connection, cancel)?);
             self.ensure_index(connection, cancel)?;
         }
         Ok(())
@@ -351,13 +352,28 @@ impl Store {
         make_folder(&self.folder)?;
         let connection = opening::create(&sqlite)?;
         connection.busy_timeout(Duration::ZERO).map_err(storage)?;
+        let version: i64 = self.waiting(cancel, || {
+            connection.query_row("PRAGMA user_version", [], |row| row.get(0))
+        })?;
+        if version == 0 {
+            let tables: i64 = self.waiting(cancel, || {
+                connection.query_row(
+                    "SELECT count(*) FROM sqlite_schema WHERE type='table'",
+                    [],
+                    |row| row.get(0),
+                )
+            })?;
+            if tables != 0 {
+                return Err(Error::StoreVersion(SQLITE.to_owned()));
+            }
+        }
+        if version != 0 && version != 2 {
+            return Err(Error::StoreVersion(SQLITE.to_owned()));
+        }
         self.waiting(cancel, || {
             connection.execute_batch(
                 "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON;",
             )
-        })?;
-        let version: i64 = self.waiting(cancel, || {
-            connection.query_row("PRAGMA user_version", [], |row| row.get(0))
         })?;
         if version == 0 {
             let fixture = match fixture {
@@ -370,7 +386,7 @@ impl Store {
         {
             self.validation_scans += 1;
         }
-        let validated = self.migrate(&connection, cancel)?;
+        let validated = self.validate(&connection, cancel)?;
         self.ensure_index(&connection, cancel)?;
         self.validated_version = Some(validated);
         self.connection = Some(connection);

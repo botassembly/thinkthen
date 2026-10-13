@@ -1,6 +1,6 @@
 # Cache identity and response storage policy
 
-Status: **Settled** for the 0.2 target by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). Tickets 0443/0444/0450 implement it. The final section preserves the landed v1 question-store contract moved from [recording.md](recording.md); target clauses supersede it only upon adoption. Recording options, default-folder resolution, permissions, pruning, conversion commands and count-only usage retain that page's rules. This contract adds no command, host cache, routing policy or proof framework.
+Status: **Settled** for the 0.2 target by [ADR 0120](../sdlc/planning/adr/0120-sdk-result-and-cache-contract.md). Tickets 0443/0444/0450 implement it. Recording options, default-folder resolution, permissions, pruning, conversion commands and count-only usage retain that page's rules. This contract adds no command, host cache, routing policy or proof framework.
 
 ## Version 2 identity
 
@@ -24,9 +24,9 @@ F("thinkthen.image-question-key/2",
 
 For images, `canonical_state_JSON` is the typed compact image envelope defined in [ADR 0121](../sdlc/planning/adr/0121-native-image-input-and-route-admission.md), retaining ancillary text, original image bytes, canonical media, order and duplicates. The validated image state digest selects the image key domain; an ordinary JSON value with an image-looking shape remains text evidence. These formulas describe the existing v2 keys and preserve existing v1/v2 rows and native validation.
 
-Models are typed compact JSON strings. State/question JSON uses the adapter's typed compact serializers and their field/option order, not arbitrary caller JSON formatting. Adapter is the admitted provider API type/dialect, today `systemone`. Canonicalize the final posting URL with the existing endpoint resolver's scheme/host normalization and base trailing-slash treatment, consistently for all inputs and migration. Preserve distinct paths, ports and escapes otherwise. A resolved suffix such as `decisions` is part of that address. Retain credential/control/userinfo/query/fragment refusals; no key is hashed, logged or persisted.
+Models are typed compact JSON strings. State/question JSON uses the adapter's typed compact serializers and their field/option order, not arbitrary caller JSON formatting. Adapter is the admitted provider API type/dialect, today `systemone`. Canonicalize the final posting URL with the existing endpoint resolver's scheme/host normalization and base trailing-slash treatment, consistently for all inputs. Preserve distinct paths, ports and escapes otherwise. A resolved suffix such as `decisions` is part of that address. Retain credential/control/userinfo/query/fragment refusals; no key is hashed, logged or persisted.
 
-For the OpenAI target in ADR 0122, `canonical_wire_question_JSON` is the adapter's typed encoded per-question object with only its top-level request-local `name` omitted. Its canonical persistent answer likewise omits only the top-level correlation name after the raw reply was validated against its actual sent request. Preserve semantic instructions, descriptions, choice values, labels and their order. A saved canonical answer is validated against its name-free canonical question; cache/replay never requires a saved qN to equal a new request's qN. Raw recorded exchange bodies retain exact original names/order and are validated against their original request before projection. This is pure adapter normalization within existing per-question storage, not a new store, key version or migration rule. System One serializers and all original v1 key/recording validation remain unchanged.
+For the OpenAI target in ADR 0122, `canonical_wire_question_JSON` is the adapter's typed encoded per-question object with only its top-level request-local `name` omitted. Its canonical persistent answer likewise omits only the top-level correlation name after the raw reply was validated against its actual sent request. Preserve semantic instructions, descriptions, choice values, labels and their order. A saved canonical answer is validated against its name-free canonical question; cache/replay never requires a saved qN to equal a new request's qN. Raw recorded exchange bodies retain exact original names/order and are validated against their original request before projection. This is pure adapter normalization within existing per-question storage, not a new store, key version or migration rule. System One serializers retain their current question and answer formats.
 
 With shared state and all other key constituents unchanged, B at q2 after A and B alone at q1 have one question key. The engine reuses held questions independently and sends only missing pieces. Correlation names/positions enter no persistent observation or answer identity: cache/replay keeps the saved observation ID, and unchanged semantic scope/reading keeps the answer ID despite transport repacking. Newly accepted live observations still receive fresh IDs under result/2. Semantic scope/order, changed evidence and readings retain their existing identity effects; exact raw request digests remain allowed to differ. No synthetic names or former envelope positions are added to saved per-question answers.
 
@@ -64,42 +64,21 @@ the reply forbids storage, so the recording cannot be written
 
 This is a local failure (CLI exit 5). Write none of that reply's answers and never retry for this failure. Other already committed replies are not retroactively removed. Explicit replay reads no headers, changes no store bytes and sends nothing. Never infer cache instructions from unknown reply body fields.
 
-## Validation and migration
+## Current store validation
 
-The landed v1 key is SHA-256 of `adapter`, original stored URL bytes, compact requested-model JSON, state JSON and wire question JSON, separated by single LF bytes, with no trailing LF. Validate that original key **before** any URL normalization. Then verify the state digest and typed model/state/question/answer, reported usage and admitted adapter. Derive legacy observation identity before rewriting. Only then normalize/rekey to v2. A v1 row's adapter is known from its existing store schema; do not infer an unknown adapter or missing address.
+Only version 2 question-store files are admitted. Old SQLite stores, unversioned or version 1 fixture rows, and digest-named recording files refuse locally before any send. The refusal names the file and says to delete it. Readers never migrate or rewrite old files.
 
-Persisted answer origins form a closed set: `live`, `converted`, `quoted` and `fixture`. `fixture` identifies a controlled or synthetic test/example answer. It makes no claim of a live provider observation. Preserve its original value through replay, migration and export. The meanings of `live`, `converted` and `quoted` stay unchanged. Public retrieval origins remain `live`, `cache` and `replay`.
+Validate every state digest, typed model, state, question, answer, reported usage, admitted adapter and complete question identity before lookup or sending. Missing fields, damaged entries and conflicting saved histories refuse locally. Identical validated duplicate snapshots can share an entry. Differing answers, observation identities or preserved histories must not be chosen silently.
 
-An absent key version is v1 only for a validated existing v1 store/fixture shape. Unknown versions/adapters, missing addresses, damaged entries or incomplete key identity and distinct saved snapshots that collapse onto one normalized v2 key refuse locally before any send. Identical validated duplicate snapshots can share an entry; differing answer, observation identity or preserved history must not be chosen silently. This target replaces v1 cache behavior that treated an undecodable held answer as a miss: no paid send repairs a damaged store.
+Persisted answer origins form a closed set: `live`, `converted`, `quoted` and `fixture`. `fixture` identifies a controlled or synthetic test/example answer and makes no claim of a live provider observation. Preserve these values through replay and export. Public retrieval origins remain `live`, `cache` and `replay`.
 
-Writable SQLite conversion is one idempotent transaction before lookup. Keep original rows until the new index commits; any failure rolls back completely. Read-only replay builds the validated v2 index in memory and changes no file bytes or metadata. Preserve strict offline replay of committed fixtures. Keep the legacy `thinkthen.recording/1` converter and its original-request byte-for-byte validation and quoting rules; no address is invented. Its good answers receive identity from original validated parts before conversion supplies synthetic metadata.
-
-No new migration command, discovery request, automatic backup mechanism or supported downgrade guarantee is added. Old/new concurrent writers are unsupported. A user who needs an old writer must use an unmigrated copy made before upgrade. Existing `cache convert` remains the explicit fixture conversion command. Usage stays count-only and is never migrated through answer records. `meta.requests` uses v2 question keys after adoption, requiring one controlled example/fixture update by 0444.
-
-## Legacy observation identity
-
-Preserve a validated existing ObservationId. Otherwise derive lowercase SHA-256 of:
-
-```text
-F("thinkthen.legacy-observation/1", original_verified_question_key,
-  canonical_answer_JSON, canonical_existing_metadata_JSON)
-```
-
-The original key part is its 64-character lowercase hexadecimal text. The metadata object includes **only validated fields already present in the saved source**, in this order: `answered_by`, `input_tokens`, `output_tokens`, `taken_at`, `origin`. Omit absent fields; preserve an existing valid null token count as null. Use the original validated values, never the current clock, retrieval origin, filename, fabricated timestamp or converter-generated provenance. Canonical answer JSON uses the saved question's typed decoder/serializer. An empty metadata object is `{}`.
-
-For existing v1 question-store rows, these metadata columns exist: retain their validated values, including a stored `taken_at:0`, `origin:"converted"` or `origin:"fixture"`. Original recording/1 envelopes lack timestamp and storage origin. Their reply's validated reported model/usage can contribute existing metadata (original reported token counts, not conversion-generated question shares), but **do not require or invent `taken_at` or `origin`** for identity. Derive each original logical question key from its validated original request parts before quoting/rekeying; it is not the whole exchange digest. Read-only conversion uses exactly the same derivation without writing anything.
-
-Reason: `engine/store/fixture.rs` requires timestamp/origin on question-store rows, while `core/recording.rs::Entry` has neither, and its converter assigns synthetic history. Requiring those values on original exchanges would break valid offline replay; hashing freshly invented values would make identity depend on conversion or retrieval. Indistinguishable legacy snapshots cannot recover distinct historical occurrences. Identity is correlation, not tamper attestation.
-
-## Landed v1 storage
-
-The following clauses are moved unchanged from recording.md. They describe behavior already built, not completion of the v2 target above.
+A current store retains initialization, bounded transactions and lookup index maintenance. Read-only replay builds its validated index in memory and changes no file bytes or metadata. `cache convert` exports current SQLite and JSONL snapshots into one fixture. Usage remains count-only and separate from answer records.
 
 ## The question store
 
 Every command keeps one answer for each question, by ADR 0111.
 
-A question's key is the SHA-256 of the adapter, the address, the model, the shared state and the wire question as sent. A live store is `thinkthen.sqlite` in the folder that `--cache`, `--record`, `THINKTHEN_CACHE` or the default cache names. A committed fixture is `thinkthen.jsonl` in the same folder, with the same rows. The file uses SQLite's rollback journal with full sync and secure delete, and it is created with mode `0600`. Network filesystems are unsupported, because SQLite's locks are not reliable there.
+A question's key follows the version 2 identity above. A live store is `thinkthen.sqlite` in the folder that `--cache`, `--record`, `THINKTHEN_CACHE` or the default cache names. A committed fixture is `thinkthen.jsonl` in the same folder, with the same rows. The file uses SQLite's rollback journal with full sync and secure delete, and it is created with mode `0600`. Network filesystems are unsupported, because SQLite's locks are not reliable there.
 
 The default cache and an explicit recording use this same key. For one-document text, `hello\n` and `hello\r\n` put different line endings in the quoted evidence and make different keys. The literal text `{"a":1}` and `{"a":1.0}` likewise differs when sent as text. A replay of one spelling misses the other, and a cache sends a new request. The rule applies to the encoded question bytes, not every original file byte: `--lines` strips a record terminator, and JSONL or a selected JSON value can be parsed and re-encoded before the request is built. Use recordings made with the same question, backend, request settings, and encoded evidence when transferring a run; do not expect a cosmetic text change to replay.
 

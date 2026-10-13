@@ -171,7 +171,14 @@ impl Asker for OneEach<'_> {
         };
         let stored = [answered.answer.as_deref().map_err(DecodeError::cause)];
         let question = [decide("Is this a refund?")];
-        match pack::read(&question, &stored, &answered.answered_by)?.as_slice() {
+        match pack::read_for(
+            crate::core::adapters::ApiType::Primary,
+            &question,
+            &stored,
+            &answered.answered_by,
+        )?
+        .as_slice()
+        {
             [AnswerOutcome::Answered(answer)] => Ok(answer.yes()),
             _ => Err(Error::Defect("a failed answer")),
         }

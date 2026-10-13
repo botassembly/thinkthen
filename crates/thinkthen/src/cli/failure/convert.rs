@@ -82,6 +82,7 @@ impl From<EngineError> for Failure {
             EngineError::QuestionMiss(key) => Self::QuestionMiss { key, context: None },
             EngineError::StoreAmbiguous => Self::StoreAmbiguous,
             EngineError::StoreHotJournal => Self::StoreHotJournal,
+            EngineError::StoreVersion(file) => Self::StoreVersion(file),
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingStorage => Self::RecordingStorage,
             EngineError::RecordingForbidden => Self::RecordingForbidden,
