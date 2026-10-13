@@ -11,7 +11,12 @@ def answer_column(name, rows, function, detailed):
     dtype = pl.Object if detailed else kinds.get(function, pl.Object)
     if function == 'decide' and not detailed and any(value is not None and not isinstance(value, bool) for value in rows):
         dtype = None
-    return pl.Series(name, rows, dtype=dtype)
+    try:
+        return pl.Series(name, rows, dtype=dtype)
+    except (TypeError, pl.exceptions.PolarsError):
+        if dtype is not None:
+            raise
+        return pl.Series(name, rows, dtype=pl.Object)
 
 
 def probability_column(result, name):
