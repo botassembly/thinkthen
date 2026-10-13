@@ -9,6 +9,7 @@ import sys
 import subprocess
 import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(1, str(Path(__file__).resolve().parent / 'templates'))
 from registry import OUTPUTS, attributes, invocations, output_path
 from native import selected_functions, immediate_schema
 from formatting import format_source
@@ -667,8 +668,15 @@ def main():
         import typescript
         definitions = prepare(graph(json.loads(args.schema.read_text()), typescript.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): typescript.runtime(definitions, version),
-                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): typescript.declarations(definitions)}
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        input_roots = getattr(typescript, 'INPUT_ROOTS', ())
+        input_definitions = prepare(graph(request_schema, input_roots))
+        runtime = (typescript.runtime(definitions, version, input_definitions) if input_roots
+                   else typescript.runtime(definitions, version))
+        declarations = (typescript.declarations(definitions, input_definitions) if input_roots
+                        else typescript.declarations(definitions))
+        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): runtime,
+                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): declarations}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
