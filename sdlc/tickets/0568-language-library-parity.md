@@ -48,4 +48,6 @@ Every language library exposes the same functions, options, settings and helpers
   - Every language library's routine installed checks pass.
 - Defers: one shared Rust conversion crate for Python, R, Ruby and TypeScript goes to idea 0571, which a later release decides.
 
+PM amendment, 2026-10-12. The coordinator's scope recommendation stands. Every host library gets every helper: `plan`, the question-file, name and reference helpers, the item and file builders, and usage persistence. Each helper's logic lives in Rust, and each library adds only a thin generated or handwritten call. A helper that needs more than a thin call in any library is deleted everywhere instead, with the reason in Progress. MCP stays outside the helper manifest. It keeps exactly the ten tools from the README and the request capabilities they share. Java's transport JSON becomes private. Python keeps its dataframe and pydantic adapters as the one named idiom exception.
+
 ## Progress
