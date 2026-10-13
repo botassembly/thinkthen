@@ -10676,6 +10676,7 @@
       "type": "object"
     },
     "score": {
+      "description": "Probability-weighted position from 0 to the number of levels minus one. A question that says 1 to 5 still returns a position from 0 to 4 for five levels.",
       "format": "double",
       "type": "number"
     },
