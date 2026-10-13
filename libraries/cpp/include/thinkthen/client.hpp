@@ -44,15 +44,18 @@ public:
     void close() noexcept { input_closed_=true; session_.reset(); }
     bool input_closed() const noexcept { return input_closed_ || !session_; }
     void finish() { require_live(); detail::check_session(thinkthen_session_finish(session_.get(),nullptr,0)); input_closed_=true; }
-    bool try_push(const inputs::RequestSessionDescriptor& item) {
+    bool try_push(const inputs::RequestSessionDescriptor& item) { return admit(item,false); }
+    bool push(const inputs::RequestSessionDescriptor& item) { return admit(item,true); }
+private:
+    bool admit(const inputs::RequestSessionDescriptor& item,bool blocking) {
         require_live(); if(input_closed_) return false; auto bytes=item.document().dump(); uint32_t state=THINKTHEN_SESSION_CLOSED_V1;
-        detail::check_session(thinkthen_session_try_push(session_.get(),bytes.data(),bytes.size(),&state));
+        detail::check_session(blocking ? thinkthen_session_push(session_.get(),bytes.data(),bytes.size(),&state) : thinkthen_session_try_push(session_.get(),bytes.data(),bytes.size(),&state));
         input_closed_=state==THINKTHEN_SESSION_CLOSED_V1;
         return state==THINKTHEN_SESSION_ACCEPTED_V1;
     }
-    Poll read(bool blocking=false) {
+    Poll read(bool blocking=false,uint32_t interest=THINKTHEN_SESSION_WAIT_RESULT_V1) {
         require_live(); uint32_t state=THINKTHEN_SESSION_PENDING_V1; thinkthen_session_result* raw=nullptr;
-        detail::check_session(blocking ? thinkthen_session_next_packet(session_.get(),THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,&state,&raw) : thinkthen_session_try_read(session_.get(),&state,&raw));
+        detail::check_session(blocking ? thinkthen_session_next_packet(session_.get(),interest,&state,&raw) : thinkthen_session_try_read(session_.get(),&state,&raw));
         std::unique_ptr<thinkthen_session_result,detail::PacketDeleter> packet(raw);
         if(state==THINKTHEN_SESSION_PENDING_V1) return {PollState::pending,{}};
         if(state==THINKTHEN_SESSION_END_V1) return {PollState::end,{}};
@@ -65,13 +68,9 @@ public:
         }
         return {PollState::result,std::move(value)};
     }
+public:
     Poll poll() { return read(); }
-    bool push(const inputs::RequestSessionDescriptor& item) {
-        require_live(); if(input_closed_) return false; auto bytes=item.document().dump(); uint32_t state=THINKTHEN_SESSION_CLOSED_V1;
-        detail::check_session(thinkthen_session_push(session_.get(),bytes.data(),bytes.size(),&state));
-        input_closed_=state==THINKTHEN_SESSION_CLOSED_V1;
-        return state==THINKTHEN_SESSION_ACCEPTED_V1;
-    }
+    Poll next() { return read(true); }
     // Wait consumes nothing. Keep this owner live and join waiters before close.
     void wait(bool input=false) {
         require_live(); uint32_t ready=0;
@@ -82,7 +81,7 @@ public:
         std::vector<results::SessionPacket> values;
         try {
             for(;;) {
-                auto next=read(true); if(next.state==PollState::end) return values;
+                auto next=read(true,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1); if(next.state==PollState::end) return values;
                 if(next.packet) values.push_back(std::move(*next.packet));
             }
         } catch(SessionFailure& error) { error.packets=std::move(values); throw; }
@@ -104,11 +103,10 @@ class Client : public NamedCalls<Client> {
     friend class NamedCalls<Client>;
     std::unique_ptr<thinkthen_engine,detail::EngineDeleter> engine_;
     Call start(const std::string& function,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
-        if(!engine_) throw std::logic_error("C++ client is closed");
         auto q=question.document().dump(), in=input.document().dump(), opts=options.document().dump();
         thinkthen_named_request_v1 request{{function.data(),function.size()},{q.data(),q.size()},{in.data(),in.size()},{opts.data(),opts.size()}};
         thinkthen_session* raw=nullptr;
-        detail::check_session(thinkthen_session_new_named_with_surface(engine_.get(),&request,{"cpp",3},&raw));
+        detail::check_session(thinkthen_session_new_named_with_surface(native_engine(),&request,{"cpp",3},&raw));
         return Call(raw);
     }
 public:

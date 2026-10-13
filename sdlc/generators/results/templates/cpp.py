@@ -51,8 +51,8 @@ def typ(raw, presence=False):
 
 def condition(tag):
     mode,member,value=tag
-    if mode=='literal': return f'literal(value_, {json.dumps(member)}, {json.dumps(value)})'
-    if mode=='literals': return ' && '.join(f'literal(value_, {json.dumps(k)}, {json.dumps(v)})' for k,v in value.items())
+    if mode=='literal': return f'detail::literal(value_, {json.dumps(member)}, {json.dumps(value)})'
+    if mode=='literals': return ' && '.join(f'detail::literal(value_, {json.dumps(k)}, {json.dumps(v)})' for k,v in value.items())
     if mode=='member': return f'value_.contains({json.dumps(member)})'
     return ' && '.join([f'value_.contains({json.dumps(k)})' for k in value['required']]+[f'!value_.contains({json.dumps(k)})' for k in value['excluded']])
 
@@ -67,7 +67,7 @@ def render(definitions,version):
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
                 lines += [f'private: mutable std::shared_ptr<const Presence<{t}>> cached_{method}_;', f'public: const Presence<{t}>& {method}() const;']
-                bodies += [f'inline const Presence<{t}>& {n}::{method}() const {{ if (!cached_{method}_) cached_{method}_ = std::make_shared<const Presence<{t}>>(member_value<{t}>(value_, {json.dumps(member)})); return *cached_{method}_; }}']
+                bodies += [f'inline const Presence<{t}>& {n}::{method}() const {{ if (!cached_{method}_) cached_{method}_ = std::make_shared<const Presence<{t}>>(detail::member_value<{t}>(value_, {json.dumps(member)})); return *cached_{method}_; }}']
         from host_answers import named_object_fields
         for member in named_object_fields(s, definitions):
             lines += [f'    std::string {member}_name() const;']
@@ -211,4 +211,4 @@ def answer_helpers(definitions):
                       'answer.emplace(*aggregate->value().value);', '}',
                       'if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);',
                       'return std::move(*answer);', '}']
-    return '\n'.join(lines + ['}']) + '\n'
+    return '\n'.join(lines + ['}']).replace('literal(', 'detail::literal(') + '\n'
