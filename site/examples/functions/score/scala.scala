@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketScoreRow
 import thinkthen.scala.ScalaEngine
 
 @main def score(): Unit =
@@ -11,7 +10,7 @@ import thinkthen.scala.ScalaEngine
     val question = "How urgent is this?"
     val levels = List("Routine.", "Soon.", "Immediate.")
     val scale = RequestQuestionDefinition().value(
-      RequestDefinitionFieldsScore()
+      RequestDefinitionAuthoredScore()
         .score(AuthoredQuestionText(question))
         .levels(AuthoredLevels(levels.asJava)))
     val outage = RequestInputText().text(
@@ -19,8 +18,6 @@ import thinkthen.scala.ScalaEngine
         "and customers cannot pay.\n")
     val call = tt.score(scale, outage)
     val urgency = Await.result(call.result, 10.seconds)
-      .packets.collectFirst {
-        case row: SessionPacketScoreRow => row.value.value
-      }
-    assert(urgency.contains(BigDecimal(2)))
+      .score().doubleValue()
+    assert(urgency == 2.0)
   }

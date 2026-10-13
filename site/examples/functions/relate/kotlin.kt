@@ -4,14 +4,13 @@ import thinkthen.Inputs.RequestItem
 import thinkthen.Inputs.RequestOriginalJson
 import thinkthen.Inputs.RequestQuestionDefinition
 import thinkthen.kotlin.KotlinEngine
-import thinkthen.kotlin.Results.SessionPacketRelateAggregate
 
 suspend fun main() = KotlinEngine().use { tt ->
     val makes = mapOf("name" to "makes",
         "source" to "company", "target" to "product",
         "either" to false)
     val ask = RequestQuestionDefinition().value(
-        Inputs.RequestDefinitionFieldsRelateVersion
+        Inputs.RequestDefinitionAuthoredRelate
             .fromJson(mapOf("version" to 1, "relate" to
                 mapOf("relations" to listOf(makes)))))
     val apple = mapOf(
@@ -27,14 +26,12 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalJson().value(one))
         })
-    val whoMakes = tt.relate(ask, names).packets
-        .filterIsInstance<SessionPacketRelateAggregate>()
-        .first().value.value
+    val whoMakes = tt.relate(ask, names).relate().value()
     val pairs = whoMakes.map { edge ->
-        edge.source.json to edge.target.json
+        edge.sourceName() to edge.targetName()
     }
     check(pairs == listOf(
-        apple to iphone,
-        amazon to kindle,
+        "Apple" to "iPhone",
+        "Amazon" to "Kindle",
     ))
 }

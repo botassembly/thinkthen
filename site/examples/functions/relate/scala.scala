@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketRelateAggregate
 import thinkthen.scala.ScalaEngine
 
 @main def relate(): Unit =
@@ -12,7 +11,7 @@ import thinkthen.scala.ScalaEngine
       "source" -> "company", "target" -> "product",
       "either" -> false)
     val ask = RequestQuestionDefinition().value(
-      RequestDefinitionFieldsRelateVersion
+      RequestDefinitionAuthoredRelate
         .fromJson(Map("version" -> 1, "relate" ->
           Map("relations" -> List(makes))).asJava))
     val apple = Map(
@@ -30,15 +29,12 @@ import thinkthen.scala.ScalaEngine
       }.asJava)
     val call = tt.relate(ask, names)
     val whoMakes = Await.result(call.result, 10.seconds)
-      .packets.collectFirst {
-        case related: SessionPacketRelateAggregate =>
-          related.value.value
-      }.get
+      .relate().value().asScala.toList
     val pairs = whoMakes.map { edge =>
-      edge.source.json -> edge.target.json
+      edge.sourceName() -> edge.targetName()
     }
     assert(pairs == List(
-      apple.asJava -> iphone.asJava,
-      amazon.asJava -> kindle.asJava,
+      "Apple" -> "iPhone",
+      "Amazon" -> "Kindle",
     ))
   }

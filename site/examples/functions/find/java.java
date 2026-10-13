@@ -4,7 +4,6 @@ import thinkthen.Inputs.RequestInputRecords;
 import thinkthen.Inputs.RequestItem;
 import thinkthen.Inputs.RequestOriginalText;
 import thinkthen.Inputs.RequestQuestionText;
-import thinkthen.Results.SessionPacketFindAggregate;
 
 public class Find {
     public static void main(String[] args) {
@@ -21,14 +20,10 @@ public class Find {
                 .map(text -> new RequestItem().original(
                     new RequestOriginalText().text(text)))
                 .toList());
-        var found = SessionPacketFindAggregate.class;
+
         try (var tt = new Engine()) {
             var refundDeadline = tt.find(question, records)
-                .join().packets().stream()
-                .filter(found::isInstance)
-                .map(found::cast)
-                .findFirst().orElseThrow()
-                .value().value().value();
+                .join().find().value().value();
             assert refundDeadline.equals(policy.get(1));
         }
     }

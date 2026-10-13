@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketTagRow
 import thinkthen.scala.ScalaEngine
 
 @main def tag(): Unit =
@@ -11,7 +10,7 @@ import thinkthen.scala.ScalaEngine
     val question = "Which labels fit this message?"
     val labels = List("praise", "bug", "billing")
     val fits = RequestQuestionDefinition().value(
-      RequestDefinitionFieldsTag()
+      RequestDefinitionAuthoredTag()
         .tag(AuthoredQuestionText(question))
         .labels(AuthoredLabels(labels.asJava)))
     val message = RequestInputText().text(
@@ -21,8 +20,6 @@ import thinkthen.scala.ScalaEngine
     val call = tt.tag(fits, message)
     val fittingLabels =
       Await.result(call.result, 10.seconds)
-        .packets.collectFirst {
-          case row: SessionPacketTagRow => row.value.value
-        }
-    assert(fittingLabels.contains(labels))
+      .tag().asScala.toList
+    assert(fittingLabels == labels)
   }

@@ -5,8 +5,7 @@ import thinkthen.Engine;
 import thinkthen.Inputs;
 import thinkthen.Inputs.RequestInputText;
 import thinkthen.Inputs.RequestQuestionDefinition;
-import thinkthen.Results.RecognizeFieldsEntities;
-import thinkthen.Results.SessionPacketRecognizeAggregate;
+import thinkthen.Results.RecognizeEntities;
 
 public class Recognize {
     public static void main(String[] args) {
@@ -15,22 +14,17 @@ public class Recognize {
         kinds.put("product", null);
         kinds.put("place", null);
         var ask = new RequestQuestionDefinition().value(
-            Inputs.RequestDefinitionFieldsRecognizeVersion
+            Inputs.RequestDefinitionRecognizeDefinition
                 .fromJson(Map.of("version", 1,
                     "recognize", Map.of("kinds", kinds))));
         var text = new RequestInputText().text(
             "Sam Patel says his Kindle arrived broken "
             + "in Denver.");
-        var recognized =
-            SessionPacketRecognizeAggregate.class;
+
         try (var tt = new Engine()) {
-            var facts = (RecognizeFieldsEntities) tt
+            var facts = (RecognizeEntities) tt
                 .recognize(ask, text)
-                .join().packets().stream()
-                .filter(recognized::isInstance)
-                .map(recognized::cast)
-                .findFirst().orElseThrow()
-                .value().getFirst().value();
+                .join().recognize().getFirst().value();
             var names = facts.entities().stream()
                 .map(one -> List.of(one.text(), one.kind()))
                 .toList();

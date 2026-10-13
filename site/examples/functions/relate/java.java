@@ -6,7 +6,6 @@ import thinkthen.Inputs.RequestInputRecords;
 import thinkthen.Inputs.RequestItem;
 import thinkthen.Inputs.RequestOriginalJson;
 import thinkthen.Inputs.RequestQuestionDefinition;
-import thinkthen.Results.SessionPacketRelateAggregate;
 
 public class Relate {
     public static void main(String[] args) {
@@ -14,7 +13,7 @@ public class Relate {
             "source", "company", "target", "product",
             "either", false);
         var ask = new RequestQuestionDefinition().value(
-            Inputs.RequestDefinitionFieldsRelateVersion
+            Inputs.RequestDefinitionAuthoredRelate
                 .fromJson(Map.of("version", 1, "relate",
                     Map.of("relations", List.of(makes)))));
         var apple = Map.of(
@@ -30,22 +29,17 @@ public class Relate {
                 .map(one -> new RequestItem().original(
                     new RequestOriginalJson().value(one)))
                 .toList());
-        var related = SessionPacketRelateAggregate.class;
+
         try (var tt = new Engine()) {
             var whoMakes = tt.relate(ask, names)
-                .join().packets().stream()
-                .filter(related::isInstance)
-                .map(related::cast)
-                .findFirst().orElseThrow()
-                .value().value();
+                .join().relate().value();
             var pairs = whoMakes.stream()
                 .map(edge -> List.of(
-                    edge.source().json(),
-                    edge.target().json()))
+                    edge.sourceName(), edge.targetName()))
                 .toList();
             assert pairs.equals(List.of(
-                List.of(apple, iphone),
-                List.of(amazon, kindle)));
+                List.of("Apple", "iPhone"),
+                List.of("Amazon", "Kindle")));
         }
     }
 }

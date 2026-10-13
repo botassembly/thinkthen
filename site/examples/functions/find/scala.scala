@@ -3,7 +3,6 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketFindAggregate
 import thinkthen.scala.ScalaEngine
 
 @main def find(): Unit =
@@ -24,9 +23,6 @@ import thinkthen.scala.ScalaEngine
     val call = tt.find(question, records)
     val refundDeadline =
       Await.result(call.result, 10.seconds)
-        .packets.collectFirst {
-          case found: SessionPacketFindAggregate =>
-            found.value.value
-        }.flatten
-    assert(refundDeadline.contains(policy(1)))
+      .find().value().value()
+    assert(refundDeadline == policy(1))
   }

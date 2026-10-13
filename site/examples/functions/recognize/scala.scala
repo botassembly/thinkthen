@@ -4,7 +4,7 @@ import scala.util.Using
 import scala.collection.immutable.ListMap
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.*
+import thinkthen.Results.*
 import thinkthen.scala.ScalaEngine
 
 @main def recognize(): Unit =
@@ -15,7 +15,7 @@ import thinkthen.scala.ScalaEngine
       "place" -> null,
     )
     val ask = RequestQuestionDefinition().value(
-      RequestDefinitionFieldsRecognizeVersion
+      RequestDefinitionRecognizeDefinition
         .fromJson(Map("version" -> 1,
           "recognize" -> Map("kinds" -> kinds)).asJava))
     val text = RequestInputText().text(
@@ -23,15 +23,10 @@ import thinkthen.scala.ScalaEngine
         "in Denver.")
     val call = tt.recognize(ask, text)
     val facts = Await.result(call.result, 10.seconds)
-      .packets.collectFirst {
-        case found: SessionPacketRecognizeAggregate =>
-          found.value.head.value
-      }
-    val names = facts.toList.flatMap {
-      case found: RecognizeFieldsEntities =>
-        found.entities.map(one => one.text -> one.kind)
-      case _ => Nil
-    }
+      .recognize().getFirst().value()
+      .asInstanceOf[RecognizeEntities]
+    val names = facts.entities().asScala.toList
+      .map(one => one.text() -> one.kind())
     assert(names == List(
       "Sam Patel" -> "person",
       "Kindle" -> "product",

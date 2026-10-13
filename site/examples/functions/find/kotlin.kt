@@ -3,7 +3,6 @@ import thinkthen.Inputs.RequestItem
 import thinkthen.Inputs.RequestOriginalText
 import thinkthen.Inputs.RequestQuestionText
 import thinkthen.kotlin.KotlinEngine
-import thinkthen.kotlin.Results.SessionPacketFindAggregate
 
 suspend fun main() = KotlinEngine().use { tt ->
     val question = RequestQuestionText()
@@ -19,8 +18,7 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalText().text(text))
         })
-    val refundDeadline = tt.find(question, records).packets
-        .filterIsInstance<SessionPacketFindAggregate>()
-        .first().value.value
+    val refundDeadline = tt.find(question, records).find()
+        .value().value()
     check(refundDeadline == policy[1])
 }

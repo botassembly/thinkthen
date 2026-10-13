@@ -4,7 +4,6 @@ import scala.util.Using
 import scala.collection.immutable.ListMap
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketChooseRow
 import thinkthen.scala.ScalaEngine
 
 @main def choose(): Unit =
@@ -16,15 +15,13 @@ import thinkthen.scala.ScalaEngine
       "account" -> "Logins and passwords.",
     ).map((name, text) => name -> AuthoredDescription(text))
     val owner = RequestQuestionDefinition().value(
-      RequestDefinitionFieldsChoose()
+      RequestDefinitionAuthoredChoose()
         .choose(AuthoredQuestionText(question))
         .options(AuthoredOptions(teams.asJava)))
     val parcel = RequestInputText().text(
       "My parcel went to the wrong address.")
     val call = tt.choose(owner, parcel)
     val team = Await.result(call.result, 10.seconds)
-      .packets.collectFirst {
-        case row: SessionPacketChooseRow => row.value.value
-      }
-    assert(team.contains(Some("shipping")))
+      .choose()
+    assert(team == "shipping")
   }

@@ -3,7 +3,7 @@ import scala.concurrent.duration.*
 import scala.util.Using
 import scala.jdk.CollectionConverters.*
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketFilterRow
+import thinkthen.Results.SessionPacketFilterRow
 import thinkthen.scala.ScalaEngine
 
 @main def filter(): Unit =
@@ -23,8 +23,9 @@ import thinkthen.scala.ScalaEngine
       }.asJava)
     val call = tt.filter(question, records)
     val complaints = Await.result(call.result, 10.seconds)
-      .packets.collect {
-        case row: SessionPacketFilterRow => row.value.input
-      }.flatten.flatten
+      .packets().asScala.collect {
+        case row: SessionPacketFilterRow =>
+          row.value().input().value()
+      }.toList
     assert(complaints == List(reviews(1), reviews(3)))
   }

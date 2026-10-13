@@ -2,7 +2,6 @@ import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.util.Using
 import thinkthen.Inputs.*
-import thinkthen.scala.Results.SessionPacketDecideRow
 import thinkthen.scala.ScalaEngine
 
 @main def decide(): Unit =
@@ -13,9 +12,6 @@ import thinkthen.scala.ScalaEngine
       "Please refund my order. It arrived broken.")
     val call = tt.decide(question, broken)
     val isRefund = Await.result(call.result, 10.seconds)
-      .packets.collectFirst {
-        case row: SessionPacketDecideRow =>
-          row.value.value.value
-      }
-    assert(isRefund.contains(true))
+      .decide()
+    assert(isRefund == true)
   }

@@ -4,10 +4,9 @@ import thinkthen.Engine;
 import thinkthen.Inputs.AuthoredDescription;
 import thinkthen.Inputs.AuthoredOptions;
 import thinkthen.Inputs.AuthoredQuestionText;
-import thinkthen.Inputs.RequestDefinitionFieldsChoose;
+import thinkthen.Inputs.RequestDefinitionAuthoredChoose;
 import thinkthen.Inputs.RequestInputText;
 import thinkthen.Inputs.RequestQuestionDefinition;
-import thinkthen.Results.SessionPacketChooseRow;
 
 public class Choose {
     public static void main(String[] args) {
@@ -21,19 +20,15 @@ public class Choose {
         teams.put("account", new AuthoredDescription(
             "Logins and passwords."));
         var owner = new RequestQuestionDefinition().value(
-            new RequestDefinitionFieldsChoose()
+            new RequestDefinitionAuthoredChoose()
                 .choose(new AuthoredQuestionText(question))
                 .options(new AuthoredOptions(teams)));
         var parcel = new RequestInputText().text(
             "My parcel went to the wrong address.");
-        var row = SessionPacketChooseRow.class;
+
         try (var tt = new Engine()) {
             var team = tt.choose(owner, parcel)
-                .join().packets().stream()
-                .filter(row::isInstance)
-                .map(row::cast)
-                .findFirst().orElseThrow()
-                .value().value().value();
+                .join().choose();
             assert team.equals("shipping");
         }
     }
