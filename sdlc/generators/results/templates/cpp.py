@@ -57,7 +57,7 @@ def condition(tag):
     return ' && '.join([f'value_.contains({json.dumps(k)})' for k in value['required']]+[f'!value_.contains({json.dumps(k)})' for k in value['excluded']])
 
 def render(definitions,version):
-    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
+    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
     for key in definitions: lines += [f'class {name(key)};']
     bodies=[]
     for key,raw in definitions.items():
@@ -66,16 +66,16 @@ def render(definitions,version):
         if 'properties' in s:
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
-                lines += [f'    Presence<{t}> {method}() const;']
-                bodies += [f'inline Presence<{t}> {n}::{method}() const {{ return member_value<{t}>(value_, {json.dumps(member)}); }}']
+                lines += [f'private: mutable std::shared_ptr<const Presence<{t}>> cached_{method}_;', f'public: const Presence<{t}>& {method}() const;']
+                bodies += [f'inline const Presence<{t}>& {n}::{method}() const {{ if (!cached_{method}_) cached_{method}_ = std::make_shared<const Presence<{t}>>(member_value<{t}>(value_, {json.dumps(member)})); return *cached_{method}_; }}']
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'    std::optional<{cn}> as_{cn}() const;']
             bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return {cn}(value_); return std::nullopt; }}']
         if 'properties' not in s and 'variants' not in s:
             t=typ(s)
-            lines += [f'    {t} value() const;']
-            bodies += [f'inline {t} {n}::value() const {{ return decode<{t}>(value_); }}']
+            lines += [f'private: mutable std::shared_ptr<const {t}> cached_value_;', f'public: const {t}& value() const;']
+            bodies += [f'inline const {t}& {n}::value() const {{ if (!cached_value_) cached_value_ = std::make_shared<const {t}>(decode<{t}>(value_)); return *cached_value_; }}']
         lines += ['};']
     return '\n'.join(lines+bodies+['}'])+'\n'
 
