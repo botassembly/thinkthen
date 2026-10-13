@@ -1351,6 +1351,18 @@ export type NativeFindResult = NativeFind;
 export type NativeAnnotateResult = NativeAnnotation;
 export type NativeRecognizeResult = NativeRecognition;
 export type NativeRelateResult = NativeRelation;
+export interface AnswerReaders {
+  decideAnswer(): boolean | null;
+  chooseAnswer(): string | null;
+  tagAnswer(): readonly string[];
+  scoreAnswer(): number | NativeNumber;
+  filterAnswer(): readonly JsonValue[];
+  rankAnswer(): readonly (number | NativeNumber)[];
+  findAnswer(): NativeFind;
+  annotateAnswer(): readonly NativeAnnotation[];
+  recognizeAnswer(): readonly NativeRecognition[];
+  relateAnswer(): NativeRelation;
+}
 export function packet(value: JsonValue): NativeSessionPacket;
 export function parse(text: string): JsonValue;
 export const REQUEST_VERSION: string;

@@ -12,6 +12,7 @@ export type Input = R.JsonValue | Source | Item | readonly (R.JsonValue | Item)[
 export interface ImageBytes { readonly kind: "bytes"; readonly bytes: Uint8Array | string; readonly media?: string; }
 export interface ItemFields { readonly images?: readonly ImageBytes[]; readonly context?: R.JsonValue; readonly options?: readonly {readonly name:string; readonly description?:R.JsonValue}[]; }
 export interface Controls { readonly signal?: AbortSignal; readonly [key:string]: unknown; }
+export interface Completed extends R.AnswerReaders {}
 export class Completed<T = R.NativeDecideResult | R.NativeChooseResult | R.NativeTagResult | R.NativeScoreResult | R.NativeFilterResult | R.NativeRankResult | R.NativeFindResult | R.NativeAnnotateResult | R.NativeRecognizeResult | R.NativeRelateResult> {
  readonly results: readonly T[];
  readonly terminal: R.NativeSessionPacketTerminal;
@@ -25,6 +26,18 @@ export class Operation implements AsyncIterableIterator<R.NativeSessionPacket> {
  close():void;
  return():Promise<IteratorResult<R.NativeSessionPacket>>;
  [Symbol.asyncIterator]():AsyncIterableIterator<R.NativeSessionPacket>;
+}
+export interface Client {
+ decideAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["decideAnswer"]>>;
+ chooseAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["chooseAnswer"]>>;
+ tagAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["tagAnswer"]>>;
+ scoreAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["scoreAnswer"]>>;
+ filterAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["filterAnswer"]>>;
+ rankAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["rankAnswer"]>>;
+ findAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["findAnswer"]>>;
+ annotateAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["annotateAnswer"]>>;
+ recognizeAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["recognizeAnswer"]>>;
+ relateAnswer(q:Question,i:Input,c?:Controls):Promise<ReturnType<R.AnswerReaders["relateAnswer"]>>;
 }
 export class Client {
  constructor(settings?:Readonly<Record<string,R.JsonValue>>);

@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".mjs",
-  "max": 424
+  "max": 3,
+  "scope": "handwritten-production"
 }

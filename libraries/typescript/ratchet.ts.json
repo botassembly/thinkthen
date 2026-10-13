@@ -1,5 +1,6 @@
 {
   "directory": ".",
   "extension": ".ts",
-  "max": 1332
+  "max": 73,
+  "scope": "handwritten-production"
 }

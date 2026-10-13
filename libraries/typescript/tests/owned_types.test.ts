@@ -38,3 +38,14 @@ async function allNamed(client:Client,question:Question,input:Input) {
  void [decide,choose,tag,score,filter,rank,find,annotate,recognize,relate];
 }
 void allNamed;
+
+async function oneLine(client:Client) {
+ const decide:boolean|null=await client.decideAnswer('Question?','text');
+ const choose:string|null=await client.chooseAnswer({choose:'Which?',options:['yes','no']},'text');
+ const tag:readonly string[]=(await client.tag({tag:'Which?',labels:['yes']},'text')).tagAnswer();
+ const score:number|Results.NativeNumber|null=await client.scoreAnswer({score:'How?',levels:['low','high']},'text');
+ const rank:readonly (number|Results.NativeNumber)[]=await client.rankAnswer('Question?',['first','second']);
+ const filter:readonly Results.JsonValue[]=await client.filterAnswer('Question?',['first',null]);
+ void [decide,choose,tag,score,rank,filter];
+}
+void oneLine;
