@@ -53,7 +53,8 @@ def generated_sources(root, target, request, result):
         outputs['CompleteFacts.g.cs'] = generator.generated(result, 'csharp')
         outputs['NativeBridge.g.cs'] = generator.bridge()
         outputs['RequestInputs.g.cs'] = template.render_inputs(request, generator.prepare, generator.graph)
-        outputs['NamedCalls.g.cs'] = template.named_calls(template.enum_values(request['$defs']['RequestFunction']))
+        outputs['NamedCalls.g.cs'] = (template.named_calls(template.enum_values(request['$defs']['RequestFunction']))
+                                      + template.answer_helpers(graph(result, ('completesessionPacket', 'completeplan'))))
     elif target == 'swift':
         outputs['ResultsGenerated.swift'] = template.render(results)
         outputs['InputsGenerated.swift'] = template.render(inputs, True) + '\npublic let ownedRequestVersion = ' + json.dumps(version) + '\n'

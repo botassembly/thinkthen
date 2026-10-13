@@ -201,7 +201,11 @@ def check(root, manifest, name):
     allowed_native_calls = set()
     for category, owners in [('lifecycle_members', config['lifecycle_owners']),
                              ('representation_members', config['representation_owners'])]:
-        allowed_native_calls.update((owner, canonical(member)) for owner in owners for member in categories[category])
+        for owner in owners:
+            for member in categories[category] + config.get(category, {}).get(owner, []):
+                allowed_native_calls.add((owner, canonical(member)))
+                if category == 'lifecycle_members' and config.get('function_suffix'):
+                    allowed_native_calls.add((owner, canonical(native(member, config['naming']) + config['function_suffix'])))
     allowed_native_calls.update((owner, canonical(member))
                                 for owner in ['', *config['representation_owners']]
                                 for member in config.get('representation_calls', []))

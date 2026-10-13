@@ -167,11 +167,40 @@ class PublicSurface(unittest.TestCase):
                                      capture_output=True, text=True, env=dict(os.environ, HOME=folder))
                 return json.loads(run.stdout)['libraries']['csharp']
             baseline = invoke(original)
-            self.assertFalse(any('schema declaration derivation failed:' in error for error in baseline))
-            self.assertFalse(any('NamedCalls.g.cs:' in error for error in baseline))
+            self.assertEqual(baseline, [])
+            extra = root / 'libraries/csharp/src/Extra.cs'
+            methods = ['Open', 'ParseQuestion', 'StartSession', 'ExecuteAsync', 'PushAsync', 'ReadAsync',
+                       'Decision', 'Choice', 'Tags', 'DecideValueAsync', 'ExtraPublicExport']
+            extra.write_text('public class Other {\n'
+                             + ''.join('public void ' + method + '() {}\n' for method in methods)
+                             + 'public string FactsJson {get;} public string Failure {get;} }\n'
+                             + 'public class InputRequestOptions { public string SurpriseOption {get;} }\n'
+                             + 'public class InputEngineSettings { public string SurpriseSetting {get;} }\n')
+            unexpected = invoke(original)
+            for method in methods:
+                self.assertIn('unlisted public call/export: Other.' + method, unexpected)
+            for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
+                                 ('InputRequestOptions', 'SurpriseOption'), ('InputEngineSettings', 'SurpriseSetting')]:
+                self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
+            extra.unlink()
+            inputs = root / 'libraries/csharp/src/RequestInputs.g.cs'
+            input_source = inputs.read_text()
+            inputs.write_text(input_source.replace('InputPresence<string> Context {', 'InputPresence<string> SurpriseOption {')
+                              .replace('InputPresence<string> Backend {', 'InputPresence<string> SurpriseSetting {'))
+            drift = invoke(original)
+            for kind, field in [('option', 'context'), ('setting', 'backend')]:
+                self.assertTrue(any(error.startswith('missing ' + kind + ': ' + field) for error in drift))
+            for owner, before, after in [('InputRequestOptions', 'Context', 'SurpriseOption'),
+                                         ('InputEngineSettings', 'Backend', 'SurpriseSetting')]:
+                self.assertIn('missing generated declaration: RequestInputs.g.cs:' + owner + '.' + before, drift)
+                self.assertIn('unlisted generated declaration: RequestInputs.g.cs:' + owner + '.' + after, drift)
+            inputs.write_text(input_source)
             renamed = invoke(original.replace('DecideAsync(', 'SurpriseAsync('))
             self.assertIn('missing generated declaration: NamedCalls.g.cs:Engine.DecideAsync', renamed)
             self.assertIn('unlisted generated declaration: NamedCalls.g.cs:Engine.SurpriseAsync', renamed)
+            accessor = invoke(original.replace('Choice(this OwnedCall', 'SurpriseAccessor(this OwnedCall'))
+            self.assertIn('missing generated declaration: NamedCalls.g.cs:AnswerAccessors.Choice', accessor)
+            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:AnswerAccessors.SurpriseAccessor', accessor)
 
     def test_java_record_components_are_checked_at_the_cli(self):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
