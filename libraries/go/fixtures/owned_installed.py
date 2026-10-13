@@ -40,7 +40,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
         if example_only:
             result = subprocess.run([str(home/'consumer-bin')], env=run_env, cwd=consumer, text=True, capture_output=True, timeout=20)
             assert result.returncode == 0, (result.stdout, result.stderr)
-            assert len(result.stdout.splitlines()) >= 10 and server.attempts > 0
+            assert len(result.stdout.splitlines()) >= 10 and server.attempts == 11, (server.attempts, server.arrivals)
             expected_options = ['billing', 'shipping', 'account', 'fraud', 'returns']
             expected_kinds = ['person', 'organization', 'location', 'product', 'event']
             criteria = [list(question.get('criteria', {})) for request in server.requests for question in request['questions'].values()]

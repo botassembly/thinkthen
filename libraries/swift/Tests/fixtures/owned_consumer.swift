@@ -61,6 +61,8 @@ import ThinkThen
         }
         let unknown = try await client.decideAnswer(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), threshold: .value(.alternative1("0.2:0.8")))))), input: .text("unsure"))
         try expect(unknown == nil, "Nullable normalized decision")
+        let unknownChoice = try await client.chooseAnswer(.definition(InputRequestQuestionDefinition(value: .alternative1(InputRequestDefinitionAuthoredChoose(choose: .alternative0("Which?"), options: .value(.alternative0(["a", "b"])), threshold: .value(.alternative0(0.95)))))), input: .text("uncertain-choice"))
+        try expect(unknownChoice == nil, "Nullable normalized choice")
         let authoredNull = try await client.decide(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), true: .value(.alternative3(.null)))))), input: .text("authored-null"))
         try expect(try authoredNull.decideAnswer() == true, "Authored null replaced normalized judgment")
         let explicit = try client.start(InputRequest(call: InputRequestCall(function: .decide, input: .text("hold-explicit-swift"), question: .text("Is it?")), schema: .thinkthenRequest_1))
@@ -78,6 +80,9 @@ import ThinkThen
             guard case .backend = failure.kind else { throw JSONConversionError("Wrong typed failure kind") }
             try expect(failure.failure.facts.isPresent && failure.call.terminal.facts.isPresent, "Failure facts lost")
         }
+        let recognition = try await client.recognize(.definition(InputRequestQuestionDefinition(value: .alternative6(InputRequestDefinitionRecognizeDefinition(recognize: InputRecognizeQuestion(kinds: .value(InputOrderedMap([.init("person", InputAuthoredDescription.alternative3(.null))]))))))), input: .text("Ana Lima"))
+        let aggregateCount = recognition.packets.filter { if case .recognizeAggregate = $0 { return true }; return false }.count
+        try expect(aggregateCount == 1, "Recognize did not emit exactly one aggregate")
         client.close()
         try expect(try call.terminal.json.data() == facts, "Result ownership ended with client")
         print("OWNED_SWIFT_PASS typed answer/failure, presence, lossless JSON, independent task, cancellation and cleanup")
