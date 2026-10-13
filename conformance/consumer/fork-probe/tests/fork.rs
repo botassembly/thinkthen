@@ -56,7 +56,8 @@ fn decide() -> Question {
 }
 
 fn answer(call: Result<thinkthen::Call<Answer>, thinkthen::Error>) -> Answer {
-    call.expect("a successful answer").into_value()
+    let call = call.unwrap_or_else(|error| unreachable!("{error:?}"));
+    call.into_value()
 }
 
 #[test]
