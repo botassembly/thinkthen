@@ -21,7 +21,7 @@ SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
        thinkthen_recognize(NULL, '@missing-question.json', 4) IS NULL,
        thinkthen_relations(NULL, '@missing-question.json', 4) IS NULL;
 ----
-true	true	true	true	true	true	true	true	true	true
+1	1	1	1	1	1	1	1	1	1
 
 query IIIIIIIIII
 SELECT thinkthen_decide_complete(NULL, 'not JSON') IS NULL,
@@ -35,7 +35,7 @@ SELECT thinkthen_decide_complete(NULL, 'not JSON') IS NULL,
        thinkthen_recognize_complete(NULL, 'not JSON') IS NULL,
        thinkthen_relate_complete(NULL, 'not JSON') IS NULL;
 ----
-true	true	true	true	true	true	true	true	true	true
+1	1	1	1	1	1	1	1	1	1
 
 query I
 SELECT count(*) FROM thinkthen_read_files(NULL::VARCHAR);
