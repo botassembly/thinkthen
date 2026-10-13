@@ -263,8 +263,17 @@ int main(void) {
             check(waiter.code == THINKTHEN_ECANCELLED, "cancel wakes blocked packet read");
             puts("woken"); fflush(stdout);
             (void)getchar();
-            thinkthen_session_result *packet = NULL;
-            uint32_t state = 99;
+            thinkthen_session_result *packet = (thinkthen_session_result *)(uintptr_t)7;
+            uint32_t state = 99, ready = 99;
+            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 5000, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_RESULT_V1, "hold an unread post-cancel packet");
+            uint32_t invalid[] = {THINKTHEN_SESSION_WAIT_INPUT_V1, 99};
+            for (size_t i = 0; i < sizeof invalid / sizeof invalid[0]; ++i) {
+                check(thinkthen_session_next_packet(session, invalid[i], &state, &packet) == THINKTHEN_EUSAGE, "packet read refuses invalid interest");
+                check(state == 99 && packet == (thinkthen_session_result *)(uintptr_t)7, "invalid interest preserves both outputs and queued packet");
+            }
+            thinkthen_session_cancel(session);
+            check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_RESULT_V1, &state, &packet) == THINKTHEN_OK && state == THINKTHEN_SESSION_RESULT_V1 && packet, "queued packet wins over cancellation");
+            packet_json(packet); thinkthen_session_result_free(packet);
             do {
                 check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &state, &packet) == THINKTHEN_OK, "drain after prompt cancel");
                 if (packet) { packet_json(packet); thinkthen_session_result_free(packet); }
