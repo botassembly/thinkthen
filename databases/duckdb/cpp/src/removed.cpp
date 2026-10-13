@@ -22,7 +22,7 @@ void RegisterRemoved(ExtensionLoader &loader) {
 	for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR}}) {
 		ScalarFunction function("thinkthen_warm", parameters, LogicalType::BIGINT, RemovedWarm);
-		function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+		ThinkThenSpecialNulls(function);
 		overloads.AddFunction(function);
 	}
 	RegisterDescribedScalar(loader, overloads, "Refuse the removed warm call and direct callers to thinkthen_decide_many.");

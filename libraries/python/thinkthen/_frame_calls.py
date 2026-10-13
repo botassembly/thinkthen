@@ -115,8 +115,13 @@ class FrameResult(PandasResult):
 @dataclass(frozen=True, repr=False, eq=False)
 class PolarsFrameResult(FrameResult):
     def _column(self, rows, positions=None):
-        import polars as pl
-        return pl.Series(str(self.on), list(rows), dtype=pl.Object)
+        from ._polars_calls import answer_column
+        return answer_column(str(self.on), rows, self.function, self.detailed)
+
+    @property
+    def probability(self):
+        from ._polars_calls import probability_column
+        return probability_column(self, str(self.on))
 
     def _selected(self):
         return self.source[list(self.positions), :]

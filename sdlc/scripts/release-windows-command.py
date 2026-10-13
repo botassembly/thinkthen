@@ -49,6 +49,11 @@ def pack(binary, archive):
         member.compress_type = zipfile.ZIP_DEFLATED
         member.external_attr = 0o100755 << 16
         output.writestr(member, data)
+        readme = zipfile.ZipInfo("README.md", (1980, 1, 1, 0, 0, 0))
+        readme.compress_type = zipfile.ZIP_DEFLATED
+        readme.external_attr = 0o100644 << 16
+        output.writestr(readme, windows_c.PUBLIC_TEXT["source"]("command").read_bytes())
+    windows_c.PUBLIC_TEXT["check_package"]("command", archive)
 
 
 def check(archive):
@@ -60,12 +65,13 @@ def check(archive):
     if sidecar.read_text().strip() != f"{digest}  {archive.name}":
         raise ValueError("command ZIP differs from its checksum")
     with zipfile.ZipFile(archive) as source:
-        if source.namelist() != ["thinkthen.exe"]:
-            raise ValueError("command ZIP must hold exactly thinkthen.exe")
+        if source.namelist() != ["thinkthen.exe", "README.md"]:
+            raise ValueError("command ZIP must hold exactly thinkthen.exe and README.md")
         member = source.getinfo("thinkthen.exe")
         if member.external_attr >> 16 & 0o170000 == 0o120000:
             raise ValueError("command ZIP holds a linked executable")
         executable(source.read(member))
+    windows_c.PUBLIC_TEXT["check_package"]("command", archive)
 
 
 def platform(folder, version):

@@ -22,6 +22,7 @@ fi
 scratch_dir STAGE
 PKG="$STAGE/thinkthen"
 cp -R "$ROOT/libraries/r/thinkthen" "$PKG"
+cp "$ROOT/libraries/r/README-PUBLIC.md" "$PKG/README.md"
 rm -rf -- "$PKG/src/rust/.cargo" "$PKG/src/rust/target"
 
 # The crate as cargo publishes it, unpacked where the package's manifest
@@ -57,4 +58,5 @@ for want in thinkthen/LICENSE thinkthen/src/rust/.cargo/config.toml thinkthen/sr
   grep -qx "$want" <<<"$listed" || { echo "make-tarball: $want is missing from the tarball" >&2; exit 1; }
 done
 grep -qx 'License: MIT + file LICENSE' "$PKG/DESCRIPTION"
+python3 "$ROOT/sdlc/scripts/registry-readmes.py" r "$tarball" >&2
 echo "$tarball"

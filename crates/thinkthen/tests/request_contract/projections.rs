@@ -50,8 +50,7 @@ fn native_filter_projection_retains_both_judgments_and_terminal_prefix() {
             .cut_at(threshold)
             .unwrap();
         for eager in [true, false] {
-            let admitted = Request::named("filter", args(q.clone().into(), feed_input()))
-                .unwrap()
+            let admitted = Request::filter(args(q.clone().into(), feed_input()))
                 .admit()
                 .unwrap();
             let records = vec![
@@ -85,16 +84,12 @@ fn native_filter_projection_retains_both_judgments_and_terminal_prefix() {
             assert_eq!(rows[0].result().value(), threshold == 0.5);
             assert_eq!(listener.count(), before + 1);
         }
-        let admitted = Request::named(
-            "filter",
-            args(
-                q.into(),
-                RequestInput::Records {
-                    items: vec![item("Alpha.")],
-                },
-            ),
-        )
-        .unwrap()
+        let admitted = Request::filter(args(
+            q.into(),
+            RequestInput::Records {
+                items: vec![item("Alpha.")],
+            },
+        ))
         .admit()
         .unwrap();
         let rows = filters(

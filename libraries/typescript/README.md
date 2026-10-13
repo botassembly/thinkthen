@@ -1,28 +1,22 @@
-# ThinkThen for typescript
+# ThinkThen for TypeScript
 
-ThinkThen answers typed questions about text. Use it to decide yes or no, choose a label, score an answer, or filter and rank records. Failed calls remain separate from answers.
-
-## Install
+ThinkThen answers typed questions about text. Use it to decide yes or no, choose a label, score an answer, or filter and rank records. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```sh
 npm install thinkthen
 ```
 
-## Example
-
-Configure a model backend before running this example.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```typescript
 import {Client} from 'thinkthen';
 
-const client = new Client({cache: false});
+const client = new Client();
 try {
   const call = await client.decide('Does this ask for a refund?', 'Please refund my order.');
-  console.log(call.results[0].value);
+  for (const answer of call.results) console.log(answer.value);
 } finally { client.close(); }
 ```
-
-## Cost
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

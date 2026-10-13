@@ -1,16 +1,12 @@
 # ThinkThen for Rust
 
-ThinkThen answers typed questions about text. Ask for a yes or no, a label, a number, or records selected and ranked by meaning. Failed calls remain separate from answers. The crate also provides the `thinkthen` command.
-
-## Install
+ThinkThen answers typed questions about text. Ask for a yes or no, a label, a number, or records selected and ranked by meaning. The crate also provides the `thinkthen` command. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```sh
 cargo add thinkthen
 ```
 
-## Example
-
-Configure a model backend before running this example.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```rust
 use thinkthen::{Engine, Question};
@@ -23,8 +19,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
-
-## Cost
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

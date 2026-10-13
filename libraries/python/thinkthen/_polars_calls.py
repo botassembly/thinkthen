@@ -4,6 +4,24 @@ from ._calls import Result
 from ._pandas_calls import PandasResult
 
 
+def answer_column(name, rows, function, detailed):
+    import polars as pl
+    kinds = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))
+    dtype = pl.Object if detailed else kinds.get(function, pl.Object)
+    return pl.Series(name, list(rows), dtype=dtype)
+
+
+def probability_column(result, name):
+    import polars as pl
+    values = Result.probability.fget(result)
+    if result.function in ('find', 'rank', 'relate'):
+        return values
+    rows = [None] * len(result.source)
+    for at, value in zip(result.positions, values, strict=True):
+        rows[at] = value
+    return pl.Series(name, rows, dtype=pl.Float64)
+
+
 def records(source, verb):
     from ._inputs import Item
     positions, values = [], []
@@ -21,8 +39,11 @@ class PolarsResult(PandasResult):
         return {**Result.to_dict(self), 'present': list(self.present), 'name': self.source.name}
 
     def _column(self, rows, positions=None):
-        import polars as pl
-        return pl.Series(self.source.name, list(rows), dtype=pl.Float64 if self.function == 'score' and not self.detailed else pl.Object)
+        return answer_column(self.source.name, rows, self.function, self.detailed)
+
+    @property
+    def probability(self):
+        return probability_column(self, self.source.name)
 
     def _selected(self):
         return self.source.gather(list(self.positions))

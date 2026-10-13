@@ -1,16 +1,12 @@
 # ThinkThen for Go
 
-ThinkThen answers typed questions about text. Ask for a yes or no, a label, a number, or records selected and ranked by meaning. Failed calls remain separate from answers.
-
-## Install
+ThinkThen answers typed questions about text. Ask for a yes or no, a label, a number, or records selected and ranked by meaning. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```sh
 go get github.com/botassembly/thinkthen/libraries/go@v0.2.0
 ```
 
-## Example
-
-Configure a model backend before running this example.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```go
 package main
@@ -32,8 +28,6 @@ func main() {
     fmt.Println(answer)
 }
 ```
-
-## Cost
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

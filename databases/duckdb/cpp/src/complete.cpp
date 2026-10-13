@@ -40,16 +40,16 @@ struct Bind : FunctionData {
     unique_ptr<FunctionData> Copy() const override { return make_uniq<Bind>(context); }
     bool Equals(const FunctionData &other) const override { return context.lock() == other.Cast<Bind>().context.lock(); }
 };
-unique_ptr<FunctionData> BindComplete(ClientContext &context, ScalarFunction &, vector<unique_ptr<Expression>> &) {
+unique_ptr<FunctionData> BindComplete(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
     context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
     return make_uniq<Bind>(context.shared_from_this());
 }
 void Complete(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &expr = state.expr.Cast<BoundFunctionExpression>();
-    auto context = expr.bind_info->Cast<Bind>().context.lock();
+    auto context = ThinkThenBindData(expr).Cast<Bind>().context.lock();
     if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
     auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-    auto name = expr.function.name;
+    auto name = ThinkThenFunctionName(expr);
     const string prefix = "thinkthen_native_", suffix = "_complete";
     const auto verb = name.substr(prefix.size(), name.size() - prefix.size() - suffix.size());
     std::optional<SessionSettings> session;
@@ -94,12 +94,12 @@ void RegisterComplete(ExtensionLoader &loader) {
     for (auto verb : {"decide","choose","tag","score","filter","rank","find","annotate","recognize","relate"}) {
         const string purpose = string("Return complete ") + verb + " results, request facts and typed failures as JSON.";
         const auto name = string("thinkthen_native_") + verb + "_complete";
-        ScalarFunction function(name,{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},LogicalType::JSON(),Complete,BindComplete);
-        function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+        ScalarFunction function(ThinkThenIdentifier(name),{LogicalType::VARCHAR,LogicalType::VARCHAR,LogicalType::VARCHAR},LogicalType::JSON(),Complete,ThinkThenBindScalar<BindComplete>);
+        ThinkThenSpecialNulls(function);
         function.SetStability(FunctionStability::VOLATILE);
         RegisterDescribedScalar(loader, function, purpose);
         if (string(verb) == "decide") {
-            function.arguments[1] = LogicalType::LIST(ImageType());
+            ThinkThenArgument(function, 1, LogicalType::LIST(ImageType()));
             RegisterDescribedScalar(loader, function, purpose);
         }
         RegisterPortableMacro(loader,string("CREATE MACRO thinkthen_")+verb+"_complete(question, inputs, settings := NULL) AS "+name+"(question, inputs, settings)", purpose);

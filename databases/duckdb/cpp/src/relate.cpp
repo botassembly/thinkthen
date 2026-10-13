@@ -82,7 +82,7 @@ struct RelateBind : FunctionData {
 };
 
 unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInput &input,
-                                     vector<LogicalType> &types, vector<string> &names) {
+                                     vector<LogicalType> &types, ThinkThenColumnNames &names) {
 	types = {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN};
 	names = {"relation", "source", "target", "probability", "either"};
 	auto bound = make_uniq<RelateBind>();

@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 import tarfile
 import tempfile
+import shutil
+import subprocess
+import struct
+import zipfile
 import unittest
 
 spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__).with_name('registry-readmes.py'))
@@ -35,6 +39,7 @@ class PackageText(unittest.TestCase):
                 (b'ticket 0578', 'ticket'),
                 (b'sdlc/planning/python.md', 'internal-path'),
                 (b'thinkthen-python', 'internal-crate'),
+                (b'thinkthen-core', 'internal-project'),
                 (b'pip install thinkthen==0.1.2', 'stale-version'),
                 (b'ThinkThen release 0.1.2', 'stale-version'),
                 (b'gem install thinkthen -v 0.1.2', 'stale-version'),
@@ -52,6 +57,46 @@ class PackageText(unittest.TestCase):
                     archive(package, dict(files, **{'package/package.json': json.dumps(changed).encode()}))
                     with self.assertRaisesRegex(readmes.Refusal, reason):
                         readmes.check_package('typescript', package)
+
+    def test_npm_assembles_public_readme_and_refuses_adr(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            source = tree / 'npm'
+            source.mkdir()
+            for name in ('package.json', 'README.md', 'LICENSE'):
+                shutil.copyfile(readmes.REPO / 'libraries/typescript' / name, source / name)
+            def pack():
+                subprocess.run(['npm', 'pack', '--offline', '--ignore-scripts', '--silent',
+                                '--cache', str(tree / 'cache'), '--pack-destination', str(tree)],
+                               cwd=source, check=True, capture_output=True)
+                return tree / ('thinkthen-' + readmes.version() + '.tgz')
+            readmes.check_package('typescript', pack())
+            (source / 'README.md').write_text('ADR 0047\n')
+            with self.assertRaisesRegex(readmes.Refusal, 'adr'):
+                readmes.check_package('typescript', pack())
+
+    def test_windows_command_assembles_root_public_page(self):
+        spec = importlib.util.spec_from_file_location('command', readmes.REPO / 'sdlc/scripts/release-windows-command.py')
+        command = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(command)
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            binary = tree / 'thinkthen.exe'
+            data = bytearray(128)
+            data[:2] = b'MZ'
+            struct.pack_into('<I', data, 60, 64)
+            data[64:68] = b'PE\0\0'
+            for offset, value in ((68, 0x8664), (86, 2), (88, 0x20B)):
+                struct.pack_into('<H', data, offset, value)
+            binary.write_bytes(data)
+            package = tree / ('thinkthen-' + readmes.version() + '-x86_64-pc-windows-msvc.zip')
+            command.pack(binary, package)
+            readmes.check_package('command', package)
+            with zipfile.ZipFile(package, 'w') as bundle:
+                bundle.writestr('thinkthen.exe', data)
+                bundle.writestr('README.md', b'ADR 0047')
+            with self.assertRaisesRegex(readmes.Refusal, 'adr'):
+                readmes.check_package('command', package)
 
     def test_dependency_versions_are_allowed(self):
         readmes.check_text(b'Rust 1.95.0; DuckDB 1.5.6; Zig 0.15.2; JDK 22; jsonlite 2.0.0', '0.2.0')

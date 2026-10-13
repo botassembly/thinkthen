@@ -8,6 +8,30 @@ from backend_settings import configuration, isolated
 CORPUS = REPO / "conformance/cases.json"
 
 
+def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(backend, tmp_path):
+    printed = run('''
+        import polars as pl, thinkthen as tt
+        source = pl.DataFrame({'body': ['first', None, 'second'], 'context': ['a', 'b', 'c']})
+        with tt.Engine(cache=False, batch=1) as engine:
+            for verb, controls, dtype, expected in [
+                    ('decide', {'threshold': .95}, pl.Boolean, [False, None, False]),
+                    ('choose', {'options': ['billing', 'shipping']}, pl.String, ['billing', None, 'billing']),
+                    ('score', {'levels': ['Routine.', 'Soon.', 'Now.']}, pl.Float64, [.15, None, .15]),
+                    ('tag', {'labels': ['bill', 'ship']}, pl.List(pl.String), [['bill', 'ship'], None, ['bill', 'ship']])]:
+                call = getattr(engine, verb)('Late?', source, on='body', context_field='/context', **controls)
+                assert call.value.dtype == dtype
+                assert call.value.to_list() == expected
+                assert call.value.name == 'body' and call.positions == (0, 2)
+                assert call.probability.dtype == pl.Float64
+                assert call.facts.records == 2 and call.facts.requests_sent == 2
+                assert call.results[0].input == {'body': 'first', 'context': 'a'}
+            assert source.to_dicts()[1] == {'body': None, 'context': 'b'}
+        print('typed frame answers')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'typed frame answers'
+    assert backend.count() == 8
+
+
 @pytest.mark.parametrize("shape", ["pandas", "polars"])
 def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(backend, tmp_path, shape):
     printed = run('''
@@ -26,6 +50,9 @@ def test_named_and_async_series_calls_keep_owned_rows_and_original_positions(bac
             if shape == "pandas": assert done.value.index.tolist() == [9, 9, 9]
             assert done.value.to_list() == [True, None, True]
             assert done.probability.to_list() == [.9, None, .9]
+            if shape == "polars":
+                assert done.value.dtype == pl.Boolean
+                assert done.probability.dtype == pl.Float64
             assert done.facts.requests_sent == 2
             assert pickle.loads(pickle.dumps(done)).value.to_list() == done.value.to_list()
             detailed = engine.decide('Late?', source, details=True)
@@ -97,6 +124,9 @@ def test_ten_series_functions_preserve_null_duplicate_and_whole_set_identity(bac
                 ("tag", "Which kinds?", {{"labels": ["bill", "ship"]}})]:
             result = call(verb, question, **kw)
             values = [None if value is pd.NA else value for value in result.value.to_list()]
+            if shape == "polars":
+                assert result.value.dtype == dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))[verb]
+                assert result.probability.dtype == pl.Float64
             if verb == "tag":
                 values = [list(value) if value is not None else None for value in values]
             assert result.value.name == "body"
@@ -235,6 +265,9 @@ def test_empty_invalid_expired_and_cancelled_series_calls_send_nothing(backend, 
             if verb == 'recognize': args = []
             call = getattr(empty.tt, verb)(*args, **kw)
             assert call.facts['records'] == call.facts['requests_sent'] == 0
+            if shape == "polars" and verb in ('decide', 'choose', 'score', 'tag'):
+                assert call.value.dtype == dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))[verb]
+                assert call.probability.dtype == pl.Float64
         source = series(['a', 'b'])
         token = tt.CancelToken(); token.cancel()
         for verb, kw in [('filter', {'deadline_ms':0}), ('rank', {'token':token}),

@@ -77,8 +77,9 @@ def main():
     classifier, selected = next((name,asset) for name,asset in inventory['native'].items() if asset['target'] == args.target)
     with zipfile.ZipFile(jars / ('thinkthen-' + classifier + '.jar'), 'w', zipfile.ZIP_DEFLATED) as jar:
         for resource in selected['files']: jar.write(args.native, resource)
-    for name in ('pom.xml','LICENSE','README.md'):
+    for name in ('pom.xml','LICENSE'):
         shutil.copyfile(ROOT / 'libraries/jvm' / name,jars / name)
+    shutil.copyfile(ROOT / 'libraries/jvm/README-PUBLIC.md', jars / 'README.md')
     actual = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm', '--out', str(out)], env=env))
     (jars / 'product-inventory.json').write_text(json.dumps(actual,indent=2) + '\n')
     maven_package(jars, inventory, classifier)

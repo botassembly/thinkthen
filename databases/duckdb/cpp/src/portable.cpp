@@ -36,7 +36,7 @@ struct PortableBind : FunctionData {
 	}
 };
 
-unique_ptr<FunctionData> Bind(ClientContext &context, ScalarFunction &,
+unique_ptr<FunctionData> Bind(ClientContext &context, const string &,
                               vector<unique_ptr<Expression>> &) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	return make_uniq<PortableBind>(context.shared_from_this());
@@ -61,7 +61,7 @@ void Validate(const Group &group) {
 }
 
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
@@ -137,7 +137,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 }
 
 void Many(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
@@ -184,7 +184,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 
 void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -266,7 +266,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 
 void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
-	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
+	auto context = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<PortableBind>().context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	std::optional<SessionSettings> session;
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -369,10 +369,10 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 }
 
 void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
-	Parser parser;
+	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
-	statement.info->schema = DEFAULT_SCHEMA;
+	ThinkThenMacroSchema(*statement.info);
 	statement.info->internal = true;
 	auto &info = statement.info->Cast<CreateMacroInfo>();
 	FunctionDescription description;
@@ -392,8 +392,8 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	ScalarFunction native("thinkthen_native_decide",
 	                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                       LogicalType::VARCHAR},
-	                      LogicalType::BOOLEAN, Decide, Bind);
-	native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                      LogicalType::BOOLEAN, Decide, ThinkThenBindScalar<Bind>);
+	ThinkThenSpecialNulls(native);
 	native.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, native, purpose);
 	// A scalar := argument is positional in DuckDB 1.5.5. This catalog macro
@@ -403,8 +403,8 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	                      "CAST(threshold AS VARCHAR), typeof(settings))", purpose);
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
-	                    LogicalType::JSON(), Many, Bind);
-	many.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                    LogicalType::JSON(), Many, ThinkThenBindScalar<Bind>);
+	ThinkThenSpecialNulls(many);
 	many.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, many, "Judge or rank keyed text records and return their values as JSON.");
 	for (auto kind : {0, 4, 5, 6}) {
@@ -426,11 +426,11 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		const string purpose = kind == 4 ? "Choose an option for text." : kind == 5 ? "Score text against ordered levels." : "Tag text with matching labels.";
 		const auto type = kind == 5 ? LogicalType::DOUBLE : kind == 6 ? LogicalType::LIST(LogicalType::VARCHAR)
 		                                                : LogicalType::VARCHAR;
-		ScalarFunction native("thinkthen_native_" + name,
+		ScalarFunction native(ThinkThenIdentifier("thinkthen_native_" + name),
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::VARCHAR, LogicalType::INTEGER, LogicalType::VARCHAR,
-		                       LogicalType::VARCHAR}, type, Listed, Bind);
-		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+		                       LogicalType::VARCHAR}, type, Listed, ThinkThenBindScalar<Bind>);
+		ThinkThenSpecialNulls(native);
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, members := NULL, settings := NULL) AS "
@@ -455,11 +455,11 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	for (auto kind : {2, 3, 7}) {
 		const string name = kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		const string purpose = kind == 2 ? "Return judgment details as JSON." : kind == 3 ? "Return judgment details or a safe recoverable failure as JSON." : "Annotate text with a question set and return its values as JSON.";
-		ScalarFunction native("thinkthen_native_" + name,
+		ScalarFunction native(ThinkThenIdentifier("thinkthen_native_" + name),
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},
-		                      LogicalType::JSON(), Scalar, Bind);
-		native.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+		                      LogicalType::JSON(), Scalar, ThinkThenBindScalar<Bind>);
+		ThinkThenSpecialNulls(native);
 		native.SetStability(FunctionStability::VOLATILE);
 		RegisterDescribedScalar(loader, native, purpose);
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, settings := NULL) AS "
