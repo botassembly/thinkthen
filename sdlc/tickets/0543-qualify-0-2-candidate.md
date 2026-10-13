@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569
+Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569, 0573, 0574, 0576, 0577, 0578, 0579
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
@@ -86,6 +86,8 @@ PM amendment, 2026-10-12, fifth. Build in waves and test once, under the [2026-1
 
 PM amendment, 2026-10-12, sixth. Two tickets join the waves. 0569 (annotate context, score levels and status) is core CLI work and joins wave 2. 0568 (language-library parity) starts once 0562 lands: its manifest, lint, typed options and size report go with the generator work, and each language's part joins that language's 0563 group in wave 4. Both close with 0560 to 0565 on the candidate SHA.
 
+PM amendment, 2026-10-12, seventh. 0573 (caller order and one aggregate packet) and 0574 (one-line answer reading) join the waves. Their engine parts join wave 2, their generator parts join 0562, and each language's part joins its 0563 group. Both close with the rest on the candidate SHA.
+
 ## Progress
 
 - 2026-10-11 started
@@ -113,3 +115,9 @@ PM amendment, 2026-10-12, sixth. Two tickets join the waves. 0569 (annotate cont
 - 2026-10-12 next: The fourth amendment moves the next full campaign to the final candidate; exact-source gates passed on 48b22e71f, fresh review found Go request duplication and JVM/Dart immediate metadata loss, and targeted repairs passed before integration and new same-revision gates.
 - 2026-10-12 landed aa595d6950d0f7243e980d27f417570b65239a49; next: The tested and freshly reviewed corrective batch is pushed and its nine tickets are closed; follow the fourth amendment with 0560 baseline, then 0561, 0565, 0562 and 0563, with 0564 after baseline and final candidate qualification after those changes.
 - 2026-10-12 next: Follow the fifth amendment: finish the 0560 baseline, combine 0561 and 0565 alongside Rust-only 0564, then 0562 and language groups for 0563 with library 0564, using wave checkpoints and one final candidate on ticket/0543-final.
+
+PM amendment, 2026-10-13. The Rust ratchet may rise from the core checkpoint of 186,955 to the measured combined total of 187,452, which stays below main. The added lines come from required queue changes and their regression tests. Make no assertion or formatting cuts to meet the old checkpoint. Set the final ratchet to the candidate's measured total, and no higher than main.
+
+PM amendment, 2026-10-13. 0576 joins 0.2. Its engine and generator parts follow 0562 and 0574, and its language parts join the 0563 groups.
+
+PM amendment, 2026-10-13. Ian ruled that the DuckDB community listing ships through 0.2, so 0577 joins it. 0577 runs in its own lane beside the waves, and its descriptor pins the candidate commit.

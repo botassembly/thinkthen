@@ -36,7 +36,7 @@ def prepare(context):
             archive.add(package / folder, arcname=folder)
 
     def c_runner(collection):
-        command(['sh', 'check.sh'], root / 'libraries/c',
+        command(['sh', './check.sh'], root / 'libraries/c',
                 {**runtime_env, 'THINKTHEN_ARTIFACT': str(artifact), 'THINKTHEN_TEST_PROFILE': 'routine',
                  'THINKTHEN_COVERAGE_STAGE': str(collection / 'installed')}, collection / 'check.log', timeout=1800)
 
@@ -48,7 +48,7 @@ def prepare(context):
     python_env = {**env, 'CARGO_TARGET_DIR': str(run / 'target-python'),
                   'THINKTHEN_COVERAGE_STAGE': str(python_stage), 'THINKTHEN_TEST_PROFILE': 'routine',
                   'THINKTHEN_FULL_COMPILER': '1'}
-    command(['sh', 'check.sh'], root / 'libraries/python',
+    command(['sh', './check.sh'], root / 'libraries/python',
             {**python_env, 'THINKTHEN_COVERAGE_PHASE': 'prepare'}, run / 'prepare-python.log', timeout=1800)
     extensions = list((python_stage / 'venv').glob('lib/python*/site-packages/thinkthen/_thinkthen*.so'))
     if len(extensions) != 1:
@@ -59,6 +59,6 @@ def prepare(context):
             selected = {**python_env, 'CARGO_TARGET_DIR': str(run / 'target-tools'), 'THINKTHEN_COVERAGE_PHASE': 'shared' if consumer == 'python-shared' else 'consumer'}
             if consumer != 'python-shared':
                 selected['THINKTHEN_PARITY_CONSUMER'] = consumer
-            command(['sh', 'check.sh'], root / 'libraries/python', selected, collection / 'check.log', timeout=1800)
+            command(['sh', './check.sh'], root / 'libraries/python', selected, collection / 'check.log', timeout=1800)
         collections.append({'name': 'installed-' + consumer, 'objects': objects, 'runner': runner})
     return collections
