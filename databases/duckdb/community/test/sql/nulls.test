@@ -9,7 +9,7 @@ SELECT (thinkthen_plan('asks for a refund', '{"7":"Refund me please."}')).record
 ----
 1
 
-query BBBBBBBBBB
+query IIIIIIIIII
 SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
        thinkthen_choose(NULL, 'ignored', ['first', 'second'], 4) IS NULL,
        thinkthen_score(NULL, 'ignored', ['low', 'high'], 4) IS NULL,
@@ -23,7 +23,7 @@ SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
 ----
 true	true	true	true	true	true	true	true	true	true
 
-query BBBBBBBBBB
+query IIIIIIIIII
 SELECT thinkthen_decide_complete(NULL, 'not JSON') IS NULL,
        thinkthen_choose_complete(NULL, 'not JSON') IS NULL,
        thinkthen_tag_complete(NULL, 'not JSON') IS NULL,
