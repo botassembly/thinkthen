@@ -43,3 +43,7 @@ Each language library that uses the C ABI keeps only its own idioms: futures or 
   - A cancellation check in each changed library shows the blocking next-packet call returns when the session is cancelled.
   - No library source contains its own 50 ms wait loop.
 - Defers: Python, R, Ruby and TypeScript, which call the core through their own Rust crates and are outside this ticket.
+
+
+
+PM amendment, 2026-10-13. Remaining work. Close 0563 now and move its remainder into the 0576 language lanes: PHP replaces its 50 ms `wait()` loop in `libraries/php/src/session/operation.php` with `thinkthen_session_next_packet`; Objective-C does the same in `Sources/Foundation/ThinkThen.m`; Zig merges e0afccd3a from `ticket/0563-php-dart-zig-runtime` and uses the blocking call in its examples; COBOL's session check uses the blocking call; Swift, Objective-C and Zig start sessions through `thinkthen_session_new_named_with_surface`. The no-poll rule covers only C-ABI libraries; the ticks in the Python, R, Ruby and TypeScript crates stay under ADR 0047. Proof, in each lane: the library's `check.sh` passes with a cancellation case, and `git grep -n 'session_wait.*50' libraries` returns nothing.

@@ -46,3 +46,7 @@ PM amendment, 2026-10-12. Accept the 2026-10-12 installed pair at da1e3bb17 as t
 - 2026-10-12 next: All installed collectors have bounded source review and available-platform proofs; repaired tooling at bec7a013b is running routine test and lint, then the combined baseline, repeat and planted-code proof remain, with Apple baseline ordering awaiting Ian.
 - 2026-10-12 next: The repaired routine test and real-code classification probe passed; reviewed fixture limits and Apple collectors are integrated, partial-report durability is being repaired, and the locally runnable baseline will guide cleanup with Objective-C explicitly unmeasured until the approved candidate Apple checks.
 - 2026-10-12 landed 1a84f9b6c; next: Coverage tooling is on main with passed routine and lint evidence plus twelve integrated lifecycle checks; run the locally runnable baseline and repeat on one frozen revision, retaining the Objective-C omission and failing status before cleanup waves.
+
+
+
+PM amendment, 2026-10-13. Remaining work. Close 0560 now; its tooling and baseline are done and reviewed. 0543 runs `sdlc/scripts/coverage --release` once on the candidate SHA and stores only its summary. The deleted-line allowance equals 59,962 minus the candidate's mapped line count. Each collection passes when its reached count is at least its lower baseline count minus that allowance. The candidate record shows this in one table, and no new script is written for it. Delete the stale branch `ticket/0560-measure-coverage`.
