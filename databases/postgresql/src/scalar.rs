@@ -55,8 +55,8 @@ fn decide(
             deadline_ms,
         };
         let held = judged(For::Decide, question, input, None, settings, named)?;
-        match held.value() {
-            Judgment::Decision(value) => answer_value(*value),
+        match held.value {
+            Judgment::Decision(value) => answer_value(value),
             _ => call::raise(call::usage("thinkthen_decide takes a decide question")),
         }
     })
@@ -90,8 +90,8 @@ fn choose(
             deadline_ms,
         };
         let held = judged(For::Choose, question, input, members, settings, named)?;
-        match held.value() {
-            Judgment::Choice(value) => value.clone(),
+        match held.value {
+            Judgment::Choice(value) => value,
             _ => call::raise(call::usage("thinkthen_choose takes a choose question")),
         }
     })
@@ -125,8 +125,8 @@ fn score(
             deadline_ms,
         };
         let held = judged(For::Score, question, input, members, settings, named)?;
-        match held.value() {
-            Judgment::Score(value) => Some(*value),
+        match held.value {
+            Judgment::Score(value) => Some(value),
             _ => call::raise(call::usage("thinkthen_score takes a score question")),
         }
     })
@@ -160,8 +160,8 @@ fn tag(
             deadline_ms,
         };
         let held = judged(For::Tag, question, input, members, settings, named)?;
-        match held.value() {
-            Judgment::Tags(value) => Some(value.clone()),
+        match held.value {
+            Judgment::Tags(value) => Some(value),
             _ => call::raise(call::usage("thinkthen_tag takes a tag question")),
         }
     })
@@ -202,7 +202,7 @@ fn details_sql(
             details(engine, &asked, &input, options)
         })
         .unwrap_or_else(|| call::raise(call::defect("details returned no record")));
-        Some(crate::jsonb(&held.to_json()))
+        Some(crate::jsonb(&held.json))
     })
 }
 }
@@ -248,8 +248,7 @@ fn try_details(
         })();
         let value = match result {
             Ok(answer) => {
-                serde_json::json!({"status":"answered","details":serde_json::from_str::<serde_json::Value>(&answer.to_json())
-            .unwrap_or_else(|_| call::raise(call::defect("a result is not JSON")))})
+                serde_json::json!({"status":"answered","details":crate::jsonb(&answer.json).0})
             }
             Err(error) => call::failed_row(&error).unwrap_or_else(|| call::raise(error)),
         };

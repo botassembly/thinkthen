@@ -44,14 +44,12 @@ pub(crate) fn run(
     items: Vec<RequestItem>,
     controls: CallOptions<'_>,
 ) -> Result<Call<RequestValue>, Error> {
-    let input = RequestInput::Records { items };
     let args = RequestArguments {
         question: RequestQuestion::Definition { value: definition },
-        input,
+        input: RequestInput::Records { items },
         options: RequestOptions::default(),
     };
-    let request = Request::for_function(function, args);
-    let request = request.admit()?;
+    let request = Request::for_function(function, args).admit()?;
     match engine.execute_request(
         &request,
         RequestEnvironment {
@@ -110,19 +108,7 @@ pub(crate) fn details(
 
 /// SQL-owned ordinary judgment columns and their existing scalar document.
 pub(crate) struct JudgmentRow {
-    value: thinkthen::Judgment,
-    probabilities: thinkthen::Probabilities,
-    json: String,
-}
-
-impl JudgmentRow {
-    pub(crate) fn value(&self) -> &thinkthen::Judgment {
-        &self.value
-    }
-    pub(crate) fn probabilities(&self) -> &thinkthen::Probabilities {
-        &self.probabilities
-    }
-    pub(crate) fn to_json(&self) -> String {
-        self.json.clone()
-    }
+    pub(crate) value: thinkthen::Judgment,
+    pub(crate) probabilities: thinkthen::Probabilities,
+    pub(crate) json: String,
 }

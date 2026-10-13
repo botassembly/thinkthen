@@ -114,11 +114,11 @@ pub(crate) fn question_result(
     verb: For,
     settings: &Settings,
 ) -> Result<LoadedQuestion, Error> {
-    let key = match verb {
-        For::Decide => "",
-        For::Choose => "options",
-        For::Score => "levels",
-        For::Tag => "labels",
+    let (key, wanted) = match verb {
+        For::Decide => ("", QuestionKind::Decide),
+        For::Choose => ("options", QuestionKind::Choose),
+        For::Score => ("levels", QuestionKind::Score),
+        For::Tag => ("labels", QuestionKind::Tag),
         For::Find | For::Rank => {
             return Err(call::usage(format!(
                 "{} is not a judgment question",
@@ -132,18 +132,6 @@ pub(crate) fn question_result(
         .and_then(|given| given.with_settings(settings, verb))
         .and_then(|given| given.parse(Question::from_json))?;
     let kind = asked.kind();
-    let wanted = match verb {
-        For::Decide => QuestionKind::Decide,
-        For::Choose => QuestionKind::Choose,
-        For::Score => QuestionKind::Score,
-        For::Tag => QuestionKind::Tag,
-        For::Find | For::Rank => {
-            return Err(call::usage(format!(
-                "{} is not a judgment question",
-                key_for(verb)
-            )));
-        }
-    };
     if kind != wanted {
         return Err(call::usage(format!(
             "a {} call takes a {} question",

@@ -112,19 +112,7 @@ pub(crate) fn details(
 
 /// SQL-owned ordinary judgment columns and their existing scalar document.
 pub(crate) struct JudgmentRow {
-    value: thinkthen::Judgment,
-    probabilities: thinkthen::Probabilities,
-    json: String,
-}
-
-impl JudgmentRow {
-    pub(crate) fn value(&self) -> &thinkthen::Judgment {
-        &self.value
-    }
-    pub(crate) fn probabilities(&self) -> &thinkthen::Probabilities {
-        &self.probabilities
-    }
-    pub(crate) fn to_json(&self) -> String {
-        self.json.clone()
-    }
+    pub(crate) value: thinkthen::Judgment,
+    pub(crate) probabilities: thinkthen::Probabilities,
+    pub(crate) json: String,
 }

@@ -260,9 +260,9 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
                 .ok_or_else(|| Failure::defect("image details returned no record"))
         })?;
     if verb.is_none() {
-        return Ok(Value::Text(details.to_json()));
+        return Ok(Value::Text(details.json));
     }
-    Ok(match details.value() {
+    Ok(match &details.value {
         Judgment::Decision(thinkthen::Answer::Yes) => Value::Integer(1),
         Judgment::Decision(thinkthen::Answer::No) => Value::Integer(0),
         Judgment::Decision(thinkthen::Answer::Unsure) | Judgment::Choice(None) => Value::Null,

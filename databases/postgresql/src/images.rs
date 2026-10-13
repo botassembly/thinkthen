@@ -134,8 +134,8 @@ fn thinkthen_decide_images(
             settings,
             Some(thinkthen::For::Decide),
         );
-        match held.value() {
-            Judgment::Decision(value) => crate::answer_value(*value),
+        match held.value {
+            Judgment::Decision(value) => crate::answer_value(value),
             _ => call::raise(call::defect("image decide held another judgment")),
         }
     })
@@ -159,8 +159,8 @@ fn thinkthen_choose_images(
             settings,
             Some(thinkthen::For::Choose),
         );
-        match held.value() {
-            Judgment::Choice(value) => value.clone(),
+        match held.value {
+            Judgment::Choice(value) => value,
             _ => call::raise(call::defect("image choose held another judgment")),
         }
     })
@@ -184,8 +184,8 @@ fn thinkthen_score_images(
             settings,
             Some(thinkthen::For::Score),
         );
-        match held.value() {
-            Judgment::Score(value) => Some(*value),
+        match held.value {
+            Judgment::Score(value) => Some(value),
             _ => call::raise(call::defect("image score held another judgment")),
         }
     })
@@ -203,7 +203,7 @@ fn thinkthen_details_images(
 ) -> Option<pgrx::datum::JsonB> {
     call::guarded(|| {
         let held = judged(question?, images?, text, settings, None);
-        Some(crate::jsonb(&held.to_json()))
+        Some(crate::jsonb(&held.json))
     })
 }
 }

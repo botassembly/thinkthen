@@ -35,7 +35,7 @@ fn answered(
 }
 
 fn probability(detail: &crate::request::JudgmentRow) -> Option<f64> {
-    match (detail.value(), detail.probabilities()) {
+    match (&detail.value, &detail.probabilities) {
         (Judgment::Decision(_), Probabilities::YesNo { yes }) => Some(*yes),
         (Judgment::Choice(Some(label)), Probabilities::Named(choices)) => choices
             .iter()
@@ -65,7 +65,7 @@ fn decide_many(
         let rows = answered(For::Decide, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Decision(answer) => crate::answer_value(*answer),
                     _ => call::raise(call::usage("thinkthen_decide_many takes a decide question")),
                 };
@@ -103,7 +103,7 @@ fn choose_many(
         let rows = answered(For::Choose, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Choice(value) => value.clone(),
                     _ => call::raise(call::usage("thinkthen_choose_many takes a choose question")),
                 };
@@ -127,7 +127,7 @@ fn score_many(
         let rows = answered(For::Score, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Score(value) => *value,
                     _ => call::raise(call::usage("thinkthen_score_many takes a score question")),
                 };
@@ -151,7 +151,7 @@ fn tag_many(
         let rows = answered(For::Tag, question, input, settings)
             .into_iter()
             .map(|(key, detail)| {
-                let value = match detail.value() {
+                let value = match &detail.value {
                     Judgment::Tags(value) => value.clone(),
                     _ => call::raise(call::usage("thinkthen_tag_many takes a tag question")),
                 };
