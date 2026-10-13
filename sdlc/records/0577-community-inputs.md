@@ -11,7 +11,7 @@ The pinned [distribution workflow](https://github.com/duckdb/extension-ci-tools/
 | linux_amd64 | ubuntu-24.04 | x64-linux-release | Native Linux x86-64 container |
 | linux_arm64 | ubuntu-24.04-arm | arm64-linux-release | Native ARM64 Linux Docker on Apple Silicon |
 | osx_arm64 | macos-15 | arm64-osx-release | Available Apple Silicon Mac, macOS 26.4; this differs from the community runner |
-| osx_amd64 | macos-15 | x64-osx-release | Cross compilation on the same Mac if its prerequisites allow it |
+| osx_amd64 | macos-15 | x64-osx-release | Candidate workflow qualification; this local lane does not add an Intel cross-build |
 
 The root manifest copies [DuckDB's actual extension-template manifest at a733bb150523d49b88ce882302b413d79c71c9b8](https://github.com/duckdb/extension-template/blob/a733bb150523d49b88ce882302b413d79c71c9b8/vcpkg.json). It includes OpenSSL and the CI tools' port/triplet overlays. A byte comparison and JSON parse pass. Template dependence is explicit; an empty substitute manifest would reproduce different inputs.
 
