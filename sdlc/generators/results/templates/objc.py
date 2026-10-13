@@ -64,7 +64,7 @@ def condition(tag):
                        [f'object[{literal(k)}] == nil' for k in value['excluded']])
 
 
-def outputs(definitions, version):
+def outputs(definitions, version, input_definitions=None):
     header = ['// Generated from the shared Rust result graph; do not edit.',
               '#import "TTResult.h"', 'NS_ASSUME_NONNULL_BEGIN',
               'FOUNDATION_EXPORT NSString * const TTRequestVersion;', 'FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);']
@@ -119,5 +119,61 @@ def outputs(definitions, version):
             raise ValueError('missing native error code: ' + symbol)
         implementation += [f'if ([kind isEqual:{literal(kind)}]) return {value.group(1)};']
     implementation += ['TTInvalidResult(); return 0;', '}']
+    ordered_header, ordered_implementation = ordered_maps()
+    header += ordered_header
+    implementation += ordered_implementation
     header += ['NS_ASSUME_NONNULL_END']
     return {'TTResults.g.h': '\n'.join(header) + '\n', 'TTResults.g.m': '\n'.join(implementation) + '\n'}
+
+
+def ordered_maps():
+    """Preserve authored object pairs while Foundation encodes scalar values."""
+    header = [
+        '@interface TTOrderedEntry : NSObject',
+        '@property(nonatomic, copy, readonly) NSString *key;',
+        '@property(nonatomic, strong, readonly) id value;',
+        '- (instancetype)initWithKey:(NSString *)key value:(id)value;', '@end',
+        '@interface TTOrderedMap : NSObject',
+        '@property(nonatomic, copy, readonly) NSArray<TTOrderedEntry *> *entries;',
+        '- (instancetype)initWithEntries:(NSArray<TTOrderedEntry *> *)entries;', '@end',
+        'FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError **error);']
+    implementation = [r'''@implementation TTOrderedEntry
+- (instancetype)initWithKey:(NSString *)key value:(id)value {
+    if ((self = [super init])) { _key = [key copy]; _value = value; } return self;
+}
+@end
+@implementation TTOrderedMap
+- (instancetype)initWithEntries:(NSArray<TTOrderedEntry *> *)entries {
+    if ((self = [super init])) { _entries = [entries copy]; } return self;
+}
+@end
+NSData *TTRequestJSONData(id value, NSError **error) {
+    NSArray<TTOrderedEntry *> *members = nil;
+    if ([value isKindOfClass:TTOrderedMap.class]) members = ((TTOrderedMap *)value).entries;
+    else if ([value isKindOfClass:NSDictionary.class]) {
+        NSMutableArray *entries = [NSMutableArray array];
+        for (NSString *key in value) [entries addObject:[[TTOrderedEntry alloc] initWithKey:key value:value[key]]];
+        members = entries;
+    }
+    BOOL array = [value isKindOfClass:NSArray.class];
+    if (!members && !array) return [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingFragmentsAllowed error:error];
+    NSMutableData *data = [NSMutableData data];
+    [data appendData:[(array ? @"[" : @"{") dataUsingEncoding:NSUTF8StringEncoding]];
+    NSArray *values = array ? value : members;
+    for (NSUInteger index = 0; index < values.count; index++) {
+        if (index) [data appendData:[@"," dataUsingEncoding:NSUTF8StringEncoding]];
+        id item = values[index];
+        if (!array) {
+            TTOrderedEntry *entry = item;
+            NSData *key = TTRequestJSONData(entry.key, error); if (!key) return nil;
+            [data appendData:key]; [data appendData:[@":" dataUsingEncoding:NSUTF8StringEncoding]];
+            item = entry.value;
+        }
+        NSData *encoded = TTRequestJSONData(item, error); if (!encoded) return nil;
+        [data appendData:encoded];
+    }
+    [data appendData:[(array ? @"]" : @"}") dataUsingEncoding:NSUTF8StringEncoding]];
+    return data;
+}
+''']
+    return header, implementation
