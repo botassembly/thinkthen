@@ -9,3 +9,6 @@ Each line is a check the PM runs on the build team. None holds status.
 - Does the surface manifest lint pass for every language library?
 - Are landed worktrees, branches and proof folders gone?
 - Does every outside pull request or issue have an owner checking it, and does any ticket marked complete still have an open outside PR or failing outside CI?
+- Before a new ticket or amendment ships, has the PM checked it against the ADRs, the README contract, the specification and other open tickets it touches, and does each amendment name what it replaces?
+- Does each measurement or size target in a ticket state its accepted variance, what gets committed and the comparison rule, or cite the standing rulings?
+- Is the coordinator pane working, or has it stopped on a capacity error or an unanswered question for more than a few minutes?
