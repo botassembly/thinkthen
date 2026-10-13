@@ -11,7 +11,59 @@ pub fn Map(comptime T: type) type {
     };
 }
 pub const Number = union(enum) { signed: i64, unsigned: u64, decimal: f64 };
-pub const Value = union(enum) { null_value, boolean: bool, number: Number, string: []const u8, array: []const Value, object: Map(Value) };
+pub const Value = union(enum) {
+    null_value,
+    boolean: bool,
+    number: Number,
+    string: []const u8,
+    array: []const Value,
+    object: Map(Value),
+    pub fn jsonStringify(self: @This(), writer: anytype) !void {
+        try writeNative(self, writer);
+    }
+};
+fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
+    const T = @TypeOf(value);
+    switch (@typeInfo(T)) {
+        .@"union" => switch (value) {
+            inline else => |member| {
+                if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer);
+            },
+        },
+        .@"struct" => {
+            try writer.beginObject();
+            if (@hasField(T, "entries")) {
+                for (value.entries) |entry| {
+                    try writer.objectField(entry.key);
+                    try writeNative(entry.value, writer);
+                }
+            } else inline for (std.meta.fields(T)) |field| {
+                const member = @field(value, field.name);
+                if (comptime std.mem.eql(u8, field.name, "extensions")) {
+                    for (member.entries) |entry| {
+                        try writer.objectField(entry.key);
+                        try writeNative(entry.value, writer);
+                    }
+                } else {
+                    const omit = if (comptime @typeInfo(field.type) == .@"union" and @hasField(field.type, "missing")) member == .missing else false;
+                    if (!omit) {
+                        try writer.objectField(field.name);
+                        try writeNative(member, writer);
+                    }
+                }
+            }
+            try writer.endObject();
+        },
+        .pointer => |info| {
+            if (T == []const u8) return writer.write(value);
+            if (info.size == .one) return writeNative(value.*, writer);
+            try writer.beginArray();
+            for (value) |member| try writeNative(member, writer);
+            try writer.endArray();
+        },
+        else => try writer.write(value),
+    }
+}
 fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
@@ -20,6 +72,34 @@ fn readNumber(v: c.thinkthen_complete_utf8_v1) !Number {
     if (std.mem.indexOfAny(u8, source, ".eE") != null) return .{ .decimal = try std.fmt.parseFloat(f64, source) };
     if (source.len != 0 and source[0] == '-') return .{ .signed = try std.fmt.parseInt(i64, source, 10) };
     return .{ .unsigned = try std.fmt.parseInt(u64, source, 10) };
+}
+/// Project a decoded native value into a generated typed record.
+pub fn readAs(comptime T: type, v: Value) anyerror!T {
+    switch (@typeInfo(T)) {
+        .optional => |info| return if (v == .null_value) null else try readAs(info.child, v),
+        .pointer => return if (T == []const u8 and v == .string) v.string else error.InvalidNativeValue,
+        .bool => return if (v == .boolean) v.boolean else error.InvalidNativeValue,
+        .int => return switch (v.number) {
+            .unsigned => |n| std.math.cast(T, n) orelse error.InvalidNativeValue,
+            .signed => |n| std.math.cast(T, n) orelse error.InvalidNativeValue,
+            else => error.InvalidNativeValue,
+        },
+        .@"struct" => {
+            if (v != .object) return error.InvalidNativeValue;
+            var result: T = undefined;
+            inline for (std.meta.fields(T)) |field| {
+                var found = false;
+                for (v.object.entries) |entry| if (std.mem.eql(u8, entry.key, field.name)) {
+                    @field(result, field.name) = try readAs(field.type, entry.value);
+                    found = true;
+                    break;
+                };
+                if (!found) return error.MissingNativeField;
+            }
+            return result;
+        },
+        else => return error.InvalidNativeValue,
+    }
 }
 pub fn readObject(a: std.mem.Allocator, v: anytype) anyerror!Map(Value) {
     const entries = try a.alloc(Map(Value).Entry, v.len);
@@ -41,44 +121,10 @@ pub fn readValue(a: std.mem.Allocator, v: c.thinkthen_complete_json_v1) anyerror
         else => error.InvalidNativeDiscriminator,
     };
 }
-pub const SessionPacket = union(enum) {
-    decide_row: SessionPacketDecideRow,
-    choose_row: SessionPacketChooseRow,
-    tag_row: SessionPacketTagRow,
-    score_row: SessionPacketScoreRow,
-    filter_row: SessionPacketFilterRow,
-    annotate_row: SessionPacketAnnotateRow,
-    decide_aggregate: SessionPacketDecideAggregate,
-    choose_aggregate: SessionPacketChooseAggregate,
-    tag_aggregate: SessionPacketTagAggregate,
-    score_aggregate: SessionPacketScoreAggregate,
-    filter_aggregate: SessionPacketFilterAggregate,
-    rank_aggregate: SessionPacketRankAggregate,
-    find_aggregate: SessionPacketFindAggregate,
-    annotate_aggregate: SessionPacketAnnotateAggregate,
-    recognize_aggregate: SessionPacketRecognizeAggregate,
-    relate_aggregate: SessionPacketRelateAggregate,
-    observation: SessionPacketObservation,
-    terminal: SessionPacketTerminal,
-};
-
-pub const SessionPacketTerminal = struct {
-    facts: Presence(Facts),
-    failure: Presence(CallError),
-    kind: []const u8,
-    extensions: Map(Value),
-};
-
-pub const CallError = struct {
-    @"error": Error,
-    facts: Presence(Facts),
-    extensions: Map(Value),
-};
-
-pub const Facts = struct {
+pub const ImmediateFacts = struct {
     attempts: Presence([]const Attempt),
     cache_answers: u64,
-    call_id: CallId,
+    call_id: Presence(CallId),
     estimated_cost_usd: Presence([]const u8),
     held_model_mismatch: Presence(bool),
     input_tokens: Presence(u64),
@@ -120,6 +166,62 @@ pub const Attempt = struct {
 pub const SdkRequestId = []const u8;
 
 pub const AttemptOutcome = enum { ok, status, transport };
+
+pub const SessionPacket = union(enum) {
+    decide_row: SessionPacketDecideRow,
+    choose_row: SessionPacketChooseRow,
+    tag_row: SessionPacketTagRow,
+    score_row: SessionPacketScoreRow,
+    filter_row: SessionPacketFilterRow,
+    annotate_row: SessionPacketAnnotateRow,
+    decide_aggregate: SessionPacketDecideAggregate,
+    choose_aggregate: SessionPacketChooseAggregate,
+    tag_aggregate: SessionPacketTagAggregate,
+    score_aggregate: SessionPacketScoreAggregate,
+    filter_aggregate: SessionPacketFilterAggregate,
+    rank_aggregate: SessionPacketRankAggregate,
+    find_aggregate: SessionPacketFindAggregate,
+    annotate_aggregate: SessionPacketAnnotateAggregate,
+    recognize_aggregate: SessionPacketRecognizeAggregate,
+    relate_aggregate: SessionPacketRelateAggregate,
+    observation: SessionPacketObservation,
+    terminal: SessionPacketTerminal,
+    pub fn jsonStringify(self: @This(), writer: anytype) !void {
+        try writeNative(self, writer);
+    }
+};
+
+pub const SessionPacketTerminal = struct {
+    facts: Presence(Facts),
+    failure: Presence(CallError),
+    kind: []const u8,
+    extensions: Map(Value),
+};
+
+pub const CallError = struct {
+    @"error": Error,
+    facts: Presence(Facts),
+    extensions: Map(Value),
+};
+
+pub const Facts = struct {
+    attempts: Presence([]const Attempt),
+    cache_answers: u64,
+    call_id: CallId,
+    estimated_cost_usd: Presence([]const u8),
+    held_model_mismatch: Presence(bool),
+    input_tokens: Presence(u64),
+    largest_request_bytes: u64,
+    largest_request_estimated_input_tokens: Presence(u64),
+    model: Presence([]const u8),
+    output_tokens: Presence(u64),
+    records: u64,
+    requests_sent: u64,
+    seconds: f64,
+    token_estimate_method: []const u8,
+    usage_persistence: Presence(PersistenceObservation),
+    extensions: Map(Value),
+};
 
 pub const Error = struct {
     estimated_input_denial: Presence(EstimatedInputDenial),
@@ -1378,6 +1480,151 @@ pub const FailureFieldKind = enum { backend };
 
 pub const BatchString = enum { max };
 
+pub fn readImmediateFacts(a: std.mem.Allocator, v: c.thinkthen_complete_immediate_facts_v1) anyerror!ImmediateFacts {
+    return .{
+        .attempts = switch (v.attempts.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = blk: {
+                const items = try a.alloc(Attempt, v.attempts.value.len);
+                for (items, 0..) |*out, i| {
+                    const entry = v.attempts.value.data[i];
+                    out.* = try readAttempt(a, entry[0]);
+                }
+                break :blk items;
+            } },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .cache_answers = v.cache_answers,
+        .call_id = switch (v.call_id.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readCallId(a, v.call_id.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .estimated_cost_usd = switch (v.estimated_cost_usd.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.estimated_cost_usd.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .held_model_mismatch = switch (v.held_model_mismatch.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.held_model_mismatch.value != 0 },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .input_tokens = switch (v.input_tokens.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.input_tokens.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .largest_request_bytes = v.largest_request_bytes,
+        .largest_request_estimated_input_tokens = switch (v.largest_request_estimated_input_tokens.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.largest_request_estimated_input_tokens.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .model = switch (v.model.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.model.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .output_tokens = switch (v.output_tokens.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.output_tokens.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .records = v.records,
+        .requests_sent = v.requests_sent,
+        .seconds = v.seconds,
+        .token_estimate_method = try a.dupe(u8, text(v.token_estimate_method)),
+        .usage_persistence = switch (v.usage_persistence.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try readPersistenceObservation(a, v.usage_persistence.value[0]) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readPersistenceObservation(a: std.mem.Allocator, v: c.thinkthen_complete_persistence_observation_v1) anyerror!PersistenceObservation {
+    return .{
+        .advice = switch (v.advice.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.advice.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .observed_at = try a.dupe(u8, text(v.observed_at)),
+        .state = try readUsagePersistence(a, v.state[0]),
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readUsagePersistence(a: std.mem.Allocator, v: c.thinkthen_complete_usage_persistence_v1) anyerror!UsagePersistence {
+    _ = a;
+    return switch (v.kind) {
+        1 => .disabled,
+        2 => .pending,
+        3 => .written,
+        4 => .failed,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
+pub fn readCallId(a: std.mem.Allocator, v: c.thinkthen_complete_call_id_v1) anyerror!CallId {
+    return try a.dupe(u8, text(v.value));
+}
+
+pub fn readAttempt(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_v1) anyerror!Attempt {
+    return .{
+        .ordinal = v.ordinal,
+        .outcome = try readAttemptOutcome(a, v.outcome[0]),
+        .request_id = switch (v.request_id.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = try a.dupe(u8, text(v.request_id.value)) },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .request_sha256 = try a.dupe(u8, text(v.request_sha256)),
+        .sdk_request_id = try readSdkRequestId(a, v.sdk_request_id[0]),
+        .server_ms = switch (v.server_ms.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.server_ms.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .status = switch (v.status.presence) {
+            0 => .missing,
+            1 => .null_value,
+            2 => .{ .value = v.status.value },
+            else => return error.InvalidNativeDiscriminator,
+        },
+        .wall_ms = v.wall_ms,
+        .extensions = try readObject(a, v.extensions),
+    };
+}
+
+pub fn readSdkRequestId(a: std.mem.Allocator, v: c.thinkthen_complete_sdk_request_id_v1) anyerror!SdkRequestId {
+    return try a.dupe(u8, text(v.value));
+}
+
+pub fn readAttemptOutcome(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_outcome_v1) anyerror!AttemptOutcome {
+    _ = a;
+    return switch (v.kind) {
+        1 => .ok,
+        2 => .status,
+        3 => .transport,
+        else => error.InvalidNativeDiscriminator,
+    };
+}
+
 pub fn readSessionPacket(a: std.mem.Allocator, v: c.thinkthen_complete_session_packet_v1) anyerror!SessionPacket {
     return switch (v.kind) {
         1 => .{ .decide_row = try readSessionPacketDecideRow(a, v.data.decide_row[0]) },
@@ -1499,78 +1746,6 @@ pub fn readFacts(a: std.mem.Allocator, v: c.thinkthen_complete_facts_v1) anyerro
             else => return error.InvalidNativeDiscriminator,
         },
         .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readPersistenceObservation(a: std.mem.Allocator, v: c.thinkthen_complete_persistence_observation_v1) anyerror!PersistenceObservation {
-    return .{
-        .advice = switch (v.advice.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try a.dupe(u8, text(v.advice.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .observed_at = try a.dupe(u8, text(v.observed_at)),
-        .state = try readUsagePersistence(a, v.state[0]),
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readUsagePersistence(a: std.mem.Allocator, v: c.thinkthen_complete_usage_persistence_v1) anyerror!UsagePersistence {
-    _ = a;
-    return switch (v.kind) {
-        1 => .disabled,
-        2 => .pending,
-        3 => .written,
-        4 => .failed,
-        else => error.InvalidNativeDiscriminator,
-    };
-}
-
-pub fn readCallId(a: std.mem.Allocator, v: c.thinkthen_complete_call_id_v1) anyerror!CallId {
-    return try a.dupe(u8, text(v.value));
-}
-
-pub fn readAttempt(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_v1) anyerror!Attempt {
-    return .{
-        .ordinal = v.ordinal,
-        .outcome = try readAttemptOutcome(a, v.outcome[0]),
-        .request_id = switch (v.request_id.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = try a.dupe(u8, text(v.request_id.value)) },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .request_sha256 = try a.dupe(u8, text(v.request_sha256)),
-        .sdk_request_id = try readSdkRequestId(a, v.sdk_request_id[0]),
-        .server_ms = switch (v.server_ms.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.server_ms.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .status = switch (v.status.presence) {
-            0 => .missing,
-            1 => .null_value,
-            2 => .{ .value = v.status.value },
-            else => return error.InvalidNativeDiscriminator,
-        },
-        .wall_ms = v.wall_ms,
-        .extensions = try readObject(a, v.extensions),
-    };
-}
-
-pub fn readSdkRequestId(a: std.mem.Allocator, v: c.thinkthen_complete_sdk_request_id_v1) anyerror!SdkRequestId {
-    return try a.dupe(u8, text(v.value));
-}
-
-pub fn readAttemptOutcome(a: std.mem.Allocator, v: c.thinkthen_complete_attempt_outcome_v1) anyerror!AttemptOutcome {
-    _ = a;
-    return switch (v.kind) {
-        1 => .ok,
-        2 => .status,
-        3 => .transport,
-        else => error.InvalidNativeDiscriminator,
     };
 }
 
@@ -5114,3 +5289,186 @@ pub fn readBatchString(a: std.mem.Allocator, v: c.thinkthen_complete_batch_strin
         else => error.InvalidNativeDiscriminator,
     };
 }
+pub const Types = struct {
+    pub const AnnotatedField = @import("results_generated.zig").AnnotatedField;
+    pub const AnnotatedRow = @import("results_generated.zig").AnnotatedRow;
+    pub const Annotation = @import("results_generated.zig").Annotation;
+    pub const AnnotationMember = @import("results_generated.zig").AnnotationMember;
+    pub const AnnotationMemberAnswerId = @import("results_generated.zig").AnnotationMemberAnswerId;
+    pub const AnnotationMemberFailureId = @import("results_generated.zig").AnnotationMemberFailureId;
+    pub const AnnotationValue = @import("results_generated.zig").AnnotationValue;
+    pub const AnnotationValueChoice = @import("results_generated.zig").AnnotationValueChoice;
+    pub const AnnotationValueDecision = @import("results_generated.zig").AnnotationValueDecision;
+    pub const AnnotationValueFailed = @import("results_generated.zig").AnnotationValueFailed;
+    pub const AnnotationValueScore = @import("results_generated.zig").AnnotationValueScore;
+    pub const AnnotationValueTags = @import("results_generated.zig").AnnotationValueTags;
+    pub const Answer = @import("results_generated.zig").Answer;
+    pub const AnswerChoice = @import("results_generated.zig").AnswerChoice;
+    pub const AnswerId = @import("results_generated.zig").AnswerId;
+    pub const AnswerScore = @import("results_generated.zig").AnswerScore;
+    pub const AnswerTag = @import("results_generated.zig").AnswerTag;
+    pub const AnswerYesNo = @import("results_generated.zig").AnswerYesNo;
+    pub const Answers = @import("results_generated.zig").Answers;
+    pub const AtomicArrayOfString = @import("results_generated.zig").AtomicArrayOfString;
+    pub const AtomicBoolean = @import("results_generated.zig").AtomicBoolean;
+    pub const AtomicDecideValue = @import("results_generated.zig").AtomicDecideValue;
+    pub const AtomicDouble = @import("results_generated.zig").AtomicDouble;
+    pub const AtomicNonZeroUsize = @import("results_generated.zig").AtomicNonZeroUsize;
+    pub const AtomicNullableString = @import("results_generated.zig").AtomicNullableString;
+    pub const Attempt = @import("results_generated.zig").Attempt;
+    pub const AttemptOutcome = @import("results_generated.zig").AttemptOutcome;
+    pub const Batch = @import("results_generated.zig").Batch;
+    pub const BatchSetting = @import("results_generated.zig").BatchSetting;
+    pub const BatchString = @import("results_generated.zig").BatchString;
+    pub const BatchWarning = @import("results_generated.zig").BatchWarning;
+    pub const BoundaryMode = @import("results_generated.zig").BoundaryMode;
+    pub const BoundaryProposal = @import("results_generated.zig").BoundaryProposal;
+    pub const CallError = @import("results_generated.zig").CallError;
+    pub const CallId = @import("results_generated.zig").CallId;
+    pub const DecideValue = @import("results_generated.zig").DecideValue;
+    pub const Entity = @import("results_generated.zig").Entity;
+    pub const EntityDocument = @import("results_generated.zig").EntityDocument;
+    pub const EntityEdge = @import("results_generated.zig").EntityEdge;
+    pub const Error = @import("results_generated.zig").Error;
+    pub const EstimatedInputDenial = @import("results_generated.zig").EstimatedInputDenial;
+    pub const EstimatedInputDenialAdditionalRequest = @import("results_generated.zig").EstimatedInputDenialAdditionalRequest;
+    pub const EstimatedInputDenialInitialRequest = @import("results_generated.zig").EstimatedInputDenialInitialRequest;
+    pub const EstimatedInputDenialRetry = @import("results_generated.zig").EstimatedInputDenialRetry;
+    pub const Facts = @import("results_generated.zig").Facts;
+    pub const Failed = @import("results_generated.zig").Failed;
+    pub const Failure = @import("results_generated.zig").Failure;
+    pub const FailureCause = @import("results_generated.zig").FailureCause;
+    pub const FailureFieldKind = @import("results_generated.zig").FailureFieldKind;
+    pub const FailureId = @import("results_generated.zig").FailureId;
+    pub const FailureKind = @import("results_generated.zig").FailureKind;
+    pub const Find = @import("results_generated.zig").Find;
+    pub const FindAnswer = @import("results_generated.zig").FindAnswer;
+    pub const FindCandidate = @import("results_generated.zig").FindCandidate;
+    pub const Image = @import("results_generated.zig").Image;
+    pub const ImageMedia = @import("results_generated.zig").ImageMedia;
+    pub const ImmediateFacts = @import("results_generated.zig").ImmediateFacts;
+    pub const InputDeclaration = @import("results_generated.zig").InputDeclaration;
+    pub const InputDeclarationObjectRoot = @import("results_generated.zig").InputDeclarationObjectRoot;
+    pub const InputDeclarationStringRoot = @import("results_generated.zig").InputDeclarationStringRoot;
+    pub const InputPropertyType = @import("results_generated.zig").InputPropertyType;
+    pub const InputPropertyTypeArray = @import("results_generated.zig").InputPropertyTypeArray;
+    pub const InputPropertyTypeBoolean = @import("results_generated.zig").InputPropertyTypeBoolean;
+    pub const InputPropertyTypeNumber = @import("results_generated.zig").InputPropertyTypeNumber;
+    pub const InputPropertyTypeString = @import("results_generated.zig").InputPropertyTypeString;
+    pub const JudgmentValue = @import("results_generated.zig").JudgmentValue;
+    pub const Label = @import("results_generated.zig").Label;
+    pub const Map = @import("results_generated.zig").Map;
+    pub const Meta = @import("results_generated.zig").Meta;
+    pub const NameOdds = @import("results_generated.zig").NameOdds;
+    pub const Number = @import("results_generated.zig").Number;
+    pub const ObjectType = @import("results_generated.zig").ObjectType;
+    pub const Observation = @import("results_generated.zig").Observation;
+    pub const ObservationFailureId = @import("results_generated.zig").ObservationFailureId;
+    pub const ObservationId = @import("results_generated.zig").ObservationId;
+    pub const ObservationObservationId = @import("results_generated.zig").ObservationObservationId;
+    pub const Origin = @import("results_generated.zig").Origin;
+    pub const PairOdds = @import("results_generated.zig").PairOdds;
+    pub const PersistenceObservation = @import("results_generated.zig").PersistenceObservation;
+    pub const PhysicalSource = @import("results_generated.zig").PhysicalSource;
+    pub const PieceOdds = @import("results_generated.zig").PieceOdds;
+    pub const Place = @import("results_generated.zig").Place;
+    pub const Position = @import("results_generated.zig").Position;
+    pub const Presence = @import("results_generated.zig").Presence;
+    pub const ProfileWarning = @import("results_generated.zig").ProfileWarning;
+    pub const QuestionName = @import("results_generated.zig").QuestionName;
+    pub const QuestionSource = @import("results_generated.zig").QuestionSource;
+    pub const RankMember = @import("results_generated.zig").RankMember;
+    pub const RankMemberResult = @import("results_generated.zig").RankMemberResult;
+    pub const ReadableQuestion = @import("results_generated.zig").ReadableQuestion;
+    pub const ReadableQuestion2 = @import("results_generated.zig").ReadableQuestion2;
+    pub const ReadableQuestion3 = @import("results_generated.zig").ReadableQuestion3;
+    pub const ReadableQuestion4 = @import("results_generated.zig").ReadableQuestion4;
+    pub const ReadableQuestionChoose = @import("results_generated.zig").ReadableQuestionChoose;
+    pub const ReadableQuestionDecide = @import("results_generated.zig").ReadableQuestionDecide;
+    pub const ReadableQuestionScore = @import("results_generated.zig").ReadableQuestionScore;
+    pub const ReadableQuestionTag = @import("results_generated.zig").ReadableQuestionTag;
+    pub const Recognition = @import("results_generated.zig").Recognition;
+    pub const RecognitionEdgeDocument = @import("results_generated.zig").RecognitionEdgeDocument;
+    pub const RecognitionMode = @import("results_generated.zig").RecognitionMode;
+    pub const RecognitionOdds = @import("results_generated.zig").RecognitionOdds;
+    pub const RecognitionOddsBoundaryOdds = @import("results_generated.zig").RecognitionOddsBoundaryOdds;
+    pub const RecognitionOddsRecognizeAnswer = @import("results_generated.zig").RecognitionOddsRecognizeAnswer;
+    pub const RecognitionProposal = @import("results_generated.zig").RecognitionProposal;
+    pub const RecognitionStageContext = @import("results_generated.zig").RecognitionStageContext;
+    pub const Recognize = @import("results_generated.zig").Recognize;
+    pub const RecognizeEntities = @import("results_generated.zig").RecognizeEntities;
+    pub const RecognizeModeProposals = @import("results_generated.zig").RecognizeModeProposals;
+    pub const RelateFields = @import("results_generated.zig").RelateFields;
+    pub const RelatedEntity = @import("results_generated.zig").RelatedEntity;
+    pub const RelatedEntityEdge = @import("results_generated.zig").RelatedEntityEdge;
+    pub const Relation = @import("results_generated.zig").Relation;
+    pub const RelationDirection = @import("results_generated.zig").RelationDirection;
+    pub const RelationEndpoint = @import("results_generated.zig").RelationEndpoint;
+    pub const RelationEndpointRelatedEntity = @import("results_generated.zig").RelationEndpointRelatedEntity;
+    pub const RelationEndpointSource = @import("results_generated.zig").RelationEndpointSource;
+    pub const RelationMember = @import("results_generated.zig").RelationMember;
+    pub const RelationMemberAnswerId = @import("results_generated.zig").RelationMemberAnswerId;
+    pub const RelationMemberFailureId = @import("results_generated.zig").RelationMemberFailureId;
+    pub const RelationMethod = @import("results_generated.zig").RelationMethod;
+    pub const RelationRule = @import("results_generated.zig").RelationRule;
+    pub const RequestFunction = @import("results_generated.zig").RequestFunction;
+    pub const SdkRequestId = @import("results_generated.zig").SdkRequestId;
+    pub const SendBudgetDenial = @import("results_generated.zig").SendBudgetDenial;
+    pub const SendBudgetDenialBeforeAdditionalSend = @import("results_generated.zig").SendBudgetDenialBeforeAdditionalSend;
+    pub const SendBudgetDenialBeforeFirstSend = @import("results_generated.zig").SendBudgetDenialBeforeFirstSend;
+    pub const SendBudgetDenialBeforeRetry = @import("results_generated.zig").SendBudgetDenialBeforeRetry;
+    pub const SessionAnnotation = @import("results_generated.zig").SessionAnnotation;
+    pub const SessionInputSource = @import("results_generated.zig").SessionInputSource;
+    pub const SessionJudgment = @import("results_generated.zig").SessionJudgment;
+    pub const SessionJudgmentChoice = @import("results_generated.zig").SessionJudgmentChoice;
+    pub const SessionJudgmentDecision = @import("results_generated.zig").SessionJudgmentDecision;
+    pub const SessionJudgmentScore = @import("results_generated.zig").SessionJudgmentScore;
+    pub const SessionJudgmentTags = @import("results_generated.zig").SessionJudgmentTags;
+    pub const SessionNamedProbability = @import("results_generated.zig").SessionNamedProbability;
+    pub const SessionObservation = @import("results_generated.zig").SessionObservation;
+    pub const SessionObservationQuestion = @import("results_generated.zig").SessionObservationQuestion;
+    pub const SessionObservationRow = @import("results_generated.zig").SessionObservationRow;
+    pub const SessionObservedRow = @import("results_generated.zig").SessionObservedRow;
+    pub const SessionObservedRowAnnotated = @import("results_generated.zig").SessionObservedRowAnnotated;
+    pub const SessionObservedRowFind = @import("results_generated.zig").SessionObservedRowFind;
+    pub const SessionObservedRowJudgment = @import("results_generated.zig").SessionObservedRowJudgment;
+    pub const SessionObservedRowRecognized = @import("results_generated.zig").SessionObservedRowRecognized;
+    pub const SessionObservedRowRelations = @import("results_generated.zig").SessionObservedRowRelations;
+    pub const SessionPacket = @import("results_generated.zig").SessionPacket;
+    pub const SessionPacketAnnotateAggregate = @import("results_generated.zig").SessionPacketAnnotateAggregate;
+    pub const SessionPacketAnnotateRow = @import("results_generated.zig").SessionPacketAnnotateRow;
+    pub const SessionPacketChooseAggregate = @import("results_generated.zig").SessionPacketChooseAggregate;
+    pub const SessionPacketChooseRow = @import("results_generated.zig").SessionPacketChooseRow;
+    pub const SessionPacketDecideAggregate = @import("results_generated.zig").SessionPacketDecideAggregate;
+    pub const SessionPacketDecideRow = @import("results_generated.zig").SessionPacketDecideRow;
+    pub const SessionPacketFilterAggregate = @import("results_generated.zig").SessionPacketFilterAggregate;
+    pub const SessionPacketFilterRow = @import("results_generated.zig").SessionPacketFilterRow;
+    pub const SessionPacketFindAggregate = @import("results_generated.zig").SessionPacketFindAggregate;
+    pub const SessionPacketObservation = @import("results_generated.zig").SessionPacketObservation;
+    pub const SessionPacketRankAggregate = @import("results_generated.zig").SessionPacketRankAggregate;
+    pub const SessionPacketRecognizeAggregate = @import("results_generated.zig").SessionPacketRecognizeAggregate;
+    pub const SessionPacketRelateAggregate = @import("results_generated.zig").SessionPacketRelateAggregate;
+    pub const SessionPacketScoreAggregate = @import("results_generated.zig").SessionPacketScoreAggregate;
+    pub const SessionPacketScoreRow = @import("results_generated.zig").SessionPacketScoreRow;
+    pub const SessionPacketTagAggregate = @import("results_generated.zig").SessionPacketTagAggregate;
+    pub const SessionPacketTagRow = @import("results_generated.zig").SessionPacketTagRow;
+    pub const SessionPacketTerminal = @import("results_generated.zig").SessionPacketTerminal;
+    pub const SessionProbabilities = @import("results_generated.zig").SessionProbabilities;
+    pub const SessionProbabilitiesNamed = @import("results_generated.zig").SessionProbabilitiesNamed;
+    pub const SessionProbabilitiesYesNo = @import("results_generated.zig").SessionProbabilitiesYesNo;
+    pub const SessionQuestionDetail = @import("results_generated.zig").SessionQuestionDetail;
+    pub const SessionRecognition = @import("results_generated.zig").SessionRecognition;
+    pub const SessionRelationEdge = @import("results_generated.zig").SessionRelationEdge;
+    pub const StopCause = @import("results_generated.zig").StopCause;
+    pub const Stopped = @import("results_generated.zig").Stopped;
+    pub const StringRoot = @import("results_generated.zig").StringRoot;
+    pub const StringType = @import("results_generated.zig").StringType;
+    pub const Threshold = @import("results_generated.zig").Threshold;
+    pub const TokenUsage = @import("results_generated.zig").TokenUsage;
+    pub const Usage = @import("results_generated.zig").Usage;
+    pub const UsagePersistence = @import("results_generated.zig").UsagePersistence;
+    pub const Value = @import("results_generated.zig").Value;
+    pub const Verb = @import("results_generated.zig").Verb;
+    pub const Version = @import("results_generated.zig").Version;
+    pub const WordingVersion = @import("results_generated.zig").WordingVersion;
+};

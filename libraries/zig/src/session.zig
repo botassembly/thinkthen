@@ -1,7 +1,9 @@
 //! Thin owned sessions over the Rust-generated complete packet graph.
 const std = @import("std");
 const tt = @import("thinkthen.zig");
-const c = tt.c;
+const c = @import("native.zig").c;
+const values = @import("results_generated.zig");
+const calls = @import("calls_generated.zig");
 pub const Function = enum { decide, choose, tag, score, filter, rank, find, annotate, recognize, relate };
 pub const Error = error{ Usage, Backend, Deadline, Local, Cancelled, Defect, ClosedEngine };
 pub fn checked(code: c_int) Error!void {
@@ -21,52 +23,63 @@ pub fn message() []const u8 {
 pub fn bytes(value: anytype) []const u8 {
     return if (value.len == 0) &.{} else value.data[0..value.len];
 }
-/// Distinguish absent, present null and present value without a JSON reader.
-pub fn Presence(comptime T: type) type {
-    return union(enum) { missing, null_value, value: T };
-}
-pub fn presence(field: anytype) Presence(@TypeOf(field.value)) {
-    return switch (field.presence) {
-        c.THINKTHEN_COMPLETE_PRESENCE_MISSING_V1 => .missing,
-        c.THINKTHEN_COMPLETE_PRESENCE_NULL_V1 => .null_value,
-        else => .{ .value = field.value },
-    };
-}
-/// For fields whose native schema allows absence but does not allow null.
-pub fn optional(field: anytype) ?@TypeOf(field.value) {
-    return if (field.presence == c.THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) field.value else null;
-}
-pub const Packet = struct {
-    raw: *c.thinkthen_session_result,
-    view: *const c.thinkthen_complete_session_packet_v1,
+const PacketStorage = struct {
+    allocator: std.mem.Allocator,
+    arena: std.heap.ArenaAllocator,
+    value: values.SessionPacket,
+};
+/// A packet owns its copied values until explicit release.
+pub const Packet = opaque {
+    fn storage(self: *const Packet) *const PacketStorage {
+        return @ptrCast(@alignCast(self));
+    }
     pub fn deinit(self: *Packet) void {
-        c.thinkthen_session_result_free(self.raw);
+        const owned: *PacketStorage = @ptrCast(@alignCast(self));
+        const allocator = owned.allocator;
+        owned.arena.deinit();
+        allocator.destroy(owned);
     }
-    pub fn terminal(self: Packet) ?*const c.thinkthen_complete_session_packet_terminal_v1 {
-        return if (self.view.kind == c.THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) self.view.data.terminal else null;
+    pub fn value(self: *const Packet) *const values.SessionPacket {
+        return &self.storage().value;
     }
-    pub fn facts(self: Packet) ?*const c.thinkthen_complete_facts_v1 {
-        const value = self.terminal() orelse return null;
-        return optional(value.facts) orelse return null;
+    pub fn terminal(self: *const Packet) ?*const values.SessionPacketTerminal {
+        return switch (self.value().*) {
+            .terminal => |*v| v,
+            else => null,
+        };
     }
-    pub fn failure(self: Packet) ?*const c.thinkthen_complete_call_error_v1 {
-        const value = self.terminal() orelse return null;
-        return optional(value.failure) orelse return null;
+    pub fn facts(self: *const Packet) ?*const values.Facts {
+        const end = self.terminal() orelse return null;
+        return switch (end.facts) {
+            .value => |*v| v,
+            else => null,
+        };
+    }
+    pub fn failure(self: *const Packet) ?*const values.CallError {
+        const end = self.terminal() orelse return null;
+        return switch (end.failure) {
+            .value => |*v| v,
+            else => null,
+        };
     }
 };
 pub const Session = struct {
-    raw: *c.thinkthen_session,
+    handle: *anyopaque,
+    allocator: std.mem.Allocator,
+    fn native(self: Session) *c.thinkthen_session {
+        return @ptrCast(self.handle);
+    }
     pub fn deinit(self: *Session) void {
-        c.thinkthen_session_free(self.raw);
+        c.thinkthen_session_free(self.native());
     }
     pub fn cancel(self: Session) void {
-        c.thinkthen_session_cancel(self.raw);
+        c.thinkthen_session_cancel(self.native());
     }
     pub fn push(self: Session, allocator: std.mem.Allocator, item: tt.authored.inputs.RequestSessionDescriptor) !enum { accepted, full, closed } {
         const json = try std.json.Stringify.valueAlloc(allocator, item, .{ .emit_null_optional_fields = false });
         defer allocator.free(json);
         var status: u32 = undefined;
-        try checked(c.thinkthen_session_try_push(self.raw, json.ptr, json.len, &status));
+        try checked(c.thinkthen_session_try_push(self.native(), json.ptr, json.len, &status));
         return switch (status) {
             c.THINKTHEN_SESSION_ACCEPTED_V1 => .accepted,
             c.THINKTHEN_SESSION_FULL_V1 => .full,
@@ -74,73 +87,57 @@ pub const Session = struct {
         };
     }
     pub fn finish(self: Session) Error!void {
-        try checked(c.thinkthen_session_finish(self.raw, null, 0));
+        try checked(c.thinkthen_session_finish(self.native(), null, 0));
     }
-    pub const Read = union(enum) { pending, end, packet: Packet };
-    pub fn read(self: Session) Error!Read {
+    pub const Read = union(enum) { pending, end, packet: *Packet };
+    pub fn read(self: Session) !Read {
+        return self.readNext(false);
+    }
+    /// Wait until a packet arrives or the cancelled session settles.
+    pub fn next(self: Session) !Read {
+        return self.readNext(true);
+    }
+    pub fn wait(self: Session, input: bool) Error!void {
+        var ready: u32 = undefined;
+        try checked(c.thinkthen_session_wait(self.native(), if (input) c.THINKTHEN_SESSION_WAIT_INPUT_V1 else c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, std.math.maxInt(u32), &ready));
+    }
+    fn readNext(self: Session, blocking: bool) !Read {
         var status: u32 = undefined;
         var raw: ?*c.thinkthen_session_result = null;
-        try checked(c.thinkthen_session_try_read(self.raw, &status, &raw));
+        try checked(if (blocking)
+            c.thinkthen_session_next_packet(self.native(), c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &status, &raw)
+        else
+            c.thinkthen_session_try_read(self.native(), &status, &raw));
         switch (status) {
             c.THINKTHEN_SESSION_PENDING_V1 => return .pending,
             c.THINKTHEN_SESSION_END_V1 => return .end,
             else => {
                 const owner = raw orelse return error.Defect;
-                errdefer c.thinkthen_session_result_free(owner);
+                defer c.thinkthen_session_result_free(owner);
                 var view: [*c]const c.thinkthen_complete_session_packet_v1 = null;
                 try checked(c.thinkthen_session_result_view(owner, &view));
-                return .{ .packet = .{ .raw = owner, .view = view } };
+                const owned = try self.allocator.create(PacketStorage);
+                errdefer self.allocator.destroy(owned);
+                owned.* = .{ .allocator = self.allocator, .arena = std.heap.ArenaAllocator.init(self.allocator), .value = undefined };
+                errdefer owned.arena.deinit();
+                owned.value = try values.readSessionPacket(owned.arena.allocator(), view[0]);
+                return .{ .packet = @ptrCast(owned) };
             },
         }
     }
 };
-pub fn decide(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallDecide) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .decide = arguments });
+pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: calls.Arguments) !Session {
+    const request = try tt.Request.init(engine.allocator, .{ .function = function, .question = arguments.question, .input = arguments.input, .options = arguments.options });
     defer request.deinit();
     return request.start(engine);
 }
-pub fn choose(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallChoose) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .choose = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn tag(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallTag) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .tag = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn score(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallScore) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .score = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn filter(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallFilter) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .filter = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn rank(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRank) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .rank = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn find(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallFind) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .find = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn annotate(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallAnnotate) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .annotate = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn recognize(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRecognize) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .recognize = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
-pub fn relate(engine: *tt.Engine, arguments: tt.authored.inputs.RequestCallRelate) !Session {
-    const request = try tt.authored.Request.init(engine.allocator, .{ .relate = arguments });
-    defer request.deinit();
-    return request.start(engine);
-}
+pub const decide = calls.decide;
+pub const choose = calls.choose;
+pub const tag = calls.tag;
+pub const score = calls.score;
+pub const filter = calls.filter;
+pub const rank = calls.rank;
+pub const find = calls.find;
+pub const annotate = calls.annotate;
+pub const recognize = calls.recognize;
+pub const relate = calls.relate;

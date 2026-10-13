@@ -15,14 +15,11 @@ pub fn main() !void {
         .input = .{ .text = .{ .text = "I demand a refund today" } },
     });
     defer call.deinit();
-    while (true) switch (try call.read()) {
-        .pending => {
-            var ready: u32 = undefined;
-            try tt.session.checked(tt.c.thinkthen_session_wait(call.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
-        },
+    while (true) switch (try call.next()) {
+        .pending => return error.Defect,
         .end => break,
         .packet => |value| {
-            var packet = value;
+            const packet = value;
             defer packet.deinit();
             if (packet.failure()) |_| return error.DecisionFailed;
             if (packet.facts()) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });

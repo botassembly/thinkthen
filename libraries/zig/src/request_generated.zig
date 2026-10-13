@@ -465,6 +465,20 @@ pub const AuthoredThreshold = union(enum) {
     }
 };
 
+pub const CacheDocument = union(enum) {
+    string: []const u8,
+
+    disabled_cache: DisabledCache,
+
+    pub fn jsonStringify(self: @This(), writer: anytype) !void {
+        switch (self) {
+            .string => |value| try writer.write(value),
+
+            .disabled_cache => |value| try writer.write(value),
+        }
+    }
+};
+
 pub const ContextSchema = union(enum) {
     string: []const u8,
 
@@ -477,6 +491,48 @@ pub const ContextSchema = union(enum) {
             .object => |value| try writer.write(value),
         }
     }
+};
+
+pub const DisabledCache = bool;
+
+pub const EngineSettings = struct {
+    backend: ?[]const u8 = null,
+
+    base_url: ?[]const u8 = null,
+
+    batch: ?RequestBatch = null,
+
+    cache: ?CacheDocument = null,
+
+    max_estimated_input_tokens_total: ??u64 = null,
+
+    max_request_bytes: ?u64 = null,
+
+    max_requests: ??u64 = null,
+
+    max_requests_total: ??u64 = null,
+
+    max_retries: ?u32 = null,
+
+    model: ?[]const u8 = null,
+
+    profile: ?[]const u8 = null,
+
+    proxy: ?std.json.Value = null,
+
+    record: ?[]const u8 = null,
+
+    refresh_cache: ?bool = null,
+
+    replay: ?[]const u8 = null,
+
+    throttle: ?i64 = null,
+
+    timeout: ?u64 = null,
+
+    usd_per_million_input: ?[]const u8 = null,
+
+    usd_per_million_output: ?[]const u8 = null,
 };
 
 pub const ImageMedia = enum { @"image/jpeg", @"image/png" };
@@ -492,13 +548,13 @@ pub const ReaderMedia = enum { text, image };
 pub const RecognitionExample = union(enum) {
     string: []const u8,
 
-    alternative1: RecognitionExampleText,
+    recognition_example_text: RecognitionExampleText,
 
     pub fn jsonStringify(self: @This(), writer: anytype) !void {
         switch (self) {
             .string => |value| try writer.write(value),
 
-            .alternative1 => |value| try writer.write(value),
+            .recognition_example_text => |value| try writer.write(value),
         }
     }
 };

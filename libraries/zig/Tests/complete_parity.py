@@ -13,12 +13,10 @@ if os.environ.get('THINKTHEN_ARTIFACT') and not os.environ.get('THINKTHEN_PARITY
 sys.path[:0] = [str(ROOT / 'conformance/children')]
 from children import child_env
 import session_cases
-from view_contract import render
 with tempfile.TemporaryDirectory(prefix='installed-session-', dir=ROOT / 'libraries/zig/target') as folder:
     scratch = Path(folder)
-    for name in ('session_consumer.zig', 'view_check.zig', 'request_fixture.zig'):
+    for name in ('session_consumer.zig', 'request_fixture.zig'):
         shutil.copy2(Path(__file__).parent / name, scratch / name)
-    (scratch / 'view_labels.zig').write_text(render())
     binary = scratch / 'consumer'
     env = child_env(home=scratch, ZIG_GLOBAL_CACHE_DIR=str(ROOT / 'libraries/zig/target/cache'))
     subprocess.run([os.environ.get('THINKTHEN_ZIG', 'zig'), 'build-exe', '-j2', '-fllvm', '-flld',

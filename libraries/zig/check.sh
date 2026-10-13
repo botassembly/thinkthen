@@ -25,7 +25,7 @@ python3 "$root/sdlc/generators/results/generate.py" --target zig --check
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
 "$zig" fmt --check "$here/src/thinkthen.zig" "$here/src/session.zig" "$here/src/authored.zig" "$here/build.zig" \
-    "$here/Tests/session.zig" "$here/Tests/session_consumer.zig" "$here/Tests/request_fixture.zig" "$here/Tests/view_check.zig" \
+    "$here/Tests/session.zig" "$here/Tests/session_consumer.zig" "$here/Tests/request_fixture.zig" \
     "$here/Tests/session-build.zig" "$here/examples/decide.zig" "$here/examples/smoke.zig"
 if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
     . "$root/sdlc/scripts/installed.sh"

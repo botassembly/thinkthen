@@ -81,10 +81,10 @@ def render(definitions):
                 variants = []
                 for index, field in enumerate(source.get('anyOf', source.get('oneOf', []))):
                     kind = field.get('type', '')
-                    tag = field.get('const') if isinstance(field.get('const'), str) else kind if isinstance(kind, str) and kind else 'alternative' + str(index)
+                    tag = field.get('const') if isinstance(field.get('const'), str) else kind if isinstance(kind, str) and kind else re.sub(r'(?<!^)(?=[A-Z])', '_', field.get('$ref', '').split('/')[-1]).lower() or 'value' + str(index)
                     variants.append((tag, field))
                 if len({tag for tag, _ in variants}) != len(variants):
-                    variants = [('alternative' + str(i), f) for i, (_, f) in enumerate(variants)]
+                    variants = [(tag + '_' + str(i), f) for i, (tag, f) in enumerate(variants)]
             chunks.append('pub const ' + typename + ' = union(enum) {\n')
             for tag, field in variants:
                 chunks.append('    ' + identifier(tag) + ': ' + typed(field, key + '_' + tag) + ',\n')
@@ -129,7 +129,7 @@ def render_results(definitions):
     from c import normalized, nullable, ident, variant_member, container_key
     def result_name(key):
         return 'JudgmentValue' if key == 'completevalue' else name(key)
-    nodes, pending = {}, ['completesessionPacket']
+    nodes, pending = {}, ['completesessionPacket', 'completeImmediateFacts']
     def references(value):
         if isinstance(value, dict):
             if '$ref' in value: yield value['$ref'].split('/')[-1]
@@ -207,7 +207,7 @@ def render_results(definitions):
                 members.append('    ' + identifier(arm) + ': ' + result_name(child) + ',')
                 body.append('        ' + str(index) + ' => .{ .' + identifier(arm) + ' = try read' + result_name(child) + '(a, v.data.' + identifier(arm) + '[0]) },')
             body += ['        else => error.InvalidNativeDiscriminator,', '    };']
-            declarations.append('pub const ' + typ + ' = union(enum) {\n' + '\n'.join(members) + '\n};')
+            declarations.append('pub const ' + typ + ' = union(enum) {\n' + '\n'.join(members) + ('\n    pub fn jsonStringify(self: @This(), writer: anytype) !void { try writeNative(self, writer); }' if key == 'completesessionPacket' else '') + '\n};')
         elif 'enum' in source:
             declarations.append('pub const ' + typ + ' = enum { ' + ', '.join(identifier(value) for value in source['enum']) + ' };')
             body = ['    _ = a;', '    return switch (v.kind) {', *('        ' + str(i) + ' => .' + identifier(value) + ',' for i, value in enumerate(source['enum'], 1)), '        else => error.InvalidNativeDiscriminator,', '    };']
@@ -231,7 +231,9 @@ def render_results(definitions):
             if 'a,' not in expression and 'a.' not in expression: body.append('    _ = a;')
             body.append('    return ' + expression + ';')
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + '\n'
+    aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
+    types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
@@ -247,7 +249,37 @@ pub fn Map(comptime T: type) type {
     };
 }
 pub const Number = union(enum) { signed: i64, unsigned: u64, decimal: f64 };
-pub const Value = union(enum) { null_value, boolean: bool, number: Number, string: []const u8, array: []const Value, object: Map(Value) };
+pub const Value = union(enum) {
+    null_value, boolean: bool, number: Number, string: []const u8, array: []const Value, object: Map(Value),
+    pub fn jsonStringify(self: @This(), writer: anytype) !void { try writeNative(self, writer); }
+};
+fn writeNative(value: anytype, writer: anytype) error{WriteFailed}!void {
+    const T = @TypeOf(value);
+    switch (@typeInfo(T)) {
+        .@"union" => switch (value) { inline else => |member| { if (@TypeOf(member) == void) try writer.write(null) else try writeNative(member, writer); } },
+        .@"struct" => {
+            try writer.beginObject();
+            if (@hasField(T, "entries")) {
+                for (value.entries) |entry| { try writer.objectField(entry.key); try writeNative(entry.value, writer); }
+            } else inline for (std.meta.fields(T)) |field| {
+                const member = @field(value, field.name);
+                if (comptime std.mem.eql(u8, field.name, "extensions")) {
+                    for (member.entries) |entry| { try writer.objectField(entry.key); try writeNative(entry.value, writer); }
+                } else {
+                    const omit = if (comptime @typeInfo(field.type) == .@"union" and @hasField(field.type, "missing")) member == .missing else false;
+                    if (!omit) { try writer.objectField(field.name); try writeNative(member, writer); }
+                }
+            }
+            try writer.endObject();
+        },
+        .pointer => |info| {
+            if (T == []const u8) return writer.write(value);
+            if (info.size == .one) return writeNative(value.*, writer);
+            try writer.beginArray(); for (value) |member| try writeNative(member, writer); try writer.endArray();
+        },
+        else => try writer.write(value),
+    }
+}
 fn text(v: c.thinkthen_complete_utf8_v1) []const u8 {
     return if (v.len == 0) &.{} else v.data[0..v.len];
 }
@@ -256,6 +288,30 @@ fn readNumber(v: c.thinkthen_complete_utf8_v1) !Number {
     if (std.mem.indexOfAny(u8, source, ".eE") != null) return .{ .decimal = try std.fmt.parseFloat(f64, source) };
     if (source.len != 0 and source[0] == '-') return .{ .signed = try std.fmt.parseInt(i64, source, 10) };
     return .{ .unsigned = try std.fmt.parseInt(u64, source, 10) };
+}
+/// Project a decoded native value into a generated typed record.
+pub fn readAs(comptime T: type, v: Value) anyerror!T {
+    switch (@typeInfo(T)) {
+        .optional => |info| return if (v == .null_value) null else try readAs(info.child, v),
+        .pointer => return if (T == []const u8 and v == .string) v.string else error.InvalidNativeValue,
+        .bool => return if (v == .boolean) v.boolean else error.InvalidNativeValue,
+        .int => return switch (v.number) { .unsigned => |n| std.math.cast(T, n) orelse error.InvalidNativeValue, .signed => |n| std.math.cast(T, n) orelse error.InvalidNativeValue, else => error.InvalidNativeValue },
+        .@"struct" => {
+            if (v != .object) return error.InvalidNativeValue;
+            var result: T = undefined;
+            inline for (std.meta.fields(T)) |field| {
+                var found = false;
+                for (v.object.entries) |entry| if (std.mem.eql(u8, entry.key, field.name)) {
+                    @field(result, field.name) = try readAs(field.type, entry.value);
+                    found = true;
+                    break;
+                };
+                if (!found) return error.MissingNativeField;
+            }
+            return result;
+        },
+        else => return error.InvalidNativeValue,
+    }
 }
 pub fn readObject(a: std.mem.Allocator, v: anytype) anyerror!Map(Value) {
     const entries = try a.alloc(Map(Value).Entry, v.len);
