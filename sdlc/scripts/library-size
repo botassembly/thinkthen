@@ -156,6 +156,26 @@ def summary(report):
     return '\n'.join(lines) + '\n'
 
 
+def candidate_summary(report):
+    lines = ['Library size at `' + report['revision'] + '`.',
+             'Final release baseline: `' + report['since'] + '`.',
+             '', '| Library | Handwritten | Generated | Tests | Exception | Handwritten / median |',
+             '| --- | ---: | ---: | ---: | ---: | ---: |']
+    for name, row in report['libraries'].items():
+        ratio = row['ratios']['handwritten']
+        lines.append(f"| {name} | {row['handwritten']} | {row['generated']} | {row['test']} | "
+                     f"{row['exception']} | {ratio if ratio is not None else 'undefined'} |")
+    totals = {name: sum(commit['handwritten_added'][name] for commit in report['commits'])
+              for name in report['libraries']}
+    merges = sum(commit['kind'] == 'merge_resolution' for commit in report['commits'])
+    lines += ['', f"History: {len(report['commits'])} commits, including {merges} merges. "
+              'Merge rows count additions absent from all parents. Generated and test additions are excluded.',
+              'Handwritten additions: ' + ', '.join(f'{name}={count}' for name, count in totals.items()) + '.',
+              'Counts use the committed registry and language conventions. Python dataframe and pydantic '
+              'adapter lines are shown separately within handwritten production. No candidate limit is inferred.']
+    return '\n'.join(lines) + '\n'
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=ROOT)
@@ -175,7 +195,7 @@ def main():
                 raise ValueError('--store accepts a simple report name')
             folder = root / 'sdlc/records/coverage'
             folder.mkdir(parents=True, exist_ok=True)
-            (folder / (args.store + '-library-size.txt')).write_text(summary(report))
+            (folder / (args.store + '-library-size.md')).write_text(candidate_summary(report))
         return 0
     except (ValueError, OSError, subprocess.CalledProcessError) as error:
         print('library-size: ' + str(error), file=sys.stderr)
