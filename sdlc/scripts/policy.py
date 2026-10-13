@@ -735,7 +735,9 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
                     if reached.startswith("../") or reached.startswith("/"):
                         held.append(f"{name}/{relative} imports source outside its crate; use a normal dependency")
             tokens = rust_tokens(text)
-            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs":
+            generated_ffi = (name == "libraries/c" and relative.startswith("src/ffi/")
+                             and f"{name}/{relative}" in GENERATED_BINDING_SOURCES)
+            if "unsafe" in tokens and posixpath.basename(relative) != "ffi.rs" and not generated_ffi:
                 held.append(f"{name}/{relative} holds unsafe outside the binding's FFI module")
             if "unexpected_cfgs" in tokens:
                 held.append(f"{name}/{relative} names unexpected_cfgs outside the lint table")
