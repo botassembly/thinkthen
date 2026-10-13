@@ -108,6 +108,7 @@ public static class AnswerAccessors {
         ArgumentNullException.ThrowIfNull(call);
         if (call.Terminal is null || call.Terminal.Kind != "terminal") throw new AnswerCardinalityFailure("terminal",
         call);
+        if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Null) throw new System.Text.Json.JsonException("Terminal failure must be an object.");
         if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value,
         call);
     }

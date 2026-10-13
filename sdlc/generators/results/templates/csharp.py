@@ -552,7 +552,7 @@ public abstract class InputDocument {
             builders += ['public static InputRequestQuestionDefinition ' + name(field) + '(' + cname(key) + ' question) {',
                          'ArgumentNullException.ThrowIfNull(question);',
                          'return new InputRequestQuestionDefinition { Value = new ' + cname(child) + ' { ' + name(field) + ' = question } };', '}']
-    return header + '\n\n'.join(output) + '\n' + '\n'.join(builders + ['}']) + '\n' 
+    return header + '\n\n'.join(output) + '\n' + '\n'.join(builders + ['}']) + '\n'
 
 
 def named_calls(functions):
@@ -597,6 +597,7 @@ def answer_helpers(definitions):
              'private static void Successful(OwnedCall call) {',
              'ArgumentNullException.ThrowIfNull(call);',
              'if (call.Terminal is null || call.Terminal.Kind != "terminal") throw new AnswerCardinalityFailure("terminal", call);',
+             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Null) throw new System.Text.Json.JsonException("Terminal failure must be an object.");',
              'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value, call);', '}']
     methods = []
     for function, kind, payload in scalar_answers(definitions):

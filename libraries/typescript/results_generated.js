@@ -2156,6 +2156,7 @@ const graph = {
     required: ["kind", "value"],
     type: "object",
     unevaluatedProperties: false,
+    "x-request-function": "choose",
   },
   completesessionJudgment_decision: {
     properties: {
@@ -2165,6 +2166,7 @@ const graph = {
     required: ["kind", "value"],
     type: "object",
     unevaluatedProperties: false,
+    "x-request-function": "decide",
   },
   completesessionJudgment_score: {
     properties: {
@@ -2174,6 +2176,7 @@ const graph = {
     required: ["kind", "value"],
     type: "object",
     unevaluatedProperties: false,
+    "x-request-function": "score",
   },
   completesessionJudgment_tags: {
     properties: {
@@ -2183,6 +2186,7 @@ const graph = {
     required: ["kind", "value"],
     type: "object",
     unevaluatedProperties: false,
+    "x-request-function": "tag",
   },
   completesessionNamedProbability: {
     properties: {
