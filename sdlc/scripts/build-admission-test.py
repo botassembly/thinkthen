@@ -46,6 +46,18 @@ class Admission(unittest.TestCase):
                 pass
         self.temporary.cleanup()
 
+    def entry_scripts(self):
+        scripts = self.root / 'scripts'
+        scripts.mkdir()
+        for name in ('heavy-lock', 'heavy-compile', 'allow-list'):
+            (scripts / name).write_bytes(HELPER.with_name(name).read_bytes())
+        # Reuse the controlled host-load boundary with the real supervisor.
+        (scripts / 'build-admission.py').write_text(
+            'import os,runpy,sys\n'
+            'os.getloadavg=lambda:(float(open(' + repr(str(self.load)) + ').read()),0,0)\n'
+            'runpy.run_path(' + repr(str(HELPER)) + ',run_name="__main__")\n')
+        return scripts
+
     def launch(self, name, priority='normal', command=None, timeout=None):
         release = self.root / name
         args = [sys.executable, '-c', LAUNCH, str(self.load), str(HELPER), '--lock', str(self.lock), '--priority', priority]
@@ -166,21 +178,18 @@ class Admission(unittest.TestCase):
             self.assertEqual(child.wait(timeout=2), 0)
 
     def test_library_wrapper_preserves_shell_arguments_and_owned_build_environment(self):
-        scripts = self.root / 'scripts'
-        scripts.mkdir()
-        for name in ('heavy-lock', 'build-admission.py', 'allow-list'):
-            (scripts / name).write_bytes(HELPER.with_name(name).read_bytes())
+        scripts = self.entry_scripts()
         caller = self.root / 'library-check.sh'
         output = self.root / 'output'
         caller.write_text("""#!/bin/bash
 set -eu
 unset THINKTHEN_API_KEY
 heavy_scripts=$1
-heavy_library=1
-. "$heavy_scripts/heavy-lock"
+. "$heavy_scripts/heavy-compile"
 mkdir -p "$CARGO_TARGET_DIR"
 heavy_compile /bin/sh -c '
  test "$THINKTHEN_HEAVY_LOCK_HELD" = "$THINKTHEN_HEAVY_LOCK"
+ test "${THINKTHEN_API_KEY+x}" != x
  exec cc "$@"
 ' compiler -x c -o "$CARGO_TARGET_DIR/probe" - <<'SOURCE'
 int main(void) { return 0; }
@@ -221,6 +230,58 @@ assert 'THINKTHEN_ARTIFACT' not in os.environ
 BOUNDARY
 ''')
         self.assertEqual(subprocess.run(['/bin/sh', str(rung)], env=env, timeout=3).returncode, 0)
+
+    def test_rungs_ignore_inherited_library_mode_and_script_path(self):
+        scripts = self.entry_scripts()
+        hostile = self.root / 'hostile'
+        hostile.mkdir()
+        invoked = self.root / 'invoked'
+        (hostile / 'allow-list').write_text('touch "' + str(invoked) + '"\n')
+        (hostile / 'build-admission.py').write_text('raise AssertionError("hostile supervisor invoked")\n')
+        rung = scripts / 'rung'
+        rung.write_text('''set -eu
+. "$(dirname -- "$0")/heavy-lock"
+python3 - "$1" <<'RUNG'
+import os,pathlib,sys,time
+assert 'THINKTHEN_API_KEY' not in os.environ
+assert 'PRIVATE_SERVICE_KEY' not in os.environ
+assert 'heavy_library' not in os.environ
+assert 'heavy_scripts' not in os.environ
+assert os.environ['THINKTHEN_HEAVY_LOCK_HELD'] == os.environ['THINKTHEN_HEAVY_LOCK']
+p = pathlib.Path(sys.argv[1])
+p.with_suffix('.started').touch()
+while not p.exists(): time.sleep(.01)
+RUNG
+''')
+        env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock),
+               'THINKTHEN_API_KEY': 'fake-rung-boundary', 'PRIVATE_SERVICE_KEY': 'fake-private-boundary',
+               'heavy_library': '1', 'heavy_scripts': str(hostile)}
+        for index in range(5):
+            name = 'rung-' + str(index)
+            child = subprocess.Popen(['/bin/sh', str(rung), str(self.root / name)], env=env)
+            self.children.append(child)
+            if index < 4:
+                self.wait_for(lambda: self.started(name) or child.poll() is not None)
+                self.assertTrue(self.started(name))
+        time.sleep(.1)
+        self.assertFalse(self.started('rung-4'))
+        self.assertFalse(invoked.exists())
+        self.release('rung-0')
+        self.wait_for(lambda: self.started('rung-4'))
+        for index in range(1, 5):
+            self.release('rung-' + str(index))
+        for child in self.children:
+            self.assertEqual(child.wait(timeout=2), 0)
+        self.assertFalse(invoked.exists())
+        # An ordinary mode value must not select the inherited script path either.
+        env['heavy_library'] = '0'
+        child = subprocess.Popen(['/bin/sh', str(rung), str(self.root / 'ordinary')], env=env)
+        self.children.append(child)
+        self.wait_for(lambda: self.started('ordinary') or child.poll() is not None)
+        self.assertTrue(self.started('ordinary'))
+        self.release('ordinary')
+        self.assertEqual(child.wait(timeout=2), 0)
+        self.assertFalse(invoked.exists())
 
     def test_compilers_keep_cache_mutation_lock_exclusive(self):
         cache = self.root / 'cache'
