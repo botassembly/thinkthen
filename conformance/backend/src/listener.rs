@@ -26,6 +26,7 @@ const UNRESETTABLE: &str = "the loopback listener cannot reset a request it had 
 #[derive(Debug)]
 pub struct Canned {
     status: u16,
+    media_type: &'static str,
     body: String,
     location: Option<String>,
     promised: Option<usize>,
@@ -82,6 +83,7 @@ impl Canned {
     pub fn status(status: u16, body: &str) -> Self {
         Self {
             status,
+            media_type: "application/json",
             body: body.to_owned(),
             location: None,
             promised: None,
@@ -93,6 +95,12 @@ impl Canned {
             close_without_reply: false,
             reset: false,
         }
+    }
+
+    /// Declare the response body media type without adding a duplicate header.
+    pub fn media_type(mut self, media_type: &'static str) -> Self {
+        self.media_type = media_type;
+        self
     }
 
     /// Wait this long before answering, so a later request can answer first.
@@ -475,8 +483,9 @@ fn write_answer(mut stream: &TcpStream, canned: &Canned, closing: bool) {
         .map(|(name, value)| format!("{name}: {value}\r\n"))
         .collect();
     let answer = format!(
-        "HTTP/1.1 {} X\r\ncontent-type: application/json\r\n{location}{asked}content-length: {}\r\n{ending}\r\n{}",
+        "HTTP/1.1 {} X\r\ncontent-type: {}\r\n{location}{asked}content-length: {}\r\n{ending}\r\n{}",
         canned.status,
+        canned.media_type,
         canned.promised.unwrap_or(canned.body.len()),
         canned.body
     );

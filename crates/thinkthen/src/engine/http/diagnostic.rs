@@ -7,7 +7,13 @@ use base64::{Engine as _, engine::general_purpose};
 
 const MAX_MESSAGE_CHARS: usize = 320;
 
-pub(super) fn decorate(error: Error, body: Option<&[u8]>, key: &Key, api: ApiType) -> Error {
+pub(super) fn decorate(
+    error: Error,
+    body: Option<&[u8]>,
+    key: &Key,
+    api: ApiType,
+    plain: bool,
+) -> Error {
     let parsed = body
         .and_then(|bytes| std::str::from_utf8(bytes).ok())
         .and_then(|text| Json::parse(text).ok());
@@ -43,6 +49,12 @@ pub(super) fn decorate(error: Error, body: Option<&[u8]>, key: &Key, api: ApiTyp
                         .or_else(|| value.as_str())
                 })
                 .or_else(|| body.member("message").and_then(Json::as_str))
+        })
+        .or_else(|| {
+            plain
+                .then_some(body)
+                .flatten()
+                .and_then(|bytes| std::str::from_utf8(bytes).ok())
         })
         .and_then(|text| safe_message(text, key));
     if !quota && message.is_none() {
@@ -80,7 +92,7 @@ fn safe_message(text: &str, key: &Key) -> Option<String> {
         || text
             .chars()
             .any(|character| character.is_control() && !character.is_whitespace())
-        || text.contains(['{', '}', '[', ']'])
+        || text.contains(['{', '}', '[', ']', '<', '>'])
         || text.split_whitespace().any(|word| {
             unsafe_token(word, key)
                 || word

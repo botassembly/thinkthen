@@ -82,6 +82,9 @@ fn send(
         exchange,
     );
     if !(200..300).contains(&status) {
+        let plain = header("content-type")
+            .and_then(|value| value.split(';').next())
+            .is_some_and(|value| value.trim().eq_ignore_ascii_case("text/plain"));
         let header = |name: &str| {
             response
                 .headers()
@@ -100,7 +103,8 @@ fn send(
         } else {
             Error::Status(status)
         };
-        let failure = super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api);
+        let failure =
+            super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api, plain);
         return Err(Box::new(Attempt {
             failure,
             asked,

@@ -161,3 +161,67 @@ fn provider_prose_keeps_actionable_local_errors_and_trims_at_a_character_boundar
         );
     }
 }
+
+#[test]
+fn declared_plain_text_uses_the_same_boundary_and_html_is_withheld() {
+    for (media_type, message, shown) in [
+        (
+            "text/plain; charset=utf-8",
+            "The local endpoint requires a decision model.",
+            true,
+        ),
+        ("text/plain", "sk-test-value", false),
+        (
+            "text/plain",
+            "<html>The local endpoint requires a decision model.</html>",
+            false,
+        ),
+        (
+            "text/html",
+            "The local endpoint requires a decision model.",
+            false,
+        ),
+    ] {
+        let listener =
+            Listener::serving(vec![Canned::status(400, message).media_type(media_type)]).unwrap();
+        let output = decide(
+            listener.base(),
+            &["--max-retries", "0"],
+            Some("sk-test-value"),
+            EVIDENCE,
+        )
+        .unwrap();
+        assert_eq!(output.status.code(), Some(4));
+        assert_eq!(listener.requests().len(), 1);
+        let expected = if shown {
+            format!("{}; provider message: {message}\n", REFUSED.trim_end())
+        } else {
+            REFUSED.to_owned()
+        };
+        assert_eq!(crate::harness::said(&output), expected);
+    }
+}
+
+#[test]
+fn readable_rate_limit_prose_does_not_turn_a_real_limit_into_a_quota_stop() {
+    let body =
+        r#"{"error":{"type":"rate_limit_exceeded","message":"Requests are arriving too quickly"}}"#;
+    let listener = Listener::answering(move |_| Canned::status(429, body)).unwrap();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "1", "--facts"],
+        Some("sk-test-value"),
+        EVIDENCE,
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(listener.requests().len(), 2);
+    let said = crate::harness::said(&output);
+    assert!(said.starts_with("thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries; provider message: Requests are arriving too quickly\n"));
+    let facts: serde_json::Value = serde_json::from_str(said.lines().last().unwrap()).unwrap();
+    assert_eq!(facts["retries"], 1);
+    assert_eq!(
+        facts["stopped"],
+        serde_json::json!({"at":1,"cause":"status","status":429,"retryable":true})
+    );
+}
