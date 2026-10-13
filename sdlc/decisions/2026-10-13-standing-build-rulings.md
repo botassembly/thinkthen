@@ -26,7 +26,7 @@ The PM made these rulings so the coordinator decides alone in the common cases. 
 
 ## Ownership
 
-- One generator developer owns `sdlc/generators/`, every generated file, `.gitattributes` and `policy.py`. A language lane that needs a generator change asks that developer and does not edit those files.
+- One generator developer owns the shared generator files: `generate.py`, `registry.py`, `host_answers.py`, `layouts.py`, `c.py`, `native_request.py`, `operations.py`, `.gitattributes` and `policy.py`. Each language lane owns its own `sdlc/generators/results/templates/<lang>*.py` files and regenerates its own outputs. A lane that needs a shared generator change asks the generator developer.
 - Each language lane edits only its own `libraries/<language>` directory and its own limit entry.
 - A developer who touches a shared file outside its lane stops and asks the coordinator.
 
