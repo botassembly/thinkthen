@@ -492,7 +492,14 @@
       "function_suffix": "Async",
       "function_containers": [
         "Engine"
-      ]
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestionFile",
+        "question_name": "InputRequestQuestionName",
+        "question_reference": "InputRequestQuestionReference",
+        "item": "InputRequestItem",
+        "files": "InputRequestSource"
+      }
     },
     "go": {
       "root": "libraries/go",
@@ -781,7 +788,14 @@
       ],
       "function_containers": [
         ""
-      ]
+      ],
+      "helper_names": {
+        "question_file": "T_RequestQuestion_file",
+        "question_name": "T_RequestQuestion_name",
+        "question_reference": "T_RequestQuestion_reference",
+        "item": "T_RequestItem",
+        "files": "T_RequestSource"
+      }
     },
     "objc": {
       "root": "libraries/objective-c",
@@ -842,7 +856,12 @@
       ],
       "helper_names": {
         "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
-        "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS"
+        "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS",
+        "question_file": "tt-n-cobol-RequestQuestion-file",
+        "question_name": "tt-n-cobol-RequestQuestion-name",
+        "question_reference": "tt-n-cobol-RequestQuestion-reference",
+        "item": "tt-n-cobol-RequestItem",
+        "files": "tt-n-cobol-RequestSource"
       },
       "function_containers": [
         ""
