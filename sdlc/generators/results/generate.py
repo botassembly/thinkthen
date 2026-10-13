@@ -760,7 +760,7 @@ def main():
         import csharp
         request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         calls_path = output_path(ROOT, 'csharp', 'NamedCalls.g.cs')
-        calls = format_source(calls_path, csharp.named_calls(csharp.enum_values(request_schema['$defs']['RequestFunction'])), child_env())
+        calls = format_source(calls_path, csharp.named_calls(csharp.enum_values(request_schema['$defs']['RequestFunction'])) + csharp.answer_helpers(prepare(graph(json.loads(args.schema.read_text()), ('completesessionPacket', 'completeplan')))), child_env())
         if args.check and (not calls_path.exists() or calls_path.read_text() != calls):
             print('generated C# named calls differ', file=sys.stderr)
             return 1

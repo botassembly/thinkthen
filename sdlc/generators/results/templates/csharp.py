@@ -549,3 +549,53 @@ def named_calls(functions):
                   f'return ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, FeedInput, options), feed, cancellation);',
                   '}']
     return '\n'.join(lines + ['}']) + '\n'
+
+
+def answer_helpers(definitions):
+    """Read native normalized judgments without recomputing authored decisions."""
+    from host_answers import scalar_answers
+    def carriers(key, seen=()):
+        if key == 'completesessionJudgment': return []
+        if key in seen: return None
+        source = definitions[key]
+        for child, _ in source.get('variants', []):
+            result = carriers(child, seen + (key,))
+            if result is not None: return result
+        for field, value in source.get('properties', {}).items():
+            if isinstance(value, dict) and '$ref' in value:
+                result = carriers(value['$ref'].split('/')[-1], seen + (key,))
+                if result is not None: return [(key, field)] + result
+        return None
+    route = carriers('completesessionPacket')
+    if not route: raise ValueError('C# needs a normalized judgment carrier route')
+    lines = ['public sealed class AnswerCardinalityFailure : InvalidOperationException {',
+             'public OwnedCall Call { get; }',
+             'internal AnswerCardinalityFailure(string function, OwnedCall call) : base("Expected exactly one " + function + " judgment.") { Call = call; }', '}',
+             'public static class AnswerAccessors {',
+             'private static void Successful(OwnedCall call) {',
+             'ArgumentNullException.ThrowIfNull(call);',
+             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value, call);', '}']
+    methods = []
+    for function, kind, payload in scalar_answers(definitions):
+        variant = next(child for child, _ in definitions['completesessionJudgment']['variants']
+                       if definitions[child].get('x-request-function') == function)
+        typ, _ = conversion(payload, definitions)
+        if nullable(payload): typ += '?'
+        pattern = 'ThinkThen.Results.' + name(variant) + ' judgment'
+        for key, field in reversed(route):
+            pattern = 'ThinkThen.Results.' + name(key) + ' { ' + name(field) + ': ' + pattern + ' }'
+        value = 'judgment.Value'
+        if nullable(payload): value = 'judgment.Value.State == ThinkThen.Results.PresenceState.Null ? null : judgment.Value.Value'
+        method = name(kind)
+        methods.append((function, method, typ))
+        lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);',
+                  'var values = new List<' + typ + '>();',
+                  'foreach (var packet in call.Packets) if (packet is ' + pattern + ' && ((ThinkThen.Results.' + name(route[0][0]) + ')packet).Function.Value == ' + quote(function) + ') values.Add(' + value + ');',
+                  'if (values.Count != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
+                  'return values[0];', '}']
+    lines += ['}', 'public sealed partial class Engine {']
+    for function, method, typ in methods:
+        lines += ['public async Task<' + typ + '> ' + function.title() + 'ValueAsync(InputRequestQuestion question, InputRequestInput input,',
+                  'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+                  '(await ' + function.title() + 'Async(question, input, options, cancellation).ConfigureAwait(false)).' + method + '();']
+    return '\n'.join(lines + ['}']) + '\n'
