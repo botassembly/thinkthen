@@ -174,6 +174,13 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         mode,
     });
     connection.create_module(
+        c"thinkthen_filter",
+        &FILTER,
+        Some(Arc::clone(&store)),
+        crate::source_filter::Filter::ARGUMENTS,
+        "Filter file evidence into typed file, location, answer and owning call columns.",
+    )?;
+    connection.create_module(
         c"thinkthen_recognize",
         &RECOGNIZE,
         Some(Arc::clone(&store)),
@@ -294,6 +301,7 @@ unsafe fn load(
     }
 }
 
+const FILTER: Module<'static, Tab<crate::source_filter::Filter>> = Module::eponymous_only_module();
 const RECOGNIZE: Module<'static, Tab<Recognizer>> = Module::eponymous_only_module();
 const RELATE: Module<'static, Tab<Relater>> = Module::eponymous_only_module();
 const DECIDE_MANY: Module<'static, Tab<DecideMany>> = Module::eponymous_only_module();

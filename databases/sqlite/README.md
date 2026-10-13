@@ -80,6 +80,19 @@ Named `model`, `context`, `threshold`, `true_reading` and `false_reading` take S
 
 Names and positions appear in `pragma_table_xinfo('thinkthen_decide_many')` and the discovery catalog reports the expanded argument range. Named parameters merge into the same native settings object before the connection cache lookup. The effective settings participate in cache identity, so changing context cannot reuse a previous context's rows. Existing positional settings retain their original bytes and behavior.
 
+## Filter file evidence into typed rows
+
+```sql
+SELECT file, first_line, last_line, ordinal, value, probability,
+       call_id, requests_sent, cache_answers
+FROM thinkthen_filter('Is this a contract?', '["contract.txt"]')
+WHERE unit = 'file' AND files_only = 1 AND batch = 16;
+```
+
+`thinkthen_filter(question, paths)` takes an ordered JSON array of file paths and returns selected rows with SQL text, integer and real columns. `files_only = 1` keeps the first passing occurrence for each file in input order. Omission returns every passing occurrence. Repeated paths retain their native occurrence ordinals and contribute to the owning call's record count. `value` is 1 for a selected row; `probability` retains its actual yes probability. The answer and call identities, request and cache counts, optional reported tokens and elapsed seconds come from the same native evaluation.
+
+Named `unit`, `window`, `media` and `format` select the existing native reader. `format` admits `jsonl`, `csv` and `tsv`. `fields` takes an ordered JSON array of evidence pointers; `context_field` selects separate per-record context. The keyed-call settings above also apply through named parameters or `settings`. These calls use the existing Source reader and native admission, including physical row coordinates, file rules and image refusals. An empty path list raises the native Source usage error. A required NULL question or paths value returns no rows before inspecting other parameters. Source failures raise ordinary SQL errors. The existing completion calls retain eager/incremental Feed behavior and full observations while their wider migration continues.
+
 ## Rank a table once
 
 ```sql

@@ -70,6 +70,10 @@
     "named_choose": {
       "sql": "SELECT key, value, probability FROM thinkthen_choose_many('Which team?', '{\"7\":\"Please track my parcel.\"}') WHERE options = '{\"shipping\":\"Parcel questions\",\"billing\":\"Money questions\"}';",
       "expected": "7|shipping|0.9"
+    },
+    "filter_source": {
+      "sql": "SELECT first_line, last_line, value, probability FROM thinkthen_filter('Is this a contract?', '[\"../../specification/fixtures/files/documents/02-contract.txt\"]') WHERE unit = 'file' AND files_only = 1 AND batch = 16;",
+      "expected": "1|4|1|0.9"
     }
   }
 }

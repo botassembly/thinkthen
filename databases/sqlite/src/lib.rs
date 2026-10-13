@@ -33,6 +33,7 @@ mod recognize_document;
 mod request;
 mod scalars;
 mod settings;
+mod source_filter;
 mod tables;
 mod worker;
 
