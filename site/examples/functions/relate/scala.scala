@@ -13,7 +13,8 @@ import thinkthen.scala.ScalaEngine
     val ask = RequestQuestionDefinition().value(
       RequestDefinitionAuthoredRelate
         .fromJson(Map("version" -> 1, "relate" ->
-          Map("relations" -> List(makes))).asJava))
+          Map("relations" ->
+            List(makes.asJava).asJava).asJava).asJava))
     val apple = Map(
       "name" -> "Apple", "kind" -> "company")
     val amazon = Map(
@@ -25,7 +26,7 @@ import thinkthen.scala.ScalaEngine
     val names = RequestInputRecords().items(
       List(apple, amazon, iphone, kindle).map { one =>
         RequestItem().original(
-          RequestOriginalJson().value(one))
+          RequestOriginalJson().value(one.asJava))
       }.asJava)
     val call = tt.relate(ask, names)
     val whoMakes = Await.result(call.result, 10.seconds)

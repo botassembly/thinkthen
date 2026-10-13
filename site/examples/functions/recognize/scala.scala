@@ -17,7 +17,8 @@ import thinkthen.scala.ScalaEngine
     val ask = RequestQuestionDefinition().value(
       RequestDefinitionRecognizeDefinition
         .fromJson(Map("version" -> 1,
-          "recognize" -> Map("kinds" -> kinds)).asJava))
+          "recognize" ->
+            Map("kinds" -> kinds.asJava).asJava).asJava))
     val text = RequestInputText().text(
       "Sam Patel says his Kindle arrived broken " +
         "in Denver.")
