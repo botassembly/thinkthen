@@ -89,15 +89,19 @@ fn input_schema(tool: Tool) -> Value {
         "question_name",
         "question_reference",
     ];
-    let question_choices = questions.iter().map(|name| json!({"required":[name],"not":{"anyOf":questions.iter().filter(|other| *other != name).map(|other| json!({"required":[other]})).collect::<Vec<_>>()}})).collect::<Vec<_>>();
+    let question_choices = questions
+        .iter()
+        .map(|name| json!({"required":[name]}))
+        .collect::<Vec<_>>();
     let forms = ["evidence", "records", "source", "images", "inputs"];
-    let input_choices = forms.iter().map(|name| {
-        let others = forms.iter().filter(|other| *other != name && !(*name == "evidence" && **other == "images"));
-        json!({"required":[name],"not":{"anyOf":others.map(|other| json!({"required":[other]})).collect::<Vec<_>>()}})
-    }).collect::<Vec<_>>();
+    let input_choices = forms
+        .iter()
+        .filter(|name| **name != "images" || tool.images())
+        .map(|name| json!({"required":[name]}))
+        .collect::<Vec<_>>();
     json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
         "additionalProperties":false,"properties":properties,
-        "allOf":[{"oneOf":question_choices},{"oneOf":input_choices}]})
+        "allOf":[{"anyOf":question_choices},{"anyOf":input_choices}]})
 }
 
 fn question_schema(tool: Tool, canonical: &Value) -> Value {
