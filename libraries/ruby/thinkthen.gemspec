@@ -33,7 +33,7 @@ Gem::Specification.new do |spec|
     extension = "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}"
     raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
 
-    spec.files = ["README.md", "lib/thinkthen.rb", extension, "lib/thinkthen/version.rb", "lib/thinkthen/session.rb", "lib/thinkthen/results_generated.rb"]
+    spec.files = ["README.md", "lib/thinkthen.rb", extension, "lib/thinkthen/version.rb", "lib/thinkthen/session.rb", "lib/thinkthen/results_generated.rb", "sig/thinkthen.rbs", "sig/thinkthen/session.rbs", "sig/thinkthen/results_generated.rbs"]
     spec.require_paths = ["lib"]
     # Built and tested on 3.4 only. 4.x is another ABI.
     spec.required_ruby_version = [">= 3.4", "< 4"].freeze

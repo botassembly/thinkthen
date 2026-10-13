@@ -1,0 +1,55 @@
+# RBS signatures for ThinkThen's hand-written Ruby surface
+# (lib/thinkthen.rb and lib/thinkthen/version.rb).
+module ThinkThen
+  VERSION: String
+
+  # The native failure family. The raised subclass matches the failure kind.
+  class Error < StandardError
+    attr_reader kind: String?
+    attr_reader retryable: bool
+    # Typed native facts, present only on native failures.
+    attr_reader facts: Results::NativeFacts?
+    # The native failure record, present only on native failures.
+    attr_reader complete: Results::NativeCallError?
+    # The completed prefix of a failed or cancelled call.
+    attr_reader results: Array[Native::Result]?
+    attr_reader terminal: Results::NativeSessionPacketTerminal?
+    attr_reader observations: Array[Results::NativeSessionPacketObservation]?
+
+    def initialize: (?String? message, ?String? kind, ?bool retryable) -> void
+    # 1 usage, 2 backend, 3 deadline, 4 local, 5 cancelled, 6 defect.
+    def code: () -> Integer
+  end
+  class UsageError < Error
+  end
+  class BackendError < Error
+  end
+  class DeadlineError < Error
+  end
+  class LocalError < Error
+  end
+  class CancelledError < Error
+  end
+  class DefectError < Error
+  end
+
+  # A cancellation token; pass one as `cancel:` to stop reads and submissions.
+  class Cancel
+    def self.new: () -> Cancel
+    def cancel: () -> void
+    def cancelled?: () -> bool
+  end
+
+  # Private in Ruby (private_constant :Native); declared because every
+  # generated Results class inherits Native::Result and its member reads.
+  module Native
+    class Result
+      # The member's native value, or KeyError when the member is absent.
+      def []: (String member) -> untyped
+      def key?: (String member) -> bool
+      def keys: () -> Array[String]
+      def to_h: () -> Hash[String, untyped]
+      def inspect: () -> String
+    end
+  end
+end

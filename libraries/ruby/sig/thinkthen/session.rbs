@@ -1,0 +1,116 @@
+# RBS signatures for lib/thinkthen/session.rb.
+module ThinkThen
+  # The state of this engine's count-only usage deltas.
+  class UsageStatus < Struct[untyped]
+    attr_reader state: String
+    # Safe advice, present only after a persistence failure.
+    attr_reader advice: String?
+
+    def initialize: (String state, String? advice) -> void
+  end
+
+  module Results
+    # One plain answer value; the kind follows the call:
+    # filter returns the original inputs, rank the typed rows, a scalar call
+    # one answer value, and a list call a frozen Array of them.
+    type answer = untyped | Array[untyped] | Array[Native::Result]
+
+    # The owned answer of one named call. Ruby treats every object as true,
+    # including a result whose value is false; read value to branch.
+    class Completed
+      def initialize: (Array[Native::Result] results, NativeSessionPacketTerminal? terminal, bool scalar, String verb, Array[NativeSessionPacketObservation] observations) -> void
+
+      # The typed result rows.
+      attr_reader results: Array[Native::Result]
+      # Nil when the native session ended without a terminal packet.
+      attr_reader terminal: Results::NativeSessionPacketTerminal?
+      attr_reader observations: Array[Results::NativeSessionPacketObservation]
+
+      def facts: () -> Results::NativeFacts
+      def value: () -> Results::answer
+      def inspect: () -> String
+    end
+  end
+
+  # One family of named calls over the owned native engine.
+  class Client
+    FUNCTIONS: Array[String]
+
+    # The named calls, in FUNCTIONS order. Each takes a question (literal
+    # text, an ordinary hash holding the native definition, or a selector),
+    # one record, an Array or Enumerable of them, a Source, or an Item.
+    def decide: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def choose: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def tag: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def score: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def filter: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def rank: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def find: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def annotate: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def recognize: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    def relate: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+
+    def initialize: (**untyped settings) -> void
+
+    def self.open: (**untyped settings) { (Client client) -> untyped } -> untyped
+                 | (**untyped settings) -> Client
+    # Close the owner, keeping any exception already in flight.
+    def self.cleanup: (Client | Client::Operation owner) -> void
+    def self.question_file: (String path) -> Client::Question
+    def self.question_name: (String name) -> Client::Question
+    def self.question_reference: (String reference) -> Client::Question
+    def self.files: (untyped paths, ?framing: String?, ?media: String, **untyped reading) -> Client::Source
+    def self.item: (untyped value, **untyped fields) -> Client::Item
+    # Native JSON of a value; the native extension itself reads this.
+    def self.dump: (untyped value) -> String
+    def self.original: (untyped value) -> Hash[Symbol, untyped]
+    def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
+
+    # The native preview of one call, without sends, keys or cache reads.
+    def plan: (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, **untyped options) -> Hash[String, untyped]
+    def start: (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) { (Client::Operation operation) -> untyped } -> untyped
+             | (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Client::Operation
+    def close: () -> nil
+    def inspect: () -> String
+    # The engine's count-only totals since it was built.
+    def usage: () -> Hash[Symbol, Integer]
+    def usage_persistence: () -> UsageStatus
+    def finish_usage_status: () -> UsageStatus
+
+    # A file or reference question selector.
+    class Question < Struct[untyped]
+      attr_reader selector: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] selector) -> void
+      def inspect: () -> String
+    end
+    # Files read natively, from Client.files.
+    class Source < Struct[untyped]
+      attr_reader source: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] source) -> void
+      def inspect: () -> String
+    end
+    # One record with its original and per-record fields, from Client.item.
+    class Item < Struct[untyped]
+      attr_reader descriptor: Hash[Symbol, untyped]
+
+      def initialize: (Hash[Symbol, untyped] descriptor) -> void
+      def inspect: () -> String
+    end
+
+    # One named call in flight; start returns one and the named calls wait.
+    class Operation
+      # Nil until the native terminal packet arrives.
+      attr_reader terminal: Results::NativeSessionPacketTerminal?
+
+      def result: () -> Results::Completed
+      def cancelled: () -> CancelledError
+      def feed: () -> nil
+      def cancel: () -> void
+      def close: () -> nil
+      def close_producer: () -> nil
+      def inspect: () -> String
+    end
+  end
+end
