@@ -161,7 +161,7 @@ Adding a symbol or a code is a minor bump. Changing a signature, a layout, or a 
 
 The Windows source door runs shared behavioral assertions through MSVC, except the Unix fork case. A separate consumer links the downloaded archive's header/import library and runs its public DLL, proving an exact spend refusal with zero counted loopback sends followed by a successful call with one send. Its fixtures alone define `_CRT_SECURE_NO_WARNINGS` under `/W4 /WX`. Threads use checked native creation, bounded join and handle close; byte-sensitive streams stay binary. The MSVC ASan check requires a detected owned negative before exercising C ownership and concurrency. It cannot establish Rust DLL instrumentation or Unix leak checking. Actual native linker, loader, execution, sanitizer availability and runtime dependency results remain pending; portable structural fixtures are not native receipts. The Windows host-exit test does not establish identical Unix destructor ordering.
 
-The compatibility doors return open-size results as JSON text. Counted question/source/image handles remain alongside them. Sessions expose owned result/2 views.
+The compatibility doors return open-size results as JSON text. Parsed question handles own the author metadata borrowed by `thinkthen_question_author`. Sessions expose owned result/2 views.
 
 ## Deferred
 

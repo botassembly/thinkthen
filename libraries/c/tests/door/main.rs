@@ -26,13 +26,13 @@ fn declared(input: &str) -> Vec<String> {
     header::declarations(input).expect("header declarations")
 }
 
+mod authored;
 mod backends;
 mod bytes;
 mod canonical;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
-mod current;
 mod golden;
 mod plan;
 mod question_file;

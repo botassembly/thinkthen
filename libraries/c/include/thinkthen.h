@@ -955,12 +955,7 @@ typedef enum thinkthen_question_loader_role_v1 {
 typedef struct thinkthen_engine thinkthen_engine;
 
 /*
- Validated immutable image plus caller-authored filename, never guessed media.
- */
-typedef struct thinkthen_image thinkthen_image;
-
-/*
- Immutable question, independent of every constructor buffer/member handle.
+ Immutable question metadata, independent of every constructor buffer.
  */
 typedef struct thinkthen_question thinkthen_question;
 
@@ -973,11 +968,6 @@ typedef struct thinkthen_session thinkthen_session;
  Independent packet owner. It remains live after its session and engine are freed.
  */
 typedef struct thinkthen_session_result thinkthen_session_result;
-
-/*
- An immutable record snapshot or explicit shared native reader selection.
- */
-typedef struct thinkthen_source thinkthen_source;
 
 /*
  The header's `thinkthen_answer`: the outcome code, then the probability
@@ -1030,36 +1020,6 @@ typedef struct thinkthen_optional_string_v1 {
    */
   struct thinkthen_string_v1 value;
 } thinkthen_optional_string_v1;
-
-/*
- C descriptor or borrowed view `ImageViewV1`.
- */
-typedef struct thinkthen_image_view_v1 {
-  /*
-   C field `media`.
-   */
-  uint32_t media;
-  /*
-   C field `bytes`.
-   */
-  const uint8_t *bytes;
-  /*
-   C field `bytes_len`.
-   */
-  size_t bytes_len;
-  /*
-   C field `width`.
-   */
-  uint32_t width;
-  /*
-   C field `height`.
-   */
-  uint32_t height;
-  /*
-   C field `filename`.
-   */
-  struct thinkthen_optional_string_v1 filename;
-} thinkthen_image_view_v1;
 
 /*
  C descriptor or borrowed view `OptionalU64V1`.
@@ -1156,276 +1116,6 @@ typedef struct thinkthen_question_author_v1 {
    */
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
-
-/*
- C descriptor or borrowed view `ContentV1`.
- */
-typedef struct thinkthen_content_v1 {
-  /*
-   C field `kind`.
-   */
-  uint32_t kind;
-  /*
-   C field `data`.
-   */
-  struct thinkthen_string_v1 data;
-} thinkthen_content_v1;
-
-/*
- C descriptor or borrowed view `OptionalContentV1`.
- */
-typedef struct thinkthen_optional_content_v1 {
-  /*
-   C field `present`.
-   */
-  int present;
-  /*
-   C field `value`.
-   */
-  struct thinkthen_content_v1 value;
-} thinkthen_optional_content_v1;
-
-/*
- C descriptor or borrowed view `OptionalDoubleV1`.
- */
-typedef struct thinkthen_optional_double_v1 {
-  /*
-   C field `present`.
-   */
-  int present;
-  /*
-   C field `value`.
-   */
-  double value;
-} thinkthen_optional_double_v1;
-
-/*
- C descriptor or borrowed view `ChoiceV1`.
- */
-typedef struct thinkthen_choice_v1 {
-  /*
-   C field `name`.
-   */
-  struct thinkthen_string_v1 name;
-  /*
-   C field `description`.
-   */
-  struct thinkthen_optional_content_v1 description;
-  /*
-   C field `weight`.
-   */
-  struct thinkthen_optional_double_v1 weight;
-} thinkthen_choice_v1;
-
-/*
- C descriptor or borrowed view `ChoicesV1`.
- */
-typedef struct thinkthen_choices_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_choice_v1 *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_choices_v1;
-
-/*
- CUT uses low; BAND uses low/high; NULL/DEFAULT use neither.
- */
-typedef struct thinkthen_rule_v1 {
-  /*
-   C field `kind`.
-   */
-  uint32_t kind;
-  /*
-   C field `low`.
-   */
-  double low;
-  /*
-   C field `high`.
-   */
-  double high;
-} thinkthen_rule_v1;
-
-/*
- C descriptor or borrowed view `OptionalSizeV1`.
- */
-typedef struct thinkthen_optional_size_v1 {
-  /*
-   C field `present`.
-   */
-  int present;
-  /*
-   C field `value`.
-   */
-  size_t value;
-} thinkthen_optional_size_v1;
-
-/*
- C descriptor or borrowed view `MemberSpecV1`.
- */
-typedef struct thinkthen_member_spec_v1 {
-  /*
-   C field `name`.
-   */
-  struct thinkthen_string_v1 name;
-  /*
-   C field `question`.
-   */
-  const struct thinkthen_question *question;
-} thinkthen_member_spec_v1;
-
-/*
- C descriptor or borrowed view `MemberSpecsV1`.
- */
-typedef struct thinkthen_member_specs_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_member_spec_v1 *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_member_specs_v1;
-
-/*
- C descriptor or borrowed view `RelationV1`.
- */
-typedef struct thinkthen_relation_v1 {
-  /*
-   C field `name`.
-   */
-  struct thinkthen_string_v1 name;
-  /*
-   C field `source`.
-   */
-  struct thinkthen_string_v1 source;
-  /*
-   C field `target`.
-   */
-  struct thinkthen_string_v1 target;
-  /*
-   C field `reads`.
-   */
-  struct thinkthen_optional_string_v1 reads;
-  /*
-   C field `either`.
-   */
-  int either;
-  /*
-   C field `single`.
-   */
-  int single;
-} thinkthen_relation_v1;
-
-/*
- C descriptor or borrowed view `RelationsV1`.
- */
-typedef struct thinkthen_relations_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_relation_v1 *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_relations_v1;
-
-/*
- C descriptor or borrowed view `QuestionSpecV1`.
- */
-typedef struct thinkthen_question_spec_v1 {
-  /*
-   C field `kind`.
-   */
-  uint32_t kind;
-  /*
-   C field `text`.
-   */
-  struct thinkthen_content_v1 text;
-  /*
-   C field `yes`.
-   */
-  struct thinkthen_optional_content_v1 yes;
-  /*
-   C field `no`.
-   */
-  struct thinkthen_optional_content_v1 no;
-  /*
-   C field `choices`.
-   */
-  struct thinkthen_choices_v1 choices;
-  /*
-   C field `threshold`.
-   */
-  struct thinkthen_rule_v1 threshold;
-  /*
-   C field `relation_threshold`.
-   */
-  struct thinkthen_rule_v1 relation_threshold;
-  /*
-   C field `model`.
-   */
-  struct thinkthen_optional_string_v1 model;
-  /*
-   C field `profile`.
-   */
-  struct thinkthen_optional_string_v1 profile;
-  /*
-   C field `batch`.
-   */
-  struct thinkthen_optional_size_v1 batch;
-  /*
-   C field `batch_max`.
-   */
-  int batch_max;
-  /*
-   C field `none`.
-   */
-  int none;
-  /*
-   C field `on`.
-   */
-  struct thinkthen_strings_v1 on;
-  /*
-   C field `members`.
-   */
-  struct thinkthen_member_specs_v1 members;
-  /*
-   C field `kinds`.
-   */
-  struct thinkthen_choices_v1 kinds;
-  /*
-   C field `relations`.
-   */
-  struct thinkthen_relations_v1 relations;
-  /*
-   C field `name_pointer`.
-   */
-  struct thinkthen_optional_string_v1 name_pointer;
-  /*
-   C field `kind_pointer`.
-   */
-  struct thinkthen_optional_string_v1 kind_pointer;
-} thinkthen_question_spec_v1;
-
-/*
- Additive 0.3 recognition task; existing V1 question layouts remain unchanged.
- */
-typedef struct thinkthen_recognition_task_v1 {
-  /*
-   C field `instructions`.
-   */
-  struct thinkthen_optional_string_v1 instructions;
-  /*
-   C field `entity_definition`.
-   */
-  struct thinkthen_optional_string_v1 entity_definition;
-} thinkthen_recognition_task_v1;
 
 /*
  Existing canonical components for one named request. Every view is counted
@@ -4765,60 +4455,6 @@ typedef struct thinkthen_complete_session_packet_v1 {
   union thinkthen_complete_session_packet_data_v1 data;
 } thinkthen_complete_session_packet_v1;
 
-/*
- C descriptor or borrowed view `SourceSpecV1`.
- */
-typedef struct thinkthen_source_spec_v1 {
-  /*
-   C field `paths`.
-   */
-  struct thinkthen_strings_v1 paths;
-  /*
-   C field `unit`.
-   */
-  uint32_t unit;
-  /*
-   C field `window`.
-   */
-  size_t window;
-} thinkthen_source_spec_v1;
-
-/*
- C descriptor or borrowed view `ImagesV1`.
- */
-typedef struct thinkthen_images_v1 {
-  /*
-   C field `data`.
-   */
-  const struct thinkthen_image *const *data;
-  /*
-   C field `len`.
-   */
-  size_t len;
-} thinkthen_images_v1;
-
-/*
- C descriptor or borrowed view `RecordV1`.
- */
-typedef struct thinkthen_record_v1 {
-  /*
-   C field `original`.
-   */
-  struct thinkthen_optional_content_v1 original;
-  /*
-   C field `context`.
-   */
-  struct thinkthen_optional_content_v1 context;
-  /*
-   C field `options`.
-   */
-  struct thinkthen_choices_v1 options;
-  /*
-   C field `images`.
-   */
-  struct thinkthen_images_v1 images;
-} thinkthen_record_v1;
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -5150,32 +4786,6 @@ int thinkthen_error_retryable(const struct thinkthen_engine *engine);
 void thinkthen_free_string(char *text);
 
 /*
- Validate and clone compressed image bytes and an optional UTF-8 filename.
- # Safety
- Counted storage is readable and output writable until return.
- */
-int thinkthen_image_clone(const struct thinkthen_engine *engine,
-                          const uint8_t *bytes,
-                          size_t len,
-                          uint32_t media,
-                          struct thinkthen_optional_string_v1 filename,
-                          struct thinkthen_image **out);
-
-/*
- Free an owned image; NULL is harmless.
- # Safety
- A nonnull image is live, freed once, after all borrowers finish.
- */
-void thinkthen_image_free(struct thinkthen_image *owner);
-
-/*
- Borrow original bytes, dimensions and filename from an immutable image owner.
- # Safety
- Owner is live throughout the view's use; output is writable.
- */
-int thinkthen_image_view(const struct thinkthen_image *owner, struct thinkthen_image_view_v1 *out);
-
-/*
  Preview one `thinkthen.plan-input/1` object as `plan` JSON text.
 
  # Safety
@@ -5227,75 +4837,6 @@ int thinkthen_question_file(const struct thinkthen_engine *engine,
 void thinkthen_question_free(struct thinkthen_question *owner);
 
 /*
- Load a bounded native question or question-set file.
- # Safety
- All pointers obey the installed header's storage and lifetime contract.
- */
-int thinkthen_question_load(const struct thinkthen_engine *engine,
-                            struct thinkthen_string_v1 path,
-                            struct thinkthen_question **out);
-
-/*
- Load a named question through the selected native role's loader.
- # Safety
- All pointers follow include/thinkthen.h's storage and lifetime contract.
- */
-int thinkthen_question_load_named(const struct thinkthen_engine *engine,
-                                  uint32_t role,
-                                  struct thinkthen_string_v1 name,
-                                  struct thinkthen_question **out);
-
-/*
- Load an explicit reference through the selected native role's loader.
- # Safety
- All pointers follow include/thinkthen.h's storage and lifetime contract.
- */
-int thinkthen_question_load_reference(const struct thinkthen_engine *engine,
-                                      uint32_t role,
-                                      struct thinkthen_string_v1 reference,
-                                      struct thinkthen_question **out);
-
-/*
- Clone an admitted native question from counted descriptors.
- # Safety
- All pointers obey the installed header's storage and lifetime contract.
- Unpublished 0426 integration carriers, pending whole-ticket qualification.
- Complete calls use the existing native engine and immutable owned results.
- Constructors clone caller buffers and referenced question/image values.
- Image views borrow immutable image memory until image_free.
- Frees accept NULL; nonnull handles must be live and freed exactly once
- after all borrowers finish. Forged, stale and concurrently freed handles
- violate this contract. Null required pointers and malformed descriptors
- return EUSAGE. Every nonzero return leaves every output unchanged.
- */
-int thinkthen_question_new(const struct thinkthen_engine *engine,
-                           const struct thinkthen_question_spec_v1 *spec,
-                           struct thinkthen_question **out);
-
-/*
- Construct through native grammar with additive author metadata.
- # Safety
- All pointers follow include/thinkthen.h's storage and lifetime contract.
- Construct through the same native grammar, with separately counted author
- metadata. author=NULL means no author metadata. All inputs are cloned.
- */
-int thinkthen_question_new_authored(const struct thinkthen_engine *engine,
-                                    const struct thinkthen_question_spec_v1 *spec,
-                                    const struct thinkthen_question_author_v1 *author,
-                                    struct thinkthen_question **out);
-
-/*
- Construct a recognition question with copied task wording.
- # Safety
- All active counted buffers, optional author and output obey the header contract.
- */
-int thinkthen_question_new_recognition_v1(const struct thinkthen_engine *engine,
-                                          const struct thinkthen_question_spec_v1 *spec,
-                                          const struct thinkthen_question_author_v1 *metadata,
-                                          const struct thinkthen_recognition_task_v1 *task,
-                                          struct thinkthen_question **out);
-
-/*
  Import counted saved-question grammar through an explicitly selected native parser.
  # Safety
  Counted bytes and output obey the header's storage contract.
@@ -5308,14 +4849,6 @@ int thinkthen_question_parse(const struct thinkthen_engine *engine,
                              uint32_t role,
                              struct thinkthen_string_v1 json,
                              struct thinkthen_question **out);
-
-/*
- Borrow authored task wording from an immutable live recognition question.
- # Safety
- Owner and writable output remain live with no concurrent destruction.
- */
-int thinkthen_question_recognition_task_v1(const struct thinkthen_question *owner,
-                                           struct thinkthen_recognition_task_v1 *out);
 
 /*
  Call `thinkthen_recognize_opts` without a deadline or cancellation token.
@@ -5639,44 +5172,6 @@ int thinkthen_session_wait(const struct thinkthen_session *session,
                            uint32_t interest,
                            uint32_t timeout_ms,
                            uint32_t *out_ready);
-
-/*
- Clone an explicit native text/image reader selection.
- # Safety
- All pointers obey the installed header's storage and lifetime contract.
- */
-int thinkthen_source_files(const struct thinkthen_engine *engine,
-                           const struct thinkthen_source_spec_v1 *spec,
-                           struct thinkthen_source **out);
-
-/*
- Free the owned handle; NULL is harmless.
- # Safety
- A nonnull handle is live, freed once, with no concurrent borrowers.
- */
-void thinkthen_source_free(struct thinkthen_source *owner);
-
-/*
- Clone an explicitly image-only native reader, validating physical units before opening paths.
- # Safety
- All pointers obey the installed header's storage and lifetime contract.
- Explicit image media with physical unit line/window/file from the same
- descriptor. Native admission rejects line/window before opening any path.
- Existing source_files unit IMAGE_FILE remains a whole-image convenience.
- */
-int thinkthen_source_image_files(const struct thinkthen_engine *engine,
-                                 const struct thinkthen_source_spec_v1 *spec,
-                                 struct thinkthen_source **out);
-
-/*
- Clone every counted original record before returning.
- # Safety
- All pointers obey the installed header's storage and lifetime contract.
- */
-int thinkthen_source_records(const struct thinkthen_engine *engine,
-                             const struct thinkthen_record_v1 *records,
-                             size_t count,
-                             struct thinkthen_source **out);
 
 #ifdef __cplusplus
 }  // extern "C"
