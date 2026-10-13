@@ -34,3 +34,19 @@ case Failed = 4;
 case Pending = 2;
 case Written = 3;
 }
+trait NativeErrors
+{
+    public static function throwImmediate(int $code, string $message): never
+    {
+        $class = match ($code) {
+            \ThinkThen\Session\THINKTHEN_EBACKEND => BackendFailure::class,
+            \ThinkThen\Session\THINKTHEN_ECANCELLED => CancelledFailure::class,
+            \ThinkThen\Session\THINKTHEN_EDEADLINE => DeadlineFailure::class,
+            \ThinkThen\Session\THINKTHEN_EDEFECT => DefectFailure::class,
+            \ThinkThen\Session\THINKTHEN_ELOCAL => LocalFailure::class,
+            \ThinkThen\Session\THINKTHEN_EUSAGE => UsageFailure::class,
+            default => DefectFailure::class,
+        };
+        throw new $class($message);
+    }
+}

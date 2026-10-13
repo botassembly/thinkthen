@@ -16,7 +16,7 @@ final class Operation
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
     public function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
-        string $function, string|array|\stdClass|QuestionInput $question, mixed $input,
+        string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
         array $options, private readonly ?Cancellation $token)
     {
         if ($input instanceof FileInput) {
@@ -30,12 +30,12 @@ final class Operation
             $source = new Input\InputRequestInputRecords(array_map(fn($item) => new Input\InputRequestItem(Client::descriptor($item)), $records));
         }
         $question = $question instanceof QuestionInput
-            ? ($question->definitionJson === null ? new Input\InputRequestQuestion($question->descriptor) : new Input\InputRequestQuestionDefinition(new Input\RawJson($question->definitionJson)))
+            ? new Input\InputRequestQuestion($question->descriptor)
             : (is_string($question) ? new Input\InputRequestQuestionText($question) : new Input\InputRequestQuestionDefinition($question));
         $buffers = [];
         $request = $ffi->new('struct thinkthen_named_request_v1');
-        foreach (['function' => $function, 'question_json' => Client::json($question),
-            'input_json' => Client::json($source), 'options_json' => Client::json(new Input\InputRequestOptions($options))] as $field => $text) {
+        foreach (['function' => $function, 'question_json' => Input\Encoder::encode($question),
+            'input_json' => Input\Encoder::encode($source), 'options_json' => Input\Encoder::encode(new Input\InputRequestOptions($options))] as $field => $text) {
             $request->$field = $this->utf8($text, $buffers);
         }
         $surface = $this->utf8('php', $buffers);
@@ -65,18 +65,20 @@ final class Operation
         if ($this->terminal === null && $this->producer !== null) $this->feed();
         return $packet;
     }
-    private function readPacket(): ?\ThinkThen\Results\Node
+    private function readPacket(bool $blocking = false): ?\ThinkThen\Results\Node
     {
         $status = $this->ffi->new('uint32_t');
         $owner = $this->ffi->new('struct thinkthen_session_result *');
-        $this->check($this->ffi->thinkthen_session_try_read($this->session, \FFI::addr($status), \FFI::addr($owner)));
+        $code = $blocking
+            ? $this->ffi->thinkthen_session_next_packet($this->session, \ThinkThen\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, \FFI::addr($status), \FFI::addr($owner))
+            : $this->ffi->thinkthen_session_try_read($this->session, \FFI::addr($status), \FFI::addr($owner));
+        $this->check($code);
         if ($status->cdata === \ThinkThen\Session\THINKTHEN_SESSION_END_V1 && $this->terminal === null) throw new DefectFailure('native session ended without terminal facts');
         if ($status->cdata !== \ThinkThen\Session\THINKTHEN_SESSION_RESULT_V1) return null;
         try {
-            $text = $this->ffi->new('const char *');
-            $length = $this->ffi->new('size_t');
-            $this->check($this->ffi->thinkthen_session_result_json($owner, \FFI::addr($text), \FFI::addr($length)));
-            $packet = \ThinkThen\Results\Decoder::packet(\FFI::string($text, $length->cdata));
+            $view = $this->ffi->new('const thinkthen_complete_session_packet_v1 *');
+            $this->check($this->ffi->thinkthen_session_result_view($owner, \FFI::addr($view)));
+            $packet = \ThinkThen\Results\Decoder::native($view);
             $this->packets[] = $packet;
             if ($packet->kind === 'row') $this->rows[] = $packet->value;
             elseif ($packet->kind === 'aggregate') array_push($this->rows, ...(is_array($packet->value) ? $packet->value : [$packet->value]));
@@ -96,9 +98,14 @@ final class Operation
     {
         try {
             while ($this->terminal === null) {
-                $this->poll();
-                if ($this->terminal !== null) break;
-                $this->wait();
+                // Host generators, tokens and async signal handlers must regain the VM.
+                $blocking = $this->producer === null && $this->token === null
+                    && (!function_exists('pcntl_async_signals') || !pcntl_async_signals());
+                if ($blocking) $this->readPacket(true);
+                else {
+                    $this->poll();
+                    if ($this->terminal === null) $this->wait();
+                }
             }
             if ($this->terminal->has('failure')) {
                 $failure = $this->terminal->failure;
@@ -123,11 +130,11 @@ final class Operation
                     $finished = true;
                 } else {
                     $finished = false;
-                    $this->pending = Client::json(new Input\InputRequestSessionDescriptor(new Input\InputRequestItem(Client::descriptor($this->producer->current()))));
+                    $this->pending = Input\Encoder::encode(new Input\InputRequestSessionDescriptor(new Input\InputRequestItem(Client::descriptor($this->producer->current()))));
                 }
             } catch (\Throwable $error) {
                 $this->producerError = $error;
-                $failure = Client::json(new Input\InputRequestReaderFailureProducer());
+                $failure = Input\Encoder::encode(new Input\InputRequestReaderFailureProducer());
                 $this->check($this->ffi->thinkthen_session_finish($this->session, $failure, strlen($failure)));
                 $this->producer = null;
                 return;

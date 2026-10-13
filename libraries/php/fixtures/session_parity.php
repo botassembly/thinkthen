@@ -15,7 +15,8 @@ function consume(stdClass $fixture, Client $client): array
     };
     elseif (($fixture->question_form ?? null) === 'file') $question = Client::questionFile('fixture-question.json');
     elseif (isset($fixture->raw)) {
-        $question = Client::questionJson($fixture->raw);
+        file_put_contents('raw-question.json', $fixture->raw);
+        $question = Client::questionFile('raw-question.json');
     }
     $none = $verb === 'find' && ($question->none ?? false);
     if ($verb === 'find' && $question instanceof stdClass) unset($question->none);
