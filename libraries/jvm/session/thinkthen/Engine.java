@@ -15,7 +15,8 @@ public final class Engine implements AutoCloseable {
     public Engine(Inputs.EngineSettings settings, Surface surface) { this(Values.object(settings.json()), surface); }
     public OwnedSession startSession(Inputs.Request request) { return startSession(Values.object(request.json())); }
     public Results.Plan plan(Inputs.Request request) { return plan(Values.object(request.json())); }
-    public CompletableFuture<OwnedCall> execute(Inputs.Request request) { return execute(Values.object(request.json())); }
+    public CompletableFuture<OwnedCall> execute(Inputs.Request request) { return execute(request, null); }
+    public CompletableFuture<OwnedCall> execute(Inputs.Request request, Iterable<Inputs.RequestSessionDescriptor> feed) { return execute(Values.object(request.json()), feed); }
     /** Shared transport construction for the Kotlin and Scala facade packages. */
     private Engine(Map<String,?> settings, Surface surface) {
         this.surface = Objects.requireNonNull(surface);
@@ -73,21 +74,32 @@ public final class Engine implements AutoCloseable {
         public Results.CallError failure() { return call.terminal().failure().value(); }
     }
     /** Future cancellation stops the native session and releases its owner promptly. */
-    private CompletableFuture<OwnedCall> execute(Map<String,?> request) {
+    private CompletableFuture<OwnedCall> execute(Map<String,?> request, Iterable<Inputs.RequestSessionDescriptor> feed) {
         var result = new CompletableFuture<OwnedCall>();
         final OwnedSession session;
         try {
             session = startSession(request);
-            try { session.finish(); } catch (RuntimeException error) { session.close(); throw error; }
+            if (feed == null) {
+                try { session.finish(); } catch (RuntimeException error) { session.close(); throw error; }
+            }
         }
         catch (RuntimeException error) { result.completeExceptionally(error); return result; }
         result.whenComplete((value,error) -> session.close());
+        if (feed != null) {
+            Thread producer = new Thread(() -> {
+                try {
+                    for (var descriptor : feed) if (session.push(descriptor).join() == 2) break;
+                    session.finish();
+                } catch (RuntimeException error) { result.completeExceptionally(error); }
+            }, "thinkthen-input");
+            producer.setDaemon(true); producer.start();
+        }
         Thread reader = new Thread(() -> {
             var packets = new ArrayList<Results.SessionPacket>();
             Results.SessionPacketTerminal terminal = null;
             try {
                 while (!result.isDone()) {
-                    var next = session.tryRead();
+                    var next = session.nextPacket();
                     if (next.packet() != null) {
                         packets.add(next.packet());
                         if (next.packet() instanceof Results.SessionPacketTerminal done) terminal = done;
@@ -98,7 +110,6 @@ public final class Engine implements AutoCloseable {
                         else result.complete(call);
                         return;
                     }
-                    if (next.packet() == null) session.waitNative(false);
                 }
             } catch (RuntimeException error) { result.completeExceptionally(error); }
         }, "thinkthen-session");
@@ -106,25 +117,25 @@ public final class Engine implements AutoCloseable {
         return result;
     }
     public CompletableFuture<OwnedCall> decide(Inputs.RequestQuestion question, Inputs.RequestInput input) { return decide(question, input, null); }
-    public CompletableFuture<OwnedCall> decide(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallDecide(), question, input, options); }
+    public CompletableFuture<OwnedCall> decide(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE), question, input, options); }
     public CompletableFuture<OwnedCall> choose(Inputs.RequestQuestion question, Inputs.RequestInput input) { return choose(question, input, null); }
-    public CompletableFuture<OwnedCall> choose(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallChoose(), question, input, options); }
+    public CompletableFuture<OwnedCall> choose(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.CHOOSE), question, input, options); }
     public CompletableFuture<OwnedCall> tag(Inputs.RequestQuestion question, Inputs.RequestInput input) { return tag(question, input, null); }
-    public CompletableFuture<OwnedCall> tag(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallTag(), question, input, options); }
+    public CompletableFuture<OwnedCall> tag(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.TAG), question, input, options); }
     public CompletableFuture<OwnedCall> score(Inputs.RequestQuestion question, Inputs.RequestInput input) { return score(question, input, null); }
-    public CompletableFuture<OwnedCall> score(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallScore(), question, input, options); }
+    public CompletableFuture<OwnedCall> score(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.SCORE), question, input, options); }
     public CompletableFuture<OwnedCall> filter(Inputs.RequestQuestion question, Inputs.RequestInput input) { return filter(question, input, null); }
-    public CompletableFuture<OwnedCall> filter(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallFilter(), question, input, options); }
+    public CompletableFuture<OwnedCall> filter(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.FILTER), question, input, options); }
     public CompletableFuture<OwnedCall> rank(Inputs.RequestQuestion question, Inputs.RequestInput input) { return rank(question, input, null); }
-    public CompletableFuture<OwnedCall> rank(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallRank(), question, input, options); }
+    public CompletableFuture<OwnedCall> rank(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.RANK), question, input, options); }
     public CompletableFuture<OwnedCall> find(Inputs.RequestQuestion question, Inputs.RequestInput input) { return find(question, input, null); }
-    public CompletableFuture<OwnedCall> find(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallFind(), question, input, options); }
+    public CompletableFuture<OwnedCall> find(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.FIND), question, input, options); }
     public CompletableFuture<OwnedCall> annotate(Inputs.RequestQuestion question, Inputs.RequestInput input) { return annotate(question, input, null); }
-    public CompletableFuture<OwnedCall> annotate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallAnnotate(), question, input, options); }
+    public CompletableFuture<OwnedCall> annotate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.ANNOTATE), question, input, options); }
     public CompletableFuture<OwnedCall> recognize(Inputs.RequestQuestion question, Inputs.RequestInput input) { return recognize(question, input, null); }
-    public CompletableFuture<OwnedCall> recognize(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallRecognize(), question, input, options); }
+    public CompletableFuture<OwnedCall> recognize(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.RECOGNIZE), question, input, options); }
     public CompletableFuture<OwnedCall> relate(Inputs.RequestQuestion question, Inputs.RequestInput input) { return relate(question, input, null); }
-    public CompletableFuture<OwnedCall> relate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCallRelate(), question, input, options); }
+    public CompletableFuture<OwnedCall> relate(Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) { return call(new Inputs.RequestCall().function(Inputs.RequestFunction.RELATE), question, input, options); }
     private CompletableFuture<OwnedCall> call(Inputs.RequestCall call, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {
         call.question(question).input(input);
         if (options != null) call.options(options);
