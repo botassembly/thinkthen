@@ -24,6 +24,57 @@ static void refused(thinkthen_engine *engine, const char *input, int expected) {
 static thinkthen_complete_utf8_v1 text(const char *value) {
     return (thinkthen_complete_utf8_v1){value, strlen(value)};
 }
+static void quoted(thinkthen_complete_utf8_v1 value) {
+    putchar('"');
+    for(size_t i=0;i<value.len;i++) {
+        unsigned char c=(unsigned char)value.data[i];
+        if(c=='"' || c=='\\') {putchar('\\');putchar(c);}
+        else if(c<32) printf("\\u%04x",c);
+        else putchar(c);
+    }
+    putchar('"');
+}
+static void print_value(const thinkthen_complete_json_v1 *value) {
+    check(value!=NULL,"value has a live root");
+    switch(value->kind) {
+        case THINKTHEN_COMPLETE_JSON_NULL_V1: fputs("null",stdout);break;
+        case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: fputs(value->data.boolean?"true":"false",stdout);break;
+        case THINKTHEN_COMPLETE_JSON_NUMBER_V1: fwrite(value->data.number.data,1,value->data.number.len,stdout);break;
+        case THINKTHEN_COMPLETE_JSON_STRING_V1: quoted(value->data.string);break;
+        case THINKTHEN_COMPLETE_JSON_ARRAY_V1:
+            putchar('[');for(size_t i=0;i<value->data.array.len;i++) {if(i) putchar(',');print_value(value->data.array.data[i]);}putchar(']');break;
+        case THINKTHEN_COMPLETE_JSON_OBJECT_V1:
+            putchar('{');for(size_t i=0;i<value->data.object.len;i++) {if(i) putchar(',');quoted(value->data.object.data[i].name);putchar(':');print_value(value->data.object.data[i].value);}putchar('}');break;
+        default:check(0,"known canonical value kind");
+    }
+}
+static thinkthen_value *owned_plan(thinkthen_engine *engine) {
+    char function[]="decide", question[]="{\"kind\":\"text\",\"text\":\"asks for a refund\"}";
+    char input[]="{\"kind\":\"text\",\"text\":\"Refund me please.\"}", options[]="{\"max_requests_total\":0}";
+    char *heap_question=malloc(sizeof(question));check(heap_question!=NULL,"named question storage");
+    memcpy(heap_question,question,sizeof(question));
+    thinkthen_named_request_v1 named={text(function),text(heap_question),text(input),text(options)};
+    thinkthen_value *owner=(thinkthen_value *)(uintptr_t)7;
+    check(thinkthen_request_plan_named_value(engine,&named,&owner)==THINKTHEN_OK,"owned named plan uses native producer");
+    const thinkthen_complete_json_v1 *root=NULL,*again=NULL;
+    check(thinkthen_value_view(owner,&root)==THINKTHEN_OK && root,"owned Plan root");
+    check(thinkthen_value_view(owner,&again)==THINKTHEN_OK && root==again,"owned Plan getters preserve stable root");
+    memset(heap_question,'?',sizeof(question));free(heap_question);named.question_json=text("broken");
+    memset(function,'?',sizeof(function));memset(question,'?',sizeof(question));memset(input,'?',sizeof(input));memset(options,'?',sizeof(options));
+    thinkthen_value *sentinel=(thinkthen_value *)(uintptr_t)7;
+    check(thinkthen_request_plan_named_value(engine,&named,&sentinel)==THINKTHEN_EUSAGE && sentinel==(thinkthen_value *)(uintptr_t)7,"owned malformed plan preserves output");
+    check(thinkthen_request_plan_named_value(NULL,&named,&sentinel)==THINKTHEN_EUSAGE && sentinel==(thinkthen_value *)(uintptr_t)7,"owned plan requires engine");
+    check(thinkthen_request_plan_named_value(engine,NULL,&sentinel)==THINKTHEN_EUSAGE && sentinel==(thinkthen_value *)(uintptr_t)7,"owned plan requires components");
+    check(thinkthen_request_plan_named_value(engine,&named,NULL)==THINKTHEN_EUSAGE,"owned plan requires output");
+    const thinkthen_error_view_v1 *failure=thinkthen_session_error_view();
+    const thinkthen_complete_json_v1 *missing=(const thinkthen_complete_json_v1 *)(uintptr_t)7;
+    check(thinkthen_value_view(NULL,&missing)==THINKTHEN_EUSAGE && missing==(const thinkthen_complete_json_v1 *)(uintptr_t)7,"NULL value preserves output");
+    failure=thinkthen_session_error_view();
+    check(thinkthen_value_view(owner,&again)==THINKTHEN_OK && again==root && thinkthen_session_error_view()==failure,"value getter preserves prior error");
+    check(thinkthen_value_view(owner,NULL)==THINKTHEN_EUSAGE,"value requires output");
+    thinkthen_value_free(NULL);
+    return owner;
+}
 static char *typed_preview(thinkthen_engine *engine) {
     thinkthen_request_text_v1 question_text={.text=text("asks for a refund")};
     thinkthen_request_question_selector_text_v1 question_value={.m_text=&question_text};
@@ -35,6 +86,13 @@ static char *typed_preview(thinkthen_engine *engine) {
     thinkthen_request_unsigned_v1 limit={.value=0};
     thinkthen_request_call_options_v1 options={.m_max_requests_total=&limit};
     thinkthen_request_arguments_v1 arguments={.m_question=&question,.m_input=&input,.m_options=&options};
+    thinkthen_value *owner=NULL;
+    check(thinkthen_request_plan_typed_value(engine,text("decide"),&arguments,text("ada"),&owner)==THINKTHEN_OK,"owned typed Plan uses shared admission");
+    const thinkthen_complete_json_v1 *root=NULL;
+    check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"owned typed Plan root");
+    print_value(root);putchar('\n');thinkthen_value_free(owner);
+    check(thinkthen_request_plan_typed_value(engine,text("decide"),NULL,text("ada"),&owner)==THINKTHEN_EUSAGE,"owned typed Plan requires arguments");
+    check(thinkthen_request_plan_typed_value(engine,text("decide"),&arguments,text("ada"),NULL)==THINKTHEN_EUSAGE,"owned typed Plan requires output");
     char *out=(char *)(uintptr_t)7;
     size_t length=99;
     check(thinkthen_request_plan_typed_json(engine,text("decide"),&arguments,text("ada"),&out,&length)==THINKTHEN_OK,
@@ -218,7 +276,11 @@ int main(void) {
           "canonical preview");
     memset(request, 0xff, sizeof(p1)-1);
     free(request);
+    thinkthen_value *owner=owned_plan(engine);
     thinkthen_engine_free(engine);
+    const thinkthen_complete_json_v1 *root=NULL;
+    check(thinkthen_value_view(owner,&root)==THINKTHEN_OK,"Plan owner survives engine and source destruction");
+    print_value(root);putchar('\n');thinkthen_value_free(owner);
     check(out && strlen(out) == len && out[len] == 0, "independent owned preview");
     check(!strcmp(typed, out), "typed preview survives engine and carrier destruction");
     thinkthen_free_string(typed);

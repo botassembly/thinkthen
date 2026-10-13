@@ -759,6 +759,11 @@ typedef struct thinkthen_session thinkthen_session;
  */
 typedef struct thinkthen_session_result thinkthen_session_result;
 
+/*
+ Independent immutable canonical value owner. Free after every borrower finishes.
+ */
+typedef struct thinkthen_value thinkthen_value;
+
 typedef struct thinkthen_complete_usage_persistence_v1 {
   uint32_t kind;
 } thinkthen_complete_usage_persistence_v1;
@@ -1207,6 +1212,29 @@ typedef struct thinkthen_question_author_v1 {
    */
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
+
+/*
+ Existing canonical components for one named request. Every view is counted
+ UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
+ */
+typedef struct thinkthen_named_request_v1 {
+  /*
+   Exact lower-case public function name.
+   */
+  struct thinkthen_complete_utf8_v1 function;
+  /*
+   Existing canonical question selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 question_json;
+  /*
+   Existing canonical input selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 input_json;
+  /*
+   Existing canonical options JSON; pass {} for omitted controls.
+   */
+  struct thinkthen_complete_utf8_v1 options_json;
+} thinkthen_named_request_v1;
 
 typedef struct thinkthen_request_literal_image_jpeg_v1 {
   uint32_t reserved;
@@ -2064,29 +2092,6 @@ typedef struct thinkthen_request_reader_failure_v1 {
   uint32_t kind;
   union thinkthen_request_reader_failure_data_v1 data;
 } thinkthen_request_reader_failure_v1;
-
-/*
- Existing canonical components for one named request. Every view is counted
- UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
- */
-typedef struct thinkthen_named_request_v1 {
-  /*
-   Exact lower-case public function name.
-   */
-  struct thinkthen_complete_utf8_v1 function;
-  /*
-   Existing canonical question selector JSON.
-   */
-  struct thinkthen_complete_utf8_v1 question_json;
-  /*
-   Existing canonical input selector JSON.
-   */
-  struct thinkthen_complete_utf8_v1 input_json;
-  /*
-   Existing canonical options JSON; pass {} for omitted controls.
-   */
-  struct thinkthen_complete_utf8_v1 options_json;
-} thinkthen_named_request_v1;
 
 typedef struct thinkthen_request_session_descriptor_v1 {
   const struct thinkthen_request_item_v1 *m_item;
@@ -4152,6 +4157,17 @@ int thinkthen_question_parse(const struct thinkthen_engine *engine,
                              struct thinkthen_question **out);
 
 /*
+ Borrow the already-admitted saved grammar, preserving omissions and ordered values.
+ Root and nested backing remain immutable and stable until question_free, including
+ after source bytes or the parsing engine are freed. Author metadata is unchanged.
+ NULL owner or output returns EUSAGE; refusal preserves output and diagnostic slots.
+ # Safety
+ owner is live for every borrower; out is aligned writable pointer storage.
+ */
+int thinkthen_question_value(const struct thinkthen_question *owner,
+                             const struct thinkthen_complete_json_v1 **out);
+
+/*
  Preview canonical Request JSON without reading a key or cache or sending.
  Only fixed atomic questions support previews; dynamic questions and other functions refuse.
  Success owns NUL-terminated JSON; free once with thinkthen_free_string.
@@ -4165,6 +4181,21 @@ int thinkthen_request_plan_json(const struct thinkthen_engine *engine,
                                 size_t request_len,
                                 char **out,
                                 size_t *out_len);
+
+/*
+ Preview named canonical components through existing Rust admission, without
+ reading a key/cache, constructing a session or sending. Fixed atomic questions
+ match the existing Plan serializer; unsupported functions/questions refuse.
+ Success transfers an independent owned canonical value; free with value_free.
+ Source bytes and engine may be freed on return. Failure leaves out untouched
+ and records only the calling thread immediate session diagnostic.
+ # Safety
+ engine is live; request is an aligned live record with readable counted UTF-8.
+ out is nonnull aligned writable pointer storage.
+ */
+int thinkthen_request_plan_named_value(const struct thinkthen_engine *engine,
+                                       const struct thinkthen_named_request_v1 *request,
+                                       struct thinkthen_value **out);
 
 /*
  Preview typed request arguments through Rust admission without sending.
@@ -4182,6 +4213,22 @@ int thinkthen_request_plan_typed_json(const struct thinkthen_engine *engine,
                                       struct thinkthen_complete_utf8_v1 surface_name,
                                       char **out,
                                       size_t *out_len);
+
+/*
+ Preview typed arguments through existing Rust admission without sessions or sends.
+ Exact Plan values match the existing Rust serializer. COBOL whole arbitrary-value
+ capacity applies before admission; input pointers never survive return.
+ Success transfers an independent immutable canonical value owner; free with value_free.
+ Refusal preserves out and records only this thread immediate session diagnostic.
+ # Safety
+ engine is live; function/surface are readable counted UTF-8. The aligned argument
+ tree has valid counted extents, and out is nonnull aligned writable pointer storage.
+ */
+int thinkthen_request_plan_typed_value(const struct thinkthen_engine *engine,
+                                       struct thinkthen_complete_utf8_v1 function,
+                                       const struct thinkthen_request_arguments_v1 *arguments,
+                                       struct thinkthen_complete_utf8_v1 surface_name,
+                                       struct thinkthen_value **out);
 
 /*
  Signal cancellation without waiting for a provider or final facts. NULL is ignored.
@@ -4442,6 +4489,23 @@ int thinkthen_session_wait(const struct thinkthen_session *session,
                            uint32_t interest,
                            uint32_t timeout_ms,
                            uint32_t *out_ready);
+
+/*
+ Free an independent canonical value owner; NULL is ignored.
+ # Safety
+ owner is NULL or unfreed, after every operation and borrowed view finishes.
+ */
+void thinkthen_value_free(struct thinkthen_value *owner);
+
+/*
+ Borrow the immutable canonical value root and nested backing until value_free.
+ Repeated and concurrent getters preserve identical pointers and prior diagnostics.
+ NULL owner or output returns EUSAGE without publishing; outputs remain untouched.
+ # Safety
+ owner remains live for every borrower; out is aligned writable pointer storage.
+ */
+int thinkthen_value_view(const struct thinkthen_value *owner,
+                         const struct thinkthen_complete_json_v1 **out);
 
 #ifdef __cplusplus
 }  // extern "C"

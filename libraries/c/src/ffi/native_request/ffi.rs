@@ -12,7 +12,7 @@ use crate::session::SessionHandle;
 use crate::session::views::thinkthen_complete_utf8_v1;
 pub use operations::*;
 use serde::Serialize;
-use serde::ser::{SerializeMap, SerializeSeq};
+use serde::ser::SerializeMap;
 use serde_json::value::RawValue;
 use thinkthen::{ErrorKind, Request, RequestReaderFailure, Surface};
 
@@ -34,14 +34,15 @@ impl From<CarrierError> for Failure {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
+#[serde(untagged)]
 enum Value {
     Boolean(bool),
     Text(String),
     Number(serde_json::Number),
     Raw(Box<RawValue>),
     Array(Vec<Self>),
-    Object(Vec<(String, Self)>),
+    Object(#[serde(serialize_with = "ordered_entries")] Vec<(String, Self)>),
 }
 impl Value {
     fn literal(text: &str) -> Result<Self, CarrierError> {
@@ -53,29 +54,15 @@ impl Value {
         serde_json::to_string(self).map_err(|_| ErrorKind::Usage.into())
     }
 }
-impl Serialize for Value {
-    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        match self {
-            Self::Boolean(value) => value.serialize(serializer),
-            Self::Text(value) => value.serialize(serializer),
-            Self::Number(value) => value.serialize(serializer),
-            Self::Raw(value) => value.serialize(serializer),
-            Self::Array(values) => {
-                let mut sequence = serializer.serialize_seq(Some(values.len()))?;
-                for value in values {
-                    sequence.serialize_element(value)?;
-                }
-                sequence.end()
-            }
-            Self::Object(values) => {
-                let mut object = serializer.serialize_map(Some(values.len()))?;
-                for (key, value) in values {
-                    object.serialize_entry(key, value)?;
-                }
-                object.end()
-            }
-        }
+fn ordered_entries<S: serde::Serializer>(
+    values: &[(String, Value)],
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    let mut object = serializer.serialize_map(Some(values.len()))?;
+    for (key, value) in values {
+        object.serialize_entry(key, value)?;
     }
+    object.end()
 }
 struct Context {
     depth: usize,
@@ -242,15 +229,16 @@ unsafe fn typed_session(
     }
 }
 
-unsafe fn typed_plan(
+unsafe fn typed_plan<T>(
     engine: &EngineHandle,
     function: thinkthen_complete_utf8_v1,
     arguments: *const carriers::thinkthen_request_arguments_v1,
     surface_name: thinkthen_complete_utf8_v1,
-) -> Result<(*mut std::ffi::c_char, usize), failures::Failure> {
+    output: impl FnOnce(&str) -> Result<T, ErrorKind>,
+) -> Result<T, failures::Failure> {
     // SAFETY: counted selectors and carriers remain live until admission returns.
     let request = unsafe { typed_request(function, arguments, surface(surface_name)?) }?;
-    super::request_preview::plan(engine, request).map_err(Into::into)
+    super::request_preview::plan(engine, request, output).map_err(Into::into)
 }
 
 unsafe fn settings_typed(

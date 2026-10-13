@@ -84,3 +84,35 @@ pub unsafe extern "C" fn thinkthen_question_parse(
         }
     })
 }
+
+/// Borrow the already-admitted saved grammar, preserving omissions and ordered values.
+/// Root and nested backing remain immutable and stable until question_free, including
+/// after source bytes or the parsing engine are freed. Author metadata is unchanged.
+/// NULL owner or output returns EUSAGE; refusal preserves output and diagnostic slots.
+/// # Safety
+/// owner is live for every borrower; out is aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_question_value(
+    owner: *const crate::current::QuestionHandle,
+    out: *mut *const crate::session::views::thinkthen_complete_json_v1,
+) -> std::ffi::c_int {
+    failures::guard(None, failures::DEFECT, || {
+        let outcome = (|| {
+            if out.is_null() {
+                return Err(ErrorKind::Usage);
+            }
+            // SAFETY: the caller retains this live owner throughout the operation.
+            let owner = unsafe { owner.as_ref() }.ok_or(ErrorKind::Usage)?;
+            let value_out = super::author::question_value(owner)?;
+            // SAFETY: every slot was validated before the native operation; success publishes once.
+            unsafe {
+                *out = value_out;
+            }
+            Ok(())
+        })();
+        match outcome {
+            Ok(()) => failures::OK,
+            Err(_error) => failures::USAGE,
+        }
+    })
+}

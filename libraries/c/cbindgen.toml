@@ -14,6 +14,7 @@ include = ["InputDeclarationKindV1", "InputPropertyKindV1", "QuestionLoaderRoleV
 item_types = ["constants", "enums", "structs", "unions", "opaque", "functions"]
 exclude = ["OK", "USAGE", "DEFECT", "NO_DEADLINE"]
 [export.rename]
+"ValueHandle" = "thinkthen_value"
 "AnnotateViewV1" = "thinkthen_annotate_view_v1"
 "AnswerDataV1" = "thinkthen_answer_data_v1"
 "AnswerV1" = "thinkthen_answer_v1"

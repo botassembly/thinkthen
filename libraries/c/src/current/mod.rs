@@ -5,9 +5,9 @@ use crate::ffi::carriers::{OptionalStringV1, StringV1, StringsV1};
 use std::fmt;
 
 /// Immutable question metadata, independent of every constructor buffer.
-#[derive(Clone)]
 pub struct QuestionHandle {
     pub(crate) author: Box<author::AuthorOwner>,
+    pub(crate) definition: crate::session::views::ValueHandle,
 }
 impl fmt::Debug for QuestionHandle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
