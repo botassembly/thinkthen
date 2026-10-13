@@ -1,19 +1,19 @@
 ---
 // Goal: show that Jev from TypeSafe answers by default, with its address, key variable and model, and how to check it.
-import SidePage from '../../../layouts/SidePage.astro';
-import Terminal from '../../../components/Terminal.astro';
-import BackendFacts from '../../../components/BackendFacts.astro';
-import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
-import { captioned } from '../../../data/samples.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
-import CheckLines from '../../../components/CheckLines.astro';
-import FromYourLanguage from '../../../components/FromYourLanguage.astro';
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import BackendFacts from '../../components/BackendFacts.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { backend } from '../../lib/backends-table.mjs';
+import CheckLines from '../../components/CheckLines.astro';
+import FromYourLanguage from '../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'typesafe');
 const b = backend('typesafe');
 const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.typesafe);
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Jev from TypeSafe, the backend ThinkThen asks by default: its address, key variable, model, and check.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Jev from TypeSafe, the backend ThinkThen asks by default: its address, key variable, model, and check.' }} name="Models">
   <h1>TypeSafe Jev</h1>
   <p class="lede">Jev is a System One model from TypeSafe. ThinkThen asks it when you name no backend.</p>
 
@@ -35,5 +35,5 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
 
   <FromYourLanguage />
 
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>

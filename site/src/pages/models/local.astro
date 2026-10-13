@@ -1,10 +1,10 @@
 ---
 // Goal: show the supported loopback setups for Ollama, llama.cpp and the Strands MLX decision server.
 import fs from 'node:fs';
-import SidePage from '../../../layouts/SidePage.astro';
-import Code from '../../../components/Code.astro';
-import { BACKEND_PAGES } from '../../../data/catalog.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
+import SidePage from '../../layouts/SidePage.astro';
+import Code from '../../components/Code.astro';
+import { BACKEND_PAGES } from '../../data/catalog.mjs';
+import { backend } from '../../lib/backends-table.mjs';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'local');
 const llama = backend('llamacpp');
@@ -12,7 +12,7 @@ const mlx = backend('mlx');
 const ollama = backend('ollama');
 const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name}.txt`, 'utf8');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Run Ollama, llama.cpp or the Strands MLX decision server on your own machine, then check the model with ThinkThen.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Run Ollama, llama.cpp or the Strands MLX decision server on your own machine, then check the model with ThinkThen.' }} name="Models">
   <h1>Run a model locally</h1>
   <p class="lede">A local decision server receives your question and text on your own machine. ThinkThen connects to it with a named backend. The loopback setup needs no key.</p>
 
@@ -37,15 +37,15 @@ const sample = (name) => fs.readFileSync(`examples/install/backends/local/${name
   <h2>Ollama</h2>
   <p>Install Ollama from <a href="https://ollama.com/download">its download page</a>. Pull <code>{ollama.model}</code> with <code>ollama pull {ollama.model}</code>, then start its server on loopback.</p>
   <Code code={sample('ollama')} file="ollama.txt" lang="bash" />
-  <p>ThinkThen reaches <code>{ollama.base}</code>. Ollama's loader and decision encoder must support the chosen model. Experiment 0030 found loader and encoder refusals in version 0.35.1. A model working in llama.cpp does not establish Ollama support. The <a href="/install/backends/ollama/">Ollama page</a> explains its text-description workaround.</p>
+  <p>ThinkThen reaches <code>{ollama.base}</code>. Ollama's loader and decision encoder must support the chosen model. Experiment 0030 found loader and encoder refusals in version 0.35.1. A model working in llama.cpp does not establish Ollama support. The <a href="/models/ollama/">Ollama page</a> explains its text-description workaround.</p>
 
   <h2>Other measured local evidence</h2>
   <p>The retained 2026-10-02 Lichen 0.1.0 server used gemma-4-26B-A4B QAT and answered one request at a time: median 0.947 seconds, 95th percentile 1.978 seconds, server memory 17.0 GiB. It reached ThinkThen by an explicit loopback System One address, without a built-in backend. Current upstream limits and images remain unverified. The <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0400-provider-setups-and-width.md">provider evidence record</a> retains the measured limits.</p>
-  <p>Experiment 0034 also passed the text check with local Clef Q4_K_M on v0.6.0, using a separate weight pin, BF16 projector and 8192 context/batch/ubatch. Its image exchanges belong to an experimental branch. Development 0.2 local image admission requires an exact supported setup declaration. The <a href="/start/files/#images">image input rules</a> link those profiles. These recordings establish no image accuracy result. <a href="/install/backends/openrouter/">Clef through OpenRouter</a> has a separate image limitation.</p>
+  <p>Experiment 0034 also passed the text check with local Clef Q4_K_M on v0.6.0, using a separate weight pin, BF16 projector and 8192 context/batch/ubatch. Its image exchanges belong to an experimental branch. Development 0.2 local image admission requires an exact supported setup declaration. The <a href="/start/files/#images">image input rules</a> link those profiles. These recordings establish no image accuracy result. <a href="/models/openrouter/">Clef through OpenRouter</a> has a separate image limitation.</p>
 
   <h2>Check the running model</h2>
   <p>Run the line for the server you started in another terminal. Each check sends real requests.</p>
   <Code code={sample('check')} file="check.txt" lang="bash" />
-  <p>The report keeps four rich wire probes and adds one row for each of the ten production functions. Each function reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. A valid empty name or relation result is answered. A pass establishes these inputs on that model. It measures no model accuracy and promises no other question set. The <a href="/functions/check/">check reference</a> explains the rows and limits.</p>
+  <p>The report keeps four rich wire probes and adds one row for each of the ten production functions. Each function reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. A valid empty name or relation result is answered. A pass establishes these inputs on that model. It measures no model accuracy and promises no other question set. The <a href="/models/check/">check reference</a> explains the rows and limits.</p>
   <p>Use <code>--url</code> for another loopback port. Set <code>{llama.keys[0]}</code>, <code>{mlx.keys[0]}</code> or <code>{ollama.keys[0]}</code> only when your server requires a key. An unset key sends no Authorization header on loopback. A remote address requires a key and HTTPS.</p>
 </SidePage>

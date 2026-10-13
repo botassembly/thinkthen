@@ -1,13 +1,13 @@
 ---
 // Goal: take a reader from Liquid's console to a key and a first answer from d1.
-import SidePage from '../../../layouts/SidePage.astro';
-import Terminal from '../../../components/Terminal.astro';
-import BackendFacts from '../../../components/BackendFacts.astro';
-import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../../data/catalog.mjs';
-import { captioned } from '../../../data/samples.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
-import CheckLines from '../../../components/CheckLines.astro';
-import FromYourLanguage from '../../../components/FromYourLanguage.astro';
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import BackendFacts from '../../components/BackendFacts.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { backend } from '../../lib/backends-table.mjs';
+import CheckLines from '../../components/CheckLines.astro';
+import FromYourLanguage from '../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'liquid');
 const b = backend('liquid');
@@ -15,7 +15,7 @@ const runs = captioned('install/backends/liquid', BACKENDS_SEE.liquid);
 const by = (name) => runs.find((r) => r.name.endsWith(name));
 const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(by);
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Liquid's d1 decision model through ThinkThen: the key from Liquid's console, the address, the model, the check, and a first answer." }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Liquid's d1 decision model through ThinkThen: the key from Liquid's console, the address, the model, the check, and a first answer." }} name="Models">
   <h1>Liquid d1</h1>
   <p class="lede">d1 is Liquid's decision model. Its server speaks System One, so ThinkThen asks it with no change but the backend name.</p>
 
@@ -34,7 +34,7 @@ const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(
   <Terminal run={status} caption={status.see} />
 
   <h2>Check it</h2>
-  <p>A first check can outlast the default timeout. Pass <code>--timeout 90</code> on a first run. On 2026-09-30, a first check timed out at 30 seconds and passed with <code>--timeout 90</code>. The <a href="/functions/check/#limits">check page</a> says how long a check can take.</p>
+  <p>A first check can outlast the default timeout. Pass <code>--timeout 90</code> on a first run. On 2026-09-30, a first check timed out at 30 seconds and passed with <code>--timeout 90</code>. The <a href="/models/check/#limits">check page</a> says how long a check can take.</p>
   <Terminal run={plan} caption={plan.see} />
   <CheckLines name="liquid" />
 
@@ -46,7 +46,7 @@ const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(
       <Terminal run={lines} caption={lines.see} />
     </Fragment>
   ) : (
-    <p>This page shows no recorded d1 answer. The <a href="/install/backends/typesafe/">TypeSafe Jev page</a> asks the same two questions.</p>
+    <p>This page shows no recorded d1 answer. The <a href="/models/typesafe/">TypeSafe Jev page</a> asks the same two questions.</p>
   )}
 
   <h2>Without the backend name</h2>
@@ -54,7 +54,7 @@ const [status, one, lines, plan] = ['status', 'one', 'lines', 'check-plan'].map(
 
   <FromYourLanguage />
 
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>
 
 <style>

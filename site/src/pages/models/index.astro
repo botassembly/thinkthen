@@ -1,15 +1,19 @@
 ---
-// Goal: list the backends ThinkThen knows by name, say where every question goes by default, and say how the key stays safe.
-import SidePage from '../../../layouts/SidePage.astro';
-import Terminal from '../../../components/Terminal.astro';
-import { BACKEND_PAGES, KEY_VARIABLE } from '../../../data/catalog.mjs';
-import { run } from '../../../data/samples.mjs';
-import { backends } from '../../../lib/backends-table.mjs';
-import { pathHtml } from '../../../lib/path.mjs';
-import { checkLines } from '../../../data/backend-checks.mjs';
+// Goal: show that one option points the same call at TypeSafe's Jev, another
+// provider or a model on your own machine with no code change, then list the
+// models ThinkThen knows by name.
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import { BACKEND_PAGES, BACKENDS_SEE, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { run } from '../../data/samples.mjs';
+import { backends } from '../../lib/backends-table.mjs';
+import { pathHtml } from '../../lib/path.mjs';
+import { checkLines } from '../../data/backend-checks.mjs';
 
 const page = BACKEND_PAGES[0];
 const plan = run('install/backends', '1-plan');
+const same = [['typesafe', '1-one'], ['liquid', '2-one'], ['ollama', '2-one']]
+  .map(([slug, name]) => ({ ...run(`install/backends/${slug}`, name), see: BACKENDS_SEE[slug][name] }));
 const linked = (name) => BACKEND_PAGES.find((p) => p.slug === (['llamacpp', 'mlx'].includes(name) ? 'local' : name));
 const rows = backends().map((b) => ({ ...b, page: linked(b.name), checks: checkLines(b.name) }));
 for (const r of rows) {
@@ -17,13 +21,20 @@ for (const r of rows) {
 }
 const typesafe = rows.find((r) => r.name === 'typesafe');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'The backends ThinkThen knows by name, where every question goes by default, and how the key stays safe.' }} name="Backends">
-  <h1>Backends</h1>
-  <p class="lede">A backend is an address and a model. Development 0.2 speaks System One and, when explicitly selected, OpenAI Decisions. Each named backend selects one API type.</p>
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Point the same call at TypeSafe's Jev, another provider or a model on your own machine with one option and no code change." }} name="Models">
+  <h1>Models</h1>
+  <p class="lede">Point the same call at TypeSafe's Jev, another provider or a model on your own machine. One option makes the switch. Your code stays the same.</p>
 
-  <p><a href="/install/backends/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server.</p>
-  <p>Public installation remains 0.1.2. This table describes development 0.2, including the llama.cpp/MLX built-ins and provider setup fields. Text check results qualify only their dated routes, models and inputs. Development 0.2 admits JPEG/PNG images through explicit supported routes and profiles. See the <a href="/start/files/#images">image input rules</a>. Experimental exchanges establish no image accuracy claim.</p>
-  <h2>The built-in backends</h2>
+  <h2 id="one-option">One option</h2>
+  <p>These three runs ask the same question about the same line. Only <code>--backend</code> changes. The Ollama run also names the port its <a href="/models/ollama/">local server</a> listens on.</p>
+  {same.map((r) => <Terminal run={r} caption={r.see} />)}
+  <p>A different model can give a different answer. Grade a model on your own records before you rely on it: <a href="/start/tune/">Tune for free</a> shows how.</p>
+
+  <h2 id="saved-answers">Saved answers stay with their model</h2>
+  <p>A switch of model asks every question again. The model is part of each saved answer's <a href="/start/pay-once/#the-key">question key</a>. The answers of two models never mix.</p>
+
+  <p><a href="/models/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server. Some models also read JPEG and PNG images. The <a href="/start/files/#images">image input rules</a> name them.</p>
+  <h2 id="named">The models ThinkThen knows by name</h2>
   <p>Name one with <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code>. Each brings its own address, key variable and model.</p>
   <table class="backends" data-backends>
     <tr><th>Name</th><th>Address</th><th>Path</th><th>Key variable</th><th>Default model</th></tr>
@@ -38,7 +49,8 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
     ))}
 
   </table>
-  <p>This table gives the last <code>thinkthen backends check</code> of each built-in backend.</p>
+  <h2 id="tested">Tested models</h2>
+  <p>This table gives the last <a href="/models/check/"><code>thinkthen backends check</code></a> of each built-in backend, with its date. A check covers its own date, model and inputs.</p>
   <table class="backend-checks">
     <tr><th>Backend</th><th>Date</th><th>Model</th><th>Lines found</th></tr>
     {rows.flatMap((r) => r.checks.map((c) => (
@@ -50,10 +62,10 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
       </tr>
     )))}
   </table>
-  <p>Any other server goes in through <a href="/install/backends/system-one/">its address or the configuration file</a>. <a href="https://github.com/botassembly/awesome-thinkthen">Awesome ThinkThen</a> lists more models and servers that pass the check.</p>
+  <p>Any other server goes in through <a href="/models/system-one/">its address or the configuration file</a>. <a href="https://github.com/botassembly/awesome-thinkthen">Awesome ThinkThen</a> lists more models and servers that pass the check.</p>
 
   <h2>With no backend named</h2>
-  <p>A command that names no backend and no address sends every question to <code>{typesafe.base}</code> with <code>{typesafe.model}</code>. It reads the key from <code>{KEY_VARIABLE}</code>. The <a href="/install/backends/typesafe/">TypeSafe Jev page</a> covers that backend.</p>
+  <p>A command that names no backend and no address sends every question to <code>{typesafe.base}</code> with <code>{typesafe.model}</code>. It reads the key from <code>{KEY_VARIABLE}</code>. The <a href="/models/typesafe/">TypeSafe Jev page</a> covers that backend.</p>
   <Terminal run={plan} caption="The plan names the address, the model, and the variable a key would come from. It holds no key." />
   <p><code>--plan</code> sends nothing and needs no key. The plan holds the evidence, so treat it with the same care as the request.</p>
 

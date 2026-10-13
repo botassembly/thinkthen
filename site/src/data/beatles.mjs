@@ -496,10 +496,10 @@ const ARTICLES = {
     goal: "Within two weeks of Jev's launch, other decision models arrived, and ThinkThen speaks to the ones that share Jev's interface.",
     idea: [
       "TypeSafe launched Jev on 2026-09-15. Two weeks later, the field had moved on four fronts.",
-      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/install/backends/liquid/).",
-      "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/install/backends/ollama/).",
+      "Liquid released d1 on 2026-09-29. Liquid calls it the first decision foundation model, and Liquid AI is a spin-off from MIT. d1 speaks the System One API, so ThinkThen runs on it. See [Liquid d1](/models/liquid/).",
+      "Ollama 0.35 shipped on 2026-09-30. It serves the nimble and tev1 models on your own machine through the same API. See [Ollama](/models/ollama/).",
       "On 2026-09-30, Benchmark Heaven's JevBench board ranked 106 systems. Three days earlier it listed 62 open models. Cygnet tops its composite score, and Jev is third.",
-      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/install/backends/openai/).",
+      "OpenAI announced a Decisions API at DevDay on 2026-09-29. Its model, Luna, answers questions a developer defines, from a fixed set of answers, over text or images. See [OpenAI Decisions API](/models/openai/).",
       "The slide's last line names the aim: ThinkThen is one SDK for every decision API.",
     ],
     source: [
@@ -538,7 +538,7 @@ const ARTICLES = {
     label: "Your own backend",
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
-      "Any server with [the same interface as Jev](/install/backends/system-one/) can answer. Name it with `--url`.",
+      "Any server with [the same interface as Jev](/models/system-one/) can answer. Name it with `--url`.",
       "`thinkthen backends check` sends four fixed requests to check that a server works. With `--plan`, it prints its plan and sends nothing.",
     ],
     see: {

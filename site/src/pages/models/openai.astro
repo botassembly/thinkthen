@@ -1,14 +1,14 @@
 ---
 // Goal: configure the explicit Decisions text route in development 0.2.
-import SidePage from '../../../layouts/SidePage.astro';
-import Code from '../../../components/Code.astro';
-import { BACKEND_PAGES } from '../../../data/catalog.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
-import FromYourLanguage from '../../../components/FromYourLanguage.astro';
+import SidePage from '../../layouts/SidePage.astro';
+import Code from '../../components/Code.astro';
+import { BACKEND_PAGES } from '../../data/catalog.mjs';
+import { backend } from '../../lib/backends-table.mjs';
+import FromYourLanguage from '../../components/FromYourLanguage.astro';
 const page = BACKEND_PAGES.find((p) => p.slug === 'openai');
 const route = backend('openai');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Configure OpenAI Decisions text in development 0.2 through one explicit named backend.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Configure OpenAI Decisions text in development 0.2 through one explicit named backend.' }} name="Models">
   <h1>OpenAI Decisions API</h1>
   <p class="lede">Development 0.2 supports Decisions text through the named <code>{route.name}</code> backend. Public installation remains 0.1.2.</p>
   <h2>Development setup</h2>
@@ -24,5 +24,5 @@ const route = backend('openai');
   <p>This probe is adapter evidence, not a full backend qualification or an accuracy comparison. Images are refused before lookup or sending until this route's image bounds and costing are admitted.</p>
   <p>OpenAI's <a href="https://developers.openai.com/api/docs/guides/decisions">Decisions guide</a> and <a href="https://developers.openai.com/api/reference/resources/decisions/methods/create">create reference</a> describe the API and pricing. Caller prices remain explicit; ThinkThen invents no usage or cost for replies that omit usage.</p>
   <FromYourLanguage />
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/backends/system-one/">Any System One server</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/models/system-one/">Any compatible server</a></p>
 </SidePage>

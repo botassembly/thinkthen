@@ -37,7 +37,7 @@ npm run build
 19. `scripts/check-cards.test.mjs` and `scripts/check-cards.mjs` enforce matching decoded titles/descriptions, both alt tags, the Open Graph address and matching same-site 1200 by 630 PNGs.
 20. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt`, the llms files, or the JSON-LD on the home and About pages is wrong. It also fails when two listed pages share a title or a description.
 
-The Backends pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen backends check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
+The Models pages read each built-in backend's name, address, key variables and model with `backend('name')` from `src/lib/backends-table.mjs`, which parses the "Named backends" table in `../specification/backends.md`. A name the table lacks fails the build, and `scripts/check-settings.mjs` fails when the built overview disagrees with the table. A live `thinkthen backends check` cannot replay, so `src/data/backend-checks.mjs` holds each live check a page states, with its date, build and record.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
@@ -45,7 +45,7 @@ A page reads a setting's default, range or allowed values with `setting('Name')`
 
 ## Lighthouse
 
-`npm run lighthouse` runs `scripts/lighthouse.mjs` on the last build. It serves `dist/` on a local port and audits twelve pages on Lighthouse's mobile and desktop presets: the home page, Start, the Python language page, the TypeSafe backend page, Functions, the `filter` function page, the `decide` function page, Learn, a Beatles Bench page, a blog post, the tutorial and the 404 page. It prints each run's performance, accessibility, best practices and SEO scores.
+`npm run lighthouse` runs `scripts/lighthouse.mjs` on the last build. It serves `dist/` on a local port and audits twelve pages on Lighthouse's mobile and desktop presets: the home page, Start, the Python language page, the TypeSafe model page, Functions, the `filter` function page, the `decide` function page, Learn, a Beatles Bench page, a blog post, the tutorial and the 404 page. It prints each run's performance, accessibility, best practices and SEO scores.
 
 It fails when a run scores below 100 on accessibility or on SEO. While `NOINDEX` is true, every page fails the SEO audit "Page is blocked from indexing" by design, and the 404 page always does. The script lets that one audit fail on those pages and fails on any other SEO audit. A build with `NOINDEX` set to false scores 100 on SEO on every page but the 404 page (ticket 0051). Performance and best practices print and never fail the run, because local timings change with the machine's load.
 
@@ -57,7 +57,7 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-The menu links Start, Functions, Languages, How-tos, Learn, Guides and Blog. Recipes appears when its published catalog is available. The Backends pages under `/install/backends/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+The menu links Start, Functions, Models, Languages, How-tos, Learn, Guides and Blog. Recipes appears when its published catalog is available. The Models pages under `/models/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Guides
 

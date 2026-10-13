@@ -1,14 +1,14 @@
 ---
 // Goal: show how ThinkThen asks a decision model that Ollama serves on your own machine, with no key and no hosted service.
-import SidePage from '../../../layouts/SidePage.astro';
-import Terminal from '../../../components/Terminal.astro';
-import BackendFacts from '../../../components/BackendFacts.astro';
-import { BACKEND_PAGES, BACKENDS_SEE } from '../../../data/catalog.mjs';
-import { captioned } from '../../../data/samples.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
-import { checkLines } from '../../../data/backend-checks.mjs';
-import CheckLines from '../../../components/CheckLines.astro';
-import FromYourLanguage from '../../../components/FromYourLanguage.astro';
+import SidePage from '../../layouts/SidePage.astro';
+import Terminal from '../../components/Terminal.astro';
+import BackendFacts from '../../components/BackendFacts.astro';
+import { BACKEND_PAGES, BACKENDS_SEE } from '../../data/catalog.mjs';
+import { captioned } from '../../data/samples.mjs';
+import { backend } from '../../lib/backends-table.mjs';
+import { checkLines } from '../../data/backend-checks.mjs';
+import CheckLines from '../../components/CheckLines.astro';
+import FromYourLanguage from '../../components/FromYourLanguage.astro';
 
 const page = BACKEND_PAGES.find((p) => p.slug === 'ollama');
 const b = backend('ollama');
@@ -17,7 +17,7 @@ const by = (name) => runs.find((r) => r.name.endsWith(name));
 const [plan, one, lines, tev1] = ['check-plan', 'one', 'lines', 'tev1'].map(by);
 const checks = checkLines('ollama');
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Ollama serves decision models such as nimble and tev1 on your own machine. ThinkThen asks them with --backend ollama.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Ollama serves decision models such as nimble and tev1 on your own machine. ThinkThen asks them with --backend ollama.' }} name="Models">
   <h1>Ollama</h1>
   <p class="lede">Ollama 0.35 and later serve System One on your own machine. ThinkThen asks them with <code>--backend {b.name}</code>, with no key and no hosted service.</p>
 
@@ -45,7 +45,7 @@ const checks = checkLines('ollama');
       <Terminal run={lines} caption={lines.see} />
     </Fragment>
   ) : (
-    <p>This page shows no recorded Ollama answer. The <a href="/install/backends/typesafe/">TypeSafe Jev page</a> asks the same two questions.</p>
+    <p>This page shows no recorded Ollama answer. The <a href="/models/typesafe/">TypeSafe Jev page</a> asks the same two questions.</p>
   )}
   {tev1 && (
     <Fragment>
@@ -58,5 +58,5 @@ const checks = checkLines('ollama');
 
   <FromYourLanguage />
 
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>

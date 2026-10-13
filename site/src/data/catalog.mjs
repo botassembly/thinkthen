@@ -925,21 +925,22 @@ export const SETTINGS_SEE = {
   '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
 };
 
-// The Backends section under /install/backends/, in side-list order. Each
-// page runs the scripts in examples/install/backends/<slug>/, and `see`
-// says what to look for in each.
+// The Models section under /models/, in side-list order. Each page runs
+// the scripts in examples/install/backends/<slug>/, and `see` says what to
+// look for in each.
 export const BACKEND_PAGES = [
-  { slug: '', title: 'Backends', label: 'Overview', group: null },
-  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
-  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
-  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'Your own' },
-  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
-  { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
-  { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },
-  { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
-  { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
-  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Built in' },
-].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
+  { slug: '', title: 'Models', label: 'Overview', group: null },
+  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Hosted' },
+  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Hosted' },
+  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Hosted' },
+  { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Hosted' },
+  { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Hosted' },
+  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'On your machine' },
+  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'On your machine' },
+  { slug: 'system-one', title: 'Any compatible server', label: 'Any compatible server', group: 'Your own server' },
+  { slug: 'other-servers', title: 'Other servers', label: 'Other servers', group: 'Your own server' },
+  { slug: 'check', title: 'Check a model', label: 'Check a model', group: 'Before you rely on one' },
+].map((p) => ({ ...p, route: `/models/${p.slug ? `${p.slug}/` : ''}` }));
 
 // The three built-in backends each language page shows, in this order. The
 // key variables repeat the "Named backends" table in
@@ -961,7 +962,7 @@ export const BACKEND_ROUTES = [
 });
 
 // Public installation remains 0.1.2; this explicitly describes the development route.
-export const OPENAI_ANNOUNCED = 'The named <code>openai</code> backend sends text questions to the OpenAI Decisions API. All ten functions run on it with text, and it refuses images. The <a href="/install/backends/openai/">OpenAI Decisions API page</a> gives its setup.';
+export const OPENAI_ANNOUNCED = 'The named <code>openai</code> backend sends text questions to the OpenAI Decisions API. All ten functions run on it with text, and it refuses images. The <a href="/models/openai/">OpenAI Decisions API page</a> gives its setup.';
 
 export const BACKENDS_SEE = {
   typesafe: {

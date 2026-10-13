@@ -1,14 +1,14 @@
 ---
 // Goal: Select Perplexity and check its Decisions route.
-import SidePage from '../../../layouts/SidePage.astro';
-import BackendFacts from '../../../components/BackendFacts.astro';
-import CheckLines from '../../../components/CheckLines.astro';
-import { BACKEND_PAGES } from '../../../data/catalog.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
+import SidePage from '../../layouts/SidePage.astro';
+import BackendFacts from '../../components/BackendFacts.astro';
+import CheckLines from '../../components/CheckLines.astro';
+import { BACKEND_PAGES } from '../../data/catalog.mjs';
+import { backend } from '../../lib/backends-table.mjs';
 const b = backend('perplexity');
 const page = BACKEND_PAGES.find((p) => p.slug === b.name);
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Perplexity Decisions through ThinkThen: address, model, key variable and check.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Perplexity Decisions through ThinkThen: address, model, key variable and check.' }} name="Models">
   <h1>Perplexity Decisions</h1>
   <p class="lede">Select this backend with <code>--backend {b.name}</code>.</p>
   <BackendFacts name={b.name} />
@@ -27,7 +27,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <h2>Pace requests</h2>
   <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. Add <code>"perplexity": &#123;"requests_per_minute": 600&#125;</code> under <code>backends</code> to pace one process at ten requests a second.</p>
   <p>Perplexity's <a href="https://docs.perplexity.ai/docs/decisions/quickstart#rate-limits">published organization limit</a> is ten requests a second. Multiple processes share that provider limit, while each ThinkThen process gets its own configured rate. Divide the allowance across processes when they run together. Perplexity also limits token bursts, so a request can reach a provider limit before the request rate does.</p>
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>
 
 <style>

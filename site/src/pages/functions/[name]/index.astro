@@ -241,7 +241,7 @@ const jobsScope = name === 'annotate'
         ))}
       </ul>
       <p>The command line comes first, then the environment, then the configuration file. The first of these that names a backend or an address decides. So <code>THINKTHEN_BASE_URL</code> in the shell outranks the configuration file's <code>backend</code>, and the key then comes from <code>THINKTHEN_API_KEY</code>. With both <code>--backend</code> and <code>--url</code>, the backend's key variables apply at that address.</p>
-      <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/start/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads, and the <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
+      <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/start/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads, and the <a href="/models/">Backends page</a> gives the rest of the key rules.</p>
     </>
   )}
 

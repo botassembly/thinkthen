@@ -1,13 +1,14 @@
 // Independent compatibility inventory: 42 historical aliases, 19 moved pages,
 // 33 language and Bash technique pages moved under /languages/, and 9
-// install and how-it-works pages moved under /start/.
+// install and how-it-works pages moved under /start/, and 11 backends
+// pages moved under /models/.
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { SITE, isStub } from '../src/lib/listed-pages.mjs';
 export const ALIASES = Object.freeze({
-  '/surfaces': '/start/', '/backends': '/install/backends/',
+  '/surfaces': '/start/', '/backends': '/models/',
   '/tutorial': '/start/tutorial/', '/recipes': '/how-tos/bash/',
   ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection'].map(s => [`/how-tos/${s}`, `/how-tos/bash/${s}/`])),
   '/shell': '/languages/bash/',
@@ -27,7 +28,8 @@ export const ALIASES = Object.freeze({
   '/reference/annotate': '/functions/annotate/#edge-cases',
   '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
   ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file'].map(s => [`/reference/functions/${s}`, `/functions/${s}/`])),
-  ...Object.fromEntries(['audit', 'diff', 'check', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
+  ...Object.fromEntries(['audit', 'diff', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
+  '/reference/check': '/models/check/',
   ...Object.fromEntries(['answers', 'question-sets'].map(s => [`/reference/${s}`, `/learn/${s}/`])),
   '/reference/recording': '/start/replay/',
   '/reference': '/functions/',
@@ -35,6 +37,8 @@ export const ALIASES = Object.freeze({
   '/learn/tutorial': '/start/tutorial/', '/learn/functional': '/start/pay-once/',
   '/learn/caching': '/start/replay/', '/learn/recording': '/start/replay/',
   '/learn/files': '/start/files/', '/learn/overhead': '/start/speed/',
+  '/install/backends': '/models/', '/functions/check': '/models/check/',
+  ...Object.fromEntries(['typesafe', 'liquid', 'openai', 'perplexity', 'openrouter', 'ollama', 'local', 'system-one', 'other-servers'].map(s => [`/install/backends/${s}`, `/models/${s}/`])),
 });
 export const routeFile = (dist, route) => path.join(dist, route.replace(/^\//, ''), 'index.html');
 export function preserver(fixed) {

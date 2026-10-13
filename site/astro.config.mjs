@@ -12,7 +12,7 @@ export default defineConfig({
   // Pages that moved keep their old address.
   redirects: {
     '/surfaces': '/start/',
-    '/backends': '/install/backends/',
+    '/backends': '/models/',
     '/tutorial': '/start/tutorial/',
     ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/how-tos/bash/' }),
     // The shell recipes moved into the Bash techniques section.
@@ -47,7 +47,7 @@ export default defineConfig({
     ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file']
       .map((name) => [`/reference/functions/${name}`, `/functions/${name}/`])),
     ...Object.fromEntries(['audit', 'diff', 'check', 'transform']
-      .map((name) => [`/reference/${name}`, `/functions/${name}/`])),
+      .map((name) => [`/reference/${name}`, name === 'check' ? '/models/check/' : `/functions/${name}/`])),
     ...Object.fromEntries(['answers', 'question-sets', 'recording']
       .map((name) => [`/reference/${name}`, name === 'recording' ? '/start/replay/' : `/learn/${name}/`])),
     '/reference': '/functions/',
@@ -64,6 +64,11 @@ export default defineConfig({
     '/learn/recording': '/start/replay/',
     '/learn/files': '/start/files/',
     '/learn/overhead': '/start/speed/',
+    // The backends pages became the Models section on 2026-10-12.
+    '/install/backends': '/models/',
+    ...Object.fromEntries(['typesafe', 'liquid', 'openai', 'perplexity', 'openrouter', 'ollama', 'local', 'system-one', 'other-servers']
+      .map((slug) => [`/install/backends/${slug}`, `/models/${slug}/`])),
+    '/functions/check': '/models/check/',
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.

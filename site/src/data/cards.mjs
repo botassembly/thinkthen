@@ -26,7 +26,7 @@ const ROUTES = {
   '/functions/': 'runs-in',
   '/languages/': 'runs-in',
   '/languages/bash/': 'runs-in',
-  '/install/backends/': 'backends',
+  '/models/': 'backends',
   '/trust/': 'audit',
   ...Object.fromEntries(LANGUAGES.map((s) => [`/languages/${s}/`, 'languages'])),
   ...Object.fromEntries(DATA.map((s) => [`${s === 'polars' ? '/languages/' : '/install/'}${s}/`, 'data'])),

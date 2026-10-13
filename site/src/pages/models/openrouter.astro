@@ -1,14 +1,14 @@
 ---
 // Goal: Select OpenRouter and check its System One route.
-import SidePage from '../../../layouts/SidePage.astro';
-import BackendFacts from '../../../components/BackendFacts.astro';
-import CheckLines from '../../../components/CheckLines.astro';
-import { BACKEND_PAGES } from '../../../data/catalog.mjs';
-import { backend } from '../../../lib/backends-table.mjs';
+import SidePage from '../../layouts/SidePage.astro';
+import BackendFacts from '../../components/BackendFacts.astro';
+import CheckLines from '../../components/CheckLines.astro';
+import { BACKEND_PAGES } from '../../data/catalog.mjs';
+import { backend } from '../../lib/backends-table.mjs';
 const b = backend('openrouter');
 const page = BACKEND_PAGES.find((p) => p.slug === b.name);
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'OpenRouter through ThinkThen: address, model, key variable and check.' }} name="Backends">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'OpenRouter through ThinkThen: address, model, key variable and check.' }} name="Models">
   <h1>OpenRouter</h1>
   <p class="lede">Select this backend with <code>--backend {b.name}</code>.</p>
   <BackendFacts name={b.name} />
@@ -28,7 +28,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <h2>Price and limits</h2>
   <p>On 2026-10-04, <a href="https://openrouter.ai/typesafe/jev-1.13">OpenRouter's Jev 1.13 page</a> listed $0.042 per million input tokens, free output and a 32,000-token context window. ThinkThen's own request limits still apply.</p>
   <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. That rate applies to one process. Concurrent processes each get their own rate.</p>
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/models/">All models</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>
 
 <style>

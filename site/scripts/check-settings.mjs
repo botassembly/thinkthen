@@ -113,7 +113,7 @@ for (const file of walkHtml(path.join(site, 'dist'))) {
 
 // The Backends overview must show every built-in backend as
 // specification/backends.md holds it: name, address, key variables, model.
-const overview = fs.readFileSync(path.join(site, 'dist', 'install', 'backends', 'index.html'), 'utf8');
+const overview = fs.readFileSync(path.join(site, 'dist', 'models', 'index.html'), 'utf8');
 const shown = [...overview.matchAll(/<tr[^>]*data-backend="([^"]+)"[^>]*>([\s\S]*?)<\/tr>/g)];
 const builtIns = backends();
 if (shown.length !== builtIns.length) problems.push(`the Backends overview shows ${shown.length} backends and specification/backends.md holds ${builtIns.length}`);
