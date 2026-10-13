@@ -751,8 +751,17 @@ typedef struct thinkthen_complete_usage_persistence_v1 {
   uint32_t kind;
 } thinkthen_complete_usage_persistence_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_utf8_v1`.
+ */
 typedef struct thinkthen_complete_utf8_v1 {
+  /*
+   C field `data`.
+   */
   const char *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_utf8_v1;
 
@@ -1795,13 +1804,31 @@ typedef struct thinkthen_request_session_descriptor_v1 {
   const struct thinkthen_request_session_source_location_v1 *m_location;
 } thinkthen_request_session_descriptor_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_extension_v1`.
+ */
 typedef struct thinkthen_complete_extension_v1 {
+  /*
+   C field `name`.
+   */
   struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `json`.
+   */
   struct thinkthen_complete_utf8_v1 json;
 } thinkthen_complete_extension_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_extensions_v1`.
+ */
 typedef struct thinkthen_complete_extensions_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_extension_v1 *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_extensions_v1;
 
@@ -1891,31 +1918,85 @@ typedef struct thinkthen_complete_u64_presence_v1 {
   uint64_t value;
 } thinkthen_complete_u64_presence_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
+ */
 typedef struct thinkthen_complete_json_array_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_json_v1 *const *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_json_array_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_entry_v1`.
+ */
 typedef struct thinkthen_complete_json_entry_v1 {
+  /*
+   C field `name`.
+   */
   struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `value`.
+   */
   const struct thinkthen_complete_json_v1 *value;
 } thinkthen_complete_json_entry_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_object_v1`.
+ */
 typedef struct thinkthen_complete_json_object_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_json_entry_v1 *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_json_object_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_data_v1`.
+ */
 typedef union thinkthen_complete_json_data_v1 {
+  /*
+   C field `boolean`.
+   */
   uint32_t boolean;
+  /*
+   C field `number`.
+   */
   struct thinkthen_complete_utf8_v1 number;
+  /*
+   C field `string`.
+   */
   struct thinkthen_complete_utf8_v1 string;
+  /*
+   C field `array`.
+   */
   struct thinkthen_complete_json_array_v1 array;
+  /*
+   C field `object`.
+   */
   struct thinkthen_complete_json_object_v1 object;
 } thinkthen_complete_json_data_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_v1`.
+ */
 typedef struct thinkthen_complete_json_v1 {
+  /*
+   C field `kind`.
+   */
   uint32_t kind;
+  /*
+   C field `data`.
+   */
   union thinkthen_complete_json_data_v1 data;
 } thinkthen_complete_json_v1;
 

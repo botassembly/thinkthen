@@ -440,12 +440,25 @@ def main():
         emitter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(emitter)
         from registry import paths
-        for module, output in zip(('engine', 'session', 'typed'), paths('c', 'operations')):
+        for module, output in zip(('engine', 'session', 'typed'), paths('c', 'operations')[:3]):
             result = emitter.render([operation for operation in OPERATIONS if operation.module == module], STATUSES if module == 'session' else (), PROJECTIONS if module == 'session' else ())
             output = ROOT / output
             result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
             if args.check and (not output.exists() or output.read_text() != result):
                 print('generated native operations differ', file=sys.stderr)
+                return 1
+            if not args.check:
+                output.write_text(result)
+        from layouts import PRIMITIVES, AUTHOR, JSON_KINDS
+        path = Path(__file__).parent / 'templates/layouts.py'
+        spec = importlib.util.spec_from_file_location('layout_target', path)
+        layouts = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(layouts)
+        for records, kinds, output in zip((PRIMITIVES, AUTHOR), (JSON_KINDS, ()), paths('c', 'operations')[3:]):
+            output = ROOT / output
+            result = format_source(output, layouts.render(records, kinds), child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            if args.check and (not output.exists() or output.read_text() != result):
+                print('generated native layouts differ', file=sys.stderr)
                 return 1
             if not args.check:
                 output.write_text(result)

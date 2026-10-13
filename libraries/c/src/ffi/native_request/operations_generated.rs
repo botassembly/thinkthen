@@ -60,3 +60,39 @@ pub unsafe extern "C" fn thinkthen_session_push_typed(
         Ok(())
     })
 }
+
+/// Construct a named request from counted typed argument records through Rust.
+/// The carrier tree copies strings, arrays, maps and explicit null alternatives;
+/// no pointer survives return. Rust alone admits questions, controls and evidence.
+/// COBOL retains its 8192-byte capacity per scalar, including image/base64 text;
+/// overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.
+/// All output, error-slot and engine lifetime rules match the named constructor.
+/// # Safety
+/// engine is live and out is writable, nonnull. function and surface are counted
+/// UTF-8 views. arguments and its entire finite carrier tree remain aligned and
+/// readable throughout the call. Each pointer/length covers its declared element
+/// type and fits Rust slices. Required pointers are nonnull; optional NULL means
+/// missing. A tagged null arm means explicit null. Inputs may be freed on return.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new_typed_with_surface(
+    engine: *const crate::EngineHandle,
+    function: crate::session::views::thinkthen_complete_utf8_v1,
+    arguments: *const super::carriers::thinkthen_request_arguments_v1,
+    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    out: *mut *mut crate::session::SessionHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe { super::typed_session(engine, function, arguments, surface_name) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}

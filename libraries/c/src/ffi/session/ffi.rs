@@ -13,60 +13,6 @@ pub use operations::*;
 use std::ffi::c_char;
 use thinkthen::{ErrorKind, Request, RequestReaderFailure, RequestSessionRead, Surface};
 
-fn required<T>(slot: *mut T) -> Result<(), ErrorKind> {
-    if slot.is_null() {
-        Err(ErrorKind::Usage)
-    } else {
-        Ok(())
-    }
-}
-
-/// Admit length-delimited UTF-8 request JSON and create an owned native session.
-/// The engine identifies this invocation as the C surface.
-/// Inputs may be freed or overwritten after return. The engine may be freed
-/// after construction; the worker owns its engine. Immediate errors leave out
-/// unchanged and record only the calling-thread session error slot.
-/// # Safety
-/// engine is live, request_json points at request_len readable bytes (NULL
-/// requires zero), and out is writable. Extents must fit Rust slices.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_new(
-    engine: *const EngineHandle,
-    request_json: *const c_char,
-    request_len: usize,
-    out: *mut *mut SessionHandle,
-) -> std::ffi::c_int {
-    // SAFETY: this export forwards the caller's documented pointer obligations.
-    unsafe { new_session(engine, request_json, request_len, out, || Ok(Surface::C)) }
-}
-
-/// Create an owned session attributed to its outer language wrapper.
-/// surface names an exact native Surface token, without a trailing NUL.
-/// Invalid tokens return Usage without retaining or printing their spelling.
-/// All ownership, diagnostics and output rules match thinkthen_session_new.
-/// # Safety
-/// The thinkthen_session_new obligations apply. surface points at surface_len
-/// readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_new_with_surface(
-    engine: *const EngineHandle,
-    request_json: *const c_char,
-    request_len: usize,
-    surface: *const c_char,
-    surface_len: usize,
-    out: *mut *mut SessionHandle,
-) -> std::ffi::c_int {
-    // SAFETY: both counted inputs obey the caller's readable extent contract.
-    unsafe {
-        new_session(engine, request_json, request_len, out, || {
-            super::text(surface, surface_len)
-                .map_err(|_| ErrorKind::Usage)?
-                .parse::<Surface>()
-                .map_err(|_| ErrorKind::Usage)
-        })
-    }
-}
-
 /// Existing canonical components for one named request. Every view is counted
 /// UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
 #[repr(C)]
@@ -87,44 +33,6 @@ impl std::fmt::Debug for NamedRequestV1 {
     }
 }
 
-/// Construct one named request through Rust and create its owned native session.
-/// Components use the existing canonical question, input and options grammars.
-/// Materialized Records become find Units or relate Entities in shared Rust;
-/// every materialized descriptor is decoded before session creation. Sources
-/// and caller feeds retain their selectors. Unknown names say "unknown function".
-/// Ownership, diagnostics and output rules match thinkthen_session_new.
-/// # Safety
-/// engine is live; request points to a readable aligned component structure.
-/// Every view points to its counted readable UTF-8 bytes (NULL requires zero);
-/// extents fit Rust slices. out is nonnull writable pointer storage. All inputs
-/// may be freed or overwritten after return; the engine may also be freed.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
-    engine: *const EngineHandle,
-    request: *const NamedRequestV1,
-    surface: crate::session::views::thinkthen_complete_utf8_v1,
-    out: *mut *mut SessionHandle,
-) -> std::ffi::c_int {
-    // SAFETY: every component and the output obey the caller's counted contract.
-    unsafe {
-        start_session(
-            engine,
-            out,
-            || named_text(surface)?.parse().map_err(|_| ErrorKind::Usage),
-            || {
-                let request = request.as_ref().ok_or(ErrorKind::Usage)?;
-                Request::named_from_json(
-                    named_text(request.function)?,
-                    named_text(request.question_json)?,
-                    named_text(request.input_json)?,
-                    named_text(request.options_json)?,
-                )
-                .map_err(decode_failure)
-            },
-        )
-    }
-}
-
 unsafe fn named_text<'a>(
     view: crate::session::views::thinkthen_complete_utf8_v1,
 ) -> Result<&'a str, ErrorKind> {
@@ -141,44 +49,32 @@ pub(super) fn decode_failure(error: thinkthen::Error) -> failures::Failure {
 }
 
 unsafe fn new_session(
-    engine: *const EngineHandle,
+    engine: &EngineHandle,
     request_json: *const c_char,
     request_len: usize,
-    out: *mut *mut SessionHandle,
     surface: impl FnOnce() -> Result<Surface, ErrorKind>,
-) -> std::ffi::c_int {
+) -> Result<*mut SessionHandle, failures::Failure> {
     // SAFETY: forward the existing export's input and output obligations.
     unsafe {
-        start_session(engine, out, surface, || {
+        start_session(engine, surface, || {
             let text = super::text(request_json, request_len).map_err(|_| ErrorKind::Usage)?;
             Request::from_json(text).map_err(decode_failure)
         })
     }
 }
 
-pub(super) unsafe fn start_session(
-    engine: *const EngineHandle,
-    out: *mut *mut SessionHandle,
+pub(super) fn start_session(
+    engine: &EngineHandle,
     surface: impl FnOnce() -> Result<Surface, ErrorKind>,
     request: impl FnOnce() -> Result<Request, failures::Failure>,
-) -> std::ffi::c_int {
-    failures::session_native_call(|| {
-        required(out)?;
-        let surface = surface()?;
-        // SAFETY: the caller keeps its engine live until this call returns.
-        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
-        let session = engine
-            .0
-            .engine
-            .request_session_with_surface(request()?, surface)
-            .map_err(failures::Failure::from)?;
-        let owner = Box::into_raw(Box::new(SessionHandle(session, surface)));
-        // SAFETY: required checked nonnull and the caller promises writable storage.
-        unsafe {
-            *out = owner;
-        }
-        Ok(())
-    })
+) -> Result<*mut SessionHandle, failures::Failure> {
+    let surface = surface()?;
+    let session = engine
+        .0
+        .engine
+        .request_session_with_surface(request()?, surface)
+        .map_err(failures::Failure::from)?;
+    Ok(Box::into_raw(Box::new(SessionHandle(session, surface))))
 }
 
 fn read_packet(
@@ -387,4 +283,55 @@ unsafe fn finish_json(
         Some(RequestReaderFailure::from_json(text).map_err(|error| error.kind())?)
     };
     session.0.finish(failure).map_err(|error| error.kind())
+}
+
+unsafe fn json_session(
+    engine: &EngineHandle,
+    request_json: *const c_char,
+    request_len: usize,
+) -> Result<*mut SessionHandle, failures::Failure> {
+    // SAFETY: this export forwards the caller's documented pointer obligations.
+    unsafe { new_session(engine, request_json, request_len, || Ok(Surface::C)) }
+}
+
+unsafe fn json_surface_session(
+    engine: &EngineHandle,
+    request_json: *const c_char,
+    request_len: usize,
+    surface: *const c_char,
+    surface_len: usize,
+) -> Result<*mut SessionHandle, failures::Failure> {
+    // SAFETY: both counted inputs obey the caller's readable extent contract.
+    unsafe {
+        new_session(engine, request_json, request_len, || {
+            super::text(surface, surface_len)
+                .map_err(|_| ErrorKind::Usage)?
+                .parse::<Surface>()
+                .map_err(|_| ErrorKind::Usage)
+        })
+    }
+}
+
+unsafe fn named_session(
+    engine: &EngineHandle,
+    request: *const NamedRequestV1,
+    surface: crate::session::views::thinkthen_complete_utf8_v1,
+) -> Result<*mut SessionHandle, failures::Failure> {
+    // SAFETY: every component and the output obey the caller's counted contract.
+    unsafe {
+        start_session(
+            engine,
+            || named_text(surface)?.parse().map_err(|_| ErrorKind::Usage),
+            || {
+                let request = request.as_ref().ok_or(ErrorKind::Usage)?;
+                Request::named_from_json(
+                    named_text(request.function)?,
+                    named_text(request.question_json)?,
+                    named_text(request.input_json)?,
+                    named_text(request.options_json)?,
+                )
+                .map_err(decode_failure)
+            },
+        )
+    }
 }

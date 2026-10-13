@@ -369,3 +369,102 @@ pub unsafe extern "C" fn thinkthen_session_finish(
         unsafe { super::finish_json(session, failure_json, failure_len) }
     })
 }
+
+/// Admit length-delimited UTF-8 request JSON and create an owned native session.
+/// The engine identifies this invocation as the C surface.
+/// Inputs may be freed or overwritten after return. The engine may be freed
+/// after construction; the worker owns its engine. Immediate errors leave out
+/// unchanged and record only the calling-thread session error slot.
+/// # Safety
+/// engine is live, request_json points at request_len readable bytes (NULL
+/// requires zero), and out is writable. Extents must fit Rust slices.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new(
+    engine: *const crate::EngineHandle,
+    request_json: *const std::ffi::c_char,
+    request_len: usize,
+    out: *mut *mut crate::session::SessionHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe { super::json_session(engine, request_json, request_len) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
+/// Create an owned session attributed to its outer language wrapper.
+/// surface names an exact native Surface token, without a trailing NUL.
+/// Invalid tokens return Usage without retaining or printing their spelling.
+/// All ownership, diagnostics and output rules match thinkthen_session_new.
+/// # Safety
+/// The thinkthen_session_new obligations apply. surface points at surface_len
+/// readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new_with_surface(
+    engine: *const crate::EngineHandle,
+    request_json: *const std::ffi::c_char,
+    request_len: usize,
+    surface: *const std::ffi::c_char,
+    surface_len: usize,
+    out: *mut *mut crate::session::SessionHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe {
+            super::json_surface_session(engine, request_json, request_len, surface, surface_len)
+        }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
+/// Construct one named request through Rust and create its owned native session.
+/// Components use the existing canonical question, input and options grammars.
+/// Materialized Records become find Units or relate Entities in shared Rust;
+/// every materialized descriptor is decoded before session creation. Sources
+/// and caller feeds retain their selectors. Unknown names say "unknown function".
+/// Ownership, diagnostics and output rules match thinkthen_session_new.
+/// # Safety
+/// engine is live; request points to a readable aligned component structure.
+/// Every view points to its counted readable UTF-8 bytes (NULL requires zero);
+/// extents fit Rust slices. out is nonnull writable pointer storage. All inputs
+/// may be freed or overwritten after return; the engine may also be freed.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_new_named_with_surface(
+    engine: *const crate::EngineHandle,
+    request: *const crate::ffi::session::NamedRequestV1,
+    surface: crate::session::views::thinkthen_complete_utf8_v1,
+    out: *mut *mut crate::session::SessionHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe { super::named_session(engine, request, surface) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}

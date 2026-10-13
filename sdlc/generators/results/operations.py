@@ -129,6 +129,38 @@ OPERATIONS = (
             Argument('failure_len', 'usize', 'input', None),
         ), 'finish_json', ('session', 'failure_json', 'failure_len'), (), 'session_call', native_unsafe=True),
 
+    Operation('session', 'thinkthen_session_new', '/// Admit length-delimited UTF-8 request JSON and create an owned native session.\n/// The engine identifies this invocation as the C surface.\n/// Inputs may be freed or overwritten after return. The engine may be freed\n/// after construction; the worker owns its engine. Immediate errors leave out\n/// unchanged and record only the calling-thread session error slot.\n/// # Safety\n/// engine is live, request_json points at request_len readable bytes (NULL\n/// requires zero), and out is writable. Extents must fit Rust slices.\n',
+        (
+            Argument('engine', '*const EngineHandle', 'borrow', None),
+            Argument('request_json', '*const c_char', 'input', 'request_len'),
+            Argument('request_len', 'usize', 'input', None),
+            Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
+        ), 'json_session', ('engine', 'request_json', 'request_len'), ('out',), 'session_native_call', native_unsafe=True),
+    Operation('session', 'thinkthen_session_new_with_surface', '/// Create an owned session attributed to its outer language wrapper.\n/// surface names an exact native Surface token, without a trailing NUL.\n/// Invalid tokens return Usage without retaining or printing their spelling.\n/// All ownership, diagnostics and output rules match thinkthen_session_new.\n/// # Safety\n/// The thinkthen_session_new obligations apply. surface points at surface_len\n/// readable UTF-8 bytes; NULL requires zero. Extents must fit Rust slices.\n',
+        (
+            Argument('engine', '*const EngineHandle', 'borrow', None),
+            Argument('request_json', '*const c_char', 'input', 'request_len'),
+            Argument('request_len', 'usize', 'input', None),
+            Argument('surface', '*const c_char', 'input', 'surface_len'),
+            Argument('surface_len', 'usize', 'input', None),
+            Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
+        ), 'json_surface_session', ('engine', 'request_json', 'request_len', 'surface', 'surface_len'), ('out',), 'session_native_call', native_unsafe=True),
+    Operation('session', 'thinkthen_session_new_named_with_surface', '/// Construct one named request through Rust and create its owned native session.\n/// Components use the existing canonical question, input and options grammars.\n/// Materialized Records become find Units or relate Entities in shared Rust;\n/// every materialized descriptor is decoded before session creation. Sources\n/// and caller feeds retain their selectors. Unknown names say "unknown function".\n/// Ownership, diagnostics and output rules match thinkthen_session_new.\n/// # Safety\n/// engine is live; request points to a readable aligned component structure.\n/// Every view points to its counted readable UTF-8 bytes (NULL requires zero);\n/// extents fit Rust slices. out is nonnull writable pointer storage. All inputs\n/// may be freed or overwritten after return; the engine may also be freed.\n',
+        (
+            Argument('engine', '*const EngineHandle', 'borrow', None),
+            Argument('request', '*const NamedRequestV1', 'input', None),
+            Argument('surface', 'crate::session::views::thinkthen_complete_utf8_v1', 'input', None),
+            Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
+        ), 'named_session', ('engine', 'request', 'surface'), ('out',), 'session_native_call', native_unsafe=True),
+    Operation('typed', 'thinkthen_session_new_typed_with_surface', '/// Construct a named request from counted typed argument records through Rust.\n/// The carrier tree copies strings, arrays, maps and explicit null alternatives;\n/// no pointer survives return. Rust alone admits questions, controls and evidence.\n/// COBOL retains its 8192-byte capacity per scalar, including image/base64 text;\n/// overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.\n/// All output, error-slot and engine lifetime rules match the named constructor.\n/// # Safety\n/// engine is live and out is writable, nonnull. function and surface are counted\n/// UTF-8 views. arguments and its entire finite carrier tree remain aligned and\n/// readable throughout the call. Each pointer/length covers its declared element\n/// type and fits Rust slices. Required pointers are nonnull; optional NULL means\n/// missing. A tagged null arm means explicit null. Inputs may be freed on return.\n',
+        (
+            Argument('engine', '*const EngineHandle', 'borrow', None),
+            Argument('function', 'thinkthen_complete_utf8_v1', 'input', None),
+            Argument('arguments', '*const carriers::thinkthen_request_arguments_v1', 'input', None),
+            Argument('surface_name', 'thinkthen_complete_utf8_v1', 'input', None),
+            Argument('out', '*mut *mut SessionHandle', 'transfer', None, lifetime='session_free'),
+        ), 'typed_session', ('engine', 'function', 'arguments', 'surface_name'), ('out',), 'session_native_call', native_unsafe=True),
+
 )
 
 # Native status projections preserve their established public integer values.

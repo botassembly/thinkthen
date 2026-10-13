@@ -7,8 +7,10 @@ def abi_type(value):
     aliases = {'EngineHandle': 'crate::EngineHandle',
                'SessionHandle': 'crate::session::SessionHandle',
                'SessionResultHandle': 'crate::session::SessionResultHandle',
-               'c_char': 'std::ffi::c_char'}
-    value = re.sub(r'\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char)\b', lambda match: aliases[match[0]], value)
+               'c_char': 'std::ffi::c_char',
+               'NamedRequestV1': 'crate::ffi::session::NamedRequestV1',
+               'thinkthen_complete_utf8_v1': 'crate::session::views::thinkthen_complete_utf8_v1'}
+    value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequestV1|thinkthen_complete_utf8_v1)\b', lambda match: aliases[match[0]], value)
     return value.replace('carriers::', 'super::carriers::')
 
 

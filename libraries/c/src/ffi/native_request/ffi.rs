@@ -151,62 +151,6 @@ unsafe fn surface(value: thinkthen_complete_utf8_v1) -> Result<Surface, ErrorKin
         .map_err(|_| ErrorKind::Usage)
 }
 
-/// Construct a named request from counted typed argument records through Rust.
-/// The carrier tree copies strings, arrays, maps and explicit null alternatives;
-/// no pointer survives return. Rust alone admits questions, controls and evidence.
-/// COBOL retains its 8192-byte capacity per scalar, including image/base64 text;
-/// overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.
-/// All output, error-slot and engine lifetime rules match the named constructor.
-/// # Safety
-/// engine is live and out is writable, nonnull. function and surface are counted
-/// UTF-8 views. arguments and its entire finite carrier tree remain aligned and
-/// readable throughout the call. Each pointer/length covers its declared element
-/// type and fits Rust slices. Required pointers are nonnull; optional NULL means
-/// missing. A tagged null arm means explicit null. Inputs may be freed on return.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_new_typed_with_surface(
-    engine: *const EngineHandle,
-    function: thinkthen_complete_utf8_v1,
-    arguments: *const carriers::thinkthen_request_arguments_v1,
-    surface_name: thinkthen_complete_utf8_v1,
-    out: *mut *mut SessionHandle,
-) -> std::ffi::c_int {
-    // SAFETY: the caller retains its engine, carrier tree and writable output.
-    unsafe {
-        super::session::start_session(
-            engine,
-            out,
-            || surface(surface_name),
-            || {
-                let mut context = Context::new(surface(surface_name)?);
-                let Value::Object(values) =
-                    carriers::read_thinkthen_request_arguments_v1(arguments, &mut context)?
-                else {
-                    return Err(ErrorKind::Usage.into());
-                };
-                let mut question = None;
-                let mut input = None;
-                let mut options = "{}".to_owned();
-                for (name, value) in values {
-                    match name.as_str() {
-                        "question" => question = Some(value.json()?),
-                        "input" => input = Some(value.json()?),
-                        "options" => options = value.json()?,
-                        _ => return Err(ErrorKind::Defect.into()),
-                    }
-                }
-                Request::named_from_json(
-                    &context.text(function)?,
-                    &question.ok_or(ErrorKind::Usage)?,
-                    &input.ok_or(ErrorKind::Usage)?,
-                    &options,
-                )
-                .map_err(super::session::decode_failure)
-            },
-        )
-    }
-}
-
 unsafe fn push_typed(
     session: &SessionHandle,
     descriptor: *const carriers::thinkthen_request_session_descriptor_v1,
@@ -255,4 +199,45 @@ pub unsafe extern "C" fn thinkthen_session_finish_typed(
         };
         session.0.finish(failure).map_err(Failure::from)
     })
+}
+
+unsafe fn typed_session(
+    engine: &EngineHandle,
+    function: thinkthen_complete_utf8_v1,
+    arguments: *const carriers::thinkthen_request_arguments_v1,
+    surface_name: thinkthen_complete_utf8_v1,
+) -> Result<*mut SessionHandle, failures::Failure> {
+    // SAFETY: the caller retains its engine, carrier tree and writable output.
+    unsafe {
+        super::session::start_session(
+            engine,
+            || surface(surface_name),
+            || {
+                let mut context = Context::new(surface(surface_name)?);
+                let Value::Object(values) =
+                    carriers::read_thinkthen_request_arguments_v1(arguments, &mut context)?
+                else {
+                    return Err(ErrorKind::Usage.into());
+                };
+                let mut question = None;
+                let mut input = None;
+                let mut options = "{}".to_owned();
+                for (name, value) in values {
+                    match name.as_str() {
+                        "question" => question = Some(value.json()?),
+                        "input" => input = Some(value.json()?),
+                        "options" => options = value.json()?,
+                        _ => return Err(ErrorKind::Defect.into()),
+                    }
+                }
+                Request::named_from_json(
+                    &context.text(function)?,
+                    &question.ok_or(ErrorKind::Usage)?,
+                    &input.ok_or(ErrorKind::Usage)?,
+                    &options,
+                )
+                .map_err(super::session::decode_failure)
+            },
+        )
+    }
 }
