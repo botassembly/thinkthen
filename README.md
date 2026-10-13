@@ -16,22 +16,22 @@ thinkthen decide 'Does the customer ask for money back?' < message.txt
 true
 ```
 
-The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branch on it. The how-to [Gate a script step on a yes/no answer](https://github.com/botassembly/thinkthen/tree/main/demos/01-refund-gate) runs this question against a recorded answer.
+The exit code is 0 for yes, 1 for no, and 3 for not sure. A shell `if` can branch on it. The demo [Gate a script step on a yes/no answer](https://github.com/botassembly/thinkthen/tree/main/demos/01-refund-gate) runs this question against a recorded answer.
 
 ## The ten functions
 
 | Function | It answers |
 | --- | --- |
-| `decide` | yes, no, or not sure |
-| `choose` | the one option that fits best |
-| `tag` | every label that applies |
-| `score` | a number on a scale |
-| `filter` | the records that pass a yes/no question |
-| `rank` | the records, best first |
-| `find` | the one unit of text that answers the question, or nothing |
-| `annotate` | a saved set of named questions for each record |
-| `recognize` | the names in a text and what kind each is |
-| `relate` | the relations between named things |
+| [`decide`](https://thinkthen.dev/functions/decide/) | yes, no, or not sure |
+| [`choose`](https://thinkthen.dev/functions/choose/) | the one option that fits best |
+| [`tag`](https://thinkthen.dev/functions/tag/) | every label that applies |
+| [`score`](https://thinkthen.dev/functions/score/) | a number on a scale |
+| [`filter`](https://thinkthen.dev/functions/filter/) | the records that pass a yes/no question |
+| [`rank`](https://thinkthen.dev/functions/rank/) | the records, best first |
+| [`find`](https://thinkthen.dev/functions/find/) | the one unit of text that answers the question, or nothing |
+| [`annotate`](https://thinkthen.dev/functions/annotate/) | a saved set of named questions for each record |
+| [`recognize`](https://thinkthen.dev/functions/recognize/) | the names in a text and what kind each is |
+| [`relate`](https://thinkthen.dev/functions/relate/) | the relations between named things |
 
 The [specification](https://github.com/botassembly/thinkthen/blob/main/specification/README.md) gives each function's contract, its exit codes, and its failures.
 

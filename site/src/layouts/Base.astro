@@ -3,8 +3,6 @@ import '../styles/site.css';
 import { NOINDEX, REPO } from '../data/catalog.mjs';
 import { DEFAULT_CARD, routeCard } from '../data/cards.mjs';
 import { ORGANIZATION_LD, PERSON_LD } from '../data/about.mjs';
-import { RECIPE_PAGES } from '../data/catalog.mjs';
-import { recipeSelection } from '../data/recipes.mjs';
 import SiteFooter from '../components/SiteFooter.astro';
 
 // `repo` is the one GitHub link a page carries, at its bottom. `image` and
@@ -59,7 +57,7 @@ const nav = [
   ['/models/', 'Models'],
   ['/languages/', 'Languages'],
   ['/databases/', 'Databases'],
-  ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
+  ['/recipes/', 'Recipes'],
 ];
 ---
 <!DOCTYPE html>

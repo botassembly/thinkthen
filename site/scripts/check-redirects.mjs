@@ -3,11 +3,10 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright-core';
 import { DIST, serveDist } from './serve-dist.mjs';
-import { ALIASES, routeFile, recipeRouteState } from './redirect-contract.mjs';
+import { ALIASES, routeFile } from './redirect-contract.mjs';
 let server, browser;
 let deadline;
-const recipeState = recipeRouteState();
-const activeAliases = Object.entries(ALIASES).filter(([alias]) => alias !== '/recipes' || !recipeState.index);
+const activeAliases = Object.entries(ALIASES);
 async function proof() {
   if (!fs.existsSync(chromium.executablePath())) throw new Error('redirect browser prerequisite: matching cached Chromium missing');
   server = await serveDist();
@@ -62,21 +61,20 @@ async function proof() {
       ['/reference/annotate#', '/functions/annotate/#'],
       ['/reference/functions/decide/#a%2Fb%2520c', '/functions/decide/#a%2Fb%2520c'],
     ].filter(([incoming]) => !bookmarkOnly || incoming === '/reference/functions/decide/#flags')) await visit(ctx, incoming, fixed, anchor, observe);
-    if (!bookmarkOnly && recipeState.index) await visit(ctx, '/recipes/', '/recipes/', null, false, true);
-    if (!bookmarkOnly && !recipeState.index) for (const suffix of ['#techniques', '#%74echniques', '#', '#a%2Fb%2520c']) await visit(ctx, '/recipes' + suffix, '/languages/bash/' + suffix);
+    if (!bookmarkOnly) await visit(ctx, '/recipes/', '/recipes/', null, false, true);
     if (!bookmarkOnly) for (const [route, id] of [['/functions/decide/#flags', 'flags'], ['/functions/#tools', 'tools'], ['/functions/annotate/#flat-fields', 'flat-fields']]) await visit(ctx, route, route, id, false, true);
   } finally { await ctx.close(); }
   if (bookmarkOnly) { console.log('redirect browser: canonical decide bookmark assertion passed'); } else {
   const fallback = await context(false);
   try {
-    for (const alias of ['/reference/functions/decide', '/reference/annotate', ...(!recipeState.index ? ['/recipes'] : [])]) {
+    for (const alias of ['/reference/functions/decide', '/reference/annotate']) {
       const fixed = ALIASES[alias];
       const html = fs.readFileSync(routeFile(DIST, alias), 'utf8');
       assert.ok(html.includes(`<a href="${fixed}">`), 'visible fixed fallback');
       await visit(fallback, alias, fixed);
     }
   } finally { await fallback.close(); }
-  console.log(`redirect browser: ${activeAliases.length} aliases, ${Object.keys(ALIASES).length} compatibility addresses, 9 original fragment cases, 3 original direct pages, ${recipeState.index ? '1 recipe direct index' : '4 recipe fragment cases'}, ${recipeState.index ? 2 : 3} Chromium no-JavaScript fallbacks passed`);
+  console.log(`redirect browser: ${activeAliases.length} aliases, ${Object.keys(ALIASES).length} compatibility addresses, 9 original fragment cases, 3 original direct pages, 1 recipe direct index, 2 Chromium no-JavaScript fallbacks passed`);
   }
 }
 try {

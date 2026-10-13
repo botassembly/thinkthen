@@ -215,6 +215,4 @@ The build transforms the 102 generated redirect stubs with `preserve-redirect-fr
 `check-markdown-headings.mjs` preserves the six existing annotate subsections after nesting them at h4. Build checks the emitted canonical twin and `llms-full.txt`; check validates the saved build.
 
 
-Recipes use `RECIPE_PAGES`; Bash examples remain `SHELL_JOBS`. Normal builds publish Rules, verify and cache SQL in the index, navigation, HTML, Markdown, llms exports and search. Link, navigation and transcript-search recipes remain later drafts. `THINKTHEN_DRAFTS=1` also emits visibly marked later drafts.
-
-`check-recipes.mjs` checks source content and rendered evidence and visibility. Run the ordinary sample replay with `node scripts/smoke.mjs recipes/`; the SQL example uses the stock DuckDB CLI. Illustrative outputs establish local behavior, not provider quality. Every supports result in verify requires a person to review the original source before action.
+`check-recipes.mjs` checks source content and rendered evidence and visibility. Run the ordinary sample replay with `node scripts/smoke.mjs recipes/`. Illustrative outputs establish local behavior, not provider quality. Every supports result in verify requires a person to review the original source before action.

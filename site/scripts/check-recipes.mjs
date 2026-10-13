@@ -1,14 +1,14 @@
-// Closed source, artifact and actual export checks for every recipe disposition.
+// Closed source, artifact and actual export checks for the measured recipes.
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
 import { RECIPE_PAGES, HOWTOS, SHELL_JOBS } from '../src/data/catalog.mjs';
-// Reader recipes and shell jobs also live under /recipes/. They carry no
-// draft state, so each always publishes.
-const JOBS = [...HOWTOS, ...SHELL_JOBS].map((j) => j.slug);
-import { recipeProblems, scopeProblems, recipeSelection, evidenceText, evidenceSource, hasDecimal, unsafePublic } from '../src/data/recipes.mjs';
+import { recipeProblems, evidenceText, evidenceSource, hasDecimal, gridRows, GRID_COLUMNS, EVIDENCE_LABEL } from '../src/data/recipes.mjs';
 import { parseHtml, findElement, textContent } from '../src/lib/html.mjs';
-import { validateCompatibility, ALIASES, routeFile } from './redirect-contract.mjs';
+import { routeFile } from './redirect-contract.mjs';
+import { isStub } from '../src/lib/listed-pages.mjs';
+// Reader recipes and shell jobs also live under /recipes/.
+const JOBS = [...HOWTOS, ...SHELL_JOBS].map((j) => j.slug);
 const ROOT = fileURLToPath(new URL('../../',import.meta.url));
 const raw = node => node.tag === '#text' ? node.text : (node.kids || []).map(raw).join('');
 const tidy = text => text.replace(/\s+/g,' ').trim();
@@ -22,7 +22,6 @@ export function fixtureAssertionProblems(base,e) {
 }
 export function artifactProblems(r, root = ROOT) {
   const base=path.join(root,r.example), problems=[];
-  if (r.publication !== 'ready' && !fs.existsSync(base)) return problems;
   const required = new Set(r.body.filter(n=>n.kind==='artifact').map(n=>n.file));
   if (r.slug==='rules-propose-model-confirms' || r.slug==='verify-a-claim') {
     for (const file of ['files/question.json','files/cases.jsonl','files/key.jsonl','files/recording/thinkthen.jsonl','1-ask.sh','1-ask.out','2-audit.sh','2-audit.out']) required.add(file);
@@ -36,18 +35,31 @@ export function renderedProblems(r,html,markdown,llms,root=ROOT) {
   const out=[],add=(code,where)=>out.push(`recipe ${code}: ${r.slug}: ${where}`);
   const main=findElement(parseHtml(html),n=>n.tag==='main');
   if (!main || main.attrs['data-recipe']!==r.slug) return [`recipe rendered: ${r.slug}: missing main`];
-  if (Object.hasOwn(main.attrs,'data-draft')!==r.draft || r.draft && (!markdown.includes('Draft:') || !llms.includes('Draft:'))) add('visibility','draft identity');
   const evidence=new Map([...r.measured,...r.fixtureAssertions].map(e=>[e.id,e]));
   const seen=new Set(),artifacts=new Set();
   function inspect(n) {
     if (Object.hasOwn(n.attrs || {},'data-recipe-evidence')) {
       const id=n.attrs['data-recipe-evidence'],e=evidence.get(id);
-      const label=e?.evidenceClass==='measured'?'Owning record':'Controlled fixture';
+      const label=EVIDENCE_LABEL[e?.evidenceClass];
       const a=findElement(n,k=>k.tag==='a');
       const cells=[]; walk(n,k=>{if(k.tag==='td')cells.push(k);});
       if (!e || seen.has(id) || n.attrs['data-evidence-class']!==e.evidenceClass || cells.length!==2 || tidy(textContent(cells[0]))!==tidy(evidenceText(e)) || tidy(textContent(cells[1]))!==label || a?.attrs.href!==evidenceSource(r,e)) add('rendered-evidence',id);
       if (e) for (const [kind,exported] of [['Markdown',markdown],['llms',llms]]) if (!exported.includes(evidenceText(e)) || !exported.includes(evidenceSource(r,e))) add('export-evidence',`${id}/${kind}`);
       seen.add(id);return;
+    }
+    if (Object.hasOwn(n.attrs || {},'data-recipe-evidence-grid')) {
+      const grid=r.body.find(b=>b.kind==='evidence-grid');
+      const want=grid?gridRows(grid,evidence):[];
+      const got=[];walk(n,k=>{if(Object.hasOwn(k.attrs||{},'data-grid-row'))got.push(k);});
+      if (!grid || got.length!==want.length) add('rendered-evidence','grid rows');
+      for (const [i,row] of want.entries()) {
+        const tr=got[i],cells=[];if(tr)walk(tr,k=>{if(k.tag==='td')cells.push(tidy(textContent(k)));});
+        const a=tr&&findElement(tr,k=>k.tag==='a');
+        const expect=[row.method,row.cells[0].cohort,...row.cells.map(c=>c.value),'Source'];
+        if (!tr || cells.join('|')!==expect.join('|') || a?.attrs.href!==row.cells[0].source) add('rendered-evidence',`grid ${row.method}-${row.cohort}`);
+        for (const [kind,exported] of [['Markdown',markdown],['llms',llms]]) if (!row.cells.every(c=>exported.includes(c.value)) || !exported.includes(row.cells[0].source)) add('export-evidence',`grid ${row.method}-${row.cohort}/${kind}`);
+      }
+      seen.add('grid');return;
     }
     if (Object.hasOwn(n.attrs || {},'data-recipe-artifact')) {
       const file=n.attrs['data-recipe-artifact'];
@@ -63,41 +75,30 @@ export function renderedProblems(r,html,markdown,llms,root=ROOT) {
   inspect(main);
   for (const node of r.body) {
     if (node.kind==='evidence'&&!seen.has(node.id)) add('rendered-evidence',`missing ${node.id}`);
+    if (node.kind==='evidence-grid'&&!seen.has('grid')) add('rendered-evidence','missing grid');
     if (node.kind==='artifact'&&!artifacts.has(node.file)) add('rendered-artifact',`missing ${node.file}`);
   }
   return out;
 }
-export function sourceProblems(catalog=RECIPE_PAGES,root=ROOT,scope=true) {
-  const out=scope?scopeProblems(catalog):[];
+export function sourceProblems(catalog=RECIPE_PAGES,root=ROOT) {
+  const out=[];
   for (const r of catalog) out.push(...recipeProblems(r),...artifactProblems(r,root));
-  if (scope) {
-    for (const r of catalog) {
-      const issue=path.join(root,r.issue);
-      if (!fs.existsSync(issue)) { out.push(`recipe scope: ${r.slug}: missing issue`);continue; }
-      const text=fs.readFileSync(issue,'utf8');
-      if (!text.startsWith('# Recipe:') || !['Kind: recipe',`Milestone: ${r.draft ? 'later' : '0.2'}`,`Status: ${r.draft ? 'open' : 'closed'}`,`Slug: ${r.slug}`,'Owner: the queue owner'].every(s=>text.includes(s))) out.push(`recipe scope: ${r.slug}: issue/milestone disposition`);
-    }
-  }
   return out;
 }
-export function distProblems(dist,catalog=RECIPE_PAGES,preview=false,root=ROOT) {
-  const out=[],state=recipeSelection(catalog,preview);
-  const index=routeFile(dist,'/recipes');
-  try { validateCompatibility(fs.readFileSync(index,'utf8'),'/recipes',ALIASES['/recipes'],dist,true,state); }
-  catch(e) { out.push(e.message); }
+export function distProblems(dist,catalog=RECIPE_PAGES,root=ROOT) {
+  const out=[];
   const llms=fs.readFileSync(path.join(dist,'llms-full.txt'),'utf8');
   const short=fs.readFileSync(path.join(dist,'llms.txt'),'utf8');
   const sitemap=fs.readFileSync(path.join(dist,'sitemap.xml'),'utf8');
-  const expected=new Set(state.pages.map(r=>r.slug));
+  const expected=new Set([...catalog.map(r=>r.slug),...JOBS]);
   const folder=path.join(dist,'recipes');
-  if (fs.existsSync(folder)) for (const entry of fs.readdirSync(folder,{withFileTypes:true})) if (entry.isDirectory()&&!expected.has(entry.name)&&!JOBS.includes(entry.name)) out.push(`recipe visibility: leaked/unknown ${entry.name}`);
+  if (fs.existsSync(folder)) for (const entry of fs.readdirSync(folder,{withFileTypes:true})) if (entry.isDirectory()&&!expected.has(entry.name)) {
+    const page=path.join(folder,entry.name,'index.html');
+    if (!fs.existsSync(page)||!isStub(fs.readFileSync(page,'utf8'))) out.push(`recipe visibility: unknown ${entry.name}`);
+  }
   for (const r of catalog) {
     const htmlPath=routeFile(dist,'/recipes/'+r.slug),mdPath=path.join(dist,'recipes',r.slug+'.md');
     const url=`https://thinkthen.dev/recipes/${r.slug}/`;
-    if (!expected.has(r.slug)) {
-      if (fs.existsSync(htmlPath)||fs.existsSync(mdPath)||llms.includes(url)||short.includes(url.slice(0,-1)+'.md')||sitemap.includes(url)) out.push(`recipe visibility: ${r.slug}: excluded output`);
-      continue;
-    }
     if (!fs.existsSync(htmlPath)||!fs.existsSync(mdPath)) { out.push(`recipe missing-artifact: ${r.slug}: HTML/Markdown twin`);continue; }
     const start=llms.indexOf('Source: '+url+'\n');
     const block=start<0?'':llms.slice(start,llms.indexOf('\n---\n',start)>0?llms.indexOf('\n---\n',start):undefined);
@@ -109,25 +110,26 @@ export function distProblems(dist,catalog=RECIPE_PAGES,preview=false,root=ROOT) 
     for (const tag of ['header','footer']) {
       const region=findElement(tree,n=>n.tag===tag);let links=0;
       walk(region || {kids:[]},n=>{ if(n.tag==='a'&&n.attrs.href==='/recipes/') links++; });
-      if (links!==(state.navigation?1:0)) out.push(`recipe visibility: ${name}: ${tag} navigation`);
+      if (links!==1) out.push(`recipe visibility: ${name}: ${tag} navigation`);
     }
   }
-  if (!state.index&&(fs.existsSync(path.join(dist,'recipes.md'))||short.includes('https://thinkthen.dev/recipes.md')||sitemap.includes('https://thinkthen.dev/recipes/'))) out.push('recipe visibility: excluded index export');
-  if (state.index) {
+  const index=routeFile(dist,'/recipes');
+  if (!fs.existsSync(index)) out.push('recipe visibility: index');
+  else {
     const body=fs.readFileSync(index,'utf8');
     const main=findElement(parseHtml(body),n=>n.tag==='main');
-    if (main && hasDecimal(textContent(main))) out.push('recipe unsupported numerical prose: index: rendered');
-    for (const r of catalog) if (body.includes(`href="/recipes/${r.slug}/"`)!==expected.has(r.slug)) out.push(`recipe visibility: index membership ${r.slug}`);
-    const md=path.join(dist,'recipes.md');
-    if (!fs.existsSync(md)||state.draftIndex&&!fs.readFileSync(md,'utf8').includes('Draft catalog:')) out.push('recipe visibility: index twin');
+    if (!main) out.push('recipe visibility: index');
+    else if (hasDecimal(textContent(main))) out.push('recipe unsupported numerical prose: index: rendered');
+    for (const slug of expected) if (!body.includes(`href="/recipes/${slug}/"`)) out.push(`recipe visibility: index membership ${slug}`);
+    if (!fs.existsSync(path.join(dist,'recipes.md'))) out.push('recipe visibility: index twin');
   }
   return out;
 }
 if (process.argv[1] && import.meta.url===pathToFileURL(process.argv[1]).href) {
   const args=process.argv.slice(2), fixture=args.indexOf('--fixture'), di=args.indexOf('--dist');
   const catalog=fixture>=0?JSON.parse(fs.readFileSync(args[fixture+1],'utf8')):RECIPE_PAGES;
-  const problems=sourceProblems(catalog,ROOT,fixture<0);
-  if (di>=0) problems.push(...distProblems(path.resolve(args[di+1]),catalog,process.env.THINKTHEN_DRAFTS==='1'));
+  const problems=sourceProblems(catalog,ROOT);
+  if (di>=0) problems.push(...distProblems(path.resolve(args[di+1]),catalog));
   if (problems.length) {for(const p of problems) console.error(p);process.exitCode=1;}
   else console.log(`recipe check: ${catalog.length} source entries${di>=0?', rendered HTML/Markdown/llms and visibility':''}`);
 }

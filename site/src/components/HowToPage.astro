@@ -9,7 +9,6 @@ import { FUNCTIONS } from '../data/catalog.mjs';
 import { captioned, files } from '../data/samples.mjs';
 
 const { job, dir, eyebrow } = Astro.props;
-if (!job.goal) throw new Error(`recipes: ${job.slug} has no goal`);
 if (!job.gain) throw new Error(`recipes: ${job.slug} has no gain`);
 const runs = captioned(dir, job.see);
 // A page with `files` shows only the files it names, in that order, each
@@ -37,6 +36,7 @@ const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text
 
   {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.caption} />)}
   {runs.map((run) => <Terminal run={run} caption={run.see} />)}
+  {job.record && <p>The timing and the cost come from <a href={job.record[1]}>{job.record[0].toLowerCase()}</a>.</p>}
 
   <p>These commands are Bash. The same functions run in <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a>, <a href="/languages/">every other language</a> and <a href="/databases/">every database</a>.</p>
   {used.length > 0 && (

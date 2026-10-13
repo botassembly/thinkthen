@@ -1,6 +1,4 @@
 import { defineConfig } from 'astro/config';
-import { RECIPE_PAGES } from './src/data/catalog.mjs';
-import { recipeSelection } from './src/data/recipes.mjs';
 import remarkExamples from './src/lib/remark-examples.mjs';
 
 export default defineConfig({
@@ -14,15 +12,19 @@ export default defineConfig({
     '/surfaces': '/start/',
     '/backends': '/models/',
     '/tutorial': '/start/tutorial/',
-    ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/languages/bash/' }),
     // The how-tos, the shell jobs and the guides became the Recipes section
     // on 2026-10-12. The shell jobs once sat at /how-tos/<slug> too.
     '/how-tos': '/recipes/',
-    '/how-tos/bash': '/recipes/',
+    '/how-tos/bash': '/languages/bash/#techniques',
+    // Setting bad records aside became a Bash technique, and asking the
+    // saved answers in SQL moved onto the DuckDB page.
+    '/how-tos/set-aside-bad-records': '/languages/bash/set-aside-bad-records/',
+    '/recipes/set-aside-bad-records': '/languages/bash/set-aside-bad-records/',
+    '/recipes/ask-your-cache-with-duckdb': '/databases/duckdb/#ask-your-saved-answers',
     '/guides': '/recipes/',
-    ...Object.fromEntries([...['triage-a-support-inbox', 'join-two-tables-by-meaning', 'code-open-ended-survey-answers', 'screen-studies-for-a-review', 'group-alerts-into-incidents', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents', 'screen-a-post-before-it-goes-up', 'search-youtube-transcripts-by-meaning'], ...['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records']]
+    ...Object.fromEntries([...['triage-a-support-inbox', 'join-two-tables-by-meaning', 'code-open-ended-survey-answers', 'screen-studies-for-a-review', 'group-alerts-into-incidents', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents', 'screen-a-post-before-it-goes-up', 'search-youtube-transcripts-by-meaning'], ...['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']]
       .map((slug) => [`/how-tos/${slug}`, `/recipes/${slug}/`])),
-    ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records']
+    ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
       .map((slug) => [`/how-tos/bash/${slug}`, `/recipes/${slug}/`])),
     '/shell': '/languages/bash/',
     ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c']
@@ -37,7 +39,7 @@ export default defineConfig({
     '/install/shell': '/languages/bash/',
     ...Object.fromEntries(['python', 'pandas', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'go', 'swift', 'zig', 'php', 'dart']
       .map((slug) => [`/install/${slug}`, `/languages/${slug}/`])),
-    ...Object.fromEntries(['if', 'case', 'not-sure', 'threshold-band', 'while-read', 'pipeline', 'batches', 'ci-gate', 'long-lived-loop', 'judge-paragraphs', 'agent-tool-guard']
+    ...Object.fromEntries(['if', 'case', 'not-sure', 'threshold-band', 'while-read', 'pipeline', 'batches', 'ci-gate', 'long-lived-loop', 'judge-paragraphs', 'agent-tool-guard', 'set-aside-bad-records']
       .map((slug) => [`/how-tos/bash/${slug}`, `/languages/bash/${slug}/`])),
     // The launch article replaced the first article on 2026-10-01.
     '/blog/code-that-understands': '/blog/introducing-thinkthen/',

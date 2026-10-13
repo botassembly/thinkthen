@@ -15,14 +15,14 @@ const auditPage = PAGES.find((p) => p.slug === 'audit');
   <p class="lede">The model reports probabilities behind its answers. You set supported reading rules and count the misses on your own labeled records.</p>
 
   <h2>Grade it on your own records</h2>
-  <p>Label some records yourself, and grade ThinkThen's saved answers against your labels. <a href="/start/tune/">Tune for free</a> shows <code>runs audit</code> doing it, and the <a href={auditPage.route}>Beatles audit section</a> grades the same songs at other bars.</p>
+  <p>Label some records yourself, and grade ThinkThen's saved answers against your labels. <a href="/start/tune/">Tune for free</a> shows <code>runs audit</code> doing it, and the <a href={auditPage.route}>Beatles audit section</a> grades the same songs at other thresholds.</p>
 
   <h2>The threshold is yours</h2>
   <p>The model reports a probability. Your threshold turns it into an answer. One number is a cut. Two numbers are a band, and the middle is not sure.</p>
   <Terminal run={lines} caption="Under the band 0.2:0.8, the refund request is yes and the thank-you is no. The send-back line could mean an exchange or money back. It lands in the band as null." />
   <p>A band hands a person the calls a pipeline should not make alone. The backend may fail to answer a question. ThinkThen marks that question failed and counts it. A failure never turns into <code>null</code>.</p>
 
-  <p>Under <code>0.3:0.7</code>, decide is not sure exactly when <code>0.3 ≤ p &lt; 0.7</code>. The interior has <code>|2p − 1| &lt; 0.4</code>; the low boundary is also not sure, while the high boundary is yes. An uneven band such as <code>0.2:0.9</code> sets different bars for yes and no.</p>
+  <p>Under <code>0.3:0.7</code>, decide is not sure exactly when <code>0.3 ≤ p &lt; 0.7</code>. The interior has <code>|2p − 1| &lt; 0.4</code>; the low boundary is also not sure, while the high boundary is yes. An uneven band such as <code>0.2:0.9</code> sets different thresholds for yes and no.</p>
   <table id="band-boundaries">
     <caption>Illustrative yes probabilities at and between band boundaries.</caption>
     <tr><th>Yes probability</th><th>0.3:0.7</th><th>0.2:0.9</th></tr>

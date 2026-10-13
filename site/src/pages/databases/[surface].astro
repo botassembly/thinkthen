@@ -2,7 +2,10 @@
 // Goal: show how to load ThinkThen into one database and ask a first query,
 // with what is different in that database.
 import SurfacePage from '../../components/SurfacePage.astro';
-import { SURFACES, BINDINGS } from '../../data/catalog.mjs';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { SURFACES, BINDINGS, SAVED_ANSWERS_SQL_SEE } from '../../data/catalog.mjs';
+import { files, run } from '../../data/samples.mjs';
 
 export function getStaticPaths() {
   return SURFACES
@@ -11,5 +14,20 @@ export function getStaticPaths() {
 }
 
 const { surface } = Astro.props;
+// Asking saved answers in SQL needs only stock DuckDB, so the DuckDB page
+// shows it.
+const dir = 'recipes/ask-your-cache-with-duckdb';
+const queries = surface.slug === 'duckdb' ? files(dir).find((f) => f.name === 'queries.sql') : null;
+const asked = surface.slug === 'duckdb' ? { ...run(dir, '1-query'), see: SAVED_ANSWERS_SQL_SEE } : null;
 ---
-<SurfacePage surface={surface} route={`/databases/${surface.slug}/`} eyebrow={['/databases/', 'Databases']} functionsAt="/databases/" />
+<SurfacePage surface={surface} route={`/databases/${surface.slug}/`} eyebrow={['/databases/', 'Databases']} functionsAt="/databases/">
+  {asked && (
+    <Fragment>
+      <h2 id="ask-your-saved-answers">Ask your saved answers in SQL</h2>
+      <p>Saved answers are plain JSON Lines. Stock DuckDB can count and sort them with no extension, no key and no request. This query reads seven saved choose answers. It counts the answered rows and the rows near the cut.</p>
+      <Code code={queries.text} file={queries.name} caption="queries.sql, two questions about the saved answers" />
+      <Terminal run={asked} caption={asked.see} />
+      <p>A saved row is not a fresh trial, and the share of the probability on the picked option is not accuracy. Grade accuracy against your own labels with <a href="/functions/audit/"><code>runs audit</code></a>.</p>
+    </Fragment>
+  )}
+</SurfacePage>

@@ -5,9 +5,6 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { ALIASES, routeFile, preserver } from './redirect-contract.mjs';
-import { RECIPE_PAGES } from '../src/data/catalog.mjs';
-import { recipeSelection } from '../src/data/recipes.mjs';
-const published = recipeSelection(RECIPE_PAGES).index;
 const root = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-links-'));
 const dist = path.join(root, 'dist');
 fs.symlinkSync(new URL('../../specification', import.meta.url).pathname, path.join(root, 'specification'));
@@ -31,8 +28,7 @@ try {
     write(routeFile(dist, pathname), `<main><h1 id="flags">Flags</h1><h2 id="edge-cases">Edges</h2>${extra}</main>`);
   }
   for (const [alias, fixed] of Object.entries(ALIASES)) {
-    write(routeFile(dist, alias), alias === '/recipes' && published
-      ? '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main><h1>Recipes</h1></main>' : stub(fixed));
+    write(routeFile(dist, alias), stub(fixed));
   }
   const page = routeFile(dist, '/fixture/');
   function run(link, expected, marker) {
@@ -58,18 +54,10 @@ try {
     [s => s.replace(preserver('/start/'), ''), /missing fragment preserver/],
   ]) { write(alias, mutate(original)); run('/functions/decide/#flags', 1, marker); }
   write(alias, original); run('/functions/decide/#flags', 0);
-  const recipe = routeFile(dist, '/recipes'); const recipeOriginal = fs.readFileSync(recipe, 'utf8'); const recipeStub = stub('/languages/bash/');
-  const index = '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main data-draft><h1>Recipes</h1><p>Draft catalog: waiting</p></main>';
-  const preview = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '1'} });
-  write(recipe,index);write(page,'<main><a href="/recipes/">Recipes</a></main>');
-  assert.equal(preview().status,0);
-  run('/functions/decide/#flags',1,/draft posts in a normal build/);
-  write(recipe,recipeStub); assert.equal(preview().status,1);assert.match(preview().stderr,/expected recipe index/);
-  write(recipe,index.replace(' data-draft',''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing draft index marker/);
-  fs.unlinkSync(recipe);assert.equal(preview().status,1);
-  write(recipe,index);
-  write(alias,original.replace(preserver('/start/'),''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing fragment preserver/);
-  write(alias,original);assert.equal(preview().status,0);
-  write(recipe,recipeOriginal);run('/functions/decide/#flags',0);
-  console.log('link checker plants: 20 cases passed, normal and explicit draft index contracts');
+  // A draft page in a normal build fails the check.
+  write(page,'<main data-draft><a href="/functions/decide/#flags">Read</a></main>');
+  const normal = spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '0'} });
+  assert.equal(normal.status, 1); assert.match(normal.stderr, /draft posts in a normal build/);
+  run('/functions/decide/#flags', 0);
+  console.log('link checker plants: 14 cases passed');
 } finally { cleanup(root); }

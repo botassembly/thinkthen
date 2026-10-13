@@ -73,7 +73,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     options: [
-      flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
+      flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The threshold the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
       ...MEANS,
       QUIET,
     ],
@@ -91,7 +91,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'choose',
-    goal: 'choose picks one option from your list, or says not sure when no option clears the bar.',
+    goal: 'choose picks one option from your list, or says not sure when no option clears the threshold.',
     primitive: 'Pick one',
     line: 'Pick one option from your list.',
     takes: `one question, one piece of evidence, and ${setting('Options').range.min} to ${setting('Options').range.max} options`,
@@ -100,7 +100,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
-      flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The bar the winning option must reach. One number only. A band is a usage error.'),
+      flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The threshold the winning option must reach. One number only. A band is a usage error.'),
       flag('--option LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `One option and what it means. It replaces the positional options. ${LIST_RULE}`),
       flag('--options POINTER', 'an RFC 6901 pointer', 'none', 'Takes the options from each record. It needs `--jsonl`.'),
       flag('--raw', 'nothing', 'off', 'Prints the label without quotation marks. CSV and TSV refuse it.'),
@@ -121,7 +121,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'tag',
-    goal: 'tag returns every label that clears the bar, each judged on its own.',
+    goal: 'tag returns every label that clears the threshold, each judged on its own.',
     primitive: 'Yes or no, per label',
     line: 'Name every label that fits.',
     takes: `one question, one piece of evidence, and ${setting('Labels').range.min} to ${setting('Labels').range.max} labels`,
@@ -129,7 +129,7 @@ export const FUNCTIONS = [
     requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
-      flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The bar every label must reach on its own. A band is refused.'),
+      flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The threshold every label must reach on its own. A band is refused.'),
       flag('--label LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `A label and what it means. It replaces the positional labels. ${LIST_RULE}`),
     ],
     shared: RECORD_FLAGS,
@@ -177,7 +177,7 @@ export const FUNCTIONS = [
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       flag('--files-only', 'nothing', lower(setting('Matching files only').default), 'Prints each matching file once in first-match order. It changes output only.'),
-      flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The bar a record must reach to be kept. A band is a usage error.'),
+      flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The threshold a record must reach to be kept. A band is a usage error.'),
       flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
       flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
       flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
@@ -274,7 +274,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'recognize',
-    goal: 'recognize finds the names in a text, gives each a kind from your list, and keeps those that clear the bar.',
+    goal: 'recognize finds the names in a text, gives each a kind from your list, and keeps those that clear the threshold.',
     primitive: 'Pick one, per word',
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
@@ -906,6 +906,9 @@ export const START_SEE = {
   },
 };
 
+// The DuckDB page's caption for asking saved answers in SQL.
+export const SAVED_ANSWERS_SQL_SEE = 'Seven saved rows: five answered, two with no answer, and no request sent. None of the five answers sits near the cut of 0.75.';
+
 // The See before you send page's caption for install/backends/1-plan.
 export const PLAN_BODY_SEE = 'The plan names the address, the model, and the variable a key would come from. It holds no key.';
 
@@ -1000,7 +1003,8 @@ export const CONFIGURATION_SEE = {
   '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
 };
 
-// The /recipes/ index shows one section per group, in this order, then the
+// The /recipes/ index opens with the recipes whose `featured` number is set,
+// in that order, then shows one section per group, in this order, then the
 // shell jobs and the pipelines. Each section lists its pages in HOWTOS
 // order. A group with no pages shows nothing. Each page's `gain` opens it
 // and lists it, in one sentence with no digits.
@@ -1014,16 +1018,16 @@ export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Operations and s
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
+    featured: 1,
     gain: 'Drop the messages that need no reply, and label the rest by kind and urgency in one pipe.',
-    goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'],
     see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'join-two-tables-by-meaning', group: 'Data science', title: 'Join two tables by meaning', reader: 'for data analysts',
+    featured: 3,
     gain: 'Join two tables when no key and no shared word links them.',
-    goal: 'filter joins two tables on meaning when no key and no shared word links them.',
     said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
     functions: ['filter'],
     see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
@@ -1031,7 +1035,6 @@ export const HOWTOS = [
   {
     slug: 'code-open-ended-survey-answers', group: 'Data science', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
     gain: 'Find the unhappy survey answers and name what went wrong in each.',
-    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'],
     see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
@@ -1039,7 +1042,6 @@ export const HOWTOS = [
   {
     slug: 'screen-studies-for-a-review', group: 'Data science', title: 'Screen studies for a review', reader: 'for researchers',
     gain: 'Sort the clear studies in or out, and hand a person only the ones too thin to judge.',
-    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
     see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
@@ -1047,7 +1049,6 @@ export const HOWTOS = [
   {
     slug: 'group-alerts-into-incidents', group: 'Operations and security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
     gain: 'Tie a new alert to the open incident it belongs to, or learn that none fits.',
-    goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'],
     see: {
@@ -1057,8 +1058,8 @@ export const HOWTOS = [
   },
   {
     slug: 'rank-the-inbound-leads', group: 'Business teams', title: 'Rank the inbound leads', reader: 'for sales teams',
+    featured: 2,
     gain: 'Drop the noise, put the buyer ready to pay first, and route each lead to its sales team.',
-    goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'],
     see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
@@ -1066,7 +1067,6 @@ export const HOWTOS = [
   {
     slug: 'check-an-expense-against-the-policy', group: 'Business teams', title: 'Check an expense against the policy', reader: 'for finance staff',
     gain: 'Pull the policy rule that covers an expense, and check the expense against it.',
-    goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
     functions: ['find', 'decide'],
     see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
@@ -1074,7 +1074,6 @@ export const HOWTOS = [
   {
     slug: 'split-a-scanned-packet-into-documents', group: 'Business teams', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
     gain: 'Turn a stack of scanned pages into separate documents, each named by kind.',
-    goal: 'choose names each page and decide marks where a new document starts.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
     functions: ['choose', 'decide'],
     see: {
@@ -1085,7 +1084,6 @@ export const HOWTOS = [
   {
     slug: 'screen-a-post-before-it-goes-up', group: 'Business teams', title: 'Screen a post before it goes up', reader: 'for community moderators',
     gain: 'Check a post against each rule with its own narrow question, and see which rule it breaks.',
-    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
     functions: ['decide'],
     see: {
@@ -1095,20 +1093,31 @@ export const HOWTOS = [
   },
   {
     slug: 'search-youtube-transcripts-by-meaning', group: 'Data science', title: 'Search YouTube transcripts by meaning', reader: 'for anyone who learns from talks',
+    record: ['The saved measurement', 'https://github.com/botassembly/thinkthen/blob/main/site/examples/how-tos/search-youtube-transcripts-by-meaning/files/measured.txt'],
+    featured: 4,
     gain: 'Find the passages of a talk that answer your question, best first.',
-    goal: 'rank orders the passages of a talk by how well each answers a question, and filter keeps the ones that do.',
     said: 'Ask a question of a talk, and find the passages that answer it. `paste` joins the caption lines into passages. `rank` puts the best answers first. `filter` keeps the passages that answer yes.',
     functions: ['rank', 'filter'],
     files: {
       'fetch.sh': 'fetch.sh downloads the automatic captions of a YouTube talk with yt-dlp. Change the id to search another talk.',
       'vtt-to-lines.awk': 'vtt-to-lines.awk writes one timed line per caption. Automatic captions repeat each line as it scrolls, so it keeps only the lines that carry new words.',
-      'measured.txt': 'measured.txt records the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
+      'measured.txt': 'measured.txt is the saved record of the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
     },
     see: {
       '1-lines': 'transcript.txt holds 200 timed lines from the talk Introducing ThinkThen, in the form fetch.sh writes. They cover the first four minutes and the minutes from 15:45 on. The speaker corrected these captions by hand.',
       '2-passages': 'awk drops the time from every line but the first of each ten. paste joins each ten lines into one passage of about 20 seconds. The 200 lines make 20 passages.',
       '3-rank': 'rank judges all 20 passages and prints the three most likely to answer yes. The top passage says a large language model could always do this work, but slowly and at a higher cost. The next two say it is zero shot and needs no labels or training.',
       '4-filter': 'filter keeps a passage when its answer is yes at the default cut of 0.5. This question asks for more, and one passage clears the cut. Use rank to explore and filter to keep.',
+    },
+  },
+  {
+    slug: 'pull-products-and-makers-from-an-inbox', group: 'Business teams', title: 'Pull products and their makers from a support inbox', reader: 'for support and product teams',
+    gain: 'Find the products a customer names, and tie each to the company that makes it.',
+    said: '`recognize` pulls the names out of a message and keeps the products. `relate` reads your catalog of companies and products and says which company makes which product. `jq` keeps the makers of the products the message named.',
+    functions: ['recognize', 'relate'],
+    see: {
+      '1-products': 'jq keeps only the products recognize found and saves them to products.txt. The message names one: the Kindle.',
+      '2-makers': 'relate finds which company in the catalog makes which product. jq keeps the maker of the Kindle: Amazon.',
     },
   },
 ];
@@ -1171,6 +1180,7 @@ export const TECHNIQUES = [
       '1-pass': 'No line hedges. The check prints nothing and passes.',
       '2-fail': 'One line hedges. The check prints it and exits 1.',
     },
+    related: { text: 'This gate stops the build at the first hedge. To list every hedging line with its line number instead, see', href: '/recipes/lint-prose-for-hedging/', label: 'Lint prose for hedging' },
   },
   {
     slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
@@ -1191,13 +1201,18 @@ export const TECHNIQUES = [
     source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
     see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
   },
+  {
+    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'bad records aside',
+    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
+    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
+    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
+  },
 ];
 
 export const SHELL_JOBS = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
-    gain: 'Label every record of a JSON file and keep its ids. A second run sends nothing.',
-    goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
+    gain: 'Label each record from one field, and keep its id and every other field.',
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date stay in each record. Run it again, and the answers come from the answer cache with no request sent.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
@@ -1206,30 +1221,20 @@ export const SHELL_JOBS = [
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
     gain: 'Separate the hunks of a diff that change what the code does from those that do not.',
-    goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does. The file name and the hunk header stay in each record.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
     slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
     gain: 'Find the hedging lines in a draft, with their line numbers.',
-    goal: 'filter finds the hedging lines in a draft and keeps their line numbers.',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
     see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
     slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
     gain: 'Fill a form from your own lists. No field holds text a model wrote.',
-    goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
-  },
-  {
-    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
-    gain: 'Set malformed records aside first. One bad line then cannot stop the run.',
-    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
-    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
-    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
   },
 ];
 
@@ -1247,17 +1252,11 @@ export const RECIPE_PAGES = [
   {
     "slug": "rules-propose-model-confirms",
     "title": "Rules propose, the model confirms",
-    "goal": "Confirm a proposed total without inventing a replacement.",
-    "job": "Confirm a proposed total without inventing a replacement.",
+    "gain": "Let your own rules find the candidate totals, and let the model pick one. No total is ever made up.",
     "functions": [
       "choose"
     ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/rules-propose-model-confirms",
-    "issue": "sdlc/issues/closed/2026-10-03-draft-function-extract.md",
-    "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": RULES_MEASURED,
     "fixtureAssertions": [
@@ -1339,207 +1338,16 @@ export const RECIPE_PAGES = [
       },
       {
         "kind": "heading",
-        "text": "Measured comparison and qualifications"
+        "text": "How it measured"
       },
       {
-        "kind": "evidence",
-        "id": "rules-full-resolved"
+        "kind": "evidence-grid",
+        "methods": ["rules", "choose", "recognize"],
+        "cohorts": ["full", "matched"]
       },
       {
-        "kind": "evidence",
-        "id": "rules-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "candidate-misses"
-      },
-      {
-        "kind": "evidence",
-        "id": "dictionary"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "name-recognize"
-      },
-      {
-        "kind": "evidence",
-        "id": "name-choose"
-      },
-      {
-        "kind": "evidence",
-        "id": "date-recognize"
-      },
-      {
-        "kind": "evidence",
-        "id": "date-choose"
-      },
-      {
-        "kind": "evidence",
-        "id": "usage"
-      },
-      {
-        "kind": "evidence",
-        "id": "exposure"
-      },
-      {
-        "kind": "evidence",
-        "id": "historical-charge"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-hold"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-hold"
+        "kind": "text",
+        "text": "Rules used frozen regexes, a broad dictionary and candidate caps. They are not the best possible rules. Only choose confirmation was tested, not decide. Recognize used one custom configuration. The source record holds the other controls and the charges."
       },
       {
         "kind": "heading",
@@ -1552,43 +1360,13 @@ export const RECIPE_PAGES = [
     ]
   },
   {
-    "slug": "link-records",
-    "title": "Link records",
-    "goal": "Choose a matching record and leave uncertain matches for a person.",
-    "job": "Choose a matching record and leave uncertain matches for a person.",
-    "functions": [
-      "choose"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: link none measurements are being rerun; no wording improvement is established.",
-    "example": "site/examples/recipes/link-records",
-    "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: link none measurements are being rerun; no wording improvement is established."
-      }
-    ]
-  },
-  {
     "slug": "verify-a-claim",
     "title": "Verify a claim",
-    "goal": "Judge a claim against its source and have a person review every supports result.",
-    "job": "Review every supports result before taking action.",
+    "gain": "See whether a source supports, contradicts or never states a claim, and send only the supports to a person.",
     "functions": [
       "choose"
     ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/verify-a-claim",
-    "issue": "sdlc/issues/closed/2026-10-03-draft-function-verify.md",
-    "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
       {
@@ -1710,185 +1488,8 @@ export const RECIPE_PAGES = [
       },
       {
         "kind": "text",
-        "text": "Qualification of negation, uncertainty and attributed claims remains later on this shared verify route. This recipe promises no automatic qualification judgment. Faults and replay misses remain failures; an uncertain answer grants no acceptance."
+        "text": "This recipe does not judge negation, uncertainty or attributed claims. Faults and replay misses remain failures; an uncertain answer grants no acceptance."
       }
     ]
   },
-  {
-    "slug": "navigate-many-documents",
-    "title": "Navigate many documents",
-    "goal": "Find passages across documents with a caller-owned manifest and fallback.",
-    "job": "Find passages across documents with a caller-owned manifest and fallback.",
-    "functions": [
-      "filter",
-      "rank",
-      "find"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
-    "example": "site/examples/recipes/navigate-many-documents",
-    "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
-      }
-    ]
-  },
-  {
-    "slug": "search-transcripts",
-    "title": "Search transcripts",
-    "goal": "Retain context around transcript search results.",
-    "job": "Retain context around transcript search results.",
-    "functions": [
-      "rank",
-      "filter"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
-    "example": "site/examples/recipes/search-transcripts",
-    "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
-      }
-    ]
-  },
-  {
-    "slug": "ask-your-cache-with-duckdb",
-    "title": "Ask your cache with DuckDB",
-    "goal": "Ask analysis questions of retained answers.",
-    "job": "Ask analysis questions of retained answers.",
-    "functions": [
-      "choose"
-    ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
-    "example": "site/examples/recipes/ask-your-cache-with-duckdb",
-    "issue": "sdlc/issues/closed/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [
-      {
-        "id": "analytics-spend",
-        "evidenceClass": "measured",
-        "value": "$0",
-        "denominator": "8",
-        "definition": "New model/API spend for eight retained-data analytics questions",
-        "qualification": "Offline retrospective analysis; historical receipt charges remain separate.",
-        "cohort": "Reviewed saved-decision SQL experiment",
-        "backend": "not applicable",
-        "model": "not applicable",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
-      },
-      {
-        "id": "historical-replay",
-        "evidenceClass": "measured",
-        "value": "100000/100000",
-        "denominator": "100000",
-        "definition": "Recorded cache answers in a historical cached local replay",
-        "qualification": "Processed-row denominator; not unique questions or measured lookup hit rate. Zero requests were recorded.",
-        "cohort": "One retained news-classification replay",
-        "backend": "not applicable",
-        "model": "not applicable",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
-      }
-    ],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Query retained detailed answers with ordinary DuckDB SQL. This example reads saved JSONL and invokes no model or ThinkThen extension."
-      },
-      {
-        "kind": "heading",
-        "text": "Supported setup"
-      },
-      {
-        "kind": "artifact",
-        "file": "files/environment.txt"
-      },
-      {
-        "kind": "text",
-        "text": "For extension calls, follow the DuckDB install page and its unsigned development instructions. This read-only example needs only the stock CLI."
-      },
-      {
-        "kind": "link",
-        "text": "Install DuckDB and read the unsigned development extension instructions.",
-        "href": "/databases/duckdb/"
-      },
-      {
-        "kind": "heading",
-        "text": "Inspect the retained rows"
-      },
-      {
-        "kind": "text",
-        "text": "These controlled purchase-note answers come from the Rules sample. Their probabilities and unanswered rows demonstrate the query shape, not provider quality."
-      },
-      {
-        "kind": "artifact",
-        "file": "files/results.jsonl"
-      },
-      {
-        "kind": "heading",
-        "text": "Run the SQL"
-      },
-      {
-        "kind": "artifact",
-        "file": "files/queries.sql"
-      },
-      {
-        "kind": "artifact",
-        "file": "1-query.sh"
-      },
-      {
-        "kind": "artifact",
-        "file": "1-query.out"
-      },
-      {
-        "kind": "heading",
-        "text": "Measured retrospective evidence"
-      },
-      {
-        "kind": "evidence",
-        "id": "analytics-spend"
-      },
-      {
-        "kind": "evidence",
-        "id": "historical-replay"
-      },
-      {
-        "kind": "heading",
-        "text": "Keep the denominators honest"
-      },
-      {
-        "kind": "text",
-        "text": "A stored answer is not a cache lookup event. A replayed row does not prove an independent trial or a live cache hit. Accuracy needs labels; selected-label probability is not accuracy or confidence."
-      },
-      {
-        "kind": "text",
-        "text": "Deduplicate receipts before joining questions. Dividing request cost across answers is an allocation. Missing cost, timing, usage and retry links stay unknown. Question-key changes alone do not prove unchanged evidence, context, options or served model."
-      },
-      {
-        "kind": "text",
-        "text": "Use audit for labeled accuracy and diff for saved comparisons with its identity limits. Stock SQL can summarize retained fields; it cannot recover fields the recording never stored."
-      }
-    ]
-  }
 ];

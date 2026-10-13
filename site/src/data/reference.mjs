@@ -72,7 +72,7 @@ export const FRAMING_DEFAULT = {
 export const BARE = {
   decide: '`true`, `false`, or `null`.',
   choose: 'A JSON string, or `null`. `--raw` prints the bare label.',
-  tag: 'A JSON array of every label that reaches the bar. An empty array `[]` is a good answer.',
+  tag: 'A JSON array of every label that reaches the threshold. An empty array `[]` is a good answer.',
   score: 'A JSON number, from 0 to the number of levels minus one.',
   filter: 'Each kept line or JSONL record as it arrived, in input order. A kept table row prints as compact JSON.',
   rank: 'Every line or record again, most likely yes first. An exact tie keeps input order. With a saved `score` question, `rank @FILE` puts the highest score first.',
