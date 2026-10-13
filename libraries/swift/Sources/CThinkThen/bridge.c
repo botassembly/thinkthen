@@ -24,6 +24,7 @@ struct native_functions {
     int (*thinkthen_session_new_named_with_surface)(const thinkthen_engine *, const thinkthen_named_request_v1 *, thinkthen_complete_utf8_v1, thinkthen_session **);
     int (*thinkthen_session_new_with_surface)(const thinkthen_engine *, const char *, size_t, const char *, size_t, thinkthen_session **);
     int (*thinkthen_session_next_packet)(thinkthen_session *, uint32_t, uint32_t *, thinkthen_session_result **);
+    int (*thinkthen_session_push)(thinkthen_session *, const char *, size_t, uint32_t *);
     void (*thinkthen_session_result_free)(thinkthen_session_result *);
     int (*thinkthen_session_result_json)(const thinkthen_session_result *, const char **, size_t *);
     int (*thinkthen_session_try_push)(thinkthen_session *, const char *, size_t, uint32_t *);
@@ -114,6 +115,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_next_packet) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_next_packet, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_push");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_push) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_push, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_result_free");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_result_free) == sizeof(symbol), "function pointer width");
@@ -218,6 +223,10 @@ int thinkthen_session_new_with_surface(const thinkthen_engine * arg0, const char
 int thinkthen_session_next_packet(thinkthen_session * arg0, uint32_t arg1, uint32_t * arg2, thinkthen_session_result ** arg3) {
     if (!native.thinkthen_session_next_packet) abort();
     return native.thinkthen_session_next_packet(arg0, arg1, arg2, arg3);
+}
+int thinkthen_session_push(thinkthen_session * arg0, const char * arg1, size_t arg2, uint32_t * arg3) {
+    if (!native.thinkthen_session_push) abort();
+    return native.thinkthen_session_push(arg0, arg1, arg2, arg3);
 }
 void thinkthen_session_result_free(thinkthen_session_result * arg0) {
     if (!native.thinkthen_session_result_free) abort();

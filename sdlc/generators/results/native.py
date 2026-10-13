@@ -7,7 +7,7 @@ COMMON = (
     'thinkthen_error_code', 'thinkthen_error_message',
     'thinkthen_session_cancel', 'thinkthen_session_error_message',
     'thinkthen_session_finish', 'thinkthen_session_free',
-    'thinkthen_session_result_free', 'thinkthen_session_try_push',
+    'thinkthen_session_result_free', 'thinkthen_session_try_push', 'thinkthen_session_push',
     'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_next_packet',
 )
 USE = {
@@ -19,7 +19,7 @@ USE = {
     'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_error_retryable',
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
             'thinkthen_session_result_view', 'thinkthen_session_new_typed_with_surface',
-            'thinkthen_session_try_push_typed', 'thinkthen_session_finish_typed',
+            'thinkthen_session_try_push_typed', 'thinkthen_session_push_typed', 'thinkthen_session_finish_typed',
             'THINKTHEN_COBOL_OVERFLOW',
             'THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1',
             'THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1',

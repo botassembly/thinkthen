@@ -1341,6 +1341,11 @@ package Thinkthen_Session_C is
       m_question : access constant thinkthen_request_question_selector_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_request_session_descriptor_v1 is record
+      m_item : access constant thinkthen_request_item_v1;
+      m_location : access constant thinkthen_request_session_source_location_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_extension_v1 is record
       name : aliased thinkthen_complete_utf8_v1;
       json : aliased thinkthen_complete_utf8_v1;
@@ -3484,11 +3489,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_complete_session_packet_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_session_descriptor_v1 is record
-      m_item : access constant thinkthen_request_item_v1;
-      m_location : access constant thinkthen_request_session_source_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    function thinkthen_engine_finish_usage_status_v1
      (engine : access constant thinkthen_engine;
       out_state : access thinkthen_complete_usage_persistence_v1;
@@ -3585,6 +3585,21 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_next_packet";
+   function thinkthen_session_push
+     (session : access thinkthen_session;
+      descriptor_json : Interfaces.C.Strings.chars_ptr;
+      descriptor_len : Interfaces.C.size_t;
+      status : access Interfaces.Unsigned_32) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_push";
+   function thinkthen_session_push_typed
+     (session : access constant thinkthen_session;
+      descriptor : access constant thinkthen_request_session_descriptor_v1;
+      status : access Interfaces.Unsigned_32) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_push_typed";
    procedure thinkthen_session_result_free (result : access thinkthen_session_result)
    with Import => True,
         Convention => C,

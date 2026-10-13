@@ -90,6 +90,29 @@ impl Queue {
             RequestSessionPushStatus::Accepted
         }
     }
+    pub(super) fn input_room(&self) -> bool {
+        let mut state = self.lock();
+        while state.input.is_some() && !state.intake_closed && state.finish.is_none() {
+            state = self.wait(state);
+        }
+        !state.intake_closed && state.finish.is_none()
+    }
+    pub(super) fn push_wait(
+        &self,
+        descriptor: RequestSessionDescriptor,
+    ) -> RequestSessionPushStatus {
+        let mut state = self.lock();
+        while state.input.is_some() && !state.intake_closed && state.finish.is_none() {
+            state = self.wait(state);
+        }
+        if state.intake_closed || state.finish.is_some() {
+            RequestSessionPushStatus::Closed
+        } else {
+            state.input = Some(descriptor);
+            self.wake.notify_all();
+            RequestSessionPushStatus::Accepted
+        }
+    }
     pub(super) fn push(&self, descriptor: RequestSessionDescriptor) -> RequestSessionPush {
         let mut state = self.lock();
         if state.intake_closed || state.finish.is_some() {
