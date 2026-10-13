@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Reviews: revision 69f8dd8, accept
+
 ## Outcome
 
 Every language library sends options and kinds in the order the caller wrote them, so cache and replay hit. `recognize` sends one aggregate packet.
