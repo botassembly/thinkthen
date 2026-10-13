@@ -75,7 +75,7 @@ pub(crate) fn run(
     }
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
-        format!("provider {}", check::PROVIDER),
+        format!("provider {}", engine.backend().api_type().name()),
         format!("model asked {}", asked.unwrap_or("unspecified")),
         format!("model sent {}", engine.backend().model().as_str()),
     ];
@@ -104,6 +104,7 @@ pub(crate) fn run(
             .map_err(|_| Failure::Defect("a plan is too large"))?;
         lines.push(format!("rich-probes {}", json_line(&counts)?));
         lines.extend(function_plans);
+        lines.push("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check exceeded it by about 22%".to_owned());
         lines.push(format!(
             "prepared-requests upper-bound {} before retries and refusal splits",
             probes.len() + function_requests
@@ -182,19 +183,21 @@ fn send(
         }
         Err(error) => error,
     };
-    let gate = match &error {
+    let gate = match error.base() {
         Error::Transport(_) => Some("connection"),
         Error::Status(401..=403) => Some("key"),
         Error::Status(404) => Some("endpoint"),
         Error::Status(_) | Error::TokenLimit | Error::ReplyTooLarge(_) | Error::Reply(_) => None,
         _ => return Err(error.into()),
     };
+    let error_can_continue =
+        !matches!(&error, Error::Provider { diagnostic, .. } if diagnostic.quota);
     let sentence = sentence(&Failure::from(error));
     match gate {
         Some(gate) => report.stopped(probe, gate, sentence),
         None => report.failed(probe, sentence),
     }
-    Ok(gate.is_none())
+    Ok(gate.is_none() && error_can_continue)
 }
 
 /// The sentence every command prints for this failure, without its prefix.

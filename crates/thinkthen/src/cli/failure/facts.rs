@@ -32,6 +32,12 @@ impl Stopped {
             other => other,
         };
         let (name, status, retryable) = match cause {
+            Failure::Provider { cause, diagnostic } => {
+                let mut stopped = Self::of(cause, exit);
+                stopped.at = at;
+                stopped.retryable &= !diagnostic.quota;
+                return stopped;
+            }
             Failure::Cancelled => ("cancelled", None, false),
             Failure::NoKey(_) => ("no_key", None, false),
             Failure::Transport(_) => ("transport", None, false),

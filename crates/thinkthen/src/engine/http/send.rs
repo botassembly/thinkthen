@@ -58,10 +58,12 @@ fn send(
         key => request.header("authorization", &format!("Bearer {key}")),
     };
     let mut response = request.send(exchange.body).map_err(|error| {
-        Box::new(Attempt::from(Error::Transport(transport(
-            &error,
-            exchange.url.starts_with("https://"),
-        ))))
+        let opening = super::opening::unopened(&error);
+        let kind =
+            opening.unwrap_or_else(|| transport(&error, exchange.url.starts_with("https://")));
+        let mut attempt = Attempt::from(Error::Transport(kind));
+        attempt.unopened = opening.is_some();
+        Box::new(attempt)
     })?;
     let status = response.status().as_u16();
     let storable = crate::core::cache_control::permits(
@@ -98,10 +100,12 @@ fn send(
         } else {
             Error::Status(status)
         };
+        let failure = super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api);
         return Err(Box::new(Attempt {
             failure,
             asked,
             info,
+            unopened: false,
         }));
     }
     let sent = u64::try_from(exchange.body.len()).unwrap_or(u64::MAX);
@@ -120,6 +124,7 @@ fn send(
                 },
                 asked: None,
                 info: info.clone(),
+                unopened: false,
             })
         })?;
     Ok(Sent {

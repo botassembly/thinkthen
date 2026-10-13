@@ -16,9 +16,6 @@ use crate::core::reply::{AnswerOutcome, FailedValue, Reply};
 use crate::core::result::Usage;
 use crate::core::text::{Evidence, ModelName};
 
-/// The wire interface the check speaks, which the report names as the provider.
-pub(crate) const PROVIDER: &str = built_in::NAME;
-
 const TEXT: &str = "The parcel arrived on Tuesday and the box was intact.";
 const OBJECT: &str = r#"{"note":"The parcel arrived on Tuesday.","box":"intact"}"#;
 

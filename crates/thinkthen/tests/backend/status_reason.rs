@@ -68,3 +68,92 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
         assert_eq!(listener.requests().len(), 1, "{status} {body}");
     }
 }
+
+#[test]
+fn quota_stops_without_retry_and_reports_the_providers_words() {
+    let body =
+        r#"{"error":{"type":"insufficient_quota","message":"You have no credits remaining"}}"#;
+    let listener = Listener::serving(vec![Canned::status(429, body)]).unwrap();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "3"],
+        Some("sk-test-value"),
+        EVIDENCE,
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(
+        crate::harness::said(&output),
+        "thinkthen: the backend systemone account is out of credit; provider message: You have no credits remaining\n"
+    );
+}
+
+#[test]
+fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
+    for message in [
+        "The selected model is unavailable",
+        "sk-test-value",
+        "c2stdGVzdC12YWx1ZQ==",
+        "echo:c2stdGVzdC12YWx1ZQ==",
+        "736b2d746573742d76616c7565",
+        "echo=736b2d746573742d76616c7565",
+        "sk%2Dtest%2Dvalue",
+        "aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd",
+        "content-type: application/json",
+        "Authorization: Bearer something",
+        "X-Api-Key: something",
+    ] {
+        let body = serde_json::json!({"error":{"message":message}}).to_string();
+        let listener = Listener::serving(vec![Canned::status(400, &body)]).unwrap();
+        let output = decide(
+            listener.base(),
+            &["--max-retries", "0"],
+            Some("sk-test-value"),
+            EVIDENCE,
+        )
+        .unwrap();
+        let said = crate::harness::said(&output);
+        assert_eq!(output.status.code(), Some(4));
+        assert_eq!(listener.requests().len(), 1);
+        if message == "The selected model is unavailable" {
+            assert_eq!(
+                said,
+                "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size; provider message: The selected model is unavailable\n"
+            );
+        } else {
+            assert_eq!(said, REFUSED);
+        }
+    }
+}
+
+#[test]
+fn provider_prose_keeps_actionable_local_errors_and_trims_at_a_character_boundary() {
+    for message in [
+        "This endpoint does not support the requested model. Load a compatible model first."
+            .to_owned(),
+        "é ".repeat(200),
+    ] {
+        let body = serde_json::json!({"detail":{"message":message}}).to_string();
+        let listener = Listener::serving(vec![Canned::status(400, &body)]).unwrap();
+        let output = decide(
+            listener.base(),
+            &["--max-retries", "0"],
+            Some("sk-test-value"),
+            EVIDENCE,
+        )
+        .unwrap();
+        let normalized = message.split_whitespace().collect::<Vec<_>>().join(" ");
+        let expected = if normalized.chars().count() > 320 {
+            normalized.chars().take(320).collect::<String>() + "…"
+        } else {
+            normalized
+        };
+        assert_eq!(output.status.code(), Some(4));
+        assert_eq!(listener.requests().len(), 1);
+        assert_eq!(
+            crate::harness::said(&output),
+            format!("{}; provider message: {expected}\n", REFUSED.trim_end())
+        );
+    }
+}

@@ -462,3 +462,27 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
 
 #[path = "check/limits.rs"]
 mod limits;
+
+#[test]
+fn a_decisions_plan_names_the_request_shape_and_states_the_token_margin() {
+    let listener = Listener::serving(vec![]).expect("loopback listener");
+    let output = check(
+        &["backends", "check"],
+        &[
+            "--backend",
+            "openai",
+            "--url",
+            listener.base(),
+            "--model",
+            "fixed",
+            "--plan",
+        ],
+        &[],
+    );
+    let stdout = text(&output.stdout);
+    assert_eq!(output.status.code(), Some(0), "{stdout}");
+    assert!(stdout.contains("\nprovider openai-decisions\n"), "{stdout}");
+    assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check exceeded it by about 22%\n"), "{stdout}");
+    assert!(stdout.contains("\"questions\":["), "{stdout}");
+    assert_eq!(listener.requests().len(), 0);
+}

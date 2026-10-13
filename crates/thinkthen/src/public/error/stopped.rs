@@ -83,7 +83,7 @@ impl Stopped {
     pub(super) fn of_engine(error: &EngineError) -> Self {
         let mut stopped = Self::of_kind(super::kind_of(error.kind()));
         stopped.retryable = error.retryable();
-        match error {
+        match error.base() {
             EngineError::NoKey(_) => stopped.cause = StopCause::NoKey,
             EngineError::Transport(_) => stopped.cause = StopCause::Transport,
             EngineError::Status(status) => {

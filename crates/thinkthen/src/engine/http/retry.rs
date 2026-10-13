@@ -60,7 +60,7 @@ pub(super) fn too_long(asked: Option<Duration>, timeout: Duration) -> bool {
 
 /// The status a gate's server floor carries: a status that asked a wait.
 pub(super) fn floor(asked: Option<Duration>, failure: &Error) -> Option<u16> {
-    match failure {
+    match failure.base() {
         Error::Status(status) => asked.map(|_| *status),
         _ => None,
     }

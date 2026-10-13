@@ -1,7 +1,7 @@
 //! One HTTP exchange with a backend, retried as `specification/backends.md` says.
 //!
-//! A retried status is sent again. A transport failure never is, because the
-//! backend may already have the request and may bill it.
+//! A retried status is sent again. An unopened connection gets one retry;
+//! a request that may have reached the backend is never resent after transport failure.
 
 use std::fmt;
 use std::path::Path;
@@ -16,7 +16,9 @@ use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
+mod diagnostic;
 mod observation;
+mod opening;
 mod retry;
 mod send;
 use observation::{ResponseInfo, observed_result};
@@ -174,7 +176,11 @@ impl Client {
         }
         Self {
             api: Default::default(),
-            agent: config.build().into(),
+            agent: Agent::with_parts(
+                config.build(),
+                opening::OpeningConnector::default(),
+                opening::OpeningResolver::default(),
+            ),
             timeout,
             width: crate::engine::limits::client_width(widths),
             every: None,
@@ -209,7 +215,7 @@ impl Client {
     ///
     /// Returns [`Error`] when the backend cannot be reached, when it answers
     /// with an error status, or when a retried status still holds after the
-    /// last retry. A transport failure returns after its one attempt.
+    /// last retry. Only a connection that never opened gets one transport retry.
     #[cfg(test)]
     pub(crate) fn post_observed(
         &self,
@@ -274,6 +280,8 @@ impl Client {
         let gates = &crate::engine::limits::of(std::process::id(), cancel)?.gates;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
+        let mut status_retries = 0;
+        let mut connection_retried = false;
         let mut last_status = None;
         loop {
             let now = Instant::now();
@@ -345,16 +353,25 @@ impl Client {
             {
                 return Err(passed);
             }
-            if retries >= exchange.max_retries
+            if attempt.unopened && !connection_retried {
+                connection_retried = true;
+                retries += 1;
+                if let Some(error) = cancel.wait(wait) {
+                    return Err(error);
+                }
+                continue;
+            }
+            if status_retries >= exchange.max_retries
                 || !is_retried(&attempt.failure)
                 || too_long(attempt.asked, self.timeout)
             {
                 return Err(attempt.failure);
             }
-            last_status = match attempt.failure {
-                Error::Status(status) => Some(status),
+            last_status = match attempt.failure.base() {
+                Error::Status(status) => Some(*status),
                 _ => None,
             };
+            status_retries += 1;
             wait = wait.saturating_mul(2);
             retries += 1;
         }
@@ -401,6 +418,7 @@ struct Attempt {
     failure: Error,
     asked: Option<Duration>,
     info: ResponseInfo,
+    unopened: bool,
 }
 
 impl From<Error> for Attempt {
@@ -410,6 +428,7 @@ impl From<Error> for Attempt {
             failure,
             asked: None,
             info: ResponseInfo::default(),
+            unopened: false,
         }
     }
 }

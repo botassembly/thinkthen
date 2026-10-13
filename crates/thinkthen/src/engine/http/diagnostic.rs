@@ -1,0 +1,168 @@
+//! Keep error codes and bounded prose, never raw bodies or header dumps.
+
+use super::Key;
+use crate::core::{Json, adapters::ApiType};
+use crate::engine::error::{Error, ProviderDiagnostic};
+use base64::{Engine as _, engine::general_purpose};
+
+const MAX_MESSAGE_CHARS: usize = 320;
+
+pub(super) fn decorate(error: Error, body: Option<&[u8]>, key: &Key, api: ApiType) -> Error {
+    let parsed = body
+        .and_then(|bytes| std::str::from_utf8(bytes).ok())
+        .and_then(|text| Json::parse(text).ok());
+    let quota = matches!(error, Error::Status(402))
+        || matches!(error, Error::Status(429))
+            && parsed.as_ref().is_some_and(|body| {
+                let details = body
+                    .member("error")
+                    .or_else(|| body.member("detail"))
+                    .unwrap_or(body);
+                ["type", "code", "error_type"].iter().any(|field| {
+                    matches!(
+                        details.member(field).and_then(Json::as_str),
+                        Some(
+                            "insufficient_quota"
+                                | "insufficient_credits"
+                                | "insufficient_balance"
+                                | "credits_exhausted"
+                                | "billing_hard_limit_reached"
+                        )
+                    )
+                })
+            });
+    let message = parsed
+        .as_ref()
+        .and_then(|body| {
+            let details = body.member("error").or_else(|| body.member("detail"));
+            details
+                .and_then(|value| {
+                    value
+                        .member("message")
+                        .and_then(Json::as_str)
+                        .or_else(|| value.as_str())
+                })
+                .or_else(|| body.member("message").and_then(Json::as_str))
+        })
+        .and_then(|text| safe_message(text, key));
+    if !quota && message.is_none() {
+        return error;
+    }
+    Error::Provider {
+        cause: Box::new(error),
+        diagnostic: ProviderDiagnostic {
+            backend: api.name(),
+            quota,
+            message,
+        },
+    }
+}
+
+fn safe_message(text: &str, key: &Key) -> Option<String> {
+    let lower = text.to_ascii_lowercase();
+    let forbidden = [
+        "authorization",
+        "bearer ",
+        "api_key",
+        "api-key",
+        "api key",
+        "apikey",
+        "x-api",
+        "headers",
+        "cookie",
+        "password",
+        "credential",
+        "secret",
+        "key hash",
+        "key fingerprint",
+        "sha256",
+        "content-type",
+        "user-agent",
+        "x-thinkthen",
+        "content-length",
+        "retry-after",
+        "x-request-id",
+    ];
+    if text.trim().is_empty()
+        || (!key.as_str().is_empty() && text.contains(key.as_str()))
+        || forbidden.iter().any(|word| lower.contains(word))
+        || text
+            .chars()
+            .any(|character| character.is_control() && !character.is_whitespace())
+        || text.contains(['{', '}', '[', ']'])
+        || text.split_whitespace().any(|word| {
+            unsafe_token(word, key)
+                || word
+                    .split([':', '=', '.'])
+                    .any(|part| unsafe_token(part, key))
+        })
+    {
+        return None;
+    }
+    let normalized = text.split_whitespace().collect::<Vec<_>>().join(" ");
+    let mut chars = normalized.chars();
+    let mut message: String = chars.by_ref().take(MAX_MESSAGE_CHARS).collect();
+    if chars.next().is_some() {
+        message.push('…');
+    }
+    Some(message)
+}
+
+fn unsafe_token(word: &str, key: &Key) -> bool {
+    let word =
+        word.trim_matches(|ch: char| matches!(ch, '.' | ',' | ':' | ';' | '\'' | '"' | '(' | ')'));
+    if word.len() >= 32
+        && word
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || b"_-/+=".contains(&byte))
+    {
+        return true;
+    }
+    if key.as_str().is_empty() {
+        return false;
+    }
+    let bytes = key.as_str().as_bytes();
+    if percent_decoded(word)
+        .is_some_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+    {
+        return true;
+    }
+    for decoder in [
+        general_purpose::STANDARD,
+        general_purpose::STANDARD_NO_PAD,
+        general_purpose::URL_SAFE,
+        general_purpose::URL_SAFE_NO_PAD,
+    ] {
+        if decoder
+            .decode(word)
+            .is_ok_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+        {
+            return true;
+        }
+    }
+    let hex = word
+        .as_bytes()
+        .chunks_exact(2)
+        .map(|pair| {
+            let pair = std::str::from_utf8(pair).ok()?;
+            u8::from_str_radix(pair, 16).ok()
+        })
+        .collect::<Option<Vec<_>>>();
+    hex.is_some_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+}
+
+/// Decode recognizable percent escapes without deriving or storing any key value.
+fn percent_decoded(word: &str) -> Option<Vec<u8>> {
+    let mut input = word.bytes();
+    let mut output = Vec::new();
+    while let Some(byte) = input.next() {
+        if byte == b'%' {
+            let high = char::from(input.next()?).to_digit(16)?;
+            let low = char::from(input.next()?).to_digit(16)?;
+            output.push(u8::try_from(high * 16 + low).ok()?);
+        } else {
+            output.push(byte);
+        }
+    }
+    Some(output)
+}

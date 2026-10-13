@@ -173,3 +173,99 @@ fn mcp_surface_is_explicit_and_uses_the_compiled_engine_on_the_same_route() {
     );
     assert_eq!(requests[0].body, BODY);
 }
+
+#[test]
+fn a_connection_that_never_opened_gets_one_retry_even_with_no_status_retries() {
+    let closed = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = closed.local_addr().unwrap();
+    drop(closed);
+    let engine = Engine::builder()
+        .base_url(&format!("http://{address}"))
+        .unwrap()
+        .api_key("fixture-native-attempts")
+        .unwrap()
+        .max_retries(0)
+        .no_cache()
+        .build()
+        .unwrap();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let error = engine
+        .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+        .unwrap_err();
+    let attempts = error.facts().unwrap().attempts().unwrap();
+    assert_eq!(attempts.len(), 2);
+    assert!(
+        attempts
+            .iter()
+            .all(|attempt| attempt.outcome() == AttemptOutcome::Transport)
+    );
+    assert!(attempts.iter().all(|attempt| attempt.status().is_none()));
+}
+
+#[test]
+fn a_transport_failure_after_the_request_arrived_never_resends() {
+    let listener = Listener::serving(vec![Canned::close_without_reply()]).unwrap();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let error = engine(&listener)
+        .unwrap()
+        .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+        .unwrap_err();
+    assert_eq!(listener.count(), 1);
+    assert_eq!(listener.requests()[0].body, BODY);
+    let attempts = error.facts().unwrap().attempts().unwrap();
+    assert_eq!(attempts.len(), 1);
+    assert_eq!(attempts[0].outcome(), AttemptOutcome::Transport);
+}
+
+#[test]
+fn a_global_timeout_during_connection_setup_retries_without_sending_http_bytes() {
+    use std::io::Read as _;
+    use std::time::Duration;
+    let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+    let address = listener.local_addr().unwrap();
+    listener.set_nonblocking(true).unwrap();
+    let server = std::thread::spawn(move || {
+        let until = std::time::Instant::now() + Duration::from_secs(2);
+        let mut connections = Vec::new();
+        while connections.len() < 2 && std::time::Instant::now() < until {
+            match listener.accept() {
+                Ok((mut stream, _)) => {
+                    stream
+                        .set_read_timeout(Some(Duration::from_secs(1)))
+                        .unwrap();
+                    let mut bytes = [0_u8; 4096];
+                    let count = stream.read(&mut bytes).unwrap();
+                    assert!(count > 0);
+                    assert_eq!(bytes[0], 0x16, "only a TLS handshake reached the peer");
+                    assert!(!bytes[..count].windows(4).any(|part| part == b"POST"));
+                    connections.push(stream);
+                }
+                Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
+                    std::thread::sleep(Duration::from_millis(1))
+                }
+                Err(error) => panic!("accept failed: {error}"),
+            }
+        }
+        std::thread::sleep(Duration::from_millis(80));
+        connections.len()
+    });
+    let engine = Engine::builder()
+        .base_url(&format!("https://{address}"))
+        .unwrap()
+        .api_key("fixture-native-attempts")
+        .unwrap()
+        .timeout(Duration::from_millis(40))
+        .unwrap()
+        .max_retries(0)
+        .no_cache()
+        .build()
+        .unwrap();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let error = engine
+        .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+        .unwrap_err();
+    let connections = server.join().unwrap();
+    assert_eq!(connections, 2);
+    assert_eq!(error.facts().unwrap().attempts().unwrap().len(), 2);
+    assert_eq!(error.to_string(), "the backend timed out");
+}

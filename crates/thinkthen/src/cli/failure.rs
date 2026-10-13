@@ -157,6 +157,10 @@ pub(crate) enum Failure {
     Transport(TransportKind),
     /// The backend answered with a status that is not a success.
     Status(u16),
+    Provider {
+        cause: Box<Self>,
+        diagnostic: crate::engine::error::ProviderDiagnostic,
+    },
     /// The backend answered status 400 and named `max_tokens_exceeded`.
     TokenLimit,
     /// The reply passed its request's limit of this many bytes and was not kept.
@@ -281,6 +285,16 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
         Failure::Status(status) => (4, status::said(*status)),
+        Failure::Provider { cause, diagnostic } => {
+            let mut bytes = Vec::new();
+            let code = say(cause, &mut bytes);
+            let text = String::from_utf8_lossy(&bytes);
+            let text = text
+                .trim_end()
+                .strip_prefix("thinkthen: ")
+                .unwrap_or(text.trim_end());
+            (code, diagnostic.sentence(text.to_owned()))
+        }
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::QuestionMiss { .. }
         | Failure::StoreAmbiguous
