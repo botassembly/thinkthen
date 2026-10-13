@@ -121,3 +121,15 @@ PM amendment, 2026-10-13. The Rust ratchet may rise from the core checkpoint of 
 PM amendment, 2026-10-13. 0576 joins 0.2. Its engine and generator parts follow 0562 and 0574, and its language parts join the 0563 groups.
 
 PM amendment, 2026-10-13. Ian ruled that the DuckDB community listing ships through 0.2, so 0577 joins it. 0577 runs in its own lane beside the waves, and its descriptor pins the candidate commit.
+
+PM amendment, 2026-10-13. Candidate checklist. This replaces any earlier ordering it contradicts.
+
+1. Merge every lane into `ticket/0543-final` on the Beelink: main, 0576, 0579, 0578, the Zig checkpoint from `ticket/0563-php-dart-zig-runtime`, the 0560 script commit, 0569's fixes, 0574's remaining languages, and `docs/0.2-refresh` from 0575. Before the freeze, 0560 to 0565, 0568, 0569 and 0573 to 0579 are merged with accepting reviews, and Ian has approved the public texts from 0575, 0577 and 0578. The language groups, 0569, 0579, 0576 and the docs lane run in parallel.
+2. Prepare the release workflows. Add a `macos-15` job to `release.yml` rehearse mode that runs `libraries/swift/check.sh`, `libraries/objective-c/check.sh` and the Foundation consumer; run Apple checks on GitHub, never on the M5 in their place. Confirm `release.yml` builds the R tarball. Replace the stale names `check-binding-proofs.mjs` and `bindings-proof.json` with `site/scripts/check-binding-samples.mjs`. Write the expiry and rotation dates of the Maven token, the signing key and `TAP_DEPLOY_KEY` into the 0425 record, as dates only. Tell the PM which account prerequisites remain: the Maven namespace, pub.dev trusted publishing and any unconfirmed trusted publisher.
+3. Freeze one SHA. Run routine `test` and `lint`, the Polars nextest and Clippy, complete C and installed C, and a build of every library.
+4. Fresh reviewers review that SHA by area: core, generators, each language group and docs. They accept or reject each source-limit change against main with its cause. The Rust ratchet equals the measured total and stays at or below main.
+5. Tag `rc/0.2.0-rc.13`.
+6. Run these in parallel: on the Beelink, `sdlc/scripts/test-full-cases --run`, `sdlc/scripts/package` and `sdlc/scripts/test-stress --run`, where exit 77 or a pending platform row fails and only Swift and Objective-C may skip; on the Beelink, `sdlc/scripts/coverage` compared by counts with the 0560 baseline net of deletions; on GitHub, `release.yml` in rehearse mode and `windows.yml`.
+7. Record each run's ID, exit and counts in the 0543 record, with no `target/` paths.
+8. Fix forward on `ticket/0543-final`, Windows included. A fix confined to one language reruns that language's tier and its hosted job. A core or generator fix reruns step 6. File a separate ticket only for a fix that needs its own design.
+9. Close 0543 and the wave tickets on the passing SHA and hand the SHA to the PM, who brings 0425 to Ian. Pinning and pushing the DuckDB descriptor follows Ian's go and is not a candidate gate.
