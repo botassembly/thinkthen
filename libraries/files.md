@@ -14,6 +14,6 @@ Source metadata stays outside caller records, annotated values, model payload an
 
 Canonical Request preview reads selected evidence to estimate supported fixed atomic questions without a key or request. The C guide describes its question and ownership limits.
 
-Each host supplies generated file input selectors to its named function. The [upgrade guide](UPGRADING-0.2.md#replace-removed-calls) links every package README and its current calls, including JVM `Engine`, Dart `Engine`, COBOL `TT_SESSION_*` and Apple Foundation `TTFoundationClient`. Generated request records replace the removed JSON/file helper APIs. Rust callers use `thinkthen::read_files` and retain source records when judging selected evidence.
+Each host supplies generated file input selectors to its named function. Each package README describes its current calls. Generated request records replace the removed JSON/file helper APIs. Rust callers use `thinkthen::read_files` and retain source records when judging selected evidence.
 
 COBOL request text and authored JSON scalars have a per-scalar representation limit; the [COBOL guide](cobol/README.md) describes overflow and borrowed native views.

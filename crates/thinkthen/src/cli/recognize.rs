@@ -3,45 +3,21 @@
 use std::io::{Read, Write};
 use std::process::ExitCode;
 
-#[cfg(test)]
-use serde::Serialize;
-
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::cli::intake::Intake;
-#[cfg(test)]
-use crate::core::{Meta, RecognizeSpec, Record};
 use crate::core::{ModelName, Reading};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES};
-#[cfg(test)]
-use crate::engine::facade::{Probabilities, Recognized};
 use crate::failure::Failure;
 use crate::profile;
 use crate::schedule;
 
-#[cfg(test)]
-mod compatibility_schema;
 mod config;
 mod dry_run;
 mod examples;
 mod native;
 mod source;
-
-#[cfg(test)]
-#[derive(Debug, Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-#[cfg_attr(test, schemars(rename = "recognizeDetails"))]
-pub(crate) struct Detailed<'a> {
-    schema: &'static str,
-    value: &'a Recognized,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    input: Option<Record>,
-    question: &'a RecognizeSpec,
-    #[schemars(with = "compatibility_schema::RecognitionOdds")]
-    answer: &'a Probabilities,
-    meta: Meta,
-}
 
 struct Running<'a> {
     common: &'a Common,
