@@ -61,6 +61,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         check(is_string($row->answer_id), 'owned answer ID');
         check($row->toObject()->answer_id === $row->answer_id, 'lossless owned JSON');
     }
+    ob_start();
+    require dirname((new ReflectionClass(Client::class))->getFileName(), 3).'/examples/direct.php';
+    $example = ob_get_clean();
+    check(array_slice(array_map(fn($line) => explode(': ', $line, 2)[0], explode("\n", $example)), 0, count($asks)) === array_keys($asks), 'ten examples did not execute');
     check($retained['decide']->results[0]->value === true, 'true value');
     check($retained['decide']->results[0]->meta->question_sources[0] instanceof ThinkThen\Results\NativeQuestionSource, 'typed nested optional source array');
 } elseif ($mode === 'poll') {

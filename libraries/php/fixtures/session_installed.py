@@ -76,13 +76,6 @@ def main():
                 if mode == 'poll': assert server.attempts == before + 3, 'poll generator request count'
                 if mode == 'zero': assert server.attempts == before, 'rejected input sent a request'
                 print(result.stdout.decode(), end='')
-            example = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
-                str(app / 'vendor/botassembly/thinkthen/examples/direct.php')],
-                env=env, capture_output=True, timeout=5)
-            assert example.returncode == 0, (example.stdout, example.stderr)
-            expected = {'decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate'}
-            assert {line.split(':', 1)[0] for line in example.stdout.decode().splitlines() if ': ' in line} == expected
-            print('PHP_EXAMPLE_PASS ten typed answers')
             env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),
