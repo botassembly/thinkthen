@@ -177,19 +177,24 @@ set -eu
 unset THINKTHEN_API_KEY
 heavy_scripts=$1
 heavy_library=1
-heavy_shell=/bin/bash
-heavy_caller=$0
 . "$heavy_scripts/heavy-lock"
 mkdir -p "$CARGO_TARGET_DIR"
-cc -x c -o "$CARGO_TARGET_DIR/probe" - <<'SOURCE'
+heavy_compile /bin/sh -c '
+ test "$THINKTHEN_HEAVY_LOCK_HELD" = "$THINKTHEN_HEAVY_LOCK"
+ exec cc "$@"
+' compiler -x c -o "$CARGO_TARGET_DIR/probe" - <<'SOURCE'
 int main(void) { return 0; }
 SOURCE
 "$CARGO_TARGET_DIR/probe"
 python3 - "$2" "$3" <<'COMPILER'
-import json,os,pathlib,signal,sys
+import fcntl,json,os,pathlib,signal,sys
 assert signal.pthread_sigmask(signal.SIG_BLOCK,set()) == set()
 assert 'THINKTHEN_API_KEY' not in os.environ
-names = ('CARGO_TARGET_DIR','THINKTHEN_TEST_PROFILE','THINKTHEN_ARTIFACT','THINKTHEN_HEAVY_LOCK_HELD')
+assert 'THINKTHEN_HEAVY_LOCK_HELD' not in os.environ
+with open(os.environ['THINKTHEN_HEAVY_LOCK'],'a+b') as lock:
+ fcntl.flock(lock,fcntl.LOCK_EX | fcntl.LOCK_NB)
+ fcntl.lockf(lock,fcntl.LOCK_EX | fcntl.LOCK_NB)
+names = ('CARGO_TARGET_DIR','THINKTHEN_TEST_PROFILE','THINKTHEN_ARTIFACT')
 pathlib.Path(sys.argv[1]).write_text(json.dumps([sys.argv[2],*[os.environ[name] for name in names]]))
 COMPILER
 [[ -n "$BASH_VERSION" ]]
@@ -202,7 +207,7 @@ exit 23
         result = subprocess.run(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, timeout=3)
         self.assertEqual(result.returncode, 23)
         self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
-        self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive', str(self.lock)])
+        self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive'])
         # The existing standalone shell entry still passes through admission.
         self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'heavy-lock')], env=env, timeout=3).returncode, 0)
         rung = scripts / 'rung'

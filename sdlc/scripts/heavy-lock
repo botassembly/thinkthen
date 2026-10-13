@@ -1,13 +1,24 @@
 # Sourced by heavy rungs before changing directory. One shared admission
-# helper owns the compiler group and the permit; nested checks reuse it.
-# Keep independent source and cache mutation locks exclusive.
-# Library callers supply the scripts directory and retain their own environment
-# boundary. R callers select bash; other callers retain the rung's POSIX shell.
+# helper owns compiler descendants and the permit. Keep independent source
+# and cache mutation locks exclusive.
+# Libraries supply heavy_scripts and heavy_library=1, then call heavy_compile
+# only around compiler commands. Their runtime checks hold no new permit.
 heavy_scripts=${heavy_scripts:-$(dirname -- "$0")}
-[ "${heavy_library:-0}" = 1 ] || . "$heavy_scripts/allow-list"
 
+heavy_compile() {
+    heavy_lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
+    if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" = "$heavy_lock" ]; then
+        "$@"
+    else
+        python3 "$heavy_scripts/build-admission.py" --lock "$heavy_lock" \
+            --priority "${heavy_priority:-normal}" -- "$@"
+    fi
+}
+
+[ "${heavy_library:-0}" != 1 ] || return 0
+. "$heavy_scripts/allow-list"
 heavy_lock=${THINKTHEN_HEAVY_LOCK:-/tmp/thinkthen-heavy.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$heavy_lock" ]; then
     exec python3 "$heavy_scripts/build-admission.py" --lock "$heavy_lock" \
-        --priority "${heavy_priority:-normal}" -- "${heavy_shell:-/bin/sh}" "${heavy_caller:-$0}" "$@"
+        --priority "${heavy_priority:-normal}" -- /bin/sh "$0" "$@"
 fi
