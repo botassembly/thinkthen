@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0574
 
+Reviews: revision 6d46fa0, reject
+
 ## Outcome
 
 Each package registry page that ships with 0.2 shows a short README written for a stranger: what ThinkThen is, one example in that language, what it costs, and how to install it. No registry page names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version. A release check fails the release if one does.
