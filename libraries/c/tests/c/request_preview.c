@@ -74,8 +74,43 @@ static char *typed_preview(thinkthen_engine *engine) {
     check(out && strlen(out)==length && out[length]==0,"typed preview owns copied bytes");
     return out;
 }
+static thinkthen_engine *typed_settings(void) {
+    thinkthen_engine *engine=thinkthen_engine_new_typed(NULL);
+    check(engine!=NULL,"NULL typed settings capture environment");
+    thinkthen_engine_free(engine);
+    thinkthen_request_engine_settings_v1 settings={0};
+    engine=thinkthen_engine_new_typed(&settings);
+    check(engine!=NULL,"empty typed settings capture environment");
+    thinkthen_engine_free(engine);
+    uint32_t ready=99;
+    check(thinkthen_session_wait(NULL,THINKTHEN_SESSION_WAIT_RESULT_V1,0,&ready)==THINKTHEN_EUSAGE,
+          "immediate session failure before construction");
+    const char *session_error=thinkthen_session_error_message();
+    thinkthen_request_unsigned_v1 timeout={.value=0};
+    settings.m_timeout=&timeout;
+    check(thinkthen_engine_new_typed(&settings)==NULL,"typed invalid timeout refuses");
+    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"typed settings use constructor slot");
+    check(!strcmp(thinkthen_error_message(NULL),"a timeout is a time above zero"),"typed settings preserve admission diagnostic");
+    check(thinkthen_session_error_message()==session_error,"constructor preserves independent session slot");
+    check(thinkthen_error_retryable(NULL)==0,"invalid typed settings are not retryable");
+    char model[]="model-never-retained-from-host";
+    thinkthen_request_text_v1 bad={.text={NULL,1}};
+    settings.m_timeout=NULL; settings.m_model=&bad;
+    check(thinkthen_engine_new_typed(&settings)==NULL,"typed NULL counted text refuses");
+    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"invalid carrier has usage kind");
+    bad.text=text(model); settings.m_model=&bad;
+    engine=thinkthen_engine_new_typed(&settings);
+    check(engine!=NULL,"typed settings accept model");
+    memset(model,'?',sizeof(model)-1);
+    check(thinkthen_error_code(NULL)==THINKTHEN_EUSAGE,"successful constructor clears failed build");
+    check(thinkthen_session_error_message()==session_error,"successful constructor preserves session slot");
+    check(!strstr(thinkthen_error_message(NULL),"model"),"typed settings diagnostic is safe");
+    thinkthen_engine_free(engine);
+    settings.m_model=NULL;
+    return thinkthen_engine_new_typed(&settings);
+}
 int main(void) {
-    thinkthen_engine *engine = thinkthen_engine_new();
+    thinkthen_engine *engine = typed_settings();
     check(engine != NULL, "engine construction");
     char *typed = typed_preview(engine);
     char *out = (char *)(uintptr_t)7;

@@ -385,6 +385,10 @@
 
 #define THINKTHEN_REQUEST_BATCH_ARM_2_V1 2
 
+#define THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1 2
+
 #define THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_1_V1 1
 
 #define THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_2_V1 2
@@ -432,6 +436,14 @@
 #define THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1 3
 
 #define THINKTHEN_REQUEST_DESCRIPTION_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1 2
 
 #define THINKTHEN_REQUEST_FRAMING_ARM_1_V1 1
 
@@ -765,6 +777,92 @@ typedef struct thinkthen_complete_utf8_v1 {
   size_t len;
 } thinkthen_complete_utf8_v1;
 
+typedef struct thinkthen_request_text_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_text_v1;
+
+typedef struct thinkthen_request_unsigned_v1 {
+  uint64_t value;
+} thinkthen_request_unsigned_v1;
+
+typedef union thinkthen_request_batch_data_v1 {
+  const struct thinkthen_request_unsigned_v1 *arm_1;
+  const struct thinkthen_request_text_v1 *arm_2;
+} thinkthen_request_batch_data_v1;
+
+typedef struct thinkthen_request_batch_v1 {
+  uint32_t kind;
+  union thinkthen_request_batch_data_v1 data;
+} thinkthen_request_batch_v1;
+
+typedef struct thinkthen_request_disabled_cache_v1 {
+  uint32_t reserved;
+} thinkthen_request_disabled_cache_v1;
+
+typedef union thinkthen_request_cache_document_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_disabled_cache_v1 *arm_2;
+} thinkthen_request_cache_document_data_v1;
+
+typedef struct thinkthen_request_cache_document_v1 {
+  uint32_t kind;
+  union thinkthen_request_cache_document_data_v1 data;
+} thinkthen_request_cache_document_v1;
+
+typedef struct thinkthen_request_null_v1 {
+  uint32_t reserved;
+} thinkthen_request_null_v1;
+
+typedef union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
+  const struct thinkthen_request_unsigned_v1 *arm_1;
+  const struct thinkthen_request_null_v1 *arm_2;
+} thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1;
+
+typedef struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 {
+  uint32_t kind;
+  union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 data;
+} thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+
+typedef union thinkthen_request_engine_settings_max_requests_data_v1 {
+  const struct thinkthen_request_unsigned_v1 *arm_1;
+  const struct thinkthen_request_null_v1 *arm_2;
+} thinkthen_request_engine_settings_max_requests_data_v1;
+
+typedef struct thinkthen_request_engine_settings_max_requests_v1 {
+  uint32_t kind;
+  union thinkthen_request_engine_settings_max_requests_data_v1 data;
+} thinkthen_request_engine_settings_max_requests_v1;
+
+typedef struct thinkthen_request_json_value_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_json_value_v1;
+
+typedef struct thinkthen_request_boolean_v1 {
+  uint32_t value;
+} thinkthen_request_boolean_v1;
+
+typedef struct thinkthen_request_engine_settings_v1 {
+  const struct thinkthen_request_text_v1 *m_backend;
+  const struct thinkthen_request_text_v1 *m_base_url;
+  const struct thinkthen_request_batch_v1 *m_batch;
+  const struct thinkthen_request_cache_document_v1 *m_cache;
+  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_estimated_input_tokens_total;
+  const struct thinkthen_request_unsigned_v1 *m_max_request_bytes;
+  const struct thinkthen_request_engine_settings_max_requests_v1 *m_max_requests;
+  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_requests_total;
+  const struct thinkthen_request_unsigned_v1 *m_max_retries;
+  const struct thinkthen_request_text_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_profile;
+  const struct thinkthen_request_json_value_v1 *m_proxy;
+  const struct thinkthen_request_text_v1 *m_record;
+  const struct thinkthen_request_boolean_v1 *m_refresh_cache;
+  const struct thinkthen_request_text_v1 *m_replay;
+  const struct thinkthen_request_unsigned_v1 *m_throttle;
+  const struct thinkthen_request_unsigned_v1 *m_timeout;
+  const struct thinkthen_request_text_v1 *m_usd_per_million_input;
+  const struct thinkthen_request_text_v1 *m_usd_per_million_output;
+} thinkthen_request_engine_settings_v1;
+
 /*
  C descriptor or borrowed view `StringV1`.
  */
@@ -907,10 +1005,6 @@ typedef struct thinkthen_request_image_media_v1 {
   union thinkthen_request_image_media_data_v1 data;
 } thinkthen_request_image_media_v1;
 
-typedef struct thinkthen_request_text_v1 {
-  struct thinkthen_complete_utf8_v1 text;
-} thinkthen_request_text_v1;
-
 typedef struct thinkthen_request_image_file_v1 {
   const struct thinkthen_request_image_media_v1 *m_media;
   const struct thinkthen_request_text_v1 *m_path;
@@ -950,10 +1044,6 @@ typedef struct thinkthen_request_input_json_v1 {
   const struct thinkthen_request_input_json_value_v1 *m_value;
 } thinkthen_request_input_json_v1;
 
-typedef struct thinkthen_request_json_value_v1 {
-  struct thinkthen_complete_utf8_v1 text;
-} thinkthen_request_json_value_v1;
-
 typedef struct thinkthen_request_json_value_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 key;
   const struct thinkthen_request_json_value_v1 *value;
@@ -973,10 +1063,6 @@ typedef struct thinkthen_request_context_schema_v1 {
   uint32_t kind;
   union thinkthen_request_context_schema_data_v1 data;
 } thinkthen_request_context_schema_v1;
-
-typedef struct thinkthen_request_unsigned_v1 {
-  uint64_t value;
-} thinkthen_request_unsigned_v1;
 
 typedef struct thinkthen_request_recognition_example_entity_v1 {
   const struct thinkthen_request_unsigned_v1 *m_end;
@@ -1196,20 +1282,6 @@ typedef struct thinkthen_request_input_v1 {
   union thinkthen_request_input_data_v1 data;
 } thinkthen_request_input_v1;
 
-typedef struct thinkthen_request_boolean_v1 {
-  uint32_t value;
-} thinkthen_request_boolean_v1;
-
-typedef union thinkthen_request_batch_data_v1 {
-  const struct thinkthen_request_unsigned_v1 *arm_1;
-  const struct thinkthen_request_text_v1 *arm_2;
-} thinkthen_request_batch_data_v1;
-
-typedef struct thinkthen_request_batch_v1 {
-  uint32_t kind;
-  union thinkthen_request_batch_data_v1 data;
-} thinkthen_request_batch_v1;
-
 typedef struct thinkthen_request_integer_v1 {
   int64_t value;
 } thinkthen_request_integer_v1;
@@ -1371,10 +1443,6 @@ typedef struct thinkthen_request_question_text_v1 {
   uint32_t kind;
   union thinkthen_request_question_text_data_v1 data;
 } thinkthen_request_question_text_v1;
-
-typedef struct thinkthen_request_null_v1 {
-  uint32_t reserved;
-} thinkthen_request_null_v1;
 
 typedef union thinkthen_request_criterion_data_v1 {
   const struct thinkthen_request_text_v1 *arm_1;
@@ -3899,16 +3967,19 @@ void thinkthen_engine_free(struct thinkthen_engine *engine);
 struct thinkthen_engine *thinkthen_engine_new(void);
 
 /*
- Build with a UTF-8 JSON settings object; null uses the environment.
-
+ Build from environment plus canonical typed settings. NULL uses environment alone.
+ Copies the finite aligned carrier tree; no foreign pointer survives return.
+ Construction sends nothing. Failure returns NULL in the calling thread constructor slot.
  # Safety
+ settings is NULL or a live aligned settings carrier tree with counted UTF-8 extents.
+ */
+struct thinkthen_engine *thinkthen_engine_new_typed(const struct thinkthen_request_engine_settings_v1 *settings);
 
- `settings_json` is null or a live NUL-terminated string.
- Build from the environment plus a closed UTF-8 settings object; NULL/{}
- uses environment alone. Keys/types and token accounting: DESIGN.md.
- No key is accepted. Unknown/repeated keys or bad types return NULL/EUSAGE
- in the calling thread's null-engine slot. A named backend captures its key;
- an explicit base_url receives that key. Building sends nothing.
+/*
+ Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.
+ Construction sends nothing; failures return NULL and occupy the constructor slot.
+ # Safety
+ settings_json is NULL or live NUL-terminated UTF-8 for the call.
  */
 struct thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
 

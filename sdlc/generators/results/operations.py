@@ -32,6 +32,14 @@ class Operation:
 
 
 OPERATIONS = (
+    Operation('engine', 'thinkthen_engine_new_with',
+        '/// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.\n/// Construction sends nothing; failures return NULL and occupy the constructor slot.\n/// # Safety\n/// settings_json is NULL or live NUL-terminated UTF-8 for the call.\n',
+        (Argument('settings_json', '*const c_char'),),
+        'settings_json', ('settings_json',), (), 'constructor_build', '*mut EngineHandle', 'std::ptr::null_mut()', native_unsafe=True),
+    Operation('typed', 'thinkthen_engine_new_typed',
+        '/// Build from environment plus canonical typed settings. NULL uses environment alone.\n/// Copies the finite aligned carrier tree; no foreign pointer survives return.\n/// Construction sends nothing. Failure returns NULL in the calling thread constructor slot.\n/// # Safety\n/// settings is NULL or a live aligned settings carrier tree with counted UTF-8 extents.\n',
+        (Argument('settings', '*const carriers::thinkthen_request_engine_settings_v1'),),
+        'settings_typed', ('settings',), (), 'constructor_build', '*mut EngineHandle', 'std::ptr::null_mut()', native_unsafe=True),
     Operation('session', 'thinkthen_session_wait',
         "/// Block for requested readiness without consuming a packet or joining provider\n/// work. timeout_ms is the maximum condition wait in milliseconds; zero checks\n/// readiness immediately. RESULT ignores input room; INPUT also watches intake;\n/// SETTLEMENT ignores cancel to drain final packets after cancellation. Output\n/// readiness takes priority over cancel. Success preserves thread-local errors;\n/// failures preserve out_ready and set only the calling thread's diagnostic.\n/// # Safety\n/// session is live for the whole wait, including concurrent cancel/read/push.\n/// Shared operations are synchronized internally. out_ready is writable and\n/// nonnull. Free only after every concurrent operation, including wait, returns.\n",
         (

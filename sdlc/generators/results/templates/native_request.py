@@ -23,6 +23,7 @@ def carrier_graph(definitions, roots=('RequestArguments', 'RequestSessionDescrip
     it. Adapters reuse the exact type identities that the Rust generator owns.
     """
     nodes = dict(definitions)
+    roots = (*roots, *(('EngineSettings',) if 'EngineSettings' in nodes else ()))
     call = nodes['RequestCall']
     nodes['RequestArguments'] = {**call, 'properties': {key: value for key, value in call['properties'].items() if key != 'function'}, 'required': [key for key in call['required'] if key != 'function']}
     def references(value):

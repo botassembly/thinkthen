@@ -811,7 +811,7 @@ def main():
         import native_request
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'],
-            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure')))),
+            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))),
             text=True, capture_output=True, check=True,
             env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'c', 'carriers_generated.rs')
