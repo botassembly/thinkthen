@@ -640,7 +640,17 @@
         "Error",
         "ErrorKind",
         "SessionError"
-      ]
+      ],
+      "representation_embedded_members": {
+        "ownedJSON": [
+          "Boolean",
+          "JSONValue",
+          "String",
+          "GoString",
+          "MarshalJSON",
+          "UnmarshalJSON"
+        ]
+      }
     },
     "jvm": {
       "root": "libraries/jvm",
@@ -691,7 +701,8 @@
       ],
       "representation_owners": [
         "Presence",
-        "UsageStatus"
+        "UsageStatus",
+        "UsagePersistence"
       ]
     },
     "swift": {
@@ -737,7 +748,16 @@
       ],
       "representation_owners": [
         "Presence",
-        "OwnedUsagePersistenceStatus"
+        "OwnedUsagePersistenceStatus",
+        "Array",
+        "Bool",
+        "Dictionary",
+        "Double",
+        "Int64",
+        "JSONValue",
+        "Optional",
+        "String",
+        "UInt64"
       ]
     },
     "zig": {
@@ -777,7 +797,12 @@
       ],
       "lifecycle_owners": [
         "Engine",
-        "Session"
+        "Session",
+        "Packet",
+        "Plan",
+        "Question",
+        "Request",
+        "UsageStatus"
       ],
       "representation_owners": [
         "Presence",
@@ -821,11 +846,13 @@
       ],
       "lifecycle_owners": [
         "Client",
-        "Operation"
+        "Operation",
+        "Cancellation"
       ],
       "representation_owners": [
         "InputDocument",
-        "Encoder"
+        "Encoder",
+        "Document"
       ]
     },
     "dart": {
@@ -947,7 +974,8 @@
       "lifecycle_owners": [
         "TTFoundationClient",
         "TTSession",
-        "TTTask"
+        "TTTask",
+        "TTUsagePersistenceStatus"
       ],
       "representation_owners": [
         "TTPresence",

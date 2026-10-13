@@ -111,13 +111,24 @@ class PublicSurface(unittest.TestCase):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(path, target)
             target = root / 'libraries/go/extra.go'
-            target.write_text('package thinkthen\nfunc (v RequestOptions) Cancel() {}\n')
+            target.write_text('package thinkthen\nfunc (v RequestOptions) Cancel() {}\n'
+                              'type hidden struct {}\ntype Exported struct { hidden }\ntype ExportedAlias = hidden\n'
+                              'func (v hidden) ExtraPublicExport() {}\n'
+                              'type returned struct {}\nfunc NewReturned() returned { return returned{} }\n'
+                              'func (v returned) ExtraReturnedExport() {}\n'
+                              'type unreachable struct {}\nfunc (v unreachable) InvisibleExport() {}\n'
+                              'func (v ownedJSON) ExtraRepresentationExport() {}\n')
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
                                  capture_output=True, text=True, env=dict(os.environ, HOME=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertEqual(run.returncode, 1)
             self.assertIn('unlisted public call/export: RequestOptions.Cancel', errors)
+            self.assertIn('unlisted public call/export: Exported.ExtraPublicExport', errors)
+            self.assertIn('unlisted public call/export: ExportedAlias.ExtraPublicExport', errors)
+            self.assertIn('unlisted public call/export: returned.ExtraReturnedExport', errors)
+            self.assertIn('unlisted public call/export: OwnedFacts.ExtraRepresentationExport', errors)
+            self.assertFalse(any('InvisibleExport' in error for error in errors))
             self.assertNotIn('unlisted public call/export: Client.Close', errors)
             self.assertFalse(any('nativeEngine.' in error or 'ownedJSON.' in error for error in errors))
 

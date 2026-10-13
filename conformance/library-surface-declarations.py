@@ -213,12 +213,29 @@ def cstyle(source, language):
             result.add(Declaration('', match[1], 'export'))
     if language == 'go':
         for match in re.finditer(r'(?m)^func\s+(?:\(\w+\s+\*?(\w+)(?:\[[^\]]+\])?\)\s+)?([A-Z]\w*)\s*(?:\[[^\]]+\])?\s*\(', text):
-            if match[1] and not match[1][:1].isupper():
-                continue
-            result.add(Declaration(match[1] or '', match[2], 'call'))
+            receiver = match[1] or ''
+            result.add(Declaration(receiver, match[2], 'private_call' if receiver and not receiver[:1].isupper() else 'call'))
+            if not receiver:
+                opening, nesting, end = match.end() - 1, 1, match.end()
+                while end < len(text) and nesting:
+                    nesting += (text[end] == '(') - (text[end] == ')')
+                    end += 1
+                signature = text[end:text.find('{', end)]
+                for returned in re.findall(r'\b[a-z]\w*\b', signature):
+                    result.add(Declaration('', returned, 'returned_type'))
         for match in re.finditer(r'(?m)^const\s+([A-Z]\w*)|^[ \t]*([A-Z]\w*)[ \t]+\w*[ \t]*=', text):
             if depths[match.start()] == 0:
                 result.add(Declaration('', match[1] or match[2], 'export'))
+    if language == 'go':
+        for match in re.finditer(r'\btype\s+(\w+)(?:\[[^]]+\])?\s+struct\s*\{', text):
+            start = text.rfind('{', match.start(), match.end())
+            if start not in pairs:
+                continue
+            for embedded in re.finditer(r'(?:^|[;\n])\s*\*?(\w+)(?:\[[^]\n]+\])?\s*(?=$|[;\n])', text[start + 1:pairs[start]]):
+                result.add(Declaration(match[1], embedded[1], 'embedded'))
+    if language == 'go':
+        for match in re.finditer(r'\btype\s+(\w+)\s*=\s*(\w+)\b', text):
+            result.add(Declaration(match[1], match[2], 'embedded'))
     if language in ('typescript', 'zig', 'swift', 'go'):
         patterns = {'typescript': r'\bexport\s+(?:declare\s+)?(?:class|interface|type|function|const|enum)\s+(\w+)',
                     'zig': r'\bpub\s+(?:const|fn)\s+(\w+)',
@@ -252,6 +269,30 @@ def cstyle(source, language):
             if not item.owner and item.kind == 'export' and item.name in {n for names in bindings.values() for n in names}:
                 public.add(item)
         result = public
+    return result
+
+
+def go_owners(declared, embedded):
+    owners, pending = set(), [embedded]
+    while pending:
+        target = pending.pop()
+        for item in declared:
+            if item.kind == 'embedded' and item.name == target and item.owner not in owners:
+                owners.add(item.owner)
+                pending.append(item.owner)
+    return {owner for owner in owners if owner[:1].isupper()}
+
+
+def public_go(declared):
+    result = {d for d in declared if d.kind not in ('private_call', 'returned_type', 'embedded')}
+    returned = {d.name for d in declared if d.kind == 'returned_type'}
+    for item in declared:
+        if item.kind != 'private_call':
+            continue
+        owners = go_owners(declared, item.owner)
+        if item.owner in returned:
+            owners.add(item.owner)
+        result.update(Declaration(owner, item.name, 'call') for owner in owners)
     return result
 
 

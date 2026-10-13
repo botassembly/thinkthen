@@ -147,6 +147,9 @@ def check(root, manifest, name):
                 errors.append(f'{relative}: declaration parse failed: {error}')
     if not source_files:
         errors.append('no public declaration files')
+    promoted_owners = {owner: READ.go_owners(declared, owner) for owner in config.get('representation_embedded_members', {})}
+    if config['language'] == 'go':
+        declared = READ.public_go(declared)
     if config['language'] == 'r':
         exports = {d.name for d in declared if d.kind == 'export'}
         declared = {d for d in declared if d.kind == 'export' or d.kind == 'call' and d.name in exports or d.owner in exports}
@@ -173,10 +176,14 @@ def check(root, manifest, name):
                 continue
             lang = language(paths[0], config['language'])
             wanted = READ.declarations(source, lang)
+            if lang == 'go':
+                wanted = READ.public_go(wanted)
             if exports is not None:
                 wanted = exported(wanted, exports[paths[0].resolve()])
             expected.update(wanted)
             actual = READ.declarations(paths[0].read_text(), lang)
+            if lang == 'go':
+                actual = READ.public_go(actual)
             if exports is not None:
                 actual = exported(actual, exports[paths[0].resolve()])
             for item in sorted(wanted - actual):
@@ -198,6 +205,9 @@ def check(root, manifest, name):
     allowed_native_calls.update((owner, canonical(member))
                                 for owner in ['', *config['representation_owners']]
                                 for member in config.get('representation_calls', []))
+    for embedded, owners in promoted_owners.items():
+        allowed_native_calls.update((owner, canonical(member)) for owner in owners
+                                    for member in config['representation_embedded_members'][embedded])
     schema_types = SCHEMA.reachable(request) | SCHEMA.reachable(result)
     allowed_types.update(config.get('representation_types', []))
     allowed_types.update(d.name for d in expected if d.kind in ('type', 'export'))
