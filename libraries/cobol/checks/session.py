@@ -51,14 +51,14 @@ with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/
         template = (installed / 'examples/session.cob').read_text()
         for function, question in questions.items():
             source = root / (function + '.cob')
-            caller = template.replace('RequestCall-decide', 'RequestCall-' + function).replace('TT_SESSION_DECIDE', 'TT_SESSION_' + function.upper())
+            caller = template.replace('TT_SESSION_DECIDE', 'TT_SESSION_' + function.upper())
             if function in ('find', 'relate'):
                 selection = 'units' if function == 'find' else 'entities'
-                caller = caller.replace('RequestInput-records', 'RequestInput-' + selection).replace('requestinput-records', 'requestinput-' + selection)
+                caller = caller.replace('RequestInputRecords', 'RequestInput' + selection.title()).replace('requestinputrecords', 'requestinput' + selection)
             if function == 'find':
-                caller = caller.replace('01 record-address usage pointer.', '01 record-address.\n 02 first-record usage pointer.\n 02 second-record usage pointer.').replace('set record-address to address of tt-n-cobol-RequestItem', 'set first-record second-record to address of tt-n-cobol-RequestItem').replace('move 1 to v-len of tt-n-cobol-RequestInput-units-member-items', 'move 2 to v-len of tt-n-cobol-RequestInput-units-member-items')
+                caller = caller.replace('01 record-address usage pointer.', '01 record-address.\n 02 first-record usage pointer.\n 02 second-record usage pointer.').replace('set record-address to address of tt-n-cobol-RequestItem', 'set first-record second-record to address of tt-n-cobol-RequestItem').replace('move 1 to v-len of tt-n-cobol-RequestInputUnitsItems', 'move 2 to v-len of tt-n-cobol-RequestInputUnitsItems')
             if function == 'relate':
-                caller = caller.replace('RequestOriginal-text-member-text', 'RequestOriginal-json-member-value').replace('RequestOriginal-text', 'RequestOriginal-json').replace('requestoriginal-text', 'requestoriginal-json').replace('v-m-text of tt-n-cobol-RequestOriginal-json', 'v-m-value of tt-n-cobol-RequestOriginal-json')
+                caller = caller.replace('RequestOriginalTextText', 'RequestOriginalJsonValue').replace('RequestOriginalText', 'RequestOriginalJson').replace('requestoriginaltext', 'requestoriginaljson').replace('v-m-text of tt-n-cobol-RequestOriginalJson', 'v-m-value of tt-n-cobol-RequestOriginalJson')
             source.write_text(caller)
             executable = root / function
             compile_caller(source, executable)
@@ -91,7 +91,7 @@ procedure division.
  move 8193 to v-len of tt-n-complete-utf8-v1
  call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
     output-text written returning status-code
- if status-code not = tt-n-cobol-overflow-constant or written not = 123
+ if status-code not = tt-n-cobol-overflow-k or written not = 123
     or output-text not = all "z" move 1 to return-code goback end-if
  move 8192 to v-len of tt-n-complete-utf8-v1
  call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
@@ -104,24 +104,24 @@ procedure division.
         compile_caller(source, root / 'capacity')
         subprocess.run([str(root / 'capacity')], env=env, check=True, timeout=5)
         # A feed waits for caller input, so cancellation has no provider race.
-        caller = template.replace('    call "TT_SESSION_DECIDE"', '''    allocate tt-n-cobol-RequestInput-feed
-    allocate tt-n-cobol-RequestInput-feed-member-name
-    move low-values to tt-n-cobol-RequestInput-feed
-    set v-data of tt-n-cobol-RequestInput-feed-member-name
+        caller = template.replace('    call "TT_SESSION_DECIDE"', '''    allocate tt-n-cobol-RequestInputFeed
+    allocate tt-n-cobol-RequestInputFeedName
+    move low-values to tt-n-cobol-RequestInputFeed
+    set v-data of tt-n-cobol-RequestInputFeedName
        to address of evidence-text
-    move evidence-length to v-len of tt-n-cobol-RequestInput-feed-member-name
-    set v-m-name of tt-n-cobol-RequestInput-feed
-       to address of tt-n-cobol-RequestInput-feed-member-name
-    move tt-n-cobol-requestinput-feed-kind-constant
+    move evidence-length to v-len of tt-n-cobol-RequestInputFeedName
+    set v-m-name of tt-n-cobol-RequestInputFeed
+       to address of tt-n-cobol-RequestInputFeedName
+    move tt-n-cobol-requestinputfeed-kind-k
        to v-kind of tt-n-cobol-RequestInput
     set v-value of tt-n-cobol-RequestInput
-       to address of tt-n-cobol-RequestInput-feed
+       to address of tt-n-cobol-RequestInputFeed
     call "TT_SESSION_DECIDE"''')
-        caller = caller.replace('    free tt-n-cobol-RequestCall-decide', '''    if status-code = 0
+        caller = caller.replace('    free tt-n-cobol-RequestCall', '''    if status-code = 0
        call "thinkthen_session_cancel" using by value session-owner returning omitted
     end-if
-    free tt-n-cobol-RequestInput-feed tt-n-cobol-RequestInput-feed-member-name
-    free tt-n-cobol-RequestCall-decide''')
+    free tt-n-cobol-RequestInputFeed tt-n-cobol-RequestInputFeedName
+    free tt-n-cobol-RequestCall''')
         source = root / 'cancel.cob'
         source.write_text(caller)
         compile_caller(source, root / 'cancel')
@@ -148,9 +148,9 @@ procedure division.
         assert result.returncode == 0 and 'ERROR_KIND 0000000003' in result.stdout, (result.stdout, result.stderr)
         assert len(backend.arrivals) == before, backend.arrivals
         source = root / 'invalid.cob'
-        source.write_text(template.replace('RequestQuestion-file-member-path', 'RequestQuestion-text-member-text')
-                          .replace('RequestQuestion-file', 'RequestQuestion-text')
-                          .replace('requestquestion-file', 'requestquestion-text')
+        source.write_text(template.replace('RequestQuestionFilePath', 'RequestQuestionTextText')
+                          .replace('RequestQuestionFile', 'RequestQuestionText')
+                          .replace('requestquestionfile', 'requestquestiontext')
                           .replace('v-m-path', 'v-m-text'))
         compile_caller(source, root / 'invalid')
         run_env = dict(env, TT_SESSION_QUESTION_FILE='', TT_SESSION_EVIDENCE='invalid', TT_SESSION_EXPECT_FAILURE='Y')

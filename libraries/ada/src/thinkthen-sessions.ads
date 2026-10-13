@@ -20,8 +20,8 @@ package Thinkthen.Sessions is
    Cancelled_Error : exception;
    Defect_Error : exception;
    Representation_Overflow : exception;
-   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request);
-   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request);
+   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String);
+   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String);
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;
                    Status : out Push_Status);
    procedure Finish (Owner : in out Session);
@@ -32,6 +32,9 @@ package Thinkthen.Sessions is
    -- Generated native constants name Result/Input/Settlement interests and readiness.
    procedure Wait (Owner : Session'Class; Interest : Interfaces.Unsigned_32;
                    Timeout_Ms : Interfaces.Unsigned_32; Ready : out Interfaces.Unsigned_32);
+   -- Block until one packet arrives or settlement completes.
+   procedure Next_Packet (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status;
+                          Interest : Interfaces.Unsigned_32 := Thinkthen_Session_C.K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1);
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status);
    procedure Close (Value : in out Packet);
    -- Every nested pointer shares Value's lifetime. Join tasks before closing owners.

@@ -19,13 +19,9 @@ begin
    Thinkthen.Sessions.Calls.Decide (Owner, Request);
    Finish (Owner);
    loop
-      Try_Read (Owner, Answer, Read);
+      Next_Packet (Owner, Answer, Read);
       case Read is
-         when Pending => declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+         when Pending => raise Program_Error with "blocking read returned pending";
          when Finished => exit;
          when Result =>
             if Status (Answer) /= Success then raise Program_Error with "smoke judgment failed"; end if;

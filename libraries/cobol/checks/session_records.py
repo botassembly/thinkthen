@@ -50,9 +50,10 @@ class Records:
         if '$ref' in source:
             key = source['$ref'].removeprefix('#/$defs/')
             source = self.nodes[key]
-        if key not in self.types:
+        typename = template.native_name(key)
+        if typename not in self.types:
             raise ValueError('missing generated request declaration ' + key)
-        row = self.types[key]()
+        row = self.types[typename]()
         if len(source.get('oneOf', [])) == 1 and 'const' in source['oneOf'][0]: source = source['oneOf'][0]
         if source.get('variants'):
             row.kind, branch = self.branch(source['variants'], value)
@@ -65,12 +66,12 @@ class Records:
         elif source.get('type') == 'array':
             array = (ct.c_void_p * len(value))(*(self.construct(key + '_item', source.get('items', {}), v) for v in value))
             row.data, row.len = self.keep(array), len(value)
-        elif source.get('type') == 'object' and isinstance(source.get('additionalProperties'), dict):
+        elif source.get('type') == 'object':
             keys = (self.types['text'] * len(value))()
             values = (ct.c_void_p * len(value))()
             for index, (k, v) in enumerate(value.items()):
                 data = k.encode(); keys[index].data = self.keep(ct.create_string_buffer(data)); keys[index].len = len(data)
-                values[index] = self.construct(key + '_entry', source['additionalProperties'], v)
+                values[index] = self.construct(key + '_entry', source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}, v)
             row.keys, row.values, row.len = self.keep(keys), self.keep(values), len(value)
         elif 'const' in source or source.get('type') == 'null': pass
         elif source.get('primitive_variants') or source.get('oneOf') or source.get('anyOf') or isinstance(source.get('type'), list):

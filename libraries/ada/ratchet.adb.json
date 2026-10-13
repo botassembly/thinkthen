@@ -1,9 +1,8 @@
 {
   "directory": [
-    "src",
-    "examples",
-    "checks"
+    "."
   ],
   "extension": ".adb",
-  "max": 3024
+  "max": 272,
+  "scope": "handwritten-production"
 }

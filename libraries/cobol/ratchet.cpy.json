@@ -1,7 +1,8 @@
 {
   "directory": [
-    "copybooks"
+    "."
   ],
   "extension": ".cpy",
-  "max": 5728
+  "max": 0,
+  "scope": "handwritten-production"
 }

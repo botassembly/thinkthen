@@ -93,6 +93,10 @@ typedef struct thinkthen_cobol_text {
 #define THINKTHEN_COBOL_REQUESTQUESTIONFILE_KIND 3
 #define THINKTHEN_COBOL_REQUESTQUESTIONNAME_KIND 4
 #define THINKTHEN_COBOL_REQUESTQUESTIONREFERENCE_KIND 5
+#define THINKTHEN_COBOL_REQUESTREADERFAILUREPRODUCER_KIND 1
+#define THINKTHEN_COBOL_REQUESTREADERFAILUREIO_KIND 2
+#define THINKTHEN_COBOL_REQUESTREADERFAILUREUTF8_KIND 3
+#define THINKTHEN_COBOL_REQUESTREADERFAILUREINVALIDINPUT_KIND 4
 #define THINKTHEN_COBOL_REQUESTTHRESHOLDARM1_KIND 1
 #define THINKTHEN_COBOL_REQUESTTHRESHOLDARM2_KIND 2
 #define THINKTHEN_COBOL_SOURCEUNITARM1_KIND 1
@@ -691,6 +695,29 @@ typedef struct thinkthen_cobol_RequestReader {
     const void * m_unit;
     const void * m_window;
 } thinkthen_cobol_RequestReader;
+typedef struct thinkthen_cobol_RequestReaderFailure {
+    uint64_t kind;
+    const void * value;
+} thinkthen_cobol_RequestReaderFailure;
+typedef struct thinkthen_cobol_RequestReaderFailureInvalidInput {
+    uint64_t reserved;
+    const void * m_kind;
+    const void * m_location;
+} thinkthen_cobol_RequestReaderFailureInvalidInput;
+typedef struct thinkthen_cobol_RequestReaderFailureIo {
+    uint64_t reserved;
+    const void * m_kind;
+    const void * m_location;
+} thinkthen_cobol_RequestReaderFailureIo;
+typedef struct thinkthen_cobol_RequestReaderFailureProducer {
+    uint64_t reserved;
+    const void * m_kind;
+} thinkthen_cobol_RequestReaderFailureProducer;
+typedef struct thinkthen_cobol_RequestReaderFailureUtf8 {
+    uint64_t reserved;
+    const void * m_kind;
+    const void * m_location;
+} thinkthen_cobol_RequestReaderFailureUtf8;
 typedef struct thinkthen_cobol_RequestSessionDescriptor {
     uint64_t reserved;
     const void * m_item;
@@ -776,7 +803,8 @@ typedef struct thinkthen_cobol_CriterionArm1 {
     uint64_t len;
 } thinkthen_cobol_CriterionArm1;
 typedef struct thinkthen_cobol_CriterionArm2 {
-    const char * data;
+    const thinkthen_cobol_text * keys;
+    const void *const * values;
     uint64_t len;
 } thinkthen_cobol_CriterionArm2;
 typedef struct thinkthen_cobol_CriterionArm3 {
@@ -809,7 +837,8 @@ typedef struct thinkthen_cobol_DescriptionArm1 {
     uint64_t len;
 } thinkthen_cobol_DescriptionArm1;
 typedef struct thinkthen_cobol_DescriptionArm2 {
-    const char * data;
+    const thinkthen_cobol_text * keys;
+    const void *const * values;
     uint64_t len;
 } thinkthen_cobol_DescriptionArm2;
 typedef struct thinkthen_cobol_DescriptionArm3 {
@@ -897,7 +926,8 @@ typedef struct thinkthen_cobol_QuestionTextArm1 {
     uint64_t len;
 } thinkthen_cobol_QuestionTextArm1;
 typedef struct thinkthen_cobol_QuestionTextArm2 {
-    const char * data;
+    const thinkthen_cobol_text * keys;
+    const void *const * values;
     uint64_t len;
 } thinkthen_cobol_QuestionTextArm2;
 typedef struct thinkthen_cobol_QuestionTextArm3 {
@@ -954,7 +984,8 @@ typedef struct thinkthen_cobol_ContextSchemaArm1 {
     uint64_t len;
 } thinkthen_cobol_ContextSchemaArm1;
 typedef struct thinkthen_cobol_ContextSchemaArm2 {
-    const char * data;
+    const thinkthen_cobol_text * keys;
+    const void *const * values;
     uint64_t len;
 } thinkthen_cobol_ContextSchemaArm2;
 typedef struct thinkthen_cobol_ImageMediaArm1 {
@@ -1395,6 +1426,18 @@ typedef struct thinkthen_cobol_RequestQuestionTextText {
 typedef struct thinkthen_cobol_RequestReaderWindow {
     uint64_t value;
 } thinkthen_cobol_RequestReaderWindow;
+typedef struct thinkthen_cobol_RequestReaderFailureInvalidInputKind {
+    uint64_t reserved;
+} thinkthen_cobol_RequestReaderFailureInvalidInputKind;
+typedef struct thinkthen_cobol_RequestReaderFailureIoKind {
+    uint64_t reserved;
+} thinkthen_cobol_RequestReaderFailureIoKind;
+typedef struct thinkthen_cobol_RequestReaderFailureProducerKind {
+    uint64_t reserved;
+} thinkthen_cobol_RequestReaderFailureProducerKind;
+typedef struct thinkthen_cobol_RequestReaderFailureUtf8Kind {
+    uint64_t reserved;
+} thinkthen_cobol_RequestReaderFailureUtf8Kind;
 typedef struct thinkthen_cobol_RequestSourcePaths {
     const void *const * data;
     uint64_t len;
@@ -1431,6 +1474,10 @@ typedef struct thinkthen_cobol_ChooseBatchArm1 {
 typedef struct thinkthen_cobol_ChooseBatchArm2 {
     int64_t value;
 } thinkthen_cobol_ChooseBatchArm2;
+typedef struct thinkthen_cobol_CriterionArm2Entry {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_CriterionArm2Entry;
 typedef struct thinkthen_cobol_CriterionArm3Item {
     const char * data;
     uint64_t len;
@@ -1441,6 +1488,10 @@ typedef struct thinkthen_cobol_DecideBatchArm1 {
 typedef struct thinkthen_cobol_DecideBatchArm2 {
     int64_t value;
 } thinkthen_cobol_DecideBatchArm2;
+typedef struct thinkthen_cobol_DescriptionArm2Entry {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_DescriptionArm2Entry;
 typedef struct thinkthen_cobol_DescriptionArm3Item {
     const char * data;
     uint64_t len;
@@ -1456,6 +1507,10 @@ typedef struct thinkthen_cobol_PointersArm2Item {
     const char * data;
     uint64_t len;
 } thinkthen_cobol_PointersArm2Item;
+typedef struct thinkthen_cobol_QuestionTextArm2Entry {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_QuestionTextArm2Entry;
 typedef struct thinkthen_cobol_QuestionTextArm3Item {
     const char * data;
     uint64_t len;
@@ -1472,6 +1527,10 @@ typedef struct thinkthen_cobol_TagBatchArm1 {
 typedef struct thinkthen_cobol_TagBatchArm2 {
     int64_t value;
 } thinkthen_cobol_TagBatchArm2;
+typedef struct thinkthen_cobol_ContextSchemaArm2Entry {
+    const char * data;
+    uint64_t len;
+} thinkthen_cobol_ContextSchemaArm2Entry;
 typedef struct thinkthen_cobol_RecognitionExampleTextKindsItem {
     const char * data;
     uint64_t len;
