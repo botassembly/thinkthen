@@ -93,8 +93,7 @@ fn input_schema(tool: Tool) -> Value {
             json!({"type":"array","items":descriptor_schema(tool, &canonical)}),
         );
     }
-    json!({"type":"object","additionalProperties":false,"properties":properties,
-        "description":"One question selector and one input form; images may accompany evidence."})
+    json!({"type":"object","additionalProperties":false,"properties":properties})
 }
 
 fn question_schema(tool: Tool, canonical: &Value) -> Value {
@@ -136,14 +135,15 @@ fn question_fields(schema: &Value, canonical: &Value, depth: u8) -> Value {
     let mut compact = summary(schema, canonical);
     if depth > 0
         && let Some(properties) = schema.get("properties").and_then(Value::as_object)
+        && let Some(compact) = compact.as_object_mut()
     {
         let fields: serde_json::Map<_, _> = properties
             .iter()
             .map(|(name, schema)| (name.clone(), question_fields(schema, canonical, depth - 1)))
             .collect();
-        compact["properties"] = Value::Object(fields);
+        compact.insert("properties".into(), Value::Object(fields));
         if let Some(required) = schema.get("required") {
-            compact["required"] = required.clone();
+            compact.insert("required".into(), required.clone());
         }
     }
     compact
@@ -164,29 +164,41 @@ fn summary(schema: &Value, canonical: &Value) -> Value {
     }
     for key in ["oneOf", "anyOf"] {
         if let Some(choices) = schema.get(key).and_then(Value::as_array) {
-            let choices: Vec<_> = choices
-                .iter()
-                .map(|choice| summary(choice, canonical))
-                .collect();
-            let mut types = Vec::new();
-            for choice in &choices {
-                if let Some(kind) = choice.get("type").and_then(Value::as_str)
-                    && !types.contains(&kind)
-                {
-                    types.push(kind);
-                }
-            }
-            if choices.iter().all(|choice| choice.get("type").is_some()) {
-                compact.insert("type".into(), json!(types));
-            } else {
-                compact.insert("anyOf".into(), json!(choices));
-            }
+            compact.extend(choice_summary(choices, canonical));
         }
     }
     if schema.get("type") == Some(&json!("array")) {
         compact.insert("items".into(), json!({}));
     }
     Value::Object(compact)
+}
+
+fn choice_summary(choices: &[Value], canonical: &Value) -> serde_json::Map<String, Value> {
+    let choices: Vec<_> = choices
+        .iter()
+        .map(|choice| summary(choice, canonical))
+        .collect();
+    let constants: Option<Vec<_>> = choices.iter().map(|choice| choice.get("const")).collect();
+    if let Some(constants) = constants {
+        return serde_json::Map::from_iter([("enum".into(), json!(constants))]);
+    }
+    let plain_types = choices.iter().all(|choice| {
+        choice
+            .as_object()
+            .is_some_and(|fields| fields.keys().all(|key| key == "type" || key == "items"))
+            && choice.get("type").is_some_and(Value::is_string)
+    });
+    if !plain_types {
+        return serde_json::Map::from_iter([("anyOf".into(), json!(choices))]);
+    }
+    let mut types = Vec::new();
+    for choice in &choices {
+        let kind = choice.get("type").unwrap_or(&Value::Null);
+        if !types.contains(&kind) {
+            types.push(kind);
+        }
+    }
+    serde_json::Map::from_iter([("type".into(), json!(types))])
 }
 
 fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
@@ -235,7 +247,7 @@ fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
     let mut source = json!({"type":"object","additionalProperties":false,"required":if file_only { vec!["paths","unit"] } else { vec!["paths"] },
         "properties":{"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
             "unit":summary(&unit, canonical),"window":{"type":"integer","minimum":1},"media":summary(&media, canonical),"framing":summary(&framing, canonical)},
-        "description":"Paths keep order and repeats. window requires unit=window; image media requires unit=file. Framing uses native reader controls."});
+        "description":"Ordered paths; window needs unit=window, images need unit=file."});
     if file_only
         && let Some(properties) = source.get_mut("properties").and_then(Value::as_object_mut)
     {

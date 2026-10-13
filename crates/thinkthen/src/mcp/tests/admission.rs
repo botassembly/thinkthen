@@ -129,14 +129,17 @@ fn source_framing_discovery_uses_native_values_and_invalid_controls_send_nothing
         "../../../../../specification/request.schema.json"
     ))
     .unwrap();
+    let framing: Vec<_> = canonical["$defs"]["RequestFraming"]["oneOf"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|choice| choice["const"].clone())
+        .collect();
     let list = super::super::tools::list();
     for tool in list["tools"].as_array().unwrap() {
         assert_eq!(
             tool["inputSchema"]["properties"]["source"]["properties"]["framing"],
-            json!({
-                "type":canonical["$defs"]["RequestSource"]["properties"]["framing"]["type"],
-                "enum":canonical["$defs"]["RequestSource"]["properties"]["framing"]["enum"]
-            })
+            json!({"enum":framing})
         );
         assert!(
             tool["inputSchema"]["properties"]["inputs"]["items"]["properties"]["source"]
