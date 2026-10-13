@@ -3667,7 +3667,138 @@ function packet(value) {
   return convert(graph.completesessionPacket, value, "completesessionPacket");
 }
 
+const answerRules = {
+  decide: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "decision",
+    member: null,
+    collection: false,
+  },
+  choose: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "choice",
+    member: null,
+    collection: false,
+  },
+  tag: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "tags",
+    member: null,
+    collection: false,
+  },
+  score: {
+    path: ["value", "value", "value"],
+    guards: [
+      [["kind"], "observation"],
+      [["value", "kind"], "row"],
+      [["value", "value", "kind"], "judgment"],
+    ],
+    kind: "score",
+    member: null,
+    collection: false,
+  },
+  filter: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: "input",
+    collection: true,
+  },
+  rank: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: "index",
+    collection: true,
+  },
+  find: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: false,
+  },
+  annotate: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: true,
+  },
+  recognize: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: true,
+  },
+  relate: {
+    path: ["value"],
+    guards: [],
+    kind: null,
+    member: null,
+    collection: false,
+  },
+};
+function answer(packets, functionName) {
+  const rule = answerRules[functionName],
+    values = [];
+  for (const packet of packets) {
+    if (packet.function !== functionName) continue;
+    let value;
+    if (rule.kind) {
+      if (
+        !rule.guards.every(
+          ([path, expected]) =>
+            path.reduce((v, key) => v?.[key], packet) === expected,
+        )
+      )
+        continue;
+      const carrier = rule.path.reduce((v, key) => v?.[key], packet);
+      if (carrier?.kind !== rule.kind) continue;
+      value = carrier.value;
+    } else {
+      if (packet.kind === "aggregate") value = packet.value;
+      else if (rule.collection && packet.kind === "row") value = [packet.value];
+      else continue;
+    }
+    if (rule.collection) values.push(...value);
+    else values.push(value);
+  }
+  if (rule.collection)
+    return Object.freeze(
+      rule.member
+        ? values.map((value) => {
+            if (!Object.hasOwn(value, rule.member))
+              throw new TypeError(
+                "Native answer is missing its projected member",
+              );
+            return value[rule.member];
+          })
+        : values,
+    );
+  if (values.length !== 1)
+    throw new RangeError("Expected exactly one successful answer");
+  return values[0];
+}
+
 module.exports = {
+  answer,
   packet,
   parse,
   NativeNumber,
