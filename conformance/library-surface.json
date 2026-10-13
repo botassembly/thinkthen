@@ -552,7 +552,29 @@
         "Engine",
         "OwnedSession"
       ],
-      "representation_owners": []
+      "representation_owners": [],
+      "lifecycle_members": {
+        "Engine": [
+          "open",
+          "parse_question",
+          "start_session",
+          "execute"
+        ]
+      },
+      "field_adapters": {
+        "Failure": {
+          "contract": "result",
+          "type": "completeCallError",
+          "aliases": {
+            "FactsJson": "facts"
+          }
+        },
+        "SessionFailure": {
+          "contract": "result",
+          "type": "completesessionPacket",
+          "aliases": {}
+        }
+      }
     },
     "go": {
       "root": "libraries/go",

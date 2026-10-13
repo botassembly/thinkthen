@@ -12,23 +12,22 @@ dotnet run --project path/to/App.csproj
 ```csharp
 using ThinkThen;
 using ThinkThen.Inputs;
-using ThinkThen.Results;
 
 using var engine = Engine.Open(new InputEngineSettings { MaxRetries = 0 });
 OwnedCall call = await engine.DecideAsync(
     new InputRequestQuestionText { Text = "Does this answer the question?" },
     new InputRequestInputText { Text = "The supplied evidence." },
     cancellation: cancellationToken);
-foreach (SessionPacket packet in call.Packets)
-    if (packet is SessionPacketDecideRow row) Console.WriteLine(row.Value.Value);
-SessionPacketTerminal terminal = call.Terminal;
+Console.WriteLine(call.Decision());
 ```
+
+The `examples/` folder contains a small installed sample for each function. Each sample reads its answer through a generated accessor. The recognize and relate samples build typed questions; the relate sample reads source and target names directly. Routine package checks replay the shipped source and count its sends.
 
 The ten named `*Async` methods admit generated Request inputs and return owned generated row, aggregate, observation and terminal packets. `SessionFailure` retains the native typed failure and completed packet prefix. Immediate admission errors use `Failure`. Host cancellation throws `OperationCanceledException` promptly and releases session ownership. The native provider can still be settling after that exception.
 
 `Engine.StartSession` exposes `OwnedSession.ReadAsync`, `PushAsync`, `Finish`, `Cancel` and disposal. A read returns null only at native End. Push retries the same descriptor after Full; false means Closed and the producer must stop advancing its reader. One reader and one producer can run concurrently. `ExecuteAsync` runs an asynchronous feed and drain together, which prevents either bounded queue from blocking the other. `Finish` accepts an optional generated `InputRequestReaderFailure` for I/O, UTF-8 or input-grammar failures and an optional caller-owned source location. `ExecuteAsync` maps `IOException`, `DecoderFallbackException`, `JsonException` and `InvalidDataException` from its feed to these native failures without copying host diagnostics. Native admission validates settings and locations. An arbitrary asynchronous iterator must honor its cancellation token; the binding cannot interrupt foreign iterator code.
 
-Read and push wait through cancellable timer delays after Pending or Full. Each session has at most one pending delay in each direction and no host worker thread. Disposal signals cancellation and closes ownership without joining the native worker. SafeHandle pins protect native operations and packet byte copies. Generated result values survive engine and session disposal and retain unknown nested members and missing versus explicit null fields.
+Read and push use blocking native operations on dedicated workers. Each session permits one reader and one producer. Cancellation wakes the native operation, and its worker copies native failure diagnostics before returning to the awaiting caller. Disposal signals cancellation and closes ownership without joining the native worker. SafeHandle pins protect native operations and packet byte copies. Generated result values survive engine and session disposal and retain unknown nested members and missing versus explicit null fields.
 
 An explicit `Cancel` retains the output receiver. Call `ReadAsync` with a fresh token to drain completed packets and eventual native terminal facts. Disposal relinquishes unread output; it does not promise that settlement has finished. A named convenience call disposes its session when cancelled.
 

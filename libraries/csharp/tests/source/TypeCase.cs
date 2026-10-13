@@ -24,7 +24,7 @@ try {
  if(args[0]=="plan") {
   using var doc=JsonDocument.Parse(args[1]);var root=doc.RootElement;
   using var planned=Engine.Open(root.GetProperty("settings").TryGetProperty("batch",out var batch)?new InputEngineSettings {Batch=new InputRequestBatchAlternative0 {Value=batch.GetUInt64()}}:new InputEngineSettings());
-  var plan=planned.Plan(new InputRequest {Schema=new InputRequestVersionAlternative0(),Call=new InputRequestCallDecide {Question=new InputRequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new InputRequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new InputRequestItem {Original=new InputRequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
+  var plan=planned.Plan(new InputRequest {Schema=new InputRequestVersionAlternative0(),Call=new InputRequestCall {Function=new InputRequestFunctionDecide(),Question=new InputRequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new InputRequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new InputRequestItem {Original=new InputRequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
   Console.WriteLine(plan.ToJsonString());return;
  }
  // Shared J1 fixtures are test data. Authored definitions go through the native parser;

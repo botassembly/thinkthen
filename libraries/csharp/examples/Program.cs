@@ -1,6 +1,8 @@
 using System;
 using ThinkThen;
+using ThinkThen.Inputs;
 using var engine = Engine.Open();
-var result = engine.Decide("Is it?", "example");
-Answer answer = result.Value;
-Console.WriteLine($"{answer.Outcome}: {answer.Probability}");
+var result = await engine.DecideAsync(
+    new InputRequestQuestionText { Text = "Is it?" },
+    new InputRequestInputText { Text = "example" });
+Console.WriteLine(result.Decision());
