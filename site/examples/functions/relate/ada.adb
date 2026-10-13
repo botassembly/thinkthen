@@ -1,5 +1,6 @@
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces; use Interfaces;
+with Thinkthen.Values;
 with Thinkthen.Requests; use Thinkthen.Requests;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
@@ -11,14 +12,18 @@ procedure Sample is
      return T_RequestItem is
      (T_original =>
         (True,
-         (T_RequestOriginal_arm_RequestOriginal_json,
+         (T_RequestOriginal_arm_json,
           (T_kind => <>,
-           T_value => To_Unbounded_String
-             ("{""name"": """ & Text
-              & """, ""kind"": """ & Kind & """}")))),
+           T_value => Thinkthen.Values.Object_Item
+             ([Thinkthen.Values.Named
+                ("name",
+                 Thinkthen.Values.String_Item (Text)),
+               Thinkthen.Values.Named
+                ("kind",
+                 Thinkthen.Values.String_Item (Kind))])))),
       others => <>);
-   Names : T_RequestInput_entities_field_items;
-   Request : T_RequestCall_relate;
+   Names : T_RequestItem_List;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
@@ -38,11 +43,11 @@ begin
    Names.Append (Name ("iPhone", "product"));
    Names.Append (Name ("Kindle", "product"));
    Request.T_question :=
-     (T_RequestQuestion_arm_RequestQuestion_file,
+     (T_RequestQuestion_arm_file,
       (T_kind => <>,
        T_path => To_Unbounded_String ("makes.json")));
    Request.T_input :=
-     (T_RequestInput_arm_RequestInput_entities,
+     (T_RequestInput_arm_entities,
       (T_items => Names, T_kind => <>));
    Relate (Owner, Request);
    Finish (Owner);
@@ -66,10 +71,10 @@ begin
             for One of Edges loop
                Append
                  (Who_Makes,
-                  Text (One.source.data.fields_kind_name
+                  Text (One.source.data.related_entity
                           .name)
                   & " makes "
-                  & Text (One.target.data.fields_kind_name
+                  & Text (One.target.data.related_entity
                             .name)
                   & ". ");
             end loop;

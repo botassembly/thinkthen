@@ -10,7 +10,7 @@ with Thinkthen_Session_C; use Thinkthen_Session_C;
 procedure Sample is
    Report : constant String :=
      "Steps: click Log in. Nobody gets in.";
-   Request : T_RequestCall_annotate;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
@@ -23,10 +23,10 @@ procedure Sample is
    Annotated : constant :=
      K_THINKTHEN_COMPLETE_SESSION_PACKET_ANNOTATE_ROW_V1;
    subtype Field is
-     thinkthen_complete_annotated_row_value_entry_v1;
+     thinkthen_complete_annotated_field_map_entry_v1;
 begin
    Request.T_question :=
-     (T_RequestQuestion_arm_RequestQuestion_file,
+     (T_RequestQuestion_arm_file,
       (T_kind => <>,
        T_path => To_Unbounded_String ("form.json")));
    Request.T_input.V_0.T_text :=
@@ -40,7 +40,7 @@ begin
          Wait (Owner, Settlement, 50, Ready);
       elsif View (Answer).kind = Annotated then
          declare
-            Row : thinkthen_complete_annotated_row_value_v1
+            Row : thinkthen_complete_annotated_field_map_v1
               renames View (Answer).data.annotate_row.value
                 .value.value;
             Triage : array (1 .. Index (Row.len)) of Field

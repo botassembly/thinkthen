@@ -10,7 +10,7 @@ procedure Sample is
    Text_In : constant String :=
      "Sam Patel says his Kindle arrived broken "
      & "in Denver.";
-   Request : T_RequestCall_recognize;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
@@ -28,7 +28,7 @@ procedure Sample is
      thinkthen_complete_entity_v1;
 begin
    Request.T_question :=
-     (T_RequestQuestion_arm_RequestQuestion_file,
+     (T_RequestQuestion_arm_file,
       (T_kind => <>,
        T_path => To_Unbounded_String ("kinds.json")));
    Request.T_input.V_0.T_text :=
@@ -55,12 +55,12 @@ begin
             for Row of Rows loop
                declare
                   Spans : constant Natural := Index
-                    (Row.value.data.fields_entities
+                    (Row.value.data.entities
                        .entities.len);
                   Entities : array (1 .. Spans) of Entity
                     with Import,
                          Address =>
-                           Row.value.data.fields_entities
+                           Row.value.data.entities
                              .entities.data;
                begin
                   for One of Entities loop

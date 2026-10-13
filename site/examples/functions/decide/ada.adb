@@ -10,7 +10,7 @@ procedure Sample is
      "Does the customer ask for a refund?";
    Broken : constant String :=
      "Please refund my order. It arrived broken.";
-   Request : T_RequestCall_decide;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;

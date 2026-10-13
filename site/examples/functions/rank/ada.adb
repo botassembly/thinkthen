@@ -11,12 +11,12 @@ procedure Sample is
    function Message (Text : String) return T_RequestItem is
      (T_original =>
         (True,
-         (T_RequestOriginal_arm_RequestOriginal_text,
+         (T_RequestOriginal_arm_text,
           (T_kind => <>,
            T_text => To_Unbounded_String (Text)))),
       others => <>);
-   Inbox : T_RequestInput_records_field_items;
-   Request : T_RequestCall_rank;
+   Inbox : T_RequestItem_List;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
@@ -46,7 +46,7 @@ begin
    Request.T_question.V_0.T_text :=
      To_Unbounded_String (Question);
    Request.T_input :=
-     (T_RequestInput_arm_RequestInput_records,
+     (T_RequestInput_arm_records,
       (T_items => Inbox, T_kind => <>));
    Rank (Owner, Request);
    Finish (Owner);

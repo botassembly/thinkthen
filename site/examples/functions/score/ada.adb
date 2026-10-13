@@ -11,9 +11,9 @@ procedure Sample is
    Outage : constant String :=
      "Our checkout page is down and customers cannot pay."
      & ASCII.LF;
-   Levels : T_Authored_levels_value_0;
-   Scale : T_RequestDefinition_fields_score;
-   Request : T_RequestCall_score;
+   Levels : T_Authored_name_List;
+   Scale : T_RequestDefinition_Authored_score;
+   Request : T_RequestCall;
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
@@ -24,18 +24,21 @@ procedure Sample is
    Score_Row : constant :=
      K_THINKTHEN_COMPLETE_SESSION_PACKET_SCORE_ROW_V1;
    Score_Arm : constant T_RequestDefinition_Kind :=
-     T_RequestDefinition_arm_RequestDefinition_fields_score;
+     T_RequestDefinition_arm_Authored_score;
 begin
-   Levels.Append (To_Unbounded_String ("Routine."));
-   Levels.Append (To_Unbounded_String ("Soon."));
-   Levels.Append (To_Unbounded_String ("Immediate."));
+   Levels.Append
+     (T_Authored_name (To_Unbounded_String ("Routine.")));
+   Levels.Append
+     (T_Authored_name (To_Unbounded_String ("Soon.")));
+   Levels.Append
+     (T_Authored_name (To_Unbounded_String ("Immediate.")));
    Scale.T_score :=
      (T_Authored_questionText_arm_0,
       To_Unbounded_String (Question));
    Scale.T_levels :=
      (True, (T_Authored_levels_arm_0, Levels));
    Request.T_question :=
-     (T_RequestQuestion_arm_RequestQuestion_definition,
+     (T_RequestQuestion_arm_definition,
       (T_kind => <>, T_value => (Score_Arm, Scale)));
    Request.T_input.V_0.T_text :=
      To_Unbounded_String (Outage);
