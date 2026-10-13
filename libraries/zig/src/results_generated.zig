@@ -512,7 +512,7 @@ pub const SessionQuestionDetail = struct {
     model: []const u8,
     observations: []const Observation,
     probabilities: Presence(SessionProbabilities),
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_sha256: []const u8,
     question_sources: []const QuestionSource,
     raw_pick: Presence([]const u8),
@@ -560,14 +560,14 @@ pub const QuestionSource = struct {
 
 pub const Origin = enum { live, cache, replay, proxy, memory };
 
-pub const ReadableQuestion = union(enum) {
-    decide: ReadableQuestionDecide,
-    choose: ReadableQuestionChoose,
-    tag: ReadableQuestionTag,
-    score: ReadableQuestionScore,
+pub const QuestionDocument = union(enum) {
+    decide: QuestionDocumentDecide,
+    choose: QuestionDocumentChoose,
+    tag: QuestionDocumentTag,
+    score: QuestionDocumentScore,
 };
 
-pub const ReadableQuestionScore = struct {
+pub const QuestionDocumentScore = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     item_schema: Presence(InputDeclaration),
@@ -652,7 +652,7 @@ pub const Batch = union(enum) {
     string: BatchString,
 };
 
-pub const ReadableQuestionTag = struct {
+pub const QuestionDocumentTag = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     item_schema: Presence(InputDeclaration),
@@ -668,7 +668,7 @@ pub const ReadableQuestionTag = struct {
     extensions: Map(Value),
 };
 
-pub const ReadableQuestionChoose = struct {
+pub const QuestionDocumentChoose = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     item_schema: Presence(InputDeclaration),
@@ -684,7 +684,7 @@ pub const ReadableQuestionChoose = struct {
     extensions: Map(Value),
 };
 
-pub const ReadableQuestionDecide = struct {
+pub const QuestionDocumentDecide = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     item_schema: Presence(InputDeclaration),
@@ -778,7 +778,7 @@ pub const Relation = struct {
     last_line: Presence(u64),
     meta: Meta,
     position: Presence(Position),
-    question: ReadableQuestion4,
+    question: RelateQuestionDocument,
     schema: Version,
     value: []const RelatedEntityEdge,
     extensions: Map(Value),
@@ -817,7 +817,7 @@ pub const RelationEndpointRelatedEntity = struct {
 
 pub const Version = enum { @"thinkthen.result/2" };
 
-pub const ReadableQuestion4 = struct {
+pub const RelateQuestionDocument = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     fields: Presence(RelateFields),
@@ -912,7 +912,7 @@ pub const RelationMemberFailureId = struct {
     direction: RelationDirection,
     method: RelationMethod,
     observations: []const Observation,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_sources: []const QuestionSource,
     reads: []const u8,
     relation: []const u8,
@@ -940,7 +940,7 @@ pub const RelationMemberAnswerId = struct {
     direction: RelationDirection,
     method: RelationMethod,
     observations: []const Observation,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_sources: []const QuestionSource,
     reads: []const u8,
     relation: []const u8,
@@ -1008,7 +1008,7 @@ pub const Recognition = struct {
     last_line: Presence(u64),
     meta: Meta,
     position: Presence(Position),
-    question: ReadableQuestion3,
+    question: RecognizeQuestionDocument,
     schema: Version,
     source: Presence(PhysicalSource),
     value: Recognize,
@@ -1043,7 +1043,7 @@ pub const EntityEdge = struct {
     extensions: Map(Value),
 };
 
-pub const ReadableQuestion3 = struct {
+pub const RecognizeQuestionDocument = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     entity_definition: Presence(Value),
@@ -1182,7 +1182,7 @@ pub const AnnotationMemberFailureId = struct {
     failure: Failure,
     failure_id: FailureId,
     observations: []const Observation,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_sources: []const QuestionSource,
     request: []const u8,
     threshold: Presence(Threshold),
@@ -1194,7 +1194,7 @@ pub const AnnotationMemberAnswerId = struct {
     answer: Answer,
     answer_id: AnswerId,
     observations: []const Observation,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_sources: []const QuestionSource,
     request: []const u8,
     threshold: Presence(Threshold),
@@ -1220,14 +1220,14 @@ pub const Find = struct {
     last_line: Presence(u64),
     meta: Meta,
     position: Presence(Position),
-    question: ReadableQuestion2,
+    question: FindQuestionDocument,
     schema: Version,
     threshold: Presence(Value),
     value: Presence(Value),
     extensions: Map(Value),
 };
 
-pub const ReadableQuestion2 = struct {
+pub const FindQuestionDocument = struct {
     batch: Presence(Batch),
     context_schema: Presence(InputDeclaration),
     item_schema: Presence(InputDeclaration),
@@ -1274,7 +1274,7 @@ pub const AtomicNonZeroUsize = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -1294,7 +1294,7 @@ pub const RankMemberResult = struct {
     answer_id: AnswerId,
     images: Presence([]const Image),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     schema: Version,
     source: Presence(PhysicalSource),
     threshold: Presence(Value),
@@ -1327,7 +1327,7 @@ pub const AtomicBoolean = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -1351,7 +1351,7 @@ pub const AtomicDouble = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -1375,7 +1375,7 @@ pub const AtomicArrayOfString = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -1399,7 +1399,7 @@ pub const AtomicNullableString = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -1423,7 +1423,7 @@ pub const AtomicDecideValue = struct {
     input: Presence(Value),
     members: Presence([]const RankMember),
     meta: Meta,
-    question: ReadableQuestion,
+    question: QuestionDocument,
     question_name: Presence([]const u8),
     schema: Version,
     source: Presence(PhysicalSource),
@@ -2353,7 +2353,7 @@ pub fn readSessionQuestionDetail(a: std.mem.Allocator, v: c.thinkthen_complete_s
             2 => .{ .value = try readSessionProbabilities(a, v.probabilities.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_sha256 = try a.dupe(u8, text(v.question_sha256)),
         .question_sources = blk: {
             const items = try a.alloc(QuestionSource, v.question_sources.len);
@@ -2485,17 +2485,17 @@ pub fn readOrigin(a: std.mem.Allocator, v: c.thinkthen_complete_origin_v1) anyer
     };
 }
 
-pub fn readReadableQuestion(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_v1) anyerror!ReadableQuestion {
+pub fn readQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_v1) anyerror!QuestionDocument {
     return switch (v.kind) {
-        1 => .{ .decide = try readReadableQuestionDecide(a, v.data.decide[0]) },
-        2 => .{ .choose = try readReadableQuestionChoose(a, v.data.choose[0]) },
-        3 => .{ .tag = try readReadableQuestionTag(a, v.data.tag[0]) },
-        4 => .{ .score = try readReadableQuestionScore(a, v.data.score[0]) },
+        1 => .{ .decide = try readQuestionDocumentDecide(a, v.data.decide[0]) },
+        2 => .{ .choose = try readQuestionDocumentChoose(a, v.data.choose[0]) },
+        3 => .{ .tag = try readQuestionDocumentTag(a, v.data.tag[0]) },
+        4 => .{ .score = try readQuestionDocumentScore(a, v.data.score[0]) },
         else => error.InvalidNativeDiscriminator,
     };
 }
 
-pub fn readReadableQuestionScore(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_score_v1) anyerror!ReadableQuestionScore {
+pub fn readQuestionDocumentScore(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_score_v1) anyerror!QuestionDocumentScore {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -2719,7 +2719,7 @@ pub fn readBatch(a: std.mem.Allocator, v: c.thinkthen_complete_batch_v1) anyerro
     };
 }
 
-pub fn readReadableQuestionTag(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_tag_v1) anyerror!ReadableQuestionTag {
+pub fn readQuestionDocumentTag(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_tag_v1) anyerror!QuestionDocumentTag {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -2808,7 +2808,7 @@ pub fn readReadableQuestionTag(a: std.mem.Allocator, v: c.thinkthen_complete_rea
     };
 }
 
-pub fn readReadableQuestionChoose(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_choose_v1) anyerror!ReadableQuestionChoose {
+pub fn readQuestionDocumentChoose(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_choose_v1) anyerror!QuestionDocumentChoose {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -2897,7 +2897,7 @@ pub fn readReadableQuestionChoose(a: std.mem.Allocator, v: c.thinkthen_complete_
     };
 }
 
-pub fn readReadableQuestionDecide(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_decide_v1) anyerror!ReadableQuestionDecide {
+pub fn readQuestionDocumentDecide(a: std.mem.Allocator, v: c.thinkthen_complete_question_document_decide_v1) anyerror!QuestionDocumentDecide {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -3170,7 +3170,7 @@ pub fn readRelation(a: std.mem.Allocator, v: c.thinkthen_complete_relation_v1) a
             2 => .{ .value = try readPosition(a, v.position.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .question = try readReadableQuestion4(a, v.question[0]),
+        .question = try readRelateQuestionDocument(a, v.question[0]),
         .schema = try readVersion(a, v.schema[0]),
         .value = blk: {
             const items = try a.alloc(RelatedEntityEdge, v.value.len);
@@ -3257,7 +3257,7 @@ pub fn readVersion(a: std.mem.Allocator, v: c.thinkthen_complete_version_v1) any
     };
 }
 
-pub fn readReadableQuestion4(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_4_v1) anyerror!ReadableQuestion4 {
+pub fn readRelateQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_relate_question_document_v1) anyerror!RelateQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -3570,7 +3570,7 @@ pub fn readRelationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_complete
             }
             break :blk items;
         },
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_sources = blk: {
             const items = try a.alloc(QuestionSource, v.question_sources.len);
             for (items, 0..) |*out, i| {
@@ -3640,7 +3640,7 @@ pub fn readRelationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complete_
             }
             break :blk items;
         },
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_sources = blk: {
             const items = try a.alloc(QuestionSource, v.question_sources.len);
             for (items, 0..) |*out, i| {
@@ -3808,7 +3808,7 @@ pub fn readRecognition(a: std.mem.Allocator, v: c.thinkthen_complete_recognition
             2 => .{ .value = try readPosition(a, v.position.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .question = try readReadableQuestion3(a, v.question[0]),
+        .question = try readRecognizeQuestionDocument(a, v.question[0]),
         .schema = try readVersion(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
@@ -3895,7 +3895,7 @@ pub fn readEntityEdge(a: std.mem.Allocator, v: c.thinkthen_complete_entity_edge_
     };
 }
 
-pub fn readReadableQuestion3(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_3_v1) anyerror!ReadableQuestion3 {
+pub fn readRecognizeQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_recognize_question_document_v1) anyerror!RecognizeQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -4357,7 +4357,7 @@ pub fn readAnnotationMemberFailureId(a: std.mem.Allocator, v: c.thinkthen_comple
             }
             break :blk items;
         },
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_sources = blk: {
             const items = try a.alloc(QuestionSource, v.question_sources.len);
             for (items, 0..) |*out, i| {
@@ -4395,7 +4395,7 @@ pub fn readAnnotationMemberAnswerId(a: std.mem.Allocator, v: c.thinkthen_complet
             }
             break :blk items;
         },
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_sources = blk: {
             const items = try a.alloc(QuestionSource, v.question_sources.len);
             for (items, 0..) |*out, i| {
@@ -4484,7 +4484,7 @@ pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find_v1) anyerror!
             2 => .{ .value = try readPosition(a, v.position.value[0]) },
             else => return error.InvalidNativeDiscriminator,
         },
-        .question = try readReadableQuestion2(a, v.question[0]),
+        .question = try readFindQuestionDocument(a, v.question[0]),
         .schema = try readVersion(a, v.schema[0]),
         .threshold = switch (v.threshold.presence) {
             0 => .missing,
@@ -4502,7 +4502,7 @@ pub fn readFind(a: std.mem.Allocator, v: c.thinkthen_complete_find_v1) anyerror!
     };
 }
 
-pub fn readReadableQuestion2(a: std.mem.Allocator, v: c.thinkthen_complete_readable_question_2_v1) anyerror!ReadableQuestion2 {
+pub fn readFindQuestionDocument(a: std.mem.Allocator, v: c.thinkthen_complete_find_question_document_v1) anyerror!FindQuestionDocument {
     return .{
         .batch = switch (v.batch.presence) {
             0 => .missing,
@@ -4690,7 +4690,7 @@ pub fn readAtomicNonZeroUsize(a: std.mem.Allocator, v: c.thinkthen_complete_atom
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -4741,7 +4741,7 @@ pub fn readRankMemberResult(a: std.mem.Allocator, v: c.thinkthen_complete_rank_m
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .schema = try readVersion(a, v.schema[0]),
         .source = switch (v.source.presence) {
             0 => .missing,
@@ -4838,7 +4838,7 @@ pub fn readAtomicBoolean(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_bo
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -4922,7 +4922,7 @@ pub fn readAtomicDouble(a: std.mem.Allocator, v: c.thinkthen_complete_atomic_dou
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5006,7 +5006,7 @@ pub fn readAtomicArrayOfString(a: std.mem.Allocator, v: c.thinkthen_complete_ato
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5097,7 +5097,7 @@ pub fn readAtomicNullableString(a: std.mem.Allocator, v: c.thinkthen_complete_at
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5186,7 +5186,7 @@ pub fn readAtomicDecideValue(a: std.mem.Allocator, v: c.thinkthen_complete_atomi
             else => return error.InvalidNativeDiscriminator,
         },
         .meta = try readMeta(a, v.meta[0]),
-        .question = try readReadableQuestion(a, v.question[0]),
+        .question = try readQuestionDocument(a, v.question[0]),
         .question_name = switch (v.question_name.presence) {
             0 => .missing,
             1 => .null_value,
@@ -5344,6 +5344,7 @@ pub const Types = struct {
     pub const Find = @import("results_generated.zig").Find;
     pub const FindAnswer = @import("results_generated.zig").FindAnswer;
     pub const FindCandidate = @import("results_generated.zig").FindCandidate;
+    pub const FindQuestionDocument = @import("results_generated.zig").FindQuestionDocument;
     pub const Image = @import("results_generated.zig").Image;
     pub const ImageMedia = @import("results_generated.zig").ImageMedia;
     pub const ImmediateFacts = @import("results_generated.zig").ImmediateFacts;
@@ -5375,18 +5376,15 @@ pub const Types = struct {
     pub const Position = @import("results_generated.zig").Position;
     pub const Presence = @import("results_generated.zig").Presence;
     pub const ProfileWarning = @import("results_generated.zig").ProfileWarning;
+    pub const QuestionDocument = @import("results_generated.zig").QuestionDocument;
+    pub const QuestionDocumentChoose = @import("results_generated.zig").QuestionDocumentChoose;
+    pub const QuestionDocumentDecide = @import("results_generated.zig").QuestionDocumentDecide;
+    pub const QuestionDocumentScore = @import("results_generated.zig").QuestionDocumentScore;
+    pub const QuestionDocumentTag = @import("results_generated.zig").QuestionDocumentTag;
     pub const QuestionName = @import("results_generated.zig").QuestionName;
     pub const QuestionSource = @import("results_generated.zig").QuestionSource;
     pub const RankMember = @import("results_generated.zig").RankMember;
     pub const RankMemberResult = @import("results_generated.zig").RankMemberResult;
-    pub const ReadableQuestion = @import("results_generated.zig").ReadableQuestion;
-    pub const ReadableQuestion2 = @import("results_generated.zig").ReadableQuestion2;
-    pub const ReadableQuestion3 = @import("results_generated.zig").ReadableQuestion3;
-    pub const ReadableQuestion4 = @import("results_generated.zig").ReadableQuestion4;
-    pub const ReadableQuestionChoose = @import("results_generated.zig").ReadableQuestionChoose;
-    pub const ReadableQuestionDecide = @import("results_generated.zig").ReadableQuestionDecide;
-    pub const ReadableQuestionScore = @import("results_generated.zig").ReadableQuestionScore;
-    pub const ReadableQuestionTag = @import("results_generated.zig").ReadableQuestionTag;
     pub const Recognition = @import("results_generated.zig").Recognition;
     pub const RecognitionEdgeDocument = @import("results_generated.zig").RecognitionEdgeDocument;
     pub const RecognitionMode = @import("results_generated.zig").RecognitionMode;
@@ -5398,7 +5396,9 @@ pub const Types = struct {
     pub const Recognize = @import("results_generated.zig").Recognize;
     pub const RecognizeEntities = @import("results_generated.zig").RecognizeEntities;
     pub const RecognizeModeProposals = @import("results_generated.zig").RecognizeModeProposals;
+    pub const RecognizeQuestionDocument = @import("results_generated.zig").RecognizeQuestionDocument;
     pub const RelateFields = @import("results_generated.zig").RelateFields;
+    pub const RelateQuestionDocument = @import("results_generated.zig").RelateQuestionDocument;
     pub const RelatedEntity = @import("results_generated.zig").RelatedEntity;
     pub const RelatedEntityEdge = @import("results_generated.zig").RelatedEntityEdge;
     pub const Relation = @import("results_generated.zig").Relation;
