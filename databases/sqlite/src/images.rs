@@ -250,12 +250,11 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
     let shared = settings.context().map(str::to_owned);
     let details =
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-            let records = shared.is_some();
             let options = match &shared {
                 Some(shared) => options.context(shared),
                 None => options,
             };
-            crate::request::details(engine, &held, vec![item], options, records)?
+            crate::request::details(engine, &held, vec![item], options)?
                 .into_iter()
                 .next()
                 .ok_or_else(|| Failure::defect("image details returned no record"))

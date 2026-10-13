@@ -535,8 +535,7 @@ fn release_only_details_many_retains_a_valid_large_original_after_one_successful
         &original,
     );
     assert_eq!(call.value().len(), 1);
-    let row: Value =
-        serde_json::from_str(&call.value()[0].compatibility_details().unwrap().to_json()).unwrap();
+    let row: Value = serde_json::to_value(&call.value()[0]).unwrap();
     assert_eq!(
         row["input"],
         serde_json::from_str::<Value>(&encoded).unwrap()

@@ -7,7 +7,7 @@ use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
+    Answer, CallOptions, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
@@ -51,38 +51,18 @@ fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failu
     )))
 }
 
-/// The shared many-record details path for a contextual singleton.
-fn contextual(
-    engine: &Engine,
-    held: &LoadedQuestion,
-    evidence: String,
-    options: CallOptions<'_>,
-) -> Result<Details, Failure> {
-    crate::request::details(
-        engine,
-        held,
-        vec![crate::request::text(evidence)],
-        options,
-        true,
-    )?
-    .into_iter()
-    .next()
-    .ok_or_else(|| Failure::defect("details returned no record"))
-}
-
 /// One ordinary detail read; all question kinds keep the same engine path.
 fn scalar_details(
     engine: &Engine,
     held: &LoadedQuestion,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Details, Failure> {
+) -> Result<crate::request::JudgmentRow, Failure> {
     crate::request::details(
         engine,
         held,
         vec![crate::request::text(evidence.to_owned())],
         options,
-        false,
     )?
     .into_iter()
     .next()
@@ -128,7 +108,9 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
         let answer =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match scalar_details(engine, &held, &evidence, options.context(&shared))?
+                        .value()
+                    {
                         Judgment::Decision(answer) => Ok(*answer),
                         _ => Err(Failure::defect("a decide answer held no decision")),
                     }
@@ -163,7 +145,7 @@ fn judged(
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
             if let Some(shared) = shared {
                 Ok(
-                    contextual(engine, &held, evidence, options.context(&shared))?
+                    scalar_details(engine, &held, &evidence, options.context(&shared))?
                         .value()
                         .clone(),
                 )
@@ -207,7 +189,9 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
         let position =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match scalar_details(engine, &held, &evidence, options.context(&shared))?
+                        .value()
+                    {
                         Judgment::Score(value) => Ok(*value),
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
@@ -231,8 +215,8 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
                     Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
+                        scalar_details(engine, &held, &evidence, options.context(&shared))?
+                            .to_json(),
                     )
                 } else {
                     Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
@@ -255,8 +239,8 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
                     Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
+                        scalar_details(engine, &held, &evidence, options.context(&shared))?
+                            .to_json(),
                     )
                 } else {
                     Ok(scalar_details(engine, &held, &evidence, options)?.to_json())

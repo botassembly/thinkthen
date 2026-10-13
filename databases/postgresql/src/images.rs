@@ -99,7 +99,7 @@ fn judged(
     text: Option<&str>,
     raw: Option<RawJson>,
     requested: Option<thinkthen::For>,
-) -> thinkthen::Details {
+) -> crate::request::JudgmentRow {
     let (settings, controls) = forms::controls(raw.as_ref(), Named::default());
     let verb = requested.unwrap_or_else(|| forms::plan_verb(question, &settings));
     if !matches!(
@@ -111,7 +111,7 @@ fn judged(
     let question = forms::question(Some(question), None, verb, &settings);
     let input = input(images, text).or_raise();
     call::run(controls, move |engine, options| {
-        crate::request::details(engine, &question, vec![input], options, false)
+        crate::request::details(engine, &question, vec![input], options)
             .map(|rows| rows.into_iter().next())
     })
     .unwrap_or_else(|| call::raise(call::defect("image details returned no record")))

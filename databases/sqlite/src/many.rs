@@ -177,7 +177,10 @@ fn lookup(value: ValueRef<'_>) -> Option<String> {
     }
 }
 
-fn answer_columns(detail: &thinkthen::Details, kind: &str) -> Result<(Value, Value), Failure> {
+fn answer_columns(
+    detail: &crate::request::JudgmentRow,
+    kind: &str,
+) -> Result<(Value, Value), Failure> {
     match detail.value() {
         Judgment::Decision(answer) if kind == "thinkthen_decide_many" => {
             let value = match answer {
@@ -336,7 +339,6 @@ fn answered(
             &held,
             texts.into_iter().map(crate::request::text).collect(),
             options,
-            true,
         )?
         .iter()
         .map(|row| answer_columns(row, kind))

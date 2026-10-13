@@ -32,13 +32,20 @@ answers = {{}}
 for verb, question in {ASK!r}.items():
     answers[verb] = run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.'))
 detail = run(db, 'SELECT thinkthen_details_images(?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.'))
-say(answers=answers, detail=detail)
+context_detail = run(db, 'SELECT thinkthen_details_images(?, ?, ?, ?)', ({ASK['choose']!r}, packed, 'Compare originals.', json.dumps({{"context":"Separate context."}})))
+say(answers=answers, detail=detail, context_detail=context_detail)
 '''
         got = child(code, env)
         expect(got['answers'], {'decide': [[1]], 'choose': [['red']], 'score': [[0.8]]}, 'three native scalar answers')
         detail = json.loads(got['detail'][0][0])
         expect(detail['answer']['probabilities'], {'red': 0.8, 'blue': 0.2}, 'complete probabilities')
-        expect(backend.bodies, [expected_body(verb) for verb in (*ASK, 'choose')], 'independent ordered original bodies and one evaluation per public call while recording')
+        contextual = json.loads(got['context_detail'][0][0])
+        expect('input' in detail, False, 'ordinary image details omit original evidence')
+        expect('input' in contextual, False, 'contextual image details omit original evidence')
+        expect(contextual['answer']['probabilities'], detail['answer']['probabilities'], 'context keeps complete probabilities')
+        expected = [expected_body(verb) for verb in (*ASK, 'choose', 'choose')]
+        expected[-1]['state'] = {'context': 'Separate context.', 'text': 'Compare originals.'}
+        expect(backend.bodies, expected, 'independent ordered original bodies and one evaluation per public call while recording')
         replay = child(STORED.replace('images.sqlite', 'images-replay.sqlite') + f'''
 db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":False,"replay":{record!r}}}),))
 say(values=[run(db, 'SELECT thinkthen_' + verb + '_images(?, ?, ?)', (question, packed, 'Compare originals.')) for verb, question in {ASK!r}.items()])
@@ -49,7 +56,7 @@ db.execute('SELECT thinkthen_configure(?)', (json.dumps({{"model":"d1","cache":F
 say(error=run(db, 'SELECT thinkthen_decide_images(?, ?, ?)', ('A different question?', packed, 'Compare originals.')))
 ''', {**env, 'THINKTHEN_MAX_REQUESTS_TOTAL':'0'})
         expect(miss['error'], 'thinkthen local: the replay folder holds no answer for this question (retryable: no)', 'strict miss never becomes unsure')
-        expect(backend.count(), 4, 'replay and misses send nothing')
+        expect(backend.count(), 5, 'replay and misses send nothing')
 
 
 def test_complete_decide_accepts_stored_blob_and_strict_replay():
