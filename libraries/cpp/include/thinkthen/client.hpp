@@ -4,9 +4,6 @@
 #include "inputs_generated.hpp"
 #include <memory>
 namespace tt {
-enum class NativeFailureKind { usage=THINKTHEN_EUSAGE, backend=THINKTHEN_EBACKEND,
-    deadline=THINKTHEN_EDEADLINE, local=THINKTHEN_ELOCAL,
-    cancelled=THINKTHEN_ECANCELLED, defect=THINKTHEN_EDEFECT };
 class NativeFailure : public std::runtime_error {
 public:
     NativeFailureKind kind;
@@ -47,15 +44,18 @@ public:
     void close() noexcept { input_closed_=true; session_.reset(); }
     bool input_closed() const noexcept { return input_closed_ || !session_; }
     void finish() { require_live(); detail::check_session(thinkthen_session_finish(session_.get(),nullptr,0)); input_closed_=true; }
-    bool try_push(const inputs::RequestSessionDescriptor& item) {
+    bool try_push(const inputs::RequestSessionDescriptor& item) { return admit(item,false); }
+    bool push(const inputs::RequestSessionDescriptor& item) { return admit(item,true); }
+private:
+    bool admit(const inputs::RequestSessionDescriptor& item,bool blocking) {
         require_live(); if(input_closed_) return false; auto bytes=item.document().dump(); uint32_t state=THINKTHEN_SESSION_CLOSED_V1;
-        detail::check_session(thinkthen_session_try_push(session_.get(),bytes.data(),bytes.size(),&state));
+        detail::check_session(blocking ? thinkthen_session_push(session_.get(),bytes.data(),bytes.size(),&state) : thinkthen_session_try_push(session_.get(),bytes.data(),bytes.size(),&state));
         input_closed_=state==THINKTHEN_SESSION_CLOSED_V1;
         return state==THINKTHEN_SESSION_ACCEPTED_V1;
     }
-    Poll poll() {
+    Poll read(bool blocking=false,uint32_t interest=THINKTHEN_SESSION_WAIT_RESULT_V1) {
         require_live(); uint32_t state=THINKTHEN_SESSION_PENDING_V1; thinkthen_session_result* raw=nullptr;
-        detail::check_session(thinkthen_session_try_read(session_.get(),&state,&raw));
+        detail::check_session(blocking ? thinkthen_session_next_packet(session_.get(),interest,&state,&raw) : thinkthen_session_try_read(session_.get(),&state,&raw));
         std::unique_ptr<thinkthen_session_result,detail::PacketDeleter> packet(raw);
         if(state==THINKTHEN_SESSION_PENDING_V1) return {PollState::pending,{}};
         if(state==THINKTHEN_SESSION_END_V1) return {PollState::end,{}};
@@ -68,19 +68,21 @@ public:
         }
         return {PollState::result,std::move(value)};
     }
+public:
+    Poll poll() { return read(); }
+    Poll next() { return read(true); }
     // Wait consumes nothing. Keep this owner live and join waiters before close.
     void wait(bool input=false) {
         require_live(); uint32_t ready=0;
-        detail::check_session(thinkthen_session_wait(session_.get(),input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,50,&ready));
+        detail::check_session(thinkthen_session_wait(session_.get(),input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,UINT32_MAX,&ready));
     }
     // Explicit blocking convenience; a caller can run this on its chosen worker.
     std::vector<results::SessionPacket> collect() {
         std::vector<results::SessionPacket> values;
         try {
             for(;;) {
-                auto next=poll(); if(next.state==PollState::end) return values;
+                auto next=read(true,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1); if(next.state==PollState::end) return values;
                 if(next.packet) values.push_back(std::move(*next.packet));
-                else wait();
             }
         } catch(SessionFailure& error) { error.packets=std::move(values); throw; }
     }
@@ -89,46 +91,37 @@ struct UsageStatus {
     const UsagePersistenceState state;
     const std::optional<std::string> advice;
 };
-class Client {
+template<auto Reader> class AnswerCall : public Call {
+public:
+    explicit AnswerCall(Call&& call):Call(std::move(call)) {}
+    auto answer() { if(!input_closed()) finish(); return Reader(collect()); }
+};
+}
+#include "calls_generated.hpp"
+namespace tt {
+class Client : public NamedCalls<Client> {
+    friend class NamedCalls<Client>;
     std::unique_ptr<thinkthen_engine,detail::EngineDeleter> engine_;
-    template<class RequestCall>
-    Call start(RequestCall call,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
-        if(!engine_) throw std::logic_error("C++ client is closed");
-        call.set_question(question);
-        call.set_input(input);
-        call.set_options(options);
-        auto bytes=inputs::Request().set_call(call).document().dump();
+    Call start(const std::string& function,const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options) const {
+        auto q=question.document().dump(), in=input.document().dump(), opts=options.document().dump();
+        thinkthen_named_request_v1 request{{function.data(),function.size()},{q.data(),q.size()},{in.data(),in.size()},{opts.data(),opts.size()}};
         thinkthen_session* raw=nullptr;
-        detail::check_session(thinkthen_session_new_with_surface(engine_.get(),bytes.data(),bytes.size(),"cpp",3,&raw));
+        detail::check_session(thinkthen_session_new_named_with_surface(native_engine(),&request,{"cpp",3},&raw));
         return Call(raw);
     }
 public:
     Client():engine_(thinkthen_engine_new()) { check_engine(); }
+    explicit Client(const inputs::EngineSettings& settings):Client(settings.document().object()) {}
     explicit Client(const Json::Object& settings):engine_(thinkthen_engine_new_with(Json(settings).dump().c_str())) { check_engine(); }
     Client(Client&&)=default;
     Client& operator=(Client&&)=default;
     Client(const Client&)=delete;
     Client& operator=(const Client&)=delete;
     void close() noexcept { engine_.reset(); }
-    UsageStatus usage_persistence() const { return usage_status(false); }
-    UsageStatus finish_usage_status() const { return usage_status(true); }
-    Call decide(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallDecide{},question,input,options); }
-    Call choose(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallChoose{},question,input,options); }
-    Call tag(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallTag{},question,input,options); }
-    Call score(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallScore{},question,input,options); }
-    Call filter(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallFilter{},question,input,options); }
-    Call rank(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRank{},question,input,options); }
-    Call find(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallFind{},question,input,options); }
-    Call annotate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallAnnotate{},question,input,options); }
-    Call recognize(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRecognize{},question,input,options); }
-    Call relate(const inputs::RequestQuestion& question,const inputs::RequestInput& input,const inputs::RequestOptions& options={}) const { return start(inputs::RequestCallRelate{},question,input,options); }
 private:
-    UsageStatus usage_status(bool finish) const {
+    thinkthen_engine* native_engine() const {
         if(!engine_) throw std::logic_error("C++ client is closed");
-        thinkthen_complete_usage_persistence_v1 state{}; thinkthen_complete_utf8_v1 advice{};
-        int code=finish ? thinkthen_engine_finish_usage_status_v1(engine_.get(),&state,&advice) : thinkthen_engine_usage_persistence_v1(engine_.get(),&state,&advice);
-        detail::check_session(code);
-        return {static_cast<UsagePersistenceState>(state.kind), advice.data ? std::optional<std::string>(std::string(advice.data,advice.len)) : std::nullopt};
+        return engine_.get();
     }
     void check_engine() {
         if(!engine_) throw NativeFailure(thinkthen_error_code(nullptr),thinkthen_error_message(nullptr));
