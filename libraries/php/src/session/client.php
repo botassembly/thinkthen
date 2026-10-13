@@ -5,11 +5,11 @@ namespace ThinkThen;
 /** Native sessions own admission, scheduling, cache and every reading rule. */
 final class Client
 {
-    use NamedCalls, NativeErrors;
+    use NamedCalls;
     private \FFI $ffi;
     private ?\FFI\CData $engine = null;
     private \WeakMap $operations;
-    public function __construct(array $settings = [], ?string $library = null)
+    public function __construct(array|\ThinkThen\Inputs\Settings $settings = [], ?string $library = null)
     {
         $this->operations = new \WeakMap();
         $library ??= dirname(__DIR__, 2).'/native/libthinkthen.so';
@@ -18,14 +18,13 @@ final class Client
             if ($declarations === false) throw new \RuntimeException('native declarations are missing');
             $this->ffi = \FFI::cdef($declarations, $library);
         } catch (\Throwable $error) { throw new LocalFailure('native library could not be loaded', previous: $error); }
-        $engine = $this->ffi->thinkthen_engine_new_with(\ThinkThen\Inputs\Encoder::encode((object)$settings));
+        $engine = $this->ffi->thinkthen_engine_new_with(\ThinkThen\Internal\Encoder::encode(is_array($settings) ? (object)$settings : $settings));
         if ($engine === null || \FFI::isNull($engine)) {
             $code = $this->ffi->thinkthen_error_code(null);
-            self::throwImmediate($code, self::text($this->ffi->thinkthen_error_message(null)));
+            \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, false);
         }
         $this->engine = $engine;
     }
-    public static function text(mixed $value): string { return is_string($value) ? $value : \FFI::string($value); }
     public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
     public static function questionFile(string $path): QuestionInput { return new QuestionInput(['kind' => 'file', 'path' => $path]); }
     public static function questionNamed(string $name): QuestionInput { return new QuestionInput(['kind' => 'name', 'name' => $name]); }
@@ -40,7 +39,7 @@ final class Client
         return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
     }
     public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
-        array $options = [], ?Cancellation $cancel = null): Operation
+        array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): Operation
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
         if ($cancel?->cancelled) throw new CancelledFailure('the call was cancelled');
@@ -49,7 +48,7 @@ final class Client
         return $operation;
     }
     private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
-        array $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
+        array|\ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
     {
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
@@ -64,7 +63,7 @@ final class Client
         $code = $finish
             ? $this->ffi->thinkthen_engine_finish_usage_status_v1($this->engine, \FFI::addr($state), \FFI::addr($advice))
             : $this->ffi->thinkthen_engine_usage_persistence_v1($this->engine, \FFI::addr($state), \FFI::addr($advice));
-        if ($code !== 0) self::throwImmediate($code, self::text($this->ffi->thinkthen_session_error_message()));
+        if ($code !== 0) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
         return new UsageStatus(UsagePersistenceState::from($state->kind),
             \FFI::isNull($advice->data) ? null : \FFI::string($advice->data, $advice->len));
     }

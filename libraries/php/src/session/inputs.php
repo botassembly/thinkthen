@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace ThinkThen\Inputs;
 
+enum Omitted { case Value; }
+
 /** Input documents retain present nulls and unknown fields for native admission. */
 abstract class Document implements \JsonSerializable
 {
@@ -9,6 +11,8 @@ abstract class Document implements \JsonSerializable
     public function jsonSerialize(): object { return (object)$this->fields; }
     public function __debugInfo(): array { return ['type' => static::class]; }
 }
+
+namespace ThinkThen\Internal;
 
 /** Keep one validated JSON value unchanged for the native definition parser. */
 final readonly class RawJson

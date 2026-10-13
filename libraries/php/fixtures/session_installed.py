@@ -63,7 +63,7 @@ def main():
                 TT_AUTOLOAD=str(app / 'vendor/autoload.php'), TT_BARRIER=str(work / 'barrier'),
                 THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
                 THINKTHEN_API_KEY='tt-canary-291')
-            for mode in ('surface', 'poll', 'named', 'presence', 'failure', 'zero', 'destroy'):
+            for mode in ('surface', 'poll', 'named', 'presence', 'native-values', 'failure', 'zero', 'destroy'):
                 before = server.attempts
                 result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
                     str(work / 'consumer.php'), mode], capture_output=True, env=env, timeout=5)

@@ -2,44 +2,67 @@
 // Generated from the shared Rust request graph; do not edit.
 declare(strict_types=1);
 namespace ThinkThen\Inputs;
-final class InputAuthoredRelation extends Document
+namespace ThinkThen\Inputs;
+final class RelationRule extends \ThinkThen\Inputs\Document
 {
-    public function __construct(string $name, array $fields = [])
+    public function __construct(string $name, bool|Omitted $either = Omitted::Value, string|Omitted $reads = Omitted::Value, bool|Omitted $single = Omitted::Value, string|Omitted $source = Omitted::Value, string|Omitted $target = Omitted::Value)
     {
-        parent::__construct(['name' => $name, ...$fields]);
+        parent::__construct([...($either === Omitted::Value ? [] : ['either' => $either]), 'name' => $name, ...($reads === Omitted::Value ? [] : ['reads' => $reads]), ...($single === Omitted::Value ? [] : ['single' => $single]), ...($source === Omitted::Value ? [] : ['source' => $source]), ...($target === Omitted::Value ? [] : ['target' => $target])]);
     }
 }
-final class InputRecognizeDefinition extends Document
+namespace ThinkThen\Inputs;
+final class Settings extends \ThinkThen\Inputs\Document
 {
-    public const TAGS = ['version' => 1];
-    public function __construct(mixed $recognize, array $fields = [])
+    public function __construct(string|Omitted $backend = Omitted::Value, string|Omitted $base_url = Omitted::Value, mixed $batch = Omitted::Value, mixed $cache = Omitted::Value, mixed $max_estimated_input_tokens_total = Omitted::Value, int|Omitted $max_request_bytes = Omitted::Value, mixed $max_requests = Omitted::Value, mixed $max_requests_total = Omitted::Value, int|Omitted $max_retries = Omitted::Value, string|Omitted $model = Omitted::Value, string|Omitted $profile = Omitted::Value, mixed $proxy = Omitted::Value, string|Omitted $record = Omitted::Value, bool|Omitted $refresh_cache = Omitted::Value, string|Omitted $replay = Omitted::Value, int|Omitted $throttle = Omitted::Value, int|Omitted $timeout = Omitted::Value, string|Omitted $usd_per_million_input = Omitted::Value, string|Omitted $usd_per_million_output = Omitted::Value)
     {
-        parent::__construct([...self::TAGS, 'recognize' => $recognize, ...$fields]);
+        parent::__construct([...($backend === Omitted::Value ? [] : ['backend' => $backend]), ...($base_url === Omitted::Value ? [] : ['base_url' => $base_url]), ...($batch === Omitted::Value ? [] : ['batch' => $batch]), ...($cache === Omitted::Value ? [] : ['cache' => $cache]), ...($max_estimated_input_tokens_total === Omitted::Value ? [] : ['max_estimated_input_tokens_total' => $max_estimated_input_tokens_total]), ...($max_request_bytes === Omitted::Value ? [] : ['max_request_bytes' => $max_request_bytes]), ...($max_requests === Omitted::Value ? [] : ['max_requests' => $max_requests]), ...($max_requests_total === Omitted::Value ? [] : ['max_requests_total' => $max_requests_total]), ...($max_retries === Omitted::Value ? [] : ['max_retries' => $max_retries]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), ...($proxy === Omitted::Value ? [] : ['proxy' => $proxy]), ...($record === Omitted::Value ? [] : ['record' => $record]), ...($refresh_cache === Omitted::Value ? [] : ['refresh_cache' => $refresh_cache]), ...($replay === Omitted::Value ? [] : ['replay' => $replay]), ...($throttle === Omitted::Value ? [] : ['throttle' => $throttle]), ...($timeout === Omitted::Value ? [] : ['timeout' => $timeout]), ...($usd_per_million_input === Omitted::Value ? [] : ['usd_per_million_input' => $usd_per_million_input]), ...($usd_per_million_output === Omitted::Value ? [] : ['usd_per_million_output' => $usd_per_million_output])]);
     }
 }
-final class InputRecognizeQuestion extends Document
-{
-    public function __construct(array $fields = [])
-    {
-        parent::__construct($fields);
-    }
-}
-final class InputRelateQuestion extends Document
-{
-    public function __construct(array $relations, array $fields = [])
-    {
-        parent::__construct(['relations' => $relations, ...$fields]);
-    }
-}
-final class InputRequestDefinitionAuthoredRelate extends Document
+namespace ThinkThen\Inputs;
+final class RecognitionDefinition extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['version' => 1];
-    public function __construct(mixed $relate, array $fields = [])
+    public function __construct(RecognitionSpec $recognize, mixed $context_schema = Omitted::Value, mixed $item_schema = Omitted::Value, string|Omitted $model = Omitted::Value, string|Omitted $name = Omitted::Value, mixed $on = Omitted::Value, string|Omitted $profile = Omitted::Value, mixed $relation_threshold = Omitted::Value, mixed $threshold = Omitted::Value, int|Omitted $wording_version = Omitted::Value)
     {
-        parent::__construct([...self::TAGS, 'relate' => $relate, ...$fields]);
+        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($on === Omitted::Value ? [] : ['on' => $on]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'recognize' => $recognize, ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
     }
 }
-final class InputRequestInputEntities extends Document
+namespace ThinkThen\Inputs;
+final class RecognitionSpec extends \ThinkThen\Inputs\Document
+{
+    public function __construct(mixed $entity_definition = Omitted::Value, mixed $instructions = Omitted::Value, mixed $kinds = Omitted::Value, mixed $mode = Omitted::Value, array|Omitted $relations = Omitted::Value, int|Omitted $snippet_pieces = Omitted::Value, mixed $stage_context = Omitted::Value)
+    {
+        parent::__construct([...($entity_definition === Omitted::Value ? [] : ['entity_definition' => $entity_definition]), ...($instructions === Omitted::Value ? [] : ['instructions' => $instructions]), ...($kinds === Omitted::Value ? [] : ['kinds' => $kinds]), ...($mode === Omitted::Value ? [] : ['mode' => $mode]), ...($relations === Omitted::Value ? [] : ['relations' => $relations]), ...($snippet_pieces === Omitted::Value ? [] : ['snippet_pieces' => $snippet_pieces]), ...($stage_context === Omitted::Value ? [] : ['stage_context' => $stage_context])]);
+    }
+}
+namespace ThinkThen\Inputs;
+final class RelationSpec extends \ThinkThen\Inputs\Document
+{
+    public function __construct(array $relations, mixed $fields = Omitted::Value)
+    {
+        parent::__construct([...($fields === Omitted::Value ? [] : ['fields' => $fields]), 'relations' => $relations]);
+    }
+}
+namespace ThinkThen\Inputs;
+final class RelateQuestion extends \ThinkThen\Inputs\Document
+{
+    public const TAGS = ['version' => 1];
+    public function __construct(RelationSpec $relate, mixed $context_schema = Omitted::Value, mixed $item_schema = Omitted::Value, string|Omitted $model = Omitted::Value, string|Omitted $name = Omitted::Value, string|Omitted $profile = Omitted::Value, mixed $threshold = Omitted::Value, int|Omitted $wording_version = Omitted::Value)
+    {
+        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'relate' => $relate, ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
+    }
+}
+namespace ThinkThen\Inputs;
+final class RecognizeQuestion extends \ThinkThen\Inputs\Document
+{
+    public const TAGS = ['version' => 1];
+    public function __construct(RecognitionSpec $recognize, mixed $context_schema = Omitted::Value, mixed $item_schema = Omitted::Value, string|Omitted $model = Omitted::Value, string|Omitted $name = Omitted::Value, mixed $on = Omitted::Value, string|Omitted $profile = Omitted::Value, mixed $relation_threshold = Omitted::Value, mixed $threshold = Omitted::Value, int|Omitted $wording_version = Omitted::Value)
+    {
+        parent::__construct([...self::TAGS, ...($context_schema === Omitted::Value ? [] : ['context_schema' => $context_schema]), ...($item_schema === Omitted::Value ? [] : ['item_schema' => $item_schema]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($name === Omitted::Value ? [] : ['name' => $name]), ...($on === Omitted::Value ? [] : ['on' => $on]), ...($profile === Omitted::Value ? [] : ['profile' => $profile]), 'recognize' => $recognize, ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($wording_version === Omitted::Value ? [] : ['wording_version' => $wording_version])]);
+    }
+}
+namespace ThinkThen\Internal\Requests;
+final class InputEntities extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'entities'];
     public function __construct(array $items, array $fields = [])
@@ -47,7 +70,8 @@ final class InputRequestInputEntities extends Document
         parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
-final class InputRequestInputFeed extends Document
+namespace ThinkThen\Internal\Requests;
+final class InputFeed extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'feed'];
     public function __construct(string $name, array $fields = [])
@@ -55,7 +79,8 @@ final class InputRequestInputFeed extends Document
         parent::__construct([...self::TAGS, 'name' => $name, ...$fields]);
     }
 }
-final class InputRequestInputRecords extends Document
+namespace ThinkThen\Internal\Requests;
+final class InputRecords extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'records'];
     public function __construct(array $items, array $fields = [])
@@ -63,7 +88,8 @@ final class InputRequestInputRecords extends Document
         parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
-final class InputRequestInputSource extends Document
+namespace ThinkThen\Internal\Requests;
+final class InputSource extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'source'];
     public function __construct(mixed $source, array $fields = [])
@@ -71,7 +97,8 @@ final class InputRequestInputSource extends Document
         parent::__construct([...self::TAGS, 'source' => $source, ...$fields]);
     }
 }
-final class InputRequestInputUnits extends Document
+namespace ThinkThen\Internal\Requests;
+final class InputUnits extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'units'];
     public function __construct(array $items, array $fields = [])
@@ -79,24 +106,28 @@ final class InputRequestInputUnits extends Document
         parent::__construct([...self::TAGS, 'items' => $items, ...$fields]);
     }
 }
-final class InputRequestItem extends Document
+namespace ThinkThen\Internal\Requests;
+final class Item extends \ThinkThen\Inputs\Document
 {
     public function __construct(array $fields = [])
     {
         parent::__construct($fields);
     }
 }
-final class InputRequestOptions extends Document
+namespace ThinkThen\Inputs;
+final class Options extends \ThinkThen\Inputs\Document
 {
-    public function __construct(array $fields = [])
+    public function __construct(bool|Omitted $attempts = Omitted::Value, mixed $batch = Omitted::Value, string|Omitted $context = Omitted::Value, string|Omitted $context_field = Omitted::Value, int|Omitted $deadline_ms = Omitted::Value, bool|Omitted $details = Omitted::Value, array|Omitted $examples = Omitted::Value, string|Omitted $examples_field = Omitted::Value, array|Omitted $field = Omitted::Value, bool|Omitted $files_only = Omitted::Value, int|Omitted $max_requests_total = Omitted::Value, mixed $mode = Omitted::Value, string|Omitted $model = Omitted::Value, bool|Omitted $none = Omitted::Value, string|Omitted $options_field = Omitted::Value, mixed $relation_threshold = Omitted::Value, array|Omitted $seed_spans = Omitted::Value, string|Omitted $seed_spans_field = Omitted::Value, int|Omitted $snippet_pieces = Omitted::Value, mixed $stage_context = Omitted::Value, mixed $threshold = Omitted::Value, int|Omitted $top = Omitted::Value)
     {
-        parent::__construct($fields);
+        parent::__construct([...($attempts === Omitted::Value ? [] : ['attempts' => $attempts]), ...($batch === Omitted::Value ? [] : ['batch' => $batch]), ...($context === Omitted::Value ? [] : ['context' => $context]), ...($context_field === Omitted::Value ? [] : ['context_field' => $context_field]), ...($deadline_ms === Omitted::Value ? [] : ['deadline_ms' => $deadline_ms]), ...($details === Omitted::Value ? [] : ['details' => $details]), ...($examples === Omitted::Value ? [] : ['examples' => $examples]), ...($examples_field === Omitted::Value ? [] : ['examples_field' => $examples_field]), ...($field === Omitted::Value ? [] : ['field' => $field]), ...($files_only === Omitted::Value ? [] : ['files_only' => $files_only]), ...($max_requests_total === Omitted::Value ? [] : ['max_requests_total' => $max_requests_total]), ...($mode === Omitted::Value ? [] : ['mode' => $mode]), ...($model === Omitted::Value ? [] : ['model' => $model]), ...($none === Omitted::Value ? [] : ['none' => $none]), ...($options_field === Omitted::Value ? [] : ['options_field' => $options_field]), ...($relation_threshold === Omitted::Value ? [] : ['relation_threshold' => $relation_threshold]), ...($seed_spans === Omitted::Value ? [] : ['seed_spans' => $seed_spans]), ...($seed_spans_field === Omitted::Value ? [] : ['seed_spans_field' => $seed_spans_field]), ...($snippet_pieces === Omitted::Value ? [] : ['snippet_pieces' => $snippet_pieces]), ...($stage_context === Omitted::Value ? [] : ['stage_context' => $stage_context]), ...($threshold === Omitted::Value ? [] : ['threshold' => $threshold]), ...($top === Omitted::Value ? [] : ['top' => $top])]);
     }
 }
-final class InputRequestQuestion extends Document
+namespace ThinkThen\Internal\Requests;
+final class Question extends \ThinkThen\Inputs\Document
 {
 }
-final class InputRequestQuestionDefinition extends Document
+namespace ThinkThen\Internal\Requests;
+final class QuestionDefinition extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'definition'];
     public function __construct(mixed $value, array $fields = [])
@@ -104,7 +135,8 @@ final class InputRequestQuestionDefinition extends Document
         parent::__construct([...self::TAGS, 'value' => $value, ...$fields]);
     }
 }
-final class InputRequestQuestionText extends Document
+namespace ThinkThen\Internal\Requests;
+final class QuestionText extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'text'];
     public function __construct(string $text, array $fields = [])
@@ -112,14 +144,16 @@ final class InputRequestQuestionText extends Document
         parent::__construct([...self::TAGS, 'text' => $text, ...$fields]);
     }
 }
-final class InputRequestReader extends Document
+namespace ThinkThen\Internal\Requests;
+final class Reader extends \ThinkThen\Inputs\Document
 {
     public function __construct(array $fields = [])
     {
         parent::__construct($fields);
     }
 }
-final class InputRequestReaderFailureProducer extends Document
+namespace ThinkThen\Internal\Requests;
+final class ReaderFailureProducer extends \ThinkThen\Inputs\Document
 {
     public const TAGS = ['kind' => 'producer'];
     public function __construct(array $fields = [])
@@ -127,14 +161,16 @@ final class InputRequestReaderFailureProducer extends Document
         parent::__construct([...self::TAGS, ...$fields]);
     }
 }
-final class InputRequestSessionDescriptor extends Document
+namespace ThinkThen\Internal\Requests;
+final class SessionDescriptor extends \ThinkThen\Inputs\Document
 {
     public function __construct(mixed $item, array $fields = [])
     {
         parent::__construct(['item' => $item, ...$fields]);
     }
 }
-final class InputRequestSource extends Document
+namespace ThinkThen\Internal\Requests;
+final class Source extends \ThinkThen\Inputs\Document
 {
     public function __construct(array $paths, array $fields = [])
     {
@@ -144,14 +180,14 @@ final class InputRequestSource extends Document
 namespace ThinkThen;
 trait NamedCalls
 {
-    public function decide(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('decide', $question, $input, $options, $cancel); }
-    public function choose(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('choose', $question, $input, $options, $cancel); }
-    public function tag(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('tag', $question, $input, $options, $cancel); }
-    public function score(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('score', $question, $input, $options, $cancel); }
-    public function filter(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('filter', $question, $input, $options, $cancel); }
-    public function rank(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('rank', $question, $input, $options, $cancel); }
-    public function find(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('find', $question, $input, $options, $cancel); }
-    public function annotate(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
-    public function recognize(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
-    public function relate(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
+    public function decide(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('decide', $question, $input, $options, $cancel); }
+    public function choose(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('choose', $question, $input, $options, $cancel); }
+    public function tag(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('tag', $question, $input, $options, $cancel); }
+    public function score(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('score', $question, $input, $options, $cancel); }
+    public function filter(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('filter', $question, $input, $options, $cancel); }
+    public function rank(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('rank', $question, $input, $options, $cancel); }
+    public function find(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('find', $question, $input, $options, $cancel); }
+    public function annotate(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('annotate', $question, $input, $options, $cancel); }
+    public function recognize(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('recognize', $question, $input, $options, $cancel); }
+    public function relate(string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input, array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): \ThinkThen\Results\Completed { return $this->call('relate', $question, $input, $options, $cancel); }
 }
