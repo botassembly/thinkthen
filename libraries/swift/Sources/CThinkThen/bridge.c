@@ -29,21 +29,11 @@ struct native_functions {
     const char * (*thinkthen_error_message)(const thinkthen_engine *);
     int (*thinkthen_error_retryable)(const thinkthen_engine *);
     void (*thinkthen_free_string)(char *);
-    int (*thinkthen_image_clone)(const thinkthen_engine *, const uint8_t *, size_t, uint32_t, thinkthen_optional_string_v1, thinkthen_image **);
-    void (*thinkthen_image_free)(thinkthen_image *);
-    int (*thinkthen_image_view)(const thinkthen_image *, thinkthen_image_view_v1 *);
     int (*thinkthen_plan_json)(const thinkthen_engine *, const char *, char **, size_t *);
     int (*thinkthen_question_author)(const thinkthen_question *, thinkthen_question_author_v1 *);
     int (*thinkthen_question_file)(const thinkthen_engine *, const char *, char **, size_t *);
     void (*thinkthen_question_free)(thinkthen_question *);
-    int (*thinkthen_question_load)(const thinkthen_engine *, thinkthen_string_v1, thinkthen_question **);
-    int (*thinkthen_question_load_named)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
-    int (*thinkthen_question_load_reference)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
-    int (*thinkthen_question_new)(const thinkthen_engine *, const thinkthen_question_spec_v1 *, thinkthen_question **);
-    int (*thinkthen_question_new_authored)(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, thinkthen_question **);
-    int (*thinkthen_question_new_recognition_v1)(const thinkthen_engine *, const thinkthen_question_spec_v1 *, const thinkthen_question_author_v1 *, const thinkthen_recognition_task_v1 *, thinkthen_question **);
     int (*thinkthen_question_parse)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
-    int (*thinkthen_question_recognition_task_v1)(const thinkthen_question *, thinkthen_recognition_task_v1 *);
     int (*thinkthen_recognize)(const thinkthen_engine *, const char *, const char *, size_t, char **, size_t *);
     int (*thinkthen_recognize_opts)(const thinkthen_engine *, const char *, const char *, size_t, int64_t, thinkthen_cancel_token *, char **, size_t *);
     int (*thinkthen_recognize_with_facts)(const thinkthen_engine *, const char *, const char *, size_t, char **, size_t *, char **, size_t *);
@@ -68,10 +58,6 @@ struct native_functions {
     int (*thinkthen_session_try_push)(thinkthen_session *, const char *, size_t, uint32_t *);
     int (*thinkthen_session_try_read)(thinkthen_session *, uint32_t *, thinkthen_session_result **);
     int (*thinkthen_session_wait)(const thinkthen_session *, uint32_t, uint32_t, uint32_t *);
-    int (*thinkthen_source_files)(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
-    void (*thinkthen_source_free)(thinkthen_source *);
-    int (*thinkthen_source_image_files)(const thinkthen_engine *, const thinkthen_source_spec_v1 *, thinkthen_source **);
-    int (*thinkthen_source_records)(const thinkthen_engine *, const thinkthen_record_v1 *, size_t, thinkthen_source **);
 };
 static struct native_functions native;
 static pthread_mutex_t loading = PTHREAD_MUTEX_INITIALIZER;
@@ -177,18 +163,6 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_free_string) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_free_string, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_image_clone");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_image_clone) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_image_clone, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_image_free");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_image_free) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_image_free, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_image_view");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_image_view) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_image_view, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_plan_json");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_plan_json) == sizeof(symbol), "function pointer width");
@@ -205,38 +179,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_question_free) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_question_free, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_load");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_load) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_load, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_load_named");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_load_named) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_load_named, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_load_reference");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_load_reference) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_load_reference, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_new");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_new) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_new, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_new_authored");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_new_authored) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_new_authored, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_new_recognition_v1");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_new_recognition_v1) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_new_recognition_v1, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_question_parse");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_question_parse) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_question_parse, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_question_recognition_task_v1");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_question_recognition_task_v1) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_question_recognition_task_v1, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_recognize");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_recognize) == sizeof(symbol), "function pointer width");
@@ -333,22 +279,6 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_wait) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_wait, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_source_files");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_source_files) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_source_files, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_source_free");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_source_free) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_source_free, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_source_image_files");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_source_image_files) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_source_image_files, &symbol, sizeof(symbol));
-            symbol = dlsym(handle, "thinkthen_source_records");
-            if (!symbol) goto failed;
-            _Static_assert(sizeof(candidate.thinkthen_source_records) == sizeof(symbol), "function pointer width");
-            memcpy(&candidate.thinkthen_source_records, &symbol, sizeof(symbol));
             native = candidate;
             native_handle = handle; // Workers may outlive Swift owners; retain until process exit.
             state = 1;
@@ -454,18 +384,6 @@ void thinkthen_free_string(char * arg0) {
     if (!native.thinkthen_free_string) abort();
     native.thinkthen_free_string(arg0);
 }
-int thinkthen_image_clone(const thinkthen_engine * arg0, const uint8_t * arg1, size_t arg2, uint32_t arg3, thinkthen_optional_string_v1 arg4, thinkthen_image ** arg5) {
-    if (!native.thinkthen_image_clone) abort();
-    return native.thinkthen_image_clone(arg0, arg1, arg2, arg3, arg4, arg5);
-}
-void thinkthen_image_free(thinkthen_image * arg0) {
-    if (!native.thinkthen_image_free) abort();
-    native.thinkthen_image_free(arg0);
-}
-int thinkthen_image_view(const thinkthen_image * arg0, thinkthen_image_view_v1 * arg1) {
-    if (!native.thinkthen_image_view) abort();
-    return native.thinkthen_image_view(arg0, arg1);
-}
 int thinkthen_plan_json(const thinkthen_engine * arg0, const char * arg1, char ** arg2, size_t * arg3) {
     if (!native.thinkthen_plan_json) abort();
     return native.thinkthen_plan_json(arg0, arg1, arg2, arg3);
@@ -482,37 +400,9 @@ void thinkthen_question_free(thinkthen_question * arg0) {
     if (!native.thinkthen_question_free) abort();
     native.thinkthen_question_free(arg0);
 }
-int thinkthen_question_load(const thinkthen_engine * arg0, thinkthen_string_v1 arg1, thinkthen_question ** arg2) {
-    if (!native.thinkthen_question_load) abort();
-    return native.thinkthen_question_load(arg0, arg1, arg2);
-}
-int thinkthen_question_load_named(const thinkthen_engine * arg0, uint32_t arg1, thinkthen_string_v1 arg2, thinkthen_question ** arg3) {
-    if (!native.thinkthen_question_load_named) abort();
-    return native.thinkthen_question_load_named(arg0, arg1, arg2, arg3);
-}
-int thinkthen_question_load_reference(const thinkthen_engine * arg0, uint32_t arg1, thinkthen_string_v1 arg2, thinkthen_question ** arg3) {
-    if (!native.thinkthen_question_load_reference) abort();
-    return native.thinkthen_question_load_reference(arg0, arg1, arg2, arg3);
-}
-int thinkthen_question_new(const thinkthen_engine * arg0, const thinkthen_question_spec_v1 * arg1, thinkthen_question ** arg2) {
-    if (!native.thinkthen_question_new) abort();
-    return native.thinkthen_question_new(arg0, arg1, arg2);
-}
-int thinkthen_question_new_authored(const thinkthen_engine * arg0, const thinkthen_question_spec_v1 * arg1, const thinkthen_question_author_v1 * arg2, thinkthen_question ** arg3) {
-    if (!native.thinkthen_question_new_authored) abort();
-    return native.thinkthen_question_new_authored(arg0, arg1, arg2, arg3);
-}
-int thinkthen_question_new_recognition_v1(const thinkthen_engine * arg0, const thinkthen_question_spec_v1 * arg1, const thinkthen_question_author_v1 * arg2, const thinkthen_recognition_task_v1 * arg3, thinkthen_question ** arg4) {
-    if (!native.thinkthen_question_new_recognition_v1) abort();
-    return native.thinkthen_question_new_recognition_v1(arg0, arg1, arg2, arg3, arg4);
-}
 int thinkthen_question_parse(const thinkthen_engine * arg0, uint32_t arg1, thinkthen_string_v1 arg2, thinkthen_question ** arg3) {
     if (!native.thinkthen_question_parse) abort();
     return native.thinkthen_question_parse(arg0, arg1, arg2, arg3);
-}
-int thinkthen_question_recognition_task_v1(const thinkthen_question * arg0, thinkthen_recognition_task_v1 * arg1) {
-    if (!native.thinkthen_question_recognition_task_v1) abort();
-    return native.thinkthen_question_recognition_task_v1(arg0, arg1);
 }
 int thinkthen_recognize(const thinkthen_engine * arg0, const char * arg1, const char * arg2, size_t arg3, char ** arg4, size_t * arg5) {
     if (!native.thinkthen_recognize) abort();
@@ -609,21 +499,5 @@ int thinkthen_session_try_read(thinkthen_session * arg0, uint32_t * arg1, thinkt
 int thinkthen_session_wait(const thinkthen_session * arg0, uint32_t arg1, uint32_t arg2, uint32_t * arg3) {
     if (!native.thinkthen_session_wait) abort();
     return native.thinkthen_session_wait(arg0, arg1, arg2, arg3);
-}
-int thinkthen_source_files(const thinkthen_engine * arg0, const thinkthen_source_spec_v1 * arg1, thinkthen_source ** arg2) {
-    if (!native.thinkthen_source_files) abort();
-    return native.thinkthen_source_files(arg0, arg1, arg2);
-}
-void thinkthen_source_free(thinkthen_source * arg0) {
-    if (!native.thinkthen_source_free) abort();
-    native.thinkthen_source_free(arg0);
-}
-int thinkthen_source_image_files(const thinkthen_engine * arg0, const thinkthen_source_spec_v1 * arg1, thinkthen_source ** arg2) {
-    if (!native.thinkthen_source_image_files) abort();
-    return native.thinkthen_source_image_files(arg0, arg1, arg2);
-}
-int thinkthen_source_records(const thinkthen_engine * arg0, const thinkthen_record_v1 * arg1, size_t arg2, thinkthen_source ** arg3) {
-    if (!native.thinkthen_source_records) abort();
-    return native.thinkthen_source_records(arg0, arg1, arg2, arg3);
 }
 #pragma GCC visibility pop

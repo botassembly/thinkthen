@@ -305,9 +305,6 @@ typedef enum thinkthen_question_loader_role_v1 {
 typedef struct thinkthen_engine thinkthen_engine;
 
 
-typedef struct thinkthen_image thinkthen_image;
-
-
 typedef struct thinkthen_question thinkthen_question;
 
 
@@ -315,9 +312,6 @@ typedef struct thinkthen_session thinkthen_session;
 
 
 typedef struct thinkthen_session_result thinkthen_session_result;
-
-
-typedef struct thinkthen_source thinkthen_source;
 
 
 typedef struct thinkthen_answer {
@@ -351,22 +345,6 @@ typedef struct thinkthen_optional_string_v1 {
 
   struct thinkthen_string_v1 value;
 } thinkthen_optional_string_v1;
-
-
-typedef struct thinkthen_image_view_v1 {
-
-  uint32_t media;
-
-  const uint8_t *bytes;
-
-  size_t bytes_len;
-
-  uint32_t width;
-
-  uint32_t height;
-
-  struct thinkthen_optional_string_v1 filename;
-} thinkthen_image_view_v1;
 
 
 typedef struct thinkthen_optional_u64_v1 {
@@ -421,154 +399,6 @@ typedef struct thinkthen_question_author_v1 {
 
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
-
-
-typedef struct thinkthen_content_v1 {
-
-  uint32_t kind;
-
-  struct thinkthen_string_v1 data;
-} thinkthen_content_v1;
-
-
-typedef struct thinkthen_optional_content_v1 {
-
-  int present;
-
-  struct thinkthen_content_v1 value;
-} thinkthen_optional_content_v1;
-
-
-typedef struct thinkthen_optional_double_v1 {
-
-  int present;
-
-  double value;
-} thinkthen_optional_double_v1;
-
-
-typedef struct thinkthen_choice_v1 {
-
-  struct thinkthen_string_v1 name;
-
-  struct thinkthen_optional_content_v1 description;
-
-  struct thinkthen_optional_double_v1 weight;
-} thinkthen_choice_v1;
-
-
-typedef struct thinkthen_choices_v1 {
-
-  const struct thinkthen_choice_v1 *data;
-
-  size_t len;
-} thinkthen_choices_v1;
-
-
-typedef struct thinkthen_rule_v1 {
-
-  uint32_t kind;
-
-  double low;
-
-  double high;
-} thinkthen_rule_v1;
-
-
-typedef struct thinkthen_optional_size_v1 {
-
-  int present;
-
-  size_t value;
-} thinkthen_optional_size_v1;
-
-
-typedef struct thinkthen_member_spec_v1 {
-
-  struct thinkthen_string_v1 name;
-
-  const struct thinkthen_question *question;
-} thinkthen_member_spec_v1;
-
-
-typedef struct thinkthen_member_specs_v1 {
-
-  const struct thinkthen_member_spec_v1 *data;
-
-  size_t len;
-} thinkthen_member_specs_v1;
-
-
-typedef struct thinkthen_relation_v1 {
-
-  struct thinkthen_string_v1 name;
-
-  struct thinkthen_string_v1 source;
-
-  struct thinkthen_string_v1 target;
-
-  struct thinkthen_optional_string_v1 reads;
-
-  int either;
-
-  int single;
-} thinkthen_relation_v1;
-
-
-typedef struct thinkthen_relations_v1 {
-
-  const struct thinkthen_relation_v1 *data;
-
-  size_t len;
-} thinkthen_relations_v1;
-
-
-typedef struct thinkthen_question_spec_v1 {
-
-  uint32_t kind;
-
-  struct thinkthen_content_v1 text;
-
-  struct thinkthen_optional_content_v1 yes;
-
-  struct thinkthen_optional_content_v1 no;
-
-  struct thinkthen_choices_v1 choices;
-
-  struct thinkthen_rule_v1 threshold;
-
-  struct thinkthen_rule_v1 relation_threshold;
-
-  struct thinkthen_optional_string_v1 model;
-
-  struct thinkthen_optional_string_v1 profile;
-
-  struct thinkthen_optional_size_v1 batch;
-
-  int batch_max;
-
-  int none;
-
-  struct thinkthen_strings_v1 on;
-
-  struct thinkthen_member_specs_v1 members;
-
-  struct thinkthen_choices_v1 kinds;
-
-  struct thinkthen_relations_v1 relations;
-
-  struct thinkthen_optional_string_v1 name_pointer;
-
-  struct thinkthen_optional_string_v1 kind_pointer;
-} thinkthen_question_spec_v1;
-
-
-typedef struct thinkthen_recognition_task_v1 {
-
-  struct thinkthen_optional_string_v1 instructions;
-
-  struct thinkthen_optional_string_v1 entity_definition;
-} thinkthen_recognition_task_v1;
 
 
 typedef struct thinkthen_named_request_v1 {
@@ -3898,36 +3728,6 @@ typedef struct thinkthen_complete_session_packet_v1 {
 } thinkthen_complete_session_packet_v1;
 
 
-typedef struct thinkthen_source_spec_v1 {
-
-  struct thinkthen_strings_v1 paths;
-
-  uint32_t unit;
-
-  size_t window;
-} thinkthen_source_spec_v1;
-
-
-typedef struct thinkthen_images_v1 {
-
-  const struct thinkthen_image *const *data;
-
-  size_t len;
-} thinkthen_images_v1;
-
-
-typedef struct thinkthen_record_v1 {
-
-  struct thinkthen_optional_content_v1 original;
-
-  struct thinkthen_optional_content_v1 context;
-
-  struct thinkthen_choices_v1 options;
-
-  struct thinkthen_images_v1 images;
-} thinkthen_record_v1;
-
-
 
 
 
@@ -4059,20 +3859,6 @@ int thinkthen_error_retryable(const struct thinkthen_engine *engine);
 void thinkthen_free_string(char *text);
 
 
-int thinkthen_image_clone(const struct thinkthen_engine *engine,
-                          const uint8_t *bytes,
-                          size_t len,
-                          uint32_t media,
-                          struct thinkthen_optional_string_v1 filename,
-                          struct thinkthen_image **out);
-
-
-void thinkthen_image_free(struct thinkthen_image *owner);
-
-
-int thinkthen_image_view(const struct thinkthen_image *owner, struct thinkthen_image_view_v1 *out);
-
-
 int thinkthen_plan_json(const struct thinkthen_engine *engine,
                         const char *plan_json,
                         char **out,
@@ -4092,49 +3878,10 @@ int thinkthen_question_file(const struct thinkthen_engine *engine,
 void thinkthen_question_free(struct thinkthen_question *owner);
 
 
-int thinkthen_question_load(const struct thinkthen_engine *engine,
-                            struct thinkthen_string_v1 path,
-                            struct thinkthen_question **out);
-
-
-int thinkthen_question_load_named(const struct thinkthen_engine *engine,
-                                  uint32_t role,
-                                  struct thinkthen_string_v1 name,
-                                  struct thinkthen_question **out);
-
-
-int thinkthen_question_load_reference(const struct thinkthen_engine *engine,
-                                      uint32_t role,
-                                      struct thinkthen_string_v1 reference,
-                                      struct thinkthen_question **out);
-
-
-int thinkthen_question_new(const struct thinkthen_engine *engine,
-                           const struct thinkthen_question_spec_v1 *spec,
-                           struct thinkthen_question **out);
-
-
-int thinkthen_question_new_authored(const struct thinkthen_engine *engine,
-                                    const struct thinkthen_question_spec_v1 *spec,
-                                    const struct thinkthen_question_author_v1 *author,
-                                    struct thinkthen_question **out);
-
-
-int thinkthen_question_new_recognition_v1(const struct thinkthen_engine *engine,
-                                          const struct thinkthen_question_spec_v1 *spec,
-                                          const struct thinkthen_question_author_v1 *metadata,
-                                          const struct thinkthen_recognition_task_v1 *task,
-                                          struct thinkthen_question **out);
-
-
 int thinkthen_question_parse(const struct thinkthen_engine *engine,
                              uint32_t role,
                              struct thinkthen_string_v1 json,
                              struct thinkthen_question **out);
-
-
-int thinkthen_question_recognition_task_v1(const struct thinkthen_question *owner,
-                                           struct thinkthen_recognition_task_v1 *out);
 
 
 int thinkthen_recognize(const struct thinkthen_engine *engine,
@@ -4295,22 +4042,3 @@ int thinkthen_session_wait(const struct thinkthen_session *session,
                            uint32_t interest,
                            uint32_t timeout_ms,
                            uint32_t *out_ready);
-
-
-int thinkthen_source_files(const struct thinkthen_engine *engine,
-                           const struct thinkthen_source_spec_v1 *spec,
-                           struct thinkthen_source **out);
-
-
-void thinkthen_source_free(struct thinkthen_source *owner);
-
-
-int thinkthen_source_image_files(const struct thinkthen_engine *engine,
-                                 const struct thinkthen_source_spec_v1 *spec,
-                                 struct thinkthen_source **out);
-
-
-int thinkthen_source_records(const struct thinkthen_engine *engine,
-                             const struct thinkthen_record_v1 *records,
-                             size_t count,
-                             struct thinkthen_source **out);

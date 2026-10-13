@@ -245,10 +245,6 @@ pub enum QuestionLoaderRoleV1 {
     THINKTHEN_LOAD_FIND_V1 = 8,
 }
 
-/// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_ABSENT_V1`.
-pub(crate) const DECLARATION_ABSENT_V1: u32 =
-    InputDeclarationKindV1::THINKTHEN_DECLARATION_ABSENT_V1 as u32;
-
 /// Validated uint32 descriptor spelling for `THINKTHEN_DECLARATION_STRING_V1`.
 pub(crate) const DECLARATION_STRING_V1: u32 =
     InputDeclarationKindV1::THINKTHEN_DECLARATION_STRING_V1 as u32;

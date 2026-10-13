@@ -73,9 +73,9 @@ The bare typed calls, their `_opts` forms, later `*_with_facts` forms, collectin
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
-## Counted typed calls
+## Parsed questions
 
-Counted question/source/image constructors and immutable image views retain their ownership rules in the generated header. Sessions expose the generated complete graph described above.
+`thinkthen_question_parse` validates counted saved-question JSON through an explicit grammar role. `thinkthen_question_author` borrows the parsed question’s owned metadata until `thinkthen_question_free`. Sessions expose the generated complete graph described above.
 
 ## Windows x86-64
 
