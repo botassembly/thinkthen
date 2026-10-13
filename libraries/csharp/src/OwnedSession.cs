@@ -30,26 +30,18 @@ public sealed class OwnedSession : IDisposable
         {
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, disposed.Token);
             using var registration = cancellation.Register(Cancel);
-            while (true)
+            linked.Token.ThrowIfCancellationRequested();
+            try
+            {
+                SessionPacket? result = await Task.Factory.StartNew(() => ReadPacket(linked.Token),
+                    CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false);
+                linked.Token.ThrowIfCancellationRequested();
+                return result;
+            }
+            catch (Failure) when (linked.IsCancellationRequested)
             {
                 linked.Token.ThrowIfCancellationRequested();
-                NativeSession.Check(NativeSession.thinkthen_session_try_read(handle, out uint status, out var pointer));
-                if (status == 2) return null;
-                if (status == 0)
-                {
-                    using var packet = new PacketHandle(pointer);
-                    // Keep the owner pinned across both accessor and copy, not just P/Invoke.
-                    bool pinned = false;
-                    try
-                    {
-                        packet.DangerousAddRef(ref pinned);
-                        NativeSession.Check(NativeSession.thinkthen_session_result_json(packet, out var json, out var length));
-                        return SessionPacket.Read(Engine.ReadJson(json, length));
-                    }
-                    finally { if (pinned) packet.DangerousRelease(); }
-                }
-                if (status != 1) throw new InvalidOperationException("Invalid native read status.");
-                await WaitAsync(false).ConfigureAwait(false);
+                throw;
             }
         }
         finally { Volatile.Write(ref reading, 0); }
@@ -76,6 +68,36 @@ public sealed class OwnedSession : IDisposable
             }
         }
         finally { Volatile.Write(ref producing, 0); }
+    }
+    private SessionPacket? ReadPacket(CancellationToken cancellation)
+    {
+        while (true)
+        {
+            uint interest = Volatile.Read(ref cancelled) != 0 ? NativeWait.Settlement : NativeWait.Result;
+            uint status;
+            IntPtr pointer;
+            try
+            {
+                // Native diagnostics belong to this worker thread.
+                NativeSession.Check(NativeWait.thinkthen_session_next_packet(handle, interest, out status, out pointer));
+            }
+            catch (Failure failure) when (failure.Kind == FailureKind.Cancelled && Volatile.Read(ref cancelled) != 0)
+            {
+                cancellation.ThrowIfCancellationRequested();
+                continue;
+            }
+            if (status == NativeWait.ReadEnd) return null;
+            if (status != NativeWait.ReadResult) throw new InvalidOperationException("Invalid native read status.");
+            using var packet = new PacketHandle(pointer);
+            bool pinned = false;
+            try
+            {
+                packet.DangerousAddRef(ref pinned);
+                NativeSession.Check(NativeSession.thinkthen_session_result_json(packet, out var json, out var length));
+                return SessionPacket.Read(Engine.ReadJson(json, length));
+            }
+            finally { if (pinned) packet.DangerousRelease(); }
+        }
     }
     private Task WaitAsync(bool input) => Task.Factory.StartNew(() =>
     {
