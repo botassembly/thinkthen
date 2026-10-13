@@ -291,20 +291,21 @@ fn canonical_find_applies_the_engine_record_cap_before_reading_the_tail() {
         .unwrap()
         .build()
         .unwrap();
-    let request = Request::new((|arguments| {
-        RequestCall::new(RequestFunction::Find, arguments)
-    })(RequestArguments {
-        question: RequestQuestion::Definition {
-            value: Question::find("Which?").unwrap().into(),
+    let request = Request::new(RequestCall::new(
+        RequestFunction::Find,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: Question::find("Which?").unwrap().into(),
+            },
+            input: RequestInput::Feed {
+                name: "bounded".into(),
+                framing: RequestFraming::Document,
+                reading: thinkthen::ReaderOptions::default(),
+                images: vec![],
+            },
+            options: RequestOptions::default(),
         },
-        input: RequestInput::Feed {
-            name: "bounded".into(),
-            framing: RequestFraming::Document,
-            reading: thinkthen::ReaderOptions::default(),
-            images: vec![],
-        },
-        options: RequestOptions::default(),
-    }))
+    ))
     .admit()
     .unwrap();
     let rows = (0..2)

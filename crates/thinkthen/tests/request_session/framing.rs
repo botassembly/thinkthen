@@ -61,9 +61,10 @@ fn session_line_projection_refuses_before_intake() {
         };
         arguments.options.field = Some(vec!["/body".into()]);
         let error = engine
-            .request_session(Request::new((|arguments| {
-                RequestCall::new(RequestFunction::Decide, arguments)
-            })(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Decide,
+                arguments,
+            )))
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Usage);
         assert_eq!(
@@ -86,9 +87,10 @@ fn line_and_jsonl_descriptors_skip_blank_rows_and_keep_record_endings() {
             images: vec![],
         };
         let session = engine(&listener)
-            .request_session(Request::new((|arguments| {
-                RequestCall::new(RequestFunction::Decide, arguments)
-            })(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Decide,
+                arguments,
+            )))
             .unwrap();
         session.try_push(descriptor(" \t\r\n")).unwrap();
         let mut pending = descriptor(if matches!(framing, RequestFraming::Jsonl) {
@@ -141,9 +143,10 @@ fn jsonl_projects_located_text_and_preserves_prefix_on_later_syntax_failure() {
     arguments.options.context_field = Some("/policy".into());
     arguments.options.batch = Some(RequestBatch::Count(1));
     let session = engine(&listener)
-        .request_session(Request::new((|arguments| {
-            RequestCall::new(RequestFunction::Decide, arguments)
-        })(arguments)))
+        .request_session(Request::new(RequestCall::new(
+            RequestFunction::Decide,
+            arguments,
+        )))
         .unwrap();
     assert_eq!(session.try_push_json(&json!({"item":{"original":{"kind":"text","text":"{\"body\":\"first\",\"policy\":\"local policy\"}\r\n"}},"location":{"file":"rows.jsonl","first_line":1,"last_line":1}}).to_string()).unwrap(), RequestSessionPushStatus::Accepted);
     received.recv_timeout(Duration::from_secs(5)).unwrap();
@@ -196,9 +199,7 @@ pub(super) fn table_request(framing: RequestFraming) -> Request {
         unreachable!()
     };
     *declared = framing;
-    Request::new((|arguments| {
-        RequestCall::new(RequestFunction::Decide, arguments)
-    })(arguments))
+    Request::new(RequestCall::new(RequestFunction::Decide, arguments))
 }
 
 #[allow(
@@ -240,9 +241,10 @@ fn table_descriptors_decode_multiline_rows_and_preserve_projection_controls_and_
             arguments.options.context_field = Some("/policy".into());
         }
         let session = engine(&listener)
-            .request_session(Request::new((|arguments| {
-                RequestCall::new(RequestFunction::Decide, arguments)
-            })(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Decide,
+                arguments,
+            )))
             .unwrap();
         push(&session, descriptor(header));
         let mut item = json!({"original":{"kind":"text","text":row}});
@@ -399,10 +401,10 @@ fn table_reader_units_refuse_before_intake() {
             *declared = reading;
             assert_eq!(
                 engine(&listener)
-                    .request_session(Request::new((|arguments| RequestCall::new(
+                    .request_session(Request::new(RequestCall::new(
                         RequestFunction::Decide,
                         arguments
-                    ))(arguments)))
+                    )))
                     .unwrap_err()
                     .kind(),
                 ErrorKind::Usage
@@ -478,9 +480,10 @@ fn table_later_failures_preserve_completed_rows_and_actual_facts() {
         let mut arguments = table_request(RequestFraming::Csv).call.arguments().clone();
         arguments.options.batch = Some(RequestBatch::Count(1));
         let session = engine(&listener)
-            .request_session(Request::new((|arguments| {
-                RequestCall::new(RequestFunction::Decide, arguments)
-            })(arguments)))
+            .request_session(Request::new(RequestCall::new(
+                RequestFunction::Decide,
+                arguments,
+            )))
             .unwrap();
         push(&session, descriptor("body\n"));
         push(&session, descriptor("first\n"));
@@ -528,9 +531,7 @@ fn table_native_stops_take_precedence_over_missing_headers() {
         }
         let session = engine(&listener)
             .request_session_with_feed_options(
-                Request::new((|arguments| {
-                    RequestCall::new(RequestFunction::Decide, arguments)
-                })(arguments)),
+                Request::new(RequestCall::new(RequestFunction::Decide, arguments)),
                 Surface::Rust,
                 RequestSessionFeedOptions {
                     eager: true,
@@ -797,9 +798,7 @@ fn owned_feed_projection_preserves_false_filters_and_refuses_conflicts_before_in
     };
     let session = engine(&listener)
         .request_session_with_feed_options(
-            Request::new((|arguments| {
-                RequestCall::new(RequestFunction::Filter, arguments)
-            })(arguments)),
+            Request::new(RequestCall::new(RequestFunction::Filter, arguments)),
             Surface::Rust,
             options,
         )
@@ -841,10 +840,7 @@ fn owned_feed_projection_preserves_false_filters_and_refuses_conflicts_before_in
     assert_eq!(
         engine(&listener)
             .request_session_with_feed_options(
-                Request::new((|arguments| RequestCall::new(
-                    RequestFunction::Decide,
-                    arguments
-                ))(arguments)),
+                Request::new(RequestCall::new(RequestFunction::Decide, arguments)),
                 Surface::Rust,
                 RequestSessionFeedOptions {
                     record_reading: Some(reading),
