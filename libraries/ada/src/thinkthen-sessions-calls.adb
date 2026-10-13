@@ -1,6 +1,7 @@
 -- Generated named calls from the canonical request schema; do not edit.
 with Ada.Unchecked_Conversion;
 with System;
+with Thinkthen_Kinds;
 with Thinkthen.Requests.Native;
 with Interfaces.C.Strings;
 package body Thinkthen.Sessions.Calls is
@@ -97,14 +98,7 @@ begin
 Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");
 Code := thinkthen_request_plan_typed_json (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address, Length'Access);
 Free (Function_Bytes); Free (Surface);
-if Code /= 0 then declare Message : constant String := Value (thinkthen_session_error_message); begin case Code is
-when K_THINKTHEN_EBACKEND => raise Backend_Error with Message;
-when K_THINKTHEN_ECANCELLED => raise Cancelled_Error with Message;
-when K_THINKTHEN_EDEADLINE => raise Deadline_Error with Message;
-when K_THINKTHEN_EDEFECT => raise Defect_Error with Message;
-when K_THINKTHEN_ELOCAL => raise Local_Error with Message;
-when K_THINKTHEN_EUSAGE => raise Usage_Error with Message;
-when others => raise Native_Error with Message; end case; end; end if;
+Thinkthen_Kinds.Check (Code);
 declare Result : constant String := Text ((data => Output, len => Length)); begin thinkthen_free_string (Output); Output := Null_Ptr; return Result; end;
 exception when others => Free (Function_Bytes); Free (Surface); thinkthen_free_string (Output); raise;
 end Plan;

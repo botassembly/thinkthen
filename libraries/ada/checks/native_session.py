@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     if not (unpacked / 'src').is_dir():
         unpacked = unpacked / 'thinkthen'
     unpacked.rename(installed)
-    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native'}
+    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native', 'thinkthen_kinds'}
     assert {p.stem for p in (installed / 'src').glob('*.adb')} == expected
     assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen_session_c', 'thinkthen-requests'}
     if '--full' in sys.argv:
