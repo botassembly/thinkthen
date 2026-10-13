@@ -46,9 +46,9 @@ $thinkthen_description$;
 }
 
 macro_rules! describe {
-    ($description:expr; [$($options:tt)*]; $(#[$attribute:meta])* fn $name:ident $($body:tt)*) => {
+    ($description:expr; [$($option:meta),* $(,)?]; $(#[$attribute:meta])* fn $name:ident $($body:tt)*) => {
         $(#[$attribute])*
-        #[pg_extern($($options)*, sql = $name::sql)]
+        #[pg_extern($($option,)* sql = $name::sql)]
         fn $name $($body)*
 
         mod $name {
