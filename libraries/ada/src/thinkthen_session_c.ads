@@ -274,6 +274,7 @@ package Thinkthen_Session_C is
    type thinkthen_question is null record;
    type thinkthen_session is null record;
    type thinkthen_session_result is null record;
+   type thinkthen_value is null record;
    type thinkthen_complete_usage_persistence_v1 is record
       kind : aliased Interfaces.Unsigned_32;
    end record
@@ -570,6 +571,13 @@ package Thinkthen_Session_C is
       wording_version : aliased thinkthen_optional_u64_v1;
       item_schema : aliased thinkthen_input_declaration_v1;
       context_schema : aliased thinkthen_input_declaration_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_named_request_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      question_json : aliased thinkthen_complete_utf8_v1;
+      input_json : aliased thinkthen_complete_utf8_v1;
+      options_json : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_literal_image_jpeg_v1 is record
@@ -1591,13 +1599,6 @@ package Thinkthen_Session_C is
    type thinkthen_request_reader_failure_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_reader_failure_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_named_request_v1 is record
-      c_function : aliased thinkthen_complete_utf8_v1;
-      question_json : aliased thinkthen_complete_utf8_v1;
-      input_json : aliased thinkthen_complete_utf8_v1;
-      options_json : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_session_descriptor_v1 is record
@@ -3706,6 +3707,10 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_question_parse";
+   function thinkthen_question_value (owner : access constant thinkthen_question; c_out : System.Address) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_question_value";
    function thinkthen_request_plan_typed_json
      (engine : access constant thinkthen_engine;
       c_function : thinkthen_complete_utf8_v1;
@@ -3716,6 +3721,15 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_request_plan_typed_json";
+   function thinkthen_request_plan_typed_value
+     (engine : access constant thinkthen_engine;
+      c_function : thinkthen_complete_utf8_v1;
+      arguments : access constant thinkthen_request_arguments_v1;
+      surface_name : thinkthen_complete_utf8_v1;
+      c_out : System.Address) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_request_plan_typed_value";
    procedure thinkthen_session_cancel (session : access thinkthen_session)
    with Import => True,
         Convention => C,
@@ -3831,6 +3845,14 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_wait";
+   procedure thinkthen_value_free (owner : access thinkthen_value)
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_value_free";
+   function thinkthen_value_view (owner : access constant thinkthen_value; c_out : System.Address) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_value_view";
 end Thinkthen_Session_C;
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");

@@ -36,22 +36,19 @@ with tempfile.TemporaryDirectory(prefix='cobol-session-', dir=REPO / 'libraries/
     shutil.copy(HEADER, installed / 'src/thinkthen.h')
     shutil.copy(LIBRARY, root / 'libthinkthen.so.0')
     entity_helper = root / 'entity.c'
-    entity_helper.write_text('''#include "thinkthen.h"
-const thinkthen_complete_json_v1 *TT_TEST_ENTITY(const char *name, unsigned long long length) {
-    static thinkthen_complete_json_v1 id, named, kind, object;
-    static thinkthen_complete_json_entry_v1 fields[3];
-    id=(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_STRING_V1,.data.string={"p1",2}};
-    named=(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_STRING_V1,.data.string={name,length}};
-    kind=(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_STRING_V1,.data.string={"person",6}};
-    fields[0]=(thinkthen_complete_json_entry_v1){{"id",2},&id};
-    fields[1]=(thinkthen_complete_json_entry_v1){{"name",4},&named};
-    fields[2]=(thinkthen_complete_json_entry_v1){{"kind",4},&kind};
-    object=(thinkthen_complete_json_v1){.kind=THINKTHEN_COMPLETE_JSON_OBJECT_V1,.data.object={fields,3}};
-    return &object;
+    entity_helper.write_text('''#include "tt_requests_generated.h"
+tt_value *TT_TEST_ENTITY(const char *name, unsigned long long length) {
+    tt_value *id=NULL,*named=NULL,*kind=NULL,*object=NULL;
+    const thinkthen_cobol_text names[3]={{"id",2},{"name",4},{"kind",4}};
+    if(TT_VALUE_STRING("p1",2,&id) || TT_VALUE_STRING(name,length,&named) || TT_VALUE_STRING("person",6,&kind)) goto done;
+    const tt_value *values[3]={id,named,kind};
+    TT_VALUE_OBJECT(names,values,3,&object);
+done:
+    TT_VALUE_FREE(id); TT_VALUE_FREE(named); TT_VALUE_FREE(kind); return object;
 }
 ''')
     entity_header = root / 'entity.h'
-    entity_header.write_text('#include "thinkthen.h"\nconst thinkthen_complete_json_v1 *TT_TEST_ENTITY(const char *, unsigned long long);\n')
+    entity_header.write_text('#include "tt_requests_generated.h"\ntt_value *TT_TEST_ENTITY(const char *, unsigned long long);\nint TT_TEST_VALUE_OWNERS(void);\n')
     home = root / 'home'
     home.mkdir()
     backend = Backend(None, key='tt-canary-273', arrivals='wire', retry_ms=True, concurrent=True)
@@ -62,30 +59,43 @@ const thinkthen_complete_json_v1 *TT_TEST_ENTITY(const char *name, unsigned long
             subprocess.run(['cobc', '-x', '-free', '-fstatic-call', '-fno-gen-c-decl-static-call',
                             '-I', str(installed / 'copybooks'), '-A', '-include ' + str(installed / 'src/tt_session.h') + ' -Wno-incompatible-pointer-types -include ' + str(entity_header) + ' -I' + str(installed / 'src'),
                             '-o', str(executable), str(source), str(installed / 'src/tt_session.c'),
-                            str(installed / 'src/tt_requests_generated.c'), str(entity_helper),
+                            str(installed / 'src/tt_requests_generated.c'), str(entity_helper), str(REPO / 'libraries/cobol/checks/value_owner.c'),
                             '-A', '-I' + str(installed / 'src'),
                             '-Q', str(root / 'libthinkthen.so.0') + ' -Wl,-rpath,$ORIGIN'],
                            env=env, check=True, timeout=30)
         template = (installed / 'examples/session.cob').read_text()
         # The plan caller exercises generated counted mapping without a session.
         plan = template[:template.index('    if status-code not = 0\n')]
-        plan = plan.replace('01 engine usage pointer.', '01 engine usage pointer.\n01 plan-owner usage pointer.\n01 plan-length usage binary-double unsigned.')
+        plan = plan.replace('01 engine usage pointer.', '01 engine usage pointer.\n01 plan-owner usage pointer.\n01 records-owner usage pointer.\n01 plan-sentinel usage pointer.\n01 null-output usage pointer value null.\n01 plan-text pic x(8192).\n01 plan-written usage binary-double unsigned.')
         plan = plan.replace('call "TT_SESSION_DECIDE" using by value engine\n       by reference tt-n-cobol-RequestCall session-owner',
-                            'call "TT_PLAN" using by value engine\n       by reference "decide" by value 6\n       by reference tt-n-cobol-RequestCall plan-owner plan-length')
-        plan += '''    call "thinkthen_engine_free" using by value engine returning omitted
-    if status-code not = 0 move 20 to return-code goback end-if
-    allocate tt-n-complete-utf8-v1
-    set v-data of tt-n-complete-utf8-v1 to plan-owner
-    move plan-length to v-len of tt-n-complete-utf8-v1
-    call "TT_SESSION_TEXT" using by reference tt-n-complete-utf8-v1
-       output-text written returning status-code
-    call "thinkthen_free_string" using by value plan-owner returning omitted
-    free tt-n-complete-utf8-v1
-    if status-code not = 0 or written not = plan-length
-       move 21 to return-code goback end-if
-    display function trim(output-text trailing)
+                            'call "TT_PLAN" using by value engine\n       by reference "decide" by value 6\n       by reference tt-n-cobol-RequestCall plan-owner')
+        plan += """    if status-code not = 0 move 20 to return-code goback end-if
+    set plan-sentinel to plan-owner
+    call "TT_PLAN" using by value engine
+       by reference "other" by value 5
+       by reference tt-n-cobol-RequestCall plan-owner returning status-code
+    if status-code = 0 or plan-owner not = plan-sentinel
+       move 24 to return-code goback end-if
+    call "TT_PLAN" using by value engine
+       by reference "decide" by value 6
+       by reference tt-n-cobol-RequestCall by value null-output returning status-code
+    if status-code not = tt-n-cobol-representation-k
+       move 25 to return-code goback end-if
+    call "thinkthen_engine_free" using by value engine returning omitted
+    call "TT_VALUE_FIELD" using by value plan-owner
+       by reference "records" by value 7 by reference records-owner
+       returning status-code
+    if status-code not = 0 move 21 to return-code goback end-if
+    call "TT_VALUE_FREE" using by value plan-owner returning omitted
+    call "TT_VALUE_TEXT" using by value records-owner
+       by reference plan-text plan-written returning status-code
+    call "TT_VALUE_FREE" using by value records-owner returning omitted
+    if status-code not = 0 move 22 to return-code goback end-if
+    call "TT_TEST_VALUE_OWNERS" returning status-code
+    if status-code not = 0 move 23 to return-code goback end-if
+    display "PLAN_RECORDS " plan-text(1:plan-written)
     move 0 to return-code goback.
-'''
+"""
         plan_source = root / 'plan.cob'; plan_source.write_text(plan)
         compile_caller(plan_source, root / 'plan')
         plan_question = root / 'plan-question.json'; plan_question.write_text(json.dumps(questions['decide']))
@@ -94,7 +104,7 @@ const thinkthen_complete_json_v1 *TT_TEST_ENTITY(const char *name, unsigned long
                                 TT_SESSION_EVIDENCE='Refund me.', TT_SESSION_EXPECT_FAILURE='N'),
                                 capture_output=True, text=True, timeout=5)
         assert result.returncode == 0 and not result.stderr, (result.returncode, result.stdout, result.stderr)
-        assert json.loads(result.stdout)['records'] == 1, result.stdout
+        assert result.stdout.strip() == 'PLAN_RECORDS 1', result.stdout
         assert len(backend.arrivals) == before, 'COBOL typed plan sent a request'
         for function, question in questions.items():
             source = root / (function + '.cob')
@@ -106,6 +116,7 @@ const thinkthen_complete_json_v1 *TT_TEST_ENTITY(const char *name, unsigned long
                 caller = caller.replace('01 record-address usage pointer.', '01 record-address.\n 02 first-record usage pointer.\n 02 second-record usage pointer.').replace('set record-address to address of tt-n-cobol-RequestItem', 'set first-record second-record to address of tt-n-cobol-RequestItem').replace('move 1 to v-len of tt-n-cobol-RequestInputUnitsItems', 'move 2 to v-len of tt-n-cobol-RequestInputUnitsItems')
             if function == 'relate':
                 caller = caller.replace('01 record-address usage pointer.', '01 record-address usage pointer.\n01 entity-value usage pointer.').replace('    call "TT_TEXT_ITEM" using', '    call "TT_TEST_ENTITY" using by reference evidence-text by value evidence-length returning entity-value\n    call "TT_TEXT_ITEM" using').replace('evidence-text by value evidence-length returning status-code', 'by value entity-value returning status-code')
+                caller = caller.replace('    if status-code not = 0\n', '    call "TT_VALUE_FREE" using by value entity-value returning omitted\n    if status-code not = 0\n', 1)
                 caller = caller.replace('TT_TEXT_ITEM', 'TT_JSON_ITEM').replace('RequestOriginalTextText', 'RequestOriginalJsonValue').replace('RequestOriginalText', 'RequestOriginalJson').replace('requestoriginaltext', 'requestoriginaljson').replace('v-m-text of tt-n-cobol-RequestOriginalJson', 'v-m-value of tt-n-cobol-RequestOriginalJson')
             source.write_text(caller)
             executable = root / function

@@ -84,7 +84,7 @@ def native_name(key):
     key = key.replace('_member_', '_').replace('_properties_', '_')
     return ''.join(part[:1].upper() + part[1:] for part in key.split('_'))
 
-def requests(definitions):
+def requests(definitions, constants):
     """Keep native COBOL storage and delegate canonical type conversion."""
     nodes = {key: (value["oneOf"][0] if isinstance(value, dict) and len(value.get("oneOf", [])) == 1 and "const" in value["oneOf"][0] else value) for key, value in definitions.items()}
     from templates.native_request import render as native_render
@@ -153,10 +153,13 @@ def requests(definitions):
     from templates.csharp import enum_values
     for function in enum_values(definitions['RequestFunction']):
         header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_RequestCall *,void **);')
-    header += ['int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,char **,uint64_t *);', 'int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
+    header += [f'#define TT_VALUE_{kind}_KIND {constants["THINKTHEN_COMPLETE_JSON_" + kind + "_V1"]}' for kind in ('NULL','BOOLEAN','NUMBER','STRING','ARRAY','OBJECT')]
+    header.append('typedef struct tt_value tt_value;')
+    header += ['int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,tt_value **);', 'int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
+    from templates.cobol_values import DECLARATIONS
     from templates.cobol_native import render, builders
     builder_header, builder_source = builders(definitions)
-    header[-1:-1] = builder_header
+    header[-1:-1] = DECLARATIONS.splitlines()[1:] + builder_header
     code = render(definitions, nodes) + builder_source + '\n'
     names = {key: native_name(key) for key in nodes}
     if len(set(names.values())) != len(names):
@@ -175,7 +178,8 @@ def outputs(root, definitions):
     schema = json.loads((root / 'specification/request.schema.json').read_text())
     schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
     definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
-    header, serializer = requests(definitions)
+    constants = abi_module(root).header_abi(root / 'libraries/c/include/thinkthen.h')['constants']
+    header, serializer = requests(definitions, constants)
     package = root / 'libraries/cobol'
     # Measure generated Request declarations with the same compiler as native ABI.
     import tempfile

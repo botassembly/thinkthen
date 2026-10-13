@@ -232,7 +232,7 @@ def generate(root, graph, prepare, env, check):
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
                   'with Thinkthen.Requests; use Thinkthen.Requests;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Thinkthen.Native_Values;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
     version = identifier('RequestVersion_' + enum_values(schema['$defs']['RequestVersion'])[0])
     for function in enum_values(schema['$defs']['RequestFunction']):
         declaration = f'procedure {function.title()} (Owner : in out Session; Request : T_RequestCall)'
@@ -246,7 +246,8 @@ def generate(root, graph, prepare, env, check):
         calls_spec += [declaration + ';', shared + ';']
         for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
             calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', (T_question => Question, T_input => Input, T_options => Options, others => <>), "' + function + '");\nend ' + function.title() + ';')
-    calls_spec.append('function Plan (Client : Engine; Request : T_RequestCall) return String;')
+    calls_spec.insert(1, 'with Thinkthen.Values;')
+    calls_spec.append('function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value;')
     from templates.ada_native import plan
     calls_body.extend(plan(schema['$defs']['RequestFunction'], (root / 'libraries/c/include/thinkthen.h').read_text()))
     calls_spec.append('end Thinkthen.Sessions.Calls;')
@@ -256,6 +257,8 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-requests.ads': spec,
                'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
+    from templates.ada_value_readers import outputs as value_reader_outputs
+    outputs.update(value_reader_outputs())
     from templates.ada_answers import outputs as answer_outputs
     results = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
     outputs.update(answer_outputs(prepare(graph(results, ('completesessionPacket',)))))
