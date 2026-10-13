@@ -759,7 +759,7 @@ def main():
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
         if args.inputs:
             schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
-            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor')))
+            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
             outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
         else:
             outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),
