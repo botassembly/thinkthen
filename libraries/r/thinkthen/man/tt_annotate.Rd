@@ -31,7 +31,9 @@ one typed row of class \code{thinkthen_AnnotateResult} per record, each with
 \code{$index} and \code{$input}. \code{$answer} holds the typed answer view: a list of
 annotated row views, one per record, with one field per question name.
 \code{$facts} holds the call's facts, including \code{requests_sent}. The
-carrier also carries \code{$positions} and \code{$length} beside those views.
+carrier also carries \code{$positions} and \code{$length} beside those views. A feed
+input returns a carrier with \code{$results} and \code{$facts} only,
+without the answer and column views.
 }
 \description{
 Asks a saved question set about each record and adds one typed field per

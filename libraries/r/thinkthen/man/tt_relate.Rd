@@ -27,7 +27,7 @@ A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
 one typed row of class \code{thinkthen_RelateResult} for the whole set, with
 \code{$input_sources} naming where each entity came from, \code{$question},
 \code{$meta}, and \code{$answer_id}. \code{$answer} holds the typed answer
-view: a list of edges, each with the relation's \code{$name}, its
+view: a list of edges, each with the relation's \code{$relation} name, its
 \code{$source} and \code{$target} entity views, and its \code{$probability}.
 \code{$facts} holds the call's facts, including \code{requests_sent}.
 }

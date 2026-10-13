@@ -30,18 +30,23 @@ reading provides them, the zero-based native \code{$index} and
 view: a list with \code{$entities}, each carrying its \code{$text},
 \code{$kind}, and zero-based Unicode-scalar \code{$start} and \code{$end}
 offsets, and, when the question asks for relations, the recognized
-\code{$relations}. \code{$facts} holds the call's facts, including
-\code{requests_sent}.
+\code{$relations}. A question that selects boundary-only mode returns
+\code{$mode} and \code{$proposals} instead, each proposal carrying its
+\code{$text}, zero-based \code{$start} and \code{$end}, \code{$length},
+and \code{$probability}, with no entities. \code{$facts} holds the call's
+facts, including \code{requests_sent}.
 }
 \description{
 Reads one text, finds every name in it, and gives each one a kind. A
 recognition question can also ask for named relationships between the names it
-finds.
+finds, or ask only for unclassified boundary proposals.
 }
 \details{
 Native admission owns every rule for the question, the text, and the controls.
 Entity spans are inclusive-start, exclusive-end offsets in Unicode scalars;
-add one to a start offset for \code{substr}.
+add one to a start offset for \code{substr}. A \code{mode} selection of
+\code{"boundary_only"} returns decoded boundary proposals with no kinds or
+entities; \code{"whole"} recognition returns the entities.
 
 A native failure raises a \code{thinkthen_error} condition with \code{$kind},
 \code{$retryable}, and, once settled, the complete error carrier in

@@ -24,13 +24,18 @@ evidence for this call.}
 \value{
 A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
 one typed row of class \code{thinkthen_TagResult} per record, each with
+\code{$value} (the applicable labels as an R list of strings),
 \code{$question}, \code{$meta}, and \code{$answer_id}, and, when the
 reading provides them, the zero-based native \code{$index} and
-\code{$input}. \code{$answer} holds the typed answer view: a list of
-character vectors, one per record, holding every applicable label; a missing
-atomic slot retains an empty character vector. \code{$facts} holds the
+\code{$input}. \code{$answer} holds the typed answer view: a list with one
+label list per record for explicit selectors and structured inputs; for an
+ordinary atomic column it is a list of character vectors, one per record,
+with a missing atomic slot retaining an empty character vector.
+\code{$facts} holds the
 call's facts, including \code{requests_sent}. For a column the carrier also
-carries \code{$positions} and \code{$length} beside those views.
+carries \code{$positions} and \code{$length} beside those views. A feed
+input returns a carrier with \code{$results} and \code{$facts} only,
+without the answer and column views.
 }
 \description{
 Asks one question whose answer is any number of labels from the declared

@@ -51,7 +51,9 @@ validates every value and rejects a control the call's function does not take.
 \details{
 A control left out keeps the native default; an explicit \code{NULL} value
 refuses at admission. The controls travel beside the question, not inside it;
-the question's own authored settings keep their precedence. An empty
+an explicit \code{model}, \code{threshold}, or \code{field} control
+overrides the question's authored model, reading rule, and projection
+pointers for that call. An empty
 \code{tt_options()} is the same as an empty list.
 }
 \examples{

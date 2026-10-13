@@ -42,8 +42,11 @@ advancing intake when closed. A record takes the same shapes as
 \code{\link{tt_record}}'s \code{original} or a whole \code{tt_record}. A
 producer from \code{\link{tt_feed}} feeds the session on R's thread; the
 handle retains one pending record while the native input cell is full. A
-native failure raises a \code{thinkthen_error} condition that retains the
-completed prefix and final facts when they exist.
+native failure raises a \code{thinkthen_error} condition that carries the
+final facts when they exist. The handle does not accumulate the packets
+already delivered; callers retain those results themselves. A named call
+joined over a feed accumulates the packets it pulled and attaches them as the
+condition's \code{$completed} prefix on failure.
 }
 \examples{
 \dontrun{

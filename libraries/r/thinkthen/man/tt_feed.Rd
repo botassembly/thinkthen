@@ -30,7 +30,9 @@ A feed of class \code{thinkthen_feed}, ready for any named call's
 }
 \description{
 Builds a bounded record producer that runs only on R's thread. A named call
-that receives a feed joins its result packets into the normal call result.
+that receives a feed joins its result packets into a carrier that holds only
+\code{$results} and \code{$facts}, without the answer and column views of
+the one-call form.
 }
 \details{
 With \code{framing = "jsonl"} the producer supplies one raw JSON line per
@@ -40,7 +42,9 @@ supplies one complete encoded header first, then at most one complete encoded
 data row per item; a quoted multiline cell belongs in one item. Native
 admission refuses unsupported framing or projection combinations before the
 producer is touched. Omitted fields use native defaults. Completion receipts
-are unavailable for feed calls and refuse before producer access. A feed with
+are unavailable for feed calls and refuse before producer access. A joined
+call that fails carries the packets it already pulled as the condition's
+\code{$completed} prefix. A feed with
 no producer supplies \code{\link{tt_batch}}'s manual intake. Printing
 withholds content.
 }

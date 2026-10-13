@@ -9,8 +9,9 @@ tt_plan(question, input, function_name = "decide", options = list())
 authored question list, or a \code{\link{tt_question}} selector.}
 \item{input}{The evidence or records the call would send, in any form the
 named call takes.}
-\item{function_name}{The named judging function to preview, such as
-\code{"decide"}, \code{"choose"}, \code{"tag"}, or \code{"score"}.}
+\item{function_name}{The named judging function to preview: \code{"decide"},
+\code{"choose"}, \code{"tag"}, \code{"score"}, \code{"filter"}, or
+\code{"rank"}; every other function refuses.}
 \item{options}{Request controls from \code{\link{tt_options}}; an empty list
 keeps the native defaults.}
 }
@@ -23,8 +24,11 @@ first request body the call would send), and \code{$upper_bound}, which is
 depend on answers; the byte estimate counts only the prepared requests.
 }
 \description{
-Runs native preview admission for the primitive functions and reports what a
-call would send. It sends no request and reads no selected source.
+Runs native preview admission for the \code{decide}, \code{choose},
+\code{tag}, \code{score}, \code{filter}, and \code{rank} functions and
+reports what a call would send; every other function refuses. It sends no
+request and reads no key, cache, or answer, but it composes and reads the
+call's selected explicit sources to build its estimate.
 }
 \details{
 A plan shares explicit batch and context settings with the actual call, and

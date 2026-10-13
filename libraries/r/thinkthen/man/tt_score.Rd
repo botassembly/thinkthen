@@ -30,7 +30,9 @@ provides them, the zero-based native \code{$index} and \code{$input}.
 ordinary atomic column it is a plain double column, with \code{$value} beside
 it filling missing slots with typed missing values. \code{$facts} holds the
 call's facts, including \code{requests_sent}. For a column the carrier also
-carries \code{$positions} and \code{$length} beside those views.
+carries \code{$positions} and \code{$length} beside those views. A feed
+input returns a carrier with \code{$results} and \code{$facts} only,
+without the answer and column views.
 }
 \description{
 Places each record on the question's named levels, which are declared

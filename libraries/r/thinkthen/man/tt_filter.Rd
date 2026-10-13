@@ -29,7 +29,9 @@ provides them, the zero-based native \code{$index} and \code{$input}.
 \code{$answer} holds the typed answer view: a list of the
 rows that reach the mark, each retaining its fields. \code{$facts} holds the
 call's facts, including \code{requests_sent}. The carrier also carries
-\code{$positions} and \code{$length} beside those views.
+\code{$positions} and \code{$length} beside those views. A feed
+input returns a carrier with \code{$results} and \code{$facts} only,
+without the answer and column views.
 }
 \description{
 Asks one yes-or-no question about every record and keeps the records whose

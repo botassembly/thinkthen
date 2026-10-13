@@ -32,20 +32,25 @@ ignored.}
 \value{
 A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
 one typed row of class \code{thinkthen_DecideResult} per record, each with
-\code{$value} (\code{TRUE}, \code{FALSE}, or \code{NA} for not sure),
+\code{$value} (\code{TRUE} or \code{FALSE}, \code{NULL} when the answer is
+not sure, or the question's authored reading for the side it landed on when it
+declares one),
 \code{$question}, \code{$meta}, and \code{$answer_id}, and, when the reading
 provides them, the zero-based native \code{$index} and \code{$input}.
 \code{$answer} holds the typed answer view; for an
-ordinary atomic column it is a plain logical column, with \code{$value} and
+ordinary atomic column it is a plain logical column whose not-sure cells are
+\code{NA}, with \code{$value} and
 \code{$probability} beside it filling missing slots with typed missing values.
 \code{$facts} holds the call's facts, including \code{requests_sent}. For a
 column the carrier also carries \code{$positions}, which maps compact native
 record indexes to original zero-based slots, and \code{$length}, the full
-column length.
+column length. A feed input returns a carrier with \code{$results} and
+\code{$facts} only, without the answer and column views.
 }
 \description{
 Asks one yes-or-no question about each record and returns a typed answer per
-record: \code{TRUE}, \code{FALSE}, or \code{NA} when the answer is not sure.
+record: \code{TRUE}, \code{FALSE}, or not sure, which a typed row carries as
+\code{NULL} and an ordinary atomic column carries as \code{NA}.
 }
 \details{
 Native admission owns every rule for the question, the records, and the
