@@ -250,7 +250,7 @@ const jobsScope = name === 'annotate'
   <h3 id="read-more">Read more</h3>
   <ul>
     <li>The <a href="#opening"><code>{title}</code> page</a> opens with one plain call in every language.</li>
-    {howtos.length > 0 && <li>These how-tos use <code>{title}</code> for a real job: {howtos.map((h, i) => <>{i > 0 && (i === howtos.length - 1 ? ' and ' : ', ')}<a href={`/how-tos/${h.slug}/`}>{h.title}</a></>)}.</li>}
+    {howtos.length > 0 && <li>These recipes use <code>{title}</code> for a real job: {howtos.map((h, i) => <>{i > 0 && (i === howtos.length - 1 ? ' and ' : ', ')}<a href={`/recipes/${h.slug}/`}>{h.title}</a></>)}.</li>}
     <li><a href="/learn/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</li>
     <li>The <a href="/start/settings/">settings page</a> gives every setting on every surface, with its default.</li>
     <li><a href="/start/replay/">Replay in tests</a> covers the answer cache, recording, replay and pruning.</li>
@@ -268,13 +268,13 @@ const jobsScope = name === 'annotate'
       {[2, 3, 4, 6, 9].includes(howtos.length) ? (
         <div class="grid">
           {howtos.map((h) => (
-            <a class="tile" href={`/how-tos/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
+            <a class="tile" href={`/recipes/${h.slug}/`}><b>{h.title}</b><span>{h.reader}</span></a>
           ))}
         </div>
       ) : (
         <ul>
           {howtos.map((h) => (
-            <li><a href={`/how-tos/${h.slug}/`}>{h.title}</a> — {h.reader}</li>
+            <li><a href={`/recipes/${h.slug}/`}>{h.title}</a> — {h.reader}</li>
           ))}
         </ul>
       )}

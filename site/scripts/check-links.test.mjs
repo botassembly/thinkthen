@@ -17,8 +17,12 @@ const checker = new URL('./check-links.mjs', import.meta.url).pathname;
 const write = (file, text) => { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, text); };
 const stub = fixed => `<!doctype html><title>Redirect</title>${preserver(fixed)}<noscript><meta http-equiv="refresh" content="0;url=${fixed}"></noscript><meta name="robots" content="noindex"><link rel="canonical" href="https://thinkthen.dev${fixed}"><body><a href="${fixed}">Continue</a></body>`;
 try {
-  for (const [alias, fixed] of Object.entries(ALIASES)) {
+  // Write every destination first, so an alias file that is also a
+  // destination, such as the recipe index, is not overwritten.
+  for (const fixed of Object.values(ALIASES)) {
     write(routeFile(dist, new URL(fixed, 'https://thinkthen.dev').pathname), '<main><h1 id="flags">Flags</h1><h2 id="edge-cases">Edges</h2></main>');
+  }
+  for (const [alias, fixed] of Object.entries(ALIASES)) {
     write(routeFile(dist, alias), alias === '/recipes' && published
       ? '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main><h1>Recipes</h1></main>' : stub(fixed));
   }
@@ -46,7 +50,7 @@ try {
     [s => s.replace(preserver('/start/'), ''), /missing fragment preserver/],
   ]) { write(alias, mutate(original)); run('/functions/decide/#flags', 1, marker); }
   write(alias, original); run('/functions/decide/#flags', 0);
-  const recipe = routeFile(dist, '/recipes'); const recipeOriginal = fs.readFileSync(recipe, 'utf8'); const recipeStub = stub('/how-tos/bash/');
+  const recipe = routeFile(dist, '/recipes'); const recipeOriginal = fs.readFileSync(recipe, 'utf8'); const recipeStub = stub('/languages/bash/');
   const index = '<link rel="canonical" href="https://thinkthen.dev/recipes/"><main data-draft><h1>Recipes</h1><p>Draft catalog: waiting</p></main>';
   const preview = () => spawnSync(process.execPath, [checker], { cwd: root, encoding: 'utf8', timeout: 10000, env: {...process.env, THINKTHEN_DRAFTS: '1'} });
   write(recipe,index);write(page,'<main><a href="/recipes/">Recipes</a></main>');

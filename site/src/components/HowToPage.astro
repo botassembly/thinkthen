@@ -1,0 +1,50 @@
+---
+// One recipe for a reader: the gain, the files the commands read, each real
+// run, and the functions it uses. HOWTOS and SHELL_JOBS in catalog.mjs hold
+// each page's words; examples/how-tos/ holds its runs.
+import Base from '../layouts/Base.astro';
+import Terminal from './Terminal.astro';
+import Code from './Code.astro';
+import { FUNCTIONS } from '../data/catalog.mjs';
+import { captioned, files } from '../data/samples.mjs';
+
+const { job, dir, eyebrow } = Astro.props;
+if (!job.goal) throw new Error(`recipes: ${job.slug} has no goal`);
+if (!job.gain) throw new Error(`recipes: ${job.slug} has no gain`);
+const runs = captioned(dir, job.see);
+// A page with `files` shows only the files it names, in that order, each
+// with its own caption. The scripts still read every file in files/.
+const all = files(dir);
+const named = (name) => {
+  const file = all.find((f) => f.name === name);
+  if (!file) throw new Error(`recipes: ${job.slug} names ${name}, and files/ has no such file`);
+  return { ...file, caption: job.files[name] };
+};
+const inputs = job.files
+  ? Object.keys(job.files).map(named)
+  : all.map((f) => ({ ...f, caption: `${f.name}, a file the commands read` }));
+const used = (job.functions || []).map((name) => FUNCTIONS.find((f) => f.name === name));
+// Copy fields mark code with backticks. The page shows it as code; the
+// meta description drops the marks.
+const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+---
+<Base title={job.title} description={job.gain} reading>
+  <div class="eyebrow"><a href="/recipes/">Recipes</a> · {eyebrow}</div>
+  <h1>{job.title}</h1>
+  <p class="lede">{job.gain}</p>
+  <p>{parts(job.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  {job.source && <p>Host contract: <a href={job.source[1]}>{job.source[0]}</a>.</p>}
+
+  {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.caption} />)}
+  {runs.map((run) => <Terminal run={run} caption={run.see} />)}
+
+  <p>These commands are Bash. The same functions run in <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a>, <a href="/languages/">every other language</a> and <a href="/databases/">every database</a>.</p>
+  {used.length > 0 && (
+    <>
+      <h2>The functions it uses</h2>
+      <ul>
+        {used.map((fn) => <li><a href={`/functions/${fn.name}/`}>{fn.name}</a>: {fn.line}</li>)}
+      </ul>
+    </>
+  )}
+</Base>

@@ -228,7 +228,7 @@ function main() {
     if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
   }
 
-  for (const folder of ['articles', 'guides']) {
+  for (const folder of ['articles']) {
     const dir = path.join(site, 'src', folder);
     if (!fs.existsSync(dir)) continue;
     for (const name of fs.readdirSync(dir).filter(n => n.endsWith('.md'))) {

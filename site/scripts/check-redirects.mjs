@@ -63,7 +63,7 @@ async function proof() {
       ['/reference/functions/decide/#a%2Fb%2520c', '/functions/decide/#a%2Fb%2520c'],
     ].filter(([incoming]) => !bookmarkOnly || incoming === '/reference/functions/decide/#flags')) await visit(ctx, incoming, fixed, anchor, observe);
     if (!bookmarkOnly && recipeState.index) await visit(ctx, '/recipes/', '/recipes/', null, false, true);
-    if (!bookmarkOnly && !recipeState.index) for (const suffix of ['#techniques', '#%74echniques', '#', '#a%2Fb%2520c']) await visit(ctx, '/recipes' + suffix, '/how-tos/bash/' + suffix);
+    if (!bookmarkOnly && !recipeState.index) for (const suffix of ['#techniques', '#%74echniques', '#', '#a%2Fb%2520c']) await visit(ctx, '/recipes' + suffix, '/languages/bash/' + suffix);
     if (!bookmarkOnly) for (const [route, id] of [['/functions/decide/#flags', 'flags'], ['/functions/#tools', 'tools'], ['/functions/annotate/#flat-fields', 'flat-fields']]) await visit(ctx, route, route, id, false, true);
   } finally { await ctx.close(); }
   if (bookmarkOnly) { console.log('redirect browser: canonical decide bookmark assertion passed'); } else {

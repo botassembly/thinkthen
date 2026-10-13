@@ -20,24 +20,24 @@ const columns = [
     ['/models/', 'Models'],
     ['/languages/', 'Languages'],
     ['/databases/', 'Databases'],
-    ['/how-tos/', 'How-tos'],
     ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
-    ['/learn/', 'Learn'],
-    ['/guides/', 'Guides'],
-    ['/blog/', 'Blog'],
   ]],
-  ['Project', [
-    [REPO, 'GitHub repository', 'github'],
+  ['Learn more', [
+    ['/learn/beatles-bench/', 'Beatles Bench'],
+    ['/blog/', 'Blog'],
     ['/about/', 'About'],
     ['/trust/', 'Trust'],
     ['/refusals/', 'What it will not do'],
-    ['/version.json', 'Build proof'],
   ]],
-  ['For machines', [
+  ['Project', [
+    [REPO, 'GitHub repository', 'github'],
+    [`${REPO}/blob/main/specification/README.md`, 'Specification', 'doc'],
+    [`${REPO}/tree/main/skills/thinkthen`, 'Agent skill', 'doc'],
     ['/llms.txt', 'llms.txt', 'doc'],
     ['/llms-full.txt', 'llms-full.txt', 'doc'],
     ['/sitemap.xml', 'Sitemap', 'doc'],
     ...(mdHref ? [[mdHref, 'This page as Markdown', 'doc']] : []),
+    ['/version.json', 'Build proof'],
   ]],
 ];
 ---

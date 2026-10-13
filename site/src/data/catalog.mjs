@@ -1000,18 +1000,21 @@ export const CONFIGURATION_SEE = {
   '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
 };
 
-// The /how-tos/ index shows one section per group, in this order. Each
-// section lists its pages in HOWTOS order. A group with no pages shows
-// nothing.
-export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Ops/Security'];
+// The /recipes/ index shows one section per group, in this order, then the
+// shell jobs and the pipelines. Each section lists its pages in HOWTOS
+// order. A group with no pages shows nothing. Each page's `gain` opens it
+// and lists it, in one sentence with no digits.
+export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Operations and security'];
 
-// The how-tos. Each page runs the scripts in examples/how-tos/<slug>/, and
+// The recipes for one reader. Each page sits at /recipes/<slug>/, runs the
+// scripts in examples/how-tos/<slug>/, and
 // `see` says what to look for in each. `group` names its HOWTO_GROUPS
 // section. An optional `files` maps the files/ names the page shows, in
 // order, to their captions. Without it, the page shows every file.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
+    gain: 'Drop the messages that need no reply, and label the rest by kind and urgency in one pipe.',
     goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'],
@@ -1019,6 +1022,7 @@ export const HOWTOS = [
   },
   {
     slug: 'join-two-tables-by-meaning', group: 'Data science', title: 'Join two tables by meaning', reader: 'for data analysts',
+    gain: 'Join two tables when no key and no shared word links them.',
     goal: 'filter joins two tables on meaning when no key and no shared word links them.',
     said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
     functions: ['filter'],
@@ -1026,6 +1030,7 @@ export const HOWTOS = [
   },
   {
     slug: 'code-open-ended-survey-answers', group: 'Data science', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
+    gain: 'Find the unhappy survey answers and name what went wrong in each.',
     goal: 'score finds the unhappy answers and tag names what went wrong in each.',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'],
@@ -1033,13 +1038,15 @@ export const HOWTOS = [
   },
   {
     slug: 'screen-studies-for-a-review', group: 'Data science', title: 'Screen studies for a review', reader: 'for researchers',
+    gain: 'Sort the clear studies in or out, and hand a person only the ones too thin to judge.',
     goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
     see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
   },
   {
-    slug: 'group-alerts-into-incidents', group: 'Ops/Security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    slug: 'group-alerts-into-incidents', group: 'Operations and security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    gain: 'Tie a new alert to the open incident it belongs to, or learn that none fits.',
     goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'],
@@ -1050,6 +1057,7 @@ export const HOWTOS = [
   },
   {
     slug: 'rank-the-inbound-leads', group: 'Business teams', title: 'Rank the inbound leads', reader: 'for sales teams',
+    gain: 'Drop the noise, put the buyer ready to pay first, and route each lead to its sales team.',
     goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'],
@@ -1057,6 +1065,7 @@ export const HOWTOS = [
   },
   {
     slug: 'check-an-expense-against-the-policy', group: 'Business teams', title: 'Check an expense against the policy', reader: 'for finance staff',
+    gain: 'Pull the policy rule that covers an expense, and check the expense against it.',
     goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
     functions: ['find', 'decide'],
@@ -1064,6 +1073,7 @@ export const HOWTOS = [
   },
   {
     slug: 'split-a-scanned-packet-into-documents', group: 'Business teams', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
+    gain: 'Turn a stack of scanned pages into separate documents, each named by kind.',
     goal: 'choose names each page and decide marks where a new document starts.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
     functions: ['choose', 'decide'],
@@ -1074,6 +1084,7 @@ export const HOWTOS = [
   },
   {
     slug: 'screen-a-post-before-it-goes-up', group: 'Business teams', title: 'Screen a post before it goes up', reader: 'for community moderators',
+    gain: 'Check a post against each rule with its own narrow question, and see which rule it breaks.',
     goal: 'One narrow decide question per rule judges a post against each rule on its own.',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
     functions: ['decide'],
@@ -1084,6 +1095,7 @@ export const HOWTOS = [
   },
   {
     slug: 'search-youtube-transcripts-by-meaning', group: 'Data science', title: 'Search YouTube transcripts by meaning', reader: 'for anyone who learns from talks',
+    gain: 'Find the passages of a talk that answer your question, best first.',
     goal: 'rank orders the passages of a talk by how well each answers a question, and filter keeps the ones that do.',
     said: 'Ask a question of a talk, and find the passages that answer it. `paste` joins the caption lines into passages. `rank` puts the best answers first. `filter` keeps the passages that answer yes.',
     functions: ['rank', 'filter'],
@@ -1102,7 +1114,7 @@ export const HOWTOS = [
 ];
 
 // The Bash techniques under /languages/bash/ and the shell jobs under
-// /how-tos/bash/. Each page runs the scripts in examples/how-tos/bash/<slug>/.
+// /recipes/. Each page runs the scripts in examples/how-tos/bash/<slug>/.
 // A technique teaches one shell form. A shell job does one job with the
 // tools you already have.
 export const TECHNIQUES = [
@@ -1184,6 +1196,7 @@ export const TECHNIQUES = [
 export const SHELL_JOBS = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
+    gain: 'Label every record of a JSON file and keep its ids. A second run sends nothing.',
     goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date stay in each record. Run it again, and the answers come from the answer cache with no request sent.',
     see: {
@@ -1192,24 +1205,28 @@ export const SHELL_JOBS = [
   },
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
+    gain: 'Separate the hunks of a diff that change what the code does from those that do not.',
     goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does. The file name and the hunk header stay in each record.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
     slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
+    gain: 'Find the hedging lines in a draft, with their line numbers.',
     goal: 'filter finds the hedging lines in a draft and keeps their line numbers.',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
     see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
     slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
+    gain: 'Fill a form from your own lists. No field holds text a model wrote.',
     goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
   },
   {
     slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
+    gain: 'Set malformed records aside first. One bad line then cannot stop the run.',
     goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
     said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
     see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
@@ -1222,12 +1239,6 @@ export const BASH_FIRST = { slug: '', title: 'Bash', label: 'Bash', route: '/lan
 export const BASH = [
   BASH_FIRST,
   ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/languages/bash/${t.slug}/` })),
-];
-// The shell jobs, in side-list order. Their first page is their index.
-export const SHELL_JOBS_FIRST = { slug: '', title: 'Shell jobs', label: 'Shell jobs', route: '/how-tos/bash/', group: null };
-export const SHELL_JOB_PAGES = [
-  SHELL_JOBS_FIRST,
-  ...SHELL_JOBS.map((r) => ({ ...r, group: 'Shell jobs', route: `/how-tos/bash/${r.slug}/` })),
 ];
 
 // Measured recipes are separate from the existing shell jobs.

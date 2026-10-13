@@ -14,10 +14,16 @@ export default defineConfig({
     '/surfaces': '/start/',
     '/backends': '/models/',
     '/tutorial': '/start/tutorial/',
-    ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/how-tos/bash/' }),
-    // The shell recipes moved into the Bash techniques section.
-    ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
-      .map((slug) => [`/how-tos/${slug}`, `/how-tos/bash/${slug}/`])),
+    ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/languages/bash/' }),
+    // The how-tos, the shell jobs and the guides became the Recipes section
+    // on 2026-10-12. The shell jobs once sat at /how-tos/<slug> too.
+    '/how-tos': '/recipes/',
+    '/how-tos/bash': '/recipes/',
+    '/guides': '/recipes/',
+    ...Object.fromEntries([...['triage-a-support-inbox', 'join-two-tables-by-meaning', 'code-open-ended-survey-answers', 'screen-studies-for-a-review', 'group-alerts-into-incidents', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents', 'screen-a-post-before-it-goes-up', 'search-youtube-transcripts-by-meaning'], ...['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records']]
+      .map((slug) => [`/how-tos/${slug}`, `/recipes/${slug}/`])),
+    ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records']
+      .map((slug) => [`/how-tos/bash/${slug}`, `/recipes/${slug}/`])),
     '/shell': '/languages/bash/',
     ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c']
       .map((slug) => [`/${slug}`, `/languages/${slug}/`])),

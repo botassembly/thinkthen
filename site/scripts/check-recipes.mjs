@@ -2,7 +2,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL, fileURLToPath } from 'node:url';
-import { RECIPE_PAGES } from '../src/data/catalog.mjs';
+import { RECIPE_PAGES, HOWTOS, SHELL_JOBS } from '../src/data/catalog.mjs';
+// Reader recipes and shell jobs also live under /recipes/. They carry no
+// draft state, so each always publishes.
+const JOBS = [...HOWTOS, ...SHELL_JOBS].map((j) => j.slug);
 import { recipeProblems, scopeProblems, recipeSelection, evidenceText, evidenceSource, hasDecimal, unsafePublic } from '../src/data/recipes.mjs';
 import { parseHtml, findElement, textContent } from '../src/lib/html.mjs';
 import { validateCompatibility, ALIASES, routeFile } from './redirect-contract.mjs';
@@ -87,7 +90,7 @@ export function distProblems(dist,catalog=RECIPE_PAGES,preview=false,root=ROOT) 
   const sitemap=fs.readFileSync(path.join(dist,'sitemap.xml'),'utf8');
   const expected=new Set(state.pages.map(r=>r.slug));
   const folder=path.join(dist,'recipes');
-  if (fs.existsSync(folder)) for (const entry of fs.readdirSync(folder,{withFileTypes:true})) if (entry.isDirectory()&&!expected.has(entry.name)) out.push(`recipe visibility: leaked/unknown ${entry.name}`);
+  if (fs.existsSync(folder)) for (const entry of fs.readdirSync(folder,{withFileTypes:true})) if (entry.isDirectory()&&!expected.has(entry.name)&&!JOBS.includes(entry.name)) out.push(`recipe visibility: leaked/unknown ${entry.name}`);
   for (const r of catalog) {
     const htmlPath=routeFile(dist,'/recipes/'+r.slug),mdPath=path.join(dist,'recipes',r.slug+'.md');
     const url=`https://thinkthen.dev/recipes/${r.slug}/`;

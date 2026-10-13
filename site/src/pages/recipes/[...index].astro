@@ -1,19 +1,41 @@
 ---
-// Goal: list only recipes eligible in the declared build mode.
+// Goal: let a reader find the finished job they have, grouped by who does
+// it, each listed with what it gains them.
 import Base from '../../layouts/Base.astro';
-import { RECIPE_PAGES } from '../../data/catalog.mjs';
-import { recipeSelection } from '../../data/recipes.mjs';
+import { RECIPE_PAGES, HOWTO_GROUPS, HOWTOS, SHELL_JOBS } from '../../data/catalog.mjs';
+import { recipeSelection, hasDecimal } from '../../data/recipes.mjs';
 export function getStaticPaths() {
   return recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1').index
     ? [{ params: { index: undefined } }] : [];
 }
 const selected = recipeSelection(RECIPE_PAGES, import.meta.env.DEV || process.env.THINKTHEN_DRAFTS === '1');
+
+// A recipe with no known group would drop off this page without a sound.
+const stray = HOWTOS.filter((h) => !HOWTO_GROUPS.includes(h.group));
+if (stray.length) throw new Error(`recipes: no group for ${stray.map((h) => h.slug).join(', ')}`);
+const item = (job) => ({ slug: job.slug, title: job.title, gain: job.gain, draft: false });
+const sections = [
+  ...HOWTO_GROUPS.map((name) => ({ name, pages: HOWTOS.filter((h) => h.group === name).map(item) })),
+  { name: 'Shell jobs', pages: SHELL_JOBS.map(item) },
+  { name: 'Pipelines', pages: selected.pages.map((r) => ({ slug: r.slug, title: r.title, gain: r.goal, draft: r.draft })) },
+].filter((s) => s.pages.length > 0);
+// The index holds no digit. A number belongs on the page that proves it.
+for (const s of sections) for (const p of s.pages) {
+  if (hasDecimal(p.gain)) throw new Error(`recipes: the gain of ${p.slug} holds a digit`);
+}
+const id = (name) => name.toLowerCase().replace(/[^a-z]+/g, '-');
 ---
-<Base title="Recipes" description="Tested questions, retained answers and measured evidence for caller-owned pipelines." reading draft={selected.draftIndex}>
+<Base title="Recipes" description="Finished jobs done with ThinkThen, grouped by who does them, each shown with real runs." reading draft={selected.draftIndex}>
   <Fragment>
     <h1>Recipes</h1>
     {selected.draftIndex && <p>Draft catalog: these recipes await publication evidence.</p>}
-    <p>A recipe combines caller-owned preparation, a saved question and a measured interpretation.</p>
-    <ul>{selected.pages.map(r => <li data-draft={r.draft ? '' : undefined}><a href={`/recipes/${r.slug}/`}>{r.title}</a> — {r.job}{r.draft && ' Draft.'}</li>)}</ul>
+    <p class="lede">Pick your job. Each recipe says what it gets done, then shows the commands and what came out.</p>
+    {sections.map((s) => (
+      <Fragment>
+        <h2 id={id(s.name)}>{s.name}</h2>
+        <ul>{s.pages.map((p) => <li data-draft={p.draft ? '' : undefined}><a href={`/recipes/${p.slug}/`}>{p.title}</a>: {p.gain}{p.draft && ' Draft.'}</li>)}</ul>
+      </Fragment>
+    ))}
+    <p>The <a href="/languages/bash/#techniques">Bash techniques</a> teach the shell forms these recipes use.</p>
   </Fragment>
 </Base>

@@ -57,18 +57,11 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-The menu links Start, Functions, Models, Languages, Databases, How-tos, Learn and Guides. The footer links the Blog. Recipes appears when its published catalog is available. The Models pages under `/models/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+The menu links Start, Functions, Models, Languages, Databases and Recipes. The footer links the same pages, then Beatles Bench, the Blog, About, Trust, What it will not do, GitHub, the specification, the agent skill, the llms files and the sitemap. The Models pages under `/models/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
-## Guides
+## Recipes
 
-`/guides/` links useful Learn and Recipe pages and lists published lessons.
-Copy `templates/guide.md` into `src/guides/` to write a lesson. `WRITING.md`
-defines the metadata, actual video/article requirements and draft exclusions.
-The lesson route reuses the existing Markdown renderer and base layout.
-`node scripts/guides.test.mjs` renders independent fixtures in a temporary copy,
-checks actual media links and replayed example presentation, and verifies draft
-exclusion from the section list, search, sitemap and Markdown exports. The
-fixtures never ship as lessons. This check runs in both build and check.
+`/recipes/` lists every finished job by reader: business teams, data science, operations and security, shell jobs and pipelines. `HOWTOS` and `SHELL_JOBS` in `src/data/catalog.mjs` hold the reader recipes and shell jobs, each with a one-sentence `gain` that opens its page and lists it. `src/components/HowToPage.astro` draws them, and their runs sit in `examples/how-tos/`. `RECIPE_PAGES` holds the measured pipeline recipes, which `WRITING.md`, "Recipes and publication evidence", governs. `src/pages/recipes/[slug].astro` draws all three kinds and fails the build when two claim one slug. The index holds no digit; a number belongs on the page that proves it.
 
 ## Where the examples come from
 
@@ -128,7 +121,7 @@ The Pages build cannot read the private deck, so it cannot see a newer deck. Wit
 
 ## The Bash techniques
 
-`/languages/bash/` holds the command line's facts and teaches the shell forms under it: `if`, `case`, exit codes, bands, loops, pipes, `xargs`, and a CI gate. The shell jobs sit at `/how-tos/bash/`. `TECHNIQUES` and `SHELL_JOBS` in `src/data/catalog.mjs` list the pages. `examples/how-tos/bash/` holds the scripts of both.
+`/languages/bash/` holds the command line's facts and teaches the shell forms under it: `if`, `case`, exit codes, bands, loops, pipes, `xargs`, and a CI gate. The shell jobs sit at `/recipes/`. `TECHNIQUES` and `SHELL_JOBS` in `src/data/catalog.mjs` list the pages. `examples/how-tos/bash/` holds the scripts of both.
 
 ## Drafts
 

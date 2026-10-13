@@ -1,7 +1,8 @@
 // Independent compatibility inventory: 42 historical aliases, 19 moved pages,
 // 33 language and Bash technique pages moved under /languages/, and 9
 // install and how-it-works pages moved under /start/, and 11 backends
-// pages moved under /models/, and 3 database pages moved under /databases/.
+// pages moved under /models/, 3 database pages moved under /databases/,
+// and 19 how-to, shell job and guide pages merged into /recipes/.
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
@@ -9,8 +10,10 @@ import path from 'node:path';
 import { SITE, isStub } from '../src/lib/listed-pages.mjs';
 export const ALIASES = Object.freeze({
   '/surfaces': '/start/', '/backends': '/models/',
-  '/tutorial': '/start/tutorial/', '/recipes': '/how-tos/bash/',
-  ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection'].map(s => [`/how-tos/${s}`, `/how-tos/bash/${s}/`])),
+  '/tutorial': '/start/tutorial/', '/recipes': '/languages/bash/',
+  '/how-tos': '/recipes/', '/how-tos/bash': '/recipes/', '/guides': '/recipes/',
+  ...Object.fromEntries([...['triage-a-support-inbox', 'join-two-tables-by-meaning', 'code-open-ended-survey-answers', 'screen-studies-for-a-review', 'group-alerts-into-incidents', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents', 'screen-a-post-before-it-goes-up', 'search-youtube-transcripts-by-meaning'], ...['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records']].map(s => [`/how-tos/${s}`, `/recipes/${s}/`])),
+  ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection', 'set-aside-bad-records'].map(s => [`/how-tos/bash/${s}`, `/recipes/${s}/`])),
   '/shell': '/languages/bash/',
   ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c'].map(s => [`/${s}`, `/languages/${s}/`])),
   ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql'].map(s => [`/${s}`, `/databases/${s}/`])),
