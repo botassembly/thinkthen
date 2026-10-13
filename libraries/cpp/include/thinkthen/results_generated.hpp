@@ -127,6 +127,7 @@ namespace tt::results {
     class PairOdds;
     class PieceOdds;
     class Place;
+    class Plan;
     class ProfileWarning;
     class Recognize;
     class RecognizeAnswer;
@@ -180,6 +181,7 @@ namespace tt::results {
     class SessionRelationEdge;
     class SourceRelationEndpoint;
     class Threshold;
+    class TokenBand;
     class TokenUsage;
     class Value;
     class Annotation : public Node {
@@ -1310,6 +1312,7 @@ namespace tt::results {
         public: const Presence<AnswerId>& answer_id() const;
         private: mutable std::shared_ptr<const Presence<double>> cached_probability_;
         public: const Presence<double>& probability() const;
+        std::string source_name() const;
     };
     class RelationMemberFailureId : public Node {
         public: using Node::Node;
@@ -1341,6 +1344,7 @@ namespace tt::results {
         public: const Presence<Failure>& failure() const;
         private: mutable std::shared_ptr<const Presence<FailureId>> cached_failure_id_;
         public: const Presence<FailureId>& failure_id() const;
+        std::string source_name() const;
     };
     class RelationMethod : public Node {
         public: using Node::Node;
@@ -1610,6 +1614,27 @@ namespace tt::results {
         private: mutable std::shared_ptr<const Presence<uint64_t>> cached_start_;
         public: const Presence<uint64_t>& start() const;
     };
+    class Plan : public Node {
+        public: using Node::Node;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_estimated_bytes_;
+        public: const Presence<uint64_t>& estimated_bytes() const;
+        private: mutable std::shared_ptr<const Presence<TokenBand>> cached_estimated_input_tokens_;
+        public: const Presence<TokenBand>& estimated_input_tokens() const;
+        private: mutable std::shared_ptr<const Presence<std::string>> cached_first_body_utf8_;
+        public: const Presence<std::string>& first_body_utf8() const;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_largest_request_bytes_;
+        public: const Presence<uint64_t>& largest_request_bytes() const;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_largest_request_estimated_input_tokens_;
+        public: const Presence<uint64_t>& largest_request_estimated_input_tokens() const;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_records_;
+        public: const Presence<uint64_t>& records() const;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_requests_;
+        public: const Presence<uint64_t>& requests() const;
+        private: mutable std::shared_ptr<const Presence<std::string>> cached_token_estimate_method_;
+        public: const Presence<std::string>& token_estimate_method() const;
+        private: mutable std::shared_ptr<const Presence<bool>> cached_upper_bound_;
+        public: const Presence<bool>& upper_bound() const;
+    };
     class ProfileWarning : public Node {
         public: using Node::Node;
         private: mutable std::shared_ptr<const Presence<std::string>> cached_running_;
@@ -1673,6 +1698,8 @@ namespace tt::results {
         public: const Presence<RelationEndpoint>& source() const;
         private: mutable std::shared_ptr<const Presence<RelationEndpoint>> cached_target_;
         public: const Presence<RelationEndpoint>& target() const;
+        std::string source_name() const;
+        std::string target_name() const;
     };
     class RelationRule : public Node {
         public: using Node::Node;
@@ -2093,6 +2120,8 @@ namespace tt::results {
         public: const Presence<EntityDocument>& source() const;
         private: mutable std::shared_ptr<const Presence<EntityDocument>> cached_target_;
         public: const Presence<EntityDocument>& target() const;
+        std::string source_name() const;
+        std::string target_name() const;
     };
     class SourceRelationEndpoint : public Node {
         public: using Node::Node;
@@ -2115,6 +2144,13 @@ namespace tt::results {
         public: using Node::Node;
         private: mutable std::shared_ptr<const std::variant<double, std::string>> cached_value_;
         public: const std::variant<double, std::string>& value() const;
+    };
+    class TokenBand : public Node {
+        public: using Node::Node;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_lower_;
+        public: const Presence<uint64_t>& lower() const;
+        private: mutable std::shared_ptr<const Presence<uint64_t>> cached_upper_;
+        public: const Presence<uint64_t>& upper() const;
     };
     class TokenUsage : public Node {
         public: using Node::Node;
@@ -4347,6 +4383,9 @@ namespace tt::results {
         "probability"));
         return *cached_probability_;
     }
+    inline std::string RelationMemberAnswerId::source_name() const {
+        return value_.at("source").at("name").get<std::string>();
+    }
     inline const Presence<RelationDirection>& RelationMemberFailureId::direction() const {
         if (!cached_direction_) cached_direction_ = std::make_shared<const Presence<RelationDirection>>(member_value<RelationDirection>(value_,
         "direction"));
@@ -4416,6 +4455,9 @@ namespace tt::results {
         if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(member_value<FailureId>(value_,
         "failure_id"));
         return *cached_failure_id_;
+    }
+    inline std::string RelationMemberFailureId::source_name() const {
+        return value_.at("source").at("name").get<std::string>();
     }
     inline const std::string& RelationMethod::value() const {
         if (!cached_value_) cached_value_ = std::make_shared<const std::string>(decode<std::string>(value_));
@@ -4805,6 +4847,51 @@ namespace tt::results {
         "start"));
         return *cached_start_;
     }
+    inline const Presence<uint64_t>& Plan::estimated_bytes() const {
+        if (!cached_estimated_bytes_) cached_estimated_bytes_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "estimated_bytes"));
+        return *cached_estimated_bytes_;
+    }
+    inline const Presence<TokenBand>& Plan::estimated_input_tokens() const {
+        if (!cached_estimated_input_tokens_) cached_estimated_input_tokens_ = std::make_shared<const Presence<TokenBand>>(member_value<TokenBand>(value_,
+        "estimated_input_tokens"));
+        return *cached_estimated_input_tokens_;
+    }
+    inline const Presence<std::string>& Plan::first_body_utf8() const {
+        if (!cached_first_body_utf8_) cached_first_body_utf8_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        "first_body_utf8"));
+        return *cached_first_body_utf8_;
+    }
+    inline const Presence<uint64_t>& Plan::largest_request_bytes() const {
+        if (!cached_largest_request_bytes_) cached_largest_request_bytes_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "largest_request_bytes"));
+        return *cached_largest_request_bytes_;
+    }
+    inline const Presence<uint64_t>& Plan::largest_request_estimated_input_tokens() const {
+        if (!cached_largest_request_estimated_input_tokens_) cached_largest_request_estimated_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "largest_request_estimated_input_tokens"));
+        return *cached_largest_request_estimated_input_tokens_;
+    }
+    inline const Presence<uint64_t>& Plan::records() const {
+        if (!cached_records_) cached_records_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "records"));
+        return *cached_records_;
+    }
+    inline const Presence<uint64_t>& Plan::requests() const {
+        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "requests"));
+        return *cached_requests_;
+    }
+    inline const Presence<std::string>& Plan::token_estimate_method() const {
+        if (!cached_token_estimate_method_) cached_token_estimate_method_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        "token_estimate_method"));
+        return *cached_token_estimate_method_;
+    }
+    inline const Presence<bool>& Plan::upper_bound() const {
+        if (!cached_upper_bound_) cached_upper_bound_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        "upper_bound"));
+        return *cached_upper_bound_;
+    }
     inline const Presence<std::string>& ProfileWarning::running() const {
         if (!cached_running_) cached_running_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
         "running"));
@@ -4907,6 +4994,12 @@ namespace tt::results {
         if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelationEndpoint>>(member_value<RelationEndpoint>(value_,
         "target"));
         return *cached_target_;
+    }
+    inline std::string RelatedEntityEdge::source_name() const {
+        return value_.at("source").at("name").get<std::string>();
+    }
+    inline std::string RelatedEntityEdge::target_name() const {
+        return value_.at("target").at("name").get<std::string>();
     }
     inline const Presence<bool>& RelationRule::either() const {
         if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
@@ -5682,6 +5775,12 @@ namespace tt::results {
         "target"));
         return *cached_target_;
     }
+    inline std::string SessionRelationEdge::source_name() const {
+        return value_.at("source").at("name").get<std::string>();
+    }
+    inline std::string SessionRelationEdge::target_name() const {
+        return value_.at("target").at("name").get<std::string>();
+    }
     inline const Presence<std::string>& SourceRelationEndpoint::file() const {
         if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
         "file"));
@@ -5722,6 +5821,16 @@ namespace tt::results {
         std::string>>(value_));
         return *cached_value_;
     }
+    inline const Presence<uint64_t>& TokenBand::lower() const {
+        if (!cached_lower_) cached_lower_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "lower"));
+        return *cached_lower_;
+    }
+    inline const Presence<uint64_t>& TokenBand::upper() const {
+        if (!cached_upper_) cached_upper_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        "upper"));
+        return *cached_upper_;
+    }
     inline const Presence<uint64_t>& TokenUsage::input_tokens() const {
         if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
         "input_tokens"));
@@ -5739,6 +5848,131 @@ namespace tt::results {
         return *cached_value_;
     }
 }
+namespace tt::results {
+    class AnswerCardinalityFailure : public std::runtime_error {
+        public:
+        std::vector<SessionPacket> packets;
+        AnswerCardinalityFailure(const char* message, const std::vector<SessionPacket>& values):std::runtime_error(message),
+        packets(values) {
+        }
+    };
+    inline void successful_answer(const std::vector<SessionPacket>& packets) {
+        size_t terminals=0;
+        for(const auto& packet:packets) if(literal(packet.document(), "kind", "terminal")) {
+            ++terminals;
+            if(packet.document().contains("failure")) throw AnswerCardinalityFailure("terminal contains a failure",
+            packets);
+        }
+        if(terminals!=1 || packets.empty() || !literal(packets.back().document(),"kind","terminal")) throw AnswerCardinalityFailure("expected one final successful terminal",
+        packets);
+    }
+    inline std::optional<bool> read_decide(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<std::optional<bool>> answer;
+        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
+        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+            const auto& judgment=packet.document().at("value").at("value").at("value");
+            if(!literal(judgment,"kind","decision")) continue;
+            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            answer.emplace(judgment.at("value").is_null() ? std::optional<bool>{
+            } : std::optional<bool>(decode<bool>(judgment.at("value"))));
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        return std::move(*answer);
+    }
+    inline std::optional<std::string> read_choose(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<std::optional<std::string>> answer;
+        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
+        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+            const auto& judgment=packet.document().at("value").at("value").at("value");
+            if(!literal(judgment,"kind","choice")) continue;
+            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            answer.emplace(judgment.at("value").is_null() ? std::optional<std::string>{
+            } : std::optional<std::string>(decode<std::string>(judgment.at("value"))));
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        return std::move(*answer);
+    }
+    inline double read_score(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<double> answer;
+        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
+        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+            const auto& judgment=packet.document().at("value").at("value").at("value");
+            if(!literal(judgment,"kind","score")) continue;
+            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            answer.emplace(decode<double>(judgment.at("value")));
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        return std::move(*answer);
+    }
+    inline std::vector<std::string> read_tag(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<std::vector<std::string>> answer;
+        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
+        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+            const auto& judgment=packet.document().at("value").at("value").at("value");
+            if(!literal(judgment,"kind","tags")) continue;
+            if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
+            answer.emplace(decode<std::vector<std::string>>(judgment.at("value")));
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching judgment",packets);
+        return std::move(*answer);
+    }
+    inline std::vector<AtomicBoolean> read_filter(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::vector<AtomicBoolean> answer;
+        for(const auto& packet:packets) if(auto row=packet.as_SessionPacketFilterRow()) answer.push_back(*row->value().value);
+        return answer;
+    }
+    inline std::vector<AtomicNonZeroUsize> read_rank(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<std::vector<AtomicNonZeroUsize>> answer;
+        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRankAggregate()) {
+            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            answer.emplace(*aggregate->value().value);
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        return std::move(*answer);
+    }
+    inline Find read_find(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<Find> answer;
+        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketFindAggregate()) {
+            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            answer.emplace(*aggregate->value().value);
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        return std::move(*answer);
+    }
+    inline std::vector<Annotation> read_annotate(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::vector<Annotation> answer;
+        for(const auto& packet:packets) if(auto row=packet.as_SessionPacketAnnotateRow()) answer.push_back(*row->value().value);
+        return answer;
+    }
+    inline std::vector<Recognition> read_recognize(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<std::vector<Recognition>> answer;
+        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRecognizeAggregate()) {
+            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            answer.emplace(*aggregate->value().value);
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        return std::move(*answer);
+    }
+    inline Relation read_relate(const std::vector<SessionPacket>& packets) {
+        successful_answer(packets);
+        std::optional<Relation> answer;
+        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRelateAggregate()) {
+            if(answer) throw AnswerCardinalityFailure("multiple matching aggregates",packets);
+            answer.emplace(*aggregate->value().value);
+        }
+        if(!answer) throw AnswerCardinalityFailure("no matching aggregate",packets);
+        return std::move(*answer);
+    }
+}
 // Generated from the compiler-derived C header; do not edit.
 #include <thinkthen/thinkthen.h>
 namespace tt {
@@ -5747,5 +5981,13 @@ namespace tt {
         failed = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
         pending = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
         written = THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
+    };
+    enum class NativeFailureKind {
+        backend = THINKTHEN_EBACKEND,
+        cancelled = THINKTHEN_ECANCELLED,
+        deadline = THINKTHEN_EDEADLINE,
+        defect = THINKTHEN_EDEFECT,
+        local = THINKTHEN_ELOCAL,
+        usage = THINKTHEN_EUSAGE,
     };
 }
