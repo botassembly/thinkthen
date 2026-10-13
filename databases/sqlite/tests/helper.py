@@ -128,6 +128,8 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
         XDG_CONFIG_HOME=str(scratch / "xdg-config"),
         SCRATCH=str(scratch),
     )
+    held.update(THINKTHEN_SQLITE_EXTENSION=str(LIB), THINKTHEN_BACKEND=str(BACKEND),
+                THINKTHEN_SQLITE_CLI=str(CLI))
     if backend is not None:
         held.update(THINKTHEN_BASE_URL=backend.base(arm), THINKTHEN_API_KEY=LOOPBACK_KEY)
     held.update(extra)
