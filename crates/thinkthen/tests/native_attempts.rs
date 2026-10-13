@@ -302,7 +302,7 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
         assert!(
             error
                 .to_string()
-                .starts_with("the backend openai-decisions account is out of credit")
+                .starts_with("the backend openai account is out of credit")
         );
         assert_eq!(
             error.to_string().contains("provider message:"),

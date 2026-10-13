@@ -51,7 +51,7 @@ pub(super) fn decorate(error: Error, body: Option<&[u8]>, key: &Key, api: ApiTyp
     Error::Provider {
         cause: Box::new(error),
         diagnostic: ProviderDiagnostic {
-            backend: api.name(),
+            backend: api.provider_name(),
             quota,
             message,
         },

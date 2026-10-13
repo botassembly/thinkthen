@@ -75,7 +75,7 @@ pub(crate) fn run(
     }
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
-        format!("provider {}", engine.backend().api_type().name()),
+        format!("provider {}", engine.backend().api_type().provider_name()),
         format!("model asked {}", asked.unwrap_or("unspecified")),
         format!("model sent {}", engine.backend().model().as_str()),
     ];

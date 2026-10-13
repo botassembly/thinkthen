@@ -482,7 +482,7 @@ fn a_decisions_plan_names_the_request_shape_and_the_measured_estimate_limit() {
     );
     let stdout = text(&output.stdout);
     assert_eq!(output.status.code(), Some(0), "{stdout}");
-    assert!(stdout.contains("\nprovider openai-decisions\n"), "{stdout}");
+    assert!(stdout.contains("\nprovider openai\n"), "{stdout}");
     assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; provider tokenization and internal prompts are not measured\n"), "{stdout}");
     assert!(stdout.contains("\"questions\":["), "{stdout}");
     assert_eq!(listener.requests().len(), 0);

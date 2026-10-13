@@ -112,7 +112,7 @@ answered function relate
 critical 0, warning 0
 ```
 
-`provider` names the selected request shape: `systemone` or `openai-decisions`. It does not name who runs the server, because the tool knows nothing about that.
+`provider` names the static provider of the selected request shape: `systemone` or `openai`. It does not name who runs the server, because the tool knows nothing about that.
 
 Each `reply PROBE JSON` line holds one decoded reply: `model` is the model that reply names, `answers` lists each logical answer in plan order as a result prints `answer`, and `usage` is the reply's token counts or `null`. A failed logical question prints the failure marker a result prints. The JSON writer escapes every control character in a model name.
 

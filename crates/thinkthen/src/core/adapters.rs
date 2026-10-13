@@ -64,6 +64,12 @@ impl ApiType {
             }
         }
     }
+    pub(crate) const fn provider_name(self) -> &'static str {
+        match self {
+            Self::Primary => systemone::NAME,
+            Self::Decisions => openai::BUILT_IN.name,
+        }
+    }
     pub(crate) const fn name(self) -> &'static str {
         match self {
             Self::Primary => systemone::NAME,
