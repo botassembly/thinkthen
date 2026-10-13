@@ -485,7 +485,9 @@
         "fixtures",
         "consumer",
         "examples",
-        "Examples"
+        "Examples",
+        "test",
+        "example"
       ]
     },
     "ada": {

@@ -23,6 +23,7 @@ class SizeReport(unittest.TestCase):
                 target.write_text(text)
             libraries = {name: {'root': 'libraries/' + name, 'test_folders': ['tests']}
                          for name in ['python', 'jvm', 'dart']}
+            libraries['dart']['test_folders'].extend(['test', 'example'])
             manifest = {'libraries': libraries, 'exceptions': {'python': {'paths': ['libraries/python/adapter.py']}}}
             write('conformance/library-surface.json', json.dumps(manifest))
             write('sdlc/generators/results/registry.py', "def generated_paths():\n    return {'libraries/python/generated.py'}\n")
@@ -37,6 +38,9 @@ class SizeReport(unittest.TestCase):
             write('libraries/dart/tests/native.mjs', 'test\n' * 3)
             write('libraries/dart/tests/native.d.mts', 'declaration\n' * 2)
             write('libraries/dart/src/tests.rs', 'rust test\n')
+            write('libraries/dart/flutter/example/lib/main.dart', 'sample\n' * 3)
+            write('libraries/dart/test/check.dart', 'test\n' * 2)
+            write('libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc', 'generated\n' * 4)
             write('libraries/jvm/tests/helper.py', 'python test\n' * 2)
             run('git', 'init', '-q')
             run('git', 'config', 'user.name', 'Fixture')
@@ -57,7 +61,8 @@ class SizeReport(unittest.TestCase):
             self.assertEqual(report['libraries']['dart']['ratios']['handwritten'], 0.5)
             self.assertEqual(report['libraries']['jvm']['languages']['kotlin']['handwritten'], 1)
             self.assertEqual(report['libraries']['jvm']['languages']['python']['test'], 2)
-            self.assertEqual(report['libraries']['dart']['test'], 6)
+            self.assertEqual(report['libraries']['dart']['test'], 11)
+            self.assertEqual(report['libraries']['dart']['generated'], 4)
             self.assertEqual(report['commits'][0]['handwritten_added']['python'], 1)
             self.assertFalse((root / 'sdlc/records').exists())
             run(str(SCRIPT), '--root', str(root), '--since', 'v1.0.0', '--store', 'candidate')

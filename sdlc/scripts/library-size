@@ -179,7 +179,7 @@ def candidate_summary(report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--root', type=Path, default=ROOT)
-    parser.add_argument('--since', help='last release revision; defaults to latest reachable release tag')
+    parser.add_argument('--since', help='last release revision; defaults to latest final release tag')
     parser.add_argument('--json', action='store_true', help='machine readable output')
     parser.add_argument('--store', metavar='NAME', help='save a short candidate summary under sdlc/records/coverage')
     args = parser.parse_args()
