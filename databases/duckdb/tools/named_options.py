@@ -7,13 +7,13 @@ def check(run):
         got = run([
             "SELECT thinkthen_decide(input := 'refund now', question := 'Is it a refund?', "
             "context := 'policy', model := 'jev-1.13.0', batch := 1, deadline_ms := -1, "
-            "true_reading := {'meaning': 'refund', 'optional': NULL}, false_reading := FALSE)",
+            "true_reading := {'meaning': 'refund', 'optional': NULL}, false_reading := {'meaning': 'other', 'enabled': FALSE})",
             "SELECT thinkthen_decide('Is it a refund?', 'refund now', "
             "'{\"context\":\"policy\",\"model\":\"jev-1.13.0\",\"batch\":1,\"deadline_ms\":-1,"
-            "\"true\":{\"meaning\":\"refund\",\"optional\":null},\"false\":false}')",
+            "\"true\":{\"meaning\":\"refund\",\"optional\":null},\"false\":{\"meaning\":\"other\",\"enabled\":false}}')",
             "SELECT thinkthen_decide('Is it a refund?', 'refund now', ' { } ', context := 'policy', "
             "model := 'jev-1.13.0', batch := 1, deadline_ms := -1, "
-            "true_reading := {'meaning': 'refund', 'optional': NULL}, false_reading := FALSE)",
+            "true_reading := {'meaning': 'refund', 'optional': NULL}, false_reading := {'meaning': 'other', 'enabled': FALSE})",
             "SELECT thinkthen_choose('Which team?', 'refund now', ['billing','shipping'], batch := 'max')",
             "SELECT thinkthen_choose('Which team?', 'refund now', ['billing','shipping'], '{\"threshold\":0.7}', batch := 'max')",
             "SELECT thinkthen_decide('Is it a refund?', 'other evidence', deadline_ms := 0)",

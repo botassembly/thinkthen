@@ -98,7 +98,8 @@ def check_hosts(cache, fetch):
         command = ['make', '-f', str(REPO / 'Makefile'), 'PROJ_DIR=' + str(build) + '/',
                    'DUCKDB_SRCDIR=' + str(inputs / 'source'), 'EXT_CONFIG=' + str(REPO / 'extension_config.cmake'),
                    'GEN=ninja', 'BUILD_EXTENSION_TEST_DEPS=none', 'DISABLE_SANITIZER=1',
-                   'EXT_RELEASE_FLAGS=-DBUILD_UNITTESTS=ON']
+                   'EXT_RELEASE_FLAGS=-DBUILD_UNITTESTS=ON',
+                   'TESTS_BASE_DIRECTORY=' + str(ROOT / 'community/test/sql') + '/']
         env = os.environ.copy()
         env['CMAKE_BUILD_PARALLEL_LEVEL'] = '2'
         subprocess.run(command + ['release'], cwd=build, env=env, check=True)
