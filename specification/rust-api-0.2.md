@@ -6,7 +6,7 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 - [0550](../sdlc/tickets/0550-binding-defects-from-adversarial-review.md) adds `RequestReaderFailure::Producer`, `RequestDecodeCause` and `Error::request_decode_cause` for typed producer and admission failures. Its usage-counter change retires `Engine::finish_usage` and retains `finish_usage_status`.
 - [0551](../sdlc/tickets/0551-one-named-request-constructor.md) adds the shared `Request` constructors, `RequestFunction` parsing and definition/input selection, and component JSON decoders. Its approved corrective constructor `Request::named_from_json` appears in [the input contract](types.md). The sixth [0558 amendment](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) keeps these component decoders through one private helper.
-- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply` and the five `legacy_details` methods to `compatibility_details`. It preserves frozen scalar details through `to_unbatched_scalar_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
+- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply`. Complete decision, choice, tag and score carriers retain scalar result/1 JSON through `to_scalar_json` and single-text output without scheduler batch metadata through `to_unbatched_scalar_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
 - [0553](../sdlc/tickets/0553-python-r-host-request-residue.md) moves question construction, label rules and nullable columns behind Rust request APIs. Its accepted revision `aae01270d365676386c2b195dccbd51bb584d291` includes `RequestQuestion::inline`, `RequestQuestion::labels`, `RequestColumn`, `RequestColumnValues` and `RequestColumnView` with their declared methods and fields.
 - [0554](../sdlc/tickets/0554-engine-methods-build-requests.md) admits native calls through `Request`. Accepted revision `018d71671b851391aa92a5fd29057a61d46fad81` includes `RequestRows`, `Engine::execute_request_rows`, and the original-preserving `CompleteRecord::map_original` and `CompleteFound::map_original` projections. [The record contract](records.md) documents that native row path. These are the existing six row variants referenced by 0558; this delta adds no rank, rank-set, find or relate row variant.
 - [0556](../sdlc/tickets/0556-blocking-session-read.md) adds `RequestSession::wait`, `RequestSessionWaitInterest` and `RequestSessionReady` to replace binding polls with native readiness waits.
@@ -162,16 +162,11 @@ enum RequestSessionReady
 enum RequestSessionWaitInterest
 enum SourceBudgetExceeded
 fn CallReply::new(String, Facts, Option<Vec<AttemptObservation>>) -> Result<CallReply, Error>
-fn CompleteChoice::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteChoice::to_unbatched_scalar_json(&self) -> Result<String, Error>
-fn CompleteDecision::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteDecision::to_unbatched_scalar_json(&self) -> Result<String, Error>
 fn CompleteFound::map_original<U>(self, impl FnMut(T) -> U) -> CompleteFound<U>
-fn CompleteRecord::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteRecord::map_original<U>(self, impl FnOnce(T) -> U) -> CompleteRecord<U, R>
-fn CompleteScore::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteScore::to_unbatched_scalar_json(&self) -> Result<String, Error>
-fn CompleteTags::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteTags::to_unbatched_scalar_json(&self) -> Result<String, Error>
 fn Engine::execute_request_rows<'a, I, T>(&self, &AdmittedRequest, I, CallOptions<'a>) -> Result<RequestRows<'a, T>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
 fn Error::request_decode_cause(&self) -> Option<RequestDecodeCause>
