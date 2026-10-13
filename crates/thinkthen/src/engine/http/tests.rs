@@ -1,5 +1,8 @@
 //! Focused HTTP parsing and transport checks.
 
+#[cfg(feature = "cli")]
+mod ollama;
+
 use super::{
     Client, Exchange, Key, bounded_wait, draw, honored, io_transport, is_retried, transport,
 };
