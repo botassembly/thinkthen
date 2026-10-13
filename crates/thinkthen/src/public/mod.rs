@@ -35,6 +35,7 @@ mod choice;
 pub(crate) mod complete;
 mod engine;
 pub(crate) mod error;
+mod filter;
 #[cfg(feature = "polars")]
 mod frame;
 mod native_batch;
