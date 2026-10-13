@@ -286,6 +286,9 @@
         ],
         "CancelToken": [
           "cancelled"
+        ],
+        "": [
+          "usage"
         ]
       },
       "question_schema_aliases": {
@@ -294,6 +297,19 @@
       },
       "function_containers": [
         "Engine"
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session",
+        "Call",
+        "CancelToken",
+        "AsyncCalls"
+      ],
+      "representation_owners": [
+        "Result",
+        "Presence",
+        "UsageStatus",
+        "Absent"
       ]
     },
     "typescript": {
@@ -330,7 +346,17 @@
       ],
       "function_containers": [
         "Client"
-      ]
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [],
+      "wrapper_members": {
+        "ClientError": [
+          "constructor"
+        ]
+      }
     },
     "ruby": {
       "root": "libraries/ruby",
@@ -361,6 +387,13 @@
       ],
       "function_containers": [
         "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [
+        "Completed"
       ]
     },
     "r": {
@@ -389,7 +422,11 @@
       ],
       "function_containers": [
         ""
-      ]
+      ],
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
     },
     "c": {
       "root": "libraries/c",
@@ -421,7 +458,11 @@
       },
       "function_containers": [
         ""
-      ]
+      ],
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
     },
     "cpp": {
       "root": "libraries/cpp",
@@ -459,6 +500,13 @@
       },
       "function_containers": [
         "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Call"
+      ],
+      "representation_owners": [
+        "Encoder"
       ]
     },
     "csharp": {
@@ -499,7 +547,12 @@
         "question_reference": "InputRequestQuestionReference",
         "item": "InputRequestItem",
         "files": "InputRequestSource"
-      }
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession"
+      ],
+      "representation_owners": []
     },
     "go": {
       "root": "libraries/go",
@@ -568,10 +621,25 @@
         "Present",
         "Null",
         "GoString",
-        "JSONValue"
+        "JSONValue",
+        "Ptr"
       ],
       "function_containers": [
         "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "OwnedCall",
+        "OwnedSession"
+      ],
+      "representation_owners": [
+        "Presence",
+        "OwnedPresence",
+        "JSONValue",
+        "UsageStatus",
+        "Error",
+        "ErrorKind",
+        "SessionError"
       ]
     },
     "jvm": {
@@ -614,7 +682,17 @@
       "facades": {
         "kotlin": "KotlinEngine",
         "scala": "ScalaEngine"
-      }
+      },
+      "lifecycle_owners": [
+        "Engine",
+        "KotlinEngine",
+        "ScalaEngine",
+        "OwnedSession"
+      ],
+      "representation_owners": [
+        "Presence",
+        "UsageStatus"
+      ]
     },
     "swift": {
       "root": "libraries/swift",
@@ -652,6 +730,14 @@
       },
       "function_containers": [
         "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Session"
+      ],
+      "representation_owners": [
+        "Presence",
+        "OwnedUsagePersistenceStatus"
       ]
     },
     "zig": {
@@ -688,6 +774,14 @@
       },
       "function_containers": [
         ""
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "Session"
+      ],
+      "representation_owners": [
+        "Presence",
+        "InputDocument"
       ]
     },
     "php": {
@@ -724,6 +818,14 @@
       },
       "function_containers": [
         "Client"
+      ],
+      "lifecycle_owners": [
+        "Client",
+        "Operation"
+      ],
+      "representation_owners": [
+        "InputDocument",
+        "Encoder"
       ]
     },
     "dart": {
@@ -761,7 +863,14 @@
       "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
       "function_containers": [
         "Engine"
-      ]
+      ],
+      "lifecycle_owners": [
+        "Engine",
+        "OwnedSession",
+        "Cancellation",
+        "NativeOwner"
+      ],
+      "representation_owners": []
     },
     "ada": {
       "root": "libraries/ada",
@@ -795,7 +904,13 @@
         "question_reference": "T_RequestQuestion_reference",
         "item": "T_RequestItem",
         "files": "T_RequestSource"
-      }
+      },
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": [
+        ""
+      ]
     },
     "objc": {
       "root": "libraries/objective-c",
@@ -828,6 +943,15 @@
       ],
       "function_containers": [
         "TTFoundationClient"
+      ],
+      "lifecycle_owners": [
+        "TTFoundationClient",
+        "TTSession",
+        "TTTask"
+      ],
+      "representation_owners": [
+        "TTPresence",
+        "TTUsagePersistenceStatus"
       ]
     },
     "cobol": {
@@ -866,7 +990,11 @@
       "function_containers": [
         ""
       ],
-      "field_prefix": "v-m-"
+      "field_prefix": "v-m-",
+      "lifecycle_owners": [
+        ""
+      ],
+      "representation_owners": []
     }
   }
 }

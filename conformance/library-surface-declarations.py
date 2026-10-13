@@ -213,6 +213,8 @@ def cstyle(source, language):
             result.add(Declaration('', match[1], 'export'))
     if language == 'go':
         for match in re.finditer(r'(?m)^func\s+(?:\(\w+\s+\*?(\w+)(?:\[[^\]]+\])?\)\s+)?([A-Z]\w*)\s*(?:\[[^\]]+\])?\s*\(', text):
+            if match[1] and not match[1][:1].isupper():
+                continue
             result.add(Declaration(match[1] or '', match[2], 'call'))
         for match in re.finditer(r'(?m)^const\s+([A-Z]\w*)|^[ \t]*([A-Z]\w*)[ \t]+\w*[ \t]*=', text):
             if depths[match.start()] == 0:

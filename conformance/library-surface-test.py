@@ -83,6 +83,14 @@ class PublicSurface(unittest.TestCase):
             self.assertEqual((code, errors), (0, []))
             code, errors = invoke(declarations.replace('export class Client', 'class Client') + '\nexport { Client };')
             self.assertEqual((code, errors), (0, []))
+            code, errors = invoke(declarations.replace('decide(): void;', 'decide(): void; cancel(): void;'))
+            self.assertEqual((code, errors), (0, []))
+            code, errors = invoke(declarations.replace('readonly context?: string;', 'readonly context?: string; cancel(): void;'))
+            self.assertIn('unlisted public call/export: Controls.cancel', errors)
+            code, errors = invoke(declarations.replace('readonly context?: string;', 'readonly context?: string; value(): string;'))
+            self.assertIn('unlisted public call/export: Controls.value', errors)
+            code, errors = invoke(declarations + '\nexport class Completed { cancel(): void; }')
+            self.assertIn('unlisted public call/export: Completed.cancel', errors)
             code, errors = invoke(declarations.replace('readonly backend?: string;', ''))
             self.assertTrue(any(error.startswith('missing setting: backend') for error in errors))
             code, errors = invoke(declarations.replace('export function plan(): void;', ''))
@@ -91,6 +99,27 @@ class PublicSurface(unittest.TestCase):
             self.assertTrue(any('missing generated declaration:' in error and '.payload' in error for error in errors))
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: string;\n surprise: string;'))
             self.assertTrue(any('unlisted generated declaration:' in error and '.surprise' in error for error in errors))
+
+    def test_go_lifecycle_calls_belong_to_native_owners(self):
+        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        with tempfile.TemporaryDirectory(prefix='library-surface-go-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            for path in [ROOT / 'libraries/c/include/thinkthen.h', *ROOT.glob('libraries/go/*.go')]:
+                target = root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+            target = root / 'libraries/go/extra.go'
+            target.write_text('package thinkthen\nfunc (v RequestOptions) Cancel() {}\n')
+            run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                  str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
+                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+            errors = json.loads(run.stdout)['libraries']['go']
+            self.assertEqual(run.returncode, 1)
+            self.assertIn('unlisted public call/export: RequestOptions.Cancel', errors)
+            self.assertNotIn('unlisted public call/export: Client.Close', errors)
+            self.assertFalse(any('nativeEngine.' in error or 'ownedJSON.' in error for error in errors))
 
     def test_java_record_components_are_checked_at_the_cli(self):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())

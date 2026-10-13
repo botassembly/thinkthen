@@ -187,23 +187,29 @@ def check(root, manifest, name):
         errors.append('schema declaration derivation failed: ' + str(error))
     categories = manifest['categories']
     allowed_types = set(categories['lifecycle'] + categories['errors'])
-    allowed_calls = {canonical(n) for n in categories['lifecycle_members'] + categories['representation_members']}
+    allowed_calls = set()
     allowed_calls.update(canonical(config.get('function_prefix', '') + native(n, config['naming'])) for n in functions + list(manifest['helpers']))
     allowed_calls.update(canonical(config.get('function_prefix', '') + native(n, config['naming']) + config.get('function_suffix', '')) for n in functions)
     allowed_calls.update(canonical(n.split('.')[-1]) for n in helper_names.values())
+    allowed_native_calls = set()
+    for category, owners in [('lifecycle_members', config['lifecycle_owners']),
+                             ('representation_members', config['representation_owners'])]:
+        allowed_native_calls.update((owner, canonical(member)) for owner in owners for member in categories[category])
+    allowed_native_calls.update((owner, canonical(member))
+                                for owner in ['', *config['representation_owners']]
+                                for member in config.get('representation_calls', []))
     schema_types = SCHEMA.reachable(request) | SCHEMA.reachable(result)
     allowed_types.update(config.get('representation_types', []))
-    allowed_calls.update(canonical(n) for n in config.get('representation_calls', []))
     allowed_types.update(d.name for d in expected if d.kind in ('type', 'export'))
     allowed_types.update(schema_types)
     allowed_types.update('Input' + n for n in schema_types)
     exception_names = set(manifest.get('exceptions', {}).get(name, {}).get('names', []))
     for item in sorted(declared - expected):
         if item.kind == 'type' or item.kind == 'export' and item.name[:1].isupper():
-            if item.name not in allowed_types and canonical(item.name) not in allowed_calls:
+            if item.name not in allowed_types and canonical(item.name) not in allowed_calls and (item.owner, canonical(item.name)) not in allowed_native_calls:
                 errors.append(f'unlisted public type/export: {item.owner}.{item.name}')
         elif item.kind in ('call', 'export'):
-            if canonical(item.name) not in allowed_calls and item.name not in config.get('wrapper_members', {}).get(item.owner, []):
+            if canonical(item.name) not in allowed_calls and (item.owner, canonical(item.name)) not in allowed_native_calls and item.name not in config.get('wrapper_members', {}).get(item.owner, []):
                 errors.append(f'unlisted public call/export: {item.owner}.{item.name}')
         elif item.kind == 'field':
             if canonical(item.name) in exception_names:
