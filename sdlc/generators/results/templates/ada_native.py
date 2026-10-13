@@ -181,3 +181,28 @@ begin
    return (data => Pointer (Address), len => size_t (Value'Length));
 end UTF8;
 '''
+
+
+def plan(function_schema, header):
+    import re
+    cases = []
+    for symbol in re.findall(r'^#define (THINKTHEN_E[A-Z]+) ', header, re.M):
+        cases.append('when K_' + symbol + ' => raise ' + symbol.removeprefix('THINKTHEN_E').title() + '_Error with Message;')
+    function_names = ', '.join('when ' + identifier('RequestFunction_' + function) + ' => "' + function + '"' for function in enum_values(function_schema))
+    return ['function Plan (Client : Engine; Request : T_RequestCall) return String is',
+            'use Thinkthen_Session_C; use Interfaces.C; use Interfaces.C.Strings;',
+            'Storage : Thinkthen.Requests.Native.Arena;',
+            'type Arguments_Access is access constant thinkthen_request_arguments_v1;',
+            'function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);',
+            'Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));',
+            'Function_Name : constant String := (case Request.T_function is ' + function_names + ');',
+            'Function_Bytes : chars_ptr := Null_Ptr; Surface : chars_ptr := Null_Ptr;',
+            'Output : aliased chars_ptr := Null_Ptr; Length : aliased size_t := 0; Code : int;',
+            'begin', 'Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");',
+            "Code := thinkthen_request_plan_typed_json (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address, Length'Access);",
+            'Free (Function_Bytes); Free (Surface);',
+            'if Code /= 0 then declare Message : constant String := Value (thinkthen_session_error_message); begin case Code is',
+            *cases, 'when others => raise Native_Error with Message; end case; end; end if;',
+            'declare Result : constant String := Text ((data => Output, len => Length)); begin thinkthen_free_string (Output); Output := Null_Ptr; return Result; end;',
+            'exception when others => Free (Function_Bytes); Free (Surface); thinkthen_free_string (Output); raise;',
+            'end Plan;']

@@ -65,6 +65,18 @@ def construct(key, source, value):
     if '$ref' in source:
         original = source['$ref'].removeprefix('#/$defs/')
         return construct(original, definitions[original], value)
+    if key == 'RequestQuestion' and isinstance(value, dict):
+        helpers = {'text': ('Text_Question', 'text'), 'file': ('Question_File', 'path'),
+                   'name': ('Question_Name', 'name'), 'reference': ('Question_Reference', 'reference')}
+        helper = helpers.get(value.get('kind'))
+        if helper and value.keys() <= {'kind', helper[1]}:
+            return helper[0] + ' (' + 'Ada.Strings.Unbounded.To_String (' + ada_text(value[helper[1]]) + ')'  + ')'
+        if value.get('kind') == 'definition':
+            definition = value['value']
+            for function, question_type in [('recognize','RecognizeQuestion'), ('relate','RelateQuestion')]:
+                if function in definition:
+                    branch = next(key for key, _ in definitions['RequestDefinition']['variants'] if function in definitions[key].get('properties', {}))
+                    return function.title() + '_Question (' + construct(branch, definitions[branch], definition) + ')'
     values = template.enum_values(source)
     if values:
         return template.identifier(key + '_' + value)

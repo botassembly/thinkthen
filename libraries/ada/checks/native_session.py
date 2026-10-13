@@ -41,9 +41,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     if not (unpacked / 'src').is_dir():
         unpacked = unpacked / 'thinkthen'
     unpacked.rename(installed)
-    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-requests', 'thinkthen-persistence', 'thinkthen-requests-native'}
+    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native'}
     assert {p.stem for p in (installed / 'src').glob('*.adb')} == expected
-    assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen_session_c'}
+    assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen_session_c', 'thinkthen-requests'}
     if '--full' in sys.argv:
         subprocess.run([sys.executable, str(PACKAGE / 'checks/complete_parity.py'), '--package', str(installed)], env=child_env(THINKTHEN_BACKEND_BIN=os.environ.get('THINKTHEN_BACKEND_BIN', str(ROOT / 'target/debug/conformance-backend'))), check=True)
         raise SystemExit(0)
@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     null_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':'0.7:0.95'}}, {'kind':'text','text':'Null evidence.'})
     item = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':{'original':{'kind':'text','text':'Located evidence.'}}, 'location':{'file':'owned.txt','first_line':1,'last_line':1}})
     declarations += [f'False_Request : constant T_RequestCall := {false_request};', f'Null_Request : constant T_RequestCall := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall := {failure};', f'Feed : constant T_RequestCall := {feed};', f'Invalid : constant T_RequestCall := {invalid};']
-    calls += ['Select_Route ("generic/v1");', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
+    calls += ['Select_Route ("generic/v1");', 'declare Preview : constant String := Thinkthen.Sessions.Calls.Plan (Client, False_Request); begin Require (Ada.Strings.Fixed.Index (Preview, """records"":1") > 0, "typed plan result"); end;', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
 Refused : Boolean := False;
 begin
 begin
@@ -95,7 +95,7 @@ end;''']
         'Select_Settings ("arm/images/liquid/decide/v1", "' + json.dumps({'cache':False,'backend':'liquid','model':'d1'})[1:-1].replace('"','""') + '");',
         'Thinkthen.Sessions.Calls.Decide (Client, Owner, Image_Request); Finish (Owner); Drain (Expected_Sends => 1, Images => True);',
     ]
-    source = (PACKAGE / 'checks/native_session.adb').read_text().replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
+    source = ('with Ada.Strings.Fixed;\n' + (PACKAGE / 'checks/native_session.adb').read_text()).replace('-- DECLARATIONS', '\n'.join(declarations)).replace('-- CALLS', '\n'.join(calls))
     (work / 'native_session.adb').write_text(source)
     subprocess.run([sys.executable, str(PACKAGE / 'checks/session_abi.py'), str(installed / 'native/include/thinkthen.h'), str(installed / 'src/thinkthen_session_c.ads')], env=child_env(), check=True)
     (work / 'consumer.gpr').write_text('with "installed package/thinkthen.gpr";\nproject Consumer is\nfor Main use ("native_session.adb");\nfor Object_Dir use "objects";\npackage Compiler is\nfor Default_Switches ("Ada") use ("-gnat2022");\nend Compiler;\nend Consumer;\n')

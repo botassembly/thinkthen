@@ -17,8 +17,21 @@ procedure Thinkthen.Sessions.Parity_Case is
    Packets : Unbounded_String := Ada.Strings.Unbounded.To_Unbounded_String ("{""packets"": [");
    First : Boolean := True;
    function Quoted (Text : String) return String is
+      Output : Unbounded_String := To_Unbounded_String ("""");
+      Hex : constant String := "0123456789abcdef";
    begin
-      return Encode (T_RequestQuestion_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String (Text)));
+      for C of Text loop
+         case C is
+            when '"' => Append (Output, "\""");
+            when '\' => Append (Output, "\\");
+            when Character'Val (0) .. Character'Val (31) =>
+               Append (Output, "\u00" & Hex (Character'Pos (C) / 16 + 1)
+                       & Hex (Character'Pos (C) mod 16 + 1));
+            when others => Append (Output, C);
+         end case;
+      end loop;
+      Append (Output, '"');
+      return To_String (Output);
    end Quoted;
    procedure Admission (Code : Natural; Message : String) is
    begin
