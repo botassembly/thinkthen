@@ -3,7 +3,7 @@ use crate::{EngineBuilder, Error};
 use clap::Args;
 use std::{io::BufReader, path::PathBuf, time::Duration};
 
-const HELP: &str = "Local stdio server with ten judging tools. Tool arguments use exactly one question selector: question (literal text or an authored object), question_file, question_name, or question_reference. Supply evidence text, records, source, or inputs; ordered images may accompany evidence for decide/choose/score. options holds applicable native controls; it never selects credentials or a backend. The compact catalog is guidance; native admission validates the full grammar.
+pub(crate) const HELP: &str = "Local stdio server with ten judging tools. Tool arguments use exactly one question selector: question (literal text or an authored object), question_file, question_name, or question_reference. Supply evidence text, records, source, or inputs; ordered images may accompany evidence for decide/choose/score. options holds applicable native controls; it never selects credentials or a backend. The compact catalog is guidance; native admission validates the full grammar.
 
 Authored question objects use decide, choose with options, tag with labels, score with levels, find, recognize, or relate. Annotate uses a versioned questions object; rank accepts a decide/score question or an ordered question set. Structured questions retain ordinary saved-question grammar.
 
@@ -12,7 +12,6 @@ https://github.com/botassembly/thinkthen/blob/main/specification/mcp.md
 https://github.com/botassembly/thinkthen/blob/main/libraries/mcp/README.md";
 
 #[derive(Args)]
-#[command(long_about = HELP)]
 pub(crate) struct Arguments {
     /// Select one named backend with its approved environment key.
     #[arg(long)]

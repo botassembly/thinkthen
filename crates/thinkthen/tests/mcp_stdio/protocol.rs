@@ -3,6 +3,36 @@ use conformance_backend::Backend;
 use serde_json::{Value, json};
 
 #[test]
+fn catalog_help_command_explains_native_arguments_and_links_full_grammar() {
+    use crate::child::ChildEnvironment as _;
+    let home = std::env::temp_dir().join(format!("thinkthen-mcp-help-{}", std::process::id()));
+    std::fs::create_dir(&home).unwrap();
+    let output = crate::child::run::output(
+        std::process::Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+            .args(["mcp", "--help"])
+            .clear_environment()
+            .isolated_home(&home)
+            .env("LANG", "C.UTF-8"),
+    );
+    std::fs::remove_dir_all(home).unwrap();
+    let output = output.unwrap();
+    assert!(output.status.success());
+    assert!(output.stderr.is_empty());
+    let help = String::from_utf8(output.stdout).unwrap();
+    for guidance in [
+        "question_file, question_name, or question_reference",
+        "options holds applicable native controls",
+        "native admission validates the full grammar",
+        "Annotate uses a versioned questions object",
+        "rank accepts a decide/score question or an ordered question set",
+        "https://github.com/botassembly/thinkthen/blob/main/specification/mcp.md",
+        "https://github.com/botassembly/thinkthen/blob/main/libraries/mcp/README.md",
+    ] {
+        assert!(help.contains(guidance), "missing MCP guidance: {guidance}");
+    }
+}
+
+#[test]
 fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
     let backend = Backend::start().unwrap();
     let mut session = Session::launch(&format!("{}/generic/v1", backend.origin()));
