@@ -50,6 +50,15 @@ import ThinkThen
         guard let row = rows.first else { throw JSONConversionError("Missing typed decide row") }
         try expect(try row.value.json.data() == Data("true".utf8), "Typed native answer")
         try expect(call.terminal.facts.isPresent, "Native final facts missing")
+        try expect(try call.decideAnswer() == true, "Normalized scalar answer")
+        for (packets, count) in [([OwnedSessionPacket](), 0), (call.packets + call.packets, 2)] {
+            do {
+                _ = try OwnedCall(packets: packets, terminal: call.terminal).decideAnswer()
+                throw JSONConversionError("Answer cardinality accepted")
+            } catch let failure as AnswerCardinalityError {
+                try expect(failure.count == count, "Wrong answer cardinality")
+            }
+        }
         let facts = try call.terminal.json.data()
         do { _ = try await client.decide(.text("Is it?"), input: .text("status-401")); throw JSONConversionError("Backend failure answered") }
         catch let failure as SessionFailure {

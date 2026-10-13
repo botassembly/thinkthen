@@ -96,6 +96,7 @@ public final class Session: @unchecked Sendable {
             try Task.checkCancellation()
             let current = try lease()
             let interest = lock.withLock { cancelled ? UInt32(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) : UInt32(THINKTHEN_SESSION_WAIT_RESULT_V1) }
+            try Task.checkCancellation()
             let observed: Result<Data?, any Error> = await withCheckedContinuation { continuation in
                 DispatchQueue.global(qos: .userInitiated).async {
                     do {
@@ -167,7 +168,7 @@ public final class Client: @unchecked Sendable {
         let handle = Array(bytes).map { CChar(bitPattern: $0) } + [0]
         let pointer = handle.withUnsafeBufferPointer { thinkthen_engine_new_with($0.baseAddress) }
         guard let pointer else {
-            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0)
+            throw SessionBoundaryFailure(code: thinkthen_error_code(nil), message: thinkthen_error_message(nil).map { String(cString: $0) } ?? "Native constructor failed", retryable: thinkthen_error_retryable(nil) != 0, facts: thinkthen_error_facts_json(nil).map { String(cString: $0) })
         }
         owner = ClientOwner(pointer)
     }
@@ -218,7 +219,7 @@ public final class Client: @unchecked Sendable {
                 try bytes.withUnsafeBytes { raw in
                     let code = thinkthen_question_parse(handle, grammar.rawValue, thinkthen_string_v1(data: raw.bindMemory(to: CChar.self).baseAddress, len: raw.count), &question)
                     if code != 0 {
-                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0)
+                        throw SessionBoundaryFailure(code: code, message: thinkthen_error_message(handle).map { String(cString: $0) } ?? "Native question admission failed", retryable: thinkthen_error_retryable(handle) != 0, facts: thinkthen_error_facts_json(handle).map { String(cString: $0) })
                     }
                 }
             }
@@ -258,9 +259,14 @@ public final class Client: @unchecked Sendable {
         return try await withTaskCancellationHandler {
             do {
                 let call = try await collect(session)
+                producer.cancel()
+                await producer.value
                 try failure.check()
                 return call
             } catch {
+                producer.cancel()
+                session.cancel()
+                await producer.value
                 try Task.checkCancellation()
                 try failure.check()
                 throw error

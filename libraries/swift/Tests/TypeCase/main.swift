@@ -82,7 +82,7 @@ import ThinkThen
                     for item in records.items { continuation.yield(InputRequestSessionDescriptor(item: item)) }
                     continuation.finish()
                 }
-                let call = InputRequestCall.decide(InputRequestCallDecide(input: .feed(InputRequestInputFeed(name: "records")), options: typedOptions, question: question))
+                let call = InputRequestCall(function: .decide, input: .feed(InputRequestInputFeed(name: "records")), options: typedOptions, question: question)
                 return try await client.execute(InputRequest(call: call, schema: .thinkthenRequest_1), feed: feed)
             }
             switch verb {
