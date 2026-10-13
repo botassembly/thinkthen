@@ -1,0 +1,11 @@
+# Public package text drafts
+
+These texts are drafts for marketing and Ian's approval before publication. A source comparison does not establish approval or registry availability.
+
+The public Rust package is `crates/thinkthen`. The Rust examples workspace has `publish = false`. Python's optional pandas and Polars interfaces ship within the Python package. Java, Kotlin and Scala share the Maven artifact. Ruby publishes native gems and a diagnostic fallback gem. The Dart registry package differs from the Flutter release archive, whose pubspec disables publishing. Go publishes the module tag. Packagist reads the repository root README and root Composer description; checking only the PHP archive cannot prove that registry page.
+
+The `README-PUBLIC.md` files hold candidate text beside each publication owner. Existing developer guides remain separate. The release checker reads package bytes rather than searching all repository prose. README bytes must equal the chosen source. Descriptions must equal the metadata source and pass the same public-text rules. Version checks apply to ThinkThen version claims, install pins, filenames and release URLs, while allowing unrelated dependency versions.
+
+Examples use named calls already present in developer guides or shipped examples. They have not been executed against installed candidate packages in this drafting work. Rust uses `Engine::decide` and `Question::decide`; Python uses `Engine.decide`; Node and Ruby use `Client.decide`; Go uses `Client.DecideAnswer`; Swift uses `Client.decideAnswer`; PHP uses `Client::decide` and `decideAnswer`; Dart uses `Engine.decide`; C# uses `DecideAsync`; Java uses `Engine.decide`; R uses `tt_decide`; C++ uses `Client::decide`; Ada uses `Sessions.Calls.Decide` and `Decide_Answer`; COBOL uses `TT_SESSION_DECIDE`; Zig uses `session.decide`; Objective-C uses `TTFoundationClient`'s asynchronous `decide` selector. Any API rename before the candidate requires updating and replaying that owner's example. The COBOL example is explicitly an excerpt; its packaged example provides construction and cleanup. The C and Zig texts include complete existing examples to preserve ownership and failure handling.
+
+Approval must cover the README drafts and package description wording. Publication remains outside this work.
