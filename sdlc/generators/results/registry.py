@@ -41,7 +41,7 @@ OUTPUTS = (
     *group('cpp', 'results', 'libraries/cpp/include/thinkthen/', 'results_generated.hpp'),
     *group('cpp', 'inputs', 'libraries/cpp/include/thinkthen/', 'inputs_generated.hpp', 'calls_generated.hpp'),
     *group('dart', 'results', 'libraries/dart/lib/src/session/', 'results_generated.dart'),
-    *group('dart', 'inputs', 'libraries/dart/lib/src/session/', 'inputs_generated.dart'),
+    *group('dart', 'inputs', 'libraries/dart/lib/src/session/', 'inputs_generated.dart', 'calls_generated.dart'),
     *group('dart', 'bridge', 'libraries/dart/lib/src/session/', 'abi_generated.dart'),
     *group('ada', 'results', 'libraries/ada/src/', 'thinkthen-requests.ads', 'thinkthen-sessions-calls.ads', 'thinkthen-sessions-calls.adb', 'thinkthen_session_c.ads', 'thinkthen-requests-native.ads', 'thinkthen-requests-native.adb', 'thinkthen_kinds.ads', 'thinkthen_kinds.adb', 'thinkthen-persistence.ads', 'thinkthen-persistence.adb', 'thinkthen-values.ads', 'thinkthen-values.adb'),
     *group('objc', 'results', 'libraries/objective-c/Sources/Foundation/', 'TTResults.g.h', 'TTResults.g.m'),
