@@ -5,11 +5,18 @@ from native import selected_header
 from c import normalized, nullable, variant_member, container_key
 from host_answers import scalar_answers, aggregate_answers, judgment_route, named_object_fields
 
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeImmediateFacts')
 
 
 def name(key):
-    return 'Native' + ''.join(part[:1].upper() + part[1:] for part in key.removeprefix('complete').split('_'))
+    key = key.removeprefix('complete')
+    semantic = {'Atomic_DecideValue': 'DecisionResult', 'Atomic_Nullable_string': 'ChoiceResult', 'Atomic_Array_of_string': 'TagResult', 'Atomic_double': 'ScoreResult', 'Atomic_boolean': 'FilterResult', 'Atomic_NonZeroUsize': 'RankResult', 'ReadableQuestion2': 'FindQuestionInfo', 'ReadableQuestion3': 'RecognitionQuestionInfo', 'ReadableQuestion4': 'RelationQuestionInfo', 'ImmediateFacts': 'FailureFacts'}
+    return semantic.get(key, ''.join(part[:1].upper() + part[1:] for part in key.split('_')))
+
+
+def input_name(key):
+    semantic = {'RecognizeQuestion': 'RecognitionSpec', 'RecognizeDefinition': 'RecognitionDefinition', 'RequestDefinition_RecognizeDefinition': 'RecognizeQuestion', 'RequestDefinition_Authored_relate': 'RelateQuestion', 'RelateQuestion': 'RelationSpec', 'Authored_relation': 'RelationRule', 'RequestOptions': 'Options', 'EngineSettings': 'Settings'}
+    return semantic.get(key, ''.join(part[:1].upper() + part[1:] for part in key.removeprefix('Request').split('_')))
 
 
 def hint(source, definitions):
@@ -35,13 +42,10 @@ def hint(source, definitions):
 def outputs(definitions, header):
     lines = ['<?php', '// Generated from the shared Rust result graph; do not edit.',
              'declare(strict_types=1);', 'namespace ThinkThen\\Results;']
-    graph = {}
     lines += answer_helpers(definitions)
     for key, source in definitions.items():
-        graph[key] = source
         if 'properties' not in source:
             continue
-        graph[key] = {**source, 'class': name(key)}
         lines += [f'final class {name(key)} extends Node {{']
         for member, field in source['properties'].items():
             # Every accessor returns presence independently of the field value.
@@ -57,17 +61,22 @@ def outputs(definitions, header):
         constants += [f'const {key} = {value};']
     constants += ['namespace ThinkThen;', 'enum UsagePersistenceState: int {']
     constants += ['case ' + word.title() + ' = ' + value + ';' for word, value in re.findall(r'^#define THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1 (\d+)\s*$', header, flags=re.M)]
-    constants += ['}', 'trait NativeErrors', '{', '    public static function throwImmediate(int $code, string $message): never', '    {', '        $class = match ($code) {']
-    for symbol in re.findall(r'^#define (THINKTHEN_E\w+) \d+\s*$', header, flags=re.M):
-        constants += ['            \\ThinkThen\\Session\\' + symbol + ' => ' + symbol.removeprefix('THINKTHEN_E').title() + 'Failure::class,']
-    constants += ['            default => DefectFailure::class,', '        };', '        throw new $class($message);', '    }', '}']
+    errors = re.findall(r'^#define (THINKTHEN_E\w+) (\d+)\s*$', header, flags=re.M)
+    constants += ['}', 'enum ErrorKind: int {']
+    constants += ['    case ' + symbol.removeprefix('THINKTHEN_E').title() + ' = ' + code + ';' for symbol, code in errors]
+    constants += ['}']
+    constants += ['final class ' + symbol.removeprefix('THINKTHEN_E').title() + 'Failure extends CallFailure { public const KIND = ErrorKind::' + symbol.removeprefix('THINKTHEN_E').title() + '; }' for symbol, _ in errors]
+    constants += ['namespace ThinkThen\\Internal;', 'final class ErrorFactory', '{', '    public static function classFor(string $kind): string', '    {', '        return match ($kind) {']
+    constants += ["            '" + symbol.removeprefix('THINKTHEN_E').lower() + "' => \\ThinkThen\\" + symbol.removeprefix('THINKTHEN_E').title() + 'Failure::class,' for symbol, _ in errors]
+    constants += ['            default => \\ThinkThen\\DefectFailure::class,', '        };', '    }', '    public static function raise(\\FFI $ffi, int $code, bool $session): never', '    {', '        $view = $session ? $ffi->thinkthen_session_error_view() : $ffi->thinkthen_error_view(null);', '        $retryable = false; $facts = null;', '        if ($view !== null && !\\FFI::isNull($view)) {', '            $code = $view->code;', '            $retryable = (bool)$view->retryable;', "            $message = $view->message->len === 0 ? '' : \\FFI::string($view->message->data, $view->message->len);", '            if (!\\FFI::isNull($view->facts)) $facts = Decoder::failureFacts($view->facts);', '        } else {', '            $text = $session ? $ffi->thinkthen_session_error_message() : $ffi->thinkthen_error_message(null);', '            $message = is_string($text) ? $text : \\FFI::string($text);', '        }', '        $class = match ($code) {']
+    constants += ['            ' + code + ' => \\ThinkThen\\' + symbol.removeprefix('THINKTHEN_E').title() + 'Failure::class,' for symbol, code in errors]
+    constants += ['            default => \\ThinkThen\\DefectFailure::class,', '        };', '        throw new $class($message, retryable: $retryable, immediateFacts: $facts);', '    }', '}']
     return {'results_generated.php': '\n'.join(lines) + '\n',
-            'graph_generated.json': json.dumps({'$comment': 'Generated from the shared Rust result graph; do not edit.', **graph}, indent=2) + '\n',
             'ffi_generated.h': declarations.strip() + '\n',
             'constants_generated.php': '\n'.join(constants) + '\n'}
 
 
-INPUT_ROOTS = ('RequestFunction', 'RequestInput', 'RequestQuestion', 'RequestReaderFailure',
+INPUT_ROOTS = ('EngineSettings', 'RequestFunction', 'RequestInput', 'RequestQuestion', 'RequestReaderFailure',
                'RequestItem', 'RequestSource', 'RequestReader',
                'RequestOptions', 'RequestSessionDescriptor')
 
@@ -77,7 +86,7 @@ def inputs(definitions):
     selected = set(INPUT_ROOTS)
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
-    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
+    selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
                      'RequestQuestion_text', 'RequestQuestion_definition',
                      'RequestReaderFailure_producer'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
@@ -87,13 +96,14 @@ def inputs(definitions):
             continue
         if 'properties' not in source:
             if key == 'RequestQuestion':
-                lines += ['final class InputRequestQuestion extends Document', '{', '}']
+                lines += ['namespace ThinkThen\\Internal\\Requests;', 'final class Question extends \\ThinkThen\\Inputs\\Document', '{', '}']
             continue
         fields = source['properties']
-        defaults = {member: field['const'] for member, field in fields.items() if 'const' in field}
+        defaults = {member: field['const'] for member, field in fields.items() if isinstance(field, dict) and 'const' in field}
         required = [member for member in source.get('required', []) if member not in defaults]
         def parameter(member):
             field = fields[member]
+            if not isinstance(field, dict): return 'mixed'
             source = definitions[field['$ref'].removeprefix('#/$defs/')] if '$ref' in field else field
             alternatives = source.get('oneOf', [])
             if len(alternatives) == 1:
@@ -104,15 +114,28 @@ def inputs(definitions):
         parameters = ', '.join(parameter(member) + ' $' + member for member in required)
         values = ', '.join(repr(member) + ' => $' + member for member in required)
         tags = ', '.join(repr(k) + ' => ' + repr(v) for k, v in defaults.items())
-        lines += ['final class Input' + ''.join(part[:1].upper() + part[1:] for part in key.split('_')) + ' extends Document', '{',
-                  *(['    public const TAGS = [' + tags + '];'] if tags else []),
-                  '    public function __construct(' + parameters + (', ' if parameters else '') + 'array $fields = [])',
-                  '    {', '        parent::__construct([' + ', '.join(part for part in ('...self::TAGS' if tags else '', values) if part) + ', ...$fields]);' if tags or values else '        parent::__construct($fields);',
-                  '    }', '}']
+        public = key in {'RequestOptions', 'EngineSettings', 'RecognizeQuestion', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RelateQuestion', 'Authored_relation'}
+        namespace = 'ThinkThen\\Inputs' if public else 'ThinkThen\\Internal\\Requests'
+        lines += ['namespace ' + namespace + ';', 'final class ' + input_name(key) + ' extends \\ThinkThen\\Inputs\\Document', '{', *(['    public const TAGS = [' + tags + '];'] if tags else [])]
+        if public:
+            args, entries = [], []
+            for member, field in fields.items():
+                if member in defaults: continue
+                typ = parameter(member)
+                reference = field.get('$ref', '').split('/')[-1] if isinstance(field, dict) else ''
+                if reference in selected and reference in {'RecognizeQuestion', 'RelateQuestion'}: typ = input_name(reference)
+                optional = member not in required
+                args.append((optional, typ + ('|Omitted' if optional and typ != 'mixed' else '') + ' $' + member + (' = Omitted::Value' if optional else '')))
+                entries.append(('...($' + member + ' === Omitted::Value ? [] : [' + repr(member) + ' => $' + member + '])') if optional else repr(member) + ' => $' + member)
+            lines += ['    public function __construct(' + ', '.join(argument for _, argument in sorted(args, key=lambda item: item[0])) + ')', '    {', '        parent::__construct([' + ', '.join((['...self::TAGS'] if tags else []) + entries) + ']);', '    }', '}']
+        else:
+            lines += ['    public function __construct(' + parameters + (', ' if parameters else '') + 'array $fields = [])',
+                      '    {', '        parent::__construct([' + ', '.join(part for part in ('...self::TAGS' if tags else '', values) if part) + ', ...$fields]);' if tags or values else '        parent::__construct($fields);',
+                      '    }', '}']
     lines += ['namespace ThinkThen;', 'trait NamedCalls', '{']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\Document|QuestionInput $question, mixed $input, array $options = [], ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
+        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\Document|QuestionInput $question, mixed $input, array|\\ThinkThen\\Inputs\\Options $options = [], ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
     lines += ['}']
     return '\n'.join(lines) + '\n'
 
@@ -145,7 +168,7 @@ def native_readers(definitions):
         if kind == 'object':
             return f'self::mapping({value}, fn($v) => ' + expression(source['additionalProperties'], '$v', container_key(source, path) + '_entry_value') + ')'
         raise ValueError(source)
-    lines = ['final class Decoder', '{', NATIVE_SUPPORT]
+    lines = ['namespace ThinkThen\\Internal;', 'final class Decoder', '{', NATIVE_SUPPORT]
     emitted = set()
     while len(emitted) < len(nodes):
         key = next(k for k in nodes if k not in emitted)
@@ -162,7 +185,7 @@ def native_readers(definitions):
                 if presence:
                     read = f'{native}->presence === 1 ? null : ({read})'
                 lines += [f'        ' + (f'if ({native}->presence !== 0) ' if presence else '') + f'$values[{member!r}] = {read};']
-            lines += [f'        return new {name(key)}((object)$values, $values);']
+            lines += [f'        return new \\ThinkThen\\Results\\{name(key)}((object)$values, $values);']
         elif 'variants' in source:
             lines += ['        return match ($native->kind) {']
             for index, (child, _) in enumerate(source['variants'], 1):
@@ -182,9 +205,13 @@ def native_readers(definitions):
     return lines + ['}']
 
 
-NATIVE_SUPPORT = r'''    public static function native(\FFI\CData $view): Node
+NATIVE_SUPPORT = r'''    public static function failureFacts(\FFI\CData $view): \ThinkThen\Results\FailureFacts
     {
-        return self::readNativeSessionPacket($view[0]);
+        return self::readFailureFacts($view[0]);
+    }
+    public static function native(\FFI\CData $view): \ThinkThen\Results\Node
+    {
+        return self::readSessionPacket($view[0]);
     }
     private static function text(\FFI\CData $view): string
     {
@@ -233,13 +260,13 @@ def answer_helpers(definitions):
     path, guards = judgment_route(definitions)
     access = '$packet' + ''.join('->' + field for field in path)
     checks = ' && '.join('$packet' + ''.join('->' + f for f in fields) + ' === ' + repr(value) for fields, value in guards)
-    lines = ['trait Answers', '{']
+    lines = ['trait AnswerAccessors', '{', '    private function requireSuccess(): void', '    {', "        if (!$this->terminal->has('failure')) return;", '        $failure = $this->terminal->failure;', '        $class = \\ThinkThen\\Internal\\ErrorFactory::classFor($failure->error->kind);', '        throw new $class($failure->error->message, $failure, $this->results, $this->terminal, $this->packets);', '    }']
     for function, kind, schema in scalar_answers(definitions):
         typ = hint(schema, definitions)
-        lines += [f'    /** @return {typ} */ public function {function}Answer(): mixed', '    {', '        $answers = [];', '        foreach ($this->packets as $packet) {', f'            if ({checks} && {access}->kind === {kind!r}) $answers[] = {access}->value;', '        }', r"        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        return $answers[0];', '    }']
+        lines += [f'    /** @return {typ} */ public function {function}Answer(): ' + ('array' if typ.startswith('list<') else typ), '    {', '        $this->requireSuccess();', '        $answers = [];', '        foreach ($this->packets as $packet) {', f'            if ({checks} && {access}->kind === {kind!r}) $answers[] = {access}->value;', '        }', r"        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        return $answers[0];', '    }']
     for function, packet, schema in aggregate_answers(definitions):
         if function in {f for f, _, _ in scalar_answers(definitions)}: continue
-        lines += [f'    /** @return {hint(schema, definitions)} */ public function {function}Answer(): mixed', '    {']
+        lines += [f'    /** @return {hint(schema, definitions)} */ public function {function}Answer(): mixed', '    {', '        $this->requireSuccess();']
         if schema.get('type') == 'array':
             lines += ['        $answer = [];', '        foreach ($this->packets as $packet) {', f'            if ($packet instanceof {name(packet)}) array_push($answer, ...$packet->value);']
             for child, _ in definitions['completesessionPacket']['variants']:

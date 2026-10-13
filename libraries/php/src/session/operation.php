@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 namespace ThinkThen;
-use ThinkThen\Inputs as Input;
+use ThinkThen\Internal\Requests as Input;
 
 /** Own a native session and retain its client until the operation closes. */
 final class Operation
@@ -17,25 +17,25 @@ final class Operation
     private ?\ThinkThen\Results\Node $terminal = null;
     public function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
         string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
-        array $options, private readonly ?Cancellation $token)
+        array|\ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
     {
         if ($input instanceof FileInput) {
-            $source = new Input\InputRequestInputSource(new Input\InputRequestSource($input->paths,
-                ['reading' => new Input\InputRequestReader($input->reading), ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]));
+            $source = new Input\InputSource(new Input\Source($input->paths,
+                ['reading' => new Input\Reader($input->reading), ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]));
         } elseif ($input instanceof \Traversable) {
             $this->producer = $input instanceof \Iterator ? $input : $input->getIterator();
-            $source = new Input\InputRequestInputFeed('php');
+            $source = new Input\InputFeed('php');
         } else {
             $records = is_array($input) && array_is_list($input) ? $input : [$input];
-            $source = new Input\InputRequestInputRecords(array_map(fn($item) => new Input\InputRequestItem(Client::descriptor($item)), $records));
+            $source = new Input\InputRecords(array_map(fn($item) => new Input\Item(Client::descriptor($item)), $records));
         }
         $question = $question instanceof QuestionInput
-            ? new Input\InputRequestQuestion($question->descriptor)
-            : (is_string($question) ? new Input\InputRequestQuestionText($question) : new Input\InputRequestQuestionDefinition($question));
+            ? new Input\Question($question->descriptor)
+            : (is_string($question) ? new Input\QuestionText($question) : new Input\QuestionDefinition($question));
         $buffers = [];
         $request = $ffi->new('struct thinkthen_named_request_v1');
-        foreach (['function' => $function, 'question_json' => Input\Encoder::encode($question),
-            'input_json' => Input\Encoder::encode($source), 'options_json' => Input\Encoder::encode(new Input\InputRequestOptions($options))] as $field => $text) {
+        foreach (['function' => $function, 'question_json' => \ThinkThen\Internal\Encoder::encode($question),
+            'input_json' => \ThinkThen\Internal\Encoder::encode($source), 'options_json' => \ThinkThen\Internal\Encoder::encode(($options instanceof \ThinkThen\Inputs\Options ? $options : (object)$options))] as $field => $text) {
             $request->$field = $this->utf8($text, $buffers);
         }
         $surface = $this->utf8('php', $buffers);
@@ -55,7 +55,7 @@ final class Operation
     }
     private function check(int $code): void
     {
-        if ($code) Client::throwImmediate($code, Client::text($this->ffi->thinkthen_session_error_message()));
+        if ($code) \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, true);
     }
     public function poll(): ?\ThinkThen\Results\Node
     {
@@ -78,7 +78,7 @@ final class Operation
         try {
             $view = $this->ffi->new('const thinkthen_complete_session_packet_v1 *');
             $this->check($this->ffi->thinkthen_session_result_view($owner, \FFI::addr($view)));
-            $packet = \ThinkThen\Results\Decoder::native($view);
+            $packet = \ThinkThen\Internal\Decoder::native($view);
             $this->packets[] = $packet;
             if ($packet->kind === 'row') $this->rows[] = $packet->value;
             elseif ($packet->kind === 'aggregate') array_push($this->rows, ...(is_array($packet->value) ? $packet->value : [$packet->value]));
@@ -110,10 +110,7 @@ final class Operation
             if ($this->terminal->has('failure')) {
                 $failure = $this->terminal->failure;
                 $detail = $failure->error;
-                $class = match ($detail->kind) {
-                    'usage' => UsageFailure::class, 'backend' => BackendFailure::class, 'deadline' => DeadlineFailure::class,
-                    'local' => LocalFailure::class, 'cancelled' => CancelledFailure::class, default => DefectFailure::class,
-                };
+                $class = \ThinkThen\Internal\ErrorFactory::classFor($detail->kind);
                 throw new $class($detail->message, $failure, $this->rows, $this->terminal, $this->packets, $this->producerError);
             }
             return new \ThinkThen\Results\Completed($this->rows, $this->terminal, $this->packets);
@@ -130,11 +127,11 @@ final class Operation
                     $finished = true;
                 } else {
                     $finished = false;
-                    $this->pending = Input\Encoder::encode(new Input\InputRequestSessionDescriptor(new Input\InputRequestItem(Client::descriptor($this->producer->current()))));
+                    $this->pending = \ThinkThen\Internal\Encoder::encode(new Input\SessionDescriptor(new Input\Item(Client::descriptor($this->producer->current()))));
                 }
             } catch (\Throwable $error) {
                 $this->producerError = $error;
-                $failure = Input\Encoder::encode(new Input\InputRequestReaderFailureProducer());
+                $failure = \ThinkThen\Internal\Encoder::encode(new Input\ReaderFailureProducer());
                 $this->check($this->ffi->thinkthen_session_finish($this->session, $failure, strlen($failure)));
                 $this->producer = null;
                 return;

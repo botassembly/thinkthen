@@ -40,7 +40,7 @@ require_once __DIR__.'/results_generated.php';
 
 final readonly class Completed
 {
-    use Answers;
+    use AnswerAccessors;
     /** @param list<Node> $results */
     public function __construct(public array $results, public Node $terminal, public array $packets = []) {}
     public function facts(): ?Node { return $this->terminal->facts; }
