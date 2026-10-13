@@ -1,0 +1,31 @@
+# 0579: Report live backend failures plainly
+
+Status: OPEN.
+
+Milestone: 0.2
+
+## Outcome
+
+When a live backend fails, ThinkThen stops or retries correctly and tells the user why in the provider's own words. A quota error stops at once and says the account is out of credit. `backends check` names the provider it actually calls. A connection that never opened gets one retry.
+
+## Evidence
+
+- Starts from: the marketing lead's 2026-10-13 live runs of `backends check` and Beatles Bench through 0.2.0 built from main at 65ce9d5af on the Beelink. Jev, Liquid d1, pplx-decider and Jev through OpenRouter passed. Curl reproductions are in botassembly/awesome-thinkthen branch 0002-per-model-guides, under models/gpt-6-luna and models/jev-openrouter.
+  - OpenAI returned status 429 with type `insufficient_quota` and the text "You have no credits remaining". ThinkThen treated it as a rate limit, retried 42 times over about three minutes, and printed "rate limit was reached ... try again later".
+  - `backends check --backend openai` prints "provider systemone", although it sends the OpenAI Decisions shape.
+  - Failures never show the provider's own error text, so neither failure could be explained without a hand-made request.
+  - A single 30-second connection timeout stops a record run, because nothing resends after a connection failure.
+  - For Jev, the check's `--plan` estimated about 4,200 input tokens, and the live reply reported 5,131.
+- Keeps: the retry rules for real rate limits, and ADR 0111's rule that a request whose bytes were sent is never resent after a transport failure.
+- Changes:
+  - Read a 429's error type. On `insufficient_quota` or the provider's equivalent, stop at once with a sentence saying the account is out of credit, and name the backend.
+  - Make `backends check` print the provider whose request shape it sends.
+  - Show the provider's own error message in every backend failure, trimmed to a sensible length. Never include a key, a header or a derived key value.
+  - Retry once when the connection never opened, since no bytes reached the server. Never resend after request bytes were sent.
+  - Find why `--plan` undercounts Jev's input tokens by about a fifth, and correct the estimate or state its margin in the plan output.
+- Proof:
+  - Outside-in tests against a recorded or local fake server show the quota stop with zero retries, the provider's message in the failure, the right provider name, and one retry after a refused connection with none after a sent request.
+  - Routine `test` and `lint` pass.
+- Defers: nothing.
+
+## Progress
