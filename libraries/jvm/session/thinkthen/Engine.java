@@ -32,13 +32,8 @@ public final class Engine extends NamedCalls implements AutoCloseable {
     public Engine() { this(new Inputs.EngineSettings()); }
     @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     private NativeFailure engineFailure() {
-        var args = new MemoryLayout[]{ValueLayout.ADDRESS};
-        int code = (int)NativeSession.call("thinkthen_error_code", ValueLayout.JAVA_INT, args, pointer);
-        boolean retryable = (int)NativeSession.call("thinkthen_error_retryable", ValueLayout.JAVA_INT, args, pointer) != 0;
-        var text = (MemorySegment)NativeSession.call("thinkthen_error_message", ValueLayout.ADDRESS, args, pointer);
-        var facts = (MemorySegment)NativeSession.call("thinkthen_error_facts_json", ValueLayout.ADDRESS, args, pointer);
-        return new NativeFailure(code, retryable, text.reinterpret(Long.MAX_VALUE).getString(0),
-            facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
+        var view = (MemorySegment)NativeSession.call("thinkthen_error_view", ValueLayout.ADDRESS, new MemoryLayout[]{ValueLayout.ADDRESS}, pointer);
+        return NativeResults.failure(view);
     }
     private void live() { if (pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Engine is closed"); }
     private synchronized OwnedSession startSession(Map<String,?> request) {
@@ -71,8 +66,8 @@ public final class Engine extends NamedCalls implements AutoCloseable {
         public String choose() { return Results.CallAnswers.choose(this); }
         public List<String> tag() { return Results.CallAnswers.tag(this); }
         public java.math.BigDecimal score() { return Results.CallAnswers.score(this); }
-        public List<Results.AtomicBoolean> filter() { return Results.CallAnswers.filter(this); }
-        public List<Results.AtomicNonZeroUsize> rank() { return Results.CallAnswers.rank(this); }
+        public List<Object> filter() { return Results.CallAnswers.filter(this); }
+        public List<java.math.BigInteger> rank() { return Results.CallAnswers.rank(this); }
         public Results.Find find() { return Results.CallAnswers.find(this); }
         public List<Results.Annotation> annotate() { return Results.CallAnswers.annotate(this); }
         public List<Results.Recognition> recognize() { return Results.CallAnswers.recognize(this); }

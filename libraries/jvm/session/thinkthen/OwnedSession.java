@@ -31,7 +31,7 @@ public final class OwnedSession implements AutoCloseable {
     public synchronized void finish(Inputs.RequestReaderFailure readerFailure) {
         live();
         try (Arena arguments = Arena.ofConfined()) {
-            var bytes = readerFailure == null ? MemorySegment.NULL : NativeSession.bytes(arguments, readerFailure.json());
+            var bytes = readerFailure == null ? MemorySegment.NULL : NativeSession.bytes(arguments, Values.json(readerFailure));
             NativeSession.check((int)NativeSession.call("thinkthen_session_finish", ValueLayout.JAVA_INT,
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE}, pointer, bytes, bytes.byteSize()));
         }
@@ -52,12 +52,8 @@ public final class OwnedSession implements AutoCloseable {
         if (state == NativeWait.READ_END) return new Read(null, true);
         if (state != NativeWait.READ_RESULT) throw new IllegalStateException("Unknown native read status");
         var packet = packetSlot.get(ValueLayout.ADDRESS, 0);
-        try (Arena arguments = Arena.ofConfined()) {
-            var json = arguments.allocate(ValueLayout.ADDRESS);
-            var length = arguments.allocate(NativeSession.SIZE);
-            NativeSession.check((int)NativeSession.call("thinkthen_session_result_json", ValueLayout.JAVA_INT,
-                new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, packet, json, length));
-            return new Read(Results.SessionPacket.read(NativeSession.copied(json.get(ValueLayout.ADDRESS, 0), length.get(NativeSession.SIZE, 0))), false);
+        try {
+            return new Read(Results.SessionPacket.read(NativeResults.packet(packet)), false);
         } finally { NativeSession.free("thinkthen_session_result_free", packet); }
     }
     /** Block for a packet; settlement drains the terminal facts after cancellation. */

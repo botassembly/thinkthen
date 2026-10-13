@@ -5,7 +5,12 @@ import java.math.*;
 public final class Results {
     private Results() {
     }
-    public static final class Annotation extends Values.View {
+    public static class View extends Values.View {
+        protected View(Object value) {
+            super(value);
+        }
+    }
+    public static final class Annotation extends View {
         public Annotation(Object value) {
             super(value);
         }
@@ -55,8 +60,7 @@ public final class Results {
             return AnnotatedRow.read(value);
         }
     }
-    public sealed interface AnnotationMember extends Values.Value permits AnnotationMemberAnswerId,
-    AnnotationMemberFailureId {
+    public sealed interface AnnotationMember permits AnnotationMemberAnswerId,AnnotationMemberFailureId {
         static AnnotationMember read(Object value) {
             Map<String,Object> object = Values.object(value);
             if (object.containsKey("answer_id")) return AnnotationMemberAnswerId.read(value);
@@ -64,7 +68,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class AnnotationMemberAnswerId extends Values.View implements AnnotationMember {
+    public static final class AnnotationMemberAnswerId extends View implements AnnotationMember {
         public AnnotationMemberAnswerId(Object value) {
             super(value);
         }
@@ -83,9 +87,9 @@ public final class Results {
             Object value = required("observations");
             return Values.list(value, item0 -> Observation.read(item0));
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public List<QuestionSource> questionSources() {
             Object value = required("question_sources");
@@ -107,7 +111,7 @@ public final class Results {
             return presence("value", value -> Value.read(value));
         }
     }
-    public static final class AnnotationMemberFailureId extends Values.View implements AnnotationMember {
+    public static final class AnnotationMemberFailureId extends View implements AnnotationMember {
         public AnnotationMemberFailureId(Object value) {
             super(value);
         }
@@ -126,9 +130,9 @@ public final class Results {
             Object value = required("observations");
             return Values.list(value, item0 -> Observation.read(item0));
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public List<QuestionSource> questionSources() {
             Object value = required("question_sources");
@@ -146,8 +150,8 @@ public final class Results {
             return presence("usage", value -> Usage.read(value));
         }
     }
-    public sealed interface AnnotationValue extends Values.Value permits AnnotationValueDecision,
-    AnnotationValueChoice,AnnotationValueScore,AnnotationValueTags,AnnotationValueFailed {
+    public sealed interface AnnotationValue permits AnnotationValueDecision,AnnotationValueChoice,
+    AnnotationValueScore,AnnotationValueTags,AnnotationValueFailed {
         static AnnotationValue read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("decision".equals(object.get("kind"))) return AnnotationValueDecision.read(value);
@@ -158,7 +162,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class AnnotationValueChoice extends Values.View implements AnnotationValue {
+    public static final class AnnotationValueChoice extends View implements AnnotationValue {
         public AnnotationValueChoice(Object value) {
             super(value);
         }
@@ -174,7 +178,7 @@ public final class Results {
             return presence("value", value -> (String)value);
         }
     }
-    public static final class AnnotationValueDecision extends Values.View implements AnnotationValue {
+    public static final class AnnotationValueDecision extends View implements AnnotationValue {
         public AnnotationValueDecision(Object value) {
             super(value);
         }
@@ -190,7 +194,7 @@ public final class Results {
             return presence("value", value -> (Boolean)value);
         }
     }
-    public static final class AnnotationValueFailed extends Values.View implements AnnotationValue {
+    public static final class AnnotationValueFailed extends View implements AnnotationValue {
         public AnnotationValueFailed(Object value) {
             super(value);
         }
@@ -206,7 +210,7 @@ public final class Results {
             return Failure.read(value);
         }
     }
-    public static final class AnnotationValueScore extends Values.View implements AnnotationValue {
+    public static final class AnnotationValueScore extends View implements AnnotationValue {
         public AnnotationValueScore(Object value) {
             super(value);
         }
@@ -222,7 +226,7 @@ public final class Results {
             return (BigDecimal)value;
         }
     }
-    public static final class AnnotationValueTags extends Values.View implements AnnotationValue {
+    public static final class AnnotationValueTags extends View implements AnnotationValue {
         public AnnotationValueTags(Object value) {
             super(value);
         }
@@ -238,7 +242,7 @@ public final class Results {
             return Values.list(value, item0 -> (String)item0);
         }
     }
-    public static final class AnswerId extends Values.View {
+    public static final class AnswerId extends View {
         public AnswerId(Object value) {
             super(value);
         }
@@ -249,7 +253,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class Answers extends Values.View {
+    public static final class Answers extends View {
         public Answers(Object value) {
             super(value);
         }
@@ -261,7 +265,7 @@ public final class Results {
             return Values.list(value, item0 -> RelationMember.read(item0));
         }
     }
-    public static final class AtomicArrayOfString extends Values.View {
+    public static final class AtomicArrayOfString extends View {
         public AtomicArrayOfString(Object value) {
             super(value);
         }
@@ -292,9 +296,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -315,7 +319,7 @@ public final class Results {
             return Values.list(value, item0 -> (String)item0);
         }
     }
-    public static final class AtomicDecideValue extends Values.View {
+    public static final class AtomicDecideValue extends View {
         public AtomicDecideValue(Object value) {
             super(value);
         }
@@ -346,9 +350,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -369,7 +373,7 @@ public final class Results {
             return DecideValue.read(value);
         }
     }
-    public static final class AtomicNonZeroUsize extends Values.View {
+    public static final class AtomicNonZeroUsize extends View {
         public AtomicNonZeroUsize(Object value) {
             super(value);
         }
@@ -400,9 +404,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -423,7 +427,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class AtomicNullableString extends Values.View {
+    public static final class AtomicNullableString extends View {
         public AtomicNullableString(Object value) {
             super(value);
         }
@@ -454,9 +458,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -477,7 +481,7 @@ public final class Results {
             return presence("value", value -> (String)value);
         }
     }
-    public static final class AtomicBoolean extends Values.View {
+    public static final class AtomicBoolean extends View {
         public AtomicBoolean(Object value) {
             super(value);
         }
@@ -508,9 +512,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -531,7 +535,7 @@ public final class Results {
             return (Boolean)value;
         }
     }
-    public static final class AtomicDouble extends Values.View {
+    public static final class AtomicDouble extends View {
         public AtomicDouble(Object value) {
             super(value);
         }
@@ -562,9 +566,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Presence<String> questionName() {
             return presence("question_name", value -> (String)value);
@@ -585,7 +589,7 @@ public final class Results {
             return (BigDecimal)value;
         }
     }
-    public static final class Attempt extends Values.View {
+    public static final class Attempt extends View {
         public Attempt(Object value) {
             super(value);
         }
@@ -622,7 +626,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public sealed interface Batch extends Values.Value permits BatchInteger,BatchString {
+    public sealed interface Batch permits BatchInteger,BatchString {
         static Batch read(Object value) {
             if (value instanceof BigDecimal) return BatchInteger.read(value);
             if (value instanceof String) return BatchString.read(value);
@@ -633,7 +637,7 @@ public final class Results {
         static BatchInteger read(Object value) {
             return new BatchInteger(Values.integer(value));
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -641,11 +645,11 @@ public final class Results {
         static BatchString read(Object value) {
             return new BatchString((String)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
-    public static final class BoundaryMode extends Values.View {
+    public static final class BoundaryMode extends View {
         public BoundaryMode(Object value) {
             super(value);
         }
@@ -656,7 +660,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class BoundaryOdds extends Values.View {
+    public static final class BoundaryOdds extends View {
         public BoundaryOdds(Object value) {
             super(value);
         }
@@ -672,7 +676,7 @@ public final class Results {
             return Values.list(value, item0 -> BoundaryProposal.read(item0));
         }
     }
-    public static final class BoundaryProposal extends Values.View {
+    public static final class BoundaryProposal extends View {
         public BoundaryProposal(Object value) {
             super(value);
         }
@@ -700,7 +704,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class CallError extends Values.View {
+    public static final class CallError extends View {
         public CallError(Object value) {
             super(value);
         }
@@ -715,7 +719,7 @@ public final class Results {
             return presence("facts", value -> Facts.read(value));
         }
     }
-    public static final class CallId extends Values.View {
+    public static final class CallId extends View {
         public CallId(Object value) {
             super(value);
         }
@@ -726,7 +730,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class DecideValue extends Values.View {
+    public static final class DecideValue extends View {
         public DecideValue(Object value) {
             super(value);
         }
@@ -737,7 +741,7 @@ public final class Results {
             return Values.freeze(json());
         }
     }
-    public static final class EntityDocument extends Values.View {
+    public static final class EntityDocument extends View {
         public EntityDocument(Object value) {
             super(value);
         }
@@ -753,7 +757,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class Error extends Values.View {
+    public static final class Error extends View {
         public Error(Object value) {
             super(value);
         }
@@ -783,8 +787,8 @@ public final class Results {
             return Stopped.read(value);
         }
     }
-    public sealed interface EstimatedInputDenial extends Values.Value permits EstimatedInputDenialInitialRequest,
-    EstimatedInputDenialAdditionalRequest,EstimatedInputDenialRetry {
+    public sealed interface EstimatedInputDenial permits EstimatedInputDenialInitialRequest,EstimatedInputDenialAdditionalRequest,
+    EstimatedInputDenialRetry {
         static EstimatedInputDenial read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("initial_request".equals(object.get("kind"))) return EstimatedInputDenialInitialRequest.read(value);
@@ -793,7 +797,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class EstimatedInputDenialAdditionalRequest extends Values.View implements EstimatedInputDenial {
+    public static final class EstimatedInputDenialAdditionalRequest extends View implements EstimatedInputDenial {
         public EstimatedInputDenialAdditionalRequest(Object value) {
             super(value);
         }
@@ -809,7 +813,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class EstimatedInputDenialInitialRequest extends Values.View implements EstimatedInputDenial {
+    public static final class EstimatedInputDenialInitialRequest extends View implements EstimatedInputDenial {
         public EstimatedInputDenialInitialRequest(Object value) {
             super(value);
         }
@@ -825,7 +829,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class EstimatedInputDenialRetry extends Values.View implements EstimatedInputDenial {
+    public static final class EstimatedInputDenialRetry extends View implements EstimatedInputDenial {
         public EstimatedInputDenialRetry(Object value) {
             super(value);
         }
@@ -845,7 +849,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class Facts extends Values.View {
+    public static final class Facts extends View {
         public Facts(Object value) {
             super(value);
         }
@@ -906,7 +910,7 @@ public final class Results {
             return presence("usage_persistence", value -> PersistenceObservation.read(value));
         }
     }
-    public static final class FailureId extends Values.View {
+    public static final class FailureId extends View {
         public FailureId(Object value) {
             super(value);
         }
@@ -917,7 +921,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class Find extends Values.View {
+    public static final class Find extends View {
         public Find(Object value) {
             super(value);
         }
@@ -955,9 +959,9 @@ public final class Results {
         public Presence<Position> position() {
             return presence("position", value -> Position.read(value));
         }
-        public ReadableQuestion2 question() {
+        public FindQuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion2.read(value);
+            return FindQuestionDocument.read(value);
         }
         public Version schema() {
             Object value = required("schema");
@@ -972,7 +976,7 @@ public final class Results {
             return presence("value", value -> Values.freeze(value));
         }
     }
-    public static final class FindCandidate extends Values.View {
+    public static final class FindCandidate extends View {
         public FindCandidate(Object value) {
             super(value);
         }
@@ -995,7 +999,7 @@ public final class Results {
             return presence("source", value -> PhysicalSource.read(value));
         }
     }
-    public static final class Image extends Values.View {
+    public static final class Image extends View {
         public Image(Object value) {
             super(value);
         }
@@ -1019,7 +1023,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class ImageMedia extends Values.View {
+    public static final class ImageMedia extends View {
         public ImageMedia(Object value) {
             super(value);
         }
@@ -1030,8 +1034,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public sealed interface InputDeclaration extends Values.Value permits InputDeclarationStringRoot,
-    InputDeclarationObjectRoot {
+    public sealed interface InputDeclaration permits InputDeclarationStringRoot,InputDeclarationObjectRoot {
         static InputDeclaration read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("string".equals(object.get("type"))) return InputDeclarationStringRoot.read(value);
@@ -1039,7 +1042,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class InputDeclarationObjectRoot extends Values.View implements InputDeclaration {
+    public static final class InputDeclarationObjectRoot extends View implements InputDeclaration {
         public InputDeclarationObjectRoot(Object value) {
             super(value);
         }
@@ -1058,7 +1061,7 @@ public final class Results {
             return ObjectType.read(value);
         }
     }
-    public static final class InputDeclarationStringRoot extends Values.View implements InputDeclaration {
+    public static final class InputDeclarationStringRoot extends View implements InputDeclaration {
         public InputDeclarationStringRoot(Object value) {
             super(value);
         }
@@ -1070,8 +1073,8 @@ public final class Results {
             return StringType.read(value);
         }
     }
-    public sealed interface InputPropertyType extends Values.Value permits InputPropertyTypeString,
-    InputPropertyTypeNumber,InputPropertyTypeBoolean,InputPropertyTypeArray {
+    public sealed interface InputPropertyType permits InputPropertyTypeString,InputPropertyTypeNumber,
+    InputPropertyTypeBoolean,InputPropertyTypeArray {
         static InputPropertyType read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("string".equals(object.get("type"))) return InputPropertyTypeString.read(value);
@@ -1081,7 +1084,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class InputPropertyTypeArray extends Values.View implements InputPropertyType {
+    public static final class InputPropertyTypeArray extends View implements InputPropertyType {
         public InputPropertyTypeArray(Object value) {
             super(value);
         }
@@ -1097,7 +1100,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class InputPropertyTypeBoolean extends Values.View implements InputPropertyType {
+    public static final class InputPropertyTypeBoolean extends View implements InputPropertyType {
         public InputPropertyTypeBoolean(Object value) {
             super(value);
         }
@@ -1109,7 +1112,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class InputPropertyTypeNumber extends Values.View implements InputPropertyType {
+    public static final class InputPropertyTypeNumber extends View implements InputPropertyType {
         public InputPropertyTypeNumber(Object value) {
             super(value);
         }
@@ -1121,7 +1124,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class InputPropertyTypeString extends Values.View implements InputPropertyType {
+    public static final class InputPropertyTypeString extends View implements InputPropertyType {
         public InputPropertyTypeString(Object value) {
             super(value);
         }
@@ -1133,7 +1136,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class Label extends Values.View {
+    public static final class Label extends View {
         public Label(Object value) {
             super(value);
         }
@@ -1148,7 +1151,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class Meta extends Values.View {
+    public static final class Meta extends View {
         public Meta(Object value) {
             super(value);
         }
@@ -1223,7 +1226,7 @@ public final class Results {
             return presence("usage", value -> Usage.read(value));
         }
     }
-    public static final class ObjectRoot extends Values.View {
+    public static final class ObjectRoot extends View {
         public ObjectRoot(Object value) {
             super(value);
         }
@@ -1242,7 +1245,7 @@ public final class Results {
             return ObjectType.read(value);
         }
     }
-    public static final class ObjectType extends Values.View {
+    public static final class ObjectType extends View {
         public ObjectType(Object value) {
             super(value);
         }
@@ -1253,7 +1256,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public sealed interface Observation extends Values.Value permits ObservationObservationId,ObservationFailureId {
+    public sealed interface Observation permits ObservationObservationId,ObservationFailureId {
         static Observation read(Object value) {
             Map<String,Object> object = Values.object(value);
             if (object.containsKey("observation_id")) return ObservationObservationId.read(value);
@@ -1261,7 +1264,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class ObservationId extends Values.View {
+    public static final class ObservationId extends View {
         public ObservationId(Object value) {
             super(value);
         }
@@ -1272,7 +1275,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class ObservationFailureId extends Values.View implements Observation {
+    public static final class ObservationFailureId extends View implements Observation {
         public ObservationFailureId(Object value) {
             super(value);
         }
@@ -1284,7 +1287,7 @@ public final class Results {
             return FailureId.read(value);
         }
     }
-    public static final class ObservationObservationId extends Values.View implements Observation {
+    public static final class ObservationObservationId extends View implements Observation {
         public ObservationObservationId(Object value) {
             super(value);
         }
@@ -1296,7 +1299,7 @@ public final class Results {
             return ObservationId.read(value);
         }
     }
-    public static final class Origin extends Values.View {
+    public static final class Origin extends View {
         public Origin(Object value) {
             super(value);
         }
@@ -1307,7 +1310,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class PersistenceObservation extends Values.View {
+    public static final class PersistenceObservation extends View {
         public PersistenceObservation(Object value) {
             super(value);
         }
@@ -1326,7 +1329,7 @@ public final class Results {
             return UsagePersistence.read(value);
         }
     }
-    public static final class PhysicalSource extends Values.View {
+    public static final class PhysicalSource extends View {
         public PhysicalSource(Object value) {
             super(value);
         }
@@ -1344,7 +1347,7 @@ public final class Results {
             return presence("last_line", value -> Values.integer(value));
         }
     }
-    public static final class Position extends Values.View {
+    public static final class Position extends View {
         public Position(Object value) {
             super(value);
         }
@@ -1365,7 +1368,7 @@ public final class Results {
             return presence("last", value -> Values.integer(value));
         }
     }
-    public static final class QuestionName extends Values.View {
+    public static final class QuestionName extends View {
         public QuestionName(Object value) {
             super(value);
         }
@@ -1376,7 +1379,7 @@ public final class Results {
             return (String)json();
         }
     }
-    public static final class QuestionSource extends Values.View {
+    public static final class QuestionSource extends View {
         public QuestionSource(Object value) {
             super(value);
         }
@@ -1395,7 +1398,7 @@ public final class Results {
             return Origin.read(value);
         }
     }
-    public static final class RankMember extends Values.View {
+    public static final class RankMember extends View {
         public RankMember(Object value) {
             super(value);
         }
@@ -1411,7 +1414,7 @@ public final class Results {
             return RankMemberResult.read(value);
         }
     }
-    public static final class RankMemberResult extends Values.View {
+    public static final class RankMemberResult extends View {
         public RankMemberResult(Object value) {
             super(value);
         }
@@ -1433,9 +1436,9 @@ public final class Results {
             Object value = required("meta");
             return Meta.read(value);
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public Version schema() {
             Object value = required("schema");
@@ -1453,23 +1456,1019 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public sealed interface ReadableQuestion extends Values.Value permits ReadableQuestionDecide,
-    ReadableQuestionChoose,ReadableQuestionTag,ReadableQuestionScore {
-        static ReadableQuestion read(Object value) {
+    public static final class Recognition extends View {
+        public Recognition(Object value) {
+            super(value);
+        }
+        static Recognition read(Object value) {
+            return new Recognition(value);
+        }
+        public RecognitionOdds answer() {
+            Object value = required("answer");
+            return RecognitionOdds.read(value);
+        }
+        public AnswerId answerId() {
+            Object value = required("answer_id");
+            return AnswerId.read(value);
+        }
+        public Presence<String> file() {
+            return presence("file", value -> (String)value);
+        }
+        public Presence<BigInteger> firstLine() {
+            return presence("first_line", value -> Values.integer(value));
+        }
+        public Presence<BigInteger> index() {
+            return presence("index", value -> Values.integer(value));
+        }
+        public Presence<Object> input() {
+            return presence("input", value -> Values.freeze(value));
+        }
+        public Presence<BigInteger> lastLine() {
+            return presence("last_line", value -> Values.integer(value));
+        }
+        public Meta meta() {
+            Object value = required("meta");
+            return Meta.read(value);
+        }
+        public Presence<Position> position() {
+            return presence("position", value -> Position.read(value));
+        }
+        public RecognizeQuestionDocument question() {
+            Object value = required("question");
+            return RecognizeQuestionDocument.read(value);
+        }
+        public Version schema() {
+            Object value = required("schema");
+            return Version.read(value);
+        }
+        public Presence<PhysicalSource> source() {
+            return presence("source", value -> PhysicalSource.read(value));
+        }
+        public Recognize value() {
+            Object value = required("value");
+            return Recognize.read(value);
+        }
+    }
+    public static final class RecognitionEdgeDocument extends View {
+        public RecognitionEdgeDocument(Object value) {
+            super(value);
+        }
+        static RecognitionEdgeDocument read(Object value) {
+            return new RecognitionEdgeDocument(value);
+        }
+        public Boolean either() {
+            Object value = required("either");
+            return (Boolean)value;
+        }
+        public BigDecimal probability() {
+            Object value = required("probability");
+            return (BigDecimal)value;
+        }
+        public String relation() {
+            Object value = required("relation");
+            return (String)value;
+        }
+        public Entity source() {
+            Object value = required("source");
+            return Entity.read(value);
+        }
+        public Entity target() {
+            Object value = required("target");
+            return Entity.read(value);
+        }
+    }
+    public static final class RecognitionMode extends View {
+        public RecognitionMode(Object value) {
+            super(value);
+        }
+        static RecognitionMode read(Object value) {
+            return new RecognitionMode(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public sealed interface RecognitionOdds permits RecognitionOddsRecognizeAnswer,RecognitionOddsBoundaryOdds {
+        static RecognitionOdds read(Object value) {
             Map<String,Object> object = Values.object(value);
-            if ("decide".equals(object.get("verb"))) return ReadableQuestionDecide.read(value);
-            if ("choose".equals(object.get("verb"))) return ReadableQuestionChoose.read(value);
-            if ("tag".equals(object.get("verb"))) return ReadableQuestionTag.read(value);
-            if ("score".equals(object.get("verb"))) return ReadableQuestionScore.read(value);
+            if (object.containsKey("names") && object.containsKey("pairs") && object.containsKey("pieces") && object.containsKey("proposals")) return RecognitionOddsRecognizeAnswer.read(value);
+            if (object.containsKey("pieces") && object.containsKey("proposals") && !object.containsKey("names") && !object.containsKey("pairs")) return RecognitionOddsBoundaryOdds.read(value);
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class ReadableQuestion2 extends Values.View {
-        public ReadableQuestion2(Object value) {
+    public static final class RecognitionOddsBoundaryOdds extends View implements RecognitionOdds {
+        public RecognitionOddsBoundaryOdds(Object value) {
             super(value);
         }
-        static ReadableQuestion2 read(Object value) {
-            return new ReadableQuestion2(value);
+        static RecognitionOddsBoundaryOdds read(Object value) {
+            return new RecognitionOddsBoundaryOdds(value);
+        }
+        public List<PieceOdds> pieces() {
+            Object value = required("pieces");
+            return Values.list(value, item0 -> PieceOdds.read(item0));
+        }
+        public List<BoundaryProposal> proposals() {
+            Object value = required("proposals");
+            return Values.list(value, item0 -> BoundaryProposal.read(item0));
+        }
+    }
+    public static final class RecognitionOddsRecognizeAnswer extends View implements RecognitionOdds {
+        public RecognitionOddsRecognizeAnswer(Object value) {
+            super(value);
+        }
+        static RecognitionOddsRecognizeAnswer read(Object value) {
+            return new RecognitionOddsRecognizeAnswer(value);
+        }
+        public List<NameOdds> names() {
+            Object value = required("names");
+            return Values.list(value, item0 -> NameOdds.read(item0));
+        }
+        public List<PairOdds> pairs() {
+            Object value = required("pairs");
+            return Values.list(value, item0 -> PairOdds.read(item0));
+        }
+        public List<PieceOdds> pieces() {
+            Object value = required("pieces");
+            return Values.list(value, item0 -> PieceOdds.read(item0));
+        }
+        public List<RecognitionProposal> proposals() {
+            Object value = required("proposals");
+            return Values.list(value, item0 -> RecognitionProposal.read(item0));
+        }
+    }
+    public static final class RecognitionProposal extends View {
+        public RecognitionProposal(Object value) {
+            super(value);
+        }
+        static RecognitionProposal read(Object value) {
+            return new RecognitionProposal(value);
+        }
+        public BigInteger end() {
+            Object value = required("end");
+            return Values.integer(value);
+        }
+        public Boolean kept() {
+            Object value = required("kept");
+            return (Boolean)value;
+        }
+        public Presence<String> kind() {
+            return presence("kind", value -> (String)value);
+        }
+        public Presence<Place> selected() {
+            return presence("selected", value -> Place.read(value));
+        }
+        public BigDecimal spanProbability() {
+            Object value = required("span_probability");
+            return (BigDecimal)value;
+        }
+        public BigInteger start() {
+            Object value = required("start");
+            return Values.integer(value);
+        }
+        public Presence<BigDecimal> strength() {
+            return presence("strength", value -> (BigDecimal)value);
+        }
+    }
+    public static final class RecognitionStageContext extends View {
+        public RecognitionStageContext(Object value) {
+            super(value);
+        }
+        static RecognitionStageContext read(Object value) {
+            return new RecognitionStageContext(value);
+        }
+        public Presence<String> boundary() {
+            return presence("boundary", value -> (String)value);
+        }
+        public Presence<String> kindEdge() {
+            return presence("kind_edge", value -> (String)value);
+        }
+        public Presence<String> relation() {
+            return presence("relation", value -> (String)value);
+        }
+    }
+    public static final class Relation extends View {
+        public Relation(Object value) {
+            super(value);
+        }
+        static Relation read(Object value) {
+            return new Relation(value);
+        }
+        public Answers answer() {
+            Object value = required("answer");
+            return Answers.read(value);
+        }
+        public AnswerId answerId() {
+            Object value = required("answer_id");
+            return AnswerId.read(value);
+        }
+        public Presence<String> file() {
+            return presence("file", value -> (String)value);
+        }
+        public Presence<BigInteger> firstLine() {
+            return presence("first_line", value -> Values.integer(value));
+        }
+        public Presence<BigInteger> index() {
+            return presence("index", value -> Values.integer(value));
+        }
+        public Presence<Object> input() {
+            return presence("input", value -> Values.freeze(value));
+        }
+        public Presence<List<SessionInputSource>> inputSources() {
+            return presence("input_sources", value -> Values.list(value, item0 -> SessionInputSource.read(item0)));
+        }
+        public Presence<BigInteger> lastLine() {
+            return presence("last_line", value -> Values.integer(value));
+        }
+        public Meta meta() {
+            Object value = required("meta");
+            return Meta.read(value);
+        }
+        public Presence<Position> position() {
+            return presence("position", value -> Position.read(value));
+        }
+        public RelateQuestionDocument question() {
+            Object value = required("question");
+            return RelateQuestionDocument.read(value);
+        }
+        public Version schema() {
+            Object value = required("schema");
+            return Version.read(value);
+        }
+        public List<RelatedEntityEdge> value() {
+            Object value = required("value");
+            return Values.list(value, item0 -> RelatedEntityEdge.read(item0));
+        }
+    }
+    public static final class RelationDirection extends View {
+        public RelationDirection(Object value) {
+            super(value);
+        }
+        static RelationDirection read(Object value) {
+            return new RelationDirection(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public sealed interface RelationEndpoint permits RelationEndpointRelatedEntity,RelationEndpointSource {
+        static RelationEndpoint read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if (object.containsKey("kind") && object.containsKey("name") && !object.containsKey("file") && !object.containsKey("ordinal") && !object.containsKey("record")) return RelationEndpointRelatedEntity.read(value);
+            if (object.containsKey("file") && object.containsKey("kind") && object.containsKey("name") && object.containsKey("ordinal") && object.containsKey("record")) return RelationEndpointSource.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class RelationEndpointRelatedEntity extends View implements RelationEndpoint {
+        public RelationEndpointRelatedEntity(Object value) {
+            super(value);
+        }
+        static RelationEndpointRelatedEntity read(Object value) {
+            return new RelationEndpointRelatedEntity(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public String name() {
+            Object value = required("name");
+            return (String)value;
+        }
+    }
+    public static final class RelationEndpointSource extends View implements RelationEndpoint {
+        public RelationEndpointSource(Object value) {
+            super(value);
+        }
+        static RelationEndpointSource read(Object value) {
+            return new RelationEndpointSource(value);
+        }
+        public Presence<String> file() {
+            required("file");
+            return presence("file", value -> (String)value);
+        }
+        public Presence<BigInteger> firstLine() {
+            return presence("first_line", value -> Values.integer(value));
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public Presence<BigInteger> lastLine() {
+            return presence("last_line", value -> Values.integer(value));
+        }
+        public String name() {
+            Object value = required("name");
+            return (String)value;
+        }
+        public BigInteger ordinal() {
+            Object value = required("ordinal");
+            return Values.integer(value);
+        }
+        public Object record() {
+            Object value = required("record");
+            return Values.freeze(value);
+        }
+    }
+    public sealed interface RelationMember permits RelationMemberAnswerId,RelationMemberFailureId {
+        static RelationMember read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if (object.containsKey("answer_id")) return RelationMemberAnswerId.read(value);
+            if (object.containsKey("failure_id")) return RelationMemberFailureId.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class RelationMemberAnswerId extends View implements RelationMember {
+        public RelationMemberAnswerId(Object value) {
+            super(value);
+        }
+        static RelationMemberAnswerId read(Object value) {
+            return new RelationMemberAnswerId(value);
+        }
+        public RelationDirection direction() {
+            Object value = required("direction");
+            return RelationDirection.read(value);
+        }
+        public RelationMethod method() {
+            Object value = required("method");
+            return RelationMethod.read(value);
+        }
+        public List<Observation> observations() {
+            Object value = required("observations");
+            return Values.list(value, item0 -> Observation.read(item0));
+        }
+        public QuestionDocument question() {
+            Object value = required("question");
+            return QuestionDocument.read(value);
+        }
+        public List<QuestionSource> questionSources() {
+            Object value = required("question_sources");
+            return Values.list(value, item0 -> QuestionSource.read(item0));
+        }
+        public String reads() {
+            Object value = required("reads");
+            return (String)value;
+        }
+        public String relation() {
+            Object value = required("relation");
+            return (String)value;
+        }
+        public String request() {
+            Object value = required("request");
+            return (String)value;
+        }
+        public RelatedEntity source() {
+            Object value = required("source");
+            return RelatedEntity.read(value);
+        }
+        public Presence<RelatedEntity> target() {
+            required("target");
+            return presence("target", value -> RelatedEntity.read(value));
+        }
+        public Threshold threshold() {
+            Object value = required("threshold");
+            return Threshold.read(value);
+        }
+        public Presence<Usage> usage() {
+            return presence("usage", value -> Usage.read(value));
+        }
+        public Boolean accepted() {
+            Object value = required("accepted");
+            return (Boolean)value;
+        }
+        public Answer answer() {
+            Object value = required("answer");
+            return Answer.read(value);
+        }
+        public AnswerId answerId() {
+            Object value = required("answer_id");
+            return AnswerId.read(value);
+        }
+        public BigDecimal probability() {
+            Object value = required("probability");
+            return (BigDecimal)value;
+        }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
+        }
+    }
+    public static final class RelationMemberFailureId extends View implements RelationMember {
+        public RelationMemberFailureId(Object value) {
+            super(value);
+        }
+        static RelationMemberFailureId read(Object value) {
+            return new RelationMemberFailureId(value);
+        }
+        public RelationDirection direction() {
+            Object value = required("direction");
+            return RelationDirection.read(value);
+        }
+        public RelationMethod method() {
+            Object value = required("method");
+            return RelationMethod.read(value);
+        }
+        public List<Observation> observations() {
+            Object value = required("observations");
+            return Values.list(value, item0 -> Observation.read(item0));
+        }
+        public QuestionDocument question() {
+            Object value = required("question");
+            return QuestionDocument.read(value);
+        }
+        public List<QuestionSource> questionSources() {
+            Object value = required("question_sources");
+            return Values.list(value, item0 -> QuestionSource.read(item0));
+        }
+        public String reads() {
+            Object value = required("reads");
+            return (String)value;
+        }
+        public String relation() {
+            Object value = required("relation");
+            return (String)value;
+        }
+        public String request() {
+            Object value = required("request");
+            return (String)value;
+        }
+        public RelatedEntity source() {
+            Object value = required("source");
+            return RelatedEntity.read(value);
+        }
+        public Presence<RelatedEntity> target() {
+            required("target");
+            return presence("target", value -> RelatedEntity.read(value));
+        }
+        public Threshold threshold() {
+            Object value = required("threshold");
+            return Threshold.read(value);
+        }
+        public Presence<Usage> usage() {
+            return presence("usage", value -> Usage.read(value));
+        }
+        public Failure failure() {
+            Object value = required("failure");
+            return Failure.read(value);
+        }
+        public FailureId failureId() {
+            Object value = required("failure_id");
+            return FailureId.read(value);
+        }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
+        }
+    }
+    public static final class RelationMethod extends View {
+        public RelationMethod(Object value) {
+            super(value);
+        }
+        static RelationMethod read(Object value) {
+            return new RelationMethod(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class RequestFunction extends View {
+        public RequestFunction(Object value) {
+            super(value);
+        }
+        static RequestFunction read(Object value) {
+            return new RequestFunction(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class SdkRequestId extends View {
+        public SdkRequestId(Object value) {
+            super(value);
+        }
+        static SdkRequestId read(Object value) {
+            return new SdkRequestId(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public sealed interface SendBudgetDenial permits SendBudgetDenialBeforeFirstSend,SendBudgetDenialBeforeAdditionalSend,
+    SendBudgetDenialBeforeRetry {
+        static SendBudgetDenial read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if ("before_first_send".equals(object.get("kind"))) return SendBudgetDenialBeforeFirstSend.read(value);
+            if ("before_additional_send".equals(object.get("kind"))) return SendBudgetDenialBeforeAdditionalSend.read(value);
+            if ("before_retry".equals(object.get("kind"))) return SendBudgetDenialBeforeRetry.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class SendBudgetDenialBeforeAdditionalSend extends View implements SendBudgetDenial {
+        public SendBudgetDenialBeforeAdditionalSend(Object value) {
+            super(value);
+        }
+        static SendBudgetDenialBeforeAdditionalSend read(Object value) {
+            return new SendBudgetDenialBeforeAdditionalSend(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+    }
+    public static final class SendBudgetDenialBeforeFirstSend extends View implements SendBudgetDenial {
+        public SendBudgetDenialBeforeFirstSend(Object value) {
+            super(value);
+        }
+        static SendBudgetDenialBeforeFirstSend read(Object value) {
+            return new SendBudgetDenialBeforeFirstSend(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+    }
+    public static final class SendBudgetDenialBeforeRetry extends View implements SendBudgetDenial {
+        public SendBudgetDenialBeforeRetry(Object value) {
+            super(value);
+        }
+        static SendBudgetDenialBeforeRetry read(Object value) {
+            return new SendBudgetDenialBeforeRetry(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public BigInteger lastStatus() {
+            Object value = required("last_status");
+            return Values.integer(value);
+        }
+    }
+    public static final class StopCause extends View {
+        public StopCause(Object value) {
+            super(value);
+        }
+        static StopCause read(Object value) {
+            return new StopCause(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class Stopped extends View {
+        public Stopped(Object value) {
+            super(value);
+        }
+        static Stopped read(Object value) {
+            return new Stopped(value);
+        }
+        public Presence<BigInteger> at() {
+            return presence("at", value -> Values.integer(value));
+        }
+        public StopCause cause() {
+            Object value = required("cause");
+            return StopCause.read(value);
+        }
+        public Boolean retryable() {
+            Object value = required("retryable");
+            return (Boolean)value;
+        }
+        public Presence<BigInteger> status() {
+            return presence("status", value -> Values.integer(value));
+        }
+    }
+    public static final class StringRoot extends View {
+        public StringRoot(Object value) {
+            super(value);
+        }
+        static StringRoot read(Object value) {
+            return new StringRoot(value);
+        }
+        public StringType type() {
+            Object value = required("type");
+            return StringType.read(value);
+        }
+    }
+    public static final class StringType extends View {
+        public StringType(Object value) {
+            super(value);
+        }
+        static StringType read(Object value) {
+            return new StringType(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class Usage extends View {
+        public Usage(Object value) {
+            super(value);
+        }
+        static Usage read(Object value) {
+            return new Usage(value);
+        }
+        public Presence<BigInteger> inputTokens() {
+            return presence("input_tokens", value -> Values.integer(value));
+        }
+        public Presence<BigInteger> outputTokens() {
+            return presence("output_tokens", value -> Values.integer(value));
+        }
+    }
+    public static final class UsagePersistence extends View {
+        public UsagePersistence(Object value) {
+            super(value);
+        }
+        static UsagePersistence read(Object value) {
+            return new UsagePersistence(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class Verb extends View {
+        public Verb(Object value) {
+            super(value);
+        }
+        static Verb read(Object value) {
+            return new Verb(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class Version extends View {
+        public Version(Object value) {
+            super(value);
+        }
+        static Version read(Object value) {
+            return new Version(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class WordingVersion extends View {
+        public WordingVersion(Object value) {
+            super(value);
+        }
+        static WordingVersion read(Object value) {
+            return new WordingVersion(value);
+        }
+        public BigInteger value() {
+            return Values.integer(json());
+        }
+    }
+    public sealed interface AnnotatedField permits AnnotatedFieldBoolean,AnnotatedFieldNull,AnnotatedFieldString,
+    AnnotatedFieldArray,AnnotatedFieldNumber,AnnotatedFieldObject {
+        static AnnotatedField read(Object value) {
+            if (value instanceof Boolean) return AnnotatedFieldBoolean.read(value);
+            if (value == null) return new AnnotatedFieldNull(null);
+            if (value instanceof String) return AnnotatedFieldString.read(value);
+            if (value instanceof List<?>) return AnnotatedFieldArray.read(value);
+            if (value instanceof BigDecimal) return AnnotatedFieldNumber.read(value);
+            if (value instanceof Map<?,?>) return AnnotatedFieldObject.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record AnnotatedFieldBoolean(Boolean value) implements AnnotatedField {
+        static AnnotatedFieldBoolean read(Object value) {
+            return new AnnotatedFieldBoolean((Boolean)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnnotatedFieldNull(Object value) implements AnnotatedField {
+        static AnnotatedFieldNull read(Object value) {
+            return new AnnotatedFieldNull(Values.freeze(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnnotatedFieldString(String value) implements AnnotatedField {
+        static AnnotatedFieldString read(Object value) {
+            return new AnnotatedFieldString((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnnotatedFieldArray(List<String> value) implements AnnotatedField {
+        static AnnotatedFieldArray read(Object value) {
+            return new AnnotatedFieldArray(Values.list(value, item0 -> (String)item0));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnnotatedFieldNumber(BigDecimal value) implements AnnotatedField {
+        static AnnotatedFieldNumber read(Object value) {
+            return new AnnotatedFieldNumber((BigDecimal)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record AnnotatedFieldObject(Failed value) implements AnnotatedField {
+        static AnnotatedFieldObject read(Object value) {
+            return new AnnotatedFieldObject(Failed.read(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class AnnotatedRow extends View {
+        public AnnotatedRow(Object value) {
+            super(value);
+        }
+        static AnnotatedRow read(Object value) {
+            return new AnnotatedRow(value);
+        }
+        public Map<String,AnnotatedField> value() {
+            return Values.map(json(), item0 -> AnnotatedField.read(item0));
+        }
+    }
+    public sealed interface Answer permits AnswerYesNo,AnswerChoice,AnswerTag,AnswerScore {
+        static Answer read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if ("yes_no".equals(object.get("kind"))) return AnswerYesNo.read(value);
+            if ("choice".equals(object.get("kind"))) return AnswerChoice.read(value);
+            if ("tag".equals(object.get("kind"))) return AnswerTag.read(value);
+            if ("score".equals(object.get("kind"))) return AnswerScore.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class AnswerChoice extends View implements Answer {
+        public AnswerChoice(Object value) {
+            super(value);
+        }
+        static AnswerChoice read(Object value) {
+            return new AnswerChoice(value);
+        }
+        public Presence<BigDecimal> confidence() {
+            return presence("confidence", value -> (BigDecimal)value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public String pick() {
+            Object value = required("pick");
+            return (String)value;
+        }
+        public Map<String,BigDecimal> probabilities() {
+            Object value = required("probabilities");
+            return Values.map(value, item0 -> (BigDecimal)item0);
+        }
+    }
+    public static final class AnswerScore extends View implements Answer {
+        public AnswerScore(Object value) {
+            super(value);
+        }
+        static AnswerScore read(Object value) {
+            return new AnswerScore(value);
+        }
+        public Presence<BigDecimal> confidence() {
+            return presence("confidence", value -> (BigDecimal)value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public String level() {
+            Object value = required("level");
+            return (String)value;
+        }
+        public Map<String,BigDecimal> probabilities() {
+            Object value = required("probabilities");
+            return Values.map(value, item0 -> (BigDecimal)item0);
+        }
+    }
+    public static final class AnswerTag extends View implements Answer {
+        public AnswerTag(Object value) {
+            super(value);
+        }
+        static AnswerTag read(Object value) {
+            return new AnswerTag(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public Map<String,BigDecimal> probabilities() {
+            Object value = required("probabilities");
+            return Values.map(value, item0 -> (BigDecimal)item0);
+        }
+    }
+    public static final class AnswerYesNo extends View implements Answer {
+        public AnswerYesNo(Object value) {
+            super(value);
+        }
+        static AnswerYesNo read(Object value) {
+            return new AnswerYesNo(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public BigDecimal probability() {
+            Object value = required("probability");
+            return (BigDecimal)value;
+        }
+    }
+    public static final class AttemptOutcome extends View {
+        public AttemptOutcome(Object value) {
+            super(value);
+        }
+        static AttemptOutcome read(Object value) {
+            return new AttemptOutcome(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public sealed interface BatchSetting permits BatchSettingInteger,BatchSettingString {
+        static BatchSetting read(Object value) {
+            if (value instanceof BigDecimal) return BatchSettingInteger.read(value);
+            if (value instanceof String) return BatchSettingString.read(value);
+            throw new IllegalStateException("Unknown native value alternative");
+        }
+    }
+    public record BatchSettingInteger(BigInteger value) implements BatchSetting {
+        static BatchSettingInteger read(Object value) {
+            return new BatchSettingInteger(Values.integer(value));
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public record BatchSettingString(String value) implements BatchSetting {
+        static BatchSettingString read(Object value) {
+            return new BatchSettingString((String)value);
+        }
+        Object json() {
+            return Values.json(value);
+        }
+    }
+    public static final class BatchWarning extends View {
+        public BatchWarning(Object value) {
+            super(value);
+        }
+        static BatchWarning read(Object value) {
+            return new BatchWarning(value);
+        }
+        public BatchSetting running() {
+            Object value = required("running");
+            return BatchSetting.read(value);
+        }
+        public BatchSetting tunedFor() {
+            Object value = required("tuned_for");
+            return BatchSetting.read(value);
+        }
+    }
+    public static final class Entity extends View {
+        public Entity(Object value) {
+            super(value);
+        }
+        static Entity read(Object value) {
+            return new Entity(value);
+        }
+        public BigInteger end() {
+            Object value = required("end");
+            return Values.integer(value);
+        }
+        public Presence<String> file() {
+            return presence("file", value -> (String)value);
+        }
+        public Presence<BigInteger> firstLine() {
+            return presence("first_line", value -> Values.integer(value));
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public Presence<BigInteger> lastLine() {
+            return presence("last_line", value -> Values.integer(value));
+        }
+        public BigInteger length() {
+            Object value = required("length");
+            return Values.integer(value);
+        }
+        public BigInteger start() {
+            Object value = required("start");
+            return Values.integer(value);
+        }
+        public BigDecimal strength() {
+            Object value = required("strength");
+            return (BigDecimal)value;
+        }
+        public String text() {
+            Object value = required("text");
+            return (String)value;
+        }
+    }
+    public static final class EntityEdge extends View {
+        public EntityEdge(Object value) {
+            super(value);
+        }
+        static EntityEdge read(Object value) {
+            return new EntityEdge(value);
+        }
+        public Presence<Boolean> either() {
+            return presence("either", value -> (Boolean)value);
+        }
+        public BigDecimal probability() {
+            Object value = required("probability");
+            return (BigDecimal)value;
+        }
+        public String relation() {
+            Object value = required("relation");
+            return (String)value;
+        }
+        public Entity source() {
+            Object value = required("source");
+            return Entity.read(value);
+        }
+        public Entity target() {
+            Object value = required("target");
+            return Entity.read(value);
+        }
+    }
+    public static final class Failed extends View {
+        public Failed(Object value) {
+            super(value);
+        }
+        static Failed read(Object value) {
+            return new Failed(value);
+        }
+        public Failure failed() {
+            Object value = required("failed");
+            return Failure.read(value);
+        }
+    }
+    public static final class Failure extends View {
+        public Failure(Object value) {
+            super(value);
+        }
+        static Failure read(Object value) {
+            return new Failure(value);
+        }
+        public FailureCause cause() {
+            Object value = required("cause");
+            return FailureCause.read(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+    }
+    public static final class FailureCause extends View {
+        public FailureCause(Object value) {
+            super(value);
+        }
+        static FailureCause read(Object value) {
+            return new FailureCause(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class FailureKind extends View {
+        public FailureKind(Object value) {
+            super(value);
+        }
+        static FailureKind read(Object value) {
+            return new FailureKind(value);
+        }
+        public String value() {
+            return (String)json();
+        }
+    }
+    public static final class FindAnswer extends View {
+        public FindAnswer(Object value) {
+            super(value);
+        }
+        static FindAnswer read(Object value) {
+            return new FindAnswer(value);
+        }
+        public Presence<BigDecimal> confidence() {
+            return presence("confidence", value -> (BigDecimal)value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public String pick() {
+            Object value = required("pick");
+            return (String)value;
+        }
+        public Map<String,BigDecimal> probabilities() {
+            Object value = required("probabilities");
+            return Values.map(value, item0 -> (BigDecimal)item0);
+        }
+    }
+    public static final class FindQuestionDocument extends View {
+        public FindQuestionDocument(Object value) {
+            super(value);
+        }
+        static FindQuestionDocument read(Object value) {
+            return new FindQuestionDocument(value);
         }
         public Presence<Batch> batch() {
             return presence("batch", value -> Batch.read(value));
@@ -1511,12 +2510,389 @@ public final class Results {
             return presence("wording_version", value -> WordingVersion.read(value));
         }
     }
-    public static final class ReadableQuestion3 extends Values.View {
-        public ReadableQuestion3(Object value) {
+    public static final class NameOdds extends View {
+        public NameOdds(Object value) {
             super(value);
         }
-        static ReadableQuestion3 read(Object value) {
-            return new ReadableQuestion3(value);
+        static NameOdds read(Object value) {
+            return new NameOdds(value);
+        }
+        public Presence<Map<String,BigDecimal>> edges() {
+            required("edges");
+            return presence("edges", value -> Values.map(value, item0 -> (BigDecimal)item0));
+        }
+        public BigInteger end() {
+            Object value = required("end");
+            return Values.integer(value);
+        }
+        public Presence<Map<String,BigDecimal>> kinds() {
+            required("kinds");
+            return presence("kinds", value -> Values.map(value, item0 -> (BigDecimal)item0));
+        }
+        public BigInteger start() {
+            Object value = required("start");
+            return Values.integer(value);
+        }
+    }
+    public static final class PairOdds extends View {
+        public PairOdds(Object value) {
+            super(value);
+        }
+        static PairOdds read(Object value) {
+            return new PairOdds(value);
+        }
+        public BigDecimal probability() {
+            Object value = required("probability");
+            return (BigDecimal)value;
+        }
+        public String relation() {
+            Object value = required("relation");
+            return (String)value;
+        }
+        public Place source() {
+            Object value = required("source");
+            return Place.read(value);
+        }
+        public Place target() {
+            Object value = required("target");
+            return Place.read(value);
+        }
+    }
+    public static final class PieceOdds extends View {
+        public PieceOdds(Object value) {
+            super(value);
+        }
+        static PieceOdds read(Object value) {
+            return new PieceOdds(value);
+        }
+        public BigInteger end() {
+            Object value = required("end");
+            return Values.integer(value);
+        }
+        public BigInteger start() {
+            Object value = required("start");
+            return Values.integer(value);
+        }
+        public Map<String,BigDecimal> tags() {
+            Object value = required("tags");
+            return Values.map(value, item0 -> (BigDecimal)item0);
+        }
+    }
+    public static final class Place extends View {
+        public Place(Object value) {
+            super(value);
+        }
+        static Place read(Object value) {
+            return new Place(value);
+        }
+        public BigInteger end() {
+            Object value = required("end");
+            return Values.integer(value);
+        }
+        public BigInteger start() {
+            Object value = required("start");
+            return Values.integer(value);
+        }
+    }
+    public static final class Plan extends View {
+        public Plan(Object value) {
+            super(value);
+        }
+        static Plan read(Object value) {
+            return new Plan(value);
+        }
+        public BigInteger estimatedBytes() {
+            Object value = required("estimated_bytes");
+            return Values.integer(value);
+        }
+        public TokenBand estimatedInputTokens() {
+            Object value = required("estimated_input_tokens");
+            return TokenBand.read(value);
+        }
+        public Presence<String> firstBodyUtf8() {
+            required("first_body_utf8");
+            return presence("first_body_utf8", value -> (String)value);
+        }
+        public BigInteger largestRequestBytes() {
+            Object value = required("largest_request_bytes");
+            return Values.integer(value);
+        }
+        public BigInteger largestRequestEstimatedInputTokens() {
+            Object value = required("largest_request_estimated_input_tokens");
+            return Values.integer(value);
+        }
+        public BigInteger records() {
+            Object value = required("records");
+            return Values.integer(value);
+        }
+        public BigInteger requests() {
+            Object value = required("requests");
+            return Values.integer(value);
+        }
+        public String tokenEstimateMethod() {
+            Object value = required("token_estimate_method");
+            return (String)value;
+        }
+        public Boolean upperBound() {
+            Object value = required("upper_bound");
+            return (Boolean)value;
+        }
+    }
+    public static final class ProfileWarning extends View {
+        public ProfileWarning(Object value) {
+            super(value);
+        }
+        static ProfileWarning read(Object value) {
+            return new ProfileWarning(value);
+        }
+        public String running() {
+            Object value = required("running");
+            return (String)value;
+        }
+        public String tunedFor() {
+            Object value = required("tuned_for");
+            return (String)value;
+        }
+    }
+    public sealed interface QuestionDocument permits QuestionDocumentDecide,QuestionDocumentChoose,
+    QuestionDocumentTag,QuestionDocumentScore {
+        static QuestionDocument read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if ("decide".equals(object.get("verb"))) return QuestionDocumentDecide.read(value);
+            if ("choose".equals(object.get("verb"))) return QuestionDocumentChoose.read(value);
+            if ("tag".equals(object.get("verb"))) return QuestionDocumentTag.read(value);
+            if ("score".equals(object.get("verb"))) return QuestionDocumentScore.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class QuestionDocumentChoose extends View implements QuestionDocument {
+        public QuestionDocumentChoose(Object value) {
+            super(value);
+        }
+        static QuestionDocumentChoose read(Object value) {
+            return new QuestionDocumentChoose(value);
+        }
+        public Presence<Batch> batch() {
+            return presence("batch", value -> Batch.read(value));
+        }
+        public Presence<InputDeclaration> contextSchema() {
+            return presence("context_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<InputDeclaration> itemSchema() {
+            return presence("item_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<List<Label>> labelDetails() {
+            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
+        }
+        public Presence<String> model() {
+            return presence("model", value -> (String)value);
+        }
+        public Presence<QuestionName> name() {
+            return presence("name", value -> QuestionName.read(value));
+        }
+        public Presence<List<String>> on() {
+            return presence("on", value -> Values.list(value, item0 -> (String)item0));
+        }
+        public Presence<String> profile() {
+            return presence("profile", value -> (String)value);
+        }
+        public Presence<WordingVersion> wordingVersion() {
+            return presence("wording_version", value -> WordingVersion.read(value));
+        }
+        public List<String> options() {
+            Object value = required("options");
+            return Values.list(value, item0 -> (String)item0);
+        }
+        public Object text() {
+            Object value = required("text");
+            return Values.freeze(value);
+        }
+        public String verb() {
+            Object value = required("verb");
+            return (String)value;
+        }
+    }
+    public static final class QuestionDocumentDecide extends View implements QuestionDocument {
+        public QuestionDocumentDecide(Object value) {
+            super(value);
+        }
+        static QuestionDocumentDecide read(Object value) {
+            return new QuestionDocumentDecide(value);
+        }
+        public Presence<Batch> batch() {
+            return presence("batch", value -> Batch.read(value));
+        }
+        public Presence<InputDeclaration> contextSchema() {
+            return presence("context_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<InputDeclaration> itemSchema() {
+            return presence("item_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<List<Label>> labelDetails() {
+            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
+        }
+        public Presence<String> model() {
+            return presence("model", value -> (String)value);
+        }
+        public Presence<QuestionName> name() {
+            return presence("name", value -> QuestionName.read(value));
+        }
+        public Presence<List<String>> on() {
+            return presence("on", value -> Values.list(value, item0 -> (String)item0));
+        }
+        public Presence<String> profile() {
+            return presence("profile", value -> (String)value);
+        }
+        public Presence<WordingVersion> wordingVersion() {
+            return presence("wording_version", value -> WordingVersion.read(value));
+        }
+        public Presence<Object> falseValue() {
+            return presence("false", value -> Values.freeze(value));
+        }
+        public Object text() {
+            Object value = required("text");
+            return Values.freeze(value);
+        }
+        public Presence<Object> trueValue() {
+            return presence("true", value -> Values.freeze(value));
+        }
+        public String verb() {
+            Object value = required("verb");
+            return (String)value;
+        }
+    }
+    public static final class QuestionDocumentScore extends View implements QuestionDocument {
+        public QuestionDocumentScore(Object value) {
+            super(value);
+        }
+        static QuestionDocumentScore read(Object value) {
+            return new QuestionDocumentScore(value);
+        }
+        public Presence<Batch> batch() {
+            return presence("batch", value -> Batch.read(value));
+        }
+        public Presence<InputDeclaration> contextSchema() {
+            return presence("context_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<InputDeclaration> itemSchema() {
+            return presence("item_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<List<Label>> labelDetails() {
+            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
+        }
+        public Presence<String> model() {
+            return presence("model", value -> (String)value);
+        }
+        public Presence<QuestionName> name() {
+            return presence("name", value -> QuestionName.read(value));
+        }
+        public Presence<List<String>> on() {
+            return presence("on", value -> Values.list(value, item0 -> (String)item0));
+        }
+        public Presence<String> profile() {
+            return presence("profile", value -> (String)value);
+        }
+        public Presence<WordingVersion> wordingVersion() {
+            return presence("wording_version", value -> WordingVersion.read(value));
+        }
+        public List<String> levels() {
+            Object value = required("levels");
+            return Values.list(value, item0 -> (String)item0);
+        }
+        public Object text() {
+            Object value = required("text");
+            return Values.freeze(value);
+        }
+        public String verb() {
+            Object value = required("verb");
+            return (String)value;
+        }
+    }
+    public static final class QuestionDocumentTag extends View implements QuestionDocument {
+        public QuestionDocumentTag(Object value) {
+            super(value);
+        }
+        static QuestionDocumentTag read(Object value) {
+            return new QuestionDocumentTag(value);
+        }
+        public Presence<Batch> batch() {
+            return presence("batch", value -> Batch.read(value));
+        }
+        public Presence<InputDeclaration> contextSchema() {
+            return presence("context_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<InputDeclaration> itemSchema() {
+            return presence("item_schema", value -> InputDeclaration.read(value));
+        }
+        public Presence<List<Label>> labelDetails() {
+            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
+        }
+        public Presence<String> model() {
+            return presence("model", value -> (String)value);
+        }
+        public Presence<QuestionName> name() {
+            return presence("name", value -> QuestionName.read(value));
+        }
+        public Presence<List<String>> on() {
+            return presence("on", value -> Values.list(value, item0 -> (String)item0));
+        }
+        public Presence<String> profile() {
+            return presence("profile", value -> (String)value);
+        }
+        public Presence<WordingVersion> wordingVersion() {
+            return presence("wording_version", value -> WordingVersion.read(value));
+        }
+        public List<String> labels() {
+            Object value = required("labels");
+            return Values.list(value, item0 -> (String)item0);
+        }
+        public Object text() {
+            Object value = required("text");
+            return Values.freeze(value);
+        }
+        public String verb() {
+            Object value = required("verb");
+            return (String)value;
+        }
+    }
+    public sealed interface Recognize permits RecognizeEntities,RecognizeModeProposals {
+        static Recognize read(Object value) {
+            Map<String,Object> object = Values.object(value);
+            if (object.containsKey("entities") && !object.containsKey("mode") && !object.containsKey("proposals")) return RecognizeEntities.read(value);
+            if (object.containsKey("mode") && object.containsKey("proposals") && !object.containsKey("entities")) return RecognizeModeProposals.read(value);
+            throw new IllegalStateException("Unknown native result alternative");
+        }
+    }
+    public static final class RecognizeAnswer extends View {
+        public RecognizeAnswer(Object value) {
+            super(value);
+        }
+        static RecognizeAnswer read(Object value) {
+            return new RecognizeAnswer(value);
+        }
+        public List<NameOdds> names() {
+            Object value = required("names");
+            return Values.list(value, item0 -> NameOdds.read(item0));
+        }
+        public List<PairOdds> pairs() {
+            Object value = required("pairs");
+            return Values.list(value, item0 -> PairOdds.read(item0));
+        }
+        public List<PieceOdds> pieces() {
+            Object value = required("pieces");
+            return Values.list(value, item0 -> PieceOdds.read(item0));
+        }
+        public List<RecognitionProposal> proposals() {
+            Object value = required("proposals");
+            return Values.list(value, item0 -> RecognitionProposal.read(item0));
+        }
+    }
+    public static final class RecognizeQuestionDocument extends View {
+        public RecognizeQuestionDocument(Object value) {
+            super(value);
+        }
+        static RecognizeQuestionDocument read(Object value) {
+            return new RecognizeQuestionDocument(value);
         }
         public Presence<Batch> batch() {
             return presence("batch", value -> Batch.read(value));
@@ -1579,12 +2955,59 @@ public final class Results {
             return presence("wording_version", value -> WordingVersion.read(value));
         }
     }
-    public static final class ReadableQuestion4 extends Values.View {
-        public ReadableQuestion4(Object value) {
+    public static final class RecognizeEntities extends View implements Recognize {
+        public RecognizeEntities(Object value) {
             super(value);
         }
-        static ReadableQuestion4 read(Object value) {
-            return new ReadableQuestion4(value);
+        static RecognizeEntities read(Object value) {
+            return new RecognizeEntities(value);
+        }
+        public List<Entity> entities() {
+            Object value = required("entities");
+            return Values.list(value, item0 -> Entity.read(item0));
+        }
+        public Presence<List<EntityEdge>> relations() {
+            return presence("relations", value -> Values.list(value, item0 -> EntityEdge.read(item0)));
+        }
+    }
+    public static final class RecognizeModeProposals extends View implements Recognize {
+        public RecognizeModeProposals(Object value) {
+            super(value);
+        }
+        static RecognizeModeProposals read(Object value) {
+            return new RecognizeModeProposals(value);
+        }
+        public BoundaryMode mode() {
+            Object value = required("mode");
+            return BoundaryMode.read(value);
+        }
+        public List<BoundaryProposal> proposals() {
+            Object value = required("proposals");
+            return Values.list(value, item0 -> BoundaryProposal.read(item0));
+        }
+    }
+    public static final class RelateFields extends View {
+        public RelateFields(Object value) {
+            super(value);
+        }
+        static RelateFields read(Object value) {
+            return new RelateFields(value);
+        }
+        public String kind() {
+            Object value = required("kind");
+            return (String)value;
+        }
+        public String name() {
+            Object value = required("name");
+            return (String)value;
+        }
+    }
+    public static final class RelateQuestionDocument extends View {
+        public RelateQuestionDocument(Object value) {
+            super(value);
+        }
+        static RelateQuestionDocument read(Object value) {
+            return new RelateQuestionDocument(value);
         }
         public Presence<Batch> batch() {
             return presence("batch", value -> Batch.read(value));
@@ -1630,1431 +3053,7 @@ public final class Results {
             return presence("wording_version", value -> WordingVersion.read(value));
         }
     }
-    public static final class ReadableQuestionChoose extends Values.View implements ReadableQuestion {
-        public ReadableQuestionChoose(Object value) {
-            super(value);
-        }
-        static ReadableQuestionChoose read(Object value) {
-            return new ReadableQuestionChoose(value);
-        }
-        public Presence<Batch> batch() {
-            return presence("batch", value -> Batch.read(value));
-        }
-        public Presence<InputDeclaration> contextSchema() {
-            return presence("context_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<InputDeclaration> itemSchema() {
-            return presence("item_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<List<Label>> labelDetails() {
-            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
-        }
-        public Presence<String> model() {
-            return presence("model", value -> (String)value);
-        }
-        public Presence<QuestionName> name() {
-            return presence("name", value -> QuestionName.read(value));
-        }
-        public Presence<List<String>> on() {
-            return presence("on", value -> Values.list(value, item0 -> (String)item0));
-        }
-        public Presence<String> profile() {
-            return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
-        public List<String> options() {
-            Object value = required("options");
-            return Values.list(value, item0 -> (String)item0);
-        }
-        public Object text() {
-            Object value = required("text");
-            return Values.freeze(value);
-        }
-        public String verb() {
-            Object value = required("verb");
-            return (String)value;
-        }
-    }
-    public static final class ReadableQuestionDecide extends Values.View implements ReadableQuestion {
-        public ReadableQuestionDecide(Object value) {
-            super(value);
-        }
-        static ReadableQuestionDecide read(Object value) {
-            return new ReadableQuestionDecide(value);
-        }
-        public Presence<Batch> batch() {
-            return presence("batch", value -> Batch.read(value));
-        }
-        public Presence<InputDeclaration> contextSchema() {
-            return presence("context_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<InputDeclaration> itemSchema() {
-            return presence("item_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<List<Label>> labelDetails() {
-            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
-        }
-        public Presence<String> model() {
-            return presence("model", value -> (String)value);
-        }
-        public Presence<QuestionName> name() {
-            return presence("name", value -> QuestionName.read(value));
-        }
-        public Presence<List<String>> on() {
-            return presence("on", value -> Values.list(value, item0 -> (String)item0));
-        }
-        public Presence<String> profile() {
-            return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
-        public Presence<Object> falseValue() {
-            return presence("false", value -> Values.freeze(value));
-        }
-        public Object text() {
-            Object value = required("text");
-            return Values.freeze(value);
-        }
-        public Presence<Object> trueValue() {
-            return presence("true", value -> Values.freeze(value));
-        }
-        public String verb() {
-            Object value = required("verb");
-            return (String)value;
-        }
-    }
-    public static final class ReadableQuestionScore extends Values.View implements ReadableQuestion {
-        public ReadableQuestionScore(Object value) {
-            super(value);
-        }
-        static ReadableQuestionScore read(Object value) {
-            return new ReadableQuestionScore(value);
-        }
-        public Presence<Batch> batch() {
-            return presence("batch", value -> Batch.read(value));
-        }
-        public Presence<InputDeclaration> contextSchema() {
-            return presence("context_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<InputDeclaration> itemSchema() {
-            return presence("item_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<List<Label>> labelDetails() {
-            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
-        }
-        public Presence<String> model() {
-            return presence("model", value -> (String)value);
-        }
-        public Presence<QuestionName> name() {
-            return presence("name", value -> QuestionName.read(value));
-        }
-        public Presence<List<String>> on() {
-            return presence("on", value -> Values.list(value, item0 -> (String)item0));
-        }
-        public Presence<String> profile() {
-            return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
-        public List<String> levels() {
-            Object value = required("levels");
-            return Values.list(value, item0 -> (String)item0);
-        }
-        public Object text() {
-            Object value = required("text");
-            return Values.freeze(value);
-        }
-        public String verb() {
-            Object value = required("verb");
-            return (String)value;
-        }
-    }
-    public static final class ReadableQuestionTag extends Values.View implements ReadableQuestion {
-        public ReadableQuestionTag(Object value) {
-            super(value);
-        }
-        static ReadableQuestionTag read(Object value) {
-            return new ReadableQuestionTag(value);
-        }
-        public Presence<Batch> batch() {
-            return presence("batch", value -> Batch.read(value));
-        }
-        public Presence<InputDeclaration> contextSchema() {
-            return presence("context_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<InputDeclaration> itemSchema() {
-            return presence("item_schema", value -> InputDeclaration.read(value));
-        }
-        public Presence<List<Label>> labelDetails() {
-            return presence("label_details", value -> Values.list(value, item0 -> Label.read(item0)));
-        }
-        public Presence<String> model() {
-            return presence("model", value -> (String)value);
-        }
-        public Presence<QuestionName> name() {
-            return presence("name", value -> QuestionName.read(value));
-        }
-        public Presence<List<String>> on() {
-            return presence("on", value -> Values.list(value, item0 -> (String)item0));
-        }
-        public Presence<String> profile() {
-            return presence("profile", value -> (String)value);
-        }
-        public Presence<WordingVersion> wordingVersion() {
-            return presence("wording_version", value -> WordingVersion.read(value));
-        }
-        public List<String> labels() {
-            Object value = required("labels");
-            return Values.list(value, item0 -> (String)item0);
-        }
-        public Object text() {
-            Object value = required("text");
-            return Values.freeze(value);
-        }
-        public String verb() {
-            Object value = required("verb");
-            return (String)value;
-        }
-    }
-    public static final class Recognition extends Values.View {
-        public Recognition(Object value) {
-            super(value);
-        }
-        static Recognition read(Object value) {
-            return new Recognition(value);
-        }
-        public RecognitionOdds answer() {
-            Object value = required("answer");
-            return RecognitionOdds.read(value);
-        }
-        public AnswerId answerId() {
-            Object value = required("answer_id");
-            return AnswerId.read(value);
-        }
-        public Presence<String> file() {
-            return presence("file", value -> (String)value);
-        }
-        public Presence<BigInteger> firstLine() {
-            return presence("first_line", value -> Values.integer(value));
-        }
-        public Presence<BigInteger> index() {
-            return presence("index", value -> Values.integer(value));
-        }
-        public Presence<Object> input() {
-            return presence("input", value -> Values.freeze(value));
-        }
-        public Presence<BigInteger> lastLine() {
-            return presence("last_line", value -> Values.integer(value));
-        }
-        public Meta meta() {
-            Object value = required("meta");
-            return Meta.read(value);
-        }
-        public Presence<Position> position() {
-            return presence("position", value -> Position.read(value));
-        }
-        public ReadableQuestion3 question() {
-            Object value = required("question");
-            return ReadableQuestion3.read(value);
-        }
-        public Version schema() {
-            Object value = required("schema");
-            return Version.read(value);
-        }
-        public Presence<PhysicalSource> source() {
-            return presence("source", value -> PhysicalSource.read(value));
-        }
-        public Recognize value() {
-            Object value = required("value");
-            return Recognize.read(value);
-        }
-    }
-    public static final class RecognitionEdgeDocument extends Values.View {
-        public RecognitionEdgeDocument(Object value) {
-            super(value);
-        }
-        static RecognitionEdgeDocument read(Object value) {
-            return new RecognitionEdgeDocument(value);
-        }
-        public Boolean either() {
-            Object value = required("either");
-            return (Boolean)value;
-        }
-        public BigDecimal probability() {
-            Object value = required("probability");
-            return (BigDecimal)value;
-        }
-        public String relation() {
-            Object value = required("relation");
-            return (String)value;
-        }
-        public Entity source() {
-            Object value = required("source");
-            return Entity.read(value);
-        }
-        public Entity target() {
-            Object value = required("target");
-            return Entity.read(value);
-        }
-    }
-    public static final class RecognitionMode extends Values.View {
-        public RecognitionMode(Object value) {
-            super(value);
-        }
-        static RecognitionMode read(Object value) {
-            return new RecognitionMode(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public sealed interface RecognitionOdds extends Values.Value permits RecognitionOddsRecognizeAnswer,
-    RecognitionOddsBoundaryOdds {
-        static RecognitionOdds read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("names") && object.containsKey("pairs") && object.containsKey("pieces") && object.containsKey("proposals")) return RecognitionOddsRecognizeAnswer.read(value);
-            if (object.containsKey("pieces") && object.containsKey("proposals") && !object.containsKey("names") && !object.containsKey("pairs")) return RecognitionOddsBoundaryOdds.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class RecognitionOddsBoundaryOdds extends Values.View implements RecognitionOdds {
-        public RecognitionOddsBoundaryOdds(Object value) {
-            super(value);
-        }
-        static RecognitionOddsBoundaryOdds read(Object value) {
-            return new RecognitionOddsBoundaryOdds(value);
-        }
-        public List<PieceOdds> pieces() {
-            Object value = required("pieces");
-            return Values.list(value, item0 -> PieceOdds.read(item0));
-        }
-        public List<BoundaryProposal> proposals() {
-            Object value = required("proposals");
-            return Values.list(value, item0 -> BoundaryProposal.read(item0));
-        }
-    }
-    public static final class RecognitionOddsRecognizeAnswer extends Values.View implements RecognitionOdds {
-        public RecognitionOddsRecognizeAnswer(Object value) {
-            super(value);
-        }
-        static RecognitionOddsRecognizeAnswer read(Object value) {
-            return new RecognitionOddsRecognizeAnswer(value);
-        }
-        public List<NameOdds> names() {
-            Object value = required("names");
-            return Values.list(value, item0 -> NameOdds.read(item0));
-        }
-        public List<PairOdds> pairs() {
-            Object value = required("pairs");
-            return Values.list(value, item0 -> PairOdds.read(item0));
-        }
-        public List<PieceOdds> pieces() {
-            Object value = required("pieces");
-            return Values.list(value, item0 -> PieceOdds.read(item0));
-        }
-        public List<RecognitionProposal> proposals() {
-            Object value = required("proposals");
-            return Values.list(value, item0 -> RecognitionProposal.read(item0));
-        }
-    }
-    public static final class RecognitionProposal extends Values.View {
-        public RecognitionProposal(Object value) {
-            super(value);
-        }
-        static RecognitionProposal read(Object value) {
-            return new RecognitionProposal(value);
-        }
-        public BigInteger end() {
-            Object value = required("end");
-            return Values.integer(value);
-        }
-        public Boolean kept() {
-            Object value = required("kept");
-            return (Boolean)value;
-        }
-        public Presence<String> kind() {
-            return presence("kind", value -> (String)value);
-        }
-        public Presence<Place> selected() {
-            return presence("selected", value -> Place.read(value));
-        }
-        public BigDecimal spanProbability() {
-            Object value = required("span_probability");
-            return (BigDecimal)value;
-        }
-        public BigInteger start() {
-            Object value = required("start");
-            return Values.integer(value);
-        }
-        public Presence<BigDecimal> strength() {
-            return presence("strength", value -> (BigDecimal)value);
-        }
-    }
-    public static final class RecognitionStageContext extends Values.View {
-        public RecognitionStageContext(Object value) {
-            super(value);
-        }
-        static RecognitionStageContext read(Object value) {
-            return new RecognitionStageContext(value);
-        }
-        public Presence<String> boundary() {
-            return presence("boundary", value -> (String)value);
-        }
-        public Presence<String> kindEdge() {
-            return presence("kind_edge", value -> (String)value);
-        }
-        public Presence<String> relation() {
-            return presence("relation", value -> (String)value);
-        }
-    }
-    public static final class Relation extends Values.View {
-        public Relation(Object value) {
-            super(value);
-        }
-        static Relation read(Object value) {
-            return new Relation(value);
-        }
-        public Answers answer() {
-            Object value = required("answer");
-            return Answers.read(value);
-        }
-        public AnswerId answerId() {
-            Object value = required("answer_id");
-            return AnswerId.read(value);
-        }
-        public Presence<String> file() {
-            return presence("file", value -> (String)value);
-        }
-        public Presence<BigInteger> firstLine() {
-            return presence("first_line", value -> Values.integer(value));
-        }
-        public Presence<BigInteger> index() {
-            return presence("index", value -> Values.integer(value));
-        }
-        public Presence<Object> input() {
-            return presence("input", value -> Values.freeze(value));
-        }
-        public Presence<List<SessionInputSource>> inputSources() {
-            return presence("input_sources", value -> Values.list(value, item0 -> SessionInputSource.read(item0)));
-        }
-        public Presence<BigInteger> lastLine() {
-            return presence("last_line", value -> Values.integer(value));
-        }
-        public Meta meta() {
-            Object value = required("meta");
-            return Meta.read(value);
-        }
-        public Presence<Position> position() {
-            return presence("position", value -> Position.read(value));
-        }
-        public ReadableQuestion4 question() {
-            Object value = required("question");
-            return ReadableQuestion4.read(value);
-        }
-        public Version schema() {
-            Object value = required("schema");
-            return Version.read(value);
-        }
-        public List<RelatedEntityEdge> value() {
-            Object value = required("value");
-            return Values.list(value, item0 -> RelatedEntityEdge.read(item0));
-        }
-    }
-    public static final class RelationDirection extends Values.View {
-        public RelationDirection(Object value) {
-            super(value);
-        }
-        static RelationDirection read(Object value) {
-            return new RelationDirection(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public sealed interface RelationEndpoint extends Values.Value permits RelationEndpointRelatedEntity,
-    RelationEndpointSource {
-        static RelationEndpoint read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("kind") && object.containsKey("name") && !object.containsKey("file") && !object.containsKey("ordinal") && !object.containsKey("record")) return RelationEndpointRelatedEntity.read(value);
-            if (object.containsKey("file") && object.containsKey("kind") && object.containsKey("name") && object.containsKey("ordinal") && object.containsKey("record")) return RelationEndpointSource.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class RelationEndpointRelatedEntity extends Values.View implements RelationEndpoint {
-        public RelationEndpointRelatedEntity(Object value) {
-            super(value);
-        }
-        static RelationEndpointRelatedEntity read(Object value) {
-            return new RelationEndpointRelatedEntity(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public String name() {
-            Object value = required("name");
-            return (String)value;
-        }
-    }
-    public static final class RelationEndpointSource extends Values.View implements RelationEndpoint {
-        public RelationEndpointSource(Object value) {
-            super(value);
-        }
-        static RelationEndpointSource read(Object value) {
-            return new RelationEndpointSource(value);
-        }
-        public Presence<String> file() {
-            required("file");
-            return presence("file", value -> (String)value);
-        }
-        public Presence<BigInteger> firstLine() {
-            return presence("first_line", value -> Values.integer(value));
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public Presence<BigInteger> lastLine() {
-            return presence("last_line", value -> Values.integer(value));
-        }
-        public String name() {
-            Object value = required("name");
-            return (String)value;
-        }
-        public BigInteger ordinal() {
-            Object value = required("ordinal");
-            return Values.integer(value);
-        }
-        public Object record() {
-            Object value = required("record");
-            return Values.freeze(value);
-        }
-    }
-    public sealed interface RelationMember extends Values.Value permits RelationMemberAnswerId,
-    RelationMemberFailureId {
-        static RelationMember read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("answer_id")) return RelationMemberAnswerId.read(value);
-            if (object.containsKey("failure_id")) return RelationMemberFailureId.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class RelationMemberAnswerId extends Values.View implements RelationMember {
-        public RelationMemberAnswerId(Object value) {
-            super(value);
-        }
-        static RelationMemberAnswerId read(Object value) {
-            return new RelationMemberAnswerId(value);
-        }
-        public RelationDirection direction() {
-            Object value = required("direction");
-            return RelationDirection.read(value);
-        }
-        public RelationMethod method() {
-            Object value = required("method");
-            return RelationMethod.read(value);
-        }
-        public List<Observation> observations() {
-            Object value = required("observations");
-            return Values.list(value, item0 -> Observation.read(item0));
-        }
-        public ReadableQuestion question() {
-            Object value = required("question");
-            return ReadableQuestion.read(value);
-        }
-        public List<QuestionSource> questionSources() {
-            Object value = required("question_sources");
-            return Values.list(value, item0 -> QuestionSource.read(item0));
-        }
-        public String reads() {
-            Object value = required("reads");
-            return (String)value;
-        }
-        public String relation() {
-            Object value = required("relation");
-            return (String)value;
-        }
-        public String request() {
-            Object value = required("request");
-            return (String)value;
-        }
-        public RelatedEntity source() {
-            Object value = required("source");
-            return RelatedEntity.read(value);
-        }
-        public Presence<RelatedEntity> target() {
-            required("target");
-            return presence("target", value -> RelatedEntity.read(value));
-        }
-        public Threshold threshold() {
-            Object value = required("threshold");
-            return Threshold.read(value);
-        }
-        public Presence<Usage> usage() {
-            return presence("usage", value -> Usage.read(value));
-        }
-        public Boolean accepted() {
-            Object value = required("accepted");
-            return (Boolean)value;
-        }
-        public Answer answer() {
-            Object value = required("answer");
-            return Answer.read(value);
-        }
-        public AnswerId answerId() {
-            Object value = required("answer_id");
-            return AnswerId.read(value);
-        }
-        public BigDecimal probability() {
-            Object value = required("probability");
-            return (BigDecimal)value;
-        }
-        public String sourceName() {
-            return (String)Values.object(required("source")).get("name");
-        }
-    }
-    public static final class RelationMemberFailureId extends Values.View implements RelationMember {
-        public RelationMemberFailureId(Object value) {
-            super(value);
-        }
-        static RelationMemberFailureId read(Object value) {
-            return new RelationMemberFailureId(value);
-        }
-        public RelationDirection direction() {
-            Object value = required("direction");
-            return RelationDirection.read(value);
-        }
-        public RelationMethod method() {
-            Object value = required("method");
-            return RelationMethod.read(value);
-        }
-        public List<Observation> observations() {
-            Object value = required("observations");
-            return Values.list(value, item0 -> Observation.read(item0));
-        }
-        public ReadableQuestion question() {
-            Object value = required("question");
-            return ReadableQuestion.read(value);
-        }
-        public List<QuestionSource> questionSources() {
-            Object value = required("question_sources");
-            return Values.list(value, item0 -> QuestionSource.read(item0));
-        }
-        public String reads() {
-            Object value = required("reads");
-            return (String)value;
-        }
-        public String relation() {
-            Object value = required("relation");
-            return (String)value;
-        }
-        public String request() {
-            Object value = required("request");
-            return (String)value;
-        }
-        public RelatedEntity source() {
-            Object value = required("source");
-            return RelatedEntity.read(value);
-        }
-        public Presence<RelatedEntity> target() {
-            required("target");
-            return presence("target", value -> RelatedEntity.read(value));
-        }
-        public Threshold threshold() {
-            Object value = required("threshold");
-            return Threshold.read(value);
-        }
-        public Presence<Usage> usage() {
-            return presence("usage", value -> Usage.read(value));
-        }
-        public Failure failure() {
-            Object value = required("failure");
-            return Failure.read(value);
-        }
-        public FailureId failureId() {
-            Object value = required("failure_id");
-            return FailureId.read(value);
-        }
-        public String sourceName() {
-            return (String)Values.object(required("source")).get("name");
-        }
-    }
-    public static final class RelationMethod extends Values.View {
-        public RelationMethod(Object value) {
-            super(value);
-        }
-        static RelationMethod read(Object value) {
-            return new RelationMethod(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class RequestFunction extends Values.View {
-        public RequestFunction(Object value) {
-            super(value);
-        }
-        static RequestFunction read(Object value) {
-            return new RequestFunction(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class SdkRequestId extends Values.View {
-        public SdkRequestId(Object value) {
-            super(value);
-        }
-        static SdkRequestId read(Object value) {
-            return new SdkRequestId(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public sealed interface SendBudgetDenial extends Values.Value permits SendBudgetDenialBeforeFirstSend,
-    SendBudgetDenialBeforeAdditionalSend,SendBudgetDenialBeforeRetry {
-        static SendBudgetDenial read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("before_first_send".equals(object.get("kind"))) return SendBudgetDenialBeforeFirstSend.read(value);
-            if ("before_additional_send".equals(object.get("kind"))) return SendBudgetDenialBeforeAdditionalSend.read(value);
-            if ("before_retry".equals(object.get("kind"))) return SendBudgetDenialBeforeRetry.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class SendBudgetDenialBeforeAdditionalSend extends Values.View implements SendBudgetDenial {
-        public SendBudgetDenialBeforeAdditionalSend(Object value) {
-            super(value);
-        }
-        static SendBudgetDenialBeforeAdditionalSend read(Object value) {
-            return new SendBudgetDenialBeforeAdditionalSend(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-    }
-    public static final class SendBudgetDenialBeforeFirstSend extends Values.View implements SendBudgetDenial {
-        public SendBudgetDenialBeforeFirstSend(Object value) {
-            super(value);
-        }
-        static SendBudgetDenialBeforeFirstSend read(Object value) {
-            return new SendBudgetDenialBeforeFirstSend(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-    }
-    public static final class SendBudgetDenialBeforeRetry extends Values.View implements SendBudgetDenial {
-        public SendBudgetDenialBeforeRetry(Object value) {
-            super(value);
-        }
-        static SendBudgetDenialBeforeRetry read(Object value) {
-            return new SendBudgetDenialBeforeRetry(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public BigInteger lastStatus() {
-            Object value = required("last_status");
-            return Values.integer(value);
-        }
-    }
-    public static final class StopCause extends Values.View {
-        public StopCause(Object value) {
-            super(value);
-        }
-        static StopCause read(Object value) {
-            return new StopCause(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class Stopped extends Values.View {
-        public Stopped(Object value) {
-            super(value);
-        }
-        static Stopped read(Object value) {
-            return new Stopped(value);
-        }
-        public Presence<BigInteger> at() {
-            return presence("at", value -> Values.integer(value));
-        }
-        public StopCause cause() {
-            Object value = required("cause");
-            return StopCause.read(value);
-        }
-        public Boolean retryable() {
-            Object value = required("retryable");
-            return (Boolean)value;
-        }
-        public Presence<BigInteger> status() {
-            return presence("status", value -> Values.integer(value));
-        }
-    }
-    public static final class StringRoot extends Values.View {
-        public StringRoot(Object value) {
-            super(value);
-        }
-        static StringRoot read(Object value) {
-            return new StringRoot(value);
-        }
-        public StringType type() {
-            Object value = required("type");
-            return StringType.read(value);
-        }
-    }
-    public static final class StringType extends Values.View {
-        public StringType(Object value) {
-            super(value);
-        }
-        static StringType read(Object value) {
-            return new StringType(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class Usage extends Values.View {
-        public Usage(Object value) {
-            super(value);
-        }
-        static Usage read(Object value) {
-            return new Usage(value);
-        }
-        public Presence<BigInteger> inputTokens() {
-            return presence("input_tokens", value -> Values.integer(value));
-        }
-        public Presence<BigInteger> outputTokens() {
-            return presence("output_tokens", value -> Values.integer(value));
-        }
-    }
-    public static final class UsagePersistence extends Values.View {
-        public UsagePersistence(Object value) {
-            super(value);
-        }
-        static UsagePersistence read(Object value) {
-            return new UsagePersistence(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class Verb extends Values.View {
-        public Verb(Object value) {
-            super(value);
-        }
-        static Verb read(Object value) {
-            return new Verb(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class Version extends Values.View {
-        public Version(Object value) {
-            super(value);
-        }
-        static Version read(Object value) {
-            return new Version(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class WordingVersion extends Values.View {
-        public WordingVersion(Object value) {
-            super(value);
-        }
-        static WordingVersion read(Object value) {
-            return new WordingVersion(value);
-        }
-        public BigInteger value() {
-            return Values.integer(json());
-        }
-    }
-    public sealed interface AnnotatedField extends Values.Value permits AnnotatedFieldBoolean,AnnotatedFieldNull,
-    AnnotatedFieldString,AnnotatedFieldArray,AnnotatedFieldNumber,AnnotatedFieldObject {
-        static AnnotatedField read(Object value) {
-            if (value instanceof Boolean) return AnnotatedFieldBoolean.read(value);
-            if (value == null) return new AnnotatedFieldNull(null);
-            if (value instanceof String) return AnnotatedFieldString.read(value);
-            if (value instanceof List<?>) return AnnotatedFieldArray.read(value);
-            if (value instanceof BigDecimal) return AnnotatedFieldNumber.read(value);
-            if (value instanceof Map<?,?>) return AnnotatedFieldObject.read(value);
-            throw new IllegalStateException("Unknown native value alternative");
-        }
-    }
-    public record AnnotatedFieldBoolean(Boolean value) implements AnnotatedField {
-        static AnnotatedFieldBoolean read(Object value) {
-            return new AnnotatedFieldBoolean((Boolean)value);
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record AnnotatedFieldNull(Object value) implements AnnotatedField {
-        static AnnotatedFieldNull read(Object value) {
-            return new AnnotatedFieldNull(Values.freeze(value));
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record AnnotatedFieldString(String value) implements AnnotatedField {
-        static AnnotatedFieldString read(Object value) {
-            return new AnnotatedFieldString((String)value);
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record AnnotatedFieldArray(List<String> value) implements AnnotatedField {
-        static AnnotatedFieldArray read(Object value) {
-            return new AnnotatedFieldArray(Values.list(value, item0 -> (String)item0));
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record AnnotatedFieldNumber(BigDecimal value) implements AnnotatedField {
-        static AnnotatedFieldNumber read(Object value) {
-            return new AnnotatedFieldNumber((BigDecimal)value);
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record AnnotatedFieldObject(Failed value) implements AnnotatedField {
-        static AnnotatedFieldObject read(Object value) {
-            return new AnnotatedFieldObject(Failed.read(value));
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public static final class AnnotatedRow extends Values.View {
-        public AnnotatedRow(Object value) {
-            super(value);
-        }
-        static AnnotatedRow read(Object value) {
-            return new AnnotatedRow(value);
-        }
-        public Map<String,AnnotatedField> value() {
-            return Values.map(json(), item0 -> AnnotatedField.read(item0));
-        }
-    }
-    public sealed interface Answer extends Values.Value permits AnswerYesNo,AnswerChoice,AnswerTag,
-    AnswerScore {
-        static Answer read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if ("yes_no".equals(object.get("kind"))) return AnswerYesNo.read(value);
-            if ("choice".equals(object.get("kind"))) return AnswerChoice.read(value);
-            if ("tag".equals(object.get("kind"))) return AnswerTag.read(value);
-            if ("score".equals(object.get("kind"))) return AnswerScore.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class AnswerChoice extends Values.View implements Answer {
-        public AnswerChoice(Object value) {
-            super(value);
-        }
-        static AnswerChoice read(Object value) {
-            return new AnswerChoice(value);
-        }
-        public Presence<BigDecimal> confidence() {
-            return presence("confidence", value -> (BigDecimal)value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public String pick() {
-            Object value = required("pick");
-            return (String)value;
-        }
-        public Map<String,BigDecimal> probabilities() {
-            Object value = required("probabilities");
-            return Values.map(value, item0 -> (BigDecimal)item0);
-        }
-    }
-    public static final class AnswerScore extends Values.View implements Answer {
-        public AnswerScore(Object value) {
-            super(value);
-        }
-        static AnswerScore read(Object value) {
-            return new AnswerScore(value);
-        }
-        public Presence<BigDecimal> confidence() {
-            return presence("confidence", value -> (BigDecimal)value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public String level() {
-            Object value = required("level");
-            return (String)value;
-        }
-        public Map<String,BigDecimal> probabilities() {
-            Object value = required("probabilities");
-            return Values.map(value, item0 -> (BigDecimal)item0);
-        }
-    }
-    public static final class AnswerTag extends Values.View implements Answer {
-        public AnswerTag(Object value) {
-            super(value);
-        }
-        static AnswerTag read(Object value) {
-            return new AnswerTag(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public Map<String,BigDecimal> probabilities() {
-            Object value = required("probabilities");
-            return Values.map(value, item0 -> (BigDecimal)item0);
-        }
-    }
-    public static final class AnswerYesNo extends Values.View implements Answer {
-        public AnswerYesNo(Object value) {
-            super(value);
-        }
-        static AnswerYesNo read(Object value) {
-            return new AnswerYesNo(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public BigDecimal probability() {
-            Object value = required("probability");
-            return (BigDecimal)value;
-        }
-    }
-    public static final class AttemptOutcome extends Values.View {
-        public AttemptOutcome(Object value) {
-            super(value);
-        }
-        static AttemptOutcome read(Object value) {
-            return new AttemptOutcome(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public sealed interface BatchSetting extends Values.Value permits BatchSettingInteger,BatchSettingString {
-        static BatchSetting read(Object value) {
-            if (value instanceof BigDecimal) return BatchSettingInteger.read(value);
-            if (value instanceof String) return BatchSettingString.read(value);
-            throw new IllegalStateException("Unknown native value alternative");
-        }
-    }
-    public record BatchSettingInteger(BigInteger value) implements BatchSetting {
-        static BatchSettingInteger read(Object value) {
-            return new BatchSettingInteger(Values.integer(value));
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public record BatchSettingString(String value) implements BatchSetting {
-        static BatchSettingString read(Object value) {
-            return new BatchSettingString((String)value);
-        }
-        public Object json() {
-            return Values.json(value);
-        }
-    }
-    public static final class BatchWarning extends Values.View {
-        public BatchWarning(Object value) {
-            super(value);
-        }
-        static BatchWarning read(Object value) {
-            return new BatchWarning(value);
-        }
-        public BatchSetting running() {
-            Object value = required("running");
-            return BatchSetting.read(value);
-        }
-        public BatchSetting tunedFor() {
-            Object value = required("tuned_for");
-            return BatchSetting.read(value);
-        }
-    }
-    public static final class Entity extends Values.View {
-        public Entity(Object value) {
-            super(value);
-        }
-        static Entity read(Object value) {
-            return new Entity(value);
-        }
-        public BigInteger end() {
-            Object value = required("end");
-            return Values.integer(value);
-        }
-        public Presence<String> file() {
-            return presence("file", value -> (String)value);
-        }
-        public Presence<BigInteger> firstLine() {
-            return presence("first_line", value -> Values.integer(value));
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public Presence<BigInteger> lastLine() {
-            return presence("last_line", value -> Values.integer(value));
-        }
-        public BigInteger length() {
-            Object value = required("length");
-            return Values.integer(value);
-        }
-        public BigInteger start() {
-            Object value = required("start");
-            return Values.integer(value);
-        }
-        public BigDecimal strength() {
-            Object value = required("strength");
-            return (BigDecimal)value;
-        }
-        public String text() {
-            Object value = required("text");
-            return (String)value;
-        }
-    }
-    public static final class EntityEdge extends Values.View {
-        public EntityEdge(Object value) {
-            super(value);
-        }
-        static EntityEdge read(Object value) {
-            return new EntityEdge(value);
-        }
-        public Presence<Boolean> either() {
-            return presence("either", value -> (Boolean)value);
-        }
-        public BigDecimal probability() {
-            Object value = required("probability");
-            return (BigDecimal)value;
-        }
-        public String relation() {
-            Object value = required("relation");
-            return (String)value;
-        }
-        public Entity source() {
-            Object value = required("source");
-            return Entity.read(value);
-        }
-        public Entity target() {
-            Object value = required("target");
-            return Entity.read(value);
-        }
-    }
-    public static final class Failed extends Values.View {
-        public Failed(Object value) {
-            super(value);
-        }
-        static Failed read(Object value) {
-            return new Failed(value);
-        }
-        public Failure failed() {
-            Object value = required("failed");
-            return Failure.read(value);
-        }
-    }
-    public static final class Failure extends Values.View {
-        public Failure(Object value) {
-            super(value);
-        }
-        static Failure read(Object value) {
-            return new Failure(value);
-        }
-        public FailureCause cause() {
-            Object value = required("cause");
-            return FailureCause.read(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-    }
-    public static final class FailureCause extends Values.View {
-        public FailureCause(Object value) {
-            super(value);
-        }
-        static FailureCause read(Object value) {
-            return new FailureCause(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class FailureKind extends Values.View {
-        public FailureKind(Object value) {
-            super(value);
-        }
-        static FailureKind read(Object value) {
-            return new FailureKind(value);
-        }
-        public String value() {
-            return (String)json();
-        }
-    }
-    public static final class FindAnswer extends Values.View {
-        public FindAnswer(Object value) {
-            super(value);
-        }
-        static FindAnswer read(Object value) {
-            return new FindAnswer(value);
-        }
-        public Presence<BigDecimal> confidence() {
-            return presence("confidence", value -> (BigDecimal)value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public String pick() {
-            Object value = required("pick");
-            return (String)value;
-        }
-        public Map<String,BigDecimal> probabilities() {
-            Object value = required("probabilities");
-            return Values.map(value, item0 -> (BigDecimal)item0);
-        }
-    }
-    public static final class NameOdds extends Values.View {
-        public NameOdds(Object value) {
-            super(value);
-        }
-        static NameOdds read(Object value) {
-            return new NameOdds(value);
-        }
-        public Presence<Map<String,BigDecimal>> edges() {
-            required("edges");
-            return presence("edges", value -> Values.map(value, item0 -> (BigDecimal)item0));
-        }
-        public BigInteger end() {
-            Object value = required("end");
-            return Values.integer(value);
-        }
-        public Presence<Map<String,BigDecimal>> kinds() {
-            required("kinds");
-            return presence("kinds", value -> Values.map(value, item0 -> (BigDecimal)item0));
-        }
-        public BigInteger start() {
-            Object value = required("start");
-            return Values.integer(value);
-        }
-    }
-    public static final class PairOdds extends Values.View {
-        public PairOdds(Object value) {
-            super(value);
-        }
-        static PairOdds read(Object value) {
-            return new PairOdds(value);
-        }
-        public BigDecimal probability() {
-            Object value = required("probability");
-            return (BigDecimal)value;
-        }
-        public String relation() {
-            Object value = required("relation");
-            return (String)value;
-        }
-        public Place source() {
-            Object value = required("source");
-            return Place.read(value);
-        }
-        public Place target() {
-            Object value = required("target");
-            return Place.read(value);
-        }
-    }
-    public static final class PieceOdds extends Values.View {
-        public PieceOdds(Object value) {
-            super(value);
-        }
-        static PieceOdds read(Object value) {
-            return new PieceOdds(value);
-        }
-        public BigInteger end() {
-            Object value = required("end");
-            return Values.integer(value);
-        }
-        public BigInteger start() {
-            Object value = required("start");
-            return Values.integer(value);
-        }
-        public Map<String,BigDecimal> tags() {
-            Object value = required("tags");
-            return Values.map(value, item0 -> (BigDecimal)item0);
-        }
-    }
-    public static final class Place extends Values.View {
-        public Place(Object value) {
-            super(value);
-        }
-        static Place read(Object value) {
-            return new Place(value);
-        }
-        public BigInteger end() {
-            Object value = required("end");
-            return Values.integer(value);
-        }
-        public BigInteger start() {
-            Object value = required("start");
-            return Values.integer(value);
-        }
-    }
-    public static final class Plan extends Values.View {
-        public Plan(Object value) {
-            super(value);
-        }
-        static Plan read(Object value) {
-            return new Plan(value);
-        }
-        public BigInteger estimatedBytes() {
-            Object value = required("estimated_bytes");
-            return Values.integer(value);
-        }
-        public TokenBand estimatedInputTokens() {
-            Object value = required("estimated_input_tokens");
-            return TokenBand.read(value);
-        }
-        public Presence<String> firstBodyUtf8() {
-            required("first_body_utf8");
-            return presence("first_body_utf8", value -> (String)value);
-        }
-        public BigInteger largestRequestBytes() {
-            Object value = required("largest_request_bytes");
-            return Values.integer(value);
-        }
-        public BigInteger largestRequestEstimatedInputTokens() {
-            Object value = required("largest_request_estimated_input_tokens");
-            return Values.integer(value);
-        }
-        public BigInteger records() {
-            Object value = required("records");
-            return Values.integer(value);
-        }
-        public BigInteger requests() {
-            Object value = required("requests");
-            return Values.integer(value);
-        }
-        public String tokenEstimateMethod() {
-            Object value = required("token_estimate_method");
-            return (String)value;
-        }
-        public Boolean upperBound() {
-            Object value = required("upper_bound");
-            return (Boolean)value;
-        }
-    }
-    public static final class ProfileWarning extends Values.View {
-        public ProfileWarning(Object value) {
-            super(value);
-        }
-        static ProfileWarning read(Object value) {
-            return new ProfileWarning(value);
-        }
-        public String running() {
-            Object value = required("running");
-            return (String)value;
-        }
-        public String tunedFor() {
-            Object value = required("tuned_for");
-            return (String)value;
-        }
-    }
-    public sealed interface Recognize extends Values.Value permits RecognizeEntities,RecognizeModeProposals {
-        static Recognize read(Object value) {
-            Map<String,Object> object = Values.object(value);
-            if (object.containsKey("entities") && !object.containsKey("mode") && !object.containsKey("proposals")) return RecognizeEntities.read(value);
-            if (object.containsKey("mode") && object.containsKey("proposals") && !object.containsKey("entities")) return RecognizeModeProposals.read(value);
-            throw new IllegalStateException("Unknown native result alternative");
-        }
-    }
-    public static final class RecognizeAnswer extends Values.View {
-        public RecognizeAnswer(Object value) {
-            super(value);
-        }
-        static RecognizeAnswer read(Object value) {
-            return new RecognizeAnswer(value);
-        }
-        public List<NameOdds> names() {
-            Object value = required("names");
-            return Values.list(value, item0 -> NameOdds.read(item0));
-        }
-        public List<PairOdds> pairs() {
-            Object value = required("pairs");
-            return Values.list(value, item0 -> PairOdds.read(item0));
-        }
-        public List<PieceOdds> pieces() {
-            Object value = required("pieces");
-            return Values.list(value, item0 -> PieceOdds.read(item0));
-        }
-        public List<RecognitionProposal> proposals() {
-            Object value = required("proposals");
-            return Values.list(value, item0 -> RecognitionProposal.read(item0));
-        }
-    }
-    public static final class RecognizeEntities extends Values.View implements Recognize {
-        public RecognizeEntities(Object value) {
-            super(value);
-        }
-        static RecognizeEntities read(Object value) {
-            return new RecognizeEntities(value);
-        }
-        public List<Entity> entities() {
-            Object value = required("entities");
-            return Values.list(value, item0 -> Entity.read(item0));
-        }
-        public Presence<List<EntityEdge>> relations() {
-            return presence("relations", value -> Values.list(value, item0 -> EntityEdge.read(item0)));
-        }
-    }
-    public static final class RecognizeModeProposals extends Values.View implements Recognize {
-        public RecognizeModeProposals(Object value) {
-            super(value);
-        }
-        static RecognizeModeProposals read(Object value) {
-            return new RecognizeModeProposals(value);
-        }
-        public BoundaryMode mode() {
-            Object value = required("mode");
-            return BoundaryMode.read(value);
-        }
-        public List<BoundaryProposal> proposals() {
-            Object value = required("proposals");
-            return Values.list(value, item0 -> BoundaryProposal.read(item0));
-        }
-    }
-    public static final class RelateFields extends Values.View {
-        public RelateFields(Object value) {
-            super(value);
-        }
-        static RelateFields read(Object value) {
-            return new RelateFields(value);
-        }
-        public String kind() {
-            Object value = required("kind");
-            return (String)value;
-        }
-        public String name() {
-            Object value = required("name");
-            return (String)value;
-        }
-    }
-    public static final class RelatedEntity extends Values.View {
+    public static final class RelatedEntity extends View {
         public RelatedEntity(Object value) {
             super(value);
         }
@@ -3070,7 +3069,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class RelatedEntityEdge extends Values.View {
+    public static final class RelatedEntityEdge extends View {
         public RelatedEntityEdge(Object value) {
             super(value);
         }
@@ -3103,7 +3102,7 @@ public final class Results {
             return (String)Values.object(required("target")).get("name");
         }
     }
-    public static final class RelationRule extends Values.View {
+    public static final class RelationRule extends View {
         public RelationRule(Object value) {
             super(value);
         }
@@ -3134,7 +3133,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public static final class SessionAnnotation extends Values.View {
+    public static final class SessionAnnotation extends View {
         public SessionAnnotation(Object value) {
             super(value);
         }
@@ -3150,7 +3149,7 @@ public final class Results {
             return AnnotationValue.read(value);
         }
     }
-    public static final class SessionInputSource extends Values.View {
+    public static final class SessionInputSource extends View {
         public SessionInputSource(Object value) {
             super(value);
         }
@@ -3166,8 +3165,8 @@ public final class Results {
             return PhysicalSource.read(value);
         }
     }
-    public sealed interface SessionJudgment extends Values.Value permits SessionJudgmentDecision,
-    SessionJudgmentChoice,SessionJudgmentScore,SessionJudgmentTags {
+    public sealed interface SessionJudgment permits SessionJudgmentDecision,SessionJudgmentChoice,
+    SessionJudgmentScore,SessionJudgmentTags {
         static SessionJudgment read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("decision".equals(object.get("kind"))) return SessionJudgmentDecision.read(value);
@@ -3177,7 +3176,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class SessionJudgmentChoice extends Values.View implements SessionJudgment {
+    public static final class SessionJudgmentChoice extends View implements SessionJudgment {
         public SessionJudgmentChoice(Object value) {
             super(value);
         }
@@ -3193,7 +3192,7 @@ public final class Results {
             return presence("value", value -> (String)value);
         }
     }
-    public static final class SessionJudgmentDecision extends Values.View implements SessionJudgment {
+    public static final class SessionJudgmentDecision extends View implements SessionJudgment {
         public SessionJudgmentDecision(Object value) {
             super(value);
         }
@@ -3209,7 +3208,7 @@ public final class Results {
             return presence("value", value -> (Boolean)value);
         }
     }
-    public static final class SessionJudgmentScore extends Values.View implements SessionJudgment {
+    public static final class SessionJudgmentScore extends View implements SessionJudgment {
         public SessionJudgmentScore(Object value) {
             super(value);
         }
@@ -3225,7 +3224,7 @@ public final class Results {
             return (BigDecimal)value;
         }
     }
-    public static final class SessionJudgmentTags extends Values.View implements SessionJudgment {
+    public static final class SessionJudgmentTags extends View implements SessionJudgment {
         public SessionJudgmentTags(Object value) {
             super(value);
         }
@@ -3241,7 +3240,7 @@ public final class Results {
             return Values.list(value, item0 -> (String)item0);
         }
     }
-    public static final class SessionNamedProbability extends Values.View {
+    public static final class SessionNamedProbability extends View {
         public SessionNamedProbability(Object value) {
             super(value);
         }
@@ -3257,8 +3256,7 @@ public final class Results {
             return (BigDecimal)value;
         }
     }
-    public sealed interface SessionObservation extends Values.Value permits SessionObservationQuestion,
-    SessionObservationRow {
+    public sealed interface SessionObservation permits SessionObservationQuestion,SessionObservationRow {
         static SessionObservation read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("question".equals(object.get("kind"))) return SessionObservationQuestion.read(value);
@@ -3266,7 +3264,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class SessionObservationQuestion extends Values.View implements SessionObservation {
+    public static final class SessionObservationQuestion extends View implements SessionObservation {
         public SessionObservationQuestion(Object value) {
             super(value);
         }
@@ -3296,7 +3294,7 @@ public final class Results {
             return presence("stage", value -> (String)value);
         }
     }
-    public static final class SessionObservationRow extends Values.View implements SessionObservation {
+    public static final class SessionObservationRow extends View implements SessionObservation {
         public SessionObservationRow(Object value) {
             super(value);
         }
@@ -3316,8 +3314,8 @@ public final class Results {
             return SessionObservedRow.read(value);
         }
     }
-    public sealed interface SessionObservedRow extends Values.Value permits SessionObservedRowJudgment,
-    SessionObservedRowAnnotated,SessionObservedRowRecognized,SessionObservedRowFind,SessionObservedRowRelations {
+    public sealed interface SessionObservedRow permits SessionObservedRowJudgment,SessionObservedRowAnnotated,
+    SessionObservedRowRecognized,SessionObservedRowFind,SessionObservedRowRelations {
         static SessionObservedRow read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("judgment".equals(object.get("kind"))) return SessionObservedRowJudgment.read(value);
@@ -3328,7 +3326,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class SessionObservedRowAnnotated extends Values.View implements SessionObservedRow {
+    public static final class SessionObservedRowAnnotated extends View implements SessionObservedRow {
         public SessionObservedRowAnnotated(Object value) {
             super(value);
         }
@@ -3344,7 +3342,7 @@ public final class Results {
             return Values.list(value, item0 -> SessionAnnotation.read(item0));
         }
     }
-    public static final class SessionObservedRowFind extends Values.View implements SessionObservedRow {
+    public static final class SessionObservedRowFind extends View implements SessionObservedRow {
         public SessionObservedRowFind(Object value) {
             super(value);
         }
@@ -3360,7 +3358,7 @@ public final class Results {
             return presence("value", value -> Values.integer(value));
         }
     }
-    public static final class SessionObservedRowJudgment extends Values.View implements SessionObservedRow {
+    public static final class SessionObservedRowJudgment extends View implements SessionObservedRow {
         public SessionObservedRowJudgment(Object value) {
             super(value);
         }
@@ -3376,7 +3374,7 @@ public final class Results {
             return SessionJudgment.read(value);
         }
     }
-    public static final class SessionObservedRowRecognized extends Values.View implements SessionObservedRow {
+    public static final class SessionObservedRowRecognized extends View implements SessionObservedRow {
         public SessionObservedRowRecognized(Object value) {
             super(value);
         }
@@ -3392,7 +3390,7 @@ public final class Results {
             return SessionRecognition.read(value);
         }
     }
-    public static final class SessionObservedRowRelations extends Values.View implements SessionObservedRow {
+    public static final class SessionObservedRowRelations extends View implements SessionObservedRow {
         public SessionObservedRowRelations(Object value) {
             super(value);
         }
@@ -3408,7 +3406,7 @@ public final class Results {
             return Values.list(value, item0 -> SessionRelationEdge.read(item0));
         }
     }
-    public sealed interface SessionPacket extends Values.Value permits SessionPacketDecideRow,SessionPacketChooseRow,
+    public sealed interface SessionPacket permits SessionPacketDecideRow,SessionPacketChooseRow,
     SessionPacketTagRow,SessionPacketScoreRow,SessionPacketFilterRow,SessionPacketAnnotateRow,SessionPacketDecideAggregate,
     SessionPacketChooseAggregate,SessionPacketTagAggregate,SessionPacketScoreAggregate,SessionPacketFilterAggregate,
     SessionPacketRankAggregate,SessionPacketFindAggregate,SessionPacketAnnotateAggregate,SessionPacketRecognizeAggregate,
@@ -3436,7 +3434,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class SessionPacketAnnotateAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketAnnotateAggregate extends View implements SessionPacket {
         public SessionPacketAnnotateAggregate(Object value) {
             super(value);
         }
@@ -3456,7 +3454,7 @@ public final class Results {
             return Values.list(value, item0 -> Annotation.read(item0));
         }
     }
-    public static final class SessionPacketAnnotateRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketAnnotateRow extends View implements SessionPacket {
         public SessionPacketAnnotateRow(Object value) {
             super(value);
         }
@@ -3476,7 +3474,7 @@ public final class Results {
             return Annotation.read(value);
         }
     }
-    public static final class SessionPacketChooseAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketChooseAggregate extends View implements SessionPacket {
         public SessionPacketChooseAggregate(Object value) {
             super(value);
         }
@@ -3496,7 +3494,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicNullableString.read(item0));
         }
     }
-    public static final class SessionPacketChooseRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketChooseRow extends View implements SessionPacket {
         public SessionPacketChooseRow(Object value) {
             super(value);
         }
@@ -3516,7 +3514,7 @@ public final class Results {
             return AtomicNullableString.read(value);
         }
     }
-    public static final class SessionPacketDecideAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketDecideAggregate extends View implements SessionPacket {
         public SessionPacketDecideAggregate(Object value) {
             super(value);
         }
@@ -3536,7 +3534,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicDecideValue.read(item0));
         }
     }
-    public static final class SessionPacketDecideRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketDecideRow extends View implements SessionPacket {
         public SessionPacketDecideRow(Object value) {
             super(value);
         }
@@ -3556,7 +3554,7 @@ public final class Results {
             return AtomicDecideValue.read(value);
         }
     }
-    public static final class SessionPacketFilterAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketFilterAggregate extends View implements SessionPacket {
         public SessionPacketFilterAggregate(Object value) {
             super(value);
         }
@@ -3576,7 +3574,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicBoolean.read(item0));
         }
     }
-    public static final class SessionPacketFilterRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketFilterRow extends View implements SessionPacket {
         public SessionPacketFilterRow(Object value) {
             super(value);
         }
@@ -3596,7 +3594,7 @@ public final class Results {
             return AtomicBoolean.read(value);
         }
     }
-    public static final class SessionPacketFindAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketFindAggregate extends View implements SessionPacket {
         public SessionPacketFindAggregate(Object value) {
             super(value);
         }
@@ -3616,7 +3614,7 @@ public final class Results {
             return Find.read(value);
         }
     }
-    public static final class SessionPacketObservation extends Values.View implements SessionPacket {
+    public static final class SessionPacketObservation extends View implements SessionPacket {
         public SessionPacketObservation(Object value) {
             super(value);
         }
@@ -3636,7 +3634,7 @@ public final class Results {
             return SessionObservation.read(value);
         }
     }
-    public static final class SessionPacketRankAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketRankAggregate extends View implements SessionPacket {
         public SessionPacketRankAggregate(Object value) {
             super(value);
         }
@@ -3656,7 +3654,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicNonZeroUsize.read(item0));
         }
     }
-    public static final class SessionPacketRecognizeAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketRecognizeAggregate extends View implements SessionPacket {
         public SessionPacketRecognizeAggregate(Object value) {
             super(value);
         }
@@ -3676,7 +3674,7 @@ public final class Results {
             return Values.list(value, item0 -> Recognition.read(item0));
         }
     }
-    public static final class SessionPacketRelateAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketRelateAggregate extends View implements SessionPacket {
         public SessionPacketRelateAggregate(Object value) {
             super(value);
         }
@@ -3696,7 +3694,7 @@ public final class Results {
             return Relation.read(value);
         }
     }
-    public static final class SessionPacketScoreAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketScoreAggregate extends View implements SessionPacket {
         public SessionPacketScoreAggregate(Object value) {
             super(value);
         }
@@ -3716,7 +3714,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicDouble.read(item0));
         }
     }
-    public static final class SessionPacketScoreRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketScoreRow extends View implements SessionPacket {
         public SessionPacketScoreRow(Object value) {
             super(value);
         }
@@ -3736,7 +3734,7 @@ public final class Results {
             return AtomicDouble.read(value);
         }
     }
-    public static final class SessionPacketTagAggregate extends Values.View implements SessionPacket {
+    public static final class SessionPacketTagAggregate extends View implements SessionPacket {
         public SessionPacketTagAggregate(Object value) {
             super(value);
         }
@@ -3756,7 +3754,7 @@ public final class Results {
             return Values.list(value, item0 -> AtomicArrayOfString.read(item0));
         }
     }
-    public static final class SessionPacketTagRow extends Values.View implements SessionPacket {
+    public static final class SessionPacketTagRow extends View implements SessionPacket {
         public SessionPacketTagRow(Object value) {
             super(value);
         }
@@ -3776,7 +3774,7 @@ public final class Results {
             return AtomicArrayOfString.read(value);
         }
     }
-    public static final class SessionPacketTerminal extends Values.View implements SessionPacket {
+    public static final class SessionPacketTerminal extends View implements SessionPacket {
         public SessionPacketTerminal(Object value) {
             super(value);
         }
@@ -3794,8 +3792,7 @@ public final class Results {
             return (String)value;
         }
     }
-    public sealed interface SessionProbabilities extends Values.Value permits SessionProbabilitiesYesNo,
-    SessionProbabilitiesNamed {
+    public sealed interface SessionProbabilities permits SessionProbabilitiesYesNo,SessionProbabilitiesNamed {
         static SessionProbabilities read(Object value) {
             Map<String,Object> object = Values.object(value);
             if ("yes_no".equals(object.get("kind"))) return SessionProbabilitiesYesNo.read(value);
@@ -3803,7 +3800,7 @@ public final class Results {
             throw new IllegalStateException("Unknown native result alternative");
         }
     }
-    public static final class SessionProbabilitiesNamed extends Values.View implements SessionProbabilities {
+    public static final class SessionProbabilitiesNamed extends View implements SessionProbabilities {
         public SessionProbabilitiesNamed(Object value) {
             super(value);
         }
@@ -3819,7 +3816,7 @@ public final class Results {
             return Values.list(value, item0 -> SessionNamedProbability.read(item0));
         }
     }
-    public static final class SessionProbabilitiesYesNo extends Values.View implements SessionProbabilities {
+    public static final class SessionProbabilitiesYesNo extends View implements SessionProbabilities {
         public SessionProbabilitiesYesNo(Object value) {
             super(value);
         }
@@ -3835,7 +3832,7 @@ public final class Results {
             return (BigDecimal)value;
         }
     }
-    public static final class SessionQuestionDetail extends Values.View {
+    public static final class SessionQuestionDetail extends View {
         public SessionQuestionDetail(Object value) {
             super(value);
         }
@@ -3887,9 +3884,9 @@ public final class Results {
         public Presence<SessionProbabilities> probabilities() {
             return presence("probabilities", value -> SessionProbabilities.read(value));
         }
-        public ReadableQuestion question() {
+        public QuestionDocument question() {
             Object value = required("question");
-            return ReadableQuestion.read(value);
+            return QuestionDocument.read(value);
         }
         public String questionSha256() {
             Object value = required("question_sha256");
@@ -3927,7 +3924,7 @@ public final class Results {
             return presence("value", value -> Value.read(value));
         }
     }
-    public static final class SessionRecognition extends Values.View {
+    public static final class SessionRecognition extends View {
         public SessionRecognition(Object value) {
             super(value);
         }
@@ -3949,7 +3946,7 @@ public final class Results {
             return presence("relations", value -> Values.list(value, item0 -> RecognitionEdgeDocument.read(item0)));
         }
     }
-    public static final class SessionRelationEdge extends Values.View {
+    public static final class SessionRelationEdge extends View {
         public SessionRelationEdge(Object value) {
             super(value);
         }
@@ -3983,7 +3980,7 @@ public final class Results {
             return (String)Values.object(required("target")).get("name");
         }
     }
-    public static final class SourceRelationEndpoint extends Values.View {
+    public static final class SourceRelationEndpoint extends View {
         public SourceRelationEndpoint(Object value) {
             super(value);
         }
@@ -4017,7 +4014,7 @@ public final class Results {
             return Values.freeze(value);
         }
     }
-    public sealed interface Threshold extends Values.Value permits ThresholdNumber,ThresholdString {
+    public sealed interface Threshold permits ThresholdNumber,ThresholdString {
         static Threshold read(Object value) {
             if (value instanceof BigDecimal) return ThresholdNumber.read(value);
             if (value instanceof String) return ThresholdString.read(value);
@@ -4028,7 +4025,7 @@ public final class Results {
         static ThresholdNumber read(Object value) {
             return new ThresholdNumber((BigDecimal)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -4036,11 +4033,11 @@ public final class Results {
         static ThresholdString read(Object value) {
             return new ThresholdString((String)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
-    public static final class TokenBand extends Values.View {
+    public static final class TokenBand extends View {
         public TokenBand(Object value) {
             super(value);
         }
@@ -4056,7 +4053,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public static final class TokenUsage extends Values.View {
+    public static final class TokenUsage extends View {
         public TokenUsage(Object value) {
             super(value);
         }
@@ -4072,8 +4069,7 @@ public final class Results {
             return Values.integer(value);
         }
     }
-    public sealed interface Value extends Values.Value permits ValueBoolean,ValueNull,ValueString,
-    ValueArray,ValueNumber {
+    public sealed interface Value permits ValueBoolean,ValueNull,ValueString,ValueArray,ValueNumber {
         static Value read(Object value) {
             if (value instanceof Boolean) return ValueBoolean.read(value);
             if (value == null) return new ValueNull(null);
@@ -4087,7 +4083,7 @@ public final class Results {
         static ValueBoolean read(Object value) {
             return new ValueBoolean((Boolean)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -4095,7 +4091,7 @@ public final class Results {
         static ValueNull read(Object value) {
             return new ValueNull(Values.freeze(value));
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -4103,7 +4099,7 @@ public final class Results {
         static ValueString read(Object value) {
             return new ValueString((String)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -4111,7 +4107,7 @@ public final class Results {
         static ValueArray read(Object value) {
             return new ValueArray(Values.list(value, item0 -> (String)item0));
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
     }
@@ -4119,9 +4115,89 @@ public final class Results {
         static ValueNumber read(Object value) {
             return new ValueNumber((BigDecimal)value);
         }
-        public Object json() {
+        Object json() {
             return Values.json(value);
         }
+    }
+    public static final class ImmediateFacts extends View {
+        public ImmediateFacts(Object value) {
+            super(value);
+        }
+        static ImmediateFacts read(Object value) {
+            return new ImmediateFacts(value);
+        }
+        public Presence<List<Attempt>> attempts() {
+            return presence("attempts", value -> Values.list(value, item0 -> Attempt.read(item0)));
+        }
+        public BigInteger cacheAnswers() {
+            Object value = required("cache_answers");
+            return Values.integer(value);
+        }
+        public Presence<CallId> callId() {
+            return presence("call_id", value -> CallId.read(value));
+        }
+        public Presence<String> estimatedCostUsd() {
+            return presence("estimated_cost_usd", value -> (String)value);
+        }
+        public Presence<Boolean> heldModelMismatch() {
+            return presence("held_model_mismatch", value -> (Boolean)value);
+        }
+        public Presence<BigInteger> inputTokens() {
+            return presence("input_tokens", value -> Values.integer(value));
+        }
+        public BigInteger largestRequestBytes() {
+            Object value = required("largest_request_bytes");
+            return Values.integer(value);
+        }
+        public Presence<BigInteger> largestRequestEstimatedInputTokens() {
+            required("largest_request_estimated_input_tokens");
+            return presence("largest_request_estimated_input_tokens", value -> Values.integer(value));
+        }
+        public Presence<String> model() {
+            return presence("model", value -> (String)value);
+        }
+        public Presence<BigInteger> outputTokens() {
+            return presence("output_tokens", value -> Values.integer(value));
+        }
+        public BigInteger records() {
+            Object value = required("records");
+            return Values.integer(value);
+        }
+        public BigInteger requestsSent() {
+            Object value = required("requests_sent");
+            return Values.integer(value);
+        }
+        public BigDecimal seconds() {
+            Object value = required("seconds");
+            return (BigDecimal)value;
+        }
+        public String tokenEstimateMethod() {
+            Object value = required("token_estimate_method");
+            return (String)value;
+        }
+        public Presence<PersistenceObservation> usagePersistence() {
+            return presence("usage_persistence", value -> PersistenceObservation.read(value));
+        }
+    }
+    static Object tree(Object value) {
+        if (value instanceof BatchInteger item) return Values.json(item.value());
+        if (value instanceof BatchString item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldBoolean item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldNull item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldString item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldArray item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldNumber item) return Values.json(item.value());
+        if (value instanceof AnnotatedFieldObject item) return Values.json(item.value());
+        if (value instanceof BatchSettingInteger item) return Values.json(item.value());
+        if (value instanceof BatchSettingString item) return Values.json(item.value());
+        if (value instanceof ThresholdNumber item) return Values.json(item.value());
+        if (value instanceof ThresholdString item) return Values.json(item.value());
+        if (value instanceof ValueBoolean item) return Values.json(item.value());
+        if (value instanceof ValueNull item) return Values.json(item.value());
+        if (value instanceof ValueString item) return Values.json(item.value());
+        if (value instanceof ValueArray item) return Values.json(item.value());
+        if (value instanceof ValueNumber item) return Values.json(item.value());
+        return value;
     }
     public static final class CallAnswers {
         private CallAnswers() {
@@ -4158,7 +4234,7 @@ public final class Results {
             Object answer = null;
             int count = 0;
             for (SessionPacket item : call.packets()) {
-                Map<String,Object> packet = Values.object(item.json());
+                Map<String,Object> packet = Values.object(Values.json(item));
                 if (!function.equals(packet.get("function")) || !("observation".equals(path(packet, new String[]{
                     "kind"
                 })) && "row".equals(path(packet, new String[]{
@@ -4183,7 +4259,7 @@ public final class Results {
             Object answer = null;
             int count = 0;
             for (SessionPacket item : call.packets()) {
-                Map<String,Object> packet = Values.object(item.json());
+                Map<String,Object> packet = Values.object(Values.json(item));
                 if (!function.equals(packet.get("function"))) continue;
                 boolean row = rows && "row".equals(packet.get("kind"));
                 if (!row && !"aggregate".equals(packet.get("kind"))) continue;
@@ -4227,13 +4303,25 @@ public final class Results {
             if (!((value instanceof List<?> list0 && list0.stream().allMatch(element0 -> element0 instanceof String)))) throw new CardinalityFailure(call);
             return Values.list(value, item0 -> (String)item0);
         }
-        public static List<AtomicBoolean> filter(Engine.OwnedCall call) {
+        public static List<Object> filter(Engine.OwnedCall call) {
             Object value = collection(call, "filter", true, true);
-            return Values.list(value, item0 -> AtomicBoolean.read(item0));
+            List<Object> projected = new ArrayList<>();
+            for (Object item : (List<?>)value) {
+                var receipt = Values.object(item);
+                if (!receipt.containsKey("input")) throw new CardinalityFailure(call);
+                projected.add(receipt.get("input"));
+            } value = projected;
+            return Values.list(value, item0 -> Values.freeze(item0));
         }
-        public static List<AtomicNonZeroUsize> rank(Engine.OwnedCall call) {
+        public static List<BigInteger> rank(Engine.OwnedCall call) {
             Object value = collection(call, "rank", true, false);
-            return Values.list(value, item0 -> AtomicNonZeroUsize.read(item0));
+            List<Object> projected = new ArrayList<>();
+            for (Object item : (List<?>)value) {
+                var receipt = Values.object(item);
+                if (!receipt.containsKey("index")) throw new CardinalityFailure(call);
+                projected.add(receipt.get("index"));
+            } value = projected;
+            return Values.list(value, item0 -> Values.integer(item0));
         }
         public static Find find(Engine.OwnedCall call) {
             Object value = collection(call, "find", false, false);

@@ -8,6 +8,8 @@ import thinkthen.Results.*;
 
 /** Shared fixtures enter named typed calls; generated getters read native-owned packets. */
 public final class SessionCases {
+    public static Object tree(Object value) { return Values.json(value); }
+    public static Inputs.EngineSettings settings(Object value) { return Inputs.EngineSettings.fromJson(value); }
     public static Object parse(String value) { return Json.parse(value); }
     public static String write(Object value) { return Json.write(value); }
     static Map<String,Object> map(Object value) { return value instanceof Map<?,?> ? Values.object(value) : Map.of(); }
@@ -39,7 +41,7 @@ public final class SessionCases {
                 }
                 var given=new LinkedHashMap<>(map(data.get("question")));
                 if(text(data,"verb").equals("find")) given.remove("none");
-                yield new RequestQuestionDefinition().value(RequestDefinition.fromJson(given));
+                yield new RequestQuestionDefinition().value(Inputs.readRequestDefinition(given));
             }
         };
     }
@@ -100,14 +102,14 @@ public final class SessionCases {
         catch(NoSuchMethodException missing) { return null; }
         catch(ReflectiveOperationException failure) { throw new IllegalStateException(failure); }
     }
-    static Object scalar(Object value) { return value instanceof Values.Value typed ? typed.json() : value; }
+    static Object scalar(Object value) { return Values.json(value); }
     static void location(Map<String,Object> row,Object source) { for(String field:List.of("file","firstLine","lastLine")) { Object value=property(source,field); if(value!=null) row.put(field.equals("firstLine")?"first_line":field.equals("lastLine")?"last_line":field,value); } }
     static Map<String,Object> author(Object question) { var result=new LinkedHashMap<String,Object>(); Object name=property(question,"name"),version=property(question,"wordingVersion"); if(name!=null)result.put("name",name);if(version!=null)result.put("wording_version",version);return result; }
     static Object entity(Entity entity) { return Map.of("text",entity.text(),"start",entity.start(),"end",entity.end(),"length",entity.length(),"kind",entity.kind(),"strength",entity.strength()); }
     static Object endpoint(Object value) { return Map.of("name",property(value,"name"),"kind",property(value,"kind")); }
     static Object edge(Object value,boolean recognized) {var result=new LinkedHashMap<String,Object>();result.put("relation",property(value,"relation"));result.put("source",recognized?entity((Entity)property(value,"source")):endpoint(property(value,"source")));result.put("target",recognized?entity((Entity)property(value,"target")):endpoint(property(value,"target")));result.put("probability",property(value,"probability"));if(Boolean.TRUE.equals(property(value,"either")))result.put("either",true);return result;}
     static Object recognized(Recognize value) {var result=new LinkedHashMap<String,Object>();result.put("entities",((List<?>)property(value,"entities")).stream().map(v->entity((Entity)v)).toList());Object relations=property(value,"relations");if(relations!=null)result.put("relations",((List<?>)relations).stream().map(v->edge(v,true)).toList());return result;}
-    static Object annotated(AnnotatedField value) { return value.json(); }
+    static Object annotated(AnnotatedField value) { return Values.json(value); }
     static List<SessionObservationQuestion> questions(Engine.OwnedCall call) {return call.packets().stream().filter(p->p instanceof SessionPacketObservation).map(p->((SessionPacketObservation)p).value()).filter(v->v instanceof SessionObservationQuestion).map(v->(SessionObservationQuestion)v).toList();}
     static Map<String,Object> row(Object value,Object reading,Engine.OwnedCall call) {
         Meta meta=(Meta)property(value,"meta"); var row=new LinkedHashMap<String,Object>();
@@ -161,7 +163,7 @@ public final class SessionCases {
         int push(RequestSessionDescriptor descriptor); void finish(RequestReaderFailure failure); void cancel(); void waitReady(boolean input); OwnedSession.Read read(); void close();
     }
     public static Request request(Map<String,Object> data,RequestQuestion question,RequestInput input,RequestOptions options) {
-        var call=new LinkedHashMap<String,Object>();call.put("function",data.get("verb"));call.put("question",question.json());call.put("input",input.json());call.put("options",options.json());
+        var call=new LinkedHashMap<String,Object>();call.put("function",data.get("verb"));call.put("question",Values.json(question));call.put("input",Values.json(input));call.put("options",options.json());
         return Request.fromJson(Map.of("schema",RequestVersion.VALUE,"call",call));
     }
     public static boolean manual(Map<String,Object> data) { return yes(data,"incremental") || yes(data,"held_cancel") || text(map(data.get("operation")),"injection").equals("cancel_token"); }
@@ -175,7 +177,7 @@ public final class SessionCases {
                 if(yes(data,"owned_jsonl")){
                     String path=(String)list(data.get("paths")).getFirst();long line=0;
                     try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(Json.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor,packets))break;}}
-                }else for(Object record:list(Values.object(input.json()).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record)),packets))break;
+                }else for(Object record:list(Values.object(Values.json(input)).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record)),packets))break;
             }
             feed.finish(null);
             while(true){var read=feed.read();if(read.packet()!=null){packets.add(read.packet());if(read.packet() instanceof SessionPacketTerminal done)terminal=done;}if(read.ended())break;if(read.packet()==null)feed.waitReady(false);}
