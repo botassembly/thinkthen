@@ -995,10 +995,10 @@
         "libraries/php/src/session/*.php"
       ],
       "option_containers": [
-        "InputRequestOptions"
+        "Options"
       ],
       "setting_containers": [
-        "InputEngineSettings"
+        "Settings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -1011,11 +1011,11 @@
         "Examples"
       ],
       "helper_names": {
-        "question_file": "InputRequestQuestionFile",
-        "question_name": "InputRequestQuestionName",
-        "question_reference": "InputRequestQuestionReference",
-        "item": "InputRequestItem",
-        "files": "InputRequestSource",
+        "question_file": "Client.questionFile",
+        "question_name": "Client.questionNamed",
+        "question_reference": "Client.questionReference",
+        "item": "Client.item",
+        "files": "Client.files",
         "usage_persistence": "usagePersistence",
         "finish_usage_status": "finishUsageStatus"
       },
@@ -1027,11 +1027,52 @@
         "Operation",
         "Cancellation"
       ],
-      "representation_owners": [
-        "InputDocument",
-        "Encoder",
-        "Document"
-      ]
+      "representation_owners": [],
+      "representation_types": [
+        "CallFailure",
+        "Cancellation",
+        "Document",
+        "Node"
+      ],
+      "wrapper_members": {
+        "CallFailure": [
+          "facts",
+          "failure"
+        ],
+        "Client": [
+          "images"
+        ],
+        "Completed": [
+          "facts"
+        ],
+        "Node": [
+          "field",
+          "has",
+          "toObject"
+        ],
+        "Operation": [
+          "poll"
+        ],
+        "Item": [
+          "fields",
+          "original"
+        ],
+        "Presence": [
+          "present"
+        ],
+        "Cancellation": [
+          "cancelled"
+        ],
+        "Document": [
+          "jsonSerialize"
+        ]
+      },
+      "field_adapters": {
+        "Files": {
+          "contract": "request",
+          "type": "RequestSource"
+        }
+      }
     },
     "dart": {
       "root": "libraries/dart",
