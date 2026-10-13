@@ -214,7 +214,7 @@ check no_home_in_library
 one_catch_unwind() { same "$(grep -rl catch_unwind src)" src/call.rs; same "$(grep -c catch_unwind src/call.rs)" 1; }
 check one_catch_unwind
 every_function_is_guarded() {
-	same "$(cat src/*.rs | grep -c '^#\[pg_extern')" "$(cat src/*.rs | grep -c '^    call::guarded(||')"
+	same "$(cat src/*.rs | grep -Ec '^#\[pg_extern|^crate::descriptions::describe!')" "$(cat src/*.rs | grep -c '^    call::guarded(||')"
 }
 check every_function_is_guarded
 every_cargo_call_is_locked_and_offline() {
@@ -480,7 +480,7 @@ rank_empty_null_and_refusals_send_nothing() {
 	fresh generic "thinkthen.batch = 'max'"
 	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{}'::jsonb)")" 0
 	same "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', NULL)")" 0
-	has "$(q -c "SELECT count(*) FROM thinkthen_rank(NULL, '{\"a\":\"b\"}'::jsonb)")" 'thinkthen usage: the question is empty (retryable: no)'
+	same "$(q -c "SELECT count(*) FROM thinkthen_rank(NULL, '{\"a\":\"b\"}'::jsonb)")" 0
 	local name value
 	for name in threshold:0.7 'true:"yes"' none:true 'options:["a","b"]'; do
 		value=${name#*:} name=${name%%:*}
@@ -488,6 +488,7 @@ rank_empty_null_and_refusals_send_nothing() {
 			"thinkthen usage: the settings key \`$name\` does not belong to this verb (retryable: no)"
 	done
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{\"a\":\"x\"}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
+	has "$(q -c "SELECT count(*) FROM thinkthen_rank('   ', '{}'::jsonb)")" 'thinkthen usage: a question is text, not white space (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"a\":4}'::jsonb)")" 'thinkthen usage: keyed input value for a is text (retryable: no)'
 	has "$(q -c "SELECT count(*) FROM thinkthen_rank('$R', '{\"1\":\"one\",\"2\":\"two\",\"3\":\"three\",\"4\":\"  \",\"5\":\"five\",\"6\":\"six\",\"7\":\"seven\"}'::jsonb)")" \
 		'thinkthen usage: the evidence is empty or blank (retryable: no)'
@@ -735,9 +736,9 @@ client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends() {
 	fresh generic
 	cargo build --locked --offline --example client_files
 	"${CARGO_TARGET_DIR:-target}/debug/examples/client_files" "$SOCK" "$RUN/client-source.txt"
-	# Two rank records, one find, two native recognition stages per source,
+	# One coalesced rank judgment retains two records, one find, two recognition stages per source,
 	# and one relation request; readers and span mapping add no sends.
-	same "$(bcount)" 8
+	same "$(bcount)" 7
 }
 check client_reader_keeps_keys_find_indexes_native_spans_and_relation_ends
 DID_NOT_READ="did not read: it must be a regular file at most 1048576 bytes"

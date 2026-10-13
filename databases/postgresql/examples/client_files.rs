@@ -21,6 +21,12 @@ fn number(value: &Value, field: &str) -> Result<usize, Box<dyn Error>> {
         .ok_or_else(|| format!("missing integer {field}").into())
 }
 
+fn sends(count: u64) -> String {
+    format!(
+        "DO $counts$ BEGIN IF (thinkthen_usage()->>'requests_sent')::bigint IS DISTINCT FROM {count} THEN RAISE EXCEPTION 'unexpected cumulative request count'; END IF; END $counts$;"
+    )
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let mut args = std::env::args().skip(1);
     let socket = args.next().ok_or("expected owned PostgreSQL socket")?;
@@ -57,18 +63,26 @@ CREATE TEMP TABLE source_rows(id integer, record text, file text, first_line int
 SELECT jsonb_agg(jsonb_build_object('id',s.id,'rank',r.rank,'probability',r.probability,'file',s.file) ORDER BY r.rank)
  FROM thinkthen_rank('Which needs attention?', (SELECT jsonb_object_agg(id,record) FROM source_rows)) r
  JOIN source_rows s ON r.key=s.id::text;
+{rank_sends}
 WITH found AS (SELECT thinkthen_find('Which source?', (SELECT array_agg(record ORDER BY id) FROM source_rows)) AS value)
  SELECT jsonb_build_object('id',s.id,'file',s.file,'record',s.record) FROM found
  JOIN source_rows s ON s.id=(value->>'index')::integer+1;
+{find_sends}
 CREATE TEMP TABLE entity_rows AS SELECT row_number() OVER (ORDER BY s.id,n.start)::bigint AS id,
  s.id AS source_id,n.text,n.start,n.end FROM source_rows s,
  LATERAL thinkthen_recognize(s.record,ARRAY['Person']) n;
 SELECT jsonb_agg(jsonb_build_object('source_id',source_id,'text',text,'start',start,'end',"end") ORDER BY id) FROM entity_rows;
+{recognize_sends}
 SELECT jsonb_agg(jsonb_build_array(a.source_id,b.source_id,a.text,b.text,sa.file,sb.file,e.probability) ORDER BY a.source_id,b.source_id)
  FROM thinkthen_relate('SELECT id,text,CASE WHEN text=''Ada approves'' THEN ''person'' ELSE ''organization'' END FROM entity_rows WHERE start > 0 ORDER BY id',ARRAY['supports=person:organization']) e
  JOIN entity_rows a ON a.id=e.source JOIN entity_rows b ON b.id=e.target
  JOIN source_rows sa ON sa.id=a.source_id JOIN source_rows sb ON sb.id=b.source_id;
-"#
+{relate_sends}
+"#,
+        rank_sends = sends(1),
+        find_sends = sends(2),
+        recognize_sends = sends(6),
+        relate_sends = sends(7),
     );
     let output = child::command("psql", &[])
         .args([
