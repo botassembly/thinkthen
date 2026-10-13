@@ -50,6 +50,8 @@ def members(declared, containers, prefix=''):
 
 
 def function_errors(declared, functions, config, containers, facade=''):
+    if config['language'] in ('java', 'cpp'):
+        declared = READ.public_inherited(declared)
     names = {canonical(d.name) for d in declared if d.kind == 'call' and d.owner in containers}
     errors = []
     for function in functions:
@@ -73,6 +75,8 @@ def facade_errors(declared, functions, manifest, config):
 
 
 def helper_errors(declared, manifest, config):
+    if config['language'] == 'cpp':
+        declared = READ.public_inherited(declared)
     errors = []
     helper_names = config.get('helper_names', {})
     call_containers = {'', *config.get('function_containers', [])}
@@ -180,12 +184,14 @@ def check(root, manifest, name):
                 wanted = READ.public_go(wanted)
             if exports is not None:
                 wanted = exported(wanted, exports[paths[0].resolve()])
+            wanted = {d for d in wanted if d.kind != 'inherited'}
             expected.update(wanted)
             actual = READ.declarations(paths[0].read_text(), lang)
             if lang == 'go':
                 actual = READ.public_go(actual)
             if exports is not None:
                 actual = exported(actual, exports[paths[0].resolve()])
+            actual = {d for d in actual if d.kind != 'inherited'}
             for item in sorted(wanted - actual):
                 errors.append(f'missing generated declaration: {filename}:{item.owner}.{item.name}')
             for item in sorted(actual - wanted):

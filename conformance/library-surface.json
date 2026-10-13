@@ -503,11 +503,79 @@
       ],
       "lifecycle_owners": [
         "Client",
-        "Call"
+        "Call",
+        "AnswerCall"
       ],
       "representation_owners": [
-        "Encoder"
-      ]
+        "Json",
+        "Node",
+        ""
+      ],
+      "lifecycle_members": {
+        "Call": [
+          "poll",
+          "collect",
+          "input_closed"
+        ],
+        "AnswerCall": [
+          "answer"
+        ]
+      },
+      "representation_types": [
+        "Call",
+        "AnswerCall",
+        "Poll",
+        "PollState",
+        "PresenceState",
+        "Json",
+        "Node"
+      ],
+      "representation_members": {
+        "Json": [
+          "at",
+          "begin",
+          "contains",
+          "dump",
+          "end",
+          "get",
+          "is_array",
+          "is_boolean",
+          "is_null",
+          "is_number",
+          "is_object",
+          "is_string",
+          "object",
+          "parse"
+        ],
+        "Node": [
+          "document"
+        ],
+        "": [
+          "encode",
+          "decode"
+        ]
+      },
+      "wrapper_members": {
+        "Json": [
+          "Array",
+          "Object"
+        ],
+        "Poll": [
+          "packet"
+        ],
+        "PollState": [
+          "pending",
+          "result",
+          "end"
+        ],
+        "PresenceState": [
+          "absent",
+          "null"
+        ],
+        "SessionFailure": [
+          "failure"
+        ]
+      }
     },
     "csharp": {
       "root": "libraries/csharp",
@@ -719,13 +787,101 @@
         "Engine",
         "KotlinEngine",
         "ScalaEngine",
-        "OwnedSession"
+        "OwnedSession",
+        "OwnedCall",
+        "Read",
+        "SessionFailure",
+        "NativeFailure"
       ],
       "representation_owners": [
         "Presence",
         "UsageStatus",
-        "UsagePersistence"
-      ]
+        "UsagePersistence",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "lifecycle_members": {
+        "Engine": [
+          "execute",
+          "start_session"
+        ],
+        "KotlinEngine": [
+          "execute",
+          "start_session"
+        ],
+        "ScalaEngine": [
+          "execute",
+          "start_session"
+        ],
+        "OwnedCall": [
+          "packets",
+          "terminal"
+        ],
+        "OwnedSession": [
+          "next_packet",
+          "next_packet_async",
+          "wait_ready"
+        ],
+        "Read": [
+          "ended",
+          "packet"
+        ],
+        "SessionFailure": [
+          "call",
+          "failure"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      },
+      "representation_types": [
+        "KotlinEngine",
+        "ScalaEngine",
+        "Call",
+        "Read",
+        "Surface",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "representation_members": {
+        "Values": [
+          "freeze",
+          "integer",
+          "json",
+          "object",
+          "list",
+          "map"
+        ],
+        "Builder": [
+          "extension",
+          "json"
+        ],
+        "View": [
+          "json"
+        ]
+      },
+      "wrapper_members": {
+        "State": [
+          "MISSING",
+          "NULL"
+        ],
+        "Surface": [
+          "JAVA",
+          "KOTLIN",
+          "SCALA"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      }
     },
     "swift": {
       "root": "libraries/swift",

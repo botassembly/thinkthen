@@ -1,7 +1,7 @@
+package thinkthen;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
-import thinkthen.Json;
 
 /** JSON interchange retains exact numbers and rejects ambiguous input. */
 public final class JsonTest {

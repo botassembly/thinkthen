@@ -1,14 +1,14 @@
-import thinkthen.{SessionCases as Fixtures, Inputs, Json}
+import thinkthen.{SessionCases as Fixtures, Inputs}
 import thinkthen.scala.*
 import scala.concurrent.Await
 import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
 object SessionCases {
   def main(args: Array[String]): Unit = {
-    if(thinkthen.CaseBatch.run(args, data => main(Array("complete", Json.write(data))))) return
+    if(thinkthen.CaseBatch.run(args, data => main(Array("complete", thinkthen.SessionCases.write(data))))) return
     val data=Fixtures.frame(args)
     try {
-      val engine=new ScalaEngine(Inputs.EngineSettings.fromJson(Json.parse(data.get("engine_settings").asInstanceOf[String])))
+      val engine=new ScalaEngine(Inputs.EngineSettings.fromJson(thinkthen.SessionCases.parse(data.get("engine_settings").asInstanceOf[String])))
       try {
         val question=Fixtures.question(data);val input=Fixtures.input(data);val options=Fixtures.options(data)
         if(Fixtures.manual(data)) {
@@ -18,10 +18,10 @@ object SessionCases {
             def finish(f:Inputs.RequestReaderFailure):Unit=session.finish(f)
             def cancel():Unit=session.cancel()
             def waitReady(input:Boolean):Unit={session.waitReady(input).join();()}
-            def read():thinkthen.OwnedSession.Read={val read=session.tryRead();new thinkthen.OwnedSession.Read(read.packet.map(p=>Fixtures.packet(p.json)).orNull,read.ended)}
+            def read():thinkthen.OwnedSession.Read={val read=session.tryRead();new thinkthen.OwnedSession.Read(read.packet.orNull,read.ended)}
             def close():Unit=session.close()
           }
-          println(Json.write(Fixtures.normalize(Fixtures.drain(feed,data,input),data)));return
+          println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.drain(feed,data,input),data)));return
         }
         val pending=data.get("verb") match {
           case "decide"=>engine.decide(question,input,options);case "choose"=>engine.choose(question,input,options)
@@ -31,9 +31,9 @@ object SessionCases {
           case "recognize"=>engine.recognize(question,input,options);case "relate"=>engine.relate(question,input,options)
           case _=>throw new IllegalArgumentException("unknown fixture function")
         }
-        val call=try Await.result(pending.result,30.seconds) catch {case failure:SessionFailure=>failure.call}
-        call.terminal.facts.map(_.requestsSent)
-        println(Json.write(Fixtures.normalize(Fixtures.javaCall(call.packets.map(_.json).asJava,call.terminal.json),data)))
+        val call=try Await.result(pending.result,30.seconds) catch {case failure:SessionFailure=>failure.call()}
+        call.terminal().facts().state()
+        println(thinkthen.SessionCases.write(Fixtures.normalize(Fixtures.javaCall(call.packets().asScala.map(_.json()).asJava,call.terminal().json()),data)))
       } finally engine.close()
     } catch {case failure:NativeFailure=>println(Fixtures.failure(failure.code,failure.getMessage))}
   }

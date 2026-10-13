@@ -14,6 +14,58 @@ CHECK = ROOT / 'conformance/library-surface.py'
 
 
 class PublicSurface(unittest.TestCase):
+    def test_cpp_public_inheritance_and_accessibility(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-cpp-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification', 'conformance']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/cpp/include', root / 'libraries/cpp/include')
+            target = root / 'libraries/c/include/thinkthen.h'
+            target.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', target)
+            client = root / 'libraries/cpp/include/thinkthen/client.hpp'
+            calls = root / 'libraries/cpp/include/thinkthen/calls_generated.hpp'
+            original, generated = client.read_text(), calls.read_text()
+            def invoke(source=original, mixin=generated):
+                client.write_text(source)
+                calls.write_text(mixin)
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cpp', '--json'],
+                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['cpp']
+            baseline = invoke()
+            self.assertFalse([e for e in baseline if e.startswith(('missing ', 'unlisted generated'))])
+            for name in ['Owner', 'T', 'EngineDeleter', 'SessionDeleter', 'PacketDeleter', 'Parser']:
+                self.assertNotIn('unlisted public type/export: .' + name, baseline)
+            errors = invoke(mixin=generated.replace(' decide(', ' missingDecide('))
+            self.assertIn('missing function: decide', errors)
+            self.assertIn('missing generated declaration: calls_generated.hpp:NamedCalls.decide', errors)
+            for replacement in ['class Client {', 'class Client : private NamedCalls<Client> {']:
+                errors = invoke(original.replace('class Client : public NamedCalls<Client> {', replacement))
+                self.assertIn('missing function: decide', errors)
+                self.assertIn('missing helper: plan', errors)
+            unrelated = original.replace('class Client : public NamedCalls<Client> {', 'class Client {')
+            errors = invoke(unrelated + '\nnamespace tt { struct Other : NamedCalls<Other> {}; }\n')
+            self.assertIn('missing function: decide', errors)
+            hidden = ('\nnamespace tt::detail { struct Hidden { void extraHidden(); }; void hiddenFree(); }\n'
+                      'namespace tt { class Other { class Nested { public: void hiddenNested(); };'
+                      ' void hiddenPrivate(); protected: void hiddenProtected(); public: void extraPublicExport(); }; }\n')
+            errors = invoke(original + hidden)
+            self.assertIn('unlisted public call/export: Other.extraPublicExport', errors)
+            self.assertEqual(set(errors) - set(baseline), {
+                'unlisted public type/export: .Other', 'unlisted public call/export: Other.extraPublicExport'})
+            # Native category adapters accept only their documented members.
+            for filename, owner in [('json.hpp', 'Json'), ('result_value.hpp', 'Node')]:
+                path = client.with_name(filename)
+                path.write_text(path.read_text().replace('class ' + owner + ' {',
+                    'class ' + owner + ' { public: void extraPublicExport(); private:', 1))
+            extra = original.replace('class Call {', 'class Call { public: void extraPublicExport(); private:', 1)
+            extra = extra.replace('class AnswerCall : public Call {',
+                                  'class AnswerCall : public Call { public: void extraPublicExport(); private:', 1)
+            errors = invoke(extra)
+            for owner in ['Json', 'Node', 'Call', 'AnswerCall']:
+                self.assertIn('unlisted public call/export: ' + owner + '.extraPublicExport', errors)
+
     def test_scoped_options_helpers_settings_generated_members_and_extra_exports(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-') as folder:
             root = Path(folder)
@@ -232,6 +284,35 @@ class PublicSurface(unittest.TestCase):
                                             'record BatchInteger(BigInteger value, java.util.Map<String, java.util.List<Results.BatchInteger>>[] surprise)'))
             self.assertIn('unlisted generated declaration: Results.java:BatchInteger.surprise', extra)
             self.assertNotIn('missing generated declaration: Results.java:BatchInteger.value', baseline)
+            self.assertEqual(baseline, [])
+            invoke(original)
+            for filename, container, facade in [('thinkthen/NamedCalls.java', 'Engine', ''),
+                                                   ('kotlin/KotlinNamedCalls.kt', 'KotlinEngine', ' (kotlin)'),
+                                                   ('scala/ScalaNamedCalls.scala', 'ScalaEngine', ' (scala)')]:
+                base = root / 'libraries/jvm/session' / filename
+                source = base.read_text()
+                base.write_text(source.replace('decide(', 'surprise('))
+                self.assertIn('missing function: decide' + facade, invoke(original))
+                base.write_text(source)
+            engine = root / 'libraries/jvm/session/thinkthen/Engine.java'
+            source = engine.read_text()
+            engine.write_text(source.replace('extends NamedCalls', 'extends AbsentCalls'))
+            self.assertIn('missing function: decide', invoke(original))
+            engine.write_text(source)
+            unrelated = root / 'libraries/jvm/session/thinkthen/Unrelated.java'
+            unrelated.write_text('public class Unrelated { public void execute() {} }')
+            self.assertIn('unlisted public call/export: Unrelated.execute', invoke(original))
+            unrelated.unlink()
+            inputs = root / 'libraries/jvm/session/thinkthen/Inputs.java'
+            source = inputs.read_text()
+            inputs.write_text(source.replace(' context(', ' surpriseOption(').replace(' backend(', ' surpriseSetting('))
+            errors = invoke(original)
+            self.assertTrue(any(error.startswith('missing option: context') for error in errors))
+            self.assertTrue(any(error.startswith('missing setting: backend') for error in errors))
+            inputs.write_text(source)
+            private = root / 'libraries/jvm/session/thinkthen/Json.java'
+            private.write_text(private.read_text().replace('class Json', 'public class Json'))
+            self.assertIn('unlisted public type/export: .Json', invoke(original))
 
     def test_native_declarations_exclude_comments_and_private_fields(self):
         spec = importlib.util.spec_from_file_location('surface_cli', CHECK)

@@ -69,8 +69,31 @@ def cstyle(source, language):
     if language == 'typescript':
         source = re.sub(r'(\breadonly\s+)"(\w+)"(?=\??\s*:)', lambda m: m[1] + ' ' + m[2] + ' ', source)
     text = masked(re.sub(r'@"([^"]+)"', lambda m: '  ' + m[1] + ' ', source) if language == 'zig' else source)
+    if language == 'cpp':
+        # Template parameter classes are not declarations or owners. Preserve offsets.
+        text = re.sub(r'\btemplate\s*<[^<>]*(?:<[^<>]*>[^<>]*)*>',
+                      lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), text)
     pairs, depths = braces(text)
     result, scopes, hidden = set(), [], []
+    if language == 'cpp':
+        for match in re.finditer(r'\bnamespace\s+([\w:]+)?\s*\{', text):
+            start = text.rfind('{', match.start(), match.end())
+            if start in pairs and (not match[1] or 'detail' in match[1].split('::')):
+                hidden.append((start, pairs[start]))
+    def cpp_public(pos):
+        if any(start < pos < end for start, end in hidden):
+            return False
+        parent = max((s for s in scopes if s[0] < pos < s[1]), default=None)
+        if not parent:
+            return True
+        access = [m for m in re.finditer(r'\b(public|private|protected)\s*:', text[parent[0]:pos])
+                  if depths[parent[0] + m.start()] == depths[parent[0]] + 1]
+        return access[-1][1] == 'public' if access else struct_scopes[parent[0]]
+    struct_scopes = {}
+    parentheses, nesting = [], 0
+    for char in text:
+        parentheses.append(nesting)
+        nesting += (char == '(') - (char == ')')
     type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension)\s+(\w+)'
     if language == 'zig':
         type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum)\b'
@@ -83,8 +106,13 @@ def cstyle(source, language):
             continue
         prefix = text[max(text.rfind('\n', 0, match.start()), text.rfind('}', 0, match.start())) + 1:match.start()]
         if language in ('java', 'csharp', 'swift') and not match[0].startswith('extension') and not re.search(r'\bpublic\b', prefix):
+            if language == 'java':
+                hidden.append((start, pairs[start]))
             continue
         name = match[1]
+        if language == 'cpp' and not cpp_public(match.start()):
+            hidden.append((start, pairs[start]))
+            continue
         if language == 'go' and not name[:1].isupper():
             continue
         end = pairs[start]
@@ -96,6 +124,18 @@ def cstyle(source, language):
             if alias:
                 name = alias[1]
         scopes.append((start, end, name))
+        if language == 'cpp':
+            struct_scopes[start] = match[0].startswith(('struct', 'union'))
+            header = text[match.end():start]
+            # Only public bases contribute the caller's inherited surface.
+            for base in re.finditer(r'(?:^\s*:|,)\s*(?:(public|protected|private)\s+)?([\w:]+)(?:\s*<[^{}]*?>)?', header):
+                if base[1] == 'public' or not base[1] and struct_scopes[start]:
+                    result.add(Declaration(name, base[2].split('::')[-1], 'inherited'))
+        if language in ('java', 'kotlin', 'scala'):
+            header = text[match.end():start]
+            base = re.search(r'\bextends\s+(\w+)|^\s*(?:private\s+constructor\s*\([^)]*\)\s*)?:\s*(\w+)', header)
+            if base:
+                result.add(Declaration(name, next(group for group in base.groups() if group), 'inherited'))
         if language == 'java' and match[0].startswith('record'):
             header = text[match.end():start]
             opening = header.find('(')
@@ -160,19 +200,18 @@ def cstyle(source, language):
         name = next(group for group in match.groups() if group)
         pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
         container = owner(pos)
+        if language == 'cpp' and (parentheses[pos] or name == 'operator'):
+            continue
         if language == 'go' and not container:
             continue
         if container is None or name.startswith('_') or language == 'dart' and name == 'Function':
             continue
         if language == 'cpp' and container:
-            start = max(s[0] for s in scopes if s[2] == container and s[0] < pos < s[1])
-            access = list(re.finditer(r'\b(public|private|protected)\s*:', text[start:pos]))
-            is_struct = bool(re.search(r'\bstruct\b[^{}]*$', text[max(0,start-100):start]))
-            if (access and access[-1][1] != 'public') or (not access and not is_struct):
+            if not cpp_public(pos):
                 continue
         tail = text[match.end():match.end() + 3]
         kind = 'call' if '(' in match[0] or language in ('swift', 'objc', 'php') and 'func' in match[0] or language in ('kotlin', 'scala', 'zig') and re.search(r'\b(fun|def|fn)\b', match[0]) else 'field'
-        if kind == 'call' and name == container:
+        if kind == 'call' and (name == container or language == 'scala' and name == 'this'):
             continue
         result.add(Declaration(container, name, kind))
     # Enum constants form the public contract even without a field declaration.
@@ -370,3 +409,14 @@ def declarations(source, language):
     if language in ('r', 'ruby', 'ada', 'cobol'):
         return other(source, language)
     return cstyle(source, language)
+
+
+def public_inherited(declared):
+    result = {d for d in declared if d.kind != 'inherited'}
+    while True:
+        promoted = {Declaration(link.owner, member.name, member.kind)
+                    for link in declared if link.kind == 'inherited'
+                    for member in result if member.owner == link.name and member.kind in ('call', 'field')}
+        if promoted <= result:
+            return result
+        result.update(promoted)

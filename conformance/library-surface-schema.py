@@ -49,6 +49,13 @@ def generated_sources(root, target, request, result):
     elif target == 'cpp':
         outputs['results_generated.hpp'] = template.render(results, version) + template.usage(header)
         outputs['inputs_generated.hpp'] = template.input_render(inputs)
+        spec = importlib.util.spec_from_file_location('surface_cpp_abi', root / 'sdlc/scripts/check-c-exports.py')
+        abi = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(abi)
+        from csharp import enum_values
+        outputs['calls_generated.hpp'] = template.named_calls(
+            enum_values(request['$defs']['RequestFunction']),
+            abi.declarations(root / 'libraries/c/include/thinkthen.h')['functions'])
     elif target == 'csharp':
         outputs['CompleteFacts.g.cs'] = generator.generated(result, 'csharp')
         outputs['NativeBridge.g.cs'] = generator.bridge()
@@ -78,9 +85,9 @@ def generated_sources(root, target, request, result):
                 pending.extend(generator.references(source))
                 pending.extend(child for child, _ in source.get('variants', []))
         outputs['Inputs.java'] = template.inputs(selected)
-        languages = importlib.import_module('jvm_languages')
-        outputs['Results.kt'] = languages.render(results, 'kotlin')
-        outputs['Results.scala'] = languages.render(results, 'scala')
+        usage = importlib.import_module('jvm_usage')
+        outputs.update({filename: '\n'.join(lines) + '\n'
+                        for filename, lines in usage.outputs(root).items()})
     elif target == 'zig':
         outputs['plan_generated.zig'] = template.render(graph(result, ('completeplan',)))
         outputs['request_generated.zig'] = template.render(inputs)
