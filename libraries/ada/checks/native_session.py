@@ -41,7 +41,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     if not (unpacked / 'src').is_dir():
         unpacked = unpacked / 'thinkthen'
     unpacked.rename(installed)
-    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native', 'thinkthen_kinds', 'thinkthen-values', 'thinkthen-answers'}
+    expected = {'thinkthen', 'thinkthen-sessions', 'thinkthen-sessions-calls', 'thinkthen-persistence', 'thinkthen-requests-native', 'thinkthen_kinds', 'thinkthen-values', 'thinkthen-answers', 'thinkthen-native_values'}
     assert {p.stem for p in (installed / 'src').glob('*.adb')} == expected
     assert {p.stem for p in (installed / 'src').glob('*.ads')} == expected | {'thinkthen_session_c', 'thinkthen-requests'}
     if '--full' in sys.argv:
@@ -76,14 +76,17 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     null_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':'0.7:0.95'}}, {'kind':'text','text':'Null evidence.'})
     item = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':{'original':{'kind':'text','text':'Located evidence.'}}, 'location':{'file':'owned.txt','first_line':1,'last_line':1}})
     declarations += [f'False_Request : constant T_RequestCall := {false_request};', f'Null_Request : constant T_RequestCall := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall := {failure};', f'Feed : constant T_RequestCall := {feed};', f'Invalid : constant T_RequestCall := {invalid};']
-    calls += ['Select_Route ("generic/v1");', 'declare Preview : constant String := Thinkthen.Sessions.Calls.Plan (Client, False_Request); begin Require (Ada.Strings.Fixed.Index (Preview, """records"":1") > 0, "typed plan result"); end;', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
+    calls += ['Select_Route ("generic/v1");', 'declare Preview : constant Thinkthen.Values.Value := Thinkthen.Sessions.Calls.Plan (Client, False_Request); begin Require (Thinkthen.Values.As_Number (Thinkthen.Values.Field_Value (Preview, "records")) = "1", "typed plan result"); end;', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
 Refused : Boolean := False;
 begin
 begin
-Thinkthen.Sessions.Calls.Decide (Owner, Invalid);
+declare Preview : constant Thinkthen.Values.Value := Thinkthen.Sessions.Calls.Plan (Client, Invalid); begin Require (Thinkthen.Values.Length (Preview) = 0, "invalid plan admitted"); end;
 exception
 when Usage_Error => Refused := True;
 end;
+if not Refused then raise Program_Error with "invalid plan admitted"; end if;
+Refused := False;
+begin Thinkthen.Sessions.Calls.Decide (Owner, Invalid); exception when Usage_Error => Refused := True; end;
 if not Refused then raise Program_Error with "invalid question admitted"; end if;
 end;''']
     calls += [

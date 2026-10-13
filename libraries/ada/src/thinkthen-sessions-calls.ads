@@ -1,4 +1,5 @@
 -- Generated named calls from canonical RequestCall variants.
+with Thinkthen.Values;
 with Thinkthen.Requests; use Thinkthen.Requests;
 package Thinkthen.Sessions.Calls is
 procedure Decide (Owner : in out Session; Request : T_RequestCall);
@@ -41,5 +42,5 @@ procedure Recognize (Owner : in out Session; Question : Thinkthen.Requests.Quest
 procedure Recognize (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False));
 procedure Relate (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False));
 procedure Relate (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False));
-function Plan (Client : Engine; Request : T_RequestCall) return String;
+function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value;
 end Thinkthen.Sessions.Calls;

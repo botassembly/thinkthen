@@ -42,7 +42,7 @@ The convenience named calls create an engine using the ordinary environment and 
 | Root cancellation token | `Thinkthen.Sessions.Cancel` |
 | Root `Plan` JSON builder | `Thinkthen.Sessions.Calls.Plan` using the same typed request records |
 
-The generated `Thinkthen.Sessions.Calls.Plan (Client, Request)` uses native typed admission and the existing Rust preview serializer. Its returned string owns the preview bytes and remains valid after request and engine finalization. Planning sends no judgment request.
+The generated `Thinkthen.Sessions.Calls.Plan (Client, Request)` uses native typed admission and the existing Rust preview serializer. Its returned `Thinkthen.Values.Value` owns the native preview tree and remains valid after request and engine finalization. Read its fields with the typed value accessors. Planning sends no judgment request.
 
 `Thinkthen.Values` supplies owned native value trees. Construct strings, booleans, nulls, exact decimal spellings, arrays and ordered objects directly. Copying a value owns an independent nested tree. `Has_Field` distinguishes a missing object member from a member holding `Null_Item`; `Field_Name` preserves object order. `As_String` preserves counted characters, including embedded zero bytes. No document parser is provided.
 

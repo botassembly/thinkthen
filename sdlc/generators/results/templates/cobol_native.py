@@ -1,6 +1,7 @@
 """Adapt existing COBOL carriers to the canonical Rust request ABI."""
 from templates.native_request import render as native_render, name
 from templates.csharp import enum_values
+from templates.cobol_values import SOURCE as VALUE_SOURCE
 
 
 def render(definitions, old_nodes):
@@ -79,7 +80,7 @@ def render(definitions, old_nodes):
         if not const:
             prefix += ['if(!p) {a->code=THINKTHEN_COBOL_REPRESENTATION; return out;}']
         bodies.append((function, '\n'.join(prefix + body + ['return out;', '}'])))
-    code = [SUPPORT]
+    code = [SUPPORT, VALUE_SOURCE]
     code.extend('static void *' + function + '(arena *,const void *);' for function, _ in bodies)
     code.extend(body for _, body in bodies)
     code += ['static int start(const void *engine,const thinkthen_cobol_RequestCall *input,void **out,const char *function,size_t length) {',
@@ -132,16 +133,24 @@ NEXT_PACKET = 'int TT_SESSION_NEXT(thinkthen_session *session,uint32_t *status,t
 USAGE_STATUS = 'static int usage_status(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                        char *advice,uint64_t *written,int finish) {\n    if(!state || !advice || !written) return THINKTHEN_COBOL_REPRESENTATION;\n    thinkthen_complete_usage_persistence_v1 observed;\n    thinkthen_complete_utf8_v1 text;\n    int code=finish ? thinkthen_engine_finish_usage_status_v1(engine,&observed,&text)\n                    : thinkthen_engine_usage_persistence_v1(engine,&observed,&text);\n    if(code) return code;\n    code=TT_SESSION_TEXT(&text,advice,written);\n    if(code) return code;\n    *state=observed;\n    return 0;\n}\nint TT_ENGINE_USAGE_PERSISTENCE(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                              char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,0);\n}\nint TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,\n                                char *advice,uint64_t *written) {\n    return usage_status(engine,state,advice,written,1);\n}\n'
 
 
-PLAN = r'''int TT_PLAN(const void *engine,const char *function,uint64_t length,
-            const thinkthen_cobol_RequestCall *input,char **out,uint64_t *written) {
+PLAN = r"""int TT_PLAN(const void *engine,const char *function,uint64_t length,
+            const thinkthen_cobol_RequestCall *input,tt_value **out) {
+    if(!out) return THINKTHEN_COBOL_REPRESENTATION;
     arena a={0};
     const thinkthen_request_arguments_v1 *arguments=convert_RequestCall_RequestArguments(&a,input);
-    int code=a.code ? a.code : thinkthen_request_plan_typed_json(engine,
+    thinkthen_value *owner=NULL;
+    int code=a.code ? a.code : thinkthen_request_plan_typed_value(engine,
         (thinkthen_complete_utf8_v1){function,length},arguments,
-        (thinkthen_complete_utf8_v1){"cobol",5},out,written);
-    release(&a); return code;
+        (thinkthen_complete_utf8_v1){"cobol",5},&owner);
+    release(&a);
+    if(!code) {
+        const thinkthen_complete_json_v1 *view=NULL;
+        code=thinkthen_value_view(owner,&view);
+        if(!code) code=own_value(view,out);
+    }
+    thinkthen_value_free(owner); return code;
 }
-'''
+"""
 
 
 def builders(definitions):
@@ -174,11 +183,11 @@ def builders(definitions):
         kind = branch.removeprefix('RequestOriginal_')
         member = 'text' if kind == 'text' else 'value'
         scalar_key = branch + '_member_' + member
-        arguments = 'const char *data,uint64_t length' if kind == 'text' else 'const struct thinkthen_complete_json_v1 *value'
-        initializer = 'data,length' if kind == 'text' else '.value=value'
+        arguments = 'const char *data,uint64_t length' if kind == 'text' else 'const tt_value *value'
+        initializer = 'data,length' if kind == 'text' else '.value=value->value'
         signature = f'int TT_{kind.upper()}_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,thinkthen_cobol_{branch} *arm,thinkthen_cobol_{scalar_key} *scalar,{arguments})'
         declarations.append(signature + ';')
-        bodies += [signature + ' {', 'if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;',
+        bodies += [signature + ' {', 'if(!item || !original || !arm || !scalar' + (' || !value' if kind != 'text' else '') + ') return THINKTHEN_COBOL_REPRESENTATION;',
                    f'*scalar=(thinkthen_cobol_{scalar_key}){{{initializer}}};',
                    f'*arm=(thinkthen_cobol_{branch}){{.m_{member}=scalar}};',
                    f'*original=(thinkthen_cobol_RequestOriginal){{.kind={original_index},.value=arm}};',
