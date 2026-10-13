@@ -31,3 +31,5 @@ ThinkThen 0.2 carries no code, tests or documents whose only job is backward com
   - Outside-in tests show the refusals for an old configuration file, an old cache file and an old request shape.
   - Routine `test`, `lint` and every language library's routine installed checks pass.
 - Defers: nothing.
+
+PM amendment, 2026-10-12. Reading an old cache to refuse it may leave the SQLite `-wal` and `-shm` sidecar files that a read-only open creates. The refusal must leave the database file's bytes and modification time unchanged. Test only that, and do not delete or prevent the sidecars.
