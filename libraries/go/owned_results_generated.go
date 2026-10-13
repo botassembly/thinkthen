@@ -1,7 +1,12 @@
 // Generated from the shared Rust result graph; do not edit.
 package thinkthen
 
-import "encoding/json"
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"reflect"
+)
 
 type OwnedAnnotation struct{ ownedJSON }
 
@@ -1492,6 +1497,13 @@ func (v OwnedRelationMemberAnswerId) AnswerId() Presence[OwnedAnswerId] {
 func (v OwnedRelationMemberAnswerId) Probability() Presence[json.Number] {
 	return ownedMember[json.Number](v.raw, "probability")
 }
+func (v OwnedRelationMemberAnswerId) SourceName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "source")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
+}
 
 type OwnedRelationMemberFailureId struct{ ownedJSON }
 
@@ -1536,6 +1548,13 @@ func (v OwnedRelationMemberFailureId) Failure() Presence[OwnedFailure] {
 }
 func (v OwnedRelationMemberFailureId) FailureId() Presence[OwnedFailureId] {
 	return ownedMember[OwnedFailureId](v.raw, "failure_id")
+}
+func (v OwnedRelationMemberFailureId) SourceName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "source")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
 }
 
 type OwnedRelationMethod struct{ ownedJSON }
@@ -1904,6 +1923,20 @@ func (v OwnedRelatedEntityEdge) Source() Presence[OwnedRelationEndpoint] {
 }
 func (v OwnedRelatedEntityEdge) Target() Presence[OwnedRelationEndpoint] {
 	return ownedMember[OwnedRelationEndpoint](v.raw, "target")
+}
+func (v OwnedRelatedEntityEdge) SourceName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "source")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
+}
+func (v OwnedRelatedEntityEdge) TargetName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "target")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
 }
 
 type OwnedRelationRule struct{ ownedJSON }
@@ -2584,6 +2617,20 @@ func (v OwnedSessionRelationEdge) Source() Presence[OwnedEntityDocument] {
 func (v OwnedSessionRelationEdge) Target() Presence[OwnedEntityDocument] {
 	return ownedMember[OwnedEntityDocument](v.raw, "target")
 }
+func (v OwnedSessionRelationEdge) SourceName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "source")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
+}
+func (v OwnedSessionRelationEdge) TargetName() Presence[string] {
+	nested := ownedMember[json.RawMessage](v.raw, "target")
+	if nested.Err != nil || !nested.Present || nested.Null {
+		return Presence[string]{Present: nested.Present, Null: nested.Null, Err: nested.Err}
+	}
+	return ownedMember[string](nested.Value, "name")
+}
 
 type OwnedSourceRelationEndpoint struct{ ownedJSON }
 
@@ -2627,6 +2674,132 @@ func (v OwnedTokenUsage) OutputTokens() Presence[json.Number] {
 }
 
 type OwnedValue struct{ ownedJSON }
+
+func (v OwnedSessionPacket) DecideAnswer() Presence[[]OwnedAtomicDecideValue] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "decide") {
+		return Presence[[]OwnedAtomicDecideValue]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicDecideValue](v.raw, "value")
+}
+func (v OwnedSessionPacket) ChooseAnswer() Presence[[]OwnedAtomicNullableString] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "choose") {
+		return Presence[[]OwnedAtomicNullableString]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicNullableString](v.raw, "value")
+}
+func (v OwnedSessionPacket) TagAnswer() Presence[[]OwnedAtomicArrayOfString] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "tag") {
+		return Presence[[]OwnedAtomicArrayOfString]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicArrayOfString](v.raw, "value")
+}
+func (v OwnedSessionPacket) ScoreAnswer() Presence[[]OwnedAtomicDouble] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "score") {
+		return Presence[[]OwnedAtomicDouble]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicDouble](v.raw, "value")
+}
+func (v OwnedSessionPacket) FilterAnswer() Presence[[]OwnedAtomicBoolean] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "filter") {
+		return Presence[[]OwnedAtomicBoolean]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicBoolean](v.raw, "value")
+}
+func (v OwnedSessionPacket) RankAnswer() Presence[[]OwnedAtomicNonZeroUsize] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "rank") {
+		return Presence[[]OwnedAtomicNonZeroUsize]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAtomicNonZeroUsize](v.raw, "value")
+}
+func (v OwnedSessionPacket) FindAnswer() Presence[OwnedFind] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "find") {
+		return Presence[OwnedFind]{Err: errOwnedAlternative}
+	}
+	return ownedMember[OwnedFind](v.raw, "value")
+}
+func (v OwnedSessionPacket) AnnotateAnswer() Presence[[]OwnedAnnotation] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "annotate") {
+		return Presence[[]OwnedAnnotation]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedAnnotation](v.raw, "value")
+}
+func (v OwnedSessionPacket) RecognizeAnswer() Presence[[]OwnedRecognition] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "recognize") {
+		return Presence[[]OwnedRecognition]{Err: errOwnedAlternative}
+	}
+	return ownedMember[[]OwnedRecognition](v.raw, "value")
+}
+func (v OwnedSessionPacket) RelateAnswer() Presence[OwnedRelation] {
+	if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", "relate") {
+		return Presence[OwnedRelation]{Err: errOwnedAlternative}
+	}
+	return ownedMember[OwnedRelation](v.raw, "value")
+}
+
+// OrderedEntry carries one authored object member.
+type OrderedEntry[V any] struct {
+	Key   string
+	Value V
+}
+type OrderedMap[V any] []OrderedEntry[V]
+
+func (v OrderedMap[V]) MarshalJSON() ([]byte, error) {
+	if v == nil {
+		return []byte("null"), nil
+	}
+	var out bytes.Buffer
+	out.WriteByte('{')
+	for i, entry := range v {
+		key, err := json.Marshal(entry.Key)
+		if err != nil {
+			return nil, err
+		}
+		value, err := json.Marshal(entry.Value)
+		if err != nil {
+			return nil, err
+		}
+		if i > 0 {
+			out.WriteByte(',')
+		}
+		out.Write(key)
+		out.WriteByte(':')
+		out.Write(value)
+	}
+	out.WriteByte('}')
+	return out.Bytes(), nil
+}
+func (v *OrderedMap[V]) UnmarshalJSON(data []byte) error {
+	if bytes.Equal(bytes.TrimSpace(data), []byte("null")) {
+		*v = nil
+		return nil
+	}
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	token, err := decoder.Token()
+	if err != nil {
+		return err
+	}
+	if token != json.Delim('{') {
+		return &json.UnmarshalTypeError{Value: "non-object", Type: reflect.TypeOf(*v)}
+	}
+	entries := make(OrderedMap[V], 0)
+	for decoder.More() {
+		token, err = decoder.Token()
+		if err != nil {
+			return err
+		}
+		var value V
+		if err = decoder.Decode(&value); err != nil {
+			return err
+		}
+		entries = append(entries, OrderedEntry[V]{Key: token.(string), Value: value})
+	}
+	if _, err = decoder.Token(); err != nil {
+		return err
+	}
+	*v = entries
+	return nil
+}
+
 type RequestInput interface{ isRequestInput() }
 
 func (RequestInputText) isRequestInput()     {}
@@ -3026,10 +3199,10 @@ func (RequestDefinitionRecognizeDefinition) isRequestDefinition() {}
 func (RequestDefinitionAnnotateDefinition) isRequestDefinition()  {}
 
 type RequestDefinitionAnnotateDefinition struct {
-	Batch     *any                        `json:"batch,omitempty"`
-	Profile   *AuthoredProfile            `json:"profile,omitempty"`
-	Questions map[string]AnnotateQuestion `json:"questions"`
-	Threshold *AuthoredThreshold          `json:"threshold,omitempty"`
+	Batch     *any                         `json:"batch,omitempty"`
+	Profile   *AuthoredProfile             `json:"profile,omitempty"`
+	Questions OrderedMap[AnnotateQuestion] `json:"questions"`
+	Threshold *AuthoredThreshold           `json:"threshold,omitempty"`
 }
 
 func (v RequestDefinitionAnnotateDefinition) MarshalJSON() ([]byte, error) {
@@ -3294,7 +3467,15 @@ type AuthoredOptions interface{ isAuthoredOptions() }
 func (AuthoredOptionsArray) isAuthoredOptions()  {}
 func (AuthoredOptionsObject) isAuthoredOptions() {}
 
-type AuthoredOptionsObject map[string]AuthoredDescription
+type AuthoredOptionsObject OrderedMap[AuthoredDescription]
+
+func (v AuthoredOptionsObject) MarshalJSON() ([]byte, error) {
+	return OrderedMap[AuthoredDescription](v).MarshalJSON()
+}
+func (v *AuthoredOptionsObject) UnmarshalJSON(data []byte) error {
+	return (*OrderedMap[AuthoredDescription])(v).UnmarshalJSON(data)
+}
+
 type AuthoredOptionsArray []AuthoredName
 type AnnotateQuestionDecide struct {
 	ContextSchema  *AuthoredInputDeclaration `json:"context_schema,omitempty"`
@@ -3336,13 +3517,13 @@ func (v RequestDefinitionRecognizeDefinition) MarshalJSON() ([]byte, error) {
 }
 
 type RecognizeQuestion struct {
-	EntityDefinition *AuthoredQuestionText           `json:"entity_definition,omitempty"`
-	Instructions     *AuthoredQuestionText           `json:"instructions,omitempty"`
-	Kinds            *map[string]AuthoredDescription `json:"kinds,omitempty"`
-	Mode             *RecognitionMode                `json:"mode,omitempty"`
-	Relations        *[]AuthoredRelation             `json:"relations,omitempty"`
-	SnippetPieces    *uint64                         `json:"snippet_pieces,omitempty"`
-	StageContext     *RecognitionStageContext        `json:"stage_context,omitempty"`
+	EntityDefinition *AuthoredQuestionText            `json:"entity_definition,omitempty"`
+	Instructions     *AuthoredQuestionText            `json:"instructions,omitempty"`
+	Kinds            *OrderedMap[AuthoredDescription] `json:"kinds,omitempty"`
+	Mode             *RecognitionMode                 `json:"mode,omitempty"`
+	Relations        *[]AuthoredRelation              `json:"relations,omitempty"`
+	SnippetPieces    *uint64                          `json:"snippet_pieces,omitempty"`
+	StageContext     *RecognitionStageContext         `json:"stage_context,omitempty"`
 }
 type RecognitionStageContext struct {
 	Boundary *string `json:"boundary,omitempty"`
@@ -3620,6 +3801,273 @@ type SessionSourceLocation struct {
 	LastLine  *uint64 `json:"last_line,omitempty"`
 }
 
+func (c *Client) Decide(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "decide", question, input, options)
+}
+func (c *Client) Choose(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "choose", question, input, options)
+}
+func (c *Client) Tag(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "tag", question, input, options)
+}
+func (c *Client) Score(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "score", question, input, options)
+}
+func (c *Client) Filter(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "filter", question, input, options)
+}
+func (c *Client) Rank(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "rank", question, input, options)
+}
+func (c *Client) Find(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "find", question, input, options)
+}
+func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "annotate", question, input, options)
+}
+func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "recognize", question, input, options)
+}
+func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
+	return c.call(ctx, "relate", question, input, options)
+}
+
+type AnswerCardinalityError struct {
+	Function string
+	Count    int
+	Call     OwnedCall
+}
+
+func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }
+func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] {
+	result := Presence[json.RawMessage]{Present: true, Value: raw}
+	for _, field := range path {
+		result = ownedMember[json.RawMessage](result.Value, field)
+		if result.Err != nil || !result.Present || result.Null {
+			return result
+		}
+	}
+	return result
+}
+func (v OwnedCall) answerTerminal() error {
+	if v.Terminal == nil {
+		return &AnswerCardinalityError{Call: v}
+	}
+	failure := v.Terminal.Failure()
+	if failure.Err != nil {
+		return failure.Err
+	}
+	if failure.Present && !failure.Null {
+		detail := failure.Value.Error()
+		if detail.Err != nil {
+			return detail.Err
+		}
+		return &SessionError{Call: v, Detail: detail.Value}
+	}
+	return nil
+}
+func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error) {
+	if err := v.answerTerminal(); err != nil {
+		return nil, err
+	}
+	values := make([]json.RawMessage, 0)
+	for _, packet := range v.Packets {
+		if !ownedLiteral(packet.raw, "function", function) {
+			continue
+		}
+		var value Presence[json.RawMessage]
+		if judgment == "" {
+			if !ownedLiteral(packet.raw, "kind", "aggregate") {
+				continue
+			}
+			value = ownedMember[json.RawMessage](packet.raw, "value")
+		} else {
+			if !(ownedLiteral(ownedAnswerPath(packet.raw, []string{}).Value, "kind", "observation") && ownedLiteral(ownedAnswerPath(packet.raw, []string{"value"}).Value, "kind", "row") && ownedLiteral(ownedAnswerPath(packet.raw, []string{"value", "value"}).Value, "kind", "judgment")) {
+				continue
+			}
+			carrier := ownedAnswerPath(packet.raw, []string{"value", "value", "value"})
+			if !ownedLiteral(carrier.Value, "kind", judgment) {
+				continue
+			}
+			value = ownedMember[json.RawMessage](carrier.Value, "value")
+		}
+		if value.Err != nil {
+			return nil, value.Err
+		}
+		if value.Present {
+			if value.Null {
+				values = append(values, json.RawMessage("null"))
+			} else {
+				values = append(values, value.Value)
+			}
+		}
+	}
+	if len(values) != 1 {
+		return nil, &AnswerCardinalityError{Function: function, Count: len(values), Call: v}
+	}
+	return values[0], nil
+}
+func (v OwnedCall) DecideAnswer() (*bool, error) {
+	raw, err := v.answerJSON("decide", "decision")
+	if err != nil {
+		var zero *bool
+		return zero, err
+	}
+	return ownedDecode[*bool](raw)
+}
+func (c *Client) DecideAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (*bool, error) {
+	call, err := c.Decide(ctx, question, input, options)
+	if err != nil {
+		var zero *bool
+		return zero, err
+	}
+	return call.DecideAnswer()
+}
+func (v OwnedCall) ChooseAnswer() (*string, error) {
+	raw, err := v.answerJSON("choose", "choice")
+	if err != nil {
+		var zero *string
+		return zero, err
+	}
+	return ownedDecode[*string](raw)
+}
+func (c *Client) ChooseAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (*string, error) {
+	call, err := c.Choose(ctx, question, input, options)
+	if err != nil {
+		var zero *string
+		return zero, err
+	}
+	return call.ChooseAnswer()
+}
+func (v OwnedCall) TagAnswer() ([]string, error) {
+	raw, err := v.answerJSON("tag", "tags")
+	if err != nil {
+		var zero []string
+		return zero, err
+	}
+	return ownedDecode[[]string](raw)
+}
+func (c *Client) TagAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]string, error) {
+	call, err := c.Tag(ctx, question, input, options)
+	if err != nil {
+		var zero []string
+		return zero, err
+	}
+	return call.TagAnswer()
+}
+func (v OwnedCall) ScoreAnswer() (float64, error) {
+	raw, err := v.answerJSON("score", "score")
+	if err != nil {
+		var zero float64
+		return zero, err
+	}
+	return ownedDecode[float64](raw)
+}
+func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (float64, error) {
+	call, err := c.Score(ctx, question, input, options)
+	if err != nil {
+		var zero float64
+		return zero, err
+	}
+	return call.ScoreAnswer()
+}
+func (v OwnedCall) FilterAnswer() ([]OwnedAtomicBoolean, error) {
+	raw, err := v.answerJSON("filter", "")
+	if err != nil {
+		var zero []OwnedAtomicBoolean
+		return zero, err
+	}
+	return ownedDecode[[]OwnedAtomicBoolean](raw)
+}
+func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAtomicBoolean, error) {
+	call, err := c.Filter(ctx, question, input, options)
+	if err != nil {
+		var zero []OwnedAtomicBoolean
+		return zero, err
+	}
+	return call.FilterAnswer()
+}
+func (v OwnedCall) RankAnswer() ([]OwnedAtomicNonZeroUsize, error) {
+	raw, err := v.answerJSON("rank", "")
+	if err != nil {
+		var zero []OwnedAtomicNonZeroUsize
+		return zero, err
+	}
+	return ownedDecode[[]OwnedAtomicNonZeroUsize](raw)
+}
+func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAtomicNonZeroUsize, error) {
+	call, err := c.Rank(ctx, question, input, options)
+	if err != nil {
+		var zero []OwnedAtomicNonZeroUsize
+		return zero, err
+	}
+	return call.RankAnswer()
+}
+func (v OwnedCall) FindAnswer() (OwnedFind, error) {
+	raw, err := v.answerJSON("find", "")
+	if err != nil {
+		var zero OwnedFind
+		return zero, err
+	}
+	return ownedDecode[OwnedFind](raw)
+}
+func (c *Client) FindAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedFind, error) {
+	call, err := c.Find(ctx, question, input, options)
+	if err != nil {
+		var zero OwnedFind
+		return zero, err
+	}
+	return call.FindAnswer()
+}
+func (v OwnedCall) AnnotateAnswer() ([]OwnedAnnotation, error) {
+	raw, err := v.answerJSON("annotate", "")
+	if err != nil {
+		var zero []OwnedAnnotation
+		return zero, err
+	}
+	return ownedDecode[[]OwnedAnnotation](raw)
+}
+func (c *Client) AnnotateAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAnnotation, error) {
+	call, err := c.Annotate(ctx, question, input, options)
+	if err != nil {
+		var zero []OwnedAnnotation
+		return zero, err
+	}
+	return call.AnnotateAnswer()
+}
+func (v OwnedCall) RecognizeAnswer() ([]OwnedRecognition, error) {
+	raw, err := v.answerJSON("recognize", "")
+	if err != nil {
+		var zero []OwnedRecognition
+		return zero, err
+	}
+	return ownedDecode[[]OwnedRecognition](raw)
+}
+func (c *Client) RecognizeAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedRecognition, error) {
+	call, err := c.Recognize(ctx, question, input, options)
+	if err != nil {
+		var zero []OwnedRecognition
+		return zero, err
+	}
+	return call.RecognizeAnswer()
+}
+func (v OwnedCall) RelateAnswer() (OwnedRelation, error) {
+	raw, err := v.answerJSON("relate", "")
+	if err != nil {
+		var zero OwnedRelation
+		return zero, err
+	}
+	return ownedDecode[OwnedRelation](raw)
+}
+func (c *Client) RelateAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedRelation, error) {
+	call, err := c.Relate(ctx, question, input, options)
+	if err != nil {
+		var zero OwnedRelation
+		return zero, err
+	}
+	return call.RelateAnswer()
+}
+
 const OwnedRequestVersion = "thinkthen.request/1"
 
 // Generated from the compiler-derived C header; do not edit.
@@ -3631,3 +4079,37 @@ const (
 	UsagePending  UsagePersistenceState = 2
 	UsageWritten  UsagePersistenceState = 3
 )
+
+type ErrorKind int
+
+const (
+	KindBackend   ErrorKind = 2
+	KindCancelled ErrorKind = 5
+	KindDeadline  ErrorKind = 3
+	KindDefect    ErrorKind = 6
+	KindLocal     ErrorKind = 4
+	KindUsage     ErrorKind = 1
+)
+
+func (k ErrorKind) String() string {
+	switch k {
+	case KindBackend:
+		return "backend"
+	case KindCancelled:
+		return "cancelled"
+	case KindDeadline:
+		return "deadline"
+	case KindDefect:
+		return "defect"
+	case KindLocal:
+		return "local"
+	case KindUsage:
+		return "usage"
+	default:
+		return "unknown"
+	}
+}
+func (c *Client) FinishUsageStatus() (UsageStatus, error)       { return c.engine.FinishUsageStatus() }
+func (e *nativeEngine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
+func (c *Client) UsagePersistence() (UsageStatus, error)        { return c.engine.UsagePersistence() }
+func (e *nativeEngine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }

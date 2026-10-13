@@ -2321,6 +2321,16 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return [TTRelationEndpoint read:value];
     }];
 }
+- (TTPresence<NSString *> *)sourceName {
+    return [self presence:@"source" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
+    }];
+}
+- (TTPresence<NSString *> *)targetName {
+    return [self presence:@"target" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
+    }];
+}
 @end
 @implementation TTRelationRule
 + (instancetype)read:(id)value {
@@ -2661,6 +2671,16 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<TTEntityDocument *> *)target {
     return [self presence:@"target" required:YES convert:^id(id value) {
         return [TTEntityDocument read:value];
+    }];
+}
+- (TTPresence<NSString *> *)sourceName {
+    return [self presence:@"source" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
+    }];
+}
+- (TTPresence<NSString *> *)targetName {
+    return [self presence:@"target" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
     }];
 }
 @end
@@ -3592,6 +3612,11 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
         return TTNumber(value);
     }];
 }
+- (TTPresence<NSString *> *)sourceName {
+    return [self presence:@"source" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
+    }];
+}
 @end
 @implementation TTRelationMemberFailureId
 + (instancetype)read:(id)value {
@@ -3669,6 +3694,11 @@ NSString * const TTRequestVersion = @"thinkthen.request/1";
 - (TTPresence<NSString *> *)failureId {
     return [self presence:@"failure_id" required:YES convert:^id(id value) {
         return TTString(value);
+    }];
+}
+- (TTPresence<NSString *> *)sourceName {
+    return [self presence:@"source" required:YES convert:^id(id value) {
+        return TTString(TTObject(value)[@"name"]);
     }];
 }
 @end
@@ -4442,4 +4472,2595 @@ NSInteger TTNativeErrorCode(NSString *kind) {
     if ([kind isEqual:@"defect"]) return 6;
     TTInvalidResult();
     return 0;
+}
+@implementation TTSessionPacket (Answers)
+- (TTPresence<NSArray<TTAtomicDecideValue *> *> *)decideAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"decide"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicDecideValue read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTAtomicNullableString *> *> *)chooseAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"choose"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicNullableString read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTAtomicArrayOfString *> *> *)tagAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"tag"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicArrayOfString read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTAtomicDouble *> *> *)scoreAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"score"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicDouble read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"filter"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicBoolean read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"rank"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicNonZeroUsize read:item];
+        });
+    }];
+}
+- (TTPresence<TTFind *> *)findAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"find"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return [TTFind read:value];
+    }];
+}
+- (TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"annotate"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAnnotation read:item];
+        });
+    }];
+}
+- (TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"recognize"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTRecognition read:item];
+        });
+    }];
+}
+- (TTPresence<TTRelation *> *)relateAnswer {
+    if (![self.rawFields[@"kind"] isEqual:@"aggregate"] || ![self.rawFields[@"function"] isEqual:@"relate"]) TTInvalidResult();
+    return [self presence:@"value" required:YES convert:^id(id value) {
+        return [TTRelation read:value];
+    }];
+}
+@end
+@implementation TTOrderedEntry
+- (instancetype)initWithKey:(NSString *)key value:(id)value {
+    if ((self = [super init])) {
+        _key = [key copy];
+        _value = value;
+    } return self;
+}
+@end
+@implementation TTOrderedMap
+- (instancetype)initWithEntries:(NSArray<TTOrderedEntry *> *)entries {
+    if ((self = [super init])) {
+        _entries = [entries copy];
+    } return self;
+}
+@end
+NSData *TTRequestJSONData(id value, NSError **error) {
+    if ([value isKindOfClass:TTRequestObject.class]) value = ((TTRequestObject *)value).requestFields;
+    NSArray<TTOrderedEntry *> *members = nil;
+    if ([value isKindOfClass:TTOrderedMap.class]) members = ((TTOrderedMap *)value).entries;
+    else if ([value isKindOfClass:NSDictionary.class]) {
+        NSMutableArray *entries = [NSMutableArray array];
+        for (NSString *key in value) [entries addObject:[[TTOrderedEntry alloc] initWithKey:key value:value[key]]];
+        members = entries;
+    }
+    BOOL array = [value isKindOfClass:NSArray.class];
+    if (!members && !array) return [NSJSONSerialization dataWithJSONObject:value options:NSJSONWritingFragmentsAllowed error:error];
+    NSMutableData *data = [NSMutableData data];
+    [data appendData:[(array ? @"[" : @"{") dataUsingEncoding:NSUTF8StringEncoding]];
+    NSArray *values = array ? value : members;
+    for (NSUInteger index = 0;
+    index < values.count;
+    index++) {
+        if (index) [data appendData:[@"," dataUsingEncoding:NSUTF8StringEncoding]];
+        id item = values[index];
+        if (!array) {
+            TTOrderedEntry *entry = item;
+            NSData *key = TTRequestJSONData(entry.key, error);
+            if (!key) return nil;
+            [data appendData:key];
+            [data appendData:[@":" dataUsingEncoding:NSUTF8StringEncoding]];
+            item = entry.value;
+        }
+        NSData *encoded = TTRequestJSONData(item, error);
+        if (!encoded) return nil;
+        [data appendData:encoded];
+    }
+    [data appendData:[(array ? @"]" : @"}") dataUsingEncoding:NSUTF8StringEncoding]];
+    return data;
+}
+@implementation TTRequestObject
+- (instancetype)init {
+    if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary];
+    return self;
+}
+@end
+@implementation TTInputAnnotateDefinition
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTOrderedMap *)questions {
+    return self.requestFields[@"questions"];
+}
+- (void)setQuestions:(TTOrderedMap *)value {
+    if (value) self.requestFields[@"questions"] = value;
+    else [self.requestFields removeObjectForKey:@"questions"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputAnnotateQuestionChoose
+- (id)choose {
+    return self.requestFields[@"choose"];
+}
+- (void)setChoose:(id)value {
+    if (value) self.requestFields[@"choose"] = value;
+    else [self.requestFields removeObjectForKey:@"choose"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)options {
+    return self.requestFields[@"options"];
+}
+- (void)setOptions:(id)value {
+    if (value) self.requestFields[@"options"] = value;
+    else [self.requestFields removeObjectForKey:@"options"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAnnotateQuestionDecide
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)decide {
+    return self.requestFields[@"decide"];
+}
+- (void)setDecide:(id)value {
+    if (value) self.requestFields[@"decide"] = value;
+    else [self.requestFields removeObjectForKey:@"decide"];
+}
+- (id)falseValue {
+    return self.requestFields[@"false"];
+}
+- (void)setFalseValue:(id)value {
+    if (value) self.requestFields[@"false"] = value;
+    else [self.requestFields removeObjectForKey:@"false"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (id)trueValue {
+    return self.requestFields[@"true"];
+}
+- (void)setTrueValue:(id)value {
+    if (value) self.requestFields[@"true"] = value;
+    else [self.requestFields removeObjectForKey:@"true"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAnnotateQuestionScore
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)levels {
+    return self.requestFields[@"levels"];
+}
+- (void)setLevels:(id)value {
+    if (value) self.requestFields[@"levels"] = value;
+    else [self.requestFields removeObjectForKey:@"levels"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)score {
+    return self.requestFields[@"score"];
+}
+- (void)setScore:(id)value {
+    if (value) self.requestFields[@"score"] = value;
+    else [self.requestFields removeObjectForKey:@"score"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAnnotateQuestionTag
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)labels {
+    return self.requestFields[@"labels"];
+}
+- (void)setLabels:(id)value {
+    if (value) self.requestFields[@"labels"] = value;
+    else [self.requestFields removeObjectForKey:@"labels"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)tag {
+    return self.requestFields[@"tag"];
+}
+- (void)setTag:(id)value {
+    if (value) self.requestFields[@"tag"] = value;
+    else [self.requestFields removeObjectForKey:@"tag"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAuthoredChoose
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)choose {
+    return self.requestFields[@"choose"];
+}
+- (void)setChoose:(id)value {
+    if (value) self.requestFields[@"choose"] = value;
+    else [self.requestFields removeObjectForKey:@"choose"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)options {
+    return self.requestFields[@"options"];
+}
+- (void)setOptions:(id)value {
+    if (value) self.requestFields[@"options"] = value;
+    else [self.requestFields removeObjectForKey:@"options"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAuthoredDecide
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)decide {
+    return self.requestFields[@"decide"];
+}
+- (void)setDecide:(id)value {
+    if (value) self.requestFields[@"decide"] = value;
+    else [self.requestFields removeObjectForKey:@"decide"];
+}
+- (id)falseValue {
+    return self.requestFields[@"false"];
+}
+- (void)setFalseValue:(id)value {
+    if (value) self.requestFields[@"false"] = value;
+    else [self.requestFields removeObjectForKey:@"false"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (id)trueValue {
+    return self.requestFields[@"true"];
+}
+- (void)setTrueValue:(id)value {
+    if (value) self.requestFields[@"true"] = value;
+    else [self.requestFields removeObjectForKey:@"true"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAuthoredFind
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)find {
+    return self.requestFields[@"find"];
+}
+- (void)setFind:(id)value {
+    if (value) self.requestFields[@"find"] = value;
+    else [self.requestFields removeObjectForKey:@"find"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAuthoredInputDeclarationObject
+- (NSDictionary *)properties {
+    return self.requestFields[@"properties"];
+}
+- (void)setProperties:(NSDictionary *)value {
+    if (value) self.requestFields[@"properties"] = value;
+    else [self.requestFields removeObjectForKey:@"properties"];
+}
+- (NSArray *)required {
+    return self.requestFields[@"required"];
+}
+- (void)setRequired:(NSArray *)value {
+    if (value) self.requestFields[@"required"] = value;
+    else [self.requestFields removeObjectForKey:@"required"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"object";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredInputDeclarationString
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"string";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredInputPropertyArray
+- (NSDictionary *)items {
+    return self.requestFields[@"items"];
+}
+- (void)setItems:(NSDictionary *)value {
+    if (value) self.requestFields[@"items"] = value;
+    else [self.requestFields removeObjectForKey:@"items"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"array";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredInputPropertyBoolean
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"boolean";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredInputPropertyNumber
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"number";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredInputPropertyString
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"type"] = @"string";
+    } return self;
+}
+@end
+@implementation TTInputAuthoredRelate
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTInputRelateQuestion *)relate {
+    return self.requestFields[@"relate"];
+}
+- (void)setRelate:(TTInputRelateQuestion *)value {
+    if (value) self.requestFields[@"relate"] = value;
+    else [self.requestFields removeObjectForKey:@"relate"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputAuthoredRelation
+- (NSNumber *)either {
+    return self.requestFields[@"either"];
+}
+- (void)setEither:(NSNumber *)value {
+    if (value) self.requestFields[@"either"] = value;
+    else [self.requestFields removeObjectForKey:@"either"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (NSString *)reads {
+    return self.requestFields[@"reads"];
+}
+- (void)setReads:(NSString *)value {
+    if (value) self.requestFields[@"reads"] = value;
+    else [self.requestFields removeObjectForKey:@"reads"];
+}
+- (NSNumber *)single {
+    return self.requestFields[@"single"];
+}
+- (void)setSingle:(NSNumber *)value {
+    if (value) self.requestFields[@"single"] = value;
+    else [self.requestFields removeObjectForKey:@"single"];
+}
+- (NSString *)source {
+    return self.requestFields[@"source"];
+}
+- (void)setSource:(NSString *)value {
+    if (value) self.requestFields[@"source"] = value;
+    else [self.requestFields removeObjectForKey:@"source"];
+}
+- (NSString *)target {
+    return self.requestFields[@"target"];
+}
+- (void)setTarget:(NSString *)value {
+    if (value) self.requestFields[@"target"] = value;
+    else [self.requestFields removeObjectForKey:@"target"];
+}
+@end
+@implementation TTInputAuthoredScore
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)levels {
+    return self.requestFields[@"levels"];
+}
+- (void)setLevels:(id)value {
+    if (value) self.requestFields[@"levels"] = value;
+    else [self.requestFields removeObjectForKey:@"levels"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)score {
+    return self.requestFields[@"score"];
+}
+- (void)setScore:(id)value {
+    if (value) self.requestFields[@"score"] = value;
+    else [self.requestFields removeObjectForKey:@"score"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputAuthoredTag
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)labels {
+    return self.requestFields[@"labels"];
+}
+- (void)setLabels:(id)value {
+    if (value) self.requestFields[@"labels"] = value;
+    else [self.requestFields removeObjectForKey:@"labels"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)tag {
+    return self.requestFields[@"tag"];
+}
+- (void)setTag:(id)value {
+    if (value) self.requestFields[@"tag"] = value;
+    else [self.requestFields removeObjectForKey:@"tag"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputEngineSettings
+- (NSString *)backend {
+    return self.requestFields[@"backend"];
+}
+- (void)setBackend:(NSString *)value {
+    if (value) self.requestFields[@"backend"] = value;
+    else [self.requestFields removeObjectForKey:@"backend"];
+}
+- (NSString *)baseUrl {
+    return self.requestFields[@"base_url"];
+}
+- (void)setBaseUrl:(NSString *)value {
+    if (value) self.requestFields[@"base_url"] = value;
+    else [self.requestFields removeObjectForKey:@"base_url"];
+}
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)cache {
+    return self.requestFields[@"cache"];
+}
+- (void)setCache:(id)value {
+    if (value) self.requestFields[@"cache"] = value;
+    else [self.requestFields removeObjectForKey:@"cache"];
+}
+- (id)maxEstimatedInputTokensTotal {
+    return self.requestFields[@"max_estimated_input_tokens_total"];
+}
+- (void)setMaxEstimatedInputTokensTotal:(id)value {
+    if (value) self.requestFields[@"max_estimated_input_tokens_total"] = value;
+    else [self.requestFields removeObjectForKey:@"max_estimated_input_tokens_total"];
+}
+- (NSNumber *)maxRequestBytes {
+    return self.requestFields[@"max_request_bytes"];
+}
+- (void)setMaxRequestBytes:(NSNumber *)value {
+    if (value) self.requestFields[@"max_request_bytes"] = value;
+    else [self.requestFields removeObjectForKey:@"max_request_bytes"];
+}
+- (id)maxRequests {
+    return self.requestFields[@"max_requests"];
+}
+- (void)setMaxRequests:(id)value {
+    if (value) self.requestFields[@"max_requests"] = value;
+    else [self.requestFields removeObjectForKey:@"max_requests"];
+}
+- (id)maxRequestsTotal {
+    return self.requestFields[@"max_requests_total"];
+}
+- (void)setMaxRequestsTotal:(id)value {
+    if (value) self.requestFields[@"max_requests_total"] = value;
+    else [self.requestFields removeObjectForKey:@"max_requests_total"];
+}
+- (NSNumber *)maxRetries {
+    return self.requestFields[@"max_retries"];
+}
+- (void)setMaxRetries:(NSNumber *)value {
+    if (value) self.requestFields[@"max_retries"] = value;
+    else [self.requestFields removeObjectForKey:@"max_retries"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)proxy {
+    return self.requestFields[@"proxy"];
+}
+- (void)setProxy:(id)value {
+    if (value) self.requestFields[@"proxy"] = value;
+    else [self.requestFields removeObjectForKey:@"proxy"];
+}
+- (NSString *)record {
+    return self.requestFields[@"record"];
+}
+- (void)setRecord:(NSString *)value {
+    if (value) self.requestFields[@"record"] = value;
+    else [self.requestFields removeObjectForKey:@"record"];
+}
+- (NSNumber *)refreshCache {
+    return self.requestFields[@"refresh_cache"];
+}
+- (void)setRefreshCache:(NSNumber *)value {
+    if (value) self.requestFields[@"refresh_cache"] = value;
+    else [self.requestFields removeObjectForKey:@"refresh_cache"];
+}
+- (NSString *)replay {
+    return self.requestFields[@"replay"];
+}
+- (void)setReplay:(NSString *)value {
+    if (value) self.requestFields[@"replay"] = value;
+    else [self.requestFields removeObjectForKey:@"replay"];
+}
+- (NSNumber *)throttle {
+    return self.requestFields[@"throttle"];
+}
+- (void)setThrottle:(NSNumber *)value {
+    if (value) self.requestFields[@"throttle"] = value;
+    else [self.requestFields removeObjectForKey:@"throttle"];
+}
+- (NSNumber *)timeout {
+    return self.requestFields[@"timeout"];
+}
+- (void)setTimeout:(NSNumber *)value {
+    if (value) self.requestFields[@"timeout"] = value;
+    else [self.requestFields removeObjectForKey:@"timeout"];
+}
+- (NSString *)usdPerMillionInput {
+    return self.requestFields[@"usd_per_million_input"];
+}
+- (void)setUsdPerMillionInput:(NSString *)value {
+    if (value) self.requestFields[@"usd_per_million_input"] = value;
+    else [self.requestFields removeObjectForKey:@"usd_per_million_input"];
+}
+- (NSString *)usdPerMillionOutput {
+    return self.requestFields[@"usd_per_million_output"];
+}
+- (void)setUsdPerMillionOutput:(NSString *)value {
+    if (value) self.requestFields[@"usd_per_million_output"] = value;
+    else [self.requestFields removeObjectForKey:@"usd_per_million_output"];
+}
+@end
+@implementation TTInputOptionSchema
+- (id)descriptionValue {
+    return self.requestFields[@"description"];
+}
+- (void)setDescriptionValue:(id)value {
+    if (value) self.requestFields[@"description"] = value;
+    else [self.requestFields removeObjectForKey:@"description"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+@end
+@implementation TTInputRecognitionExampleEntity
+- (NSNumber *)end {
+    return self.requestFields[@"end"];
+}
+- (void)setEnd:(NSNumber *)value {
+    if (value) self.requestFields[@"end"] = value;
+    else [self.requestFields removeObjectForKey:@"end"];
+}
+- (NSString *)kind {
+    return self.requestFields[@"kind"];
+}
+- (void)setKind:(NSString *)value {
+    if (value) self.requestFields[@"kind"] = value;
+    else [self.requestFields removeObjectForKey:@"kind"];
+}
+- (NSNumber *)start {
+    return self.requestFields[@"start"];
+}
+- (void)setStart:(NSNumber *)value {
+    if (value) self.requestFields[@"start"] = value;
+    else [self.requestFields removeObjectForKey:@"start"];
+}
+@end
+@implementation TTInputRecognitionExampleText
+- (NSArray *)entities {
+    return self.requestFields[@"entities"];
+}
+- (void)setEntities:(NSArray *)value {
+    if (value) self.requestFields[@"entities"] = value;
+    else [self.requestFields removeObjectForKey:@"entities"];
+}
+- (NSArray *)kinds {
+    return self.requestFields[@"kinds"];
+}
+- (void)setKinds:(NSArray *)value {
+    if (value) self.requestFields[@"kinds"] = value;
+    else [self.requestFields removeObjectForKey:@"kinds"];
+}
+- (NSString *)text {
+    return self.requestFields[@"text"];
+}
+- (void)setText:(NSString *)value {
+    if (value) self.requestFields[@"text"] = value;
+    else [self.requestFields removeObjectForKey:@"text"];
+}
+@end
+@implementation TTInputRecognitionSeedSpan
+- (NSNumber *)end {
+    return self.requestFields[@"end"];
+}
+- (void)setEnd:(NSNumber *)value {
+    if (value) self.requestFields[@"end"] = value;
+    else [self.requestFields removeObjectForKey:@"end"];
+}
+- (NSString *)kind {
+    return self.requestFields[@"kind"];
+}
+- (void)setKind:(NSString *)value {
+    if (value) self.requestFields[@"kind"] = value;
+    else [self.requestFields removeObjectForKey:@"kind"];
+}
+- (NSNumber *)start {
+    return self.requestFields[@"start"];
+}
+- (void)setStart:(NSNumber *)value {
+    if (value) self.requestFields[@"start"] = value;
+    else [self.requestFields removeObjectForKey:@"start"];
+}
+@end
+@implementation TTInputRecognitionStageContext
+- (NSString *)boundary {
+    return self.requestFields[@"boundary"];
+}
+- (void)setBoundary:(NSString *)value {
+    if (value) self.requestFields[@"boundary"] = value;
+    else [self.requestFields removeObjectForKey:@"boundary"];
+}
+- (NSString *)kindEdge {
+    return self.requestFields[@"kind_edge"];
+}
+- (void)setKindEdge:(NSString *)value {
+    if (value) self.requestFields[@"kind_edge"] = value;
+    else [self.requestFields removeObjectForKey:@"kind_edge"];
+}
+- (NSString *)relation {
+    return self.requestFields[@"relation"];
+}
+- (void)setRelation:(NSString *)value {
+    if (value) self.requestFields[@"relation"] = value;
+    else [self.requestFields removeObjectForKey:@"relation"];
+}
+@end
+@implementation TTInputRecognizeDefinition
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTInputRecognizeQuestion *)recognize {
+    return self.requestFields[@"recognize"];
+}
+- (void)setRecognize:(TTInputRecognizeQuestion *)value {
+    if (value) self.requestFields[@"recognize"] = value;
+    else [self.requestFields removeObjectForKey:@"recognize"];
+}
+- (id)relationThreshold {
+    return self.requestFields[@"relation_threshold"];
+}
+- (void)setRelationThreshold:(id)value {
+    if (value) self.requestFields[@"relation_threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"relation_threshold"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputRecognizeQuestion
+- (id)entityDefinition {
+    return self.requestFields[@"entity_definition"];
+}
+- (void)setEntityDefinition:(id)value {
+    if (value) self.requestFields[@"entity_definition"] = value;
+    else [self.requestFields removeObjectForKey:@"entity_definition"];
+}
+- (id)instructions {
+    return self.requestFields[@"instructions"];
+}
+- (void)setInstructions:(id)value {
+    if (value) self.requestFields[@"instructions"] = value;
+    else [self.requestFields removeObjectForKey:@"instructions"];
+}
+- (TTOrderedMap *)kinds {
+    return self.requestFields[@"kinds"];
+}
+- (void)setKinds:(TTOrderedMap *)value {
+    if (value) self.requestFields[@"kinds"] = value;
+    else [self.requestFields removeObjectForKey:@"kinds"];
+}
+- (id)mode {
+    return self.requestFields[@"mode"];
+}
+- (void)setMode:(id)value {
+    if (value) self.requestFields[@"mode"] = value;
+    else [self.requestFields removeObjectForKey:@"mode"];
+}
+- (NSArray *)relations {
+    return self.requestFields[@"relations"];
+}
+- (void)setRelations:(NSArray *)value {
+    if (value) self.requestFields[@"relations"] = value;
+    else [self.requestFields removeObjectForKey:@"relations"];
+}
+- (NSNumber *)snippetPieces {
+    return self.requestFields[@"snippet_pieces"];
+}
+- (void)setSnippetPieces:(NSNumber *)value {
+    if (value) self.requestFields[@"snippet_pieces"] = value;
+    else [self.requestFields removeObjectForKey:@"snippet_pieces"];
+}
+- (TTInputRecognitionStageContext *)stageContext {
+    return self.requestFields[@"stage_context"];
+}
+- (void)setStageContext:(TTInputRecognitionStageContext *)value {
+    if (value) self.requestFields[@"stage_context"] = value;
+    else [self.requestFields removeObjectForKey:@"stage_context"];
+}
+@end
+@implementation TTInputRelateFields
+- (NSString *)kind {
+    return self.requestFields[@"kind"];
+}
+- (void)setKind:(NSString *)value {
+    if (value) self.requestFields[@"kind"] = value;
+    else [self.requestFields removeObjectForKey:@"kind"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+@end
+@implementation TTInputRelateQuestion
+- (TTInputRelateFields *)fields {
+    return self.requestFields[@"fields"];
+}
+- (void)setFields:(TTInputRelateFields *)value {
+    if (value) self.requestFields[@"fields"] = value;
+    else [self.requestFields removeObjectForKey:@"fields"];
+}
+- (NSArray *)relations {
+    return self.requestFields[@"relations"];
+}
+- (void)setRelations:(NSArray *)value {
+    if (value) self.requestFields[@"relations"] = value;
+    else [self.requestFields removeObjectForKey:@"relations"];
+}
+@end
+@implementation TTInputRequest
+- (TTInputRequestCall *)call {
+    return self.requestFields[@"call"];
+}
+- (void)setCall:(TTInputRequestCall *)value {
+    if (value) self.requestFields[@"call"] = value;
+    else [self.requestFields removeObjectForKey:@"call"];
+}
+- (id)schema {
+    return self.requestFields[@"schema"];
+}
+- (void)setSchema:(id)value {
+    if (value) self.requestFields[@"schema"] = value;
+    else [self.requestFields removeObjectForKey:@"schema"];
+}
+@end
+@implementation TTInputRequestCall
+- (id)function {
+    return self.requestFields[@"function"];
+}
+- (void)setFunction:(id)value {
+    if (value) self.requestFields[@"function"] = value;
+    else [self.requestFields removeObjectForKey:@"function"];
+}
+- (id)input {
+    return self.requestFields[@"input"];
+}
+- (void)setInput:(id)value {
+    if (value) self.requestFields[@"input"] = value;
+    else [self.requestFields removeObjectForKey:@"input"];
+}
+- (TTInputRequestOptions *)options {
+    return self.requestFields[@"options"];
+}
+- (void)setOptions:(TTInputRequestOptions *)value {
+    if (value) self.requestFields[@"options"] = value;
+    else [self.requestFields removeObjectForKey:@"options"];
+}
+- (id)question {
+    return self.requestFields[@"question"];
+}
+- (void)setQuestion:(id)value {
+    if (value) self.requestFields[@"question"] = value;
+    else [self.requestFields removeObjectForKey:@"question"];
+}
+@end
+@implementation TTInputRequestDefinitionAnnotateDefinition
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTOrderedMap *)questions {
+    return self.requestFields[@"questions"];
+}
+- (void)setQuestions:(TTOrderedMap *)value {
+    if (value) self.requestFields[@"questions"] = value;
+    else [self.requestFields removeObjectForKey:@"questions"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredChoose
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)choose {
+    return self.requestFields[@"choose"];
+}
+- (void)setChoose:(id)value {
+    if (value) self.requestFields[@"choose"] = value;
+    else [self.requestFields removeObjectForKey:@"choose"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (id)options {
+    return self.requestFields[@"options"];
+}
+- (void)setOptions:(id)value {
+    if (value) self.requestFields[@"options"] = value;
+    else [self.requestFields removeObjectForKey:@"options"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredDecide
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)decide {
+    return self.requestFields[@"decide"];
+}
+- (void)setDecide:(id)value {
+    if (value) self.requestFields[@"decide"] = value;
+    else [self.requestFields removeObjectForKey:@"decide"];
+}
+- (id)falseValue {
+    return self.requestFields[@"false"];
+}
+- (void)setFalseValue:(id)value {
+    if (value) self.requestFields[@"false"] = value;
+    else [self.requestFields removeObjectForKey:@"false"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (id)trueValue {
+    return self.requestFields[@"true"];
+}
+- (void)setTrueValue:(id)value {
+    if (value) self.requestFields[@"true"] = value;
+    else [self.requestFields removeObjectForKey:@"true"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredFind
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)find {
+    return self.requestFields[@"find"];
+}
+- (void)setFind:(id)value {
+    if (value) self.requestFields[@"find"] = value;
+    else [self.requestFields removeObjectForKey:@"find"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredRelate
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTInputRelateQuestion *)relate {
+    return self.requestFields[@"relate"];
+}
+- (void)setRelate:(TTInputRelateQuestion *)value {
+    if (value) self.requestFields[@"relate"] = value;
+    else [self.requestFields removeObjectForKey:@"relate"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredScore
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)levels {
+    return self.requestFields[@"levels"];
+}
+- (void)setLevels:(id)value {
+    if (value) self.requestFields[@"levels"] = value;
+    else [self.requestFields removeObjectForKey:@"levels"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)score {
+    return self.requestFields[@"score"];
+}
+- (void)setScore:(id)value {
+    if (value) self.requestFields[@"score"] = value;
+    else [self.requestFields removeObjectForKey:@"score"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputRequestDefinitionAuthoredTag
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (id)labels {
+    return self.requestFields[@"labels"];
+}
+- (void)setLabels:(id)value {
+    if (value) self.requestFields[@"labels"] = value;
+    else [self.requestFields removeObjectForKey:@"labels"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (id)tag {
+    return self.requestFields[@"tag"];
+}
+- (void)setTag:(id)value {
+    if (value) self.requestFields[@"tag"] = value;
+    else [self.requestFields removeObjectForKey:@"tag"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+@end
+@implementation TTInputRequestDefinitionRecognizeDefinition
+- (id)contextSchema {
+    return self.requestFields[@"context_schema"];
+}
+- (void)setContextSchema:(id)value {
+    if (value) self.requestFields[@"context_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"context_schema"];
+}
+- (id)itemSchema {
+    return self.requestFields[@"item_schema"];
+}
+- (void)setItemSchema:(id)value {
+    if (value) self.requestFields[@"item_schema"] = value;
+    else [self.requestFields removeObjectForKey:@"item_schema"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (id)on {
+    return self.requestFields[@"on"];
+}
+- (void)setOn:(id)value {
+    if (value) self.requestFields[@"on"] = value;
+    else [self.requestFields removeObjectForKey:@"on"];
+}
+- (NSString *)profile {
+    return self.requestFields[@"profile"];
+}
+- (void)setProfile:(NSString *)value {
+    if (value) self.requestFields[@"profile"] = value;
+    else [self.requestFields removeObjectForKey:@"profile"];
+}
+- (TTInputRecognizeQuestion *)recognize {
+    return self.requestFields[@"recognize"];
+}
+- (void)setRecognize:(TTInputRecognizeQuestion *)value {
+    if (value) self.requestFields[@"recognize"] = value;
+    else [self.requestFields removeObjectForKey:@"recognize"];
+}
+- (id)relationThreshold {
+    return self.requestFields[@"relation_threshold"];
+}
+- (void)setRelationThreshold:(id)value {
+    if (value) self.requestFields[@"relation_threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"relation_threshold"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)wordingVersion {
+    return self.requestFields[@"wording_version"];
+}
+- (void)setWordingVersion:(NSNumber *)value {
+    if (value) self.requestFields[@"wording_version"] = value;
+    else [self.requestFields removeObjectForKey:@"wording_version"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"version"] = @(1);
+    } return self;
+}
+@end
+@implementation TTInputRequestImageBytes
+- (NSString *)bytes {
+    return self.requestFields[@"bytes"];
+}
+- (void)setBytes:(NSString *)value {
+    if (value) self.requestFields[@"bytes"] = value;
+    else [self.requestFields removeObjectForKey:@"bytes"];
+}
+- (id)media {
+    return self.requestFields[@"media"];
+}
+- (void)setMedia:(id)value {
+    if (value) self.requestFields[@"media"] = value;
+    else [self.requestFields removeObjectForKey:@"media"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"bytes";
+    } return self;
+}
+@end
+@implementation TTInputRequestImageFile
+- (id)media {
+    return self.requestFields[@"media"];
+}
+- (void)setMedia:(id)value {
+    if (value) self.requestFields[@"media"] = value;
+    else [self.requestFields removeObjectForKey:@"media"];
+}
+- (NSString *)path {
+    return self.requestFields[@"path"];
+}
+- (void)setPath:(NSString *)value {
+    if (value) self.requestFields[@"path"] = value;
+    else [self.requestFields removeObjectForKey:@"path"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"file";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputEntities
+- (NSArray *)items {
+    return self.requestFields[@"items"];
+}
+- (void)setItems:(NSArray *)value {
+    if (value) self.requestFields[@"items"] = value;
+    else [self.requestFields removeObjectForKey:@"items"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"entities";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputFeed
+- (id)framing {
+    return self.requestFields[@"framing"];
+}
+- (void)setFraming:(id)value {
+    if (value) self.requestFields[@"framing"] = value;
+    else [self.requestFields removeObjectForKey:@"framing"];
+}
+- (NSArray *)images {
+    return self.requestFields[@"images"];
+}
+- (void)setImages:(NSArray *)value {
+    if (value) self.requestFields[@"images"] = value;
+    else [self.requestFields removeObjectForKey:@"images"];
+}
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (TTInputRequestReader *)reading {
+    return self.requestFields[@"reading"];
+}
+- (void)setReading:(TTInputRequestReader *)value {
+    if (value) self.requestFields[@"reading"] = value;
+    else [self.requestFields removeObjectForKey:@"reading"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"feed";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputJson
+- (NSArray *)images {
+    return self.requestFields[@"images"];
+}
+- (void)setImages:(NSArray *)value {
+    if (value) self.requestFields[@"images"] = value;
+    else [self.requestFields removeObjectForKey:@"images"];
+}
+- (id)value {
+    return self.requestFields[@"value"];
+}
+- (void)setValue:(id)value {
+    if (value) self.requestFields[@"value"] = value;
+    else [self.requestFields removeObjectForKey:@"value"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"json";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputRecords
+- (NSArray *)items {
+    return self.requestFields[@"items"];
+}
+- (void)setItems:(NSArray *)value {
+    if (value) self.requestFields[@"items"] = value;
+    else [self.requestFields removeObjectForKey:@"items"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"records";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputSource
+- (TTInputRequestSource *)source {
+    return self.requestFields[@"source"];
+}
+- (void)setSource:(TTInputRequestSource *)value {
+    if (value) self.requestFields[@"source"] = value;
+    else [self.requestFields removeObjectForKey:@"source"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"source";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputText
+- (NSArray *)images {
+    return self.requestFields[@"images"];
+}
+- (void)setImages:(NSArray *)value {
+    if (value) self.requestFields[@"images"] = value;
+    else [self.requestFields removeObjectForKey:@"images"];
+}
+- (NSString *)text {
+    return self.requestFields[@"text"];
+}
+- (void)setText:(NSString *)value {
+    if (value) self.requestFields[@"text"] = value;
+    else [self.requestFields removeObjectForKey:@"text"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"text";
+    } return self;
+}
+@end
+@implementation TTInputRequestInputUnits
+- (NSArray *)items {
+    return self.requestFields[@"items"];
+}
+- (void)setItems:(NSArray *)value {
+    if (value) self.requestFields[@"items"] = value;
+    else [self.requestFields removeObjectForKey:@"items"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"units";
+    } return self;
+}
+@end
+@implementation TTInputRequestItem
+- (id)context {
+    return self.requestFields[@"context"];
+}
+- (void)setContext:(id)value {
+    if (value) self.requestFields[@"context"] = value;
+    else [self.requestFields removeObjectForKey:@"context"];
+}
+- (NSArray *)examples {
+    return self.requestFields[@"examples"];
+}
+- (void)setExamples:(NSArray *)value {
+    if (value) self.requestFields[@"examples"] = value;
+    else [self.requestFields removeObjectForKey:@"examples"];
+}
+- (NSArray *)images {
+    return self.requestFields[@"images"];
+}
+- (void)setImages:(NSArray *)value {
+    if (value) self.requestFields[@"images"] = value;
+    else [self.requestFields removeObjectForKey:@"images"];
+}
+- (NSArray *)options {
+    return self.requestFields[@"options"];
+}
+- (void)setOptions:(NSArray *)value {
+    if (value) self.requestFields[@"options"] = value;
+    else [self.requestFields removeObjectForKey:@"options"];
+}
+- (id)original {
+    return self.requestFields[@"original"];
+}
+- (void)setOriginal:(id)value {
+    if (value) self.requestFields[@"original"] = value;
+    else [self.requestFields removeObjectForKey:@"original"];
+}
+- (NSArray *)seedSpans {
+    return self.requestFields[@"seed_spans"];
+}
+- (void)setSeedSpans:(NSArray *)value {
+    if (value) self.requestFields[@"seed_spans"] = value;
+    else [self.requestFields removeObjectForKey:@"seed_spans"];
+}
+@end
+@implementation TTInputRequestOptions
+- (NSNumber *)attempts {
+    return self.requestFields[@"attempts"];
+}
+- (void)setAttempts:(NSNumber *)value {
+    if (value) self.requestFields[@"attempts"] = value;
+    else [self.requestFields removeObjectForKey:@"attempts"];
+}
+- (id)batch {
+    return self.requestFields[@"batch"];
+}
+- (void)setBatch:(id)value {
+    if (value) self.requestFields[@"batch"] = value;
+    else [self.requestFields removeObjectForKey:@"batch"];
+}
+- (NSString *)context {
+    return self.requestFields[@"context"];
+}
+- (void)setContext:(NSString *)value {
+    if (value) self.requestFields[@"context"] = value;
+    else [self.requestFields removeObjectForKey:@"context"];
+}
+- (NSString *)contextField {
+    return self.requestFields[@"context_field"];
+}
+- (void)setContextField:(NSString *)value {
+    if (value) self.requestFields[@"context_field"] = value;
+    else [self.requestFields removeObjectForKey:@"context_field"];
+}
+- (NSNumber *)deadlineMs {
+    return self.requestFields[@"deadline_ms"];
+}
+- (void)setDeadlineMs:(NSNumber *)value {
+    if (value) self.requestFields[@"deadline_ms"] = value;
+    else [self.requestFields removeObjectForKey:@"deadline_ms"];
+}
+- (NSNumber *)details {
+    return self.requestFields[@"details"];
+}
+- (void)setDetails:(NSNumber *)value {
+    if (value) self.requestFields[@"details"] = value;
+    else [self.requestFields removeObjectForKey:@"details"];
+}
+- (NSArray *)examples {
+    return self.requestFields[@"examples"];
+}
+- (void)setExamples:(NSArray *)value {
+    if (value) self.requestFields[@"examples"] = value;
+    else [self.requestFields removeObjectForKey:@"examples"];
+}
+- (NSString *)examplesField {
+    return self.requestFields[@"examples_field"];
+}
+- (void)setExamplesField:(NSString *)value {
+    if (value) self.requestFields[@"examples_field"] = value;
+    else [self.requestFields removeObjectForKey:@"examples_field"];
+}
+- (NSArray *)field {
+    return self.requestFields[@"field"];
+}
+- (void)setField:(NSArray *)value {
+    if (value) self.requestFields[@"field"] = value;
+    else [self.requestFields removeObjectForKey:@"field"];
+}
+- (NSNumber *)filesOnly {
+    return self.requestFields[@"files_only"];
+}
+- (void)setFilesOnly:(NSNumber *)value {
+    if (value) self.requestFields[@"files_only"] = value;
+    else [self.requestFields removeObjectForKey:@"files_only"];
+}
+- (NSNumber *)maxRequestsTotal {
+    return self.requestFields[@"max_requests_total"];
+}
+- (void)setMaxRequestsTotal:(NSNumber *)value {
+    if (value) self.requestFields[@"max_requests_total"] = value;
+    else [self.requestFields removeObjectForKey:@"max_requests_total"];
+}
+- (id)mode {
+    return self.requestFields[@"mode"];
+}
+- (void)setMode:(id)value {
+    if (value) self.requestFields[@"mode"] = value;
+    else [self.requestFields removeObjectForKey:@"mode"];
+}
+- (NSString *)model {
+    return self.requestFields[@"model"];
+}
+- (void)setModel:(NSString *)value {
+    if (value) self.requestFields[@"model"] = value;
+    else [self.requestFields removeObjectForKey:@"model"];
+}
+- (NSNumber *)none {
+    return self.requestFields[@"none"];
+}
+- (void)setNone:(NSNumber *)value {
+    if (value) self.requestFields[@"none"] = value;
+    else [self.requestFields removeObjectForKey:@"none"];
+}
+- (NSString *)optionsField {
+    return self.requestFields[@"options_field"];
+}
+- (void)setOptionsField:(NSString *)value {
+    if (value) self.requestFields[@"options_field"] = value;
+    else [self.requestFields removeObjectForKey:@"options_field"];
+}
+- (id)relationThreshold {
+    return self.requestFields[@"relation_threshold"];
+}
+- (void)setRelationThreshold:(id)value {
+    if (value) self.requestFields[@"relation_threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"relation_threshold"];
+}
+- (NSArray *)seedSpans {
+    return self.requestFields[@"seed_spans"];
+}
+- (void)setSeedSpans:(NSArray *)value {
+    if (value) self.requestFields[@"seed_spans"] = value;
+    else [self.requestFields removeObjectForKey:@"seed_spans"];
+}
+- (NSString *)seedSpansField {
+    return self.requestFields[@"seed_spans_field"];
+}
+- (void)setSeedSpansField:(NSString *)value {
+    if (value) self.requestFields[@"seed_spans_field"] = value;
+    else [self.requestFields removeObjectForKey:@"seed_spans_field"];
+}
+- (NSNumber *)snippetPieces {
+    return self.requestFields[@"snippet_pieces"];
+}
+- (void)setSnippetPieces:(NSNumber *)value {
+    if (value) self.requestFields[@"snippet_pieces"] = value;
+    else [self.requestFields removeObjectForKey:@"snippet_pieces"];
+}
+- (TTInputRecognitionStageContext *)stageContext {
+    return self.requestFields[@"stage_context"];
+}
+- (void)setStageContext:(TTInputRecognitionStageContext *)value {
+    if (value) self.requestFields[@"stage_context"] = value;
+    else [self.requestFields removeObjectForKey:@"stage_context"];
+}
+- (id)threshold {
+    return self.requestFields[@"threshold"];
+}
+- (void)setThreshold:(id)value {
+    if (value) self.requestFields[@"threshold"] = value;
+    else [self.requestFields removeObjectForKey:@"threshold"];
+}
+- (NSNumber *)top {
+    return self.requestFields[@"top"];
+}
+- (void)setTop:(NSNumber *)value {
+    if (value) self.requestFields[@"top"] = value;
+    else [self.requestFields removeObjectForKey:@"top"];
+}
+@end
+@implementation TTInputRequestOriginalJson
+- (id)value {
+    return self.requestFields[@"value"];
+}
+- (void)setValue:(id)value {
+    if (value) self.requestFields[@"value"] = value;
+    else [self.requestFields removeObjectForKey:@"value"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"json";
+    } return self;
+}
+@end
+@implementation TTInputRequestOriginalText
+- (NSString *)text {
+    return self.requestFields[@"text"];
+}
+- (void)setText:(NSString *)value {
+    if (value) self.requestFields[@"text"] = value;
+    else [self.requestFields removeObjectForKey:@"text"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"text";
+    } return self;
+}
+@end
+@implementation TTInputRequestQuestionDefinition
+- (id)value {
+    return self.requestFields[@"value"];
+}
+- (void)setValue:(id)value {
+    if (value) self.requestFields[@"value"] = value;
+    else [self.requestFields removeObjectForKey:@"value"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"definition";
+    } return self;
+}
+@end
+@implementation TTInputRequestQuestionFile
+- (NSString *)path {
+    return self.requestFields[@"path"];
+}
+- (void)setPath:(NSString *)value {
+    if (value) self.requestFields[@"path"] = value;
+    else [self.requestFields removeObjectForKey:@"path"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"file";
+    } return self;
+}
+@end
+@implementation TTInputRequestQuestionName
+- (NSString *)name {
+    return self.requestFields[@"name"];
+}
+- (void)setName:(NSString *)value {
+    if (value) self.requestFields[@"name"] = value;
+    else [self.requestFields removeObjectForKey:@"name"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"name";
+    } return self;
+}
+@end
+@implementation TTInputRequestQuestionReference
+- (NSString *)reference {
+    return self.requestFields[@"reference"];
+}
+- (void)setReference:(NSString *)value {
+    if (value) self.requestFields[@"reference"] = value;
+    else [self.requestFields removeObjectForKey:@"reference"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"reference";
+    } return self;
+}
+@end
+@implementation TTInputRequestQuestionText
+- (NSString *)text {
+    return self.requestFields[@"text"];
+}
+- (void)setText:(NSString *)value {
+    if (value) self.requestFields[@"text"] = value;
+    else [self.requestFields removeObjectForKey:@"text"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"text";
+    } return self;
+}
+@end
+@implementation TTInputRequestReader
+- (id)unit {
+    return self.requestFields[@"unit"];
+}
+- (void)setUnit:(id)value {
+    if (value) self.requestFields[@"unit"] = value;
+    else [self.requestFields removeObjectForKey:@"unit"];
+}
+- (NSNumber *)window {
+    return self.requestFields[@"window"];
+}
+- (void)setWindow:(NSNumber *)value {
+    if (value) self.requestFields[@"window"] = value;
+    else [self.requestFields removeObjectForKey:@"window"];
+}
+@end
+@implementation TTInputRequestReaderFailureInvalidInput
+- (TTInputSessionSourceLocation *)location {
+    return self.requestFields[@"location"];
+}
+- (void)setLocation:(TTInputSessionSourceLocation *)value {
+    if (value) self.requestFields[@"location"] = value;
+    else [self.requestFields removeObjectForKey:@"location"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"invalid_input";
+    } return self;
+}
+@end
+@implementation TTInputRequestReaderFailureIo
+- (TTInputSessionSourceLocation *)location {
+    return self.requestFields[@"location"];
+}
+- (void)setLocation:(TTInputSessionSourceLocation *)value {
+    if (value) self.requestFields[@"location"] = value;
+    else [self.requestFields removeObjectForKey:@"location"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"io";
+    } return self;
+}
+@end
+@implementation TTInputRequestReaderFailureProducer
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"producer";
+    } return self;
+}
+@end
+@implementation TTInputRequestReaderFailureUtf8
+- (TTInputSessionSourceLocation *)location {
+    return self.requestFields[@"location"];
+}
+- (void)setLocation:(TTInputSessionSourceLocation *)value {
+    if (value) self.requestFields[@"location"] = value;
+    else [self.requestFields removeObjectForKey:@"location"];
+}
+- (instancetype)init {
+    if ((self = [super init])) {
+        self.requestFields[@"kind"] = @"utf8";
+    } return self;
+}
+@end
+@implementation TTInputRequestSessionDescriptor
+- (TTInputRequestItem *)item {
+    return self.requestFields[@"item"];
+}
+- (void)setItem:(TTInputRequestItem *)value {
+    if (value) self.requestFields[@"item"] = value;
+    else [self.requestFields removeObjectForKey:@"item"];
+}
+- (TTInputSessionSourceLocation *)location {
+    return self.requestFields[@"location"];
+}
+- (void)setLocation:(TTInputSessionSourceLocation *)value {
+    if (value) self.requestFields[@"location"] = value;
+    else [self.requestFields removeObjectForKey:@"location"];
+}
+@end
+@implementation TTInputRequestSource
+- (id)framing {
+    return self.requestFields[@"framing"];
+}
+- (void)setFraming:(id)value {
+    if (value) self.requestFields[@"framing"] = value;
+    else [self.requestFields removeObjectForKey:@"framing"];
+}
+- (id)media {
+    return self.requestFields[@"media"];
+}
+- (void)setMedia:(id)value {
+    if (value) self.requestFields[@"media"] = value;
+    else [self.requestFields removeObjectForKey:@"media"];
+}
+- (NSArray *)paths {
+    return self.requestFields[@"paths"];
+}
+- (void)setPaths:(NSArray *)value {
+    if (value) self.requestFields[@"paths"] = value;
+    else [self.requestFields removeObjectForKey:@"paths"];
+}
+- (TTInputRequestReader *)reading {
+    return self.requestFields[@"reading"];
+}
+- (void)setReading:(TTInputRequestReader *)value {
+    if (value) self.requestFields[@"reading"] = value;
+    else [self.requestFields removeObjectForKey:@"reading"];
+}
+@end
+@implementation TTInputSessionSourceLocation
+- (NSString *)file {
+    return self.requestFields[@"file"];
+}
+- (void)setFile:(NSString *)value {
+    if (value) self.requestFields[@"file"] = value;
+    else [self.requestFields removeObjectForKey:@"file"];
+}
+- (NSNumber *)firstLine {
+    return self.requestFields[@"first_line"];
+}
+- (void)setFirstLine:(NSNumber *)value {
+    if (value) self.requestFields[@"first_line"] = value;
+    else [self.requestFields removeObjectForKey:@"first_line"];
+}
+- (NSNumber *)lastLine {
+    return self.requestFields[@"last_line"];
+}
+- (void)setLastLine:(NSNumber *)value {
+    if (value) self.requestFields[@"last_line"] = value;
+    else [self.requestFields removeObjectForKey:@"last_line"];
+}
+@end
+NSErrorDomain const TTAnswerErrorDomain = @"io.github.botassembly.thinkthen.answer";
+extern NSErrorDomain const TTErrorDomain;
+extern NSString * const TTFailureDetailsKey;
+TTPresence *TTAnswerPresence(id payload, id (^convert)(id)) {
+    TTResultNode *node = [[TTResultNode alloc] initWithFields:@{
+        @"value":payload
+    }];
+    return [node presence:@"value" required:YES convert:convert];
+}
+id TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal, NSString *function,
+NSString *judgment, id call, NSError **error) {
+    if (terminal.failure.state == TTPresenceValue) {
+        TTCallError *failure = terminal.failure.value;
+        if (error) *error = [NSError errorWithDomain:TTErrorDomain code:TTNativeErrorCode(failure.error.value.kind.value) userInfo:@{
+            NSLocalizedDescriptionKey:failure.error.value.message.value, TTFailureDetailsKey:failure, @"ThinkThenCall":call
+        }];
+        return nil;
+    }
+    NSMutableArray *values = [NSMutableArray array];
+    if (terminal) for (TTSessionPacket *packet in packets) {
+        NSDictionary *fields = packet.rawFields;
+        if (![fields[@"function"] isEqual:function]) continue;
+        id value;
+        if (!judgment.length) {
+            if (![fields[@"kind"] isEqual:@"aggregate"]) continue;
+            value = fields[@"value"];
+        } else {
+            if (!([fields[@"kind"] isEqual:@"observation"] && [fields[@"value"][@"kind"] isEqual:@"row"] && [fields[@"value"][@"value"][@"kind"] isEqual:@"judgment"])) continue;
+            NSDictionary *carrier = fields[@"value"][@"value"][@"value"];
+            if (![carrier[@"kind"] isEqual:judgment]) continue;
+            value = carrier[@"value"];
+        } if (value) [values addObject:value];
+    }
+    if (values.count != 1) {
+        if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{
+            NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function,
+            @"ThinkThenAnswerCount":@(values.count), @"ThinkThenCall":call
+        }];
+        return nil;
+    }
+    return values[0];
 }

@@ -603,6 +603,8 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *relation;
 @property(nonatomic, readonly) TTPresence<TTRelationEndpoint *> *source;
 @property(nonatomic, readonly) TTPresence<TTRelationEndpoint *> *target;
+@property(nonatomic, readonly) TTPresence<NSString *> *sourceName;
+@property(nonatomic, readonly) TTPresence<NSString *> *targetName;
 + (instancetype)read:(id)value;
 @end
 @interface TTRelationRule : TTResultNode
@@ -684,6 +686,8 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSString *> *relation;
 @property(nonatomic, readonly) TTPresence<TTEntityDocument *> *source;
 @property(nonatomic, readonly) TTPresence<TTEntityDocument *> *target;
+@property(nonatomic, readonly) TTPresence<NSString *> *sourceName;
+@property(nonatomic, readonly) TTPresence<NSString *> *targetName;
 + (instancetype)read:(id)value;
 @end
 @interface TTSourceRelationEndpoint : TTResultNode
@@ -920,6 +924,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<TTAnswer *> *answer;
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *probability;
+@property(nonatomic, readonly) TTPresence<NSString *> *sourceName;
 + (instancetype)read:(id)value;
 @end
 @interface TTRelationMemberFailureId : TTRelationMember
@@ -937,6 +942,7 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<TTUsage *> *usage;
 @property(nonatomic, readonly) TTPresence<TTFailure *> *failure;
 @property(nonatomic, readonly) TTPresence<NSString *> *failureId;
+@property(nonatomic, readonly) TTPresence<NSString *> *sourceName;
 + (instancetype)read:(id)value;
 @end
 @interface TTSendBudgetDenialBeforeAdditionalSend : TTSendBudgetDenial
@@ -1164,4 +1170,863 @@ TTTokenUsage, TTValue;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *value;
 + (instancetype)read:(id)value;
 @end
+@interface TTSessionPacket (Answers)
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDecideValue *> *> *decideAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNullableString *> *> *chooseAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicArrayOfString *> *> *tagAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicDouble *> *> *scoreAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicBoolean *> *> *filterAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *rankAnswer;
+@property(nonatomic, readonly) TTPresence<TTFind *> *findAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTAnnotation *> *> *annotateAnswer;
+@property(nonatomic, readonly) TTPresence<NSArray<TTRecognition *> *> *recognizeAnswer;
+@property(nonatomic, readonly) TTPresence<TTRelation *> *relateAnswer;
+@end
+@interface TTOrderedEntry : NSObject
+@property(nonatomic, copy, readonly) NSString *key;
+@property(nonatomic, strong, readonly) id value;
+- (instancetype)initWithKey:(NSString *)key value:(id)value;
+@end
+@interface TTOrderedMap : NSObject
+@property(nonatomic, copy, readonly) NSArray<TTOrderedEntry *> *entries;
+- (instancetype)initWithEntries:(NSArray<TTOrderedEntry *> *)entries;
+@end
+FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError **error);
+@interface TTRequestObject : NSObject
+@property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;
+@end
+@class TTInputAnnotateDefinition, TTInputAnnotateQuestionChoose, TTInputAnnotateQuestionDecide,
+TTInputAnnotateQuestionScore, TTInputAnnotateQuestionTag, TTInputAuthoredChoose, TTInputAuthoredDecide,
+TTInputAuthoredFind, TTInputAuthoredInputDeclarationObject, TTInputAuthoredInputDeclarationString,
+TTInputAuthoredInputPropertyArray, TTInputAuthoredInputPropertyBoolean, TTInputAuthoredInputPropertyNumber,
+TTInputAuthoredInputPropertyString, TTInputAuthoredRelate, TTInputAuthoredRelation, TTInputAuthoredScore,
+TTInputAuthoredTag, TTInputEngineSettings, TTInputOptionSchema, TTInputRecognitionExampleEntity,
+TTInputRecognitionExampleText, TTInputRecognitionSeedSpan, TTInputRecognitionStageContext,
+TTInputRecognizeDefinition, TTInputRecognizeQuestion, TTInputRelateFields, TTInputRelateQuestion,
+TTInputRequest, TTInputRequestCall, TTInputRequestDefinitionAnnotateDefinition, TTInputRequestDefinitionAuthoredChoose,
+TTInputRequestDefinitionAuthoredDecide, TTInputRequestDefinitionAuthoredFind, TTInputRequestDefinitionAuthoredRelate,
+TTInputRequestDefinitionAuthoredScore, TTInputRequestDefinitionAuthoredTag, TTInputRequestDefinitionRecognizeDefinition,
+TTInputRequestImageBytes, TTInputRequestImageFile, TTInputRequestInputEntities, TTInputRequestInputFeed,
+TTInputRequestInputJson, TTInputRequestInputRecords, TTInputRequestInputSource, TTInputRequestInputText,
+TTInputRequestInputUnits, TTInputRequestItem, TTInputRequestOptions, TTInputRequestOriginalJson,
+TTInputRequestOriginalText, TTInputRequestQuestionDefinition, TTInputRequestQuestionFile, TTInputRequestQuestionName,
+TTInputRequestQuestionReference, TTInputRequestQuestionText, TTInputRequestReader, TTInputRequestReaderFailureInvalidInput,
+TTInputRequestReaderFailureIo, TTInputRequestReaderFailureProducer, TTInputRequestReaderFailureUtf8,
+TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocation;
+@interface TTInputAnnotateDefinition : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTOrderedMap *questions;
+@property(nonatomic, strong, nullable) id threshold;
+@end
+@interface TTInputAnnotateQuestionChoose : TTRequestObject
+@property(nonatomic, strong, nullable) id choose;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id options;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAnnotateQuestionDecide : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id decide;
+@property(nonatomic, strong, nullable) id falseValue;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) id trueValue;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAnnotateQuestionScore : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id levels;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id score;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAnnotateQuestionTag : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id labels;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id tag;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredChoose : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id choose;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id options;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredDecide : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id decide;
+@property(nonatomic, strong, nullable) id falseValue;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) id trueValue;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredFind : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id find;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredInputDeclarationObject : TTRequestObject
+@property(nonatomic, strong, nullable) NSDictionary *properties;
+@property(nonatomic, strong, nullable) NSArray *required;
+@end
+@interface TTInputAuthoredInputDeclarationString : TTRequestObject
+@end
+@interface TTInputAuthoredInputPropertyArray : TTRequestObject
+@property(nonatomic, strong, nullable) NSDictionary *items;
+@end
+@interface TTInputAuthoredInputPropertyBoolean : TTRequestObject
+@end
+@interface TTInputAuthoredInputPropertyNumber : TTRequestObject
+@end
+@interface TTInputAuthoredInputPropertyString : TTRequestObject
+@end
+@interface TTInputAuthoredRelate : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTInputRelateQuestion *relate;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredRelation : TTRequestObject
+@property(nonatomic, strong, nullable) NSNumber *either;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString *reads;
+@property(nonatomic, strong, nullable) NSNumber *single;
+@property(nonatomic, strong, nullable) NSString *source;
+@property(nonatomic, strong, nullable) NSString *target;
+@end
+@interface TTInputAuthoredScore : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id levels;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id score;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputAuthoredTag : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id labels;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id tag;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputEngineSettings : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *backend;
+@property(nonatomic, strong, nullable) NSString *baseUrl;
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id cache;
+@property(nonatomic, strong, nullable) id maxEstimatedInputTokensTotal;
+@property(nonatomic, strong, nullable) NSNumber *maxRequestBytes;
+@property(nonatomic, strong, nullable) id maxRequests;
+@property(nonatomic, strong, nullable) id maxRequestsTotal;
+@property(nonatomic, strong, nullable) NSNumber *maxRetries;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id proxy;
+@property(nonatomic, strong, nullable) NSString *record;
+@property(nonatomic, strong, nullable) NSNumber *refreshCache;
+@property(nonatomic, strong, nullable) NSString *replay;
+@property(nonatomic, strong, nullable) NSNumber *throttle;
+@property(nonatomic, strong, nullable) NSNumber *timeout;
+@property(nonatomic, strong, nullable) NSString *usdPerMillionInput;
+@property(nonatomic, strong, nullable) NSString *usdPerMillionOutput;
+@end
+@interface TTInputOptionSchema : TTRequestObject
+@property(nonatomic, strong, nullable) id descriptionValue;
+@property(nonatomic, strong, nullable) NSString *name;
+@end
+@interface TTInputRecognitionExampleEntity : TTRequestObject
+@property(nonatomic, strong, nullable) NSNumber *end;
+@property(nonatomic, strong, nullable) NSString *kind;
+@property(nonatomic, strong, nullable) NSNumber *start;
+@end
+@interface TTInputRecognitionExampleText : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *entities;
+@property(nonatomic, strong, nullable) NSArray *kinds;
+@property(nonatomic, strong, nullable) NSString *text;
+@end
+@interface TTInputRecognitionSeedSpan : TTRequestObject
+@property(nonatomic, strong, nullable) NSNumber *end;
+@property(nonatomic, strong, nullable) NSString *kind;
+@property(nonatomic, strong, nullable) NSNumber *start;
+@end
+@interface TTInputRecognitionStageContext : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *boundary;
+@property(nonatomic, strong, nullable) NSString *kindEdge;
+@property(nonatomic, strong, nullable) NSString *relation;
+@end
+@interface TTInputRecognizeDefinition : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTInputRecognizeQuestion *recognize;
+@property(nonatomic, strong, nullable) id relationThreshold;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRecognizeQuestion : TTRequestObject
+@property(nonatomic, strong, nullable) id entityDefinition;
+@property(nonatomic, strong, nullable) id instructions;
+@property(nonatomic, strong, nullable) TTOrderedMap *kinds;
+@property(nonatomic, strong, nullable) id mode;
+@property(nonatomic, strong, nullable) NSArray *relations;
+@property(nonatomic, strong, nullable) NSNumber *snippetPieces;
+@property(nonatomic, strong, nullable) TTInputRecognitionStageContext *stageContext;
+@end
+@interface TTInputRelateFields : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *kind;
+@property(nonatomic, strong, nullable) NSString *name;
+@end
+@interface TTInputRelateQuestion : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputRelateFields *fields;
+@property(nonatomic, strong, nullable) NSArray *relations;
+@end
+@interface TTInputRequest : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputRequestCall *call;
+@property(nonatomic, strong, nullable) id schema;
+@end
+@interface TTInputRequestCall : TTRequestObject
+@property(nonatomic, strong, nullable) id function;
+@property(nonatomic, strong, nullable) id input;
+@property(nonatomic, strong, nullable) TTInputRequestOptions *options;
+@property(nonatomic, strong, nullable) id question;
+@end
+@interface TTInputRequestDefinitionAnnotateDefinition : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTOrderedMap *questions;
+@property(nonatomic, strong, nullable) id threshold;
+@end
+@interface TTInputRequestDefinitionAuthoredChoose : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id choose;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) id options;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionAuthoredDecide : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id decide;
+@property(nonatomic, strong, nullable) id falseValue;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) id trueValue;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionAuthoredFind : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id find;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionAuthoredRelate : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTInputRelateQuestion *relate;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionAuthoredScore : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id levels;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id score;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionAuthoredTag : TTRequestObject
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) id labels;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) id tag;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestDefinitionRecognizeDefinition : TTRequestObject
+@property(nonatomic, strong, nullable) id contextSchema;
+@property(nonatomic, strong, nullable) id itemSchema;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) id on;
+@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) TTInputRecognizeQuestion *recognize;
+@property(nonatomic, strong, nullable) id relationThreshold;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@end
+@interface TTInputRequestImageBytes : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *bytes;
+@property(nonatomic, strong, nullable) id media;
+@end
+@interface TTInputRequestImageFile : TTRequestObject
+@property(nonatomic, strong, nullable) id media;
+@property(nonatomic, strong, nullable) NSString *path;
+@end
+@interface TTInputRequestInputEntities : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *items;
+@end
+@interface TTInputRequestInputFeed : TTRequestObject
+@property(nonatomic, strong, nullable) id framing;
+@property(nonatomic, strong, nullable) NSArray *images;
+@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) TTInputRequestReader *reading;
+@end
+@interface TTInputRequestInputJson : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *images;
+@property(nonatomic, strong, nullable) id value;
+@end
+@interface TTInputRequestInputRecords : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *items;
+@end
+@interface TTInputRequestInputSource : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputRequestSource *source;
+@end
+@interface TTInputRequestInputText : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *images;
+@property(nonatomic, strong, nullable) NSString *text;
+@end
+@interface TTInputRequestInputUnits : TTRequestObject
+@property(nonatomic, strong, nullable) NSArray *items;
+@end
+@interface TTInputRequestItem : TTRequestObject
+@property(nonatomic, strong, nullable) id context;
+@property(nonatomic, strong, nullable) NSArray *examples;
+@property(nonatomic, strong, nullable) NSArray *images;
+@property(nonatomic, strong, nullable) NSArray *options;
+@property(nonatomic, strong, nullable) id original;
+@property(nonatomic, strong, nullable) NSArray *seedSpans;
+@end
+@interface TTInputRequestOptions : TTRequestObject
+@property(nonatomic, strong, nullable) NSNumber *attempts;
+@property(nonatomic, strong, nullable) id batch;
+@property(nonatomic, strong, nullable) NSString *context;
+@property(nonatomic, strong, nullable) NSString *contextField;
+@property(nonatomic, strong, nullable) NSNumber *deadlineMs;
+@property(nonatomic, strong, nullable) NSNumber *details;
+@property(nonatomic, strong, nullable) NSArray *examples;
+@property(nonatomic, strong, nullable) NSString *examplesField;
+@property(nonatomic, strong, nullable) NSArray *field;
+@property(nonatomic, strong, nullable) NSNumber *filesOnly;
+@property(nonatomic, strong, nullable) NSNumber *maxRequestsTotal;
+@property(nonatomic, strong, nullable) id mode;
+@property(nonatomic, strong, nullable) NSString *model;
+@property(nonatomic, strong, nullable) NSNumber *none;
+@property(nonatomic, strong, nullable) NSString *optionsField;
+@property(nonatomic, strong, nullable) id relationThreshold;
+@property(nonatomic, strong, nullable) NSArray *seedSpans;
+@property(nonatomic, strong, nullable) NSString *seedSpansField;
+@property(nonatomic, strong, nullable) NSNumber *snippetPieces;
+@property(nonatomic, strong, nullable) TTInputRecognitionStageContext *stageContext;
+@property(nonatomic, strong, nullable) id threshold;
+@property(nonatomic, strong, nullable) NSNumber *top;
+@end
+@interface TTInputRequestOriginalJson : TTRequestObject
+@property(nonatomic, strong, nullable) id value;
+@end
+@interface TTInputRequestOriginalText : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *text;
+@end
+@interface TTInputRequestQuestionDefinition : TTRequestObject
+@property(nonatomic, strong, nullable) id value;
+@end
+@interface TTInputRequestQuestionFile : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *path;
+@end
+@interface TTInputRequestQuestionName : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *name;
+@end
+@interface TTInputRequestQuestionReference : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *reference;
+@end
+@interface TTInputRequestQuestionText : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *text;
+@end
+@interface TTInputRequestReader : TTRequestObject
+@property(nonatomic, strong, nullable) id unit;
+@property(nonatomic, strong, nullable) NSNumber *window;
+@end
+@interface TTInputRequestReaderFailureInvalidInput : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@end
+@interface TTInputRequestReaderFailureIo : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@end
+@interface TTInputRequestReaderFailureProducer : TTRequestObject
+@end
+@interface TTInputRequestReaderFailureUtf8 : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@end
+@interface TTInputRequestSessionDescriptor : TTRequestObject
+@property(nonatomic, strong, nullable) TTInputRequestItem *item;
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@end
+@interface TTInputRequestSource : TTRequestObject
+@property(nonatomic, strong, nullable) id framing;
+@property(nonatomic, strong, nullable) id media;
+@property(nonatomic, strong, nullable) NSArray *paths;
+@property(nonatomic, strong, nullable) TTInputRequestReader *reading;
+@end
+@interface TTInputSessionSourceLocation : TTRequestObject
+@property(nonatomic, strong, nullable) NSString *file;
+@property(nonatomic, strong, nullable) NSNumber *firstLine;
+@property(nonatomic, strong, nullable) NSNumber *lastLine;
+@end
+#define TT_GENERATED_NAMED_DECLARATIONS \
+- (nullable TTTask *)decide:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)choose:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)tag:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)score:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)filter:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)rank:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)find:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)annotate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)recognize:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+\
+- (nullable TTTask *)relate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;
+#define TT_GENERATED_NAMED_IMPLEMENTATIONS \
+- (nullable TTTask *)decide:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"decide" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)choose:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"choose" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)tag:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"tag" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)score:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"score" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)filter:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"filter" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)rank:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"rank" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)find:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"find" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)annotate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"annotate" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)recognize:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"recognize" question:question input:input options:options feed:feed completion:completion error:error];
+} \
+- (nullable TTTask *)relate:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
+    return [self start:@"relate" question:question input:input options:options feed:feed completion:completion error:error];
+}
+FOUNDATION_EXPORT NSErrorDomain const TTAnswerErrorDomain;
+FOUNDATION_EXPORT id _Nullable TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal,
+NSString *function, NSString *judgment, id call, NSError **error);
+FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));
+#define TT_GENERATED_ANSWER_DECLARATIONS \
+- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSString *> *)chooseAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer:(NSError **)error;
+\
+- (nullable TTPresence<TTFind *> *)findAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError **)error;
+\
+- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError **)error;
+#define TT_GENERATED_ANSWER_IMPLEMENTATIONS \
+- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"decide", @"decision", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTBoolean(value);
+    });
+} \
+- (nullable TTPresence<NSString *> *)chooseAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"choose", @"choice", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTString(value);
+    });
+} \
+- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"tag", @"tags", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return TTString(item);
+        });
+    });
+} \
+- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"score", @"score", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTNumber(value);
+    });
+} \
+- (nullable TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"filter", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicBoolean read:item];
+        });
+    });
+} \
+- (nullable TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"rank", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAtomicNonZeroUsize read:item];
+        });
+    });
+} \
+- (nullable TTPresence<TTFind *> *)findAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"find", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return [TTFind read:value];
+    });
+} \
+- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"annotate", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTAnnotation read:item];
+        });
+    });
+} \
+- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"recognize", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return TTArray(value, ^id(id item) {
+            return [TTRecognition read:item];
+        });
+    });
+} \
+- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError **)error {
+    id payload = TTAnswerPayload(self.packets, self.terminal, @"relate", @"", self, error);
+    if (!payload) return nil;
+    return TTAnswerPresence(payload, ^id(id value) {
+        return [TTRelation read:value];
+    });
+}
+#define TT_GENERATED_BLOCKING_ANSWER_DECLARATIONS \
+- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSString *> *)chooseAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<TTFind *> *)findAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+\
+- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error;
+#define TT_GENERATED_BLOCKING_ANSWER_IMPLEMENTATIONS \
+- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self decide:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result decideAnswer:error];
+} \
+- (nullable TTPresence<NSString *> *)chooseAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self choose:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result chooseAnswer:error];
+} \
+- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self tag:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result tagAnswer:error];
+} \
+- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self score:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result scoreAnswer:error];
+} \
+- (nullable TTPresence<NSArray<TTAtomicBoolean *> *> *)filterAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self filter:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result filterAnswer:error];
+} \
+- (nullable TTPresence<NSArray<TTAtomicNonZeroUsize *> *> *)rankAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self rank:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result rankAnswer:error];
+} \
+- (nullable TTPresence<TTFind *> *)findAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self find:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result findAnswer:error];
+} \
+- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self annotate:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result annotateAnswer:error];
+} \
+- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self recognize:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result recognizeAnswer:error];
+} \
+- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error {
+    __block TTCall *result;
+    __block NSError *failure = nil;
+    dispatch_semaphore_t settled = dispatch_semaphore_create(0);
+    TTTask *task = [self relate:question input:input options:options feed:nil completion:^(TTCall *call,
+    NSError *problem) {
+        result = call;
+        failure = problem;
+        dispatch_semaphore_signal(settled);
+    } error:&failure];
+    if (!task) {
+        if (error) *error = failure;
+        return nil;
+    } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER);
+    if (failure) {
+        if (error) *error = failure;
+        return nil;
+    } return [result relateAnswer:error];
+}
+typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {
+    TTUsagePersistenceDisabled = 1,
+    TTUsagePersistenceFailed = 4,
+    TTUsagePersistencePending = 2,
+    TTUsagePersistenceWritten = 3,
+};
+#define TT_GENERATED_USAGE_DECLARATIONS \
+- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;
+\
+- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;
+#define TT_GENERATED_USAGE_IMPLEMENTATIONS \
+- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error {
+    return [self usageStatus:YES error:error];
+} \
+- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error {
+    return [self usageStatus:NO error:error];
+}
 NS_ASSUME_NONNULL_END
