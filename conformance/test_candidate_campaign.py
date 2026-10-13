@@ -6,12 +6,14 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import tarfile
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from conformance import parity
 from conformance.children.children import child_env
+from conformance.source_fixtures import stage_files, stage_generated_source
 
 
 class CandidatePlatforms(unittest.TestCase):
@@ -100,23 +102,31 @@ class RetainedNpmArtifact(unittest.TestCase):
             tools = root / 'home/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64/bin'
             for directory in (library, scripts, tools, root / 'sdlc/generators/results'):
                 directory.mkdir(parents=True)
+            stage_generated_source(parity.ROOT, root, 'typescript')
+            stage_files(parity.ROOT, root, ('sdlc/scripts/registry-readmes.py',
+                        'libraries/typescript/README.md', 'libraries/typescript/package.json',
+                        'crates/thinkthen/Cargo.toml'))
             shutil.copyfile(parity.ROOT / 'libraries/typescript/check.sh', library / 'check.sh')
             shutil.copyfile(parity.ROOT / 'sdlc/scripts/scratch.sh', scripts / 'scratch.sh')
-            (root / 'sdlc/generators/results/generate.py').write_text('')
             (library / 'build-addon.sh').write_text('printf addon > thinkthen-linux-x64.node\n')
-            (library / 'package.json').write_text('{"name":"thinkthen","version":"0.2.0","license":"MIT"}\n')
-            (tools / 'node').write_text('#!/bin/sh\ncase "$*" in --version) echo v22.22.3 ;; *version*) echo 0.2.0 ;; *) echo linux-x64 ;; esac\n')
+            (library / 'fixture').write_text('package')
+            packed_input = root / 'packed-input.tgz'
+            with tarfile.open(packed_input, 'w:gz') as archive:
+                for name in ('README.md', 'package.json', 'fixture'):
+                    archive.add(library / name, arcname='package/' + name)
+            node = shutil.which('node')
+            (tools / 'node').write_text('#!/bin/sh\ncase "$*" in *prettier*) exec "' + node + '" "$@" ;; --version) echo v22.22.3 ;; *version*) echo 0.2.0 ;; *) echo linux-x64 ;; esac\n')
             (tools / 'npm').write_text('''#!/bin/sh
 set -eu
 while [ "$1" != --pack-destination ]; do shift; done
 mkdir -p "$2"
-printf package > "$2/thinkthen-0.2.0.tgz"
+cp "''' + str(packed_input) + '''" "$2/thinkthen-0.2.0.tgz"
 ''')
             for path in tools.iterdir():
                 path.chmod(0o755)
             (scripts / 'installed.sh').write_text('exit 91\n')
             env = child_env(home=root / 'home') | {'HOME': str(root / 'home'),
-                   'PATH': str(tools) + ':' + os.defpath, 'THINKTHEN_TEST_PROFILE': 'full'}
+                   'PATH': str(tools) + ':' + os.environ['PATH'], 'THINKTHEN_TEST_PROFILE': 'full'}
             for name in ('THINKTHEN_ARTIFACT', 'THINKTHEN_PARITY_PREPARED', 'THINKTHEN_PARITY_PREPARE'):
                 env.pop(name, None)
             # Stop at installation: the real full preparation must already retain its input.
@@ -124,12 +134,11 @@ printf package > "$2/thinkthen-0.2.0.tgz"
                                     capture_output=True, text=True, check=False)
             artifact = library / 'target/pack/thinkthen-0.2.0.tgz'
             self.assertTrue(artifact.is_file(), result.stdout + result.stderr)
-            self.assertEqual(artifact.read_text(), 'package')
+            self.assertEqual(artifact.read_bytes(), packed_input.read_bytes())
+            with tarfile.open(artifact) as archive:
+                self.assertEqual(archive.extractfile('package/fixture').read(), b'package')
             self.assertEqual(result.returncode, 91, result.stdout + result.stderr)
             shutil.copyfile(parity.ROOT / 'sdlc/scripts/release-pack', scripts / 'release-pack')
-            crate = root / 'crates/thinkthen'
-            crate.mkdir(parents=True)
-            (crate / 'Cargo.toml').write_text('version = "0.2.0"\n')
             (tools / 'rustc').write_text('#!/bin/sh\necho "host: x86_64-unknown-linux-gnu"\n')
             (tools / 'rustc').chmod(0o755)
             output = root / 'output'
