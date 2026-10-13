@@ -59,6 +59,19 @@ import ThinkThen
                 try expect(failure.count == count, "Wrong answer cardinality")
             }
         }
+        let unknown = try await client.decideAnswer(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), threshold: .value(.alternative1("0.2:0.8")))))), input: .text("unsure"))
+        try expect(unknown == nil, "Nullable normalized decision")
+        let authoredNull = try await client.decide(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), true: .value(.alternative3(.null)))))), input: .text("authored-null"))
+        try expect(try authoredNull.decideAnswer() == true, "Authored null replaced normalized judgment")
+        let explicit = try client.start(InputRequest(call: InputRequestCall(function: .decide, input: .text("hold-explicit-swift"), question: .text("Is it?"))))
+        try explicit.finish()
+        try await arrived(barrier + "/arrived-hold-explicit-swift")
+        explicit.cancel()
+        _ = FileManager.default.createFile(atPath: barrier + "/release-hold-explicit-swift", contents: Data())
+        var settled: OwnedSessionPacketTerminal?
+        while let packet = try await explicit.read() { if case .terminal(let value) = packet { settled = value } }
+        explicit.close()
+        try expect(settled?.facts.isPresent == true && settled?.failure.isPresent == true, "Explicit post-cancel drain lost terminal facts")
         let facts = try call.terminal.json.data()
         do { _ = try await client.decide(.text("Is it?"), input: .text("status-401")); throw JSONConversionError("Backend failure answered") }
         catch let failure as SessionFailure {

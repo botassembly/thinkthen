@@ -360,7 +360,7 @@ func main() {
 	require(nullFound, "null row missing")
 	normalized, normalizedErr := nullCall.DecideAnswer()
 	require(normalizedErr == nil && normalized != nil && *normalized, "authored null replaced normalized judgment")
-	uncertain, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "unsure", nil)
+	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), "unsure", nil)
 	require(err == nil, "uncertain call failed")
 	n, err = uncertain.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain requests missing")
