@@ -20,7 +20,7 @@ class Handler(BaseHTTPRequestHandler):
         body = json.dumps({'model': 'fixed', 'answers': {'q1': {'type': 'noul', 'noul': 0.9}}}).encode()
         self.send_response(200 if len(arrivals) == 1 else 503)
         self.send_header('Content-Length', str(len(body)))
-        self.send_header('Connection', 'close')
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
 
