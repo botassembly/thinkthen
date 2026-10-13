@@ -82,6 +82,10 @@ fn generated(reference: &str) -> String {
         .into_generator();
     // The bare value each verb prints at the C interface, from the type it prints.
     let edges = generator.subschema_for::<Vec<RelationEdge<RelationEntity>>>();
+    let mut score = generator.subschema_for::<f64>().to_value();
+    score["description"] = json!(
+        "Probability-weighted position from 0 to the number of levels minus one. A question that says 1 to 5 still returns a position from 0 to 4 for five levels."
+    );
     let named = [
         (
             "decide",
@@ -92,7 +96,7 @@ fn generated(reference: &str) -> String {
             generator.subschema_for::<Option<String>>().to_value(),
         ),
         ("tag", generator.subschema_for::<Vec<String>>().to_value()),
-        ("score", generator.subschema_for::<f64>().to_value()),
+        ("score", score),
         (
             "filter",
             generator.subschema_for::<Vec<String>>().to_value(),

@@ -18,7 +18,7 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 ## What it prints
 
-On one document, a JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. In record mode each compact JSONL row is `{"input":RECORD,"value":NUMBER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`.
+On one document, a JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. A question that says "Rate this from 1 to 5" still returns a position from 0 to 4 for five levels; question wording and level names do not change the numbering. In record mode each compact JSONL row is `{"input":RECORD,"value":NUMBER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`.
 
 To put the highest values first, save the same question and levels in a `score` question file and run `rank @FILE` over the records. At equal framing, field selection, context, batch setting, model, and backend, both commands send the same score requests and use the same weighted values. `score` keeps input order; `rank` sorts those values, keeps input order at an exact tie, and can print only the first `--top N` rows. [rank.md](rank.md) gives that command's output and details.
 
