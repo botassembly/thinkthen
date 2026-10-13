@@ -9,6 +9,7 @@ export type Question = string | R.RequestDefinition | QuestionFile;
 export interface QuestionFile { readonly _questionFile: unique symbol; }
 export interface Source { readonly _source: unique symbol; }
 export interface Item { readonly _item: unique symbol; }
+export type CompleteInput = R.JsonValue | Source | Item | readonly (R.JsonValue | Item)[];
 export type Input = R.JsonValue | Source | Item | readonly (R.JsonValue | Item)[] | Iterable<R.JsonValue | Item> | AsyncIterable<R.JsonValue | Item>;
 export interface ImageBytes { readonly kind: "bytes"; readonly bytes: Uint8Array | string; readonly media?: string; }
 export interface ItemFields { readonly images?: readonly ImageBytes[]; readonly context?: R.JsonValue; readonly options?: readonly {readonly name:string; readonly description?:R.JsonValue}[]; }
@@ -49,6 +50,7 @@ export class Client {
  static questionFile(path:string):QuestionFile;
  static questionName(name:string):QuestionFile;
  static questionReference(reference:string):QuestionFile;
+ plan(verb:string,question:Question,input:CompleteInput,controls?:Controls):R.NativePlan;
  start(verb:string,question:Question,input:Input,controls?:Controls):Operation;
  close():void;
  decide(q:Question,i:Input,c?:Controls):Promise<Completed<R.NativeDecideResult>>;

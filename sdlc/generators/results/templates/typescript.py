@@ -1,7 +1,7 @@
 """Owned JavaScript values and declarations from the shared Rust graph."""
 import json
 from host_answers import aggregate_answers, aggregate_projection, scalar_answers, judgment_route
-ROOTS = ('completesessionPacket',)
+ROOTS = ('completesessionPacket', 'completeplan')
 INPUT_ROOTS = ('RequestOptions', 'EngineSettings', 'RequestDefinition')
 
 def name(key):
@@ -135,8 +135,9 @@ function convert(schema,value,key) {
   }
   return Object.freeze(held);
 }
+function plan(value) { return convert(graph.completeplan,value,'completeplan'); }
 function packet(value) { return convert(graph.completesessionPacket,value,'completesessionPacket'); }
-''', answer_runtime(definitions), 'module.exports = { answer, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
+''', answer_runtime(definitions), 'module.exports = { answer, plan, packet, parse, NativeNumber, REQUEST_VERSION: '+json.dumps(version)+', '+', '.join(name(k) for k,s in definitions.items() if 'properties' in s)+' };']
     return '\n'.join(lines)+'\n'
 
 
