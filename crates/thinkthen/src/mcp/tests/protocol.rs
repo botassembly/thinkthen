@@ -109,8 +109,8 @@ fn false_null_and_partial_failure_are_preserved_as_successful_native_objects() {
 }
 
 #[test]
-fn advertised_source_schema_accepts_only_native_unit_media_window_combinations() {
-    let list = tools::list(&json!({"type":"object"}));
+fn discovery_guides_source_fields_and_leaves_cross_field_rules_to_native_admission() {
+    let list = tools::list();
     let decide = list["tools"]
         .as_array()
         .unwrap()
@@ -128,7 +128,6 @@ import json,sys
 from jsonschema import Draft202012Validator
 case=json.load(sys.stdin)
 for schema,source,expected in case['cases']:
-    schema['$defs']=case['defs']
     actual=Draft202012Validator(schema).is_valid(source)
     assert actual == expected, (source,expected,actual)
 "#;
@@ -148,24 +147,17 @@ for schema,source,expected in case['cases']:
             json!({"paths":paths,"unit":"file","media":"image"}),
             true,
         ),
-        (source, json!({"paths":paths,"media":"image"}), false),
-        (
-            source,
-            json!({"paths":paths,"unit":"line","media":"image"}),
-            false,
-        ),
-        (
-            source,
-            json!({"paths":paths,"unit":"window","window":2,"media":"image"}),
-            false,
-        ),
-        (source, json!({"paths":paths,"unit":"window"}), false),
-        (source, json!({"paths":paths,"window":2}), false),
+        (source, json!({"paths":paths,"media":"image"}), true),
+        (source, json!({"paths":paths,"unit":"window"}), true),
+        (source, json!({"paths":paths,"window":2}), true),
         (
             source,
             json!({"paths":paths,"unit":"file","window":2}),
-            false,
+            true,
         ),
+        (source, json!({"paths":paths,"unit":"unknown"}), false),
+        (source, json!({"paths":paths,"media":"unknown"}), false),
+        (source, json!({"paths":paths,"framing":"unknown"}), false),
         (
             text_source,
             json!({"paths":paths,"unit":"file","media":"image"}),
@@ -182,11 +174,7 @@ for schema,source,expected in case['cases']:
         .stdin
         .take()
         .unwrap()
-        .write_all(
-            json!({"cases":cases,"defs":decide["inputSchema"]["$defs"]})
-                .to_string()
-                .as_bytes(),
-        )
+        .write_all(json!({"cases":cases}).to_string().as_bytes())
         .unwrap();
     let output = child.wait_with_output().unwrap();
     assert!(

@@ -335,7 +335,7 @@ def invoke(binary, backend, env, home, step, settings):
         client.raw_question = step.get('raw')
         tools = client.tools()
         assert [t['name'] for t in tools] == list(parity.inventory()['functions'])
-        assert all(isinstance(t['inputSchema'], dict) and isinstance(t['outputSchema'], dict) for t in tools)
+        assert all(isinstance(t['inputSchema'], dict) and 'outputSchema' not in t for t in tools)
         args = arguments(step, home, settings)
         if 'proxy' in settings:
             args['options']['proxy'] = settings['proxy']

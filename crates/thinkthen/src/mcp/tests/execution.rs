@@ -65,7 +65,6 @@ fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch
             .no_cache()
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     for invalid in [
         json!({"body":"Bob."}),
@@ -108,7 +107,6 @@ fn rank_forwards_the_inclusive_cutoff_before_top_and_refuses_nonprobability_rout
             .no_cache()
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let params: CallParams = serde_json::from_value(json!({"name":"rank","arguments":{
         "question":"Best?", "records":["below","first","last"],
@@ -178,7 +176,6 @@ fn recognition_call_controls_and_item_overrides_change_the_actual_stage_and_resu
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let mut question: Value =
         serde_json::from_str(fixture["question_json"].as_str().unwrap()).unwrap();
@@ -228,7 +225,6 @@ fn recognition_item_controls_refuse_null_and_invalid_edges_without_sends() {
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     for controls in [
         json!({"examples":null}),
@@ -275,7 +271,6 @@ fn framed_table_sources_execute_logical_rows_and_keep_original_positions() {
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let folder = std::env::temp_dir().join(format!("thinkthen-mcp-framing-{}", std::process::id()));
     std::fs::create_dir(&folder).unwrap();

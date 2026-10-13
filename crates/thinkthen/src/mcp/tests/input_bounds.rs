@@ -121,13 +121,7 @@ fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_uncha
 #[test]
 fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
     use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
-    use conformance_backend::{Canned, Listener};
-    let listener = Listener::answering(|_| {
-        Canned::ok(include_str!(
-            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
-        ))
-    })
-    .unwrap();
+    let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");
@@ -214,6 +208,15 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
     std::fs::remove_dir_all(folder).unwrap();
 }
 
+fn image_listener() -> conformance_backend::Listener {
+    conformance_backend::Listener::answering(|_| {
+        conformance_backend::Canned::ok(include_str!(
+            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
+        ))
+    })
+    .unwrap()
+}
+
 fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
     crate::Engine::builder()
         .backend("liquid")
@@ -233,13 +236,7 @@ fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
 #[test]
 fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
     use crate::transport::TransportAttachmentLimit;
-    use conformance_backend::{Canned, Listener};
-    let listener = Listener::answering(|_| {
-        Canned::ok(include_str!(
-            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
-        ))
-    })
-    .unwrap();
+    let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");

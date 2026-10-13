@@ -47,6 +47,8 @@ with Client.launch(("thinkthen", "mcp", "--replay",
     print(call["value"]["value"])
 ```
 
+`tools/list` provides compact input guidance for all ten tools. It preserves caller field names and native choice values, omits output schemas, and leaves full validation to native admission. Run `thinkthen mcp --help` for the full grammar links. Discovery types describe writable fields; they do not replace native checks for exclusive selectors, reader controls or authored questions.
+
 Use inline literal text, including `@` prefixes, or the ordinary native JSON
 question/set/plan grammar as `question`. `question_file` explicitly loads an
 ordinary existing file. `question_name` loads a validated name from the native
@@ -79,7 +81,7 @@ native cancelled error with zero sends. Notification cancellation continues to
 cancel active requests and retire their owned work.
 
 Successes return unchanged native complete call envelopes and the packaged native
-output schema. Safe errors use `Error::complete()`, including joined started-call
+native result contract. Safe errors use `Error::complete()`, including joined started-call
 facts. Incremental failures additionally retain actual ordered `completed` results. Admission failures invent no call facts. No adapter rewrites schemas,
 origins, IDs, timing, models or cache hits. Native calls stamp the closed `mcp`
 surface and compiled-engine User-Agent, call ID and request ID.

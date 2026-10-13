@@ -21,7 +21,7 @@ pub(crate) enum Command {
     Status(StatusArguments),
 
     /// Serve the ten judging functions over local MCP stdio.
-    #[command(display_order = 1006)]
+    #[command(display_order = 1006, long_about = crate::mcp::startup::HELP)]
     Mcp(crate::mcp::startup::Arguments),
 
     /// Check that a named backend works with this tool.
