@@ -7,19 +7,15 @@ Future<void> main() async {
   const outage = 'Our checkout page is down '
       'and customers cannot pay.\n';
   final call = await engine.score(
-    InputRequestQuestionDefinition(
-      value: InputRequestDefinition.read({
+    DefinedQuestion(
+      value: Definition.read({
         'score': question,
         'levels': levels,
       }),
     ),
-    InputRequestInputText(text: outage),
+    InputText(text: outage),
   );
-  final urgency = call.packets
-      .whereType<SessionPacketScoreRow>()
-      .single
-      .value
-      .value;
+  final urgency = call.scoreAnswer();
   assert(urgency == 2.0);
   engine.close();
 }

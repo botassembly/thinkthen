@@ -19,10 +19,11 @@ func main() {
 		"Soon.",
 		"Immediate.",
 	}
-	scale := tt.DefinedQuestion(tt.AuthoredScore{
+	definition := tt.RequestDefinitionAuthoredScore{
 		Score:  tt.AuthoredQuestionTextString(question),
 		Levels: tt.Ptr[tt.AuthoredLevels](levels),
-	})
+	}
+	scale := tt.DefinedQuestion(definition)
 	outage := "Our checkout page is down " +
 		"and customers cannot pay.\n"
 	call, err := client.Score(

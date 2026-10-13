@@ -25,11 +25,12 @@ func main() {
 		Source: tt.Ptr[tt.AuthoredName]("company"),
 		Target: tt.Ptr[tt.AuthoredName]("product"),
 	}
-	ask := tt.DefinedQuestion(tt.AuthoredRelate{
-		Relate: tt.AuthoredRelateRelate{
+	definition := tt.RequestDefinitionAuthoredRelate{
+		Relate: tt.RelateQuestion{
 			Relations: []tt.AuthoredRelation{makes},
 		},
-	})
+	}
+	ask := tt.DefinedQuestion(definition)
 	call, err := client.Relate(
 		context.Background(),
 		ask,
@@ -49,9 +50,9 @@ func main() {
 	var pairs [][2]string
 	for _, edge := range edges {
 		source, _ := edge.Source().Value.
-			AsRelatedEntityEdgePropertiesSourceFieldsKindName()
+			AsRelationEndpointRelatedEntity()
 		target, _ := edge.Target().Value.
-			AsRelatedEntityEdgePropertiesSourceFieldsKindName()
+			AsRelationEndpointRelatedEntity()
 		pairs = append(pairs, [2]string{
 			source.Name().Value,
 			target.Name().Value,

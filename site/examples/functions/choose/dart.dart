@@ -10,19 +10,15 @@ Future<void> main() async {
   };
   const parcel = 'My parcel went to the wrong address.';
   final call = await engine.choose(
-    InputRequestQuestionDefinition(
-      value: InputRequestDefinition.read({
+    DefinedQuestion(
+      value: Definition.read({
         'choose': question,
         'options': teams,
       }),
     ),
-    InputRequestInputText(text: parcel),
+    InputText(text: parcel),
   );
-  final team = call.packets
-      .whereType<SessionPacketChooseRow>()
-      .single
-      .value
-      .value;
+  final team = call.chooseAnswer();
   assert(team == 'shipping');
   engine.close();
 }

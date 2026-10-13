@@ -10,21 +10,17 @@ Future<void> main() async {
     'Gift cards cannot be exchanged for cash.',
   ];
   final call = await engine.find(
-    InputRequestQuestionText(text: question),
-    InputRequestInputRecords(items: [
+    QuestionText(text: question),
+    InputUnits(items: [
       for (final line in policy)
-        InputRequestItem(
+        Item(
           original: Presence.present(
-            InputRequestOriginalText(text: line),
+            OriginalText(text: line),
           ),
         ),
     ]),
   );
-  final refundDeadline = call.packets
-      .whereType<SessionPacketFindAggregate>()
-      .single
-      .value
-      .value;
+  final refundDeadline = call.findAnswer().value;
   assert(refundDeadline == policy[1]);
   engine.close();
 }

@@ -40,7 +40,7 @@ while (status != THINKTHEN_SESSION_END_V1) {
     const thinkthen_complete_session_packet_v1 *packet;
     thinkthen_session_result_view(owner, &packet);
     if (packet->kind == annotate_row) {
-        thinkthen_complete_annotated_row_value_v1 triage =
+        thinkthen_complete_annotated_field_map_v1 triage =
             packet->data.annotate_row->value->value->value;
         for (size_t i = 0; i < triage.len; i++) {
             char name[16];

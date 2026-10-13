@@ -22,7 +22,7 @@ int main() {
         auto rows = found->value().value;
         for (const auto& row : *rows) {
             auto value = *row.value().value;
-            auto facts = value.as_RecognizeFieldsEntities();
+            auto facts = value.as_RecognizeEntities();
             auto entities = facts->entities().value;
             for (const auto& one : *entities) {
                 names.push_back(*one.text().value + " (" +

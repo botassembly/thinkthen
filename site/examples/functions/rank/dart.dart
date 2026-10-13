@@ -12,24 +12,19 @@ Future<void> main() async {
     'Please send the signed quote by 5 pm today',
   ];
   final call = await engine.rank(
-    InputRequestQuestionText(text: question),
-    InputRequestInputRecords(items: [
+    QuestionText(text: question),
+    InputRecords(items: [
       for (final message in inbox)
-        InputRequestItem(
+        Item(
           original: Presence.present(
-            InputRequestOriginalText(text: message),
+            OriginalText(text: message),
           ),
         ),
     ]),
   );
-  final byUrgency = call.packets
-      .whereType<SessionPacketRankAggregate>()
-      .single
-      .value;
-  final order = [
-    for (final one in byUrgency) one.index.value!.toInt(),
-  ];
-  const expected = [1, 3, 2, 0];
-  assert(const ListEquality<int>().equals(order, expected));
+  final byUrgency = call.rankAnswer();
+  final expected = [inbox[1], inbox[3], inbox[2], inbox[0]];
+  assert(const ListEquality<Object?>()
+      .equals(byUrgency, expected));
   engine.close();
 }

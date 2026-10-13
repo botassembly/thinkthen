@@ -9,19 +9,15 @@ Future<void> main() async {
       'but export crashes the app,\n'
       'and I was charged twice.\n';
   final call = await engine.tag(
-    InputRequestQuestionDefinition(
-      value: InputRequestDefinition.read({
+    DefinedQuestion(
+      value: Definition.read({
         'tag': question,
         'labels': labels,
       }),
     ),
-    InputRequestInputText(text: message),
+    InputText(text: message),
   );
-  final fittingLabels = call.packets
-      .whereType<SessionPacketTagRow>()
-      .single
-      .value
-      .value;
+  final fittingLabels = call.tagAnswer();
   assert(const ListEquality<String>().equals(
     fittingLabels,
     ['praise', 'bug', 'billing'],

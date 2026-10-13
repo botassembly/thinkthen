@@ -19,7 +19,7 @@ var complaints: [String] = []
 for case .filterRow(let row) in call.packets {
     let kept = row.value
     guard kept.value else { continue }
-    if case .value(.alternative0(let index)) = kept.index {
+    if case .value(let index) = kept.index {
         complaints.append(reviews[Int(index)])
     }
 }

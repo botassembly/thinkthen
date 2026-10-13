@@ -33,7 +33,7 @@ func main() {
 			continue
 		}
 		facts, _ := found.Value().Value[0].Value().Value.
-			AsRecognizeFieldsEntities()
+			AsRecognizeEntities()
 		for _, one := range facts.Entities().Value {
 			names = append(names, [2]string{
 				one.Text().Value,

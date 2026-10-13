@@ -6,15 +6,10 @@ Future<void> main() async {
   const broken =
       'Please refund my order. It arrived broken.';
   final call = await engine.decide(
-    InputRequestQuestionText(text: question),
-    InputRequestInputText(text: broken),
+    QuestionText(text: question),
+    InputText(text: broken),
   );
-  final isRefund = call.packets
-      .whereType<SessionPacketDecideRow>()
-      .single
-      .value
-      .value
-      .asAlternative0;
+  final isRefund = call.decideAnswer();
   assert(isRefund == true);
   engine.close();
 }

@@ -2,7 +2,7 @@ import 'package:collection/collection.dart';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
 typedef Named =
-    RelatedEntityEdgePropertiesSourceFieldsKindName;
+    RelationEndpointRelatedEntity;
 
 Future<void> main() async {
   final engine = Engine.open();
@@ -13,8 +13,8 @@ Future<void> main() async {
     {'name': 'Kindle', 'kind': 'product'},
   ];
   final call = await engine.relate(
-    InputRequestQuestionDefinition(
-      value: InputRequestDefinition.read({
+    DefinedQuestion(
+      value: Definition.read({
         'version': 1,
         'relate': {
           'relations': [
@@ -27,20 +27,16 @@ Future<void> main() async {
         },
       }),
     ),
-    InputRequestInputRecords(items: [
+    InputEntities(items: [
       for (final name in names)
-        InputRequestItem(
+        Item(
           original: Presence.present(
-            InputRequestOriginalJson(value: name),
+            OriginalJson(value: name),
           ),
         ),
     ]),
   );
-  final whoMakes = call.packets
-      .whereType<SessionPacketRelateAggregate>()
-      .single
-      .value
-      .value;
+  final whoMakes = call.relateAnswer().value;
   final pairs = [
     for (final edge in whoMakes)
       (

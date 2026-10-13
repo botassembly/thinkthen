@@ -43,9 +43,9 @@ while (status != THINKTHEN_SESSION_END_V1) {
         const thinkthen_complete_recognition_v1 *row =
             packet->data.recognize_aggregate->value.data[0];
         const thinkthen_complete_entity_v1 *const *found =
-            row->value->data.fields_entities->entities.data;
+            row->value->data.entities->entities.data;
         size_t count =
-            row->value->data.fields_entities->entities.len;
+            row->value->data.entities->entities.len;
         for (size_t i = 0; i < count; i++) {
             const thinkthen_complete_entity_v1 *one =
                 found[i];

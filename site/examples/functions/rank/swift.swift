@@ -19,7 +19,7 @@ let call = try await client.rank(
 var byUrgency = [Int](repeating: -1, count: inbox.count)
 for case .rankAggregate(let ranked) in call.packets {
     for one in ranked.value {
-        if case .value(.alternative0(let index)) =
+        if case .value(let index) =
             one.index
         {
             byUrgency[Int(one.value) - 1] = Int(index)

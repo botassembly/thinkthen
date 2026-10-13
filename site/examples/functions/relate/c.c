@@ -55,9 +55,9 @@ while (status != THINKTHEN_SESSION_END_V1) {
             const thinkthen_complete_related_entity_edge_v1
                 *edge = edges->value.data[i];
             thinkthen_complete_utf8_v1 company =
-                edge->source->data.fields_kind_name->name;
+                edge->source->data.related_entity->name;
             thinkthen_complete_utf8_v1 product =
-                edge->target->data.fields_kind_name->name;
+                edge->target->data.related_entity->name;
             size_t end = strlen(who_makes);
             snprintf(who_makes + end,
                 sizeof who_makes - end,

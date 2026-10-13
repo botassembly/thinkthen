@@ -20,10 +20,11 @@ func main() {
 		"bug",
 		"billing",
 	}
-	labelQuestion := tt.DefinedQuestion(tt.AuthoredTag{
+	definition := tt.RequestDefinitionAuthoredTag{
 		Tag:    tt.AuthoredQuestionTextString(question),
 		Labels: tt.Ptr[tt.AuthoredLabels](labels),
-	})
+	}
+	labelQuestion := tt.DefinedQuestion(definition)
 	message := "Love the new dashboard, " +
 		"but export crashes the app,\n" +
 		"and I was charged twice.\n"

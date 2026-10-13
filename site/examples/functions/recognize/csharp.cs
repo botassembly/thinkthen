@@ -23,7 +23,7 @@ var ask = engine.ParseQuestion(
 var call = await engine.RecognizeAsync(
     ask,
     new InputRequestInputText { Text = text });
-var facts = (RecognizeFieldsEntities)call.Packets
+var facts = (RecognizeEntities)call.Packets
     .OfType<SessionPacketRecognizeAggregate>()
     .First()
     .Value.Single()

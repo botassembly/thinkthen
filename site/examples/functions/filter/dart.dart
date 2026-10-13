@@ -11,21 +11,17 @@ Future<void> main() async {
     'The strap snapped on day two.',
   ];
   final call = await engine.filter(
-    InputRequestQuestionText(text: question),
-    InputRequestInputRecords(items: [
+    QuestionText(text: question),
+    InputRecords(items: [
       for (final review in reviews)
-        InputRequestItem(
+        Item(
           original: Presence.present(
-            InputRequestOriginalText(text: review),
+            OriginalText(text: review),
           ),
         ),
     ]),
   );
-  final complaints = [
-    for (final row
-        in call.packets.whereType<SessionPacketFilterRow>())
-      row.value.input.value,
-  ];
+  final complaints = call.filterAnswer();
   assert(const ListEquality<Object?>().equals(
     complaints,
     [reviews[1], reviews[3]],

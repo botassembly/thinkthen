@@ -4,7 +4,7 @@ using ThinkThen;
 using ThinkThen.Inputs;
 using ThinkThen.Results;
 using Named = ThinkThen.Results
-    .RelatedEntityEdgePropertiesSourceFieldsKindName;
+    .RelationEndpointRelatedEntity;
 
 using var engine = Engine.Open();
 var names = new[]

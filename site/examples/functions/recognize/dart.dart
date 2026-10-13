@@ -7,22 +7,18 @@ Future<void> main() async {
   const text = 'Sam Patel says his Kindle arrived broken '
       'in Denver.';
   final call = await engine.recognize(
-    InputRequestQuestionDefinition(
-      value: InputRequestDefinition.read({
+    DefinedQuestion(
+      value: Definition.read({
         'version': 1,
         'recognize': {
           'kinds': {for (final kind in kinds) kind: null},
         },
       }),
     ),
-    InputRequestInputText(text: text),
+    InputText(text: text),
   );
-  final facts = call.packets
-      .whereType<SessionPacketRecognizeAggregate>()
-      .first
-      .value
-      .single
-      .value as RecognizeFieldsEntities;
+  final facts = call.recognizeAnswer().single.value
+      as RecognizeEntities;
   final names = [
     for (final one in facts.entities) (one.text, one.kind),
   ];
