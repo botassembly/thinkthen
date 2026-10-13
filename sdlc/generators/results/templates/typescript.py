@@ -2,26 +2,35 @@
 import json
 from host_answers import aggregate_answers, aggregate_projection, scalar_answers, judgment_route
 ROOTS = ('completesessionPacket',)
+INPUT_ROOTS = ('RequestOptions', 'EngineSettings', 'RequestDefinition')
 
 def name(key):
     return 'Native' + ''.join(p[:1].upper()+p[1:] for p in key.removeprefix('complete').split('_'))
 
-def typ(source):
+def input_name(key):
+    if key.startswith('RequestDefinition_'):
+        base = input_name(key.removeprefix('RequestDefinition_'))
+        return base.removesuffix('Definition') + ('RequestDefinition' if base.endswith('Definition') else 'Definition')
+    return ''.join(p[:1].upper()+p[1:] for p in key.removeprefix('Authored_').split('_'))
+
+def typ(source, inputs=False):
+    named = input_name if inputs else name
     if isinstance(source,bool): return 'JsonValue'
-    if '$ref' in source: return name(source['$ref'].removeprefix('#/$defs/'))
+    if '$ref' in source: return named(source['$ref'].removeprefix('#/$defs/'))
     if 'const' in source: return json.dumps(source['const'])
     if 'enum' in source: return ' | '.join(json.dumps(v) for v in source['enum'])
-    if 'variants' in source: return ' | '.join(name(k) for k,_ in source['variants'])
-    if 'primitive_schemas' in source: return ' | '.join(typ(v) for v in source['primitive_schemas'].values())
+    if 'variants' in source: return ' | '.join(named(k) for k,_ in source['variants'])
+    if 'primitive_schemas' in source: return ' | '.join(typ(v, inputs) for v in source['primitive_schemas'].values())
     for union in ('anyOf','oneOf'):
-        if union in source: return ' | '.join(typ(v) for v in source[union])
+        if union in source: return ' | '.join(typ(v, inputs) for v in source[union])
     kind=source.get('type')
-    if isinstance(kind,list): return ' | '.join(typ({**source,'type':v}) for v in kind)
-    if kind=='array': return 'readonly ('+typ(source.get('items',{}))+')[]'
-    if kind=='object': return 'Readonly<Record<string, '+typ(source.get('additionalProperties',{}))+'>>'
-    return {'string':'string','integer':'number | NativeNumber','number':'number | NativeNumber','boolean':'boolean','null':'null'}.get(kind,'JsonValue')
+    if isinstance(kind,list): return ' | '.join(typ({**source,'type':v}, inputs) for v in kind)
+    if kind=='array': return 'readonly ('+typ(source.get('items',{}), inputs)+')[]'
+    if kind=='object': return 'Readonly<Record<string, '+typ(source.get('additionalProperties',{}), inputs)+'>>'
+    numeric = 'number' if inputs else 'number | NativeNumber'
+    return {'string':'string','integer':numeric,'number':numeric,'boolean':'boolean','null':'null'}.get(kind,'JsonValue')
 
-def declarations(definitions):
+def declarations(definitions, input_definitions=None):
     lines=['// Generated from the shared Rust result graph; do not edit.', 'export type JsonValue = null | boolean | number | NativeNumber | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };']
     lines += ['export class NativeNumber { readonly raw: string; private constructor(); }']
     for key,source in definitions.items():
@@ -46,9 +55,26 @@ def declarations(definitions):
         lines += [f' {function}Answer(): {typ(payload)};']
     lines += ['}']
     lines += ['export function packet(value: JsonValue): NativeSessionPacket;', 'export function parse(text: string): JsonValue;', 'export const REQUEST_VERSION: string;']
+    lines += input_declarations(input_definitions or {})
     return '\n'.join(lines)+'\n'
 
-def runtime(definitions,version):
+def input_declarations(definitions):
+    lines = []
+    excluded = {key: tag[2]['excluded'] for source in definitions.values()
+                for key, tag in source.get('variants', []) if tag[0] == 'structure'}
+    for key, source in definitions.items():
+        if 'properties' not in source:
+            lines += [f'export type {input_name(key)} = {typ(source, True)};']
+            continue
+        lines += [f'export interface {input_name(key)} {{']
+        for member, field in source['properties'].items():
+            optional = '' if member in source.get('required', []) else '?'
+            lines += [f' readonly {json.dumps(member)}{optional}: {typ(field, True)};']
+        lines += [f' readonly {json.dumps(member)}?: never;' for member in excluded.get(key, [])]
+        lines += ['}']
+    return lines
+
+def runtime(definitions,version,input_definitions=None):
     lines=["'use strict';", '// Generated from the shared Rust result graph; do not edit.', 'const graph = {']
     for key,source in definitions.items():
         lines += [json.dumps(key)+': {']
