@@ -199,15 +199,20 @@ fn a_retried_filtered_row_keeps_its_observation_and_call_facts() {
         }
     };
     let asked = question();
-    let mut rows = engine.filter_with(
+    let mut rows = crate::api::pull_filters(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new()
             .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
             .observe(&observe),
     );
     assert_eq!(
         rows.by_ref()
+            .filter_map(|row| match row {
+                Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+                Err(error) => Some(Err(error)),
+            })
             .collect::<Result<Vec<_>, _>>()
             .expect("filtered"),
         ["beta"]

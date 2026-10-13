@@ -292,9 +292,6 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         .and_then(QuestionSetBuilder::build)
         .expect("set");
 
-    let by_slice = keyed(engine.filter(&asked, texts), |t| (t.to_owned(), ()));
-    let by_cursor = keyed(engine.filter(&asked, cursor(&texts)), |t| (t, ()));
-    assert_eq!((by_slice.len(), &by_slice), (texts.len(), &by_cursor));
     let by_slice = keyed(engine.decide_many(&asked, texts), |row| {
         let (text, answer) = row.into_parts();
         (text.to_owned(), answer)
@@ -340,7 +337,42 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         .into_value()
         .into_selected();
     assert_eq!(by_slice.map(str::to_owned), by_cursor);
+}
 
+#[test]
+fn a_filter_slice_and_iterator_keep_order_and_invalid_prefix() {
+    let _serial = serial();
+    let backend = Backend::start().expect("backend");
+    let engine = engine(&format!("{}/generic/v1", backend.origin()));
+    let asked = question();
+    let texts = ["alpha", "beta", "gamma", "delta", "epsilon"];
+    let by_slice = keyed(
+        crate::api::pull_filters(
+            &engine,
+            &asked,
+            crate::api::plain_records(texts),
+            CallOptions::new(),
+        )
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        }),
+        |t| (t.to_owned(), ()),
+    );
+    let by_cursor = keyed(
+        crate::api::pull_filters(
+            &engine,
+            &asked,
+            crate::api::plain_records(cursor(&texts)),
+            CallOptions::new(),
+        )
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        }),
+        |t| (t, ()),
+    );
+    assert_eq!((by_slice.len(), &by_slice), (texts.len(), &by_cursor));
     // A failed record ends a batch: earlier rows in order, the error, then nothing.
     let broken = ["alpha", "beta", "   ", "delta"];
     let expected = vec![
@@ -348,10 +380,34 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         Ok(("beta".to_owned(), ())),
         Err(ErrorKind::Usage),
     ];
-    let by_slice = keyed(engine.filter(&asked, broken), |t| (t.to_owned(), ()));
+    let by_slice = keyed(
+        crate::api::pull_filters(
+            &engine,
+            &asked,
+            crate::api::plain_records(broken),
+            CallOptions::new(),
+        )
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        }),
+        |t| (t.to_owned(), ()),
+    );
     assert_eq!(by_slice, expected);
     assert_eq!(
-        keyed(engine.filter(&asked, cursor(&broken)), |t| (t, ())),
+        keyed(
+            crate::api::pull_filters(
+                &engine,
+                &asked,
+                crate::api::plain_records(cursor(&broken)),
+                CallOptions::new()
+            )
+            .filter_map(|row| match row {
+                Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+                Err(error) => Some(Err(error)),
+            }),
+            |t| (t, ())
+        ),
         expected
     );
 }
@@ -379,11 +435,16 @@ fn a_batch_of_one_reads_no_record_ahead_of_its_rows() {
             backend.release();
             held_pull
         });
-        let mut batch = engine.filter_with(
+        let mut batch = crate::api::pull_filters(
+            &engine,
             &asked,
-            records,
+            crate::api::plain_records(records),
             CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
-        );
+        )
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        });
         let mut rows = 0;
         while rows < 50 {
             assert!(batch.next().is_some_and(|row| row.is_ok()));
@@ -416,13 +477,18 @@ fn a_batch_keeps_a_throttle_of_sends_in_flight_while_they_are_held() {
             backend.release();
             in_flight
         });
-        let batch = engine.filter_with(
+        let batch = crate::api::pull_filters(
+            &engine,
             &asked,
-            records,
+            crate::api::plain_records(records),
             CallOptions::new().batch(BatchSetting::Records(
                 std::num::NonZeroUsize::new(2).expect("two"),
             )),
-        );
+        )
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        });
         assert!(batch.take(5).all(|row| row.is_ok()));
         watcher.join().expect("watcher")
     });
@@ -466,7 +532,16 @@ fn a_long_batch_keeps_memory_flat_as_its_input_grows() {
         .expect("engine");
     let records = (0..20_000).map(|_| "x".repeat(16_384));
     let (mut early, mut rows) = (0, 0);
-    for row in engine.filter(&question(), records) {
+    for row in crate::api::pull_filters(
+        &engine,
+        &question(),
+        crate::api::plain_records(records),
+        CallOptions::new(),
+    )
+    .filter_map(|row| match row {
+        Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+        Err(error) => Some(Err(error)),
+    }) {
         assert!(row.is_ok(), "{row:?}");
         rows += 1;
         if rows == 5_000 {

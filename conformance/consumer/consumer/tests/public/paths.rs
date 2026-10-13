@@ -125,8 +125,14 @@ fn environment_engine_child() {
                 .into_value()
         );
         assert_eq!(
-            rows(explicit.filter(&decide, records), |kept| kept),
-            rows(environment.filter(&decide, records), |kept| kept)
+            rows(crate::api::pull_filters(&explicit, &decide, crate::api::plain_records(records), CallOptions::new()).filter_map(|row| match row {
+                Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+                Err(error) => Some(Err(error)),
+            }), |kept| kept),
+            rows(crate::api::pull_filters(&environment, &decide, crate::api::plain_records(records), CallOptions::new()).filter_map(|row| match row {
+                Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+                Err(error) => Some(Err(error)),
+            }), |kept| kept)
         );
         let parts = thinkthen::Row::into_parts;
         assert_eq!(
@@ -194,8 +200,9 @@ fn questions() -> (Question, ChooseQuestion<Team>, QuestionSet) {
 }
 
 /// Every row of a batch, each mapped or `None` for an error.
-fn rows<T, U>(batch: thinkthen::Batch<'_, T>, keep: impl Fn(T) -> U) -> Vec<U> {
+fn rows<T, U>(batch: impl IntoIterator<Item = Result<T, Error>>, keep: impl Fn(T) -> U) -> Vec<U> {
     batch
+        .into_iter()
         .map(|row| keep(row.expect("each row answers")))
         .collect()
 }

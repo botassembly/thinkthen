@@ -230,11 +230,14 @@ fn a_spent_batch_sends_nothing() {
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = engine(listener.base());
     let options = CallOptions::new().cancel(&token);
-    let rows: Vec<_> = engine
-        .filter_with(&question(), ["one", "two"], options)
-        .collect();
-    assert_eq!(rows.len(), 1);
-    assert_eq!(kind(&rows[0]), Some(ErrorKind::Cancelled));
+    let rows = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Filter,
+        question().into(),
+        crate::api::plain_records(["one", "two"]),
+        options,
+    );
+    assert_eq!(kind(&rows), Some(ErrorKind::Cancelled));
     assert_eq!(listener.count(), 0);
 }
 
@@ -529,17 +532,17 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
                     refused
                 });
                 let caught = catch_unwind(AssertUnwindSafe(|| {
-                    batch
-                        .filter_with(
-                            &asked,
-                            texts,
-                            CallOptions::new()
-                                .interrupt(&check)
-                                .batch(BatchSetting::Records(
-                                    std::num::NonZeroUsize::new(2).expect("two"),
-                                )),
-                        )
-                        .count()
+                    crate::api::pull_filters(
+                        &batch,
+                        &asked,
+                        crate::api::plain_records(texts),
+                        CallOptions::new()
+                            .interrupt(&check)
+                            .batch(BatchSetting::Records(
+                                std::num::NonZeroUsize::new(2).expect("two"),
+                            )),
+                    )
+                    .count()
                 }));
                 release
                     .join()

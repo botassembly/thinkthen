@@ -12,11 +12,11 @@ use crate::core::{self, Value};
 use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
 use crate::public::batch::Batch;
-use crate::public::engine::{DecisionQuestion, Engine, Evidence, only};
-use crate::public::error::{Error, ErrorKind};
+use crate::public::engine::{DecisionQuestion, Engine, Evidence};
+use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::pull;
-use crate::public::question::{Kind, Question};
+use crate::public::question::Question;
 use crate::public::results::{
     self, Answer, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation, Row,
 };
@@ -30,10 +30,6 @@ pub(crate) struct Values {
 /// One record's answer and its probability of yes.
 type Decided = (Value, f64);
 type Pair<I, T> = fn(I, Decided) -> Result<Option<T>, Error>;
-
-fn invalid_answer() -> Error {
-    Error::of(ErrorKind::Backend, "a backend question failed in a batch")
-}
 
 pub(super) fn selected_batch(
     question: &Question,
@@ -88,41 +84,6 @@ pub(crate) fn selected_set_batch(
 }
 
 impl Engine {
-    /// The records whose answer is yes, lazily, in input order.
-    pub fn filter<'a, I>(&'a self, question: &'a Question, records: I) -> Batch<'a, I::Item>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.filter_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::filter`] under these controls.
-    pub fn filter_with<'a, I>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, I::Item>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        let records = records.into_iter().map(Ok);
-        Batch::of(only(question, &[Kind::Decide], "filter").and_then(|()| {
-            self.try_decisions(
-                crate::InputFunction::Filter,
-                question,
-                records,
-                options,
-                |item, (answer, _)| match answer {
-                    Value::YesNo(value) => Ok((value == Some(true)).then_some(item)),
-                    _ => Err(invalid_answer()),
-                },
-            )
-        }))
-    }
-
     /// Each record with its answer, lazily, in input order.
     pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(
         &'a self,

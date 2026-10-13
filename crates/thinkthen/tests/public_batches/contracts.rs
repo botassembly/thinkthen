@@ -262,13 +262,18 @@ fn batch_observer_keeps_filtered_row_and_even_request_shares() {
     };
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
     let asked = question();
-    let mut batch = engine.filter_with(
+    let mut batch = crate::api::pull_filters(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new().batch(setting).observe(&observe),
     );
     let kept = batch
         .by_ref()
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        })
         .collect::<Result<Vec<_>, _>>()
         .expect("filtered");
     assert_eq!(kept, ["beta"]);
