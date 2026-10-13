@@ -30,11 +30,11 @@ procedure Sample is
      thinkthen_complete_atomic_array_of_string_v1;
 begin
    Labels.Append
-     (T_Authored_name (To_Unbounded_String ("praise")));
+     (To_Unbounded_String ("praise"));
    Labels.Append
-     (T_Authored_name (To_Unbounded_String ("bug")));
+     (To_Unbounded_String ("bug"));
    Labels.Append
-     (T_Authored_name (To_Unbounded_String ("billing")));
+     (To_Unbounded_String ("billing"));
    Which.T_tag :=
      (T_Authored_questionText_arm_0,
       To_Unbounded_String (Question));

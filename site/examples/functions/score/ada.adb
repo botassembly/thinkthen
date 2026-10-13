@@ -27,11 +27,11 @@ procedure Sample is
      T_RequestDefinition_arm_Authored_score;
 begin
    Levels.Append
-     (T_Authored_name (To_Unbounded_String ("Routine.")));
+     (To_Unbounded_String ("Routine."));
    Levels.Append
-     (T_Authored_name (To_Unbounded_String ("Soon.")));
+     (To_Unbounded_String ("Soon."));
    Levels.Append
-     (T_Authored_name (To_Unbounded_String ("Immediate.")));
+     (To_Unbounded_String ("Immediate."));
    Scale.T_score :=
      (T_Authored_questionText_arm_0,
       To_Unbounded_String (Question));
