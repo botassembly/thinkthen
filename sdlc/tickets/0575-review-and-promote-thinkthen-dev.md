@@ -24,7 +24,7 @@ thinkthen.dev shows the refreshed 0.2 docs on the day 0.2 ships. An independent 
 - Changes:
   - Rebase the branch on the 0.2 candidate and rerun the full site build and every language replay against the candidate libraries.
   - Have one independent reviewer read every page as a first-time Python developer, DuckDB analyst and agent builder. The reviewer checks that each claim links to its evidence, each sample matches the candidate's output, and every page uses present-tense reader wording.
-  - Check that every product the site names is one the public may see.
+  - Name Jev, SystemOne, TypeSafe and other public model and product keywords often in page text, titles and descriptions, for search. Ian ruled on 2026-10-13 that these names are public.
   - Remove the docs branch's temporary word-check allow entries once the 0.2 fixes they cover have landed.
   - Land the branch on main with the 0.2 release, and deploy thinkthen.dev from main after Ian's go.
   - Write the release announcement and link it to the home page, the install page and the recipes.
