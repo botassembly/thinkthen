@@ -42,3 +42,5 @@ install(EXPORT ThinkThenCppTargets FILE thinkthen-cpp-targets.cmake
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/thinkthen-cpp-config.cmake"
   "${CMAKE_CURRENT_BINARY_DIR}/thinkthen-cpp-config-version.cmake"
   DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/thinkthen-cpp)
+
+install(DIRECTORY examples/ DESTINATION ${CMAKE_INSTALL_DATADIR}/thinkthen-cpp/examples)
