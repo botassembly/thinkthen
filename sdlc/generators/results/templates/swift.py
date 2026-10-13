@@ -44,6 +44,8 @@ def render(definitions, inputs=False):
             kind = 'string' if isinstance(source['const'], str) else 'boolean' if isinstance(source['const'], bool) else 'integer'
         if kind == 'array':
             return '[' + typ(source.get('items', {}), path + '_Item') + ']'
+        if kind == 'object' and source.get('x-preserve-order'):
+            return 'InputOrderedMap<' + typ(source.get('additionalProperties', {}), path + '_Entry') + '>'
         if kind == 'object':
             return '[String: ' + typ(source.get('additionalProperties', {}), path + '_Entry') + ']'
         return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64' if source.get('format', '').startswith('uint') else 'Int64', 'null': 'JSONValue'}.get(kind, 'JSONValue')
@@ -62,6 +64,8 @@ def render(definitions, inputs=False):
             return 'object[' + json.dumps(field) + '] != nil && object[' + json.dumps(field) + '] != .null'
         return ' && '.join(['object[' + json.dumps(k) + '] != nil' for k in value['required']] + ['object[' + json.dumps(k) + '] == nil' for k in value['excluded']])
     lines = ['// Generated from the shared Rust graph. Do not edit.', 'import Foundation']
+    if inputs:
+        lines += [ordered_maps()]
     pending = set()
     while nodes.keys() - pending:
         key = sorted(nodes.keys() - pending)[0]
@@ -71,11 +75,12 @@ def render(definitions, inputs=False):
         if literals and all(isinstance(value, str) for value in literals):
             lines += [f'public enum {cls}: JSONRepresentable {{']
             lines += [f'    case {literal_member(value)}' for value in literals]
-            lines += ['    case unknown(String)', f'    public static func read(_ json: JSONValue) throws -> {cls} {{', '        let value = try String.read(json)', '        switch value {']
+            lines += ([] if inputs else ['    case unknown(String)'])
+            lines += [f'    public static func read(_ json: JSONValue) throws -> {cls} {{', '        let value = try String.read(json)', '        switch value {']
             lines += [f'        case {json.dumps(value)}: return .{literal_member(value)}' for value in literals]
-            lines += ['        default: return .unknown(value)', '        }', '    }', '    public var json: JSONValue {', '        switch self {']
+            lines += [('        default: throw JSONConversionError("Unknown ' + cls + ' value")') if inputs else '        default: return .unknown(value)', '        }', '    }', '    public var json: JSONValue {', '        switch self {']
             lines += [f'        case .{literal_member(value)}: return .string({json.dumps(value)})' for value in literals]
-            lines += ['        case .unknown(let value): return .string(value)', '        }', '    }', '}']
+            lines += ([] if inputs else ['        case .unknown(let value): return .string(value)']) + ['        }', '    }', '}']
         elif 'properties' in source:
             fields = source['properties']
             required = set(source.get('required', []))
@@ -121,6 +126,8 @@ def render(definitions, inputs=False):
             lines += ['        }', '    }', '}']
         else:
             lines += [f'public typealias {cls} = {typ(source, key + "_Value")}']
+    if inputs:
+        lines += [named_calls(definitions)]
     return '\n'.join(lines) + '\n'
 
 
@@ -131,6 +138,10 @@ def bridge(abi):
         lines += ['    case ' + literal_member(key.removeprefix(prefix).removesuffix(suffix).lower()) + ' = ' + str(value)
                   for key, value in abi['constants'].items() if key.startswith(prefix) and key.endswith(suffix)]
         lines += ['}']
+    lines += ['func nativeFailureKind(_ code: Int32) -> OwnedFailureKind {', '    switch code {']
+    lines += ['    case ' + str(value) + ': return .' + literal_member(key.removeprefix('THINKTHEN_E').lower())
+              for key, value in abi['constants'].items() if re.fullmatch(r'THINKTHEN_E[A-Z]+', key)]
+    lines += ['    default: return .unknown(String(code))', '    }', '}']
     return '\n'.join(lines) + '\n'
 
 
@@ -169,3 +180,35 @@ def linux_bridge(functions):
         lines += [f'{prototype["return"]} {name}({arguments}) {{',
                   f'    if (!native.{name}) abort();', f'    {returned}native.{name}({passed});', '}']
     return '\n'.join(lines + ['#pragma GCC visibility pop']) + '\n'
+
+
+def ordered_maps():
+    return """public struct InputOrderedEntry<Value: JSONRepresentable>: Sendable {
+    public let key: String
+    public let value: Value
+    public init(_ key: String, _ value: Value) { self.key = key; self.value = value }
+}
+public struct InputOrderedMap<Value: JSONRepresentable>: JSONRepresentable {
+    public let entries: [InputOrderedEntry<Value>]
+    public init(_ entries: [InputOrderedEntry<Value>]) { self.entries = entries }
+    public static func read(_ json: JSONValue) throws -> Self {
+        let members: [JSONMember]
+        switch json.kind {
+        case .orderedObject(let value): members = value
+        case .object(let value): members = value.map { JSONMember($0.key, $0.value) }
+        default: throw JSONConversionError("Expected JSON object")
+        }
+        return Self(try members.map { InputOrderedEntry($0.key, try Value.read($0.value)) })
+    }
+    public var json: JSONValue { .orderedObject(entries.map { JSONMember($0.key, $0.value.json) }) }
+}"""
+
+
+def named_calls(definitions):
+    lines = ['extension Client {']
+    for item in definitions['RequestFunction'].get('oneOf', []):
+        function = item['const']
+        version = literal_member(definitions['RequestVersion']['oneOf'][0]['const'])
+        lines += [f'    public func {function}(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {{',
+                  f'        try await execute(InputRequest(call: InputRequestCall(function: .{literal_member(function)}, input: input, options: options, question: question), schema: .{version}))', '    }']
+    return '\n'.join(lines + ['}'])

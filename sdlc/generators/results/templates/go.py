@@ -19,7 +19,7 @@ def condition(tag):
     if mode=='member': return f'ownedHas(v.raw, {json.dumps(field)})'
     return ' && '.join([f'ownedHas(v.raw, {json.dumps(k)})' for k in value['required']]+[f'!ownedHas(v.raw, {json.dumps(k)})' for k in value['excluded']])
 def render(definitions, input_definitions):
-    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import "encoding/json"']
+    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import ("encoding/json"; "bytes"; "reflect"; "context")']
     for key, raw in definitions.items():
         n=name(key); s=shape(raw)
         lines += [f'type {n} struct {{ ownedJSON }}']
@@ -32,14 +32,20 @@ def render(definitions, input_definitions):
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'func (v {n}) As{cn.removeprefix("Owned")}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errOwnedAlternative }}; return ownedDecode[{cn}](v.raw) }}']
-    return '\n'.join(lines)+'\n'+inputs(input_definitions)
+    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)
 
 
 def usage(header):
     members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
     lines = ['// Generated from the compiler-derived C header; do not edit.', 'package thinkthen', 'type UsagePersistenceState uint32', 'const (']
     lines += ['Usage' + word.title() + ' UsagePersistenceState = ' + value for _, word, value in members]
-    return '\n'.join(lines + [')']) + '\n'
+    lines += [')', 'type ErrorKind int', 'const (']
+    errors = re.findall(r'^#define THINKTHEN_E([A-Z]+) (\d+)\s*$', header, re.M)
+    lines += ['Kind' + word.title() + ' ErrorKind = ' + value for word, value in errors]
+    lines += [')', 'func (k ErrorKind) String() string { switch k {']
+    lines += ['case Kind' + word.title() + ': return ' + json.dumps(word.lower()) for word, _ in errors]
+    lines += ['default: return "unknown"', '} }']
+    return '\n'.join(lines) + '\n'
 
 
 def inputs(definitions):
@@ -47,7 +53,7 @@ def inputs(definitions):
     definitions = dict(definitions)
     pending = ['RequestSessionDescriptor', 'Request', 'EngineSettings', 'RequestOptions', 'RequestQuestion', 'RequestItem', 'RequestSource', 'RequestInput']
     generated = {}
-    lines = []
+    lines = [ordered_maps()]
     def ident(key):
         if key == 'SourceUnit': return 'RequestSourceUnit'
         return ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key))
@@ -64,7 +70,7 @@ def inputs(definitions):
         if t == 'array': return '[]' + field_type(s.get('items', {}), key+'Item')
         if t == 'object' and 'properties' not in s:
             values = s.get('additionalProperties', True)
-            return 'map[string]' + field_type(values, key+'Value')
+            return ('OrderedMap[' + field_type(values, key+'Value') + ']' if s.get('x-preserve-order') else 'map[string]' + field_type(values, key+'Value'))
         if t == 'object' or 'anyOf' in s or 'oneOf' in s:
             definitions[key] = s; pending.append(key); return ident(key)
         return {'string':'string', 'boolean':'bool', 'integer':('uint64' if str(s.get('format','')).startswith('uint') else 'int64'), 'number':'float64'}.get(t, 'any')
@@ -126,4 +132,43 @@ def inputs(definitions):
         ft=field_type(s,key+'Value')
         nullable = isinstance(s.get('type'),list) and 'null' in s['type']
         lines.append(f'type {n} = *{ft}' if nullable else f'type {n} {ft}')
+        if s.get('x-preserve-order'):
+            lines += [f'func (v {n}) MarshalJSON() ([]byte,error) {{ return {ft}(v).MarshalJSON() }}', f'func (v *{n}) UnmarshalJSON(data []byte) error {{ return (*{ft})(v).UnmarshalJSON(data) }}']
     return '\n'.join(lines)+'\n'
+
+
+def ordered_maps():
+    """JSON object transport keeps pair order, including duplicates for Rust refusal."""
+    return r'''// OrderedEntry carries one authored object member.
+type OrderedEntry[V any] struct { Key string; Value V }
+type OrderedMap[V any] []OrderedEntry[V]
+func (v OrderedMap[V]) MarshalJSON() ([]byte,error) {
+    if v == nil { return []byte("null"),nil }
+    var out bytes.Buffer; out.WriteByte('{')
+    for i,entry := range v {
+        key,err:=json.Marshal(entry.Key); if err!=nil { return nil,err }
+        value,err:=json.Marshal(entry.Value); if err!=nil { return nil,err }
+        if i>0 { out.WriteByte(',') }; out.Write(key); out.WriteByte(':'); out.Write(value)
+    }
+    out.WriteByte('}'); return out.Bytes(),nil
+}
+func (v *OrderedMap[V]) UnmarshalJSON(data []byte) error {
+    if bytes.Equal(bytes.TrimSpace(data),[]byte("null")) { *v=nil; return nil }
+    decoder:=json.NewDecoder(bytes.NewReader(data)); token,err:=decoder.Token()
+    if err!=nil { return err }; if token!=json.Delim('{') { return &json.UnmarshalTypeError{Value:"non-object",Type:reflect.TypeOf(*v)} }
+    entries:=make(OrderedMap[V],0)
+    for decoder.More() {
+        token,err=decoder.Token(); if err!=nil { return err }; var value V
+        if err=decoder.Decode(&value);err!=nil { return err }
+        entries=append(entries,OrderedEntry[V]{Key:token.(string),Value:value})
+    }
+    if _,err=decoder.Token();err!=nil { return err }; *v=entries; return nil
+}
+'''
+
+
+def named_calls(definitions):
+    functions = definitions['RequestFunction'].get('oneOf', [])
+    return '\n'.join(
+        f'func (c *Client) {item["const"].title()}(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall,error) {{ return c.call(ctx,{json.dumps(item["const"])},question,input,options) }}'
+        for item in functions) + '\n'
