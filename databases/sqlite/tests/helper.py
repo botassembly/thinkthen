@@ -27,7 +27,7 @@ from children import child_env  # noqa: E402  the shared helper, ticket 0127
 BUILT = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target"))
 SUFFIX = "dylib" if sys.platform == "darwin" else "so"
 LIB = pathlib.Path(os.environ.get("THINKTHEN_SQLITE_EXTENSION", BUILT / "release" / f"libthinkthen0.{SUFFIX}"))
-BACKEND = os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend"))
+BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", os.environ.get("THINKTHEN_BACKEND", str(pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT.parents[1] / "target")) / "debug" / "conformance-backend")))
 CLI = os.environ.get("THINKTHEN_SQLITE_CLI", str(pathlib.Path.home() / ".cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3"))
 LOOPBACK_KEY = "sk-sqlite-loopback"
 LIVE: list[subprocess.Popen] = []
@@ -128,7 +128,7 @@ def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> 
         XDG_CONFIG_HOME=str(scratch / "xdg-config"),
         SCRATCH=str(scratch),
     )
-    held.update(THINKTHEN_SQLITE_EXTENSION=str(LIB), THINKTHEN_BACKEND=str(BACKEND),
+    held.update(THINKTHEN_SQLITE_EXTENSION=str(LIB), THINKTHEN_BACKEND_BIN=str(BACKEND),
                 THINKTHEN_SQLITE_CLI=str(CLI))
     if backend is not None:
         held.update(THINKTHEN_BASE_URL=backend.base(arm), THINKTHEN_API_KEY=LOOPBACK_KEY)
