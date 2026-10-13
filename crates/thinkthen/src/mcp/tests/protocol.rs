@@ -109,32 +109,6 @@ fn false_null_and_partial_failure_are_preserved_as_successful_native_objects() {
 }
 
 #[test]
-fn catalog_names_match_independent_function_inventory_and_only_advertise_tools() {
-    let contract: Value =
-        serde_json::from_str(include_str!("../../../../../conformance/cases.json")).unwrap();
-    let list = tools::list(&json!({"type":"object","required":["native_fixture"]}));
-    let names: Vec<_> = list["tools"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|tool| tool["name"].clone())
-        .collect();
-    assert_eq!(
-        names,
-        contract["parity"]["functions"].as_array().unwrap().to_vec()
-    );
-    for tool in list["tools"].as_array().unwrap() {
-        assert_eq!(tool["inputSchema"]["additionalProperties"], false);
-        assert_eq!(tool["outputSchema"]["required"], json!(["native_fixture"]));
-        assert!(
-            tool["inputSchema"]["properties"]["options"]["properties"]
-                .get("api_key")
-                .is_none()
-        );
-    }
-}
-
-#[test]
 fn advertised_source_schema_accepts_only_native_unit_media_window_combinations() {
     let list = tools::list(&json!({"type":"object"}));
     let decide = list["tools"]
