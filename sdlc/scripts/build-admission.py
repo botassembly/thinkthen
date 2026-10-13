@@ -77,26 +77,50 @@ def admit(fd, priority, directory, deadline):
         time.sleep(POLL)
 
 
+def child_pids():
+    return {int(pid) for task in Path('/proc/self/task').iterdir()
+            for pid in (task / 'children').read_text().split()}
+
+
+def reap_descendants(excluded, terminate=False):
+    # The subreaper adopts this command's descendants even after setsid or
+    # setpgrp. Killing a parent brings its children here on the next pass.
+    while True:
+        owned = child_pids() - excluded
+        if not owned:
+            return
+        for pid in owned:
+            if terminate:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            try:
+                os.waitpid(pid, os.WNOHANG)
+            except ChildProcessError:
+                pass
+        if not terminate:
+            return
+        time.sleep(POLL)
+
+
 def run_owned(command, env, deadline):
     if sys.platform == 'linux':
         libc = ctypes.CDLL(None, use_errno=True)
         if libc.prctl(36, 1, 0, 0, 0):  # PR_SET_CHILD_SUBREAPER
             raise OSError(ctypes.get_errno(), 'cannot own build descendants')
+    existing = child_pids() if sys.platform == 'linux' else set()
     blocked = {signal.SIGTERM, signal.SIGINT, signal.SIGHUP}
     previous_mask = signal.pthread_sigmask(signal.SIG_BLOCK, blocked)
-    child = subprocess.Popen(command, env=env, start_new_session=True, close_fds=True)
+    child = None
     try:
+        child = subprocess.Popen(command, env=env, start_new_session=True, close_fds=True,
+                                 preexec_fn=lambda: signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask))
         signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
         while True:
             # Reap adopted descendants while their harness is alive too.
             if sys.platform == 'linux':
-                for task in Path('/proc/self/task').iterdir():
-                    for pid in map(int, (task / 'children').read_text().split()):
-                        if pid != child.pid:
-                            try:
-                                os.waitpid(pid, os.WNOHANG)
-                            except ChildProcessError:
-                                pass
+                reap_descendants(existing | {child.pid})
             if deadline is not None and time.monotonic() >= deadline:
                 raise TimeoutError('build timed out')
             try:
@@ -106,19 +130,21 @@ def run_owned(command, env, deadline):
                 continue
     finally:
         signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGTERM, signal.SIGINT, signal.SIGHUP})
-        # A successful compiler may still leave a daemon. Kill it before
-        # releasing its permit, then reap every adopted member of our group.
-        try:
-            os.killpg(child.pid, signal.SIGKILL)
-        except ProcessLookupError:
-            pass
-        child.wait()
-        if sys.platform == 'linux':
-            while True:
+        if child is None:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous_mask)
+        else:
+            # A successful compiler may still leave a daemon. Kill it before
+            # releasing its permit, including descendants outside its group.
+            if sys.platform == 'linux':
+                child.kill()
+            else:
                 try:
-                    os.waitpid(-child.pid, 0)
-                except ChildProcessError:
-                    break
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            child.wait()
+            if sys.platform == 'linux':
+                reap_descendants(existing, terminate=True)
 
 
 def main():

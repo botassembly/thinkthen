@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Real process regressions for shared compiler admission and ownership."""
+import ctypes
 import fcntl
 import os
 from pathlib import Path
@@ -18,18 +19,30 @@ COMPILER = 'import pathlib,sys,time; p=pathlib.Path(sys.argv[1]); p.with_suffix(
 
 class Admission(unittest.TestCase):
     def setUp(self):
+        if sys.platform == 'linux':
+            self.assertEqual(ctypes.CDLL(None).prctl(36, 1, 0, 0, 0), 0)
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.lock = self.root / 'lock'
         self.load = self.root / 'load'
         self.load.write_text('0')
         self.children = []
+        self.descendants = []
 
     def tearDown(self):
         for child in self.children:
             if child.poll() is None:
                 child.terminate()
             child.wait(timeout=2)
+        for pid in self.descendants:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            try:
+                os.waitpid(pid, 0)
+            except ChildProcessError:
+                pass
         self.temporary.cleanup()
 
     def launch(self, name, priority='normal', command=None, timeout=None):
@@ -99,6 +112,41 @@ class Admission(unittest.TestCase):
             with self.lock.open('a+b') as legacy:
                 fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 fcntl.lockf(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    @unittest.skipUnless(sys.platform == 'linux', 'Linux descendant ownership')
+    def test_detached_descendants_are_reaped_before_permits_release(self):
+        unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)'])
+        self.children.append(unrelated)
+        for mode in ('exit', 'timeout', 'terminate', 'interrupt', 'hangup'):
+            with self.subTest(mode=mode):
+                pidfile = self.root / (mode + '.detached')
+                code = ('import subprocess,sys,time,pathlib; '
+                        'p=subprocess.Popen([sys.executable,"-c","import time; time.sleep(30)"],start_new_session=True); '
+                        'pathlib.Path(sys.argv[1]).write_text(str(p.pid)); ' +
+                        ('sys.exit(23)' if mode == 'exit' else 'time.sleep(30)'))
+                child = self.launch(mode, command=[sys.executable, '-c', code, str(pidfile)], timeout=.3 if mode == 'timeout' else None)
+                self.wait_for(pidfile.exists)
+                pid = int(pidfile.read_text())
+                self.descendants.append(pid)
+                signum = {'terminate': signal.SIGTERM, 'interrupt': signal.SIGINT, 'hangup': signal.SIGHUP}.get(mode)
+                if signum:
+                    child.send_signal(signum)
+                self.assertEqual(child.wait(timeout=2), 128 + signum if signum else {'exit': 23, 'timeout': 124}[mode])
+                with self.assertRaises(ProcessLookupError):
+                    os.kill(pid, 0)
+                self.assertIsNone(unrelated.poll())
+                with self.lock.open('a+b') as legacy:
+                    fcntl.flock(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    fcntl.lockf(legacy, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def test_child_inherits_original_signal_mask(self):
+        code = 'import signal; assert signal.pthread_sigmask(signal.SIG_BLOCK,set()) == {signal.SIGUSR1}'
+        previous = signal.pthread_sigmask(signal.SIG_BLOCK, {signal.SIGUSR1})
+        try:
+            child = self.launch('mask', command=[sys.executable, '-c', code])
+        finally:
+            signal.pthread_sigmask(signal.SIG_SETMASK, previous)
+        self.assertEqual(child.wait(timeout=2), 0)
 
     def test_wait_timeout_removes_priority_and_child_inherits_no_lock_descriptor(self):
         with self.lock.open('a+b') as legacy:
