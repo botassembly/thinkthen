@@ -61,6 +61,25 @@ The keyed input is a JSON object of original row keys to nonblank text; repeated
 
 Each SQL call still needs the caller's judgment about whether to spend. Correlated scalar calls can send once per source row. For a large join, aggregate its keyed JSON once, then join the table result. `tests/slide.sql` is a runnable small example of that shape.
 
+## Name keyed call parameters
+
+The keyed judgment and rank tables also accept optional arguments by hidden-column name:
+
+```sql
+SELECT key, value, probability
+FROM thinkthen_decide_many('Is it red?', '{"7":"A red door."}')
+WHERE model = 'judge-model' AND context = 'Describe the visible color.'
+  AND batch = 2 AND threshold = '0.3:0.7';
+
+SELECT key, value, probability
+FROM thinkthen_choose_many('Which team?', '{"7":"Please track my parcel."}')
+WHERE options = '{"shipping":"Parcel questions","billing":"Money questions"}';
+```
+
+Named `model`, `context`, `threshold`, `true_reading` and `false_reading` take SQL text. `batch` and `deadline_ms` take SQL integers. `options`, `levels` and `labels` take ordered JSON label arrays or description maps as SQL text; their entries retain the native member grammar and authored order. `none` takes the SQL integers 0 and 1. Each function still applies its own allowed settings grammar. Named NULL values omit that setting. Supplying the same field by name and in the settings object raises usage before sending. Required NULL inputs still return no rows before inspecting these parameters.
+
+Names and positions appear in `pragma_table_xinfo('thinkthen_decide_many')` and the discovery catalog reports the expanded argument range. Named parameters merge into the same native settings object before the connection cache lookup. The effective settings participate in cache identity, so changing context cannot reuse a previous context's rows. Existing positional settings retain their original bytes and behavior.
+
 ## Rank a table once
 
 ```sql

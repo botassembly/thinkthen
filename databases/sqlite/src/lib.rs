@@ -26,6 +26,7 @@ mod ffi;
 mod files;
 mod images;
 mod many;
+mod named;
 mod question;
 mod rank_set;
 mod recognize_document;

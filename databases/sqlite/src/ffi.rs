@@ -354,7 +354,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
         // SAFETY: the handle belongs to this connection and outlives the table.
         let handle = unsafe { db.handle() };
         Ok((
-            Cow::Borrowed(T::SCHEMA),
+            T::schema().map_err(rusqlite::Error::from)?,
             Self {
                 base: ffi::sqlite3_vtab::default(),
                 db: handle,

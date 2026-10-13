@@ -29,6 +29,9 @@ pub(crate) trait Table {
     const NAME: &'static str;
     /// The declared columns; the arguments are the hidden ones at the end.
     const SCHEMA: &'static CStr;
+    fn schema() -> Result<std::borrow::Cow<'static, CStr>, Failure> {
+        Ok(std::borrow::Cow::Borrowed(Self::SCHEMA))
+    }
     /// The first hidden column.
     const FIRST_HIDDEN: usize;
     /// Every column.
