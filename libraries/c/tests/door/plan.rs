@@ -26,7 +26,28 @@ fn canonical_request_preview_owns_bytes_and_sends_nothing() {
         .output()
         .expect("the canonical preview program ran");
     super::successful(&output);
-    let plan: serde_json::Value = serde_json::from_slice(&output.stdout).expect("native plan JSON");
+    let lines = output
+        .stdout
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty())
+        .collect::<Vec<_>>();
+    assert_eq!(
+        lines.len(),
+        3,
+        "typed graph, named graph and existing Rust serializer"
+    );
+    assert_eq!(
+        lines.first(),
+        lines.last(),
+        "typed Plan preserves exact Rust serialization"
+    );
+    assert_eq!(
+        lines.get(1),
+        lines.last(),
+        "named Plan preserves exact Rust serialization"
+    );
+    let plan: serde_json::Value =
+        serde_json::from_slice(lines.last().expect("Plan JSON")).expect("native plan JSON");
     assert_eq!(plan["records"], 1);
     assert_eq!(plan["requests"], 1);
     assert_eq!(plan["first_body_utf8"], BODY);

@@ -5,7 +5,7 @@ use crate::ffi::carriers::{
 };
 use crate::ffi::values as abi;
 use thinkthen::{InputDeclaration, InputPropertyType, QuestionName, WordingVersion};
-#[derive(Clone, Default)]
+#[derive(Default)]
 pub(crate) struct Author {
     pub(crate) name: Option<QuestionName>,
     pub(crate) version: Option<WordingVersion>,
@@ -40,21 +40,14 @@ macro_rules! native_author {
 }
 pub(crate) use native_author;
 pub(crate) struct AuthorOwner {
-    data: Author,
     _storage: Storage,
     pub(crate) view: QuestionAuthorV1,
-}
-impl Clone for AuthorOwner {
-    fn clone(&self) -> Self {
-        Self::new(self.data.clone())
-    }
 }
 impl AuthorOwner {
     pub(crate) fn new(data: Author) -> Self {
         let mut storage = Storage::default();
         let view = storage.author(&data);
         Self {
-            data,
             _storage: storage,
             view,
         }

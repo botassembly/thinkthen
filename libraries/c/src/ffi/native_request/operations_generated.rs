@@ -6,6 +6,46 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
 use thinkthen::ErrorKind;
+/// Preview typed arguments through existing Rust admission without sessions or sends.
+/// Exact Plan values match the existing Rust serializer. COBOL whole arbitrary-value
+/// capacity applies before admission; input pointers never survive return.
+/// Success transfers an independent immutable canonical value owner; free with value_free.
+/// Refusal preserves out and records only this thread immediate session diagnostic.
+/// # Safety
+/// engine is live; function/surface are readable counted UTF-8. The aligned argument
+/// tree has valid counted extents, and out is nonnull aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_request_plan_typed_value(
+    engine: *const crate::EngineHandle,
+    function: crate::session::views::thinkthen_complete_utf8_v1,
+    arguments: *const super::carriers::thinkthen_request_arguments_v1,
+    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    out: *mut *mut crate::session::views::ValueHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe {
+            super::typed_plan(
+                engine,
+                function,
+                arguments,
+                surface_name,
+                super::super::request_preview::value_output,
+            )
+        }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
 /// Build from environment plus canonical typed settings. NULL uses environment alone.
 /// Copies the finite aligned carrier tree; no foreign pointer survives return.
 /// Construction sends nothing. Failure returns NULL in the calling thread constructor slot.
@@ -109,8 +149,15 @@ pub unsafe extern "C" fn thinkthen_request_plan_typed_json(
         // SAFETY: the caller retains this live owner throughout the operation.
         let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
         // SAFETY: the caller retains counted input trees until the native helper returns.
-        let (value_out, value_out_len) =
-            unsafe { super::typed_plan(engine, function, arguments, surface_name) }?;
+        let (value_out, value_out_len) = unsafe {
+            super::typed_plan(
+                engine,
+                function,
+                arguments,
+                surface_name,
+                super::super::request_preview::json_output,
+            )
+        }?;
         // SAFETY: every slot was validated before the native operation; success publishes once.
         unsafe {
             *out = value_out;

@@ -53,6 +53,26 @@ pub(crate) fn ready_status(value: thinkthen::RequestSessionReady) -> u32 {
         thinkthen::RequestSessionReady::Timeout => THINKTHEN_SESSION_READY_TIMEOUT_V1,
     }
 }
+pub(crate) fn failure_code(value: thinkthen::ErrorKind) -> i32 {
+    match value {
+        thinkthen::ErrorKind::Usage => crate::ffi::values::THINKTHEN_EUSAGE,
+        thinkthen::ErrorKind::Backend => crate::ffi::values::THINKTHEN_EBACKEND,
+        thinkthen::ErrorKind::Deadline => crate::ffi::values::THINKTHEN_EDEADLINE,
+        thinkthen::ErrorKind::Local => crate::ffi::values::THINKTHEN_ELOCAL,
+        thinkthen::ErrorKind::Cancelled => crate::ffi::values::THINKTHEN_ECANCELLED,
+        thinkthen::ErrorKind::Defect => crate::ffi::values::THINKTHEN_EDEFECT,
+    }
+}
+pub(crate) fn failure_message(value: thinkthen::ErrorKind) -> &'static str {
+    match value {
+        thinkthen::ErrorKind::Usage => "invalid session arguments or input",
+        thinkthen::ErrorKind::Backend => "session backend refused the operation",
+        thinkthen::ErrorKind::Deadline => "session deadline expired",
+        thinkthen::ErrorKind::Local => "session local operation failed",
+        thinkthen::ErrorKind::Cancelled => "session operation cancelled",
+        thinkthen::ErrorKind::Defect => "defect: a session operation failed",
+    }
+}
 /// Borrow the calling thread immediate session failure, or NULL before failure.
 /// Success, getters, engine calls and terminal packets preserve this independent slot.
 /// The root, safe message and every typed optional fact remain valid until the next

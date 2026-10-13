@@ -174,6 +174,9 @@ impl<'a> Node<'a> {
         };
         Ok(Self { raw, value })
     }
+    pub(crate) fn raw_text(&self) -> &str {
+        self.raw.get()
+    }
     pub(crate) fn kind(&self) -> &'static str {
         match self.value {
             Kind::Null => "null",
@@ -233,82 +236,41 @@ impl<'a> Node<'a> {
     }
 }
 
-pub(crate) fn read_json(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<*const thinkthen_complete_json_v1, ErrorKind> {
-    let (kind, data) = match &node.value {
-        Kind::Null => (
-            THINKTHEN_COMPLETE_JSON_NULL_V1,
-            thinkthen_complete_json_data_v1 { boolean: 0 },
-        ),
-        Kind::Boolean(value) => (
-            THINKTHEN_COMPLETE_JSON_BOOLEAN_V1,
-            thinkthen_complete_json_data_v1 {
-                boolean: u32::from(*value),
-            },
-        ),
-        Kind::Number => (
-            THINKTHEN_COMPLETE_JSON_NUMBER_V1,
-            thinkthen_complete_json_data_v1 {
-                number: store.text(node.raw.get()),
-            },
-        ),
-        Kind::String(value) => (
-            THINKTHEN_COMPLETE_JSON_STRING_V1,
-            thinkthen_complete_json_data_v1 {
-                string: store.text(value),
-            },
-        ),
-        Kind::Array(values) => {
-            let mut copied = Vec::new();
-            for value in values {
-                copied.push(read_json(value, store)?);
-            }
-            let (data, len) = store.slice(copied);
-            (
-                THINKTHEN_COMPLETE_JSON_ARRAY_V1,
-                thinkthen_complete_json_data_v1 {
-                    array: thinkthen_complete_json_array_v1 { data, len },
-                },
-            )
-        }
-        Kind::Object(values) => {
-            let mut copied = Vec::new();
-            for (name, value) in values {
-                copied.push(thinkthen_complete_json_entry_v1 {
-                    name: store.text(name),
-                    value: read_json(value, store)?,
-                });
-            }
-            let (data, len) = store.slice(copied);
-            (
-                THINKTHEN_COMPLETE_JSON_OBJECT_V1,
-                thinkthen_complete_json_data_v1 {
-                    object: thinkthen_complete_json_object_v1 { data, len },
-                },
-            )
-        }
-    };
-    Ok(store.hold(thinkthen_complete_json_v1 { kind, data }))
-}
-
 #[derive(Debug)]
-pub(crate) struct Projection {
+pub(crate) struct Projection<T = super::views_generated::thinkthen_complete_session_packet_v1> {
     _storage: Storage,
-    pub(crate) root: *const super::views_generated::thinkthen_complete_session_packet_v1,
+    pub(crate) root: *const T,
 }
 impl Projection {
     pub(crate) fn new(text: &str) -> Result<Self, ErrorKind> {
+        Self::with(text, |node, storage| {
+            let packet =
+                super::views_generated::read_thinkthen_complete_session_packet_v1(node, storage)?;
+            Ok(storage.hold(packet))
+        })
+    }
+}
+impl<T> Projection<T> {
+    fn with(
+        text: &str,
+        read: impl FnOnce(&Node, &mut Storage) -> Result<*const T, ErrorKind>,
+    ) -> Result<Self, ErrorKind> {
         let node = Node::parse(text)?;
         let mut storage = Storage::default();
-        let packet =
-            super::views_generated::read_thinkthen_complete_session_packet_v1(&node, &mut storage)?;
-        let root = storage.hold(packet);
+        let root = read(&node, &mut storage)?;
         Ok(Self {
             _storage: storage,
             root,
         })
+    }
+}
+
+/// Independent immutable canonical value owner. Free after every borrower finishes.
+#[derive(Debug)]
+pub struct ValueHandle(pub(crate) Projection<thinkthen_complete_json_v1>);
+impl ValueHandle {
+    pub(crate) fn new(text: &str) -> Result<Self, ErrorKind> {
+        Projection::with(text, read_json).map(Self)
     }
 }
 

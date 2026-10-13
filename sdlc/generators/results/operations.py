@@ -4,6 +4,7 @@ Semantic decoding, admission, allocation and waiting remain Rust helpers. No
 operation record contains executable wrapper bodies.
 """
 from dataclasses import dataclass
+import json
 
 
 @dataclass(frozen=True)
@@ -54,6 +55,31 @@ OPERATIONS = (
          Argument('json', 'crate::ffi::carriers::StringV1'),
          Argument('out', '*mut *mut crate::current::QuestionHandle', 'transfer', lifetime='question_free')),
         'author::parse_question', ('role', 'json'), ('out',), 'engine_call', native_unsafe=True),
+    Operation('question', 'thinkthen_question_value',
+        '/// Borrow the already-admitted saved grammar, preserving omissions and ordered values.\n/// Root and nested backing remain immutable and stable until question_free, including\n/// after source bytes or the parsing engine are freed. Author metadata is unchanged.\n/// NULL owner or output returns EUSAGE; refusal preserves output and diagnostic slots.\n/// # Safety\n/// owner is live for every borrower; out is aligned writable pointer storage.\n',
+        (Argument('owner', '*const crate::current::QuestionHandle', 'borrow'),
+         Argument('out', '*mut *const crate::session::views::thinkthen_complete_json_v1', 'borrowed-output', lifetime='question_free')),
+        'author::question_value', ('owner',), ('out',), 'plain_call'),
+    Operation('engine', 'thinkthen_value_view',
+        '/// Borrow the immutable canonical value root and nested backing until value_free.\n/// Repeated and concurrent getters preserve identical pointers and prior diagnostics.\n/// NULL owner or output returns EUSAGE without publishing; outputs remain untouched.\n/// # Safety\n/// owner remains live for every borrower; out is aligned writable pointer storage.\n',
+        (Argument('owner', '*const crate::session::views::ValueHandle', 'borrow'),
+         Argument('out', '*mut *const crate::session::views::thinkthen_complete_json_v1', 'borrowed-output', lifetime='value_free')),
+        'request_preview::value_view', ('owner',), ('out',), 'session_call'),
+    Operation('engine', 'thinkthen_value_free',
+        '/// Free an independent canonical value owner; NULL is ignored.\n/// # Safety\n/// owner is NULL or unfreed, after every operation and borrowed view finishes.\n',
+        (Argument('owner', '*mut crate::session::views::ValueHandle', 'consume-nullable'),),
+        'release_box', ('owner',), (), 'constructor_guard', '()', '()'),
+    Operation('engine', 'thinkthen_request_plan_named_value',
+        '/// Preview named canonical components through existing Rust admission, without\n/// reading a key/cache, constructing a session or sending. Fixed atomic questions\n/// match the existing Plan serializer; unsupported functions/questions refuse.\n/// Success transfers an independent owned canonical value; free with value_free.\n/// Source bytes and engine may be freed on return. Failure leaves out untouched\n/// and records only the calling thread immediate session diagnostic.\n/// # Safety\n/// engine is live; request is an aligned live record with readable counted UTF-8.\n/// out is nonnull aligned writable pointer storage.\n',
+        (Argument('engine', '*const EngineHandle', 'borrow'), Argument('request', '*const NamedRequestV1'),
+         Argument('out', '*mut *mut crate::session::views::ValueHandle', 'transfer', lifetime='value_free')),
+        'request_preview::named_plan', ('engine', 'request'), ('out',), 'session_native_call', native_unsafe=True),
+    Operation('typed', 'thinkthen_request_plan_typed_value',
+        '/// Preview typed arguments through existing Rust admission without sessions or sends.\n/// Exact Plan values match the existing Rust serializer. COBOL whole arbitrary-value\n/// capacity applies before admission; input pointers never survive return.\n/// Success transfers an independent immutable canonical value owner; free with value_free.\n/// Refusal preserves out and records only this thread immediate session diagnostic.\n/// # Safety\n/// engine is live; function/surface are readable counted UTF-8. The aligned argument\n/// tree has valid counted extents, and out is nonnull aligned writable pointer storage.\n',
+        (Argument('engine', '*const EngineHandle', 'borrow'), Argument('function', 'thinkthen_complete_utf8_v1'),
+         Argument('arguments', '*const carriers::thinkthen_request_arguments_v1'), Argument('surface_name', 'thinkthen_complete_utf8_v1'),
+         Argument('out', '*mut *mut crate::session::views::ValueHandle', 'transfer', lifetime='value_free')),
+        'typed_plan', ('engine', 'function', 'arguments', 'surface_name', '@super::super::request_preview::value_output'), ('out',), 'session_native_call', native_unsafe=True),
     Operation('engine', 'thinkthen_engine_new_with',
         '/// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.\n/// Construction sends nothing; failures return NULL and occupy the constructor slot.\n/// # Safety\n/// settings_json is NULL or live NUL-terminated UTF-8 for the call.\n',
         (Argument('settings_json', '*const c_char'),),
@@ -201,7 +227,7 @@ OPERATIONS = (
             Argument('surface_name', 'thinkthen_complete_utf8_v1', 'input'),
             Argument('out', '*mut *mut c_char', 'transfer', lifetime='free_string'),
             Argument('out_len', '*mut usize', 'transfer'),
-        ), 'typed_plan', ('engine', 'function', 'arguments', 'surface_name'), ('out', 'out_len'), 'session_native_call', native_unsafe=True),
+        ), 'typed_plan', ('engine', 'function', 'arguments', 'surface_name', '@super::super::request_preview::json_output'), ('out', 'out_len'), 'session_native_call', native_unsafe=True),
     Operation('typed', 'thinkthen_session_new_typed_with_surface', '/// Construct a named request from counted typed argument records through Rust.\n/// The carrier tree copies strings, arrays, maps and explicit null alternatives;\n/// no pointer survives return. Rust alone admits questions, controls and evidence.\n/// COBOL retains its 8192-byte capacity per scalar, including image/base64 text;\n/// overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.\n/// All output, error-slot and engine lifetime rules match the named constructor.\n/// # Safety\n/// engine is live and out is writable, nonnull. function and surface are counted\n/// UTF-8 views. arguments and its entire finite carrier tree remain aligned and\n/// readable throughout the call. Each pointer/length covers its declared element\n/// type and fits Rust slices. Required pointers are nonnull; optional NULL means\n/// missing. A tagged null arm means explicit null. Inputs may be freed on return.\n',
         (
             Argument('engine', '*const EngineHandle', 'borrow', None),
@@ -246,15 +272,29 @@ OPERATIONS = (
 # Native status projections preserve their established public integer values.
 STATUSES = (('THINKTHEN_SESSION_ACCEPTED_V1', 0, 'Push transferred one descriptor to the session.'), ('THINKTHEN_SESSION_FULL_V1', 1, 'Push retained nothing; retry the same descriptor.'), ('THINKTHEN_SESSION_CLOSED_V1', 2, 'Intake closed; stop advancing the producer.'), ('THINKTHEN_SESSION_RESULT_V1', 0, 'Read transferred one independent packet owner.'), ('THINKTHEN_SESSION_PENDING_V1', 1, 'Work has not settled and no packet is ready.'), ('THINKTHEN_SESSION_END_V1', 2, 'Terminal was read and no more output will arrive.'), ('THINKTHEN_SESSION_WAIT_RESULT_V1', 0, 'Wait only for results, end or cancel; input room cannot wake this wait.'), ('THINKTHEN_SESSION_WAIT_INPUT_V1', 1, 'Wait for result, input room/closure, end or cancel.'), ('THINKTHEN_SESSION_WAIT_SETTLEMENT_V1', 2, 'Drain output after cancel without waking repeatedly for cancellation.'), ('THINKTHEN_SESSION_READY_RESULT_V1', 0, 'A result or terminal packet is ready; no packet has been consumed.'), ('THINKTHEN_SESSION_READY_INPUT_V1', 1, 'Caller-supplied input has room.'), ('THINKTHEN_SESSION_READY_CLOSED_V1', 2, 'Caller-supplied input has closed.'), ('THINKTHEN_SESSION_READY_END_V1', 3, 'Every output packet has been consumed.'), ('THINKTHEN_SESSION_READY_CANCELLED_V1', 4, 'Intake was cancelled; settlement can still be pending.'), ('THINKTHEN_SESSION_READY_TIMEOUT_V1', 5, 'The caller-given timeout passed.'))
 PROJECTIONS = (
-    ('push_status', 'thinkthen::RequestSessionPushStatus', (
+    ('push_status', 'thinkthen::RequestSessionPushStatus', 'u32', (
         ('Accepted', 'THINKTHEN_SESSION_ACCEPTED_V1'),
         ('Full', 'THINKTHEN_SESSION_FULL_V1'),
         ('Closed', 'THINKTHEN_SESSION_CLOSED_V1'))),
-    ('ready_status', 'thinkthen::RequestSessionReady', (
+    ('ready_status', 'thinkthen::RequestSessionReady', 'u32', (
         ('Result', 'THINKTHEN_SESSION_READY_RESULT_V1'),
         ('Input', 'THINKTHEN_SESSION_READY_INPUT_V1'),
         ('Closed', 'THINKTHEN_SESSION_READY_CLOSED_V1'),
         ('End', 'THINKTHEN_SESSION_READY_END_V1'),
         ('Cancelled', 'THINKTHEN_SESSION_READY_CANCELLED_V1'),
         ('Timeout', 'THINKTHEN_SESSION_READY_TIMEOUT_V1'))),
+)
+
+# One native ErrorKind inventory drives the established codes and safe defaults.
+FAILURE_KINDS = (
+    ('Usage', 'THINKTHEN_EUSAGE', 'invalid session arguments or input'),
+    ('Backend', 'THINKTHEN_EBACKEND', 'session backend refused the operation'),
+    ('Deadline', 'THINKTHEN_EDEADLINE', 'session deadline expired'),
+    ('Local', 'THINKTHEN_ELOCAL', 'session local operation failed'),
+    ('Cancelled', 'THINKTHEN_ECANCELLED', 'session operation cancelled'),
+    ('Defect', 'THINKTHEN_EDEFECT', 'defect: a session operation failed'),
+)
+PROJECTIONS += (
+    ('failure_code', 'thinkthen::ErrorKind', 'i32', tuple((kind, 'crate::ffi::values::' + code) for kind, code, _ in FAILURE_KINDS)),
+    ('failure_message', 'thinkthen::ErrorKind', "&'static str", tuple((kind, json.dumps(message)) for kind, _, message in FAILURE_KINDS)),
 )

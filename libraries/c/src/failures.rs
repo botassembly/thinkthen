@@ -21,17 +21,7 @@ pub(crate) const USAGE: i32 = abi::THINKTHEN_EUSAGE;
 /// The header's defect code, the guard's answer when a panic reached it.
 pub(crate) const DEFECT: i32 = abi::THINKTHEN_EDEFECT;
 
-/// The header's code for a kind, in the header's own order.
-const fn code_of(kind: ErrorKind) -> i32 {
-    match kind {
-        ErrorKind::Usage => USAGE,
-        ErrorKind::Backend => abi::THINKTHEN_EBACKEND,
-        ErrorKind::Deadline => abi::THINKTHEN_EDEADLINE,
-        ErrorKind::Local => abi::THINKTHEN_ELOCAL,
-        ErrorKind::Cancelled => abi::THINKTHEN_ECANCELLED,
-        ErrorKind::Defect => DEFECT,
-    }
-}
+use crate::ffi::session::{failure_code as code_of, failure_message};
 
 /// One failure the interface reports: its code, the retry signal, and a message
 /// safe to log.
@@ -90,15 +80,7 @@ impl Failure {
 
 impl From<ErrorKind> for Failure {
     fn from(kind: ErrorKind) -> Self {
-        let message = match kind {
-            ErrorKind::Usage => "invalid session arguments or input",
-            ErrorKind::Backend => "session backend refused the operation",
-            ErrorKind::Deadline => "session deadline expired",
-            ErrorKind::Local => "session local operation failed",
-            ErrorKind::Cancelled => "session operation cancelled",
-            ErrorKind::Defect => "defect: a session operation failed",
-        };
-        thinkthen::Error::new(kind, message).into()
+        thinkthen::Error::new(kind, failure_message(kind)).into()
     }
 }
 

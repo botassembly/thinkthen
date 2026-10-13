@@ -36,5 +36,6 @@ pub(crate) fn parse_role(role: u32, json: &str) -> Result<QuestionHandle, Failur
     };
     Ok(QuestionHandle {
         author: Box::new(AuthorOwner::new(author)),
+        definition: crate::session::views::ValueHandle::new(json)?,
     })
 }

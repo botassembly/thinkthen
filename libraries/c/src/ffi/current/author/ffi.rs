@@ -30,3 +30,9 @@ pub(super) unsafe fn parse_question(
     let value = current::question::parse_role(role, unsafe { read::string(json) }?)?;
     Ok(Box::into_raw(Box::new(value)))
 }
+
+pub(super) fn question_value(
+    owner: &QuestionHandle,
+) -> Result<*const crate::session::views::thinkthen_complete_json_v1, thinkthen::ErrorKind> {
+    super::super::request_preview::value_view(&owner.definition)
+}
