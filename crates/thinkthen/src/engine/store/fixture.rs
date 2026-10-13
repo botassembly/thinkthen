@@ -12,8 +12,8 @@ use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 
 use super::{Found, JSONL, SQLITE, exists, storage};
-use crate::core::pack::{QuestionKey, State, model_json};
-use crate::core::{ReportedUsage, Url, bytes_sha256, hex};
+use crate::core::pack::{QuestionKey, State};
+use crate::core::{ReportedUsage, bytes_sha256, hex};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
@@ -153,27 +153,14 @@ impl Entries {
                 }
                 self.originals.insert(original.digest.clone(), original);
             }
-            Line::Answer(answer) => self.take_answer(answer, line)?,
+            Line::Answer(answer) => self.take_answer(answer)?,
         }
         Ok(())
     }
 
-    fn take_answer(&mut self, mut answer: Answer, line: &str) -> Result<(), &'static str> {
-        let state = self
-            .states
-            .get(&answer.state)
-            .ok_or("names a state no earlier line holds")?;
-        if answer.key_version.unwrap_or(1) == 1 {
-            if key_of(&answer, state).map(|key| key.hex()) != Some(answer.key.clone()) {
-                return Err("records a different question, so the file was damaged or hand-edited");
-            }
-            if answer.observation_id.is_none() {
-                let source = crate::core::Json::parse(line).map_err(|_| "has invalid metadata")?;
-                answer.observation_id = Some(
-                    super::versioned::legacy_id(&answer, state, Some(&source))
-                        .map_err(|_| "has invalid constituents")?,
-                );
-            }
+    fn take_answer(&mut self, answer: Answer) -> Result<(), &'static str> {
+        if !self.states.contains_key(&answer.state) {
+            return Err("names a state no earlier line holds");
         }
         if self
             .answers
@@ -190,6 +177,17 @@ impl Entries {
     pub(crate) fn parse(text: &str) -> Result<Self, Error> {
         let mut entries = Self::default();
         for (number, line) in text.lines().enumerate() {
+            let value: serde_json::Value = serde_json::from_str(line).map_err(|_| {
+                Error::Entry(
+                    JSONL.to_owned(),
+                    format!("line {} is not a question entry", number + 1),
+                )
+            })?;
+            if value.get("key").is_some()
+                && value.get("key_version").and_then(serde_json::Value::as_u64) != Some(2)
+            {
+                return Err(Error::StoreVersion(JSONL.to_owned()));
+            }
             entries.take(line).map_err(|why| {
                 Error::Entry(JSONL.to_owned(), format!("line {} {why}", number + 1))
             })?;
@@ -199,6 +197,12 @@ impl Entries {
 
     /// Read every entry of one store's database.
     pub(crate) fn read(connection: &Connection) -> Result<Self, Error> {
+        let version: u32 = connection
+            .query_row("PRAGMA user_version", [], |row| row.get(0))
+            .map_err(storage)?;
+        if version != 2 {
+            return Err(Error::StoreVersion(SQLITE.to_owned()));
+        }
         let mut entries = Self::default();
         let mut states = connection
             .prepare("SELECT sha256, state FROM states")
@@ -213,12 +217,6 @@ impl Entries {
             if entries.states.insert(digest, state).is_some() {
                 return Err(super::versioned::invalid());
             }
-        }
-        let version: u32 = connection
-            .query_row("PRAGMA user_version", [], |row| row.get(0))
-            .map_err(storage)?;
-        if !matches!(version, 1 | 2) {
-            return Err(super::versioned::invalid());
         }
         let mut statement = connection
             .prepare(
@@ -253,7 +251,7 @@ impl Entries {
             .map_err(storage)?;
         for row in rows {
             let (mut answer, state) = row.map_err(|_| super::versioned::invalid())?;
-            if version == 2 {
+            {
                 let key = bytes_of(&answer.key).ok_or_else(super::versioned::invalid)?;
                 let (key_version, adapter, id, batch): (u32, String, String, Option<u32>) = connection.query_row(
                     "SELECT key_version, adapter, observation_id, batch_size FROM answers WHERE key=?1", [key.as_slice()],
@@ -410,22 +408,6 @@ impl Replayed {
                 "multiple historical reported models match this question".to_owned(),
             )),
         }
-    }
-}
-
-/// The key an answer line's parts hash to.
-pub(crate) fn key_of(answer: &Answer, state: &str) -> Option<QuestionKey> {
-    let url = Url::new(answer.url.clone()).ok()?;
-    let model = model_json(&answer.model).ok()?;
-    if hex(&State::image_sha256(state)) == answer.state {
-        Some(QuestionKey::images_of(
-            &url,
-            &model,
-            state,
-            &answer.question,
-        ))
-    } else {
-        Some(QuestionKey::of(&url, &model, state, &answer.question))
     }
 }
 

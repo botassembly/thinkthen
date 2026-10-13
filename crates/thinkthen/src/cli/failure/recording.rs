@@ -88,6 +88,7 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
              open the folder once with write access, as `--cache DIR` does, then replay it"
                 .to_owned(),
         ),
+        Failure::StoreVersion(file) => (5, format!("{file} uses an old store format; delete it")),
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
         Failure::RecordingStorage => (
             5,

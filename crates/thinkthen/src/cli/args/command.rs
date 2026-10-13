@@ -282,11 +282,8 @@ pub(crate) enum CacheCommand {
 
 #[derive(Args, Debug)]
 pub(crate) struct ConvertArguments {
-    /// The recording or cache folder to convert. Its old files stay.
+    /// The current recording or cache folder to convert.
     pub(crate) directory: PathBuf,
-    /// Also write each single-record exchange in the quoted form.
-    #[arg(long)]
-    pub(crate) quote: bool,
 }
 
 #[derive(Args, Debug)]

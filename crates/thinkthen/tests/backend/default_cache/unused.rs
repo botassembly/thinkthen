@@ -10,8 +10,8 @@ use std::time::SystemTime;
 
 use super::folder;
 
-const USED: &str = "2bc2f3db71bf8156dd2d2060d777a34c80a88cb1c0afa665d469e3b055712f71";
-const OTHER: &str = "0311afcb8eba767b756924bd17cba8bdf973788f9103d8feb9ec00d4a7366474";
+const USED: &str = "1c38c6f52bec903f93aef63060bdc08055463afe00b5759223bfc5a64d30dafe";
+const OTHER: &str = "66b92312d4b7f0be51cb0d7338f832dd8f878a5b0ea96396606aca3a41be5a6b";
 const INVALID: &str =
     "thinkthen: --used takes one lowercase 64-character question key per nonblank line\n";
 
@@ -114,7 +114,7 @@ fn supplied_keys_name_the_unused_answers_without_editing_the_folder() {
         ),
         (
             String::new(),
-            format!("unused from supplied keys: 2\nunused {OTHER}\nunused {USED}\n"),
+            format!("unused from supplied keys: 2\nunused {USED}\nunused {OTHER}\n"),
         ),
     ];
     for (text, expected) in cases {

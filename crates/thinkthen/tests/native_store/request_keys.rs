@@ -1,4 +1,4 @@
-//! Cache/2 metadata and original fixture/1 validation are distinct identities.
+//! Current fixture keys retain canonical question bytes and replay without writes.
 use super::*;
 use serde_json::value::RawValue;
 use std::collections::BTreeMap;
@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 type Members = BTreeMap<String, Box<RawValue>>;
 
 #[test]
-fn fixture_questions_use_v2_result_keys_and_original_v1_rows_still_replay_without_writes() {
+fn fixture_questions_use_current_result_keys_and_replay_without_writes() {
     let corpus: Value = serde_json::from_str(include_str!(
         "../../../../specification/fixtures/batching/portable-records.json"
     ))
@@ -96,16 +96,14 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
     for (at, (row, expected)) in rows.iter().zip(expected_questions).enumerate() {
         let actual = questions[&format!("q{}", at + 1)].get();
         assert_eq!(actual, expected, "fixture question bytes stay unchanged");
-        let original_key = sha256(&["systemone", &url, model, state, actual].join("\n"));
         let v2 = framed(
             "thinkthen.question-key/2",
             &["systemone", &url, model, model, state, actual],
         );
-        assert_ne!(v2, original_key);
         assert_eq!(row.result().meta().requests(), std::slice::from_ref(&v2));
-        expected_keys.push(v2);
+        expected_keys.push(v2.clone());
         fixture.push(
-            json!({"key":original_key,"url":url,"model":"jev-1.13.0",
+            json!({"key_version":2,"adapter":"systemone","observation_id":match &row.result().identity().observations()[0] { thinkthen::Observation::Answered { observation_id } => observation_id.to_string(), _ => unreachable!() },"key":v2,"url":url,"model":"jev-1.13.0",
             "state":state_digest,"question":actual,"answer":ANSWER,
             "answered_by":"jev-1.13.0","input_tokens":null,"output_tokens":null,
             "taken_at":0,"origin":"converted"})

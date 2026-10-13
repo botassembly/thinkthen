@@ -262,7 +262,7 @@ fn prune_shrinks_the_store_file_and_takes_the_oldest_answer_first() {
 }
 
 #[test]
-fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
+fn older_than_selects_by_taken_at_and_keeps_unrelated_files() {
     let folder = folder("prune-older-than");
     let filled = fill(
         &folder,
@@ -273,12 +273,26 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
         ],
     );
     taken_at(&folder, &[(&filled[0], 0)]);
-    // Prune reads only the store; an old digest-named entry, a stray file
-    // and a directory are the owner's, and stay byte for byte.
-    let old = format!("{}.json", "0".repeat(64));
-    fs::write(folder.join(&old), b"an old entry").expect("old entry");
     fs::write(folder.join("sentinel"), b"keep me").expect("sentinel");
-    fs::create_dir(folder.join(format!("{}.json", "f".repeat(64)))).expect("directory");
+    // A current version can live in WAL while the database header remains old.
+    let writer = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("writer");
+    writer.execute_batch("PRAGMA user_version = 1; PRAGMA journal_mode = WAL; PRAGMA user_version = 2; BEGIN IMMEDIATE;").expect("current WAL");
+    let preview = prune(&folder, &["--older-than", "1d", "--dry-run"]);
+    assert_eq!(preview.status.code(), Some(0), "{preview:?}");
+    assert!(crate::harness::printed(&preview).starts_with("selected 1 answers"));
+    let mut expected = filled.clone();
+    expected.sort();
+    assert_eq!(held(&folder), expected);
+    let status = run(
+        &["status", "--json"],
+        &[("THINKTHEN_CACHE", folder.to_str().expect("folder"))],
+    )
+    .expect("WAL status");
+    assert_eq!(status.status.code(), Some(0), "{status:?}");
+    let status: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
+    assert_eq!(status["cache"]["entries"], 2);
+    drop(writer);
+
     let before = store_bytes(&folder);
     let output = prune(&folder, &["--older-than", "1d"]);
     assert_eq!(output.status.code(), Some(0));
@@ -288,7 +302,6 @@ fn older_than_selects_by_taken_at_and_old_entries_stay_beside_the_store() {
         removed(1, 1, before, store_bytes(&folder))
     );
     assert_eq!(held(&folder), [filled[1].clone()]);
-    assert_eq!(fs::read(folder.join(old)).expect("old"), b"an old entry");
     assert_eq!(fs::read(folder.join("sentinel")).expect("kept"), b"keep me");
     // A multi-byte last character is a typo, not a panic.
     let typo = prune(&folder, &["--older-than", "5\u{e9}"]);
@@ -329,5 +342,218 @@ fn an_unreadable_folder_fails_prune_before_any_change() {
             fs::read(folder.join("thinkthen.sqlite")).expect("after"),
             before
         );
+    }
+}
+
+type Try<T> = Result<T, Box<dyn std::error::Error>>;
+
+fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connection>)> {
+    let database = folder.join("thinkthen.sqlite");
+    let mut held = None;
+    let file = if old.starts_with("jsonl") {
+        let live = fs::read(&database)?;
+        assert_eq!(
+            run(
+                &["cache", "convert", folder.to_str().ok_or("folder path")?],
+                &[]
+            )?
+            .status
+            .code(),
+            Some(0)
+        );
+        let jsonl = folder.join("thinkthen.jsonl");
+        let text = fs::read_to_string(&jsonl)?;
+        let text = text.replace(
+            "\"key_version\":2,",
+            if old.ends_with("unversioned") {
+                ""
+            } else {
+                "\"key_version\":1,"
+            },
+        );
+        fs::write(jsonl, text)?;
+        if old.contains("mixed") {
+            fs::write(&database, live)?;
+        }
+        "thinkthen.jsonl".to_owned()
+    } else if old != "digest" {
+        let connection = rusqlite::Connection::open(&database)?;
+        connection.execute_batch("PRAGMA user_version = 1;")?;
+        if old == "wal" || old == "wal-closed" {
+            connection.execute_batch(
+                "PRAGMA journal_mode = WAL; PRAGMA user_version = 1; BEGIN IMMEDIATE;",
+            )?;
+            if old == "wal" {
+                held = Some(connection);
+            } else {
+                connection.execute_batch("ROLLBACK;")?;
+                drop(connection);
+                assert!(!folder.join("thinkthen.sqlite-wal").exists());
+                assert!(!folder.join("thinkthen.sqlite-shm").exists());
+            }
+        }
+        "thinkthen.sqlite".to_owned()
+    } else {
+        let file = format!("{}.json", "a".repeat(64));
+        fs::write(folder.join(&file), b"PRIVATE_OLD_FILE")?;
+        file
+    };
+    Ok((file, held))
+}
+
+#[test]
+fn maintenance_refuses_old_files_without_sends_or_data_changes() {
+    let snapshot = |folder: &Path, file: &str| {
+        let mut names: Vec<_> = fs::read_dir(folder)
+            .expect("folder")
+            .map(|item| item.expect("entry").file_name())
+            .collect();
+        names.sort();
+        let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(file)]
+            .into_iter()
+            .filter(|path| path.exists())
+            .map(|path| {
+                (
+                    fs::read(&path).expect("bytes"),
+                    fs::metadata(path)
+                        .expect("metadata")
+                        .modified()
+                        .expect("mtime"),
+                )
+            })
+            .collect();
+        ((!file.ends_with(".sqlite")).then_some(names), contents)
+    };
+    for old in [
+        "sqlite",
+        "wal",
+        "wal-closed",
+        "digest",
+        "jsonl",
+        "jsonl-unversioned",
+        "jsonl-mixed",
+        "jsonl-mixed-unversioned",
+    ] {
+        for (case, (command, extra)) in [
+            ("prune", &["--max-size", "1"][..]),
+            ("prune", &["--max-size", "1", "--dry-run"][..]),
+            ("unused", &[][..]),
+            ("status", &["--json"][..]),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let folder = folder(&format!("maintenance-old-{old}-{case}"));
+            fill(
+                &folder,
+                EVIDENCE,
+                &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+            );
+            let (file, held) = old_store(&folder, old).expect("old store fixture");
+            let used = folder.with_extension("used");
+            fs::write(&used, "").expect("used list");
+            let before = snapshot(&folder, &file);
+            let listener = Listener::serving(vec![]).expect("listener");
+            let path = folder.to_str().expect("folder");
+            let used = used.to_str().expect("used");
+            let mut arguments = if command == "status" {
+                vec![command]
+            } else {
+                vec!["cache", command, path]
+            };
+            arguments.extend_from_slice(extra);
+            if command == "unused" {
+                arguments.extend(["--used", used]);
+            }
+            let output = run(
+                &arguments,
+                &[
+                    ("THINKTHEN_CACHE", path),
+                    ("THINKTHEN_BASE_URL", listener.base()),
+                    ("THINKTHEN_API_KEY", "test-key"),
+                ],
+            )
+            .expect("maintenance");
+            let code = output.status.code();
+            assert_eq!(code, Some(5), "{old} {arguments:?} {output:?}");
+            assert!(output.stdout.is_empty());
+            assert_eq!(
+                crate::harness::said(&output),
+                format!("thinkthen: {file} uses an old store format; delete it\n")
+            );
+            assert!(
+                snapshot(&folder, &file) == before,
+                "{old} {arguments:?} changed preserved files"
+            );
+            assert!(listener.requests().is_empty());
+            drop(held);
+        }
+    }
+}
+
+#[test]
+fn maintenance_keeps_current_fixtures_and_counts_only_sqlite_answers() {
+    let folder = folder("maintenance-current-fixture");
+    fill(
+        &folder,
+        EVIDENCE,
+        &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+    );
+    let path = folder.to_str().expect("folder");
+    assert_eq!(
+        run(&["cache", "convert", path], &[])
+            .expect("convert")
+            .status
+            .code(),
+        Some(0)
+    );
+    let fixture = folder.join("thinkthen.jsonl");
+    let before = fs::read(&fixture).expect("fixture");
+    let modified = fs::metadata(&fixture)
+        .expect("metadata")
+        .modified()
+        .expect("mtime");
+    let listener = Listener::serving(vec![]).expect("listener");
+    for arguments in [
+        vec!["cache", "prune", path, "--max-size", "1"],
+        vec!["cache", "prune", path, "--max-size", "1", "--dry-run"],
+        vec!["status", "--json"],
+    ] {
+        let output = run(
+            &arguments,
+            &[
+                ("THINKTHEN_CACHE", path),
+                ("THINKTHEN_BASE_URL", listener.base()),
+            ],
+        )
+        .expect("maintenance");
+        assert_eq!(output.status.code(), Some(0), "{output:?}");
+        assert!(output.stderr.is_empty());
+        if arguments[0] == "status" {
+            let status: serde_json::Value =
+                serde_json::from_slice(&output.stdout).expect("status JSON");
+            assert_eq!(status["cache"]["entries"], 0);
+            assert_eq!(status["cache"]["bytes"], 0);
+        } else {
+            let expected = if arguments.last() == Some(&"--dry-run") {
+                "selected 0 answers and 0 bytes; 0 answers and 0 bytes unselected\n"
+            } else {
+                "removed 0 answers and 0 bytes; 0 answers and 0 bytes remain\n"
+            };
+            assert_eq!(output.stdout, expected.as_bytes());
+        }
+        assert_eq!(
+            fs::read(&fixture).expect("fixture after maintenance"),
+            before
+        );
+        assert_eq!(
+            fs::metadata(&fixture)
+                .expect("metadata")
+                .modified()
+                .expect("mtime"),
+            modified
+        );
+        assert_eq!(fs::read_dir(&folder).expect("folder").count(), 1);
+        assert!(listener.requests().is_empty());
     }
 }
