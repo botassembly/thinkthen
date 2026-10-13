@@ -101,6 +101,9 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         "sk%2Dtest%2Dvalue",
         "aabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccddaabbccdd",
         "content-type: application/json",
+        "Host: example.org",
+        "X-Custom: hello",
+        "Request failed.\nHost: example.org",
         "Authorization: Bearer something",
         "X-Api-Key: something",
     ] {
@@ -132,6 +135,7 @@ fn provider_prose_keeps_actionable_local_errors_and_trims_at_a_character_boundar
     for message in [
         "This endpoint does not support the requested model. Load a compatible model first."
             .to_owned(),
+        "Your API key has expired. Create a replacement in your account.".to_owned(),
         "é ".repeat(200),
     ] {
         let body = serde_json::json!({"detail":{"message":message}}).to_string();

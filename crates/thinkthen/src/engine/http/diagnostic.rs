@@ -61,31 +61,22 @@ pub(super) fn decorate(error: Error, body: Option<&[u8]>, key: &Key, api: ApiTyp
 fn safe_message(text: &str, key: &Key) -> Option<String> {
     let lower = text.to_ascii_lowercase();
     let forbidden = [
-        "authorization",
         "bearer ",
-        "api_key",
-        "api-key",
-        "api key",
-        "apikey",
-        "x-api",
-        "headers",
-        "cookie",
-        "password",
-        "credential",
-        "secret",
+        "authorization=",
+        "api_key=",
+        "api-key=",
+        "apikey=",
+        "password=",
+        "credential=",
+        "secret=",
         "key hash",
         "key fingerprint",
-        "sha256",
-        "content-type",
-        "user-agent",
-        "x-thinkthen",
-        "content-length",
-        "retry-after",
-        "x-request-id",
+        "sha256:",
     ];
     if text.trim().is_empty()
         || (!key.as_str().is_empty() && text.contains(key.as_str()))
         || forbidden.iter().any(|word| lower.contains(word))
+        || header_lines(text)
         || text
             .chars()
             .any(|character| character.is_control() && !character.is_whitespace())
@@ -165,4 +156,18 @@ fn percent_decoded(word: &str) -> Option<Vec<u8>> {
         }
     }
     Some(output)
+}
+
+/// A single HTTP field name before a colon is ambiguous untrusted prose.
+fn header_lines(text: &str) -> bool {
+    text.lines().any(|line| {
+        let Some((name, _)) = line.split_once(':') else {
+            return false;
+        };
+        let name = name.trim();
+        !name.is_empty()
+            && name
+                .bytes()
+                .all(|byte| byte.is_ascii_alphanumeric() || b"!#$%&'*+-.^_`|~".contains(&byte))
+    })
 }
