@@ -13,7 +13,7 @@ COMMON = (
     'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_next_packet',
 )
 USE = {
-    'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json'),
+    'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json', 'thinkthen_session_result_view'),
     'swift': (),
     'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_error_retryable',
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',

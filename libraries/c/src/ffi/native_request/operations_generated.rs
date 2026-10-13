@@ -6,6 +6,24 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
 use thinkthen::ErrorKind;
+/// Build from environment plus canonical typed settings. NULL uses environment alone.
+/// Copies the finite aligned carrier tree; no foreign pointer survives return.
+/// Construction sends nothing. Failure returns NULL in the calling thread constructor slot.
+/// # Safety
+/// settings is NULL or a live aligned settings carrier tree with counted UTF-8 extents.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_new_typed(
+    settings: *const super::carriers::thinkthen_request_engine_settings_v1,
+) -> *mut crate::EngineHandle {
+    failures::guard(None, std::ptr::null_mut(), || {
+        // SAFETY: the caller retains all constructor input until admission returns.
+        failures::built(|| unsafe { super::settings_typed(settings) })
+            .map_or(std::ptr::null_mut(), |engine| {
+                Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine))))
+            })
+    })
+}
+
 /// Push a counted typed feed descriptor. Rust owns framing and admission.
 /// No input pointer survives return; status is published only on success.
 /// # Safety

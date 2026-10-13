@@ -547,26 +547,32 @@ def main():
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import dart
         schema = json.loads((ROOT / "specification/request.schema.json").read_text()) if args.inputs else json.loads(args.schema.read_text())
-        result = dart.render(prepare(graph(schema, dart.INPUT_ROOTS if args.inputs else dart.ROOTS)), args.inputs)
+        definitions = prepare(graph(schema, dart.INPUT_ROOTS if args.inputs else dart.ROOTS))
+        result = dart.render(definitions, args.inputs)
         if args.bridge:
             path = ROOT / "sdlc/scripts/check-c-exports.py"
             spec = importlib.util.spec_from_file_location("dart_abi", path)
             abi = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(abi)
-            result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"))
+            result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"), prepare(graph(schema, ('completesessionPacket',))))
         if args.inputs:
             result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
-        output = output_path(ROOT, 'dart', 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart')
-        result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
-                                env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
-        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
-        if args.check:
-            if not output.exists() or output.read_text() != result:
-                print("generated Dart types differ", file=sys.stderr)
-                return 1
-        else:
-            output.parent.mkdir(parents=True, exist_ok=True)
-            output.write_text(result)
+        filename = 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart'
+        outputs = {filename: result}
+        if args.inputs:
+            outputs['calls_generated.dart'] = dart.calls(definitions, prepare(graph(json.loads(args.schema.read_text()), ('completesessionPacket',))))
+        for filename, result in outputs.items():
+            output = output_path(ROOT, 'dart', filename)
+            result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
+                                    env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print("generated Dart types differ: " + filename, file=sys.stderr)
+                    return 1
+            else:
+                output.parent.mkdir(parents=True, exist_ok=True)
+                output.write_text(result)
         return 0
     if args.target == "cpp":
         if args.bridge:
@@ -737,9 +743,27 @@ def main():
     if args.target == "zig":
         if args.bridge:
             parser.error("Zig reads the generated C header directly")
-        if args.output == OUTPUT:
-            filename = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
-            args.output = output_path(ROOT, 'zig', filename)
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import zig
+        schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
+        if args.inputs:
+            schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
+            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor')))
+            outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
+        else:
+            outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),
+                       'results_generated.zig': zig.render_results(prepare(graph(schema, ('completesessionPacket',))))}
+        primary = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
+        for filename, result in outputs.items():
+            output = args.output if filename == primary and args.output != OUTPUT else output_path(ROOT, 'zig', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print('generated Zig source differs: ' + filename, file=sys.stderr)
+                    return 1
+            else:
+                output.write_text(result)
+        return 0
     if args.target in ("python", "r") and args.inputs:
         path = Path(__file__).parent / ("templates/" + args.target + ".py")
         spec = importlib.util.spec_from_file_location("host_inputs", path)
@@ -787,7 +811,7 @@ def main():
         import native_request
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
         result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'],
-            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure')))),
+            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))),
             text=True, capture_output=True, check=True,
             env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'c', 'carriers_generated.rs')

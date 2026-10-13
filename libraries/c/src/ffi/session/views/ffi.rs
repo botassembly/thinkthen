@@ -6,6 +6,8 @@
     reason = "fixture borrows only live owner-backed C views"
 )]
 use super::*;
+#[path = "tests.rs"]
+mod extension_values;
 use crate::complete_session_views as generated;
 
 fn text(value: thinkthen_complete_utf8_v1) -> String {
@@ -20,7 +22,9 @@ fn text(value: thinkthen_complete_utf8_v1) -> String {
 fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth() {
     // The terminal/null envelope is the existing generated-reader fixture;
     // extra failure members exercise the same extension rule at nested depths.
-    let projection = Projection::new(r#"{"kind":"terminal","facts":null,"failure":{"error":{"kind":"local","message":"safe","retryable":false,"stopped":{"cause":"local","retryable":false,"future_stop":17},"future_error":{"z":1e400,"a":-0}},"future_failure":[false,null]},"future":{"nested":false}}"#).expect("complete fixture");
+    let projection = extension_values::projection(
+        r#"{"kind":"terminal","facts":null,"failure":{"error":{"kind":"local","message":"safe","retryable":false,"stopped":{"cause":"local","retryable":false,"future_stop":17},"future_error":{"z":1e400,"a":-0}},"future_failure":[false,null]},"future":{"nested":false}}"#,
+    );
     // SAFETY: the projection owns this tagged graph throughout these reads.
     let terminal = unsafe {
         let packet = &*projection.root;
@@ -58,6 +62,7 @@ fn complete_view_retains_missing_null_and_unknown_members_at_each_object_depth()
             (text(entry.name), text(entry.json)),
             (key.to_owned(), raw.to_owned())
         );
+        extension_values::check(entry.value, key);
     }
 }
 #[test]

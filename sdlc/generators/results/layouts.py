@@ -26,7 +26,7 @@ def optional(name, value):
 
 PRIMITIVES = (
     counted('thinkthen_complete_utf8_v1', 'std::ffi::c_char'),
-    Layout('thinkthen_complete_extension_v1', (('name', 'thinkthen_complete_utf8_v1'), ('json', 'thinkthen_complete_utf8_v1'))),
+    Layout('thinkthen_complete_extension_v1', (('name', 'thinkthen_complete_utf8_v1'), ('json', 'thinkthen_complete_utf8_v1'), ('value', '*const thinkthen_complete_json_v1'))),
     counted('thinkthen_complete_extensions_v1', 'thinkthen_complete_extension_v1'),
     Layout('thinkthen_complete_json_entry_v1', (('name', 'thinkthen_complete_utf8_v1'), ('value', '*const thinkthen_complete_json_v1'))),
     counted('thinkthen_complete_json_array_v1', '*const thinkthen_complete_json_v1'),

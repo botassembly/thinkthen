@@ -258,3 +258,21 @@ unsafe fn typed_plan(
     let request = unsafe { typed_request(function, arguments, surface(surface_name)?) }?;
     super::request_preview::plan(engine, request).map_err(Into::into)
 }
+
+unsafe fn settings_typed(
+    settings: *const carriers::thinkthen_request_engine_settings_v1,
+) -> Result<thinkthen::Engine, Failure> {
+    let json = if settings.is_null() {
+        "{}".to_owned()
+    } else {
+        // SAFETY: the host retains the settings carrier tree throughout admission.
+        unsafe {
+            carriers::read_thinkthen_request_engine_settings_v1(
+                settings,
+                &mut Context::new(Surface::C),
+            )
+        }?
+        .json()?
+    };
+    crate::settings::build(&json)
+}
