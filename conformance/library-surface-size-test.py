@@ -64,7 +64,8 @@ class SizeReport(unittest.TestCase):
             record = root / 'sdlc/records/coverage/candidate-library-size.md'
             self.assertTrue(record.is_file())
             self.assertIn('| Library |', record.read_text())
-            self.assertNotIn(report['commits'][0]['commit'], record.read_text())
+            self.assertEqual(record.read_text().count(report['revision']), 1)
+            self.assertLess(len(record.read_text().splitlines()), 20)
             failure = subprocess.run([str(SCRIPT), '--root', str(root), '--store', '../escape'], env=env, capture_output=True)
             self.assertEqual(failure.returncode, 2)
             self.assertFalse((root / 'sdlc/records/escape-library-size.md').exists())
