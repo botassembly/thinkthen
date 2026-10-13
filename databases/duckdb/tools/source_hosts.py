@@ -102,7 +102,9 @@ def check_hosts(cache, fetch):
         env = os.environ.copy()
         env['CMAKE_BUILD_PARALLEL_LEVEL'] = '2'
         subprocess.run(command + ['release'], cwd=build, env=env, check=True)
-        subprocess.run(command + ['test_release'], cwd=build, env=env, check=True)
+        with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-sql-') as folder:
+            test_env = child_env('http://127.0.0.1:9/generic/v1', Path(folder), keyless=True)
+            subprocess.run(command + ['test_release'], cwd=build, env=test_env, check=True)
         cli = build / 'build/release/duckdb'
         extension = build / 'build/release/extension/thinkthen/thinkthen.duckdb_extension'
         from named_options import check
