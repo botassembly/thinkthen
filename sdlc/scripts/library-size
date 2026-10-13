@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Report tracked host source size; candidate acceptance belongs to the release."""
 import argparse
-import importlib.util
+import types
 import json
 from pathlib import Path
 import statistics
@@ -28,12 +28,23 @@ def git(root, *args):
 
 
 def registry(root):
-    spec = importlib.util.spec_from_file_location(
-        'surface_registry', root / 'sdlc/generators/results/registry.py')
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[spec.name] = module
-    spec.loader.exec_module(module)
+    module = types.ModuleType('surface_registry')
+    sys.modules[module.__name__] = module
+    source = git(root, 'show', 'HEAD:sdlc/generators/results/registry.py')
+    exec(compile(source, 'registry.py', 'exec'), module.__dict__)
     return module.generated_paths()
+
+
+def blobs(root, paths):
+    output = subprocess.check_output(['git', '-C', str(root), 'cat-file', '--batch'],
+                                     input=''.join('HEAD:' + path + '\n' for path in paths).encode())
+    cursor = 0
+    for path in paths:
+        end = output.index(b'\n', cursor)
+        size = int(output[cursor:end].split()[-1])
+        cursor = end + 1
+        yield path, output[cursor:cursor + size].decode()
+        cursor += size + 1
 
 
 def owner(path, manifest):
@@ -58,20 +69,23 @@ def classification(path, name, manifest, generated):
 
 
 def release_base(root):
-    tags = git(root, 'tag', '--merged', 'HEAD').splitlines()
+    tags = git(root, 'tag', '--list').splitlines()
     # Release tags have a numeric version; candidate tags cannot be a baseline.
     import re
     tags = [tag for tag in tags if re.fullmatch(r'v?\d+\.\d+\.\d+', tag)]
     if not tags:
         raise ValueError('no release tag; supply --since REVISION')
-    return max(tags, key=lambda tag: int(git(root, 'log', '-1', '--format=%ct', tag)))
+    return max(tags, key=lambda tag: tuple(int(part) for part in tag.removeprefix('v').split('.')))
 
 
 def additions(root, since, manifest, generated):
     result = []
-    for commit in git(root, 'rev-list', '--reverse', '--first-parent', since + '..HEAD').splitlines():
+    for commit in git(root, 'rev-list', '--reverse', '--topo-order', since + '..HEAD').splitlines():
         counts = {name: 0 for name in manifest['libraries']}
-        patch = git(root, 'show', '--format=', '--first-parent', '--unified=0',
+        parents = git(root, 'rev-list', '--parents', '-1', commit).split()[1:]
+        merge = len(parents) > 1
+        prefix = '+' * len(parents) if merge else '+'
+        patch = git(root, 'show', '--format=', '--cc' if merge else '--patch', '--unified=0',
                     '--no-renames', commit, '--', 'libraries',
                     'sdlc/generators/results/csharp/CompleteFacts.g.cs')
         path = None
@@ -80,11 +94,12 @@ def additions(root, since, manifest, generated):
                 path = line[6:]
             elif line.startswith('+++ '):
                 path = None
-            elif line.startswith('+') and line[1:].strip() and path:
+            elif line.startswith(prefix) and line[len(prefix):].strip() and path:
                 name = owner(path, manifest)
                 if name and classification(path, name, manifest, generated) == 'handwritten':
                     counts[name] += 1
-        result.append({'commit': commit, 'handwritten_added': counts})
+        result.append({'commit': commit, 'kind': 'merge_resolution' if merge else 'change',
+                       'handwritten_added': counts})
     return result
 
 
@@ -92,14 +107,16 @@ def measure(root, manifest, since):
     generated = registry(root)
     counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
                          languages={}) for name in manifest['libraries']}
-    for path in git(root, 'ls-files').splitlines():
+    paths = [path for path in git(root, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
+             if owner(path, manifest) and classification(path, owner(path, manifest), manifest, generated)]
+    for path, source in blobs(root, paths):
         name = owner(path, manifest)
         if not name:
             continue
         kind = classification(path, name, manifest, generated)
         if not kind:
             continue
-        total = sum(bool(line.strip()) for line in (root / path).read_text().splitlines())
+        total = sum(bool(line.strip()) for line in source.splitlines())
         row = counts[name]
         row[kind] += total
         exception = manifest.get('exceptions', {}).get(name, {})
@@ -117,7 +134,7 @@ def measure(root, manifest, since):
                          for kind, median in medians.items()}
         row['handwritten_without_exception'] = row['handwritten'] - row['exception']
     return {'revision': git(root, 'rev-parse', 'HEAD').strip(), 'since': since,
-            'units': 'nonblank source lines', 'history_classification': 'current registry and conventions',
+            'units': 'nonblank source lines', 'history_classification': 'committed registry and conventions; merges count only combined additions',
             'medians': medians, 'libraries': counts,
             'commits': additions(root, since, manifest, generated)}
 
@@ -148,7 +165,7 @@ def main():
     args = parser.parse_args()
     try:
         root = args.root.resolve()
-        manifest = json.loads((root / 'conformance/library-surface.json').read_text())
+        manifest = json.loads(git(root, 'show', 'HEAD:conformance/library-surface.json'))
         since = args.since or release_base(root)
         git(root, 'rev-parse', '--verify', since + '^{commit}')
         report = measure(root, manifest, since)
