@@ -94,9 +94,9 @@ def construct(key, source, value):
                     expression = '(Present => True, Value => ' + expression + ')'
             fields.append(field + ' => ' + expression)
         return f"{typ}'(" + (', '.join(fields) if fields else 'null record') + ')'
-    if source.get('type') == 'array' or source.get('type') == 'object' and isinstance(source.get('additionalProperties'), dict):
+    if source.get('type') == 'array' or source.get('type') == 'object':
         mapping = source.get('type') == 'object'
-        values = ['(Key => ' + ada_text(k) + ', Value => ' + construct(key + '_element', source['additionalProperties'], v) + ')' for k, v in value.items()] if mapping else [construct(key + '_element', source.get('items', {}), item) for item in value]
+        values = ['(Key => ' + ada_text(k) + ', Value => ' + construct(key + '_element', source.get('additionalProperties') if isinstance(source.get('additionalProperties'), dict) else {}, v) + ')' for k, v in value.items()] if mapping else [construct(key + '_element', source.get('items', {}), item) for item in value]
         return f"{typ}'[" + ', '.join(values) + ']'
     if 'const' in source or source.get('type') == 'null':
         return f"{typ}'(null record)"

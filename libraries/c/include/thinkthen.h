@@ -889,71 +889,6 @@ typedef struct thinkthen_question_author_v1 {
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
 
-typedef struct thinkthen_request_reader_failure_producer_v1 {
-  uint32_t reserved;
-} thinkthen_request_reader_failure_producer_v1;
-
-typedef struct thinkthen_request_text_v1 {
-  struct thinkthen_complete_utf8_v1 text;
-} thinkthen_request_text_v1;
-
-typedef struct thinkthen_request_unsigned_v1 {
-  uint64_t value;
-} thinkthen_request_unsigned_v1;
-
-typedef struct thinkthen_request_session_source_location_v1 {
-  const struct thinkthen_request_text_v1 *m_file;
-  const struct thinkthen_request_unsigned_v1 *m_first_line;
-  const struct thinkthen_request_unsigned_v1 *m_last_line;
-} thinkthen_request_session_source_location_v1;
-
-typedef struct thinkthen_request_reader_failure_io_v1 {
-  const struct thinkthen_request_session_source_location_v1 *m_location;
-} thinkthen_request_reader_failure_io_v1;
-
-typedef struct thinkthen_request_reader_failure_utf_8_v1 {
-  const struct thinkthen_request_session_source_location_v1 *m_location;
-} thinkthen_request_reader_failure_utf_8_v1;
-
-typedef struct thinkthen_request_reader_failure_invalid_input_v1 {
-  const struct thinkthen_request_session_source_location_v1 *m_location;
-} thinkthen_request_reader_failure_invalid_input_v1;
-
-typedef union thinkthen_request_reader_failure_data_v1 {
-  const struct thinkthen_request_reader_failure_producer_v1 *arm_1;
-  const struct thinkthen_request_reader_failure_io_v1 *arm_2;
-  const struct thinkthen_request_reader_failure_utf_8_v1 *arm_3;
-  const struct thinkthen_request_reader_failure_invalid_input_v1 *arm_4;
-} thinkthen_request_reader_failure_data_v1;
-
-typedef struct thinkthen_request_reader_failure_v1 {
-  uint32_t kind;
-  union thinkthen_request_reader_failure_data_v1 data;
-} thinkthen_request_reader_failure_v1;
-
-/*
- Existing canonical components for one named request. Every view is counted
- UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
- */
-typedef struct thinkthen_named_request_v1 {
-  /*
-   Exact lower-case public function name.
-   */
-  struct thinkthen_complete_utf8_v1 function;
-  /*
-   Existing canonical question selector JSON.
-   */
-  struct thinkthen_complete_utf8_v1 question_json;
-  /*
-   Existing canonical input selector JSON.
-   */
-  struct thinkthen_complete_utf8_v1 input_json;
-  /*
-   Existing canonical options JSON; pass {} for omitted controls.
-   */
-  struct thinkthen_complete_utf8_v1 options_json;
-} thinkthen_named_request_v1;
-
 typedef struct thinkthen_request_literal_image_jpeg_v1 {
   uint32_t reserved;
 } thinkthen_request_literal_image_jpeg_v1;
@@ -971,6 +906,10 @@ typedef struct thinkthen_request_image_media_v1 {
   uint32_t kind;
   union thinkthen_request_image_media_data_v1 data;
 } thinkthen_request_image_media_v1;
+
+typedef struct thinkthen_request_text_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_text_v1;
 
 typedef struct thinkthen_request_image_file_v1 {
   const struct thinkthen_request_image_media_v1 *m_media;
@@ -1034,6 +973,10 @@ typedef struct thinkthen_request_context_schema_v1 {
   uint32_t kind;
   union thinkthen_request_context_schema_data_v1 data;
 } thinkthen_request_context_schema_v1;
+
+typedef struct thinkthen_request_unsigned_v1 {
+  uint64_t value;
+} thinkthen_request_unsigned_v1;
 
 typedef struct thinkthen_request_recognition_example_entity_v1 {
   const struct thinkthen_request_unsigned_v1 *m_end;
@@ -1798,6 +1741,63 @@ typedef struct thinkthen_request_arguments_v1 {
   const struct thinkthen_request_call_options_v1 *m_options;
   const struct thinkthen_request_question_selector_v1 *m_question;
 } thinkthen_request_arguments_v1;
+
+typedef struct thinkthen_request_reader_failure_producer_v1 {
+  uint32_t reserved;
+} thinkthen_request_reader_failure_producer_v1;
+
+typedef struct thinkthen_request_session_source_location_v1 {
+  const struct thinkthen_request_text_v1 *m_file;
+  const struct thinkthen_request_unsigned_v1 *m_first_line;
+  const struct thinkthen_request_unsigned_v1 *m_last_line;
+} thinkthen_request_session_source_location_v1;
+
+typedef struct thinkthen_request_reader_failure_io_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_io_v1;
+
+typedef struct thinkthen_request_reader_failure_utf_8_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_utf_8_v1;
+
+typedef struct thinkthen_request_reader_failure_invalid_input_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_invalid_input_v1;
+
+typedef union thinkthen_request_reader_failure_data_v1 {
+  const struct thinkthen_request_reader_failure_producer_v1 *arm_1;
+  const struct thinkthen_request_reader_failure_io_v1 *arm_2;
+  const struct thinkthen_request_reader_failure_utf_8_v1 *arm_3;
+  const struct thinkthen_request_reader_failure_invalid_input_v1 *arm_4;
+} thinkthen_request_reader_failure_data_v1;
+
+typedef struct thinkthen_request_reader_failure_v1 {
+  uint32_t kind;
+  union thinkthen_request_reader_failure_data_v1 data;
+} thinkthen_request_reader_failure_v1;
+
+/*
+ Existing canonical components for one named request. Every view is counted
+ UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
+ */
+typedef struct thinkthen_named_request_v1 {
+  /*
+   Exact lower-case public function name.
+   */
+  struct thinkthen_complete_utf8_v1 function;
+  /*
+   Existing canonical question selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 question_json;
+  /*
+   Existing canonical input selector JSON.
+   */
+  struct thinkthen_complete_utf8_v1 input_json;
+  /*
+   Existing canonical options JSON; pass {} for omitted controls.
+   */
+  struct thinkthen_complete_utf8_v1 options_json;
+} thinkthen_named_request_v1;
 
 typedef struct thinkthen_request_session_descriptor_v1 {
   const struct thinkthen_request_item_v1 *m_item;
@@ -4022,20 +4022,35 @@ int thinkthen_question_parse(const struct thinkthen_engine *engine,
 
 /*
  Preview canonical Request JSON without reading a key or cache or sending.
- Preview supported fixed atomic questions under shared Request admission; unsupported functions and dynamic questions refuse.
- Success owns NUL-terminated plan JSON in out and its byte length in out_len;
- free once with thinkthen_free_string. Refusal leaves both outputs unchanged
- and records the safe calling-thread thinkthen_session_error_message.
+ Only fixed atomic questions support previews; dynamic questions and other functions refuse.
+ Success owns NUL-terminated JSON; free once with thinkthen_free_string.
+ Errors preserve output slots and use the calling thread session diagnostic.
  # Safety
- engine is live; request_json points to request_len readable bytes (NULL
- requires zero); out and out_len are nonnull writable, nonoverlapping slots.
- Extents fit Rust slices. The engine remains live until this call returns.
+ Engine is live; request_json has request_len readable bytes; NULL requires zero.
+ Output slots are nonnull writable and nonoverlapping. Extents fit Rust slices.
  */
 int thinkthen_request_plan_json(const struct thinkthen_engine *engine,
                                 const char *request_json,
                                 size_t request_len,
                                 char **out,
                                 size_t *out_len);
+
+/*
+ Preview typed request arguments through Rust admission without sending.
+ Supports the same fixed atomic questions and plan JSON as the JSON preview.
+ COBOL scalar capacity applies before admission. No carrier pointer survives return.
+ Success owns NUL-terminated JSON; free once with thinkthen_free_string.
+ Refusals preserve both output slots and use the calling thread session diagnostic.
+ # Safety
+ Engine is live; function and surface are counted UTF-8 views. The finite aligned
+ argument tree remains readable until return. Outputs are writable and nonoverlapping.
+ */
+int thinkthen_request_plan_typed_json(const struct thinkthen_engine *engine,
+                                      struct thinkthen_complete_utf8_v1 function,
+                                      const struct thinkthen_request_arguments_v1 *arguments,
+                                      struct thinkthen_complete_utf8_v1 surface_name,
+                                      char **out,
+                                      size_t *out_len);
 
 /*
  Signal cancellation without waiting for a provider or final facts. NULL is ignored.

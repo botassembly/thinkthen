@@ -6,7 +6,8 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from session_records import ROOT, module
+from session_records import ROOT, module, definitions
+from templates.csharp import enum_values
 
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env, read_process_line
@@ -23,7 +24,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-session-parity-') as te
     shutil.copy(HEADER, installed / 'src/thinkthen.h')
     native = work / 'libthinkthen.so.0'; shutil.copy(LIBRARY, native)
     programs = []
-    for verb in shared.shared.FUNCTIONS:
+    for verb in enum_values(definitions['RequestFunction']):
         programs.append(f'''identification division.
 program-id. COBOL_{verb.upper()}.
 data division.
@@ -34,9 +35,9 @@ linkage section.
 01 input-record usage pointer.
 01 session-owner usage pointer.
 procedure division using engine input-record session-owner.
- set address of tt-n-cobol-RequestCall-{verb} to input-record
+ set address of tt-n-cobol-RequestCall to input-record
  call "TT_SESSION_{verb.upper()}" using by value engine
-    by reference tt-n-cobol-RequestCall-{verb} session-owner
+    by reference tt-n-cobol-RequestCall session-owner
     returning return-code
  goback.
 end program COBOL_{verb.upper()}.

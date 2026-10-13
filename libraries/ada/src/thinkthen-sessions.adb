@@ -1,4 +1,5 @@
 with Ada.Unchecked_Conversion;
+with Thinkthen.Requests.Native;
 with Interfaces.C.Strings;
 with System;
 package body Thinkthen.Sessions is
@@ -6,6 +7,7 @@ package body Thinkthen.Sessions is
    use Interfaces.C.Strings;
    use Interfaces;
    use Thinkthen_Session_C;
+   Default_Client : Engine;
    type View_Access is access constant thinkthen_complete_session_packet_v1;
    procedure Check (Code : int) is
    begin
@@ -24,22 +26,23 @@ package body Thinkthen.Sessions is
          end case;
       end;
    end Check;
-   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
-      Client : Engine;
+   procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) is
    begin
-      Start (Client, Owner, Request);
+      Start (Default_Client, Owner, Request, Function_Name);
    end Start;
-   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
-      JSON : constant String := Thinkthen.Requests.Encode (Request);
-      Bytes : chars_ptr := Null_Ptr;
-      Surface : chars_ptr := Null_Ptr;
+   procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) is
+      Storage : Thinkthen.Requests.Native.Arena;
+      type Arguments_Access is access constant thinkthen_request_arguments_v1;
+      function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);
+      Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));
+      Bytes : chars_ptr := New_String (Function_Name);
+      Surface : chars_ptr := New_String ("ada");
       Code : int;
       New_Handle : aliased Session_Access := null;
    begin
-      Bytes := New_String (JSON);
-      Surface := New_String ("ada");
-      Code := thinkthen_session_new_with_surface (Client.Handle, Bytes, size_t (JSON'Length),
-                                                  Surface, 3, New_Handle'Address);
+      Code := thinkthen_session_new_typed_with_surface
+        (Client.Handle, (data => Bytes, len => Function_Name'Length), Arguments,
+         (data => Surface, len => 3), New_Handle'Address);
       Free (Bytes);
       Free (Surface);
       Check (Code);
@@ -54,32 +57,26 @@ package body Thinkthen.Sessions is
    end Start;
    procedure Push (Owner : in out Session; Item : Thinkthen.Requests.T_RequestSessionDescriptor;
                    Status : out Push_Status) is
-      JSON : constant String := Thinkthen.Requests.Encode (Item);
-      Bytes : chars_ptr := New_String (JSON);
+      Storage : Thinkthen.Requests.Native.Arena;
+      type Descriptor_Access is access constant thinkthen_request_session_descriptor_v1;
+      function Pointer is new Ada.Unchecked_Conversion (System.Address, Descriptor_Access);
+      Descriptor : constant Descriptor_Access := Pointer (Thinkthen.Requests.Native.Convert (Item, Storage));
       Native_Status : aliased Unsigned_32;
-      Code : int;
    begin
-      Code := thinkthen_session_try_push (Owner.Handle, Bytes, size_t (JSON'Length), Native_Status'Access);
-      Free (Bytes);
-      Check (Code);
+      Check (thinkthen_session_push_typed (Owner.Handle, Descriptor, Native_Status'Access));
       Status := Push_Status'Val (Native_Status);
-   exception
-      when others => Free (Bytes); raise;
    end Push;
    procedure Finish (Owner : in out Session) is
    begin
       Check (thinkthen_session_finish (Owner.Handle, Null_Ptr, 0));
    end Finish;
    procedure Finish (Owner : in out Session; Failure : Thinkthen.Requests.T_RequestReaderFailure) is
-      JSON : constant String := Thinkthen.Requests.Encode (Failure);
-      Bytes : chars_ptr := New_String (JSON);
-      Code : int;
+      Storage : Thinkthen.Requests.Native.Arena;
+      type Failure_Access is access constant thinkthen_request_reader_failure_v1;
+      function Pointer is new Ada.Unchecked_Conversion (System.Address, Failure_Access);
+      Descriptor : constant Failure_Access := Pointer (Thinkthen.Requests.Native.Convert (Failure, Storage));
    begin
-      Code := thinkthen_session_finish (Owner.Handle, Bytes, size_t (JSON'Length));
-      Free (Bytes);
-      Check (Code);
-   exception
-      when others => Free (Bytes); raise;
+      Check (thinkthen_session_finish_typed (Owner.Handle, Descriptor));
    end Finish;
    procedure Cancel (Owner : in out Session) is
    begin
@@ -110,6 +107,16 @@ package body Thinkthen.Sessions is
       Check (thinkthen_session_wait (Owner.Handle, Interest, Timeout_Ms, Native_Ready'Access));
       Ready := Native_Ready;
    end Wait;
+   procedure Next_Packet (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status;
+                          Interest : Unsigned_32 := K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) is
+      Native_Status : aliased Unsigned_32;
+      New_Handle : aliased Packet_Access := null;
+   begin
+      Check (thinkthen_session_next_packet (Owner.Handle, Interest, Native_Status'Access, New_Handle'Address));
+      Close (Value);
+      Value.Handle := New_Handle;
+      Status := Read_Status'Val (Native_Status);
+   end Next_Packet;
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status) is
       Native_Status : aliased Unsigned_32;
       New_Handle : aliased Packet_Access := null;

@@ -61,6 +61,47 @@ pub unsafe extern "C" fn thinkthen_session_push_typed(
     })
 }
 
+/// Preview typed request arguments through Rust admission without sending.
+/// Supports the same fixed atomic questions and plan JSON as the JSON preview.
+/// COBOL scalar capacity applies before admission. No carrier pointer survives return.
+/// Success owns NUL-terminated JSON; free once with thinkthen_free_string.
+/// Refusals preserve both output slots and use the calling thread session diagnostic.
+/// # Safety
+/// Engine is live; function and surface are counted UTF-8 views. The finite aligned
+/// argument tree remains readable until return. Outputs are writable and nonoverlapping.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_request_plan_typed_json(
+    engine: *const crate::EngineHandle,
+    function: crate::session::views::thinkthen_complete_utf8_v1,
+    arguments: *const super::carriers::thinkthen_request_arguments_v1,
+    surface_name: crate::session::views::thinkthen_complete_utf8_v1,
+    out: *mut *mut std::ffi::c_char,
+    out_len: *mut usize,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        if out_len.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        if out.cast::<()>() == out_len.cast::<()>() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let (value_out, value_out_len) =
+            unsafe { super::typed_plan(engine, function, arguments, surface_name) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+            *out_len = value_out_len;
+        }
+        Ok(())
+    })
+}
+
 /// Construct a named request from counted typed argument records through Rust.
 /// The carrier tree copies strings, arrays, maps and explicit null alternatives;
 /// no pointer survives return. Rust alone admits questions, controls and evidence.

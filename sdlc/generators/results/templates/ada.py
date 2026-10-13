@@ -13,7 +13,7 @@ def identifier(value):
     return 'T_' + re.sub(r'[^a-zA-Z0-9]+', '_', value).strip('_')
 
 
-def render(definitions, names=None):
+def render(definitions, names=None, schemas=None):
     specs, bodies, done = [], [], set()
     optionals = {}
     scalar_names = {}
@@ -33,6 +33,8 @@ def render(definitions, names=None):
         done.add(key)
         if not isinstance(schema, dict):
             schema = {}
+        if schemas is not None:
+            schemas[key] = schema
         if '$ref' in schema:
             original = schema['$ref'].removeprefix('#/$defs/')
             base = emit(original, definitions[original])
@@ -72,9 +74,9 @@ def render(definitions, names=None):
                     entries.append(f'Add (Result, {ada_string(member)}, Encode (Value.{field}));')
             specs.append(f'type {name} is ' + ('record\n' + '\n'.join(fields) + '\nend record;' if fields else 'null record;'))
             body = 'Result : Unbounded_String := To_Unbounded_String ("{");\nbegin\n' + '\n'.join(entries) + '\nAppend (Result, "}");\nreturn To_String (Result);'
-        elif kinds == 'array' or kinds == 'object' and isinstance(schema.get('additionalProperties'), dict):
+        elif kinds == 'array' or kinds == 'object':
             mapping = kinds == 'object'
-            typ = emit(key + '_element', schema['additionalProperties'] if mapping else schema.get('items', {}))
+            typ = emit(key + '_element', (schema.get('additionalProperties') if isinstance(schema.get('additionalProperties'), dict) else {}) if mapping else schema.get('items', {}))
             if key not in definitions:
                 identity = (mapping, typ)
                 if identity in containers:
@@ -235,7 +237,11 @@ def header(root, env):
 def generate(root, graph, prepare, env, check):
     schema = json.loads((root / 'specification/request.schema.json').read_text())
     schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-    spec, body = render(prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure'))))
+    definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
+    names, schemas = {}, {}
+    spec, body = render(definitions, names, schemas)
+    from templates.ada_native import render as native_render
+    native_spec, native_body = native_render(definitions, names, schemas)
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
                   'with Thinkthen.Requests; use Thinkthen.Requests;',
                   'package Thinkthen.Sessions.Calls is']
@@ -246,12 +252,13 @@ def generate(root, graph, prepare, env, check):
         shared = declaration.replace('(Owner', '(Client : Engine; Owner')
         calls_spec += [declaration + ';', shared + ';']
         for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
-            calls_body.append(signature + ' is\nCall : T_RequestCall := Request;\nbegin\nCall.T_function := ' + identifier('RequestFunction_' + function) + ';\nStart (' + owner + ', (T_schema => ' + version + ', T_call => Call));\nend ' + function.title() + ';')
+            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', Request, "' + function + '");\nend ' + function.title() + ';')
     calls_spec.append('end Thinkthen.Sessions.Calls;')
     calls_body.append('end Thinkthen.Sessions.Calls;')
     outputs = {'thinkthen-sessions-calls.ads': '\n'.join(calls_spec) + '\n',
                'thinkthen-sessions-calls.adb': '\n'.join(calls_body) + '\n',
                'thinkthen-requests.ads': spec, 'thinkthen-requests.adb': body,
+               'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
     for name, content in outputs.items():
         path = output_path(root, 'ada', name)

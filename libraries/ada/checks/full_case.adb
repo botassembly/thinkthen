@@ -26,13 +26,9 @@ procedure Thinkthen.Sessions.Parity_Case is
    end Admission;
    procedure Drain_One is
    begin
-      Try_Read (Owner, Value, Read);
+      Next_Packet (Owner, Value, Read);
       case Read is
-         when Pending => declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+         when Pending => raise Program_Error with "blocking read returned pending";
          when Finished => null;
          when Result =>
             declare

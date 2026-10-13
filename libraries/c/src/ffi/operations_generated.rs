@@ -5,6 +5,7 @@
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
+use thinkthen::ErrorKind;
 /// The calling thread's last message on this engine; never null.
 ///
 /// # Safety
@@ -82,6 +83,45 @@ pub unsafe extern "C" fn thinkthen_error_code(
     // SAFETY: the caller retains its nullable engine owner.
     let held = unsafe { super::held(engine) };
     super::guard(held, super::DEFECT, || failures::code(held))
+}
+
+/// Preview canonical Request JSON without reading a key or cache or sending.
+/// Only fixed atomic questions support previews; dynamic questions and other functions refuse.
+/// Success owns NUL-terminated JSON; free once with thinkthen_free_string.
+/// Errors preserve output slots and use the calling thread session diagnostic.
+/// # Safety
+/// Engine is live; request_json has request_len readable bytes; NULL requires zero.
+/// Output slots are nonnull writable and nonoverlapping. Extents fit Rust slices.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_request_plan_json(
+    engine: *const crate::EngineHandle,
+    request_json: *const std::ffi::c_char,
+    request_len: usize,
+    out: *mut *mut std::ffi::c_char,
+    out_len: *mut usize,
+) -> std::ffi::c_int {
+    failures::session_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage);
+        }
+        if out_len.is_null() {
+            return Err(ErrorKind::Usage);
+        }
+        if out.cast::<()>() == out_len.cast::<()>() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let (value_out, value_out_len) =
+            unsafe { super::request_preview::json_plan(engine, request_json, request_len) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+            *out_len = value_out_len;
+        }
+        Ok(())
+    })
 }
 
 /// Free an engine; null is ignored.

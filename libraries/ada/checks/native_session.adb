@@ -53,13 +53,9 @@ procedure Native_Session is
       Entity_Count := 0;
       Terminal := False;
       loop
-         Try_Read (Owner, Value, Read);
+         Next_Packet (Owner, Value, Read);
          case Read is
-            when Pending => declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+            when Pending => raise Program_Error with "blocking read returned pending";
             when Finished => exit;
             when Result =>
                declare

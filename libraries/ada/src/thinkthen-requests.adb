@@ -147,6 +147,16 @@ when T_Authored_inputDeclaration_arm_string => return Encode (Value.V_0);
 when T_Authored_inputDeclaration_arm_object => return Encode (Value.V_1);
 end case;
 end Encode;
+function Encode (Value : T_JSON_Map) return String is
+Result : Unbounded_String := To_Unbounded_String ("{");
+begin
+for Item of Value loop
+if Length (Result) > 1 then Append (Result, ","); end if;
+Append (Result, Quote (To_String (Item.Key)) & ":" & Encode (Item.Value));
+end loop;
+Append (Result, "}");
+return To_String (Result);
+end Encode;
 function Encode (Value : T_JSON_List) return String is
 Result : Unbounded_String := To_Unbounded_String ("[");
 begin
