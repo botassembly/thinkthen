@@ -4,17 +4,20 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 SCRIPT = Path(__file__).resolve().parents[1] / 'sdlc/scripts/library-size'
+sys.path.insert(0, str(SCRIPT.parents[2]))
+from conformance.children.children import child_env
 
 
 class SizeReport(unittest.TestCase):
     def test_disjoint_counts_ratios_history_and_opt_in_storage(self):
         with tempfile.TemporaryDirectory(prefix='library-size-') as folder:
             root = Path(folder)
-            env = dict(os.environ, HOME=folder, GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
+            env = child_env(home=folder, GIT_CONFIG_NOSYSTEM='1', GIT_CONFIG_GLOBAL=os.devnull)
             def run(*args):
                 return subprocess.check_output(args, cwd=root, env=env, text=True, stderr=subprocess.PIPE)
             def write(path, text):

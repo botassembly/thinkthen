@@ -56,6 +56,8 @@ cargo nextest run --profile default --config-file "$REPO/.config/nextest.toml" \
     --target-dir target/consumer --workspace
 python3 conformance/parity.py --validate
 python3 -m unittest conformance.test_parity conformance.test_campaign_env conformance.test_candidate_campaign conformance.test_stress_selection
+python3 conformance/library-surface-test.py
+python3 conformance/library-surface-size-test.py
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
 sh conformance/children/test.sh
