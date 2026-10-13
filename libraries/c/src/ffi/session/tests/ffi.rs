@@ -11,10 +11,13 @@ fn immediate_native_diagnostics_keep_retry_and_owned_facts() {
     let engine = thinkthen::Engine::builder()
         .base_url(&format!("{}/arm/503/v1", backend.origin()))
         .expect("base")
+        .api_key("fake-session-key")
+        .expect("key")
+        .max_retries(0)
         .no_cache()
         .build()
         .expect("engine");
-    let question = thinkthen::Question::new("Question?")
+    let question = thinkthen::Question::decide("Is it?")
         .expect("question")
         .cut();
     let error = engine.decide(&question, "text").expect_err("backend fails");
