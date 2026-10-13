@@ -10,29 +10,28 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = ROOT / 'conformance/library-surface.json'
-EXTENSIONS = {'.rs', '.py', '.pyi', '.js', '.mjs', '.cjs', '.ts', '.mts', '.cts', '.rb', '.R', '.c', '.h', '.cpp',
-              '.hpp', '.cc', '.cs', '.go', '.java', '.kt', '.scala', '.swift', '.zig',
-              '.php', '.dart', '.ads', '.adb', '.cob', '.cbl', '.cpy', '.m'}
-# These declarations come from real tool invocations rather than the schema generator.
-TOOL_GENERATED = {'libraries/r/thinkthen/R/extendr-wrappers.R',
-                  'libraries/r/thinkthen/src/entrypoint.c',
-                  'libraries/ruby/fallback/thinkthen.h',
-                  'libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc',
-                  'libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h',
-                  'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.cc',
-                  'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.h'}
 
 
 def git(root, *args):
     return subprocess.check_output(['git', '-C', str(root), *args], text=True)
 
 
-def registry(root):
-    module = types.ModuleType('surface_registry')
-    sys.modules[module.__name__] = module
-    source = git(root, 'show', 'HEAD:sdlc/generators/results/registry.py')
-    exec(compile(source, 'registry.py', 'exec'), module.__dict__)
-    return module.generated_paths(), {output.path: output.target for output in module.OUTPUTS}
+def committed_classifier(root):
+    """Load both modules from the measured commit, including their dependency."""
+    previous = sys.modules.get('registry')
+    registry = types.ModuleType('registry')
+    classifier = types.ModuleType('surface_sources')
+    try:
+        sys.modules['registry'] = registry
+        for name, module in [('registry', registry), ('sources', classifier)]:
+            source = git(root, 'show', 'HEAD:sdlc/generators/results/' + name + '.py')
+            exec(compile(source, name + '.py', 'exec'), module.__dict__)
+    finally:
+        if previous is None:
+            sys.modules.pop('registry', None)
+        else:
+            sys.modules['registry'] = previous
+    return classifier
 
 
 def blobs(root, paths):
@@ -47,26 +46,6 @@ def blobs(root, paths):
         cursor += size + 1
 
 
-def owner(path, manifest, outputs):
-    for name, config in manifest['libraries'].items():
-        if path.startswith(config['root'] + '/'):
-            return name
-    target = outputs.get(path)
-    if target in manifest['libraries']:
-        return target
-    return None
-
-
-def classification(path, name, manifest, generated):
-    if path in generated or path in TOOL_GENERATED:
-        return 'generated'
-    if Path(path).suffix not in EXTENSIONS:
-        return None
-    config = manifest['libraries'][name]
-    parts = Path(path).parts
-    if Path(path).name == 'tests.rs' or any(folder in parts for folder in config['test_folders']):
-        return 'test'
-    return 'handwritten'
 
 
 def release_base(root):
@@ -79,7 +58,7 @@ def release_base(root):
     return max(tags, key=lambda tag: tuple(int(part) for part in tag.removeprefix('v').split('.')))
 
 
-def additions(root, since, manifest, generated, outputs):
+def additions(root, since, manifest, classifier, generated, outputs):
     result = []
     for commit in git(root, 'rev-list', '--reverse', '--topo-order', since + '..HEAD').splitlines():
         counts = {name: 0 for name in manifest['libraries']}
@@ -95,8 +74,8 @@ def additions(root, since, manifest, generated, outputs):
             elif line.startswith('+++ '):
                 path = None
             elif line.startswith(prefix) and line[len(prefix):].strip() and path:
-                name = owner(path, manifest, outputs)
-                if name and classification(path, name, manifest, generated) == 'handwritten':
+                name = classifier.owner(path, manifest, outputs)
+                if name and classifier.classification(path, name, manifest, generated) == 'handwritten':
                     counts[name] += 1
         result.append({'commit': commit, 'kind': 'merge_resolution' if merge else 'change',
                        'handwritten_added': counts})
@@ -104,16 +83,18 @@ def additions(root, since, manifest, generated, outputs):
 
 
 def measure(root, manifest, since):
-    generated, outputs = registry(root)
+    classifier = committed_classifier(root)
+    generated, outputs = classifier.generated_paths(), classifier.output_owners()
     counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
                          languages={}) for name in manifest['libraries']}
     paths = [path for path in git(root, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
-             if owner(path, manifest, outputs) and classification(path, owner(path, manifest, outputs), manifest, generated)]
+             if classifier.owner(path, manifest, outputs) and classifier.classification(
+                 path, classifier.owner(path, manifest, outputs), manifest, generated)]
     for path, source in blobs(root, paths):
-        name = owner(path, manifest, outputs)
+        name = classifier.owner(path, manifest, outputs)
         if not name:
             continue
-        kind = classification(path, name, manifest, generated)
+        kind = classifier.classification(path, name, manifest, generated)
         if not kind:
             continue
         total = sum(bool(line.strip()) for line in source.splitlines())
@@ -136,7 +117,7 @@ def measure(root, manifest, since):
     return {'revision': git(root, 'rev-parse', 'HEAD').strip(), 'since': since,
             'units': 'nonblank source lines', 'history_classification': 'committed registry and conventions; merges count only combined additions',
             'medians': medians, 'libraries': counts,
-            'commits': additions(root, since, manifest, generated, outputs)}
+            'commits': additions(root, since, manifest, classifier, generated, outputs)}
 
 
 def summary(report):

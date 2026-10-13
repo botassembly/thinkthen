@@ -27,6 +27,7 @@ class SizeReport(unittest.TestCase):
             manifest = {'libraries': libraries, 'exceptions': {'python': {'paths': ['libraries/python/adapter.py']}}}
             write('conformance/library-surface.json', json.dumps(manifest))
             write('sdlc/generators/results/registry.py', "from types import SimpleNamespace\nOUTPUTS = (SimpleNamespace(target='python', path='libraries/python/generated.py'), SimpleNamespace(target='python', path='sdlc/generators/side/inputs.json'))\ndef generated_paths():\n    return {output.path for output in OUTPUTS}\n")
+            write('sdlc/generators/results/sources.py', (SCRIPT.parent.parent / 'generators/results/sources.py').read_text())
             write('libraries/python/main.py', 'one\n\ntwo\n')
             write('libraries/python/adapter.py', 'adapter\n')
             write('libraries/python/generated.py', 'generated\n' * 5)
@@ -100,6 +101,7 @@ class SizeReport(unittest.TestCase):
             (root / 'libraries/python/generated.py').unlink()
             write('conformance/library-surface.json', '{}')
             write('sdlc/generators/results/registry.py', 'invalid Python')
+            write('sdlc/generators/results/sources.py', 'invalid classifier')
             dirty = json.loads(run(str(SCRIPT), '--root', str(root), '--json'))
             self.assertEqual(dirty, committed)
 
