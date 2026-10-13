@@ -1,5 +1,7 @@
 #pragma once
 
+#include "duckdb_api.hpp"
+
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/parser/parsed_data/create_scalar_function_info.hpp"
 #include "duckdb/parser/parsed_data/create_table_function_info.hpp"
@@ -11,7 +13,7 @@ void DescribeRegistration(ExtensionLoader &loader, Info info, const string &purp
     info.on_conflict = OnCreateConflict::ALTER_ON_CONFLICT;
     for (const auto &function : info.functions.functions) {
         FunctionDescription description;
-        description.parameter_types = function.arguments;
+        description.parameter_types = ThinkThenRegistrationTypes(function);
         description.description = purpose;
         info.descriptions.push_back(std::move(description));
     }

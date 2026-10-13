@@ -50,10 +50,10 @@ struct NestedBind : FunctionData {
 	}
 };
 
-unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &function,
+unique_ptr<FunctionData> BindNested(ClientContext &context, const string &name,
                                      vector<unique_ptr<Expression>> &arguments) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-	const auto kind = function.name == "thinkthen_native_recognize" ? 8 : 9;
+	const auto kind = name == "thinkthen_native_recognize" ? 8 : 9;
 	auto bound = make_uniq<NestedBind>(context.shared_from_this(), kind);
 	if (!arguments[0]->IsFoldable() || ExpressionExecutor::EvaluateScalar(context, *arguments[0]).IsNull()) {
 		return bound;
@@ -86,7 +86,7 @@ struct Group {
 };
 
 void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &bound = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<NestedBind>();
+	auto &bound = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<NestedBind>();
 	auto context = bound.context.lock();
 	if (!context) {
 		throw OrdinaryError("thinkthen defect: the caller session ended");
@@ -181,20 +181,20 @@ void RegisterNested(ExtensionLoader &loader) {
 	ScalarFunction recognize("thinkthen_native_recognize",
 	                         {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
 	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                         NestedType(8), Nested, BindNested);
-	recognize.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                         NestedType(8), Nested, ThinkThenBindScalar<BindNested>);
+	ThinkThenSpecialNulls(recognize);
 	recognize.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, recognize, spans);
 	auto described = recognize;
-	described.arguments[1] = LogicalType::VARCHAR;
+	ThinkThenArgument(described, 1, LogicalType::VARCHAR);
 	RegisterDescribedScalar(loader, described, spans);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL) AS "
 	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))", spans);
 	ScalarFunction relations("thinkthen_native_relations",
 	                         {LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                         NestedType(9), Nested, BindNested);
-	relations.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                         NestedType(9), Nested, ThinkThenBindScalar<BindNested>);
+	ThinkThenSpecialNulls(relations);
 	relations.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, relations, edges);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_relations(input, spec, settings := NULL) AS "
