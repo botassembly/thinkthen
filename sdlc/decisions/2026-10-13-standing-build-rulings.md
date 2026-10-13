@@ -22,7 +22,7 @@ The PM made these rulings so the coordinator decides alone in the common cases. 
 - Every checkpoint runs one fixed gate list: routine `test`, `lint` and every library build, collecting all failures in each phase before stopping.
 - A developer runs its own library's `check.sh`, its lint limit and the routine tests for the files it touched before it hands back.
 - Each lane builds into its own Cargo folder, `CARGO_TARGET_DIR=/tmp/thinkthen-target-<lane>`, so lanes never queue on one build directory. The lane deletes it when it lands.
-- Every `check.sh` uses one heavy-build lock path. Up to four developer lanes run at once while machine load stays below the core count.
+- Every `check.sh` uses one heavy-build lock path. Run every ready developer lane at once; at most four heavy builds run on the Beelink at a time, while machine load stays below the core count.
 
 ## Ownership
 
