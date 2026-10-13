@@ -10,56 +10,6 @@
 #include <stdlib.h>
 
 /*
- C value `THINKTHEN_ANSWER_CHOICE_V1`.
- */
-#define THINKTHEN_ANSWER_CHOICE_V1 2u
-
-/*
- C value `THINKTHEN_ANSWER_FIND_V1`.
- */
-#define THINKTHEN_ANSWER_FIND_V1 5u
-
-/*
- C value `THINKTHEN_ANSWER_SCORE_V1`.
- */
-#define THINKTHEN_ANSWER_SCORE_V1 4u
-
-/*
- C value `THINKTHEN_ANSWER_TAG_V1`.
- */
-#define THINKTHEN_ANSWER_TAG_V1 3u
-
-/*
- C value `THINKTHEN_ANSWER_YES_NO_V1`.
- */
-#define THINKTHEN_ANSWER_YES_NO_V1 1u
-
-/*
- C value `THINKTHEN_ATTEMPT_OK_V1`.
- */
-#define THINKTHEN_ATTEMPT_OK_V1 1u
-
-/*
- C value `THINKTHEN_ATTEMPT_STATUS_V1`.
- */
-#define THINKTHEN_ATTEMPT_STATUS_V1 2u
-
-/*
- C value `THINKTHEN_ATTEMPT_TRANSPORT_V1`.
- */
-#define THINKTHEN_ATTEMPT_TRANSPORT_V1 3u
-
-/*
- C value `THINKTHEN_BATCH_MAX_V1`.
- */
-#define THINKTHEN_BATCH_MAX_V1 2u
-
-/*
- C value `THINKTHEN_BATCH_RECORDS_V1`.
- */
-#define THINKTHEN_BATCH_RECORDS_V1 1u
-
-/*
  A counted COBOL scalar exceeds its documented representation capacity.
  */
 #define THINKTHEN_COBOL_OVERFLOW 1002
@@ -373,41 +323,6 @@
 #define THINKTHEN_COMPLETE_VERSION_THINKTHEN_RESULT_2_V1 1
 
 /*
- C value `THINKTHEN_CONTENT_JSON_V1`.
- */
-#define THINKTHEN_CONTENT_JSON_V1 2u
-
-/*
- C value `THINKTHEN_CONTENT_TEXT_V1`.
- */
-#define THINKTHEN_CONTENT_TEXT_V1 1u
-
-/*
- C value `THINKTHEN_DECIDE_AUTHORED_V1`.
- */
-#define THINKTHEN_DECIDE_AUTHORED_V1 2u
-
-/*
- C value `THINKTHEN_DECIDE_BOOLEAN_V1`.
- */
-#define THINKTHEN_DECIDE_BOOLEAN_V1 1u
-
-/*
- C value `THINKTHEN_DECIDE_NULL_V1`.
- */
-#define THINKTHEN_DECIDE_NULL_V1 0u
-
-/*
- C value `THINKTHEN_DIRECTION_EITHER_V1`.
- */
-#define THINKTHEN_DIRECTION_EITHER_V1 2u
-
-/*
- C value `THINKTHEN_DIRECTION_SOURCE_TO_TARGET_V1`.
- */
-#define THINKTHEN_DIRECTION_SOURCE_TO_TARGET_V1 1u
-
-/*
  the wire failed or refused
  */
 #define THINKTHEN_EBACKEND 2
@@ -438,126 +353,6 @@
 #define THINKTHEN_EUSAGE 1
 
 /*
- C value `THINKTHEN_EVENT_QUESTION_V1`.
- */
-#define THINKTHEN_EVENT_QUESTION_V1 1u
-
-/*
- C value `THINKTHEN_EVENT_ROW_V1`.
- */
-#define THINKTHEN_EVENT_ROW_V1 2u
-
-/*
- C value `THINKTHEN_FUNCTION_ANNOTATE_V1`.
- */
-#define THINKTHEN_FUNCTION_ANNOTATE_V1 8u
-
-/*
- C value `THINKTHEN_FUNCTION_CHOOSE_V1`.
- */
-#define THINKTHEN_FUNCTION_CHOOSE_V1 2u
-
-/*
- C value `THINKTHEN_FUNCTION_DECIDE_V1`.
- */
-#define THINKTHEN_FUNCTION_DECIDE_V1 1u
-
-/*
- C value `THINKTHEN_FUNCTION_FILTER_V1`.
- */
-#define THINKTHEN_FUNCTION_FILTER_V1 5u
-
-/*
- C value `THINKTHEN_FUNCTION_FIND_V1`.
- */
-#define THINKTHEN_FUNCTION_FIND_V1 7u
-
-/*
- C value `THINKTHEN_FUNCTION_RANK_V1`.
- */
-#define THINKTHEN_FUNCTION_RANK_V1 6u
-
-/*
- C value `THINKTHEN_FUNCTION_RECOGNIZE_V1`.
- */
-#define THINKTHEN_FUNCTION_RECOGNIZE_V1 9u
-
-/*
- C value `THINKTHEN_FUNCTION_RELATE_V1`.
- */
-#define THINKTHEN_FUNCTION_RELATE_V1 10u
-
-/*
- C value `THINKTHEN_FUNCTION_SCORE_V1`.
- */
-#define THINKTHEN_FUNCTION_SCORE_V1 4u
-
-/*
- C value `THINKTHEN_FUNCTION_TAG_V1`.
- */
-#define THINKTHEN_FUNCTION_TAG_V1 3u
-
-/*
- C value `THINKTHEN_ID_FAILURE_V1`.
- */
-#define THINKTHEN_ID_FAILURE_V1 2u
-
-/*
- C value `THINKTHEN_ID_OBSERVATION_V1`.
- */
-#define THINKTHEN_ID_OBSERVATION_V1 1u
-
-/*
- C value `THINKTHEN_IMAGE_JPEG_V1`.
- */
-#define THINKTHEN_IMAGE_JPEG_V1 1u
-
-/*
- C value `THINKTHEN_IMAGE_PNG_V1`.
- */
-#define THINKTHEN_IMAGE_PNG_V1 2u
-
-/*
- C value `THINKTHEN_MEMBER_FAILURE_V1`.
- */
-#define THINKTHEN_MEMBER_FAILURE_V1 2u
-
-/*
- C value `THINKTHEN_MEMBER_INVALID_DISTRIBUTION_V1`.
- */
-#define THINKTHEN_MEMBER_INVALID_DISTRIBUTION_V1 5u
-
-/*
- C value `THINKTHEN_MEMBER_INVALID_PROBABILITY_V1`.
- */
-#define THINKTHEN_MEMBER_INVALID_PROBABILITY_V1 4u
-
-/*
- C value `THINKTHEN_MEMBER_MISSING_ANSWER_V1`.
- */
-#define THINKTHEN_MEMBER_MISSING_ANSWER_V1 1u
-
-/*
- C value `THINKTHEN_MEMBER_MISSING_PROBABILITY_V1`.
- */
-#define THINKTHEN_MEMBER_MISSING_PROBABILITY_V1 3u
-
-/*
- C value `THINKTHEN_MEMBER_SUCCESS_V1`.
- */
-#define THINKTHEN_MEMBER_SUCCESS_V1 1u
-
-/*
- C value `THINKTHEN_MEMBER_UNEXPECTED_PROBABILITY_V1`.
- */
-#define THINKTHEN_MEMBER_UNEXPECTED_PROBABILITY_V1 6u
-
-/*
- C value `THINKTHEN_MEMBER_WRONG_KIND_V1`.
- */
-#define THINKTHEN_MEMBER_WRONG_KIND_V1 2u
-
-/*
  C value `THINKTHEN_NO`.
  */
 #define THINKTHEN_NO 0
@@ -577,51 +372,6 @@
  error_retryable and error_facts_json describe the calling thread's failure.
  */
 #define THINKTHEN_OK 0
-
-/*
- C value `THINKTHEN_ORIGIN_CACHE_V1`.
- */
-#define THINKTHEN_ORIGIN_CACHE_V1 2u
-
-/*
- C value `THINKTHEN_ORIGIN_LIVE_V1`.
- */
-#define THINKTHEN_ORIGIN_LIVE_V1 1u
-
-/*
- reserved, never emitted in 0.2
- */
-#define THINKTHEN_ORIGIN_MEMORY_V1 5u
-
-/*
- reserved, never emitted in 0.2
- */
-#define THINKTHEN_ORIGIN_PROXY_V1 4u
-
-/*
- C value `THINKTHEN_ORIGIN_REPLAY_V1`.
- */
-#define THINKTHEN_ORIGIN_REPLAY_V1 3u
-
-/*
- C value `THINKTHEN_PROBABILITIES_NAMED_V1`.
- */
-#define THINKTHEN_PROBABILITIES_NAMED_V1 2u
-
-/*
- C value `THINKTHEN_PROBABILITIES_YES_V1`.
- */
-#define THINKTHEN_PROBABILITIES_YES_V1 1u
-
-/*
- C value `THINKTHEN_RELATION_CHOICE_V1`.
- */
-#define THINKTHEN_RELATION_CHOICE_V1 2u
-
-/*
- C value `THINKTHEN_RELATION_YES_NO_V1`.
- */
-#define THINKTHEN_RELATION_YES_NO_V1 1u
 
 #define THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_1_V1 1
 
@@ -794,36 +544,6 @@
 #define THINKTHEN_REQUEST_THRESHOLD_ARM_2_V1 2
 
 /*
- C value `THINKTHEN_RESULT_FAILURE_V1`.
- */
-#define THINKTHEN_RESULT_FAILURE_V1 2u
-
-/*
- C value `THINKTHEN_RESULT_SUCCESS_V1`.
- */
-#define THINKTHEN_RESULT_SUCCESS_V1 1u
-
-/*
- C value `THINKTHEN_RULE_BAND_V1`.
- */
-#define THINKTHEN_RULE_BAND_V1 3u
-
-/*
- C value `THINKTHEN_RULE_CUT_V1`.
- */
-#define THINKTHEN_RULE_CUT_V1 2u
-
-/*
- input-only missing reading
- */
-#define THINKTHEN_RULE_DEFAULT_V1 0u
-
-/*
- C value `THINKTHEN_RULE_NULL_V1`.
- */
-#define THINKTHEN_RULE_NULL_V1 1u
-
-/*
  Push transferred one descriptor to the session.
  */
 #define THINKTHEN_SESSION_ACCEPTED_V1 0
@@ -897,106 +617,6 @@
  Drain output after cancel without waking repeatedly for cancellation.
  */
 #define THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 2
-
-/*
- C value `THINKTHEN_SOURCE_FILE_V1`.
- */
-#define THINKTHEN_SOURCE_FILE_V1 3u
-
-/*
- C value `THINKTHEN_SOURCE_IMAGE_FILE_V1`.
- */
-#define THINKTHEN_SOURCE_IMAGE_FILE_V1 4u
-
-/*
- C value `THINKTHEN_SOURCE_JSONL_V1`.
- */
-#define THINKTHEN_SOURCE_JSONL_V1 5u
-
-/*
- C value `THINKTHEN_SOURCE_LINE_V1`.
- */
-#define THINKTHEN_SOURCE_LINE_V1 1u
-
-/*
- C value `THINKTHEN_SOURCE_WINDOW_V1`.
- */
-#define THINKTHEN_SOURCE_WINDOW_V1 2u
-
-/*
- C value `THINKTHEN_STAGE_BOUNDARY_V1`.
- */
-#define THINKTHEN_STAGE_BOUNDARY_V1 1u
-
-/*
- C value `THINKTHEN_STAGE_EDGE_V1`.
- */
-#define THINKTHEN_STAGE_EDGE_V1 3u
-
-/*
- C value `THINKTHEN_STAGE_KIND_V1`.
- */
-#define THINKTHEN_STAGE_KIND_V1 2u
-
-/*
- C value `THINKTHEN_STAGE_RELATION_V1`.
- */
-#define THINKTHEN_STAGE_RELATION_V1 4u
-
-/*
- C value `THINKTHEN_STOP_BACKEND_V1`.
- */
-#define THINKTHEN_STOP_BACKEND_V1 8u
-
-/*
- C value `THINKTHEN_STOP_CANCELLED_V1`.
- */
-#define THINKTHEN_STOP_CANCELLED_V1 9u
-
-/*
- C value `THINKTHEN_STOP_DEADLINE_V1`.
- */
-#define THINKTHEN_STOP_DEADLINE_V1 11u
-
-/*
- C value `THINKTHEN_STOP_DEFECT_V1`.
- */
-#define THINKTHEN_STOP_DEFECT_V1 10u
-
-/*
- C value `THINKTHEN_STOP_LOCAL_V1`.
- */
-#define THINKTHEN_STOP_LOCAL_V1 2u
-
-/*
- C value `THINKTHEN_STOP_NO_KEY_V1`.
- */
-#define THINKTHEN_STOP_NO_KEY_V1 3u
-
-/*
- C value `THINKTHEN_STOP_REPLY_V1`.
- */
-#define THINKTHEN_STOP_REPLY_V1 7u
-
-/*
- C value `THINKTHEN_STOP_STATUS_V1`.
- */
-#define THINKTHEN_STOP_STATUS_V1 5u
-
-/*
- C value `THINKTHEN_STOP_TOO_LARGE_V1`.
- */
-#define THINKTHEN_STOP_TOO_LARGE_V1 6u
-
-/*
- C value `THINKTHEN_STOP_TRANSPORT_V1`.
- */
-#define THINKTHEN_STOP_TRANSPORT_V1 4u
-
-/*
- C value `THINKTHEN_STOP_USAGE_V1`.
- */
-#define THINKTHEN_STOP_USAGE_V1 1u
 
 /*
  C value `THINKTHEN_UNSURE`.
@@ -1131,8 +751,17 @@ typedef struct thinkthen_complete_usage_persistence_v1 {
   uint32_t kind;
 } thinkthen_complete_usage_persistence_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_utf8_v1`.
+ */
 typedef struct thinkthen_complete_utf8_v1 {
+  /*
+   C field `data`.
+   */
   const char *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_utf8_v1;
 
@@ -2175,13 +1804,31 @@ typedef struct thinkthen_request_session_descriptor_v1 {
   const struct thinkthen_request_session_source_location_v1 *m_location;
 } thinkthen_request_session_descriptor_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_extension_v1`.
+ */
 typedef struct thinkthen_complete_extension_v1 {
+  /*
+   C field `name`.
+   */
   struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `json`.
+   */
   struct thinkthen_complete_utf8_v1 json;
 } thinkthen_complete_extension_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_extensions_v1`.
+ */
 typedef struct thinkthen_complete_extensions_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_extension_v1 *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_extensions_v1;
 
@@ -2271,31 +1918,85 @@ typedef struct thinkthen_complete_u64_presence_v1 {
   uint64_t value;
 } thinkthen_complete_u64_presence_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
+ */
 typedef struct thinkthen_complete_json_array_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_json_v1 *const *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_json_array_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_entry_v1`.
+ */
 typedef struct thinkthen_complete_json_entry_v1 {
+  /*
+   C field `name`.
+   */
   struct thinkthen_complete_utf8_v1 name;
+  /*
+   C field `value`.
+   */
   const struct thinkthen_complete_json_v1 *value;
 } thinkthen_complete_json_entry_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_object_v1`.
+ */
 typedef struct thinkthen_complete_json_object_v1 {
+  /*
+   C field `data`.
+   */
   const struct thinkthen_complete_json_entry_v1 *data;
+  /*
+   C field `len`.
+   */
   size_t len;
 } thinkthen_complete_json_object_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_data_v1`.
+ */
 typedef union thinkthen_complete_json_data_v1 {
+  /*
+   C field `boolean`.
+   */
   uint32_t boolean;
+  /*
+   C field `number`.
+   */
   struct thinkthen_complete_utf8_v1 number;
+  /*
+   C field `string`.
+   */
   struct thinkthen_complete_utf8_v1 string;
+  /*
+   C field `array`.
+   */
   struct thinkthen_complete_json_array_v1 array;
+  /*
+   C field `object`.
+   */
   struct thinkthen_complete_json_object_v1 object;
 } thinkthen_complete_json_data_v1;
 
+/*
+ C descriptor or borrowed view `thinkthen_complete_json_v1`.
+ */
 typedef struct thinkthen_complete_json_v1 {
+  /*
+   C field `kind`.
+   */
   uint32_t kind;
+  /*
+   C field `data`.
+   */
   union thinkthen_complete_json_data_v1 data;
 } thinkthen_complete_json_v1;
 
