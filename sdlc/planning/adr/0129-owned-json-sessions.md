@@ -1,5 +1,9 @@
 # ADR 0129: Own JSON request sessions and result handles
 
+## Amendment, 2026-10-13
+
+The frozen C compatibility forms and promises below are superseded by [the no-compatibility ruling](../../decisions/2026-10-12-no-compatibility-before-1-0.md), under tickets 0561, 0565 and 0576. The owned session, cancellation, terminal facts and pure-core rules remain authoritative. Ticket 0576 requires Swift, C++, Java and Zig to read native result views and delete their handwritten JSON parsers. C#, Go, TypeScript and R may use platform standard decoders over generated types, subject to each language's more specific ruling. This replaces the earlier host reader choice where it differs and introduces no new wire format.
+
 The queue owner accepted this interface for ticket 0503 after fresh review of revision `0c5f1f772e85a9fcdbc1e7ceb6f86bf21af004bd`. Implementation follows this decision. Ian can overturn its additive names, packet shape and queue choice. The governing contract is the 2026-10-09 amendment to 0503, the amendments to 0511 and 0513, and `sdlc/decisions/2026-10-09-thin-first-class-bindings.md`. ADR 0125 retains Request admission and pure-core boundaries. ADR 0101 retains the frozen C compatibility forms.
 
 The queue owner accepted the observation follow-up below after fresh review of revision `e8f546aeca5644f3703f61cf6c6cf51b3038e0d6` against `6af931685`. It extends the output and shared execution sections as stated below. The original acceptance provenance, ownership, queue, terminal, pure-core and frozen C rules continue to apply. Runtime implementation remains work under ticket 0503.

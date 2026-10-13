@@ -1,5 +1,9 @@
 # Thin, first-class bindings in 0.2
 
+## Amendment, 2026-10-13
+
+Ticket 0576's remaining-work ruling requires Swift, C++, Java and Zig to read native result views and delete their handwritten JSON parsers. C#, Go, TypeScript and R may use the platform's standard decoder over generated types; each language's more specific ticket rules still apply. Rust owns result decoding and validation. Hosts keep their language idiom and one public API. This replaces the JSON-session reader choice below where it differs.
+
 ## Ruling
 
 Ian, 2026-10-09: "Now is the time to fix all this up because we can't be dealing with this long term. I want to make all the right decisions and make 0.2 as strong as possible."
