@@ -59,11 +59,10 @@ const nav = [
   ['/models/', 'Models'],
   ['/languages/', 'Languages'],
   ['/databases/', 'Databases'],
+  ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
   ['/how-tos/', 'How-tos'],
-    ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
   ['/learn/', 'Learn'],
   ['/guides/', 'Guides'],
-  ['/blog/', 'Blog'],
 ];
 ---
 <!DOCTYPE html>

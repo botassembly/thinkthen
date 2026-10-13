@@ -1,5 +1,5 @@
 ---
-// Goal: say what a server must do before ThinkThen can ask it, so the reader can judge a server that does not speak System One yet.
+// Goal: say what a server must do before ThinkThen can ask it, and how to bridge a server that takes another request shape.
 import SidePage from '../../layouts/SidePage.astro';
 import Terminal from '../../components/Terminal.astro';
 import { BACKEND_PAGES, BACKENDS_SEE } from '../../data/catalog.mjs';
@@ -8,9 +8,9 @@ import { captioned } from '../../data/samples.mjs';
 const page = BACKEND_PAGES.find((p) => p.slug === 'other-servers');
 const [request] = captioned('install/backends/other-servers', BACKENDS_SEE['other-servers']);
 ---
-<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'What a server must do before ThinkThen can ask it, and how to bridge a server that does not speak System One yet.' }} name="Models">
+<SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'What a server must do before ThinkThen can ask it, and how to bridge a server that takes another request shape.' }} name="Models">
   <h1>Other servers</h1>
-  <p class="lede">ThinkThen speaks one wire shape, System One. A server with another shape needs a small server in front of it that speaks System One.</p>
+  <p class="lede">ThinkThen sends every request in one shape, called System One. A server that takes another shape needs a small server in front of it that takes this one.</p>
 
   <h2>What the server must do</h2>
   <ul>
@@ -26,7 +26,7 @@ const [request] = captioned('install/backends/other-servers', BACKENDS_SEE['othe
   <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/backends.md">backends specification</a> gives every field of the request and the reply.</p>
 
   <h2>Test that server</h2>
-  <p>Point <code>thinkthen backends check</code> at that server. A pass establishes the rich wire probes and the minimal ten-function inputs on that model. The <a href="/models/system-one/">System One page</a> shows the check.</p>
+  <p>Point <code>thinkthen backends check</code> at that server. It sends four fixed test questions, then one small call through each of the ten functions. The <a href="/models/system-one/">Any compatible server</a> page shows the check.</p>
 
   <p class="pagelinks"><a href="/models/">All models</a> · <a href="/models/system-one/">Any compatible server</a></p>
 </SidePage>

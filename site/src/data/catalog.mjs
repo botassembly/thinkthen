@@ -356,8 +356,8 @@ export const FUNCTIONS = [
       flag('levels', '', '', 'The scale, lowest first.'),
       flag('threshold', '', '', 'A cut, or a band written LOW:HIGH.'),
       flag('on', '', '', 'One JSON Pointer, or a list of them.'),
-      flag('name, wording_version', '', '', 'Optional author name and wording version in development 0.2. They do not change the question digest.'),
-      flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection in development 0.2. They never project or coerce the input.'),
+      flag('name, wording_version', '', '', 'Optional author name and wording version. They do not change the question digest.'),
+      flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection. They never project or coerce the input.'),
       flag('model, profile', '', '', 'The model to ask and the calibration profile to apply.'),
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
@@ -961,12 +961,11 @@ export const BACKEND_ROUTES = [
   return { ...r, title: page.title, route: page.route, base: r.address ?? row.base };
 });
 
-// Public installation remains 0.1.2; this explicitly describes the development route.
 export const OPENAI_ANNOUNCED = 'The named <code>openai</code> backend sends text questions to the OpenAI Decisions API. All ten functions run on it with text, and it refuses images. The <a href="/models/openai/">OpenAI Decisions API page</a> gives its setup.';
 
 export const BACKENDS_SEE = {
   typesafe: {
-    '1-one': 'Jev answers yes. Sending the item back asks for a refund.',
+    '1-one': 'Jev answers yes at the default threshold.',
     '2-lines': 'One request carries all three lines. The thanks is the only no.',
     '3-check-plan': "The check would post to TypeSafe's address with Jev's pinned model. The plan sends nothing.",
   },

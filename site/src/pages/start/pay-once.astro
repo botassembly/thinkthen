@@ -28,7 +28,7 @@ const spec = (name, anchor = '') => `${REPO}/blob/main/specification/${name}.md$
   <p>Records that share a request can still move an answer a little. In <a href={adr}>ADR 0055's table</a>, the packed run's right answers moved by up to 4 across repeats and record orders. <code>--batch 1</code> keeps records apart.</p>
 
   <h2 id="the-key">One saved answer per question</h2>
-  <p>When the backend permits storage, ThinkThen saves each good answer under its own question key. The question key covers the backend address, the API type, the model you asked for and the model that answered, the shared context, and the encoded question with the text it quotes. So a change of model asks again.</p>
+  <p>When the backend permits storage, ThinkThen saves each good answer under its own question key. The question key covers the backend address, the request shape the backend takes, the model you asked for and the model that answered, the shared context, and the encoded question with the text it quotes. So a change of model asks again.</p>
   <p>A change in how records group into requests never asks again. Each record's question stays the same whatever shares its request. After a run of 100 records, a run of 120 that holds them asks only the 20 new ones. The <a href={spec('records', '#how-many-requests-each-command-makes')}>records specification</a> gives the rule, and the <a href={spec('cache', '#version-2-identity')}>cache specification</a> gives the question key.</p>
   <p>The <a href="/start/replay/#replay-in-a-test">replay page</a> reads four reviews from saved answers. This run reads the same saved answers one review a request.</p>
   <Terminal run={batchOne} caption={batchOne.see} />

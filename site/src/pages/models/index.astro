@@ -24,18 +24,19 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: "Point the same call at TypeSafe's Jev, another provider or a model on your own machine with one option and no code change." }} name="Models">
   <h1>Models</h1>
   <p class="lede">Point the same call at TypeSafe's Jev, another provider or a model on your own machine. One option makes the switch. Your code stays the same.</p>
+  <p>A backend is a named way to reach a model. Before you rely on a provider, <a href="/models/check/"><code>thinkthen backends check</code></a> sends a few fixed questions and one small call through each of the ten functions, and tells you what works.</p>
 
   <h2 id="one-option">One option</h2>
-  <p>These three runs ask the same question about the same line. Only <code>--backend</code> changes. The Ollama run also names the port its <a href="/models/ollama/">local server</a> listens on.</p>
+  <p>These three runs ask the same question about the same line. Each names a different <code>--backend</code>. The Ollama run also passes <code>--url</code>. The site's <a href="/models/ollama/">Ollama</a> listens on a second port. On Ollama's default port, leave <code>--url</code> out.</p>
   {same.map((r) => <Terminal run={r} caption={r.see} />)}
-  <p>A different model can give a different answer. Grade a model on your own records before you rely on it: <a href="/start/tune/">Tune for free</a> shows how.</p>
+  <p>A different model can give a different answer. Grade a model on your own records before you rely on it. <a href="/start/tune/">Tune for free</a> shows how.</p>
 
   <h2 id="saved-answers">Saved answers stay with their model</h2>
-  <p>A switch of model asks every question again. The model is part of each saved answer's <a href="/start/pay-once/#the-key">question key</a>. The answers of two models never mix.</p>
+  <p>A switch of model or address asks every question again. Both are part of each saved answer's <a href="/start/pay-once/#the-key">question key</a>. The answers of two models never mix.</p>
 
-  <p><a href="/models/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server. Some models also read JPEG and PNG images. The <a href="/start/files/#images">image input rules</a> name them.</p>
   <h2 id="named">The models ThinkThen knows by name</h2>
   <p>Name one with <code>--backend NAME</code> or <code>THINKTHEN_BACKEND</code>. Each brings its own address, key variable and model.</p>
+  <p><a href="/models/local/">Run a model locally</a> shows Ollama, llama.cpp and the Strands MLX server. Some models also read JPEG and PNG images. The <a href="/start/files/#images">image input rules</a> name them.</p>
   <table class="backends" data-backends>
     <tr><th>Name</th><th>Address</th><th>Path</th><th>Key variable</th><th>Default model</th></tr>
     {rows.map((r) => (
@@ -52,7 +53,7 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h2 id="tested">Tested models</h2>
   <p>This table gives the last <a href="/models/check/"><code>thinkthen backends check</code></a> of each built-in backend, with its date. A check covers its own date, model and inputs.</p>
   <table class="backend-checks">
-    <tr><th>Backend</th><th>Date</th><th>Model</th><th>Lines found</th></tr>
+    <tr><th>Backend</th><th>Date</th><th>Model</th><th>Check result</th></tr>
     {rows.flatMap((r) => r.checks.map((c) => (
       <tr>
         <td><a href={r.page.route}><code>{r.name}</code></a></td>
@@ -67,12 +68,12 @@ const typesafe = rows.find((r) => r.name === 'typesafe');
   <h2>With no backend named</h2>
   <p>A command that names no backend and no address sends every question to <code>{typesafe.base}</code> with <code>{typesafe.model}</code>. It reads the key from <code>{KEY_VARIABLE}</code>. The <a href="/models/typesafe/">TypeSafe Jev page</a> covers that backend.</p>
   <Terminal run={plan} caption="The plan names the address, the model, and the variable a key would come from. It holds no key." />
-  <p><code>--plan</code> sends nothing and needs no key. The plan holds the evidence, so treat it with the same care as the request.</p>
+  <p><code>--plan</code> sends nothing and needs no key. The plan holds the evidence. Treat it with the same care as the request.</p>
 
-  <h2>The key</h2>
+  <h2 id="the-key">The key</h2>
   <p>A named backend reads only its own key variables, and the first one that is not blank wins. With no backend named, the key comes from <code>{KEY_VARIABLE}</code>. The command takes no flag and no file for a key. A key that is unset or blank exits 4 at any address but the three local hosts named below. The message names the variable and never a value.</p>
-  <p>The key goes only to the address you named. It never shows in a plan, a result, a saved answer, a log line, or an error. An address that holds the key is refused before anything is sent.</p>
-  <p>A plain <code>http://</code> address may reach only <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code>. Any other <code>http://</code> host is a usage error, because the key would cross the network in clear text. At those three hosts a request goes out with no key when the key variable is unset, whichever backend is named. Under <code>http://</code> the tool ignores every proxy variable.</p>
+  <p>Your key goes only to the address you named. <a href="/start/your-data/#key">Your data stays yours</a> says where it never shows.</p>
+  <p>A plain <code>http://</code> address may reach only <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code>. Any other <code>http://</code> host is a usage error. The key would cross the network in clear text. At those three hosts a request goes out with no key when the key variable is unset, whichever backend is named. Under <code>http://</code> the tool ignores every proxy variable.</p>
   <p>An address with a user name, a query, or a fragment is a usage error. The plan prints the address, and a saved answer keeps it.</p>
 
   <h2>Where your text goes</h2>

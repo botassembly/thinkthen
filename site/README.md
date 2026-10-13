@@ -57,7 +57,7 @@ Read `WRITING.md` first. It holds the page rules, the code rules, and how an exa
 
 ## The menu
 
-The menu links Start, Functions, Models, Languages, Databases, How-tos, Learn, Guides and Blog. Recipes appears when its published catalog is available. The Models pages under `/models/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
+The menu links Start, Functions, Models, Languages, Databases, How-tos, Learn and Guides. The footer links the Blog. Recipes appears when its published catalog is available. The Models pages under `/models/` share a side list, `BACKEND_PAGES` in `src/data/catalog.mjs`. Trust and What it will not do sit in the footer and on the Learn page. Moved pages keep their old address through the redirects in `astro.config.mjs`.
 
 ## Guides
 

@@ -12,6 +12,7 @@ import Code from './Code.astro';
 import { FUNCTIONS, CODE_FUNCTIONS, KEY_VARIABLE, BACKEND_ROUTES, OPENAI_ANNOUNCED } from '../data/catalog.mjs';
 import { backendsName, captioned, files, firstCall, installSample, sample, moreSamples, hasSamples } from '../data/samples.mjs';
 import { buildLines } from '../data/build-lines.mjs';
+import { backends } from '../lib/backends-table.mjs';
 import postgresGrant from '../../../databases/postgresql/fixtures/grant.sql?raw';
 
 const { surface, route: pageRoute, eyebrow = ['/languages/', 'Languages'], functionsAt = null } = Astro.props;
@@ -78,6 +79,8 @@ const fnSamples = shell ? [] : [...CODE_FUNCTIONS, FUNCTIONS.find((f) => f.name 
 });
 const anySample = fnSamples.some((f) => f.code || f.more);
 const guide = packageGuide(surface.slug);
+// Every SQL extension passes the name to the engine, which knows each built-in.
+const builtIns = backends().map((b) => b.name);
 ---
 <Base title={title} description={description}>
   <div class="eyebrow"><a href={eyebrow[0]}>{eyebrow[1]}</a></div>
@@ -106,19 +109,6 @@ const guide = packageGuide(surface.slug);
     </>
   )}
   <p>{surface.slug === 'r' ? 'For live calls, set' : 'Set'} <code>{KEY_VARIABLE}</code> in the environment.</p>
-  {surface.slug === 'sqlite' && (
-    <>
-      <h3>Use reviewed views and ingestion triggers</h3>
-      <p>On a fresh connection, load once with the explicit trusted entry point. A native host names <code>sqlite3_thinkthen_trusted_init</code> in <code>sqlite3_load_extension</code>. Switch modes with a fresh connection.</p>
-      <Code code={'.load ./thinkthen sqlite3_thinkthen_trusted_init\nPRAGMA trusted_schema=ON;'} lang="sql" label="Copy the trusted initial load" />
-      <p>This choice permits schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while <code>trusted_schema</code> is ON. Review every schema you open or attach. Keep downloaded or unreviewed databases on separate default-loaded connections. There is no per-view or per-file trust isolation.</p>
-      <p>Judgment scalars, plans and judgment tables can run in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments remain non-deterministic and non-innocuous, so SQLite's generated-column and index restrictions still apply.</p>
-      <p>Loading changes neither <code>trusted_schema</code> nor an existing host authorizer. With <code>trusted_schema=OFF</code>, judgments from main and attached schema objects refuse before reading question files or sending requests. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL. TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with <code>trusted_schema=OFF</code>. These calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. Existing file permissions, budgets and cancellation still apply. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/sqlite/README.md#use-reviewed-views-and-ingestion-triggers">SQLite README</a> gives an ingestion-trigger recipe.</p>
-      <h3>Pass recognition kinds</h3>
-      <p>Pass one kind as <code>'person'</code>, or comma-separated names as <code>'person,organisation'</code>. Descriptions take a recognize JSON object such as <code>{`'{"kinds":{"person":"A human name."}}'`}</code>, a full versioned recognize spec, or an <code>@file</code> containing that spec. A bare JSON array string such as <code>{`'["person"]'`}</code> currently names one literal kind, <code>{`["person"]`}</code>. Use <code>'person'</code> to request the person kind.</p>
-      <Code code={"SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');"} lang="sql" label="Copy the SQLite recognition call" />
-    </>
-  )}
   {surface.windows && (
     <>
       <h3 id="windows">Windows</h3>
@@ -136,7 +126,7 @@ const guide = packageGuide(surface.slug);
   {surface.slug === 'postgresql' && (
     <>
       <h3>Let an application role call ThinkThen</h3>
-      <p>A server administrator copies the release files into PostgreSQL's library and extension directories before running <code>CREATE EXTENSION thinkthen</code>. These directories usually require administrator access. The released package targets PostgreSQL 16; other versions and managed hosts remain untested.</p>
+      <p>A server administrator copies the release files into PostgreSQL's library and extension directories before running <code>CREATE EXTENSION thinkthen</code>. These directories usually require administrator access. The released package is built and tested for PostgreSQL 16.</p>
       <p>The extension revokes public execution rights. After installation, an administrator runs this grant with the existing application role in place of <code>the_app_role</code>. It grants only the functions owned by ThinkThen. That role can then make paid requests using the server's configured backend.</p>
       <Code code={postgresGrant.trimEnd()} lang="sql" label="Copy the extension-only application grant" />
       <p>The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/postgresql/README.md#authority-who-may-do-what">PostgreSQL README</a> explains execution rights and the separate permissions for named files.</p>
@@ -167,7 +157,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
           repo: "'{{ env_var('THINKTHEN_EXT_DIR') }}'"`} lang="yaml" file="profiles.yml" label="Copy the dbt v1 startup profile" />
       <p>Run <code>dbt run --profiles-dir .</code> from the project. The adapter supplies <code>config_options</code> when it opens DuckDB. A later SQL <code>SET allow_unsigned_extensions</code> cannot change the setting. Enable unsigned extensions only for a local artifact you trust.</p>
       <p>Keep this project's extension directory separate from DuckDB's existing installation. An extension installed from another repository can produce “the origin is different”. Use a fresh project-owned directory at startup and retry installation there. Changing XDG directories does not relocate DuckDB's extension directory. Do not replace or remove a user's existing extension to recover.</p>
-      <p>The public unsigned archive does not currently support dbt2. Its attempted initialization SQL runs after DuckDB opens and fails before loading the extension. Community signing is in progress; a future signed artifact must match the DuckDB version embedded in dbt2 and pass an actual load test.</p>
+      <p>dbt v2 requires signed extensions. Use dbt v1.</p>
     </>
   )}
 
@@ -195,10 +185,33 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
   )}
   <p>Not sure comes back as {parts(surface.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}. Branch on it and send those cases to a person.</p>
 
+  {surface.slug === 'sqlite' && (
+    <>
+      <h2 id="trusted-loading">Use reviewed views and ingestion triggers</h2>
+      <p>On a fresh connection, load once with the explicit trusted entry point. A native host names <code>sqlite3_thinkthen_trusted_init</code> in <code>sqlite3_load_extension</code>. Switch modes with a fresh connection.</p>
+      <Code code={'.load ./thinkthen sqlite3_thinkthen_trusted_init\nPRAGMA trusted_schema=ON;'} lang="sql" label="Copy the trusted initial load" />
+      <p>This choice permits schema SQL to spend paid requests and read permitted question files. Trust covers main, every attached schema and later attachments while <code>trusted_schema</code> is ON. Review every schema you open or attach. Keep downloaded or unreviewed databases on separate default-loaded connections. There is no per-view or per-file trust isolation.</p>
+      <p>Judgment scalars, plans and judgment tables can run in views and triggers. SQLite may also evaluate judgments in CHECK and DEFAULT expressions. Configuration, usage, budget setters and removed spellings retain DIRECTONLY and remain unavailable from main and attached schema objects. Judgments remain non-deterministic and non-innocuous, so SQLite's generated-column and index restrictions still apply.</p>
+      <p>Loading changes neither <code>trusted_schema</code> nor an existing host authorizer. With <code>trusted_schema=OFF</code>, judgments from main and attached schema objects refuse before reading question files or sending requests. Top-level calls remain available. SQLite treats caller-created TEMP objects as caller SQL. TEMP views and triggers can call judgments, plans, controls and judgment tables in both loading modes, even with <code>trusted_schema=OFF</code>. These calls can spend paid requests and read permitted question files. This flag does not revoke TEMP calls. Existing file permissions, budgets and cancellation still apply. The <a href="https://github.com/botassembly/thinkthen/blob/main/databases/sqlite/README.md#use-reviewed-views-and-ingestion-triggers">SQLite README</a> gives an ingestion-trigger recipe.</p>
+      <h2 id="recognition-kinds">Pass recognition kinds</h2>
+      <p>Pass one kind as <code>'person'</code>, or comma-separated names as <code>'person,organisation'</code>. Descriptions take a recognize JSON object such as <code>{`'{"kinds":{"person":"A human name."}}'`}</code>, a full versioned recognize spec, or an <code>@file</code> containing that spec. A bare JSON array string such as <code>{`'["person"]'`}</code> names one literal kind, <code>{`["person"]`}</code>. Use <code>'person'</code> to request the person kind.</p>
+      <Code code={"SELECT text, kind FROM thinkthen_recognize('Maria Chen called.', 'person');"} lang="sql" label="Copy the SQLite recognition call" />
+    </>
+  )}
+
   {!shell && functionsAt && (
     <>
       <h2 id="functions">All ten functions in {surface.name}</h2>
       <p>The <a href={functionsAt}>Databases page</a> shows all ten functions in SQL, with what {surface.name} printed for each.</p>
+      {fnSamples.some((f) => f.more) && <h2 id="bigger-examples">Bigger examples</h2>}
+      {fnSamples.filter((f) => f.more).map((f) => (
+        <>
+          <h3 id={`more-${f.name}`}><a href={`/functions/${f.name}/`}><code>{f.title}</code></a></h3>
+          {f.inputs.filter((file) => f.more.code.includes(file.name)).map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the query reads`} />)}
+          <Code code={f.more.code} file={f.more.file} caption={f.more.see} label={`Copy the bigger ${surface.name} ${f.name} query`} />
+          {f.more.output && <Code code={f.more.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
+        </>
+      ))}
     </>
   )}
   {!shell && !functionsAt && (
@@ -254,7 +267,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
 
   {surface.settings && (
     <>
-      <h2>Settings, caching and replay</h2>
+      <h2 id="settings">Settings, caching and replay</h2>
       <p>{parts(surface.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/start/settings/">Settings</a> page lists every setting. <a href="/start/replay/">Replay in tests</a> shows how a test replays saved answers.</p>
     </>
   )}
@@ -279,7 +292,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
           <p>SQL names a built-in or configured backend. The selected backend supplies its address, model and key variable. SQL accepts no address or key.</p>
           <Code code={{ duckdb: "SET thinkthen_backend = 'typesafe';", postgresql: "SET thinkthen.backend = 'typesafe';", sqlite: `SELECT thinkthen_configure('{"backend":"typesafe"}');` }[surface.slug]} lang="sql" />
           {surface.slug === 'sqlite' ? <p>Configure before the first engine build or plan. SQLite keeps one engine for the whole process.</p> : <p>RESET restores captured environment selection. PostgreSQL requires an administrator to change the backend; DuckDB selects it for the calling session.</p>}
-          <p>The names are <code>liquid</code>, <code>ollama</code>, <code>openrouter</code>, <code>perplexity</code> and <code>typesafe</code>.</p>
+          <p>SQL takes any name in the configuration file, or a built-in name: {builtIns.map((name, i) => <>{i > 0 && (i === builtIns.length - 1 ? ' or ' : ', ')}<code>{name}</code></>)}.</p>
         </>
       )}
       {route !== 'cli' && route !== 'sql' && (

@@ -1,5 +1,5 @@
 ---
-// Goal: show how to point ThinkThen at any server that speaks System One, by address or by a named entry in the configuration file, and how to check it.
+// Goal: show how to point ThinkThen at any compatible server, by address or by a named entry in the configuration file, and how to check it.
 import SidePage from '../../layouts/SidePage.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
@@ -16,7 +16,7 @@ const rate = setting('Requests a minute');
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Point ThinkThen at any compatible server, by address or by a named entry in the configuration file, and check it.' }} name="Models">
   <h1>Any compatible server</h1>
-  <p class="lede">Point ThinkThen at any server that answers its questions, by address or by name. The server takes each request at <code>BASE/systemone</code>, in the shape <a href="/models/other-servers/">Other servers</a> describes.</p>
+  <p class="lede">Point ThinkThen at any server that answers its questions, by address or by name. <a href="/models/other-servers/">Other servers</a> gives the request shape the server must take.</p>
 
   <h2>By address</h2>
   <p>Set <code>THINKTHEN_BASE_URL</code> to the server's base, or pass <code>--url</code> on one command. The key comes from <code>{KEY_VARIABLE}</code>. The model is the default unless you pass <code>--model</code>.</p>
@@ -29,12 +29,12 @@ const rate = setting('Requests a minute');
   <p>A name uses 1 to 32 lowercase letters, digits, and hyphens, and may not reuse a built-in name. The <a href="/start/configuration/">Configuration page</a> says where the file lives.</p>
 
   <h2>Pace the requests</h2>
-  <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. In development 0.2, a built-in's entry may hold a rate, a paired caller input/output price and an inline backend profile. Its address, path, key, model and wire form stay fixed. An explicit profile or price pair outranks the selected setup; setup prices outrank the top-level pair. These fields select no automatic rate or image capability. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process. <a href="/start/settings/#requests-a-minute">Requests a minute</a> gives the rule.</p>
+  <p>ThinkThen sets no pace of its own. <code>requests_per_minute</code> on an entry caps how many requests one process starts each minute, retries included. It takes {rate.allowed.toLowerCase()}. A built-in's entry may also hold a rate, a price pair and a profile. Its address, key, model and request shape stay fixed. An explicit profile or price pair outranks the selected setup. Setup prices outrank the top-level pair. <code>THINKTHEN_REQUESTS_PER_MINUTE</code> outranks the file. The limit holds within one process. <a href="/start/settings/#requests-a-minute">Requests a minute</a> gives the rule.</p>
   <Code code={bad.text} file={bad.name} caption={`${bad.name}, a rate out of range`} />
   <Terminal run={badRate} caption={badRate.see} />
 
   <h2>Check the server</h2>
-  <p><code>thinkthen backends check --url BASE</code> sends four rich wire probes, then minimal inputs through all ten production functions. It prints one row each for the connection, the key, the endpoint, the four questions, and the usage counts. Each function row reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. A rich probe row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It exits 0 only when no row is critical. Every request is real, so a hosted server may charge for it. The <a href="/models/check/">check reference</a> explains every row.</p>
+  <p><code>thinkthen backends check --url BASE</code> sends four fixed test questions, then one small call through each of the ten functions. It prints one row each for the connection, the key, the endpoint, the four questions, and the usage counts. Each function row reads <code>answered</code>, <code>incompatible</code> or <code>unchecked</code>. A test question's row reads <code>ok</code>, <code>warning</code> or <code>critical</code>. It exits 0 only when no row is critical. Every request is real. A hosted server may charge for it. The <a href="/models/check/">check reference</a> explains every row.</p>
   <Terminal run={plan} caption={plan.see} />
   <p>A threshold tuned on one model does not carry to another. Grade the new model on your own labeled records with <a href="/trust/">audit</a> before you trust it.</p>
 

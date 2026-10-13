@@ -15,13 +15,11 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Jev from TypeSafe, the backend ThinkThen asks by default: its address, key variable, model, and check.' }} name="Models">
   <h1>TypeSafe Jev</h1>
-  <p class="lede">Jev is a System One model from TypeSafe. ThinkThen asks it when you name no backend.</p>
+  <p class="lede">Jev is TypeSafe's decision model. ThinkThen asks it when you name no backend.</p>
 
   <BackendFacts name="typesafe" />
   <p>The default model is a pinned version. TypeSafe can move an alias to a new model, and the pinned version stays the same. Name another version with <code>--model</code> only when you mean to change the model behind a run.</p>
-  <p>On 2026-09-29, <a href="https://typesafe.ai/">TypeSafe's public site</a> advertised Jev input at $42 per billion tokens. Check your account terms for the rate you will pay.</p>
-
-  <p>The admitted <a href="https://github.com/botassembly/thinkthen-exp/tree/7c8197b5/experiments/0033-jev-in-your-database">0033 database report</a> retained a 2026-10-05 direct Jev 1.13.0 tariff of $0.042 per million input tokens and free output. Its thirty database/function workflows on public 0.1.2 returned typed answers with recorded installation caveats. Those operational results measure no accuracy ranking and do not qualify development 0.2 APIs. Calculated usage cost is not an invoice.</p>
+  <p>On 2026-10-05, the <a href="https://github.com/botassembly/thinkthen-exp/tree/7c8197b5/experiments/0033-jev-in-your-database">0033 database report</a> recorded Jev 1.13.0 at $0.042 per million input tokens, with free output. Check your account terms for the rate you will pay.</p>
 
   <h2>Two ways to reach it</h2>
   <p>With no backend named, ThinkThen posts to the same address with the same model and reads the key from <code>{KEY_VARIABLE}</code>. With <code>--backend {b.name}</code>, it reads the key from <code>{b.keys[0]}</code>. Both reach the same model, and both share the answer cache.</p>
@@ -29,7 +27,7 @@ const [one, lines, plan] = captioned('install/backends/typesafe', BACKENDS_SEE.t
   <Terminal run={lines} caption={lines.see} />
 
   <h2>Check it</h2>
-  <p><code>thinkthen backends check</code> sends four rich probes and minimal calls through all ten functions. It reports which inputs the backend can answer. The plan shows where they would go.</p>
+  <p><code>thinkthen backends check</code> sends four fixed test questions, then one small call through each of the ten functions. It reports which inputs the backend can answer. The plan shows where they would go.</p>
   <Terminal run={plan} caption={plan.see} />
   <CheckLines name="typesafe" />
 

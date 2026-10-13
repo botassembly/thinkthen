@@ -312,7 +312,7 @@ Ticket 0421 adds `llamacpp` and `mlx` under the same loopback, credential-host, 
 
 When MLX renders a nonempty object or list as text, the rich check row warns with ``backend `mlx` sends each description object as its `what` text, a temporary workaround for the Strands server schema, so its other fields are left out``. `--plan` prints that sentence once after `thinkthen: `. Ollama's sentence remains unchanged. Cache and recording keys continue to follow the encoded question bytes, so different renderings share only identical questions.
 
-[Run a model locally](https://thinkthen.dev/install/backends/local/) gives the pinned source, model and setup commands. Experiment 0030, reported 2026-10-04, established route and schema prerequisites. It does not establish model accuracy or every possible function input.
+[Run a model locally](https://thinkthen.dev/models/local/) gives the pinned source, model and setup commands. Experiment 0030, reported 2026-10-04, established route and schema prerequisites. It does not establish model accuracy or every possible function input.
 
 The [MLX runtime issue](../sdlc/issues/2026-10-05-mlx-score-criteria-need-text-rendering.md) owns the text workaround, score-level limit and unproved structured instructions. The [llama.cpp runtime issue](../sdlc/issues/2026-10-05-llamacpp-runtime-limits.md) owns the native route, decision encoding and supported setup bounds.
 

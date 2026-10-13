@@ -18,7 +18,7 @@ const loadLine = (slug) => (slug === 'postgresql'
   : sample('decide', slug).code.match(LOAD[slug])[0].trim());
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 
-const fns = [...CODE_FUNCTIONS, FUNCTIONS.find((f) => f.name === 'question-file')].map((fn) => {
+const shown = (fn) => {
   const runs = DBS.map((db) => {
     const found = sample(fn.name, db.slug);
     if (!found) throw new Error(`databases: examples/functions/${fn.name} has no ${db.slug} sample`);
@@ -32,7 +32,20 @@ const fns = [...CODE_FUNCTIONS, FUNCTIONS.find((f) => f.name === 'question-file'
     first: runs[0],
     rest: runs.slice(1).map((r) => ({ ...r, same: r.query === runs[0].query })),
   };
-});
+};
+const fns = CODE_FUNCTIONS.map(shown);
+const questionFile = shown(FUNCTIONS.find((f) => f.name === 'question-file'));
+
+// Each row names a real difference, as the samples below show it.
+const DIFFERS = [
+  ['A newline in a string', '`chr(10)`', '`char(10)`', '`chr(10)`'],
+  ['Labels and levels', "a list after the question: `['a', 'b']`", 'JSON question text that holds them', 'JSON question text that holds them, then `NULL`'],
+  ['Kinds, rules and lines to search', "a list: `['a', 'b']`", "`'a,b'` for kinds and rules, `json_array('a', 'b')` for lines", "`ARRAY['a', 'b']`"],
+  ['Rows as one JSON object', '`json_group_object(id, body)`', '`json_group_object(id, body)`', '`jsonb_object_agg(id, body)`'],
+  ['What find returns', 'a struct: read `.value`', "JSON text: read `json_extract(x, '$.value')`", "`jsonb`: read `x ->> 'value'`"],
+  ['What recognize returns', 'a list: `unnest` it', 'a table function', 'a table function'],
+  ['How yes and no print', '`true`, `false`', '`1`, `0`', '`t`, `f`'],
+];
 ---
 <Base title="Databases" description="Ask the ten ThinkThen functions inside DuckDB, SQLite or PostgreSQL, with the same answers, answer cache and replay as every other binding.">
   <h1>Databases</h1>
@@ -40,35 +53,45 @@ const fns = [...CODE_FUNCTIONS, FUNCTIONS.find((f) => f.name === 'question-file'
 
   <h2 id="load">Load the extension</h2>
   <table>
-    <tr><th>Database</th><th>Load line</th><th>Not sure</th></tr>
+    <tr><th>Database</th><th>Load line</th></tr>
     {DBS.map((db) => (
-      <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td><code>{loadLine(db.slug)}</code></td><td>{parts(db.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}</td></tr>
+      <tr><td><a href={`/databases/${db.slug}/`}>{db.name}</a></td><td><code>{loadLine(db.slug)}</code></td></tr>
     ))}
   </table>
-  <p>Each database's page gives its install steps and a first query. Every query below runs after the load line, and each one replays a saved answer.</p>
+  <p>Each database's page gives its install steps and a first query. Every query below runs after the load line, and each one replays a saved answer. In all three databases, a not-sure answer comes back as <code>NULL</code>.</p>
+
+  <h2 id="what-differs">What differs</h2>
+  <table>
+    <tr><th>What</th>{DBS.map((db) => <th>{db.name}</th>)}</tr>
+    {DIFFERS.map(([what, ...cells]) => (
+      <tr><td>{what}</td>{cells.map((c) => <td>{parts(c).map((x) => x.code ? <code>{x.part}</code> : x.part)}</td>)}</tr>
+    ))}
+  </table>
 
   <h2 id="functions">The ten functions in SQL</h2>
-  <p>Each query is in {duckdb.name} syntax. Where {others.map((db) => db.name).join(' or ')} asks it another way, its own query follows. Each heading links the function's page, which explains it in Bash.</p>
-  {fns.map((f) => (
+  <p>Each query is in {duckdb.name} syntax. Under it, {others.map((db) => db.name).join(' and ')} show what they printed, and their own query where it differs. Each heading links the function's page, which explains it in Bash.</p>
+  {[...fns, null, questionFile].map((f) => f === null ? (
+    <h2 id="question-file">A saved question file</h2>
+  ) : (
     <>
       <h3 id={`fn-${f.name}`}><a href={`/functions/${f.name}/`}><code>{f.title}</code></a></h3>
       {f.inputs.map((file) => <Code code={file.text} file={file.name} caption={`${file.name}, a file the query reads`} />)}
       <Code code={f.first.query} lang="sql" caption={duckdb.name} label={`Copy the ${duckdb.name} ${f.name} query`} />
       {f.first.output && <Code code={f.first.output} lang="output" caption={`What ${duckdb.name} printed`} copy={false} />}
-      {f.rest.map((r) => (
-        <>
-          {r.same
-            ? <p>{r.db.name} runs the same query.</p>
-            : <Code code={r.query} lang="sql" caption={r.db.name} label={`Copy the ${r.db.name} ${f.name} query`} />}
-          {r.output && <Code code={r.output} lang="output" caption={`What ${r.db.name} printed`} copy={false} />}
-        </>
-      ))}
+      <details>
+        <summary>{others.map((db) => db.name).join(' and ')}</summary>
+        {f.rest.map((r) => (
+          <>
+            {r.same
+              ? <p>{r.db.name} runs the same query.</p>
+              : <Code code={r.query} lang="sql" caption={r.db.name} label={`Copy the ${r.db.name} ${f.name} query`} />}
+            {r.output && <Code code={r.output} lang="output" caption={`What ${r.db.name} printed`} copy={false} />}
+          </>
+        ))}
+      </details>
     </>
   ))}
 
   <h2 id="caching-and-replay">Caching and replay</h2>
-  <ul>
-    {DBS.map((db) => <li><a href={`/databases/${db.slug}/`}>{db.name}</a>: {parts(db.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}
-  </ul>
-  <p><a href="/start/replay/">Replay in tests</a> shows a replay from the command line. <a href="/start/pay-once/#the-key">Pay once</a> says what makes two questions the same.</p>
+  <p>Each database records and replays saved answers with its own setting: {DBS.map((db, i) => <>{i > 0 && (i === DBS.length - 1 ? ' and ' : ', ')}<a href={`/databases/${db.slug}/#settings`}>{db.name}</a></>)}. <a href="/start/replay/">Replay in tests</a> shows a replay from the command line.</p>
 </Base>

@@ -14,11 +14,10 @@ const ROWS = ['connection', 'key', 'endpoint', 'noul', 'choice', 'score', 'mixed
 ---
 <SidePage pages={BACKEND_PAGES} page={{ ...page, description: 'Check a model or server with thinkthen backends check before you rely on it: what it sends, what each report row means, and when it exits 4.' }} name="Models">
   <h1>Check a model</h1>
-  <p class="lede"><code>thinkthen backends check</code> tests whether a server works with ThinkThen. It sends four rich wire probes, then minimal calls through all ten production functions. Every request is real. A hosted server may charge for it.</p>
-  <p><code>thinkthen check</code> remains a hidden compatibility alias with the same options, requests, report and exit codes.</p>
+  <p class="lede"><code>thinkthen backends check</code> tests whether a server works with ThinkThen. It sends four fixed test questions, then one small call through each of the ten functions. Every request is real. A hosted server may charge for it.</p>
 
   <h2 id="plan">See it first</h2>
-  <p><code>--plan</code> prints the address and the model, then the four rich request bodies, function-plan counts and a total prepared-request upper bound before retries and refusal splits. It sends nothing and needs no key.</p>
+  <p><code>--plan</code> prints the address and the model, then the four test question bodies, function-plan counts and a total prepared-request upper bound before retries and refusal splits. It sends nothing and needs no key.</p>
   <Terminal run={plan} caption={BACKENDS_SEE['system-one']['4-check-plan']} />
 
   <h2 id="probes">The four probes</h2>

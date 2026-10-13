@@ -17,7 +17,6 @@ import {
   ARGUMENTS, THRESHOLDS, CUT, DEFAULT_CUT, FRAMING, FRAMING_DEFAULT,
   BARE, RECORD, LIMITS, SIGNALS, RUN_RULE,
 } from '../../../data/reference.mjs';
-import { backends } from '../../../lib/backends-table.mjs';
 
 
 export function getStaticPaths() {
@@ -234,14 +233,7 @@ const jobsScope = name === 'annotate'
   {isFn && (
     <>
       <h3 id="backend">Backend and environment</h3>
-      <p>With no backend named, the key comes from <code>THINKTHEN_API_KEY</code>. <code>--backend</code>, <code>THINKTHEN_BACKEND</code> or the configuration file's <code>backend</code> names a backend. A named backend reads only its own key variables, and the first one that is not blank wins:</p>
-      <ul>
-        {backends().map((b) => (
-          <li><code>{b.name}</code> reads {b.keys.map((k, i) => <>{i > 0 && ', then '}<code>{k}</code></>)}.</li>
-        ))}
-      </ul>
-      <p>The command line comes first, then the environment, then the configuration file. The first of these that names a backend or an address decides. So <code>THINKTHEN_BASE_URL</code> in the shell outranks the configuration file's <code>backend</code>, and the key then comes from <code>THINKTHEN_API_KEY</code>. With both <code>--backend</code> and <code>--url</code>, the backend's key variables apply at that address.</p>
-      <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/start/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads, and the <a href="/models/">Backends page</a> gives the rest of the key rules.</p>
+      <p><code>--backend</code>, <code>THINKTHEN_BACKEND</code> or the configuration file names the backend, and each backend reads its own key variable. The <a href="/models/#the-key">Models page</a> gives every rule.</p>
     </>
   )}
 

@@ -41,7 +41,7 @@ The [specification](https://github.com/botassembly/thinkthen/blob/main/specifica
 - Jev is fast and cheap. On 2026-10-01 a call to Jev through a library took a median of 138 ms. ThinkThen's own work took about 2 ms of it. [Overhead](https://thinkthen.dev/learn/overhead/) gives every measurement and the published price.
 - ThinkThen batches for you. Hand it a list or a stream of records, and it packs the records into as few requests as the batch settings allow. See [Functional patterns](https://thinkthen.dev/learn/functional/).
 - ThinkThen caches and replays. A repeated question can reuse its saved answer. A test replays recorded answers with no key and no network. See [Caching and replay](https://thinkthen.dev/learn/caching/).
-- You can swap the model and the provider. One `--backend` option points the same call at TypeSafe, another hosted vendor, or a model on your own machine. See [Backends](https://thinkthen.dev/install/backends/).
+- You can swap the model and the provider. One `--backend` option points the same call at TypeSafe, another hosted vendor, or a model on your own machine. See [Backends](https://thinkthen.dev/models/).
 - ThinkThen is yours under the [MIT license](https://github.com/botassembly/thinkthen/blob/main/LICENSE). It runs from the command line and 24 bindings, 3 of them databases. Your questions live in your own code and SQL, not in one vendor's database function. See [Install](https://thinkthen.dev/install/).
 
 ## Install
@@ -58,7 +58,7 @@ brew install botassembly/thinkthen/thinkthen
 
 With Rust installed, `cargo install thinkthen` builds the command from crates.io. [Install](https://thinkthen.dev/install/) covers every other route and each of the 24 bindings.
 
-A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/install/backends/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
+A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/models/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
 
 ### Try it with no key
 
