@@ -140,7 +140,7 @@ pub use results::{
 
 pub use results::{RecognitionReading, RelationReading, ResolvedRelationRule};
 
-pub use results::{CompleteCall, CompleteError, ErrorSnapshot};
+pub use results::{CompleteError, ErrorSnapshot};
 
 mod declarations;
 pub use crate::core::{
