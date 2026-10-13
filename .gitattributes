@@ -52,6 +52,7 @@ libraries/jvm/session/thinkthen/ErrorKind.java linguist-generated
 libraries/jvm/session/thinkthen/Inputs.java linguist-generated
 libraries/jvm/session/thinkthen/NamedCalls.java linguist-generated
 libraries/jvm/session/thinkthen/NativeNamed.java linguist-generated
+libraries/jvm/session/thinkthen/NativeResults.java linguist-generated
 libraries/jvm/session/thinkthen/NativeUsageLayouts.java linguist-generated
 libraries/jvm/session/thinkthen/NativeWait.java linguist-generated
 libraries/jvm/session/thinkthen/RequestVersion.java linguist-generated

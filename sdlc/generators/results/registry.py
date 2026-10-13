@@ -52,7 +52,7 @@ OUTPUTS = (
     *group('swift', 'bridge', 'libraries/swift/Sources/ThinkThen/', 'ABIGenerated.swift'),
     *group('swift', 'bridge', 'libraries/swift/Sources/CThinkThen/', 'bridge.c'),
     *group('cobol', 'results', 'libraries/cobol/', 'src/tt_requests_generated.h', 'src/tt_requests_generated.c', 'copybooks/tt-native-generated.cpy'),
-    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
+    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NativeResults.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
     *group('jvm', 'results', 'libraries/jvm/session/kotlin/', 'UsagePersistence.kt', 'KotlinNamedCalls.kt'),
     *group('jvm', 'results', 'libraries/jvm/session/scala/', 'UsagePersistence.scala', 'ScalaNamedCalls.scala'),
 )
