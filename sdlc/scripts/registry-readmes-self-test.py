@@ -9,6 +9,7 @@ import tempfile
 import shutil
 import subprocess
 import struct
+import yaml
 import zipfile
 import unittest
 
@@ -122,6 +123,24 @@ class PackageText(unittest.TestCase):
             page.write_text('```python\nprint(engine.decide("Refund?", "Refund please.").value)\n```\n')
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
+
+    def test_release_replays_every_public_package_on_a_supported_host(self):
+        jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
+        mac_steps = [step for step in jobs['smoke']['steps']
+                     if 'registry-readmes.py examples' in step.get('run', '')]
+        self.assertEqual(len(mac_steps), 1)
+        self.assertEqual(mac_steps[0]['if'], "runner.os == 'macOS'")
+        mac_families = set(readmes.re.findall(r'--family ([a-z-]+)', mac_steps[0]['run']))
+        draft = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text().split('\ndraft)\n')[1].split('\n\t;;')[0]
+        linux_families = set(readmes.re.findall(r'--family ([a-z-]+)', draft))
+        self.assertEqual(mac_families, {'objective-c'})
+        self.assertNotIn('objective-c', linux_families)
+        self.assertEqual(linux_families | mac_families, set(readmes.published_families()))
+        self.assertIn('smoke', jobs['draft']['needs'])
+        self.assertTrue(any(step.get('with', {}).get('name') == 'crate-package'
+                            and step['with']['path'] == 'crate-dist' for step in jobs['draft']['steps']))
+        self.assertTrue(any('cp r-dist/* crate-dist/*.crate all-files/' in step.get('run', '')
+                            for step in jobs['draft']['steps']))
 
     def test_release_refuses_when_examples_cannot_run(self):
         with tempfile.TemporaryDirectory() as scratch:

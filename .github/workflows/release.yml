@@ -426,6 +426,9 @@ jobs:
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+      - name: Replay the public Objective-C package example
+        if: runner.os == 'macOS'
+        run: python3 sdlc/scripts/registry-readmes.py examples smoke-files --family objective-c
       - name: Validate and consume the downloaded Windows C archive
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |
@@ -456,6 +459,8 @@ jobs:
         with: {name: apple-packages-x86_64-apple-darwin, path: platform/platform-x86_64-apple-darwin}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with: {name: r-package, path: r-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: crate-package, path: crate-dist}
       - env: {VERSION: "${{ needs.resolve.outputs.version }}"}
         run: sdlc/scripts/release-workflow tap-formula "$VERSION" platform thinkthen.rb
       - run: ruby -c thinkthen.rb
@@ -475,7 +480,7 @@ jobs:
             sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
-          cp r-dist/* all-files/
+          cp r-dist/* crate-dist/*.crate all-files/
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 
   crates:

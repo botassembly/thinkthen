@@ -815,7 +815,13 @@ draft)
 		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
 		python3 sdlc/scripts/registry-readmes.py auto "$package"
 	done
-	python3 sdlc/scripts/registry-readmes.py examples "$files"
+	# Objective-C replays in the macOS smoke jobs that this draft depends on.
+	python3 sdlc/scripts/registry-readmes.py examples "$files" \
+		--family command --family crate --family python --family typescript \
+		--family ruby --family go --family cpp --family c --family csharp \
+		--family jvm --family swift --family zig --family php --family dart \
+		--family ada --family cobol --family r --family sqlite \
+		--family postgresql --family duckdb --family packagist
 	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
 	if [ "$mode" = rehearse ]; then
 		# GitHub names a missing tag in a draft but should create its ref only
