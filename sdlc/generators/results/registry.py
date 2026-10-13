@@ -61,6 +61,21 @@ def generated_paths():
     return {output.path for output in OUTPUTS}
 
 
+def attributes(source):
+    """Derive generated-file labels without replacing unrelated Git attributes."""
+    retained = []
+    for line in source.splitlines():
+        fields = line.split()
+        if not fields or fields[0].startswith('#') or 'linguist-generated' not in fields[1:]:
+            retained.append(line)
+            continue
+        fields = [field for field in fields if field != 'linguist-generated']
+        if len(fields) > 1:
+            retained.append(' '.join(fields))
+    return '\n'.join([*retained, *(path + ' linguist-generated'
+                                 for path in sorted(generated_paths()))]) + '\n'
+
+
 def invocations():
     return tuple(dict.fromkeys((output.producer, output.target, output.mode)
                               for output in OUTPUTS))

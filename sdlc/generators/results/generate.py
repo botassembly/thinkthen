@@ -9,7 +9,7 @@ import sys
 import subprocess
 import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry import OUTPUTS, invocations, output_path
+from registry import OUTPUTS, attributes, invocations, output_path
 from native import selected_functions, immediate_schema
 from formatting import format_source
 
@@ -418,6 +418,14 @@ def main():
     args = parser.parse_args()
     if args.all:
         failures = []
+        attributes_path = ROOT / '.gitattributes'
+        attributes_source = attributes_path.read_text()
+        generated_attributes = attributes(attributes_source)
+        if args.check and attributes_source != generated_attributes:
+            print('generated Git attributes differ', file=sys.stderr)
+            failures.append('registry:attributes')
+        elif not args.check:
+            attributes_path.write_text(generated_attributes)
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
