@@ -52,7 +52,8 @@ def generated_sources(root, target, request, result):
     elif target == 'csharp':
         outputs['CompleteFacts.g.cs'] = generator.generated(result, 'csharp')
         outputs['NativeBridge.g.cs'] = generator.bridge()
-        outputs['RequestInputs.g.cs'] = template.render_inputs(request)
+        outputs['RequestInputs.g.cs'] = template.render_inputs(request, generator.prepare, generator.graph)
+        outputs['NamedCalls.g.cs'] = template.named_calls(template.enum_values(request['$defs']['RequestFunction']))
     elif target == 'swift':
         outputs['ResultsGenerated.swift'] = template.render(results)
         outputs['InputsGenerated.swift'] = template.render(inputs, True) + '\npublic let ownedRequestVersion = ' + json.dumps(version) + '\n'
@@ -60,7 +61,7 @@ def generated_sources(root, target, request, result):
         outputs['results_generated.dart'] = template.render(results)
         outputs['inputs_generated.dart'] = template.render(inputs, True) + '\nconst requestVersion = ' + json.dumps(version) + ';\n'
     elif target == 'go':
-        outputs['owned_results_generated.go'] = template.render(results) + '\nconst OwnedRequestVersion = ' + json.dumps(version) + '\n' + template.usage(header)
+        outputs['owned_results_generated.go'] = template.render(results, inputs) + '\nconst OwnedRequestVersion = ' + json.dumps(version) + '\n' + template.usage(header)
     elif target == 'php':
         outputs.update(template.outputs(results, header))
         outputs['inputs_generated.php'] = template.inputs(inputs)

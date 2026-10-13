@@ -123,6 +123,7 @@ class PublicSurface(unittest.TestCase):
                                  capture_output=True, text=True, env=dict(os.environ, HOME=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertEqual(run.returncode, 1)
+            self.assertFalse(any('schema declaration derivation failed:' in error for error in errors))
             self.assertIn('unlisted public call/export: RequestOptions.Cancel', errors)
             self.assertIn('unlisted public call/export: Exported.ExtraPublicExport', errors)
             self.assertIn('unlisted public call/export: ExportedAlias.ExtraPublicExport', errors)
@@ -131,6 +132,46 @@ class PublicSurface(unittest.TestCase):
             self.assertFalse(any('InvisibleExport' in error for error in errors))
             self.assertNotIn('unlisted public call/export: Client.Close', errors)
             self.assertFalse(any('nativeEngine.' in error or 'ownedJSON.' in error for error in errors))
+            generated = root / 'libraries/go/owned_results_generated.go'
+            source = generated.read_text()
+            source = source.replace('Context           *string', 'Surprise          *string')
+            generated.write_text(source)
+            run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                  str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
+                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+            errors = json.loads(run.stdout)['libraries']['go']
+            self.assertIn('missing generated declaration: owned_results_generated.go:RequestOptions.Context', errors)
+            self.assertIn('unlisted generated declaration: owned_results_generated.go:RequestOptions.Surprise', errors)
+
+    def test_csharp_generated_named_calls_are_checked_at_the_cli(self):
+        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        with tempfile.TemporaryDirectory(prefix='library-surface-csharp-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            paths = [ROOT / 'libraries/c/include/thinkthen.h']
+            for pattern in manifest['libraries']['csharp']['declarations']:
+                paths.extend(ROOT.glob(pattern))
+            for path in paths:
+                target = root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                if path.is_relative_to(ROOT / 'sdlc'):
+                    continue
+                shutil.copyfile(path, target)
+            calls = root / 'libraries/csharp/src/NamedCalls.g.cs'
+            original = calls.read_text()
+            def invoke(source):
+                calls.write_text(source)
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                      str(ROOT / 'conformance/library-surface.json'), '--library', 'csharp', '--json'],
+                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                return json.loads(run.stdout)['libraries']['csharp']
+            baseline = invoke(original)
+            self.assertFalse(any('schema declaration derivation failed:' in error for error in baseline))
+            self.assertFalse(any('NamedCalls.g.cs:' in error for error in baseline))
+            renamed = invoke(original.replace('DecideAsync(', 'SurpriseAsync('))
+            self.assertIn('missing generated declaration: NamedCalls.g.cs:Engine.DecideAsync', renamed)
+            self.assertIn('unlisted generated declaration: NamedCalls.g.cs:Engine.SurpriseAsync', renamed)
 
     def test_java_record_components_are_checked_at_the_cli(self):
         manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
