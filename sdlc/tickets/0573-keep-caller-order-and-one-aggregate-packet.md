@@ -30,3 +30,5 @@ Every language library sends options and kinds in the order the caller wrote the
 - Defers: nothing.
 
 ## Progress
+
+PM amendment, 2026-10-13. Remaining work. The single recognize aggregate packet is done (7ed9f7829). Lane G3 adds one case to `conformance/cases.json` with five options and five kinds in non-alphabetical order, which every library replays, and makes `site/scripts/smoke-bindings.mjs` pick `.dylib` paths and `DYLD_LIBRARY_PATH` on Darwin. In the language lanes: Java, Kotlin and Scala take options and kinds through an ordered type instead of `java.util.Map`; C# takes a list of pairs; Objective-C sends its `TTOrderedMap` through a generated encoder instead of `NSJSONSerialization`. Correct the Python test name that mentions the removed empty final packet.

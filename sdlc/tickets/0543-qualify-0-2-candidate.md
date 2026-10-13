@@ -133,3 +133,5 @@ PM amendment, 2026-10-13. Candidate checklist. This replaces any earlier orderin
 7. Record each run's ID, exit and counts in the 0543 record, with no `target/` paths.
 8. Fix forward on `ticket/0543-final`, Windows included. A fix confined to one language reruns that language's tier and its hosted job. A core or generator fix reruns step 6. File a separate ticket only for a fix that needs its own design.
 9. Close 0543 and the wave tickets on the passing SHA and hand the SHA to the PM, who brings 0425 to Ian. Pinning and pushing the DuckDB descriptor follows Ian's go and is not a candidate gate.
+
+PM amendment, 2026-10-13. Follow `sdlc/decisions/2026-10-13-standing-build-rulings.md` for size, measurement, checks, ownership, questions, records, scope and recovery. 0560, 0561, 0563 and 0565 have no work left; their remainders moved to 0562, 0564, 0576 and this ticket, and they close when the candidate merge lands them. 0575's merge of `docs/0.2-refresh` into `ticket/0543-final` is a gate before the freeze.
