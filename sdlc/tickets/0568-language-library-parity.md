@@ -51,3 +51,5 @@ Every language library exposes the same functions, options, settings and helpers
 PM amendment, 2026-10-12. The coordinator's scope recommendation stands. Every host library gets every helper: `plan`, the question-file, name and reference helpers, the item and file builders, and usage persistence. Each helper's logic lives in Rust, and each library adds only a thin generated or handwritten call. A helper that needs more than a thin call in any library is deleted everywhere instead, with the reason in Progress. MCP stays outside the helper manifest. It keeps exactly the ten tools from the README and the request capabilities they share. Java's transport JSON becomes private. Python keeps its dataframe and pydantic adapters as the one named idiom exception.
 
 ## Progress
+
+PM amendment, 2026-10-13. C is the shared native layer that the C-session host libraries call, so the three-times-median proof does not apply to it. Stop cutting C at 1,982 handwritten lines and set its ratchet there. Keep a diagnostic, the raw JSON entry points or an export only while a library or the CLI calls it. Delete any that nothing calls, and make no further C cuts beyond that.
