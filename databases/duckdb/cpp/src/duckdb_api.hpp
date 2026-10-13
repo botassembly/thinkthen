@@ -11,7 +11,7 @@ using ThinkThenScalarBinder = unique_ptr<FunctionData> (*)(ClientContext &, cons
                                                          vector<unique_ptr<Expression>> &);
 
 // Keep the host version boundary here; SQL callers and the Rust bridge share one contract.
-#if defined(DUCKDB_MAJOR_VERSION) && DUCKDB_MAJOR_VERSION >= 2
+#if defined(THINKTHEN_DUCKDB_V2) && THINKTHEN_DUCKDB_V2
 using ThinkThenIdentifier = Identifier;
 using ThinkThenColumnNames = vector<Identifier>;
 
