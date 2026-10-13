@@ -12,6 +12,7 @@ final class NativeSession {
     private static final ConcurrentHashMap<String,MethodHandle> CALLS = new ConcurrentHashMap<>();
     static final ValueLayout.OfLong SIZE = (ValueLayout.OfLong)LINKER.canonicalLayouts().get("size_t");
     private NativeSession() {}
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static Object call(String name, MemoryLayout result, MemoryLayout[] arguments, Object... values) {
         var handle = CALLS.computeIfAbsent(name, key -> LINKER.downcallHandle(SYMBOLS.find(key).orElseThrow(),
             result == null ? FunctionDescriptor.ofVoid(arguments) : FunctionDescriptor.of(result, arguments)));
@@ -34,6 +35,7 @@ final class NativeSession {
     static void free(String name, MemorySegment pointer) {
         call(name, null, new MemoryLayout[]{ValueLayout.ADDRESS}, pointer);
     }
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static void check(int code) {
         if (code == 0) return;
         MemorySegment message = (MemorySegment)call("thinkthen_session_error_message", ValueLayout.ADDRESS, new MemoryLayout[]{});
@@ -42,6 +44,7 @@ final class NativeSession {
         throw new NativeFailure(code, retryable, message.reinterpret(Long.MAX_VALUE).getString(0),
             facts.equals(MemorySegment.NULL) ? null : Json.parse(facts.reinterpret(Long.MAX_VALUE).getString(0)));
     }
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static UsagePersistence usage(MemorySegment engine, String function) {
         try (Arena outputs = Arena.ofConfined()) {
             var state = outputs.allocate(NativeUsageLayouts.STATE);
@@ -58,6 +61,7 @@ final class NativeSession {
             return new UsagePersistence(UsagePersistence.State.read(state.get(ValueLayout.JAVA_INT, NativeUsageLayouts.STATE_KIND)), copied);
         }
     }
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static Object copied(MemorySegment pointer, long length) {
         if (length > Integer.MAX_VALUE) throw new IllegalStateException("Result exceeds Java array size");
         return Json.parseOwned(new String(pointer.reinterpret(length).toArray(ValueLayout.JAVA_BYTE), StandardCharsets.UTF_8));

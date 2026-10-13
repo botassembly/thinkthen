@@ -8,6 +8,8 @@ import thinkthen.Results.*;
 
 /** Shared fixtures enter named typed calls; generated getters read native-owned packets. */
 public final class SessionCases {
+    public static Object parse(String value) { return Json.parse(value); }
+    public static String write(Object value) { return Json.write(value); }
     static Map<String,Object> map(Object value) { return value instanceof Map<?,?> ? Values.object(value) : Map.of(); }
     static List<?> list(Object value) { return value instanceof List<?> values ? values : List.of(); }
     static boolean yes(Map<String,Object> data,String key) { return Boolean.TRUE.equals(data.get(key)); }
