@@ -2166,63 +2166,63 @@ namespace tt::results {
         public: const std::variant<bool, std::nullptr_t, std::string, std::vector<std::string>, double>& value() const;
     };
     inline const Presence<AnswerId>& Annotation::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<std::pair<std::string, AnnotationMember>>>& Annotation::answers() const {
         if (!cached_answers_) cached_answers_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        AnnotationMember>>>>(member_value<std::vector<std::pair<std::string, AnnotationMember>>>(value_,
+        AnnotationMember>>>>(detail::member_value<std::vector<std::pair<std::string, AnnotationMember>>>(value_,
         "answers"));
         return *cached_answers_;
     }
     inline const Presence<std::string>& Annotation::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Annotation::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<uint64_t>& Annotation::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& Annotation::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<uint64_t>& Annotation::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<Meta>& Annotation::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<Position>& Annotation::position() const {
-        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(member_value<Position>(value_,
+        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(detail::member_value<Position>(value_,
         "position"));
         return *cached_position_;
     }
     inline const Presence<Version>& Annotation::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& Annotation::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<AnnotatedRow>& Annotation::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AnnotatedRow>>(member_value<AnnotatedRow>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AnnotatedRow>>(detail::member_value<AnnotatedRow>(value_,
         "value"));
         return *cached_value_;
     }
@@ -2235,157 +2235,157 @@ namespace tt::results {
         return std::nullopt;
     }
     inline const Presence<Answer>& AnnotationMemberAnswerId::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AnnotationMemberAnswerId::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Observation>>& AnnotationMemberAnswerId::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<ReadableQuestion>& AnnotationMemberAnswerId::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::vector<QuestionSource>>& AnnotationMemberAnswerId::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& AnnotationMemberAnswerId::request() const {
-        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request"));
         return *cached_request_;
     }
     inline const Presence<Threshold>& AnnotationMemberAnswerId::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Usage>& AnnotationMemberAnswerId::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline const Presence<Value>& AnnotationMemberAnswerId::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Value>>(member_value<Value>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Value>>(detail::member_value<Value>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Failure>& AnnotationMemberFailureId::failure() const {
-        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(member_value<Failure>(value_,
+        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(detail::member_value<Failure>(value_,
         "failure"));
         return *cached_failure_;
     }
     inline const Presence<FailureId>& AnnotationMemberFailureId::failure_id() const {
-        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(member_value<FailureId>(value_,
+        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(detail::member_value<FailureId>(value_,
         "failure_id"));
         return *cached_failure_id_;
     }
     inline const Presence<std::vector<Observation>>& AnnotationMemberFailureId::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<ReadableQuestion>& AnnotationMemberFailureId::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::vector<QuestionSource>>& AnnotationMemberFailureId::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& AnnotationMemberFailureId::request() const {
-        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request"));
         return *cached_request_;
     }
     inline const Presence<Threshold>& AnnotationMemberFailureId::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Usage>& AnnotationMemberFailureId::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline std::optional<AnnotationValueDecision> AnnotationValue::as_AnnotationValueDecision() const {
-        if (literal(value_, "kind", "decision")) return AnnotationValueDecision(value_);
+        if (detail::literal(value_, "kind", "decision")) return AnnotationValueDecision(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueChoice> AnnotationValue::as_AnnotationValueChoice() const {
-        if (literal(value_, "kind", "choice")) return AnnotationValueChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return AnnotationValueChoice(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueScore> AnnotationValue::as_AnnotationValueScore() const {
-        if (literal(value_, "kind", "score")) return AnnotationValueScore(value_);
+        if (detail::literal(value_, "kind", "score")) return AnnotationValueScore(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueTags> AnnotationValue::as_AnnotationValueTags() const {
-        if (literal(value_, "kind", "tags")) return AnnotationValueTags(value_);
+        if (detail::literal(value_, "kind", "tags")) return AnnotationValueTags(value_);
         return std::nullopt;
     }
     inline std::optional<AnnotationValueFailed> AnnotationValue::as_AnnotationValueFailed() const {
-        if (literal(value_, "kind", "failed")) return AnnotationValueFailed(value_);
+        if (detail::literal(value_, "kind", "failed")) return AnnotationValueFailed(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& AnnotationValueChoice::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& AnnotationValueChoice::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& AnnotationValueDecision::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<bool>& AnnotationValueDecision::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& AnnotationValueFailed::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<Failure>& AnnotationValueFailed::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Failure>>(member_value<Failure>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Failure>>(detail::member_value<Failure>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& AnnotationValueScore::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<double>& AnnotationValueScore::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& AnnotationValueTags::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<std::string>>& AnnotationValueTags::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "value"));
         return *cached_value_;
     }
@@ -2394,437 +2394,437 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<std::vector<RelationMember>>& Answers::questions() const {
-        if (!cached_questions_) cached_questions_ = std::make_shared<const Presence<std::vector<RelationMember>>>(member_value<std::vector<RelationMember>>(value_,
+        if (!cached_questions_) cached_questions_ = std::make_shared<const Presence<std::vector<RelationMember>>>(detail::member_value<std::vector<RelationMember>>(value_,
         "questions"));
         return *cached_questions_;
     }
     inline const Presence<Answer>& AtomicArrayOfString::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicArrayOfString::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicArrayOfString::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicArrayOfString::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicArrayOfString::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicArrayOfString::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicArrayOfString::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicArrayOfString::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicArrayOfString::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicArrayOfString::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicArrayOfString::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicArrayOfString::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<std::vector<std::string>>& AtomicArrayOfString::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Answer>& AtomicDecideValue::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicDecideValue::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicDecideValue::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicDecideValue::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicDecideValue::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicDecideValue::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicDecideValue::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicDecideValue::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicDecideValue::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicDecideValue::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicDecideValue::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicDecideValue::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<DecideValue>& AtomicDecideValue::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<DecideValue>>(member_value<DecideValue>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<DecideValue>>(detail::member_value<DecideValue>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Answer>& AtomicNonZeroUsize::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicNonZeroUsize::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicNonZeroUsize::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicNonZeroUsize::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicNonZeroUsize::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicNonZeroUsize::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicNonZeroUsize::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicNonZeroUsize::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicNonZeroUsize::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicNonZeroUsize::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicNonZeroUsize::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicNonZeroUsize::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<uint64_t>& AtomicNonZeroUsize::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Answer>& AtomicNullableString::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicNullableString::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicNullableString::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicNullableString::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicNullableString::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicNullableString::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicNullableString::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicNullableString::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicNullableString::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicNullableString::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicNullableString::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicNullableString::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<std::string>& AtomicNullableString::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Answer>& AtomicBoolean::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicBoolean::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicBoolean::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicBoolean::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicBoolean::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicBoolean::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicBoolean::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicBoolean::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicBoolean::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicBoolean::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicBoolean::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicBoolean::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<bool>& AtomicBoolean::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Answer>& AtomicDouble::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& AtomicDouble::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& AtomicDouble::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& AtomicDouble::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& AtomicDouble::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<RankMember>>& AtomicDouble::members() const {
-        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(member_value<std::vector<RankMember>>(value_,
+        if (!cached_members_) cached_members_ = std::make_shared<const Presence<std::vector<RankMember>>>(detail::member_value<std::vector<RankMember>>(value_,
         "members"));
         return *cached_members_;
     }
     inline const Presence<Meta>& AtomicDouble::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& AtomicDouble::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& AtomicDouble::question_name() const {
-        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_name_) cached_question_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_name"));
         return *cached_question_name_;
     }
     inline const Presence<Version>& AtomicDouble::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& AtomicDouble::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Threshold>& AtomicDouble::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<double>& AtomicDouble::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<uint64_t>& Attempt::ordinal() const {
-        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "ordinal"));
         return *cached_ordinal_;
     }
     inline const Presence<AttemptOutcome>& Attempt::outcome() const {
-        if (!cached_outcome_) cached_outcome_ = std::make_shared<const Presence<AttemptOutcome>>(member_value<AttemptOutcome>(value_,
+        if (!cached_outcome_) cached_outcome_ = std::make_shared<const Presence<AttemptOutcome>>(detail::member_value<AttemptOutcome>(value_,
         "outcome"));
         return *cached_outcome_;
     }
     inline const Presence<std::string>& Attempt::request_id() const {
-        if (!cached_request_id_) cached_request_id_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_id_) cached_request_id_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request_id"));
         return *cached_request_id_;
     }
     inline const Presence<std::string>& Attempt::request_sha256() const {
-        if (!cached_request_sha256_) cached_request_sha256_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_sha256_) cached_request_sha256_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request_sha256"));
         return *cached_request_sha256_;
     }
     inline const Presence<SdkRequestId>& Attempt::sdk_request_id() const {
-        if (!cached_sdk_request_id_) cached_sdk_request_id_ = std::make_shared<const Presence<SdkRequestId>>(member_value<SdkRequestId>(value_,
+        if (!cached_sdk_request_id_) cached_sdk_request_id_ = std::make_shared<const Presence<SdkRequestId>>(detail::member_value<SdkRequestId>(value_,
         "sdk_request_id"));
         return *cached_sdk_request_id_;
     }
     inline const Presence<uint64_t>& Attempt::server_ms() const {
-        if (!cached_server_ms_) cached_server_ms_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_server_ms_) cached_server_ms_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "server_ms"));
         return *cached_server_ms_;
     }
     inline const Presence<uint64_t>& Attempt::status() const {
-        if (!cached_status_) cached_status_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_status_) cached_status_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "status"));
         return *cached_status_;
     }
     inline const Presence<uint64_t>& Attempt::wall_ms() const {
-        if (!cached_wall_ms_) cached_wall_ms_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_wall_ms_) cached_wall_ms_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "wall_ms"));
         return *cached_wall_ms_;
     }
@@ -2838,47 +2838,47 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<std::vector<PieceOdds>>& BoundaryOdds::pieces() const {
-        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(member_value<std::vector<PieceOdds>>(value_,
+        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(detail::member_value<std::vector<PieceOdds>>(value_,
         "pieces"));
         return *cached_pieces_;
     }
     inline const Presence<std::vector<BoundaryProposal>>& BoundaryOdds::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(member_value<std::vector<BoundaryProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(detail::member_value<std::vector<BoundaryProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<uint64_t>& BoundaryProposal::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<uint64_t>& BoundaryProposal::length() const {
-        if (!cached_length_) cached_length_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_length_) cached_length_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "length"));
         return *cached_length_;
     }
     inline const Presence<double>& BoundaryProposal::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<uint64_t>& BoundaryProposal::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<std::string>& BoundaryProposal::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<Error>& CallError::error() const {
-        if (!cached_error_) cached_error_ = std::make_shared<const Presence<Error>>(member_value<Error>(value_,
+        if (!cached_error_) cached_error_ = std::make_shared<const Presence<Error>>(detail::member_value<Error>(value_,
         "error"));
         return *cached_error_;
     }
     inline const Presence<Facts>& CallError::facts() const {
-        if (!cached_facts_) cached_facts_ = std::make_shared<const Presence<Facts>>(member_value<Facts>(value_,
+        if (!cached_facts_) cached_facts_ = std::make_shared<const Presence<Facts>>(detail::member_value<Facts>(value_,
         "facts"));
         return *cached_facts_;
     }
@@ -2891,164 +2891,164 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<std::string>& EntityDocument::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& EntityDocument::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<EstimatedInputDenial>& Error::estimated_input_denial() const {
-        if (!cached_estimated_input_denial_) cached_estimated_input_denial_ = std::make_shared<const Presence<EstimatedInputDenial>>(member_value<EstimatedInputDenial>(value_,
+        if (!cached_estimated_input_denial_) cached_estimated_input_denial_ = std::make_shared<const Presence<EstimatedInputDenial>>(detail::member_value<EstimatedInputDenial>(value_,
         "estimated_input_denial"));
         return *cached_estimated_input_denial_;
     }
     inline const Presence<FailureKind>& Error::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<FailureKind>>(member_value<FailureKind>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<FailureKind>>(detail::member_value<FailureKind>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& Error::message() const {
-        if (!cached_message_) cached_message_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_message_) cached_message_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "message"));
         return *cached_message_;
     }
     inline const Presence<bool>& Error::retryable() const {
-        if (!cached_retryable_) cached_retryable_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_retryable_) cached_retryable_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "retryable"));
         return *cached_retryable_;
     }
     inline const Presence<SendBudgetDenial>& Error::send_budget_denial() const {
-        if (!cached_send_budget_denial_) cached_send_budget_denial_ = std::make_shared<const Presence<SendBudgetDenial>>(member_value<SendBudgetDenial>(value_,
+        if (!cached_send_budget_denial_) cached_send_budget_denial_ = std::make_shared<const Presence<SendBudgetDenial>>(detail::member_value<SendBudgetDenial>(value_,
         "send_budget_denial"));
         return *cached_send_budget_denial_;
     }
     inline const Presence<Stopped>& Error::stopped() const {
-        if (!cached_stopped_) cached_stopped_ = std::make_shared<const Presence<Stopped>>(member_value<Stopped>(value_,
+        if (!cached_stopped_) cached_stopped_ = std::make_shared<const Presence<Stopped>>(detail::member_value<Stopped>(value_,
         "stopped"));
         return *cached_stopped_;
     }
     inline std::optional<EstimatedInputDenialInitialRequest> EstimatedInputDenial::as_EstimatedInputDenialInitialRequest() const {
-        if (literal(value_, "kind", "initial_request")) return EstimatedInputDenialInitialRequest(value_);
+        if (detail::literal(value_, "kind", "initial_request")) return EstimatedInputDenialInitialRequest(value_);
         return std::nullopt;
     }
     inline std::optional<EstimatedInputDenialAdditionalRequest> EstimatedInputDenial::as_EstimatedInputDenialAdditionalRequest() const {
-        if (literal(value_, "kind", "additional_request")) return EstimatedInputDenialAdditionalRequest(value_);
+        if (detail::literal(value_, "kind", "additional_request")) return EstimatedInputDenialAdditionalRequest(value_);
         return std::nullopt;
     }
     inline std::optional<EstimatedInputDenialRetry> EstimatedInputDenial::as_EstimatedInputDenialRetry() const {
-        if (literal(value_, "kind", "retry")) return EstimatedInputDenialRetry(value_);
+        if (detail::literal(value_, "kind", "retry")) return EstimatedInputDenialRetry(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& EstimatedInputDenialAdditionalRequest::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& EstimatedInputDenialAdditionalRequest::limit() const {
-        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "limit"));
         return *cached_limit_;
     }
     inline const Presence<std::string>& EstimatedInputDenialInitialRequest::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& EstimatedInputDenialInitialRequest::limit() const {
-        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "limit"));
         return *cached_limit_;
     }
     inline const Presence<std::string>& EstimatedInputDenialRetry::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& EstimatedInputDenialRetry::last_status() const {
-        if (!cached_last_status_) cached_last_status_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_status_) cached_last_status_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_status"));
         return *cached_last_status_;
     }
     inline const Presence<uint64_t>& EstimatedInputDenialRetry::limit() const {
-        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_limit_) cached_limit_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "limit"));
         return *cached_limit_;
     }
     inline const Presence<std::vector<Attempt>>& Facts::attempts() const {
-        if (!cached_attempts_) cached_attempts_ = std::make_shared<const Presence<std::vector<Attempt>>>(member_value<std::vector<Attempt>>(value_,
+        if (!cached_attempts_) cached_attempts_ = std::make_shared<const Presence<std::vector<Attempt>>>(detail::member_value<std::vector<Attempt>>(value_,
         "attempts"));
         return *cached_attempts_;
     }
     inline const Presence<uint64_t>& Facts::cache_answers() const {
-        if (!cached_cache_answers_) cached_cache_answers_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_cache_answers_) cached_cache_answers_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "cache_answers"));
         return *cached_cache_answers_;
     }
     inline const Presence<CallId>& Facts::call_id() const {
-        if (!cached_call_id_) cached_call_id_ = std::make_shared<const Presence<CallId>>(member_value<CallId>(value_,
+        if (!cached_call_id_) cached_call_id_ = std::make_shared<const Presence<CallId>>(detail::member_value<CallId>(value_,
         "call_id"));
         return *cached_call_id_;
     }
     inline const Presence<std::string>& Facts::estimated_cost_usd() const {
-        if (!cached_estimated_cost_usd_) cached_estimated_cost_usd_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_estimated_cost_usd_) cached_estimated_cost_usd_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "estimated_cost_usd"));
         return *cached_estimated_cost_usd_;
     }
     inline const Presence<bool>& Facts::held_model_mismatch() const {
-        if (!cached_held_model_mismatch_) cached_held_model_mismatch_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_held_model_mismatch_) cached_held_model_mismatch_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "held_model_mismatch"));
         return *cached_held_model_mismatch_;
     }
     inline const Presence<uint64_t>& Facts::input_tokens() const {
-        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "input_tokens"));
         return *cached_input_tokens_;
     }
     inline const Presence<uint64_t>& Facts::largest_request_bytes() const {
-        if (!cached_largest_request_bytes_) cached_largest_request_bytes_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_largest_request_bytes_) cached_largest_request_bytes_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "largest_request_bytes"));
         return *cached_largest_request_bytes_;
     }
     inline const Presence<uint64_t>& Facts::largest_request_estimated_input_tokens() const {
-        if (!cached_largest_request_estimated_input_tokens_) cached_largest_request_estimated_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_largest_request_estimated_input_tokens_) cached_largest_request_estimated_input_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "largest_request_estimated_input_tokens"));
         return *cached_largest_request_estimated_input_tokens_;
     }
     inline const Presence<std::string>& Facts::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<uint64_t>& Facts::output_tokens() const {
-        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "output_tokens"));
         return *cached_output_tokens_;
     }
     inline const Presence<uint64_t>& Facts::records() const {
-        if (!cached_records_) cached_records_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_records_) cached_records_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "records"));
         return *cached_records_;
     }
     inline const Presence<uint64_t>& Facts::requests_sent() const {
-        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "requests_sent"));
         return *cached_requests_sent_;
     }
     inline const Presence<double>& Facts::seconds() const {
-        if (!cached_seconds_) cached_seconds_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_seconds_) cached_seconds_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "seconds"));
         return *cached_seconds_;
     }
     inline const Presence<std::string>& Facts::token_estimate_method() const {
-        if (!cached_token_estimate_method_) cached_token_estimate_method_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_token_estimate_method_) cached_token_estimate_method_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "token_estimate_method"));
         return *cached_token_estimate_method_;
     }
     inline const Presence<PersistenceObservation>& Facts::usage_persistence() const {
-        if (!cached_usage_persistence_) cached_usage_persistence_ = std::make_shared<const Presence<PersistenceObservation>>(member_value<PersistenceObservation>(value_,
+        if (!cached_usage_persistence_) cached_usage_persistence_ = std::make_shared<const Presence<PersistenceObservation>>(detail::member_value<PersistenceObservation>(value_,
         "usage_persistence"));
         return *cached_usage_persistence_;
     }
@@ -3057,107 +3057,107 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<FindAnswer>& Find::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<FindAnswer>>(member_value<FindAnswer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<FindAnswer>>(detail::member_value<FindAnswer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& Find::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<FindCandidate>>& Find::candidates() const {
-        if (!cached_candidates_) cached_candidates_ = std::make_shared<const Presence<std::vector<FindCandidate>>>(member_value<std::vector<FindCandidate>>(value_,
+        if (!cached_candidates_) cached_candidates_ = std::make_shared<const Presence<std::vector<FindCandidate>>>(detail::member_value<std::vector<FindCandidate>>(value_,
         "candidates"));
         return *cached_candidates_;
     }
     inline const Presence<std::string>& Find::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Find::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<uint64_t>& Find::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<uint64_t>& Find::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<Meta>& Find::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<Position>& Find::position() const {
-        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(member_value<Position>(value_,
+        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(detail::member_value<Position>(value_,
         "position"));
         return *cached_position_;
     }
     inline const Presence<ReadableQuestion2>& Find::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion2>>(member_value<ReadableQuestion2>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion2>>(detail::member_value<ReadableQuestion2>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<Version>& Find::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<std::nullptr_t>& Find::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<std::nullptr_t>>(member_value<std::nullptr_t>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<std::nullptr_t>>(detail::member_value<std::nullptr_t>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Json>& Find::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<uint64_t>& FindCandidate::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& FindCandidate::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<double>& FindCandidate::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<PhysicalSource>& FindCandidate::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<std::string>& Image::base64() const {
-        if (!cached_base64_) cached_base64_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_base64_) cached_base64_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "base64"));
         return *cached_base64_;
     }
     inline const Presence<uint32_t>& Image::height() const {
-        if (!cached_height_) cached_height_ = std::make_shared<const Presence<uint32_t>>(member_value<uint32_t>(value_,
+        if (!cached_height_) cached_height_ = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
         "height"));
         return *cached_height_;
     }
     inline const Presence<ImageMedia>& Image::media() const {
-        if (!cached_media_) cached_media_ = std::make_shared<const Presence<ImageMedia>>(member_value<ImageMedia>(value_,
+        if (!cached_media_) cached_media_ = std::make_shared<const Presence<ImageMedia>>(detail::member_value<ImageMedia>(value_,
         "media"));
         return *cached_media_;
     }
     inline const Presence<uint32_t>& Image::width() const {
-        if (!cached_width_) cached_width_ = std::make_shared<const Presence<uint32_t>>(member_value<uint32_t>(value_,
+        if (!cached_width_) cached_width_ = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
         "width"));
         return *cached_width_;
     }
@@ -3166,193 +3166,193 @@ namespace tt::results {
         return *cached_value_;
     }
     inline std::optional<InputDeclarationStringRoot> InputDeclaration::as_InputDeclarationStringRoot() const {
-        if (literal(value_, "type", "string")) return InputDeclarationStringRoot(value_);
+        if (detail::literal(value_, "type", "string")) return InputDeclarationStringRoot(value_);
         return std::nullopt;
     }
     inline std::optional<InputDeclarationObjectRoot> InputDeclaration::as_InputDeclarationObjectRoot() const {
-        if (literal(value_, "type", "object")) return InputDeclarationObjectRoot(value_);
+        if (detail::literal(value_, "type", "object")) return InputDeclarationObjectRoot(value_);
         return std::nullopt;
     }
     inline const Presence<std::vector<std::pair<std::string, InputPropertyType>>>& InputDeclarationObjectRoot::properties() const {
         if (!cached_properties_) cached_properties_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        InputPropertyType>>>>(member_value<std::vector<std::pair<std::string, InputPropertyType>>>(value_,
+        InputPropertyType>>>>(detail::member_value<std::vector<std::pair<std::string, InputPropertyType>>>(value_,
         "properties"));
         return *cached_properties_;
     }
     inline const Presence<std::vector<std::string>>& InputDeclarationObjectRoot::required() const {
-        if (!cached_required_) cached_required_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_required_) cached_required_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "required"));
         return *cached_required_;
     }
     inline const Presence<ObjectType>& InputDeclarationObjectRoot::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<ObjectType>>(member_value<ObjectType>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<ObjectType>>(detail::member_value<ObjectType>(value_,
         "type"));
         return *cached_type_;
     }
     inline const Presence<StringType>& InputDeclarationStringRoot::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<StringType>>(member_value<StringType>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<StringType>>(detail::member_value<StringType>(value_,
         "type"));
         return *cached_type_;
     }
     inline std::optional<InputPropertyTypeString> InputPropertyType::as_InputPropertyTypeString() const {
-        if (literal(value_, "type", "string")) return InputPropertyTypeString(value_);
+        if (detail::literal(value_, "type", "string")) return InputPropertyTypeString(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeNumber> InputPropertyType::as_InputPropertyTypeNumber() const {
-        if (literal(value_, "type", "number")) return InputPropertyTypeNumber(value_);
+        if (detail::literal(value_, "type", "number")) return InputPropertyTypeNumber(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeBoolean> InputPropertyType::as_InputPropertyTypeBoolean() const {
-        if (literal(value_, "type", "boolean")) return InputPropertyTypeBoolean(value_);
+        if (detail::literal(value_, "type", "boolean")) return InputPropertyTypeBoolean(value_);
         return std::nullopt;
     }
     inline std::optional<InputPropertyTypeArray> InputPropertyType::as_InputPropertyTypeArray() const {
-        if (literal(value_, "type", "array")) return InputPropertyTypeArray(value_);
+        if (detail::literal(value_, "type", "array")) return InputPropertyTypeArray(value_);
         return std::nullopt;
     }
     inline const Presence<StringRoot>& InputPropertyTypeArray::items() const {
-        if (!cached_items_) cached_items_ = std::make_shared<const Presence<StringRoot>>(member_value<StringRoot>(value_,
+        if (!cached_items_) cached_items_ = std::make_shared<const Presence<StringRoot>>(detail::member_value<StringRoot>(value_,
         "items"));
         return *cached_items_;
     }
     inline const Presence<std::string>& InputPropertyTypeArray::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "type"));
         return *cached_type_;
     }
     inline const Presence<std::string>& InputPropertyTypeBoolean::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "type"));
         return *cached_type_;
     }
     inline const Presence<std::string>& InputPropertyTypeNumber::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "type"));
         return *cached_type_;
     }
     inline const Presence<std::string>& InputPropertyTypeString::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "type"));
         return *cached_type_;
     }
     inline const Presence<Json>& Label::description() const {
-        if (!cached_description_) cached_description_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_description_) cached_description_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "description"));
         return *cached_description_;
     }
     inline const Presence<std::string>& Label::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::string>& Meta::answered_by() const {
-        if (!cached_answered_by_) cached_answered_by_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_answered_by_) cached_answered_by_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "answered_by"));
         return *cached_answered_by_;
     }
     inline const Presence<std::vector<Attempt>>& Meta::attempts() const {
-        if (!cached_attempts_) cached_attempts_ = std::make_shared<const Presence<std::vector<Attempt>>>(member_value<std::vector<Attempt>>(value_,
+        if (!cached_attempts_) cached_attempts_ = std::make_shared<const Presence<std::vector<Attempt>>>(detail::member_value<std::vector<Attempt>>(value_,
         "attempts"));
         return *cached_attempts_;
     }
     inline const Presence<BatchSetting>& Meta::batch_setting() const {
-        if (!cached_batch_setting_) cached_batch_setting_ = std::make_shared<const Presence<BatchSetting>>(member_value<BatchSetting>(value_,
+        if (!cached_batch_setting_) cached_batch_setting_ = std::make_shared<const Presence<BatchSetting>>(detail::member_value<BatchSetting>(value_,
         "batch_setting"));
         return *cached_batch_setting_;
     }
     inline const Presence<BatchWarning>& Meta::batch_warning() const {
-        if (!cached_batch_warning_) cached_batch_warning_ = std::make_shared<const Presence<BatchWarning>>(member_value<BatchWarning>(value_,
+        if (!cached_batch_warning_) cached_batch_warning_ = std::make_shared<const Presence<BatchWarning>>(detail::member_value<BatchWarning>(value_,
         "batch_warning"));
         return *cached_batch_warning_;
     }
     inline const Presence<bool>& Meta::cached() const {
-        if (!cached_cached_) cached_cached_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_cached_) cached_cached_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "cached"));
         return *cached_cached_;
     }
     inline const Presence<std::string>& Meta::context_sha256() const {
-        if (!cached_context_sha256_) cached_context_sha256_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_context_sha256_) cached_context_sha256_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "context_sha256"));
         return *cached_context_sha256_;
     }
     inline const Presence<uint64_t>& Meta::failed_questions() const {
-        if (!cached_failed_questions_) cached_failed_questions_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_failed_questions_) cached_failed_questions_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "failed_questions"));
         return *cached_failed_questions_;
     }
     inline const Presence<std::string>& Meta::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<std::vector<Observation>>& Meta::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<Origin>& Meta::origin() const {
-        if (!cached_origin_) cached_origin_ = std::make_shared<const Presence<Origin>>(member_value<Origin>(value_,
+        if (!cached_origin_) cached_origin_ = std::make_shared<const Presence<Origin>>(detail::member_value<Origin>(value_,
         "origin"));
         return *cached_origin_;
     }
     inline const Presence<ProfileWarning>& Meta::profile_warning() const {
-        if (!cached_profile_warning_) cached_profile_warning_ = std::make_shared<const Presence<ProfileWarning>>(member_value<ProfileWarning>(value_,
+        if (!cached_profile_warning_) cached_profile_warning_ = std::make_shared<const Presence<ProfileWarning>>(detail::member_value<ProfileWarning>(value_,
         "profile_warning"));
         return *cached_profile_warning_;
     }
     inline const Presence<std::string>& Meta::question_sha256() const {
-        if (!cached_question_sha256_) cached_question_sha256_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_sha256_) cached_question_sha256_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_sha256"));
         return *cached_question_sha256_;
     }
     inline const Presence<std::vector<QuestionSource>>& Meta::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& Meta::questions_sha256() const {
-        if (!cached_questions_sha256_) cached_questions_sha256_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_questions_sha256_) cached_questions_sha256_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "questions_sha256"));
         return *cached_questions_sha256_;
     }
     inline const Presence<std::vector<std::string>>& Meta::requests() const {
-        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "requests"));
         return *cached_requests_;
     }
     inline const Presence<uint64_t>& Meta::requests_sent() const {
-        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "requests_sent"));
         return *cached_requests_sent_;
     }
     inline const Presence<std::string>& Meta::tool() const {
-        if (!cached_tool_) cached_tool_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_tool_) cached_tool_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "tool"));
         return *cached_tool_;
     }
     inline const Presence<std::string>& Meta::url() const {
-        if (!cached_url_) cached_url_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_url_) cached_url_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "url"));
         return *cached_url_;
     }
     inline const Presence<Usage>& Meta::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline const Presence<std::vector<std::pair<std::string, InputPropertyType>>>& ObjectRoot::properties() const {
         if (!cached_properties_) cached_properties_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        InputPropertyType>>>>(member_value<std::vector<std::pair<std::string, InputPropertyType>>>(value_,
+        InputPropertyType>>>>(detail::member_value<std::vector<std::pair<std::string, InputPropertyType>>>(value_,
         "properties"));
         return *cached_properties_;
     }
     inline const Presence<std::vector<std::string>>& ObjectRoot::required() const {
-        if (!cached_required_) cached_required_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_required_) cached_required_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "required"));
         return *cached_required_;
     }
     inline const Presence<ObjectType>& ObjectRoot::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<ObjectType>>(member_value<ObjectType>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<ObjectType>>(detail::member_value<ObjectType>(value_,
         "type"));
         return *cached_type_;
     }
@@ -3373,12 +3373,12 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<FailureId>& ObservationFailureId::failure_id() const {
-        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(member_value<FailureId>(value_,
+        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(detail::member_value<FailureId>(value_,
         "failure_id"));
         return *cached_failure_id_;
     }
     inline const Presence<ObservationId>& ObservationObservationId::observation_id() const {
-        if (!cached_observation_id_) cached_observation_id_ = std::make_shared<const Presence<ObservationId>>(member_value<ObservationId>(value_,
+        if (!cached_observation_id_) cached_observation_id_ = std::make_shared<const Presence<ObservationId>>(detail::member_value<ObservationId>(value_,
         "observation_id"));
         return *cached_observation_id_;
     }
@@ -3387,52 +3387,52 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<std::string>& PersistenceObservation::advice() const {
-        if (!cached_advice_) cached_advice_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_advice_) cached_advice_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "advice"));
         return *cached_advice_;
     }
     inline const Presence<std::string>& PersistenceObservation::observed_at() const {
-        if (!cached_observed_at_) cached_observed_at_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_observed_at_) cached_observed_at_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "observed_at"));
         return *cached_observed_at_;
     }
     inline const Presence<UsagePersistence>& PersistenceObservation::state() const {
-        if (!cached_state_) cached_state_ = std::make_shared<const Presence<UsagePersistence>>(member_value<UsagePersistence>(value_,
+        if (!cached_state_) cached_state_ = std::make_shared<const Presence<UsagePersistence>>(detail::member_value<UsagePersistence>(value_,
         "state"));
         return *cached_state_;
     }
     inline const Presence<std::string>& PhysicalSource::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& PhysicalSource::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<uint64_t>& PhysicalSource::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<std::string>& Position::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Position::first() const {
-        if (!cached_first_) cached_first_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_) cached_first_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first"));
         return *cached_first_;
     }
     inline const Presence<std::vector<std::string>>& Position::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<uint64_t>& Position::last() const {
-        if (!cached_last_) cached_last_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_) cached_last_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last"));
         return *cached_last_;
     }
@@ -3441,643 +3441,643 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<std::string>& QuestionSource::answered_by() const {
-        if (!cached_answered_by_) cached_answered_by_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_answered_by_) cached_answered_by_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "answered_by"));
         return *cached_answered_by_;
     }
     inline const Presence<uint32_t>& QuestionSource::batch_size() const {
-        if (!cached_batch_size_) cached_batch_size_ = std::make_shared<const Presence<uint32_t>>(member_value<uint32_t>(value_,
+        if (!cached_batch_size_) cached_batch_size_ = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
         "batch_size"));
         return *cached_batch_size_;
     }
     inline const Presence<Origin>& QuestionSource::origin() const {
-        if (!cached_origin_) cached_origin_ = std::make_shared<const Presence<Origin>>(member_value<Origin>(value_,
+        if (!cached_origin_) cached_origin_ = std::make_shared<const Presence<Origin>>(detail::member_value<Origin>(value_,
         "origin"));
         return *cached_origin_;
     }
     inline const Presence<std::string>& RankMember::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<RankMemberResult>& RankMember::result() const {
-        if (!cached_result_) cached_result_ = std::make_shared<const Presence<RankMemberResult>>(member_value<RankMemberResult>(value_,
+        if (!cached_result_) cached_result_ = std::make_shared<const Presence<RankMemberResult>>(detail::member_value<RankMemberResult>(value_,
         "result"));
         return *cached_result_;
     }
     inline const Presence<Answer>& RankMemberResult::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& RankMemberResult::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::vector<Image>>& RankMemberResult::images() const {
-        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(member_value<std::vector<Image>>(value_,
+        if (!cached_images_) cached_images_ = std::make_shared<const Presence<std::vector<Image>>>(detail::member_value<std::vector<Image>>(value_,
         "images"));
         return *cached_images_;
     }
     inline const Presence<Meta>& RankMemberResult::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<ReadableQuestion>& RankMemberResult::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<Version>& RankMemberResult::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& RankMemberResult::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<std::nullptr_t>& RankMemberResult::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<std::nullptr_t>>(member_value<std::nullptr_t>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<std::nullptr_t>>(detail::member_value<std::nullptr_t>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<uint64_t>& RankMemberResult::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "value"));
         return *cached_value_;
     }
     inline std::optional<ReadableQuestionDecide> ReadableQuestion::as_ReadableQuestionDecide() const {
-        if (literal(value_, "verb", "decide")) return ReadableQuestionDecide(value_);
+        if (detail::literal(value_, "verb", "decide")) return ReadableQuestionDecide(value_);
         return std::nullopt;
     }
     inline std::optional<ReadableQuestionChoose> ReadableQuestion::as_ReadableQuestionChoose() const {
-        if (literal(value_, "verb", "choose")) return ReadableQuestionChoose(value_);
+        if (detail::literal(value_, "verb", "choose")) return ReadableQuestionChoose(value_);
         return std::nullopt;
     }
     inline std::optional<ReadableQuestionTag> ReadableQuestion::as_ReadableQuestionTag() const {
-        if (literal(value_, "verb", "tag")) return ReadableQuestionTag(value_);
+        if (detail::literal(value_, "verb", "tag")) return ReadableQuestionTag(value_);
         return std::nullopt;
     }
     inline std::optional<ReadableQuestionScore> ReadableQuestion::as_ReadableQuestionScore() const {
-        if (literal(value_, "verb", "score")) return ReadableQuestionScore(value_);
+        if (detail::literal(value_, "verb", "score")) return ReadableQuestionScore(value_);
         return std::nullopt;
     }
     inline const Presence<Batch>& ReadableQuestion2::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion2::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion2::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestion2::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestion2::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestion2::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<bool>& ReadableQuestion2::none() const {
-        if (!cached_none_) cached_none_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_none_) cached_none_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "none"));
         return *cached_none_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestion2::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestion2::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<Json>& ReadableQuestion2::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<std::string>& ReadableQuestion2::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<WordingVersion>& ReadableQuestion2::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<Batch>& ReadableQuestion3::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion3::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<Json>& ReadableQuestion3::entity_definition() const {
-        if (!cached_entity_definition_) cached_entity_definition_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_entity_definition_) cached_entity_definition_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "entity_definition"));
         return *cached_entity_definition_;
     }
     inline const Presence<Json>& ReadableQuestion3::instructions() const {
-        if (!cached_instructions_) cached_instructions_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_instructions_) cached_instructions_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "instructions"));
         return *cached_instructions_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion3::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<std::pair<std::string, Json>>>& ReadableQuestion3::kinds() const {
         if (!cached_kinds_) cached_kinds_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        Json>>>>(member_value<std::vector<std::pair<std::string, Json>>>(value_, "kinds"));
+        Json>>>>(detail::member_value<std::vector<std::pair<std::string, Json>>>(value_, "kinds"));
         return *cached_kinds_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestion3::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<RecognitionMode>& ReadableQuestion3::mode() const {
-        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<RecognitionMode>>(member_value<RecognitionMode>(value_,
+        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<RecognitionMode>>(detail::member_value<RecognitionMode>(value_,
         "mode"));
         return *cached_mode_;
     }
     inline const Presence<std::string>& ReadableQuestion3::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestion3::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestion3::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestion3::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<Threshold>& ReadableQuestion3::relation_threshold() const {
-        if (!cached_relation_threshold_) cached_relation_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_relation_threshold_) cached_relation_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "relation_threshold"));
         return *cached_relation_threshold_;
     }
     inline const Presence<std::vector<RelationRule>>& ReadableQuestion3::relations() const {
-        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RelationRule>>>(member_value<std::vector<RelationRule>>(value_,
+        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
         "relations"));
         return *cached_relations_;
     }
     inline const Presence<uint32_t>& ReadableQuestion3::snippet_pieces() const {
-        if (!cached_snippet_pieces_) cached_snippet_pieces_ = std::make_shared<const Presence<uint32_t>>(member_value<uint32_t>(value_,
+        if (!cached_snippet_pieces_) cached_snippet_pieces_ = std::make_shared<const Presence<uint32_t>>(detail::member_value<uint32_t>(value_,
         "snippet_pieces"));
         return *cached_snippet_pieces_;
     }
     inline const Presence<RecognitionStageContext>& ReadableQuestion3::stage_context() const {
-        if (!cached_stage_context_) cached_stage_context_ = std::make_shared<const Presence<RecognitionStageContext>>(member_value<RecognitionStageContext>(value_,
+        if (!cached_stage_context_) cached_stage_context_ = std::make_shared<const Presence<RecognitionStageContext>>(detail::member_value<RecognitionStageContext>(value_,
         "stage_context"));
         return *cached_stage_context_;
     }
     inline const Presence<Threshold>& ReadableQuestion3::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Verb>& ReadableQuestion3::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<Verb>>(member_value<Verb>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<Verb>>(detail::member_value<Verb>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<WordingVersion>& ReadableQuestion3::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<Batch>& ReadableQuestion4::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion4::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<RelateFields>& ReadableQuestion4::fields() const {
-        if (!cached_fields_) cached_fields_ = std::make_shared<const Presence<RelateFields>>(member_value<RelateFields>(value_,
+        if (!cached_fields_) cached_fields_ = std::make_shared<const Presence<RelateFields>>(detail::member_value<RelateFields>(value_,
         "fields"));
         return *cached_fields_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestion4::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestion4::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestion4::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestion4::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestion4::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestion4::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<std::vector<RelationRule>>& ReadableQuestion4::relations() const {
-        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RelationRule>>>(member_value<std::vector<RelationRule>>(value_,
+        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RelationRule>>>(detail::member_value<std::vector<RelationRule>>(value_,
         "relations"));
         return *cached_relations_;
     }
     inline const Presence<Threshold>& ReadableQuestion4::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<std::string>& ReadableQuestion4::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<WordingVersion>& ReadableQuestion4::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<Batch>& ReadableQuestionChoose::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionChoose::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionChoose::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestionChoose::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestionChoose::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestionChoose::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionChoose::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestionChoose::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<WordingVersion>& ReadableQuestionChoose::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionChoose::options() const {
-        if (!cached_options_) cached_options_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_options_) cached_options_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "options"));
         return *cached_options_;
     }
     inline const Presence<Json>& ReadableQuestionChoose::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<std::string>& ReadableQuestionChoose::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<Batch>& ReadableQuestionDecide::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionDecide::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionDecide::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestionDecide::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestionDecide::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestionDecide::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionDecide::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestionDecide::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<WordingVersion>& ReadableQuestionDecide::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<Json>& ReadableQuestionDecide::false_() const {
-        if (!cached_false__) cached_false__ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_false__) cached_false__ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "false"));
         return *cached_false__;
     }
     inline const Presence<Json>& ReadableQuestionDecide::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<Json>& ReadableQuestionDecide::true_() const {
-        if (!cached_true__) cached_true__ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_true__) cached_true__ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "true"));
         return *cached_true__;
     }
     inline const Presence<std::string>& ReadableQuestionDecide::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<Batch>& ReadableQuestionScore::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionScore::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionScore::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestionScore::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestionScore::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestionScore::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionScore::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestionScore::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<WordingVersion>& ReadableQuestionScore::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionScore::levels() const {
-        if (!cached_levels_) cached_levels_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_levels_) cached_levels_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "levels"));
         return *cached_levels_;
     }
     inline const Presence<Json>& ReadableQuestionScore::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<std::string>& ReadableQuestionScore::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<Batch>& ReadableQuestionTag::batch() const {
-        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(member_value<Batch>(value_,
+        if (!cached_batch_) cached_batch_ = std::make_shared<const Presence<Batch>>(detail::member_value<Batch>(value_,
         "batch"));
         return *cached_batch_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionTag::context_schema() const {
-        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_context_schema_) cached_context_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "context_schema"));
         return *cached_context_schema_;
     }
     inline const Presence<InputDeclaration>& ReadableQuestionTag::item_schema() const {
-        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(member_value<InputDeclaration>(value_,
+        if (!cached_item_schema_) cached_item_schema_ = std::make_shared<const Presence<InputDeclaration>>(detail::member_value<InputDeclaration>(value_,
         "item_schema"));
         return *cached_item_schema_;
     }
     inline const Presence<std::vector<Label>>& ReadableQuestionTag::label_details() const {
-        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(member_value<std::vector<Label>>(value_,
+        if (!cached_label_details_) cached_label_details_ = std::make_shared<const Presence<std::vector<Label>>>(detail::member_value<std::vector<Label>>(value_,
         "label_details"));
         return *cached_label_details_;
     }
     inline const Presence<std::string>& ReadableQuestionTag::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<QuestionName>& ReadableQuestionTag::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(member_value<QuestionName>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<QuestionName>>(detail::member_value<QuestionName>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionTag::on() const {
-        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_on_) cached_on_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "on"));
         return *cached_on_;
     }
     inline const Presence<std::string>& ReadableQuestionTag::profile() const {
-        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_profile_) cached_profile_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "profile"));
         return *cached_profile_;
     }
     inline const Presence<WordingVersion>& ReadableQuestionTag::wording_version() const {
-        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(member_value<WordingVersion>(value_,
+        if (!cached_wording_version_) cached_wording_version_ = std::make_shared<const Presence<WordingVersion>>(detail::member_value<WordingVersion>(value_,
         "wording_version"));
         return *cached_wording_version_;
     }
     inline const Presence<std::vector<std::string>>& ReadableQuestionTag::labels() const {
-        if (!cached_labels_) cached_labels_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_labels_) cached_labels_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "labels"));
         return *cached_labels_;
     }
     inline const Presence<Json>& ReadableQuestionTag::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<std::string>& ReadableQuestionTag::verb() const {
-        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_verb_) cached_verb_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "verb"));
         return *cached_verb_;
     }
     inline const Presence<RecognitionOdds>& Recognition::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<RecognitionOdds>>(member_value<RecognitionOdds>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<RecognitionOdds>>(detail::member_value<RecognitionOdds>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& Recognition::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::string>& Recognition::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Recognition::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<uint64_t>& Recognition::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& Recognition::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<uint64_t>& Recognition::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<Meta>& Recognition::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<Position>& Recognition::position() const {
-        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(member_value<Position>(value_,
+        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(detail::member_value<Position>(value_,
         "position"));
         return *cached_position_;
     }
     inline const Presence<ReadableQuestion3>& Recognition::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion3>>(member_value<ReadableQuestion3>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion3>>(detail::member_value<ReadableQuestion3>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<Version>& Recognition::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<PhysicalSource>& Recognition::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Recognize>& Recognition::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Recognize>>(member_value<Recognize>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Recognize>>(detail::member_value<Recognize>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<bool>& RecognitionEdgeDocument::either() const {
-        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "either"));
         return *cached_either_;
     }
     inline const Presence<double>& RecognitionEdgeDocument::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<std::string>& RecognitionEdgeDocument::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<Entity>& RecognitionEdgeDocument::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Entity>>(member_value<Entity>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Entity>>(detail::member_value<Entity>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Entity>& RecognitionEdgeDocument::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Entity>>(member_value<Entity>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Entity>>(detail::member_value<Entity>(value_,
         "target"));
         return *cached_target_;
     }
@@ -4094,147 +4094,147 @@ namespace tt::results {
         return std::nullopt;
     }
     inline const Presence<std::vector<PieceOdds>>& RecognitionOddsBoundaryOdds::pieces() const {
-        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(member_value<std::vector<PieceOdds>>(value_,
+        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(detail::member_value<std::vector<PieceOdds>>(value_,
         "pieces"));
         return *cached_pieces_;
     }
     inline const Presence<std::vector<BoundaryProposal>>& RecognitionOddsBoundaryOdds::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(member_value<std::vector<BoundaryProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(detail::member_value<std::vector<BoundaryProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<std::vector<NameOdds>>& RecognitionOddsRecognizeAnswer::names() const {
-        if (!cached_names_) cached_names_ = std::make_shared<const Presence<std::vector<NameOdds>>>(member_value<std::vector<NameOdds>>(value_,
+        if (!cached_names_) cached_names_ = std::make_shared<const Presence<std::vector<NameOdds>>>(detail::member_value<std::vector<NameOdds>>(value_,
         "names"));
         return *cached_names_;
     }
     inline const Presence<std::vector<PairOdds>>& RecognitionOddsRecognizeAnswer::pairs() const {
-        if (!cached_pairs_) cached_pairs_ = std::make_shared<const Presence<std::vector<PairOdds>>>(member_value<std::vector<PairOdds>>(value_,
+        if (!cached_pairs_) cached_pairs_ = std::make_shared<const Presence<std::vector<PairOdds>>>(detail::member_value<std::vector<PairOdds>>(value_,
         "pairs"));
         return *cached_pairs_;
     }
     inline const Presence<std::vector<PieceOdds>>& RecognitionOddsRecognizeAnswer::pieces() const {
-        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(member_value<std::vector<PieceOdds>>(value_,
+        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(detail::member_value<std::vector<PieceOdds>>(value_,
         "pieces"));
         return *cached_pieces_;
     }
     inline const Presence<std::vector<RecognitionProposal>>& RecognitionOddsRecognizeAnswer::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<RecognitionProposal>>>(member_value<std::vector<RecognitionProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<RecognitionProposal>>>(detail::member_value<std::vector<RecognitionProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<uint64_t>& RecognitionProposal::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<bool>& RecognitionProposal::kept() const {
-        if (!cached_kept_) cached_kept_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_kept_) cached_kept_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "kept"));
         return *cached_kept_;
     }
     inline const Presence<std::string>& RecognitionProposal::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<Place>& RecognitionProposal::selected() const {
-        if (!cached_selected_) cached_selected_ = std::make_shared<const Presence<Place>>(member_value<Place>(value_,
+        if (!cached_selected_) cached_selected_ = std::make_shared<const Presence<Place>>(detail::member_value<Place>(value_,
         "selected"));
         return *cached_selected_;
     }
     inline const Presence<double>& RecognitionProposal::span_probability() const {
-        if (!cached_span_probability_) cached_span_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_span_probability_) cached_span_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "span_probability"));
         return *cached_span_probability_;
     }
     inline const Presence<uint64_t>& RecognitionProposal::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<double>& RecognitionProposal::strength() const {
-        if (!cached_strength_) cached_strength_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_strength_) cached_strength_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "strength"));
         return *cached_strength_;
     }
     inline const Presence<std::string>& RecognitionStageContext::boundary() const {
-        if (!cached_boundary_) cached_boundary_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_boundary_) cached_boundary_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "boundary"));
         return *cached_boundary_;
     }
     inline const Presence<std::string>& RecognitionStageContext::kind_edge() const {
-        if (!cached_kind_edge_) cached_kind_edge_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_edge_) cached_kind_edge_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind_edge"));
         return *cached_kind_edge_;
     }
     inline const Presence<std::string>& RecognitionStageContext::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<Answers>& Relation::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answers>>(member_value<Answers>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answers>>(detail::member_value<Answers>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& Relation::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<std::string>& Relation::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Relation::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<uint64_t>& Relation::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<Json>& Relation::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<std::vector<SessionInputSource>>& Relation::input_sources() const {
-        if (!cached_input_sources_) cached_input_sources_ = std::make_shared<const Presence<std::vector<SessionInputSource>>>(member_value<std::vector<SessionInputSource>>(value_,
+        if (!cached_input_sources_) cached_input_sources_ = std::make_shared<const Presence<std::vector<SessionInputSource>>>(detail::member_value<std::vector<SessionInputSource>>(value_,
         "input_sources"));
         return *cached_input_sources_;
     }
     inline const Presence<uint64_t>& Relation::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<Meta>& Relation::meta() const {
-        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(member_value<Meta>(value_,
+        if (!cached_meta_) cached_meta_ = std::make_shared<const Presence<Meta>>(detail::member_value<Meta>(value_,
         "meta"));
         return *cached_meta_;
     }
     inline const Presence<Position>& Relation::position() const {
-        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(member_value<Position>(value_,
+        if (!cached_position_) cached_position_ = std::make_shared<const Presence<Position>>(detail::member_value<Position>(value_,
         "position"));
         return *cached_position_;
     }
     inline const Presence<ReadableQuestion4>& Relation::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion4>>(member_value<ReadableQuestion4>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion4>>(detail::member_value<ReadableQuestion4>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<Version>& Relation::schema() const {
-        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(member_value<Version>(value_,
+        if (!cached_schema_) cached_schema_ = std::make_shared<const Presence<Version>>(detail::member_value<Version>(value_,
         "schema"));
         return *cached_schema_;
     }
     inline const Presence<std::vector<RelatedEntityEdge>>& Relation::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<RelatedEntityEdge>>>(member_value<std::vector<RelatedEntityEdge>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<RelatedEntityEdge>>>(detail::member_value<std::vector<RelatedEntityEdge>>(value_,
         "value"));
         return *cached_value_;
     }
@@ -4251,47 +4251,47 @@ namespace tt::results {
         return std::nullopt;
     }
     inline const Presence<std::string>& RelationEndpointRelatedEntity::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& RelationEndpointRelatedEntity::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::string>& RelationEndpointSource::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& RelationEndpointSource::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<std::string>& RelationEndpointSource::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& RelationEndpointSource::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<std::string>& RelationEndpointSource::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<uint64_t>& RelationEndpointSource::ordinal() const {
-        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "ordinal"));
         return *cached_ordinal_;
     }
     inline const Presence<Json>& RelationEndpointSource::record() const {
-        if (!cached_record_) cached_record_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_record_) cached_record_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "record"));
         return *cached_record_;
     }
@@ -4304,82 +4304,82 @@ namespace tt::results {
         return std::nullopt;
     }
     inline const Presence<RelationDirection>& RelationMemberAnswerId::direction() const {
-        if (!cached_direction_) cached_direction_ = std::make_shared<const Presence<RelationDirection>>(member_value<RelationDirection>(value_,
+        if (!cached_direction_) cached_direction_ = std::make_shared<const Presence<RelationDirection>>(detail::member_value<RelationDirection>(value_,
         "direction"));
         return *cached_direction_;
     }
     inline const Presence<RelationMethod>& RelationMemberAnswerId::method() const {
-        if (!cached_method_) cached_method_ = std::make_shared<const Presence<RelationMethod>>(member_value<RelationMethod>(value_,
+        if (!cached_method_) cached_method_ = std::make_shared<const Presence<RelationMethod>>(detail::member_value<RelationMethod>(value_,
         "method"));
         return *cached_method_;
     }
     inline const Presence<std::vector<Observation>>& RelationMemberAnswerId::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<ReadableQuestion>& RelationMemberAnswerId::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::vector<QuestionSource>>& RelationMemberAnswerId::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& RelationMemberAnswerId::reads() const {
-        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "reads"));
         return *cached_reads_;
     }
     inline const Presence<std::string>& RelationMemberAnswerId::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<std::string>& RelationMemberAnswerId::request() const {
-        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request"));
         return *cached_request_;
     }
     inline const Presence<RelatedEntity>& RelationMemberAnswerId::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelatedEntity>>(member_value<RelatedEntity>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelatedEntity>>(detail::member_value<RelatedEntity>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<RelatedEntity>& RelationMemberAnswerId::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelatedEntity>>(member_value<RelatedEntity>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelatedEntity>>(detail::member_value<RelatedEntity>(value_,
         "target"));
         return *cached_target_;
     }
     inline const Presence<Threshold>& RelationMemberAnswerId::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Usage>& RelationMemberAnswerId::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline const Presence<bool>& RelationMemberAnswerId::accepted() const {
-        if (!cached_accepted_) cached_accepted_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_accepted_) cached_accepted_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "accepted"));
         return *cached_accepted_;
     }
     inline const Presence<Answer>& RelationMemberAnswerId::answer() const {
-        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(member_value<Answer>(value_,
+        if (!cached_answer_) cached_answer_ = std::make_shared<const Presence<Answer>>(detail::member_value<Answer>(value_,
         "answer"));
         return *cached_answer_;
     }
     inline const Presence<AnswerId>& RelationMemberAnswerId::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<double>& RelationMemberAnswerId::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
@@ -4387,72 +4387,72 @@ namespace tt::results {
         return value_.at("source").at("name").get<std::string>();
     }
     inline const Presence<RelationDirection>& RelationMemberFailureId::direction() const {
-        if (!cached_direction_) cached_direction_ = std::make_shared<const Presence<RelationDirection>>(member_value<RelationDirection>(value_,
+        if (!cached_direction_) cached_direction_ = std::make_shared<const Presence<RelationDirection>>(detail::member_value<RelationDirection>(value_,
         "direction"));
         return *cached_direction_;
     }
     inline const Presence<RelationMethod>& RelationMemberFailureId::method() const {
-        if (!cached_method_) cached_method_ = std::make_shared<const Presence<RelationMethod>>(member_value<RelationMethod>(value_,
+        if (!cached_method_) cached_method_ = std::make_shared<const Presence<RelationMethod>>(detail::member_value<RelationMethod>(value_,
         "method"));
         return *cached_method_;
     }
     inline const Presence<std::vector<Observation>>& RelationMemberFailureId::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<ReadableQuestion>& RelationMemberFailureId::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::vector<QuestionSource>>& RelationMemberFailureId::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& RelationMemberFailureId::reads() const {
-        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "reads"));
         return *cached_reads_;
     }
     inline const Presence<std::string>& RelationMemberFailureId::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<std::string>& RelationMemberFailureId::request() const {
-        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_request_) cached_request_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "request"));
         return *cached_request_;
     }
     inline const Presence<RelatedEntity>& RelationMemberFailureId::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelatedEntity>>(member_value<RelatedEntity>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelatedEntity>>(detail::member_value<RelatedEntity>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<RelatedEntity>& RelationMemberFailureId::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelatedEntity>>(member_value<RelatedEntity>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelatedEntity>>(detail::member_value<RelatedEntity>(value_,
         "target"));
         return *cached_target_;
     }
     inline const Presence<Threshold>& RelationMemberFailureId::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<Usage>& RelationMemberFailureId::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline const Presence<Failure>& RelationMemberFailureId::failure() const {
-        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(member_value<Failure>(value_,
+        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(detail::member_value<Failure>(value_,
         "failure"));
         return *cached_failure_;
     }
     inline const Presence<FailureId>& RelationMemberFailureId::failure_id() const {
-        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(member_value<FailureId>(value_,
+        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(detail::member_value<FailureId>(value_,
         "failure_id"));
         return *cached_failure_id_;
     }
@@ -4472,34 +4472,34 @@ namespace tt::results {
         return *cached_value_;
     }
     inline std::optional<SendBudgetDenialBeforeFirstSend> SendBudgetDenial::as_SendBudgetDenialBeforeFirstSend() const {
-        if (literal(value_, "kind", "before_first_send")) return SendBudgetDenialBeforeFirstSend(value_);
+        if (detail::literal(value_, "kind", "before_first_send")) return SendBudgetDenialBeforeFirstSend(value_);
         return std::nullopt;
     }
     inline std::optional<SendBudgetDenialBeforeAdditionalSend> SendBudgetDenial::as_SendBudgetDenialBeforeAdditionalSend() const {
-        if (literal(value_, "kind", "before_additional_send")) return SendBudgetDenialBeforeAdditionalSend(value_);
+        if (detail::literal(value_, "kind", "before_additional_send")) return SendBudgetDenialBeforeAdditionalSend(value_);
         return std::nullopt;
     }
     inline std::optional<SendBudgetDenialBeforeRetry> SendBudgetDenial::as_SendBudgetDenialBeforeRetry() const {
-        if (literal(value_, "kind", "before_retry")) return SendBudgetDenialBeforeRetry(value_);
+        if (detail::literal(value_, "kind", "before_retry")) return SendBudgetDenialBeforeRetry(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SendBudgetDenialBeforeAdditionalSend::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& SendBudgetDenialBeforeFirstSend::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& SendBudgetDenialBeforeRetry::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& SendBudgetDenialBeforeRetry::last_status() const {
-        if (!cached_last_status_) cached_last_status_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_status_) cached_last_status_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_status"));
         return *cached_last_status_;
     }
@@ -4508,27 +4508,27 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<uint64_t>& Stopped::at() const {
-        if (!cached_at_) cached_at_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_at_) cached_at_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "at"));
         return *cached_at_;
     }
     inline const Presence<StopCause>& Stopped::cause() const {
-        if (!cached_cause_) cached_cause_ = std::make_shared<const Presence<StopCause>>(member_value<StopCause>(value_,
+        if (!cached_cause_) cached_cause_ = std::make_shared<const Presence<StopCause>>(detail::member_value<StopCause>(value_,
         "cause"));
         return *cached_cause_;
     }
     inline const Presence<bool>& Stopped::retryable() const {
-        if (!cached_retryable_) cached_retryable_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_retryable_) cached_retryable_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "retryable"));
         return *cached_retryable_;
     }
     inline const Presence<uint64_t>& Stopped::status() const {
-        if (!cached_status_) cached_status_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_status_) cached_status_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "status"));
         return *cached_status_;
     }
     inline const Presence<StringType>& StringRoot::type() const {
-        if (!cached_type_) cached_type_ = std::make_shared<const Presence<StringType>>(member_value<StringType>(value_,
+        if (!cached_type_) cached_type_ = std::make_shared<const Presence<StringType>>(detail::member_value<StringType>(value_,
         "type"));
         return *cached_type_;
     }
@@ -4537,12 +4537,12 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<uint64_t>& Usage::input_tokens() const {
-        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "input_tokens"));
         return *cached_input_tokens_;
     }
     inline const Presence<uint64_t>& Usage::output_tokens() const {
-        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "output_tokens"));
         return *cached_output_tokens_;
     }
@@ -4575,78 +4575,78 @@ namespace tt::results {
         return *cached_value_;
     }
     inline std::optional<AnswerYesNo> Answer::as_AnswerYesNo() const {
-        if (literal(value_, "kind", "yes_no")) return AnswerYesNo(value_);
+        if (detail::literal(value_, "kind", "yes_no")) return AnswerYesNo(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerChoice> Answer::as_AnswerChoice() const {
-        if (literal(value_, "kind", "choice")) return AnswerChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return AnswerChoice(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerTag> Answer::as_AnswerTag() const {
-        if (literal(value_, "kind", "tag")) return AnswerTag(value_);
+        if (detail::literal(value_, "kind", "tag")) return AnswerTag(value_);
         return std::nullopt;
     }
     inline std::optional<AnswerScore> Answer::as_AnswerScore() const {
-        if (literal(value_, "kind", "score")) return AnswerScore(value_);
+        if (detail::literal(value_, "kind", "score")) return AnswerScore(value_);
         return std::nullopt;
     }
     inline const Presence<double>& AnswerChoice::confidence() const {
-        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "confidence"));
         return *cached_confidence_;
     }
     inline const Presence<std::string>& AnswerChoice::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& AnswerChoice::pick() const {
-        if (!cached_pick_) cached_pick_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_pick_) cached_pick_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "pick"));
         return *cached_pick_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& AnswerChoice::probabilities() const {
         if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
         return *cached_probabilities_;
     }
     inline const Presence<double>& AnswerScore::confidence() const {
-        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "confidence"));
         return *cached_confidence_;
     }
     inline const Presence<std::string>& AnswerScore::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& AnswerScore::level() const {
-        if (!cached_level_) cached_level_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_level_) cached_level_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "level"));
         return *cached_level_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& AnswerScore::probabilities() const {
         if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
         return *cached_probabilities_;
     }
     inline const Presence<std::string>& AnswerTag::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& AnswerTag::probabilities() const {
         if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
         return *cached_probabilities_;
     }
     inline const Presence<std::string>& AnswerYesNo::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<double>& AnswerYesNo::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
@@ -4660,97 +4660,97 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<BatchSetting>& BatchWarning::running() const {
-        if (!cached_running_) cached_running_ = std::make_shared<const Presence<BatchSetting>>(member_value<BatchSetting>(value_,
+        if (!cached_running_) cached_running_ = std::make_shared<const Presence<BatchSetting>>(detail::member_value<BatchSetting>(value_,
         "running"));
         return *cached_running_;
     }
     inline const Presence<BatchSetting>& BatchWarning::tuned_for() const {
-        if (!cached_tuned_for_) cached_tuned_for_ = std::make_shared<const Presence<BatchSetting>>(member_value<BatchSetting>(value_,
+        if (!cached_tuned_for_) cached_tuned_for_ = std::make_shared<const Presence<BatchSetting>>(detail::member_value<BatchSetting>(value_,
         "tuned_for"));
         return *cached_tuned_for_;
     }
     inline const Presence<uint64_t>& Entity::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<std::string>& Entity::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& Entity::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<std::string>& Entity::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& Entity::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<uint64_t>& Entity::length() const {
-        if (!cached_length_) cached_length_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_length_) cached_length_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "length"));
         return *cached_length_;
     }
     inline const Presence<uint64_t>& Entity::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<double>& Entity::strength() const {
-        if (!cached_strength_) cached_strength_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_strength_) cached_strength_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "strength"));
         return *cached_strength_;
     }
     inline const Presence<std::string>& Entity::text() const {
-        if (!cached_text_) cached_text_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_text_) cached_text_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "text"));
         return *cached_text_;
     }
     inline const Presence<bool>& EntityEdge::either() const {
-        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "either"));
         return *cached_either_;
     }
     inline const Presence<double>& EntityEdge::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<std::string>& EntityEdge::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<Entity>& EntityEdge::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Entity>>(member_value<Entity>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Entity>>(detail::member_value<Entity>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Entity>& EntityEdge::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Entity>>(member_value<Entity>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Entity>>(detail::member_value<Entity>(value_,
         "target"));
         return *cached_target_;
     }
     inline const Presence<Failure>& Failed::failed() const {
-        if (!cached_failed_) cached_failed_ = std::make_shared<const Presence<Failure>>(member_value<Failure>(value_,
+        if (!cached_failed_) cached_failed_ = std::make_shared<const Presence<Failure>>(detail::member_value<Failure>(value_,
         "failed"));
         return *cached_failed_;
     }
     inline const Presence<FailureCause>& Failure::cause() const {
-        if (!cached_cause_) cached_cause_ = std::make_shared<const Presence<FailureCause>>(member_value<FailureCause>(value_,
+        if (!cached_cause_) cached_cause_ = std::make_shared<const Presence<FailureCause>>(detail::member_value<FailureCause>(value_,
         "cause"));
         return *cached_cause_;
     }
     inline const Presence<std::string>& Failure::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
@@ -4763,142 +4763,142 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<double>& FindAnswer::confidence() const {
-        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "confidence"));
         return *cached_confidence_;
     }
     inline const Presence<std::string>& FindAnswer::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& FindAnswer::pick() const {
-        if (!cached_pick_) cached_pick_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_pick_) cached_pick_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "pick"));
         return *cached_pick_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& FindAnswer::probabilities() const {
         if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "probabilities"));
         return *cached_probabilities_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& NameOdds::edges() const {
         if (!cached_edges_) cached_edges_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "edges"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "edges"));
         return *cached_edges_;
     }
     inline const Presence<uint64_t>& NameOdds::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& NameOdds::kinds() const {
         if (!cached_kinds_) cached_kinds_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "kinds"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "kinds"));
         return *cached_kinds_;
     }
     inline const Presence<uint64_t>& NameOdds::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<double>& PairOdds::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<std::string>& PairOdds::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<Place>& PairOdds::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Place>>(member_value<Place>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<Place>>(detail::member_value<Place>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<Place>& PairOdds::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Place>>(member_value<Place>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<Place>>(detail::member_value<Place>(value_,
         "target"));
         return *cached_target_;
     }
     inline const Presence<uint64_t>& PieceOdds::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<uint64_t>& PieceOdds::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<std::vector<std::pair<std::string, double>>>& PieceOdds::tags() const {
         if (!cached_tags_) cached_tags_ = std::make_shared<const Presence<std::vector<std::pair<std::string,
-        double>>>>(member_value<std::vector<std::pair<std::string, double>>>(value_, "tags"));
+        double>>>>(detail::member_value<std::vector<std::pair<std::string, double>>>(value_, "tags"));
         return *cached_tags_;
     }
     inline const Presence<uint64_t>& Place::end() const {
-        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_end_) cached_end_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "end"));
         return *cached_end_;
     }
     inline const Presence<uint64_t>& Place::start() const {
-        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_start_) cached_start_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "start"));
         return *cached_start_;
     }
     inline const Presence<uint64_t>& Plan::estimated_bytes() const {
-        if (!cached_estimated_bytes_) cached_estimated_bytes_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_estimated_bytes_) cached_estimated_bytes_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "estimated_bytes"));
         return *cached_estimated_bytes_;
     }
     inline const Presence<TokenBand>& Plan::estimated_input_tokens() const {
-        if (!cached_estimated_input_tokens_) cached_estimated_input_tokens_ = std::make_shared<const Presence<TokenBand>>(member_value<TokenBand>(value_,
+        if (!cached_estimated_input_tokens_) cached_estimated_input_tokens_ = std::make_shared<const Presence<TokenBand>>(detail::member_value<TokenBand>(value_,
         "estimated_input_tokens"));
         return *cached_estimated_input_tokens_;
     }
     inline const Presence<std::string>& Plan::first_body_utf8() const {
-        if (!cached_first_body_utf8_) cached_first_body_utf8_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_first_body_utf8_) cached_first_body_utf8_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "first_body_utf8"));
         return *cached_first_body_utf8_;
     }
     inline const Presence<uint64_t>& Plan::largest_request_bytes() const {
-        if (!cached_largest_request_bytes_) cached_largest_request_bytes_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_largest_request_bytes_) cached_largest_request_bytes_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "largest_request_bytes"));
         return *cached_largest_request_bytes_;
     }
     inline const Presence<uint64_t>& Plan::largest_request_estimated_input_tokens() const {
-        if (!cached_largest_request_estimated_input_tokens_) cached_largest_request_estimated_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_largest_request_estimated_input_tokens_) cached_largest_request_estimated_input_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "largest_request_estimated_input_tokens"));
         return *cached_largest_request_estimated_input_tokens_;
     }
     inline const Presence<uint64_t>& Plan::records() const {
-        if (!cached_records_) cached_records_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_records_) cached_records_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "records"));
         return *cached_records_;
     }
     inline const Presence<uint64_t>& Plan::requests() const {
-        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "requests"));
         return *cached_requests_;
     }
     inline const Presence<std::string>& Plan::token_estimate_method() const {
-        if (!cached_token_estimate_method_) cached_token_estimate_method_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_token_estimate_method_) cached_token_estimate_method_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "token_estimate_method"));
         return *cached_token_estimate_method_;
     }
     inline const Presence<bool>& Plan::upper_bound() const {
-        if (!cached_upper_bound_) cached_upper_bound_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_upper_bound_) cached_upper_bound_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "upper_bound"));
         return *cached_upper_bound_;
     }
     inline const Presence<std::string>& ProfileWarning::running() const {
-        if (!cached_running_) cached_running_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_running_) cached_running_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "running"));
         return *cached_running_;
     }
     inline const Presence<std::string>& ProfileWarning::tuned_for() const {
-        if (!cached_tuned_for_) cached_tuned_for_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_tuned_for_) cached_tuned_for_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "tuned_for"));
         return *cached_tuned_for_;
     }
@@ -4911,87 +4911,87 @@ namespace tt::results {
         return std::nullopt;
     }
     inline const Presence<std::vector<NameOdds>>& RecognizeAnswer::names() const {
-        if (!cached_names_) cached_names_ = std::make_shared<const Presence<std::vector<NameOdds>>>(member_value<std::vector<NameOdds>>(value_,
+        if (!cached_names_) cached_names_ = std::make_shared<const Presence<std::vector<NameOdds>>>(detail::member_value<std::vector<NameOdds>>(value_,
         "names"));
         return *cached_names_;
     }
     inline const Presence<std::vector<PairOdds>>& RecognizeAnswer::pairs() const {
-        if (!cached_pairs_) cached_pairs_ = std::make_shared<const Presence<std::vector<PairOdds>>>(member_value<std::vector<PairOdds>>(value_,
+        if (!cached_pairs_) cached_pairs_ = std::make_shared<const Presence<std::vector<PairOdds>>>(detail::member_value<std::vector<PairOdds>>(value_,
         "pairs"));
         return *cached_pairs_;
     }
     inline const Presence<std::vector<PieceOdds>>& RecognizeAnswer::pieces() const {
-        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(member_value<std::vector<PieceOdds>>(value_,
+        if (!cached_pieces_) cached_pieces_ = std::make_shared<const Presence<std::vector<PieceOdds>>>(detail::member_value<std::vector<PieceOdds>>(value_,
         "pieces"));
         return *cached_pieces_;
     }
     inline const Presence<std::vector<RecognitionProposal>>& RecognizeAnswer::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<RecognitionProposal>>>(member_value<std::vector<RecognitionProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<RecognitionProposal>>>(detail::member_value<std::vector<RecognitionProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<std::vector<Entity>>& RecognizeEntities::entities() const {
-        if (!cached_entities_) cached_entities_ = std::make_shared<const Presence<std::vector<Entity>>>(member_value<std::vector<Entity>>(value_,
+        if (!cached_entities_) cached_entities_ = std::make_shared<const Presence<std::vector<Entity>>>(detail::member_value<std::vector<Entity>>(value_,
         "entities"));
         return *cached_entities_;
     }
     inline const Presence<std::vector<EntityEdge>>& RecognizeEntities::relations() const {
-        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<EntityEdge>>>(member_value<std::vector<EntityEdge>>(value_,
+        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<EntityEdge>>>(detail::member_value<std::vector<EntityEdge>>(value_,
         "relations"));
         return *cached_relations_;
     }
     inline const Presence<BoundaryMode>& RecognizeModeProposals::mode() const {
-        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<BoundaryMode>>(member_value<BoundaryMode>(value_,
+        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<BoundaryMode>>(detail::member_value<BoundaryMode>(value_,
         "mode"));
         return *cached_mode_;
     }
     inline const Presence<std::vector<BoundaryProposal>>& RecognizeModeProposals::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(member_value<std::vector<BoundaryProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(detail::member_value<std::vector<BoundaryProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<std::string>& RelateFields::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& RelateFields::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::string>& RelatedEntity::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& RelatedEntity::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<bool>& RelatedEntityEdge::either() const {
-        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "either"));
         return *cached_either_;
     }
     inline const Presence<double>& RelatedEntityEdge::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<std::string>& RelatedEntityEdge::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<RelationEndpoint>& RelatedEntityEdge::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelationEndpoint>>(member_value<RelationEndpoint>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<RelationEndpoint>>(detail::member_value<RelationEndpoint>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<RelationEndpoint>& RelatedEntityEdge::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelationEndpoint>>(member_value<RelationEndpoint>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<RelationEndpoint>>(detail::member_value<RelationEndpoint>(value_,
         "target"));
         return *cached_target_;
     }
@@ -5002,776 +5002,776 @@ namespace tt::results {
         return value_.at("target").at("name").get<std::string>();
     }
     inline const Presence<bool>& RelationRule::either() const {
-        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "either"));
         return *cached_either_;
     }
     inline const Presence<std::string>& RelationRule::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<std::string>& RelationRule::reads() const {
-        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_reads_) cached_reads_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "reads"));
         return *cached_reads_;
     }
     inline const Presence<bool>& RelationRule::single() const {
-        if (!cached_single_) cached_single_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_single_) cached_single_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "single"));
         return *cached_single_;
     }
     inline const Presence<std::string>& RelationRule::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<std::string>& RelationRule::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "target"));
         return *cached_target_;
     }
     inline const Presence<std::string>& SessionAnnotation::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<AnnotationValue>& SessionAnnotation::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AnnotationValue>>(member_value<AnnotationValue>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AnnotationValue>>(detail::member_value<AnnotationValue>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<uint64_t>& SessionInputSource::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<PhysicalSource>& SessionInputSource::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "source"));
         return *cached_source_;
     }
     inline std::optional<SessionJudgmentDecision> SessionJudgment::as_SessionJudgmentDecision() const {
-        if (literal(value_, "kind", "decision")) return SessionJudgmentDecision(value_);
+        if (detail::literal(value_, "kind", "decision")) return SessionJudgmentDecision(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentChoice> SessionJudgment::as_SessionJudgmentChoice() const {
-        if (literal(value_, "kind", "choice")) return SessionJudgmentChoice(value_);
+        if (detail::literal(value_, "kind", "choice")) return SessionJudgmentChoice(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentScore> SessionJudgment::as_SessionJudgmentScore() const {
-        if (literal(value_, "kind", "score")) return SessionJudgmentScore(value_);
+        if (detail::literal(value_, "kind", "score")) return SessionJudgmentScore(value_);
         return std::nullopt;
     }
     inline std::optional<SessionJudgmentTags> SessionJudgment::as_SessionJudgmentTags() const {
-        if (literal(value_, "kind", "tags")) return SessionJudgmentTags(value_);
+        if (detail::literal(value_, "kind", "tags")) return SessionJudgmentTags(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionJudgmentChoice::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& SessionJudgmentChoice::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionJudgmentDecision::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<bool>& SessionJudgmentDecision::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionJudgmentScore::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<double>& SessionJudgmentScore::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionJudgmentTags::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<std::string>>& SessionJudgmentTags::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionNamedProbability::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<double>& SessionNamedProbability::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline std::optional<SessionObservationQuestion> SessionObservation::as_SessionObservationQuestion() const {
-        if (literal(value_, "kind", "question")) return SessionObservationQuestion(value_);
+        if (detail::literal(value_, "kind", "question")) return SessionObservationQuestion(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservationRow> SessionObservation::as_SessionObservationRow() const {
-        if (literal(value_, "kind", "row")) return SessionObservationRow(value_);
+        if (detail::literal(value_, "kind", "row")) return SessionObservationRow(value_);
         return std::nullopt;
     }
     inline const Presence<SessionQuestionDetail>& SessionObservationQuestion::detail() const {
-        if (!cached_detail_) cached_detail_ = std::make_shared<const Presence<SessionQuestionDetail>>(member_value<SessionQuestionDetail>(value_,
+        if (!cached_detail_) cached_detail_ = std::make_shared<const Presence<SessionQuestionDetail>>(detail::member_value<SessionQuestionDetail>(value_,
         "detail"));
         return *cached_detail_;
     }
     inline const Presence<uint64_t>& SessionObservationQuestion::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<std::string>& SessionObservationQuestion::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::string>& SessionObservationQuestion::member() const {
-        if (!cached_member_) cached_member_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_member_) cached_member_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "member"));
         return *cached_member_;
     }
     inline const Presence<uint64_t>& SessionObservationQuestion::position() const {
-        if (!cached_position_) cached_position_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_position_) cached_position_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "position"));
         return *cached_position_;
     }
     inline const Presence<std::string>& SessionObservationQuestion::stage() const {
-        if (!cached_stage_) cached_stage_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_stage_) cached_stage_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "stage"));
         return *cached_stage_;
     }
     inline const Presence<uint64_t>& SessionObservationRow::index() const {
-        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_index_) cached_index_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "index"));
         return *cached_index_;
     }
     inline const Presence<std::string>& SessionObservationRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<SessionObservedRow>& SessionObservationRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionObservedRow>>(member_value<SessionObservedRow>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionObservedRow>>(detail::member_value<SessionObservedRow>(value_,
         "value"));
         return *cached_value_;
     }
     inline std::optional<SessionObservedRowJudgment> SessionObservedRow::as_SessionObservedRowJudgment() const {
-        if (literal(value_, "kind", "judgment")) return SessionObservedRowJudgment(value_);
+        if (detail::literal(value_, "kind", "judgment")) return SessionObservedRowJudgment(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowAnnotated> SessionObservedRow::as_SessionObservedRowAnnotated() const {
-        if (literal(value_, "kind", "annotated")) return SessionObservedRowAnnotated(value_);
+        if (detail::literal(value_, "kind", "annotated")) return SessionObservedRowAnnotated(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowRecognized> SessionObservedRow::as_SessionObservedRowRecognized() const {
-        if (literal(value_, "kind", "recognized")) return SessionObservedRowRecognized(value_);
+        if (detail::literal(value_, "kind", "recognized")) return SessionObservedRowRecognized(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowFind> SessionObservedRow::as_SessionObservedRowFind() const {
-        if (literal(value_, "kind", "find")) return SessionObservedRowFind(value_);
+        if (detail::literal(value_, "kind", "find")) return SessionObservedRowFind(value_);
         return std::nullopt;
     }
     inline std::optional<SessionObservedRowRelations> SessionObservedRow::as_SessionObservedRowRelations() const {
-        if (literal(value_, "kind", "relations")) return SessionObservedRowRelations(value_);
+        if (detail::literal(value_, "kind", "relations")) return SessionObservedRowRelations(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionObservedRowAnnotated::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<SessionAnnotation>>& SessionObservedRowAnnotated::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionAnnotation>>>(member_value<std::vector<SessionAnnotation>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionAnnotation>>>(detail::member_value<std::vector<SessionAnnotation>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionObservedRowFind::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& SessionObservedRowFind::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionObservedRowJudgment::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<SessionJudgment>& SessionObservedRowJudgment::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionJudgment>>(member_value<SessionJudgment>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionJudgment>>(detail::member_value<SessionJudgment>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionObservedRowRecognized::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<SessionRecognition>& SessionObservedRowRecognized::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionRecognition>>(member_value<SessionRecognition>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionRecognition>>(detail::member_value<SessionRecognition>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionObservedRowRelations::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<SessionRelationEdge>>& SessionObservedRowRelations::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionRelationEdge>>>(member_value<std::vector<SessionRelationEdge>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionRelationEdge>>>(detail::member_value<std::vector<SessionRelationEdge>>(value_,
         "value"));
         return *cached_value_;
     }
     inline std::optional<SessionPacketDecideRow> SessionPacket::as_SessionPacketDecideRow() const {
-        if (literal(value_, "function", "decide") && literal(value_, "kind", "row")) return SessionPacketDecideRow(value_);
+        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "row")) return SessionPacketDecideRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketChooseRow> SessionPacket::as_SessionPacketChooseRow() const {
-        if (literal(value_, "function", "choose") && literal(value_, "kind", "row")) return SessionPacketChooseRow(value_);
+        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "row")) return SessionPacketChooseRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTagRow> SessionPacket::as_SessionPacketTagRow() const {
-        if (literal(value_, "function", "tag") && literal(value_, "kind", "row")) return SessionPacketTagRow(value_);
+        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "row")) return SessionPacketTagRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketScoreRow> SessionPacket::as_SessionPacketScoreRow() const {
-        if (literal(value_, "function", "score") && literal(value_, "kind", "row")) return SessionPacketScoreRow(value_);
+        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "row")) return SessionPacketScoreRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFilterRow> SessionPacket::as_SessionPacketFilterRow() const {
-        if (literal(value_, "function", "filter") && literal(value_, "kind", "row")) return SessionPacketFilterRow(value_);
+        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "row")) return SessionPacketFilterRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketAnnotateRow> SessionPacket::as_SessionPacketAnnotateRow() const {
-        if (literal(value_, "function", "annotate") && literal(value_, "kind", "row")) return SessionPacketAnnotateRow(value_);
+        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "row")) return SessionPacketAnnotateRow(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketDecideAggregate> SessionPacket::as_SessionPacketDecideAggregate() const {
-        if (literal(value_, "function", "decide") && literal(value_, "kind", "aggregate")) return SessionPacketDecideAggregate(value_);
+        if (detail::literal(value_, "function", "decide") && detail::literal(value_, "kind", "aggregate")) return SessionPacketDecideAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketChooseAggregate> SessionPacket::as_SessionPacketChooseAggregate() const {
-        if (literal(value_, "function", "choose") && literal(value_, "kind", "aggregate")) return SessionPacketChooseAggregate(value_);
+        if (detail::literal(value_, "function", "choose") && detail::literal(value_, "kind", "aggregate")) return SessionPacketChooseAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTagAggregate> SessionPacket::as_SessionPacketTagAggregate() const {
-        if (literal(value_, "function", "tag") && literal(value_, "kind", "aggregate")) return SessionPacketTagAggregate(value_);
+        if (detail::literal(value_, "function", "tag") && detail::literal(value_, "kind", "aggregate")) return SessionPacketTagAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketScoreAggregate> SessionPacket::as_SessionPacketScoreAggregate() const {
-        if (literal(value_, "function", "score") && literal(value_, "kind", "aggregate")) return SessionPacketScoreAggregate(value_);
+        if (detail::literal(value_, "function", "score") && detail::literal(value_, "kind", "aggregate")) return SessionPacketScoreAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFilterAggregate> SessionPacket::as_SessionPacketFilterAggregate() const {
-        if (literal(value_, "function", "filter") && literal(value_, "kind", "aggregate")) return SessionPacketFilterAggregate(value_);
+        if (detail::literal(value_, "function", "filter") && detail::literal(value_, "kind", "aggregate")) return SessionPacketFilterAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRankAggregate> SessionPacket::as_SessionPacketRankAggregate() const {
-        if (literal(value_, "function", "rank") && literal(value_, "kind", "aggregate")) return SessionPacketRankAggregate(value_);
+        if (detail::literal(value_, "function", "rank") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRankAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketFindAggregate> SessionPacket::as_SessionPacketFindAggregate() const {
-        if (literal(value_, "function", "find") && literal(value_, "kind", "aggregate")) return SessionPacketFindAggregate(value_);
+        if (detail::literal(value_, "function", "find") && detail::literal(value_, "kind", "aggregate")) return SessionPacketFindAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketAnnotateAggregate> SessionPacket::as_SessionPacketAnnotateAggregate() const {
-        if (literal(value_, "function", "annotate") && literal(value_, "kind", "aggregate")) return SessionPacketAnnotateAggregate(value_);
+        if (detail::literal(value_, "function", "annotate") && detail::literal(value_, "kind", "aggregate")) return SessionPacketAnnotateAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRecognizeAggregate> SessionPacket::as_SessionPacketRecognizeAggregate() const {
-        if (literal(value_, "function", "recognize") && literal(value_, "kind", "aggregate")) return SessionPacketRecognizeAggregate(value_);
+        if (detail::literal(value_, "function", "recognize") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRecognizeAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketRelateAggregate> SessionPacket::as_SessionPacketRelateAggregate() const {
-        if (literal(value_, "function", "relate") && literal(value_, "kind", "aggregate")) return SessionPacketRelateAggregate(value_);
+        if (detail::literal(value_, "function", "relate") && detail::literal(value_, "kind", "aggregate")) return SessionPacketRelateAggregate(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketObservation> SessionPacket::as_SessionPacketObservation() const {
-        if (literal(value_, "kind", "observation")) return SessionPacketObservation(value_);
+        if (detail::literal(value_, "kind", "observation")) return SessionPacketObservation(value_);
         return std::nullopt;
     }
     inline std::optional<SessionPacketTerminal> SessionPacket::as_SessionPacketTerminal() const {
-        if (literal(value_, "kind", "terminal")) return SessionPacketTerminal(value_);
+        if (detail::literal(value_, "kind", "terminal")) return SessionPacketTerminal(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionPacketAnnotateAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketAnnotateAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<Annotation>>& SessionPacketAnnotateAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<Annotation>>>(member_value<std::vector<Annotation>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<Annotation>>>(detail::member_value<std::vector<Annotation>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketAnnotateRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketAnnotateRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<Annotation>& SessionPacketAnnotateRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Annotation>>(member_value<Annotation>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Annotation>>(detail::member_value<Annotation>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketChooseAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketChooseAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicNullableString>>& SessionPacketChooseAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicNullableString>>>(member_value<std::vector<AtomicNullableString>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicNullableString>>>(detail::member_value<std::vector<AtomicNullableString>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketChooseRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketChooseRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<AtomicNullableString>& SessionPacketChooseRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicNullableString>>(member_value<AtomicNullableString>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicNullableString>>(detail::member_value<AtomicNullableString>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketDecideAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketDecideAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicDecideValue>>& SessionPacketDecideAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicDecideValue>>>(member_value<std::vector<AtomicDecideValue>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicDecideValue>>>(detail::member_value<std::vector<AtomicDecideValue>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketDecideRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketDecideRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<AtomicDecideValue>& SessionPacketDecideRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicDecideValue>>(member_value<AtomicDecideValue>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicDecideValue>>(detail::member_value<AtomicDecideValue>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketFilterAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketFilterAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicBoolean>>& SessionPacketFilterAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicBoolean>>>(member_value<std::vector<AtomicBoolean>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicBoolean>>>(detail::member_value<std::vector<AtomicBoolean>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketFilterRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketFilterRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<AtomicBoolean>& SessionPacketFilterRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicBoolean>>(member_value<AtomicBoolean>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicBoolean>>(detail::member_value<AtomicBoolean>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketFindAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketFindAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<Find>& SessionPacketFindAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Find>>(member_value<Find>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Find>>(detail::member_value<Find>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<RequestFunction>& SessionPacketObservation::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<RequestFunction>>(member_value<RequestFunction>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<RequestFunction>>(detail::member_value<RequestFunction>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketObservation::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<SessionObservation>& SessionPacketObservation::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionObservation>>(member_value<SessionObservation>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<SessionObservation>>(detail::member_value<SessionObservation>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketRankAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketRankAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicNonZeroUsize>>& SessionPacketRankAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicNonZeroUsize>>>(member_value<std::vector<AtomicNonZeroUsize>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicNonZeroUsize>>>(detail::member_value<std::vector<AtomicNonZeroUsize>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketRecognizeAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketRecognizeAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<Recognition>>& SessionPacketRecognizeAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<Recognition>>>(member_value<std::vector<Recognition>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<Recognition>>>(detail::member_value<std::vector<Recognition>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketRelateAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketRelateAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<Relation>& SessionPacketRelateAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Relation>>(member_value<Relation>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Relation>>(detail::member_value<Relation>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketScoreAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketScoreAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicDouble>>& SessionPacketScoreAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicDouble>>>(member_value<std::vector<AtomicDouble>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicDouble>>>(detail::member_value<std::vector<AtomicDouble>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketScoreRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketScoreRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<AtomicDouble>& SessionPacketScoreRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicDouble>>(member_value<AtomicDouble>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicDouble>>(detail::member_value<AtomicDouble>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketTagAggregate::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketTagAggregate::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<AtomicArrayOfString>>& SessionPacketTagAggregate::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicArrayOfString>>>(member_value<std::vector<AtomicArrayOfString>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<AtomicArrayOfString>>>(detail::member_value<std::vector<AtomicArrayOfString>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionPacketTagRow::function() const {
-        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_function_) cached_function_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "function"));
         return *cached_function_;
     }
     inline const Presence<std::string>& SessionPacketTagRow::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<AtomicArrayOfString>& SessionPacketTagRow::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicArrayOfString>>(member_value<AtomicArrayOfString>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<AtomicArrayOfString>>(detail::member_value<AtomicArrayOfString>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<Facts>& SessionPacketTerminal::facts() const {
-        if (!cached_facts_) cached_facts_ = std::make_shared<const Presence<Facts>>(member_value<Facts>(value_,
+        if (!cached_facts_) cached_facts_ = std::make_shared<const Presence<Facts>>(detail::member_value<Facts>(value_,
         "facts"));
         return *cached_facts_;
     }
     inline const Presence<CallError>& SessionPacketTerminal::failure() const {
-        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<CallError>>(member_value<CallError>(value_,
+        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<CallError>>(detail::member_value<CallError>(value_,
         "failure"));
         return *cached_failure_;
     }
     inline const Presence<std::string>& SessionPacketTerminal::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline std::optional<SessionProbabilitiesYesNo> SessionProbabilities::as_SessionProbabilitiesYesNo() const {
-        if (literal(value_, "kind", "yes_no")) return SessionProbabilitiesYesNo(value_);
+        if (detail::literal(value_, "kind", "yes_no")) return SessionProbabilitiesYesNo(value_);
         return std::nullopt;
     }
     inline std::optional<SessionProbabilitiesNamed> SessionProbabilities::as_SessionProbabilitiesNamed() const {
-        if (literal(value_, "kind", "named")) return SessionProbabilitiesNamed(value_);
+        if (detail::literal(value_, "kind", "named")) return SessionProbabilitiesNamed(value_);
         return std::nullopt;
     }
     inline const Presence<std::string>& SessionProbabilitiesNamed::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<std::vector<SessionNamedProbability>>& SessionProbabilitiesNamed::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionNamedProbability>>>(member_value<std::vector<SessionNamedProbability>>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<std::vector<SessionNamedProbability>>>(detail::member_value<std::vector<SessionNamedProbability>>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::string>& SessionProbabilitiesYesNo::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<double>& SessionProbabilitiesYesNo::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<AnswerId>& SessionQuestionDetail::answer_id() const {
-        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(member_value<AnswerId>(value_,
+        if (!cached_answer_id_) cached_answer_id_ = std::make_shared<const Presence<AnswerId>>(detail::member_value<AnswerId>(value_,
         "answer_id"));
         return *cached_answer_id_;
     }
     inline const Presence<bool>& SessionQuestionDetail::cached() const {
-        if (!cached_cached_) cached_cached_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_cached_) cached_cached_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "cached"));
         return *cached_cached_;
     }
     inline const Presence<double>& SessionQuestionDetail::confidence() const {
-        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_confidence_) cached_confidence_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "confidence"));
         return *cached_confidence_;
     }
     inline const Presence<uint64_t>& SessionQuestionDetail::failed_questions() const {
-        if (!cached_failed_questions_) cached_failed_questions_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_failed_questions_) cached_failed_questions_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "failed_questions"));
         return *cached_failed_questions_;
     }
     inline const Presence<Failure>& SessionQuestionDetail::failure() const {
-        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(member_value<Failure>(value_,
+        if (!cached_failure_) cached_failure_ = std::make_shared<const Presence<Failure>>(detail::member_value<Failure>(value_,
         "failure"));
         return *cached_failure_;
     }
     inline const Presence<FailureId>& SessionQuestionDetail::failure_id() const {
-        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(member_value<FailureId>(value_,
+        if (!cached_failure_id_) cached_failure_id_ = std::make_shared<const Presence<FailureId>>(detail::member_value<FailureId>(value_,
         "failure_id"));
         return *cached_failure_id_;
     }
     inline const Presence<Json>& SessionQuestionDetail::input() const {
-        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_input_) cached_input_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "input"));
         return *cached_input_;
     }
     inline const Presence<PhysicalSource>& SessionQuestionDetail::input_source() const {
-        if (!cached_input_source_) cached_input_source_ = std::make_shared<const Presence<PhysicalSource>>(member_value<PhysicalSource>(value_,
+        if (!cached_input_source_) cached_input_source_ = std::make_shared<const Presence<PhysicalSource>>(detail::member_value<PhysicalSource>(value_,
         "input_source"));
         return *cached_input_source_;
     }
     inline const Presence<std::vector<SessionInputSource>>& SessionQuestionDetail::input_sources() const {
-        if (!cached_input_sources_) cached_input_sources_ = std::make_shared<const Presence<std::vector<SessionInputSource>>>(member_value<std::vector<SessionInputSource>>(value_,
+        if (!cached_input_sources_) cached_input_sources_ = std::make_shared<const Presence<std::vector<SessionInputSource>>>(detail::member_value<std::vector<SessionInputSource>>(value_,
         "input_sources"));
         return *cached_input_sources_;
     }
     inline const Presence<std::vector<Json>>& SessionQuestionDetail::inputs() const {
-        if (!cached_inputs_) cached_inputs_ = std::make_shared<const Presence<std::vector<Json>>>(member_value<std::vector<Json>>(value_,
+        if (!cached_inputs_) cached_inputs_ = std::make_shared<const Presence<std::vector<Json>>>(detail::member_value<std::vector<Json>>(value_,
         "inputs"));
         return *cached_inputs_;
     }
     inline const Presence<std::string>& SessionQuestionDetail::model() const {
-        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_model_) cached_model_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "model"));
         return *cached_model_;
     }
     inline const Presence<std::vector<Observation>>& SessionQuestionDetail::observations() const {
-        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(member_value<std::vector<Observation>>(value_,
+        if (!cached_observations_) cached_observations_ = std::make_shared<const Presence<std::vector<Observation>>>(detail::member_value<std::vector<Observation>>(value_,
         "observations"));
         return *cached_observations_;
     }
     inline const Presence<SessionProbabilities>& SessionQuestionDetail::probabilities() const {
-        if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<SessionProbabilities>>(member_value<SessionProbabilities>(value_,
+        if (!cached_probabilities_) cached_probabilities_ = std::make_shared<const Presence<SessionProbabilities>>(detail::member_value<SessionProbabilities>(value_,
         "probabilities"));
         return *cached_probabilities_;
     }
     inline const Presence<ReadableQuestion>& SessionQuestionDetail::question() const {
-        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(member_value<ReadableQuestion>(value_,
+        if (!cached_question_) cached_question_ = std::make_shared<const Presence<ReadableQuestion>>(detail::member_value<ReadableQuestion>(value_,
         "question"));
         return *cached_question_;
     }
     inline const Presence<std::string>& SessionQuestionDetail::question_sha256() const {
-        if (!cached_question_sha256_) cached_question_sha256_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_question_sha256_) cached_question_sha256_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "question_sha256"));
         return *cached_question_sha256_;
     }
     inline const Presence<std::vector<QuestionSource>>& SessionQuestionDetail::question_sources() const {
-        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(member_value<std::vector<QuestionSource>>(value_,
+        if (!cached_question_sources_) cached_question_sources_ = std::make_shared<const Presence<std::vector<QuestionSource>>>(detail::member_value<std::vector<QuestionSource>>(value_,
         "question_sources"));
         return *cached_question_sources_;
     }
     inline const Presence<std::string>& SessionQuestionDetail::raw_pick() const {
-        if (!cached_raw_pick_) cached_raw_pick_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_raw_pick_) cached_raw_pick_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "raw_pick"));
         return *cached_raw_pick_;
     }
     inline const Presence<Usage>& SessionQuestionDetail::reported_usage() const {
-        if (!cached_reported_usage_) cached_reported_usage_ = std::make_shared<const Presence<Usage>>(member_value<Usage>(value_,
+        if (!cached_reported_usage_) cached_reported_usage_ = std::make_shared<const Presence<Usage>>(detail::member_value<Usage>(value_,
         "reported_usage"));
         return *cached_reported_usage_;
     }
     inline const Presence<std::vector<std::string>>& SessionQuestionDetail::requests() const {
-        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<std::vector<std::string>>>(member_value<std::vector<std::string>>(value_,
+        if (!cached_requests_) cached_requests_ = std::make_shared<const Presence<std::vector<std::string>>>(detail::member_value<std::vector<std::string>>(value_,
         "requests"));
         return *cached_requests_;
     }
     inline const Presence<uint64_t>& SessionQuestionDetail::requests_sent() const {
-        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_requests_sent_) cached_requests_sent_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "requests_sent"));
         return *cached_requests_sent_;
     }
     inline const Presence<Threshold>& SessionQuestionDetail::threshold() const {
-        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(member_value<Threshold>(value_,
+        if (!cached_threshold_) cached_threshold_ = std::make_shared<const Presence<Threshold>>(detail::member_value<Threshold>(value_,
         "threshold"));
         return *cached_threshold_;
     }
     inline const Presence<std::string>& SessionQuestionDetail::url() const {
-        if (!cached_url_) cached_url_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_url_) cached_url_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "url"));
         return *cached_url_;
     }
     inline const Presence<TokenUsage>& SessionQuestionDetail::usage() const {
-        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<TokenUsage>>(member_value<TokenUsage>(value_,
+        if (!cached_usage_) cached_usage_ = std::make_shared<const Presence<TokenUsage>>(detail::member_value<TokenUsage>(value_,
         "usage"));
         return *cached_usage_;
     }
     inline const Presence<Value>& SessionQuestionDetail::value() const {
-        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Value>>(member_value<Value>(value_,
+        if (!cached_value_) cached_value_ = std::make_shared<const Presence<Value>>(detail::member_value<Value>(value_,
         "value"));
         return *cached_value_;
     }
     inline const Presence<std::vector<Entity>>& SessionRecognition::entities() const {
-        if (!cached_entities_) cached_entities_ = std::make_shared<const Presence<std::vector<Entity>>>(member_value<std::vector<Entity>>(value_,
+        if (!cached_entities_) cached_entities_ = std::make_shared<const Presence<std::vector<Entity>>>(detail::member_value<std::vector<Entity>>(value_,
         "entities"));
         return *cached_entities_;
     }
     inline const Presence<RecognitionMode>& SessionRecognition::mode() const {
-        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<RecognitionMode>>(member_value<RecognitionMode>(value_,
+        if (!cached_mode_) cached_mode_ = std::make_shared<const Presence<RecognitionMode>>(detail::member_value<RecognitionMode>(value_,
         "mode"));
         return *cached_mode_;
     }
     inline const Presence<std::vector<BoundaryProposal>>& SessionRecognition::proposals() const {
-        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(member_value<std::vector<BoundaryProposal>>(value_,
+        if (!cached_proposals_) cached_proposals_ = std::make_shared<const Presence<std::vector<BoundaryProposal>>>(detail::member_value<std::vector<BoundaryProposal>>(value_,
         "proposals"));
         return *cached_proposals_;
     }
     inline const Presence<std::vector<RecognitionEdgeDocument>>& SessionRecognition::relations() const {
-        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RecognitionEdgeDocument>>>(member_value<std::vector<RecognitionEdgeDocument>>(value_,
+        if (!cached_relations_) cached_relations_ = std::make_shared<const Presence<std::vector<RecognitionEdgeDocument>>>(detail::member_value<std::vector<RecognitionEdgeDocument>>(value_,
         "relations"));
         return *cached_relations_;
     }
     inline const Presence<bool>& SessionRelationEdge::either() const {
-        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(member_value<bool>(value_,
+        if (!cached_either_) cached_either_ = std::make_shared<const Presence<bool>>(detail::member_value<bool>(value_,
         "either"));
         return *cached_either_;
     }
     inline const Presence<double>& SessionRelationEdge::probability() const {
-        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(member_value<double>(value_,
+        if (!cached_probability_) cached_probability_ = std::make_shared<const Presence<double>>(detail::member_value<double>(value_,
         "probability"));
         return *cached_probability_;
     }
     inline const Presence<std::string>& SessionRelationEdge::relation() const {
-        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_relation_) cached_relation_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "relation"));
         return *cached_relation_;
     }
     inline const Presence<EntityDocument>& SessionRelationEdge::source() const {
-        if (!cached_source_) cached_source_ = std::make_shared<const Presence<EntityDocument>>(member_value<EntityDocument>(value_,
+        if (!cached_source_) cached_source_ = std::make_shared<const Presence<EntityDocument>>(detail::member_value<EntityDocument>(value_,
         "source"));
         return *cached_source_;
     }
     inline const Presence<EntityDocument>& SessionRelationEdge::target() const {
-        if (!cached_target_) cached_target_ = std::make_shared<const Presence<EntityDocument>>(member_value<EntityDocument>(value_,
+        if (!cached_target_) cached_target_ = std::make_shared<const Presence<EntityDocument>>(detail::member_value<EntityDocument>(value_,
         "target"));
         return *cached_target_;
     }
@@ -5782,37 +5782,37 @@ namespace tt::results {
         return value_.at("target").at("name").get<std::string>();
     }
     inline const Presence<std::string>& SourceRelationEndpoint::file() const {
-        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_file_) cached_file_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "file"));
         return *cached_file_;
     }
     inline const Presence<uint64_t>& SourceRelationEndpoint::first_line() const {
-        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_first_line_) cached_first_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "first_line"));
         return *cached_first_line_;
     }
     inline const Presence<std::string>& SourceRelationEndpoint::kind() const {
-        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_kind_) cached_kind_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "kind"));
         return *cached_kind_;
     }
     inline const Presence<uint64_t>& SourceRelationEndpoint::last_line() const {
-        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_last_line_) cached_last_line_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "last_line"));
         return *cached_last_line_;
     }
     inline const Presence<std::string>& SourceRelationEndpoint::name() const {
-        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(member_value<std::string>(value_,
+        if (!cached_name_) cached_name_ = std::make_shared<const Presence<std::string>>(detail::member_value<std::string>(value_,
         "name"));
         return *cached_name_;
     }
     inline const Presence<uint64_t>& SourceRelationEndpoint::ordinal() const {
-        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_ordinal_) cached_ordinal_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "ordinal"));
         return *cached_ordinal_;
     }
     inline const Presence<Json>& SourceRelationEndpoint::record() const {
-        if (!cached_record_) cached_record_ = std::make_shared<const Presence<Json>>(member_value<Json>(value_,
+        if (!cached_record_) cached_record_ = std::make_shared<const Presence<Json>>(detail::member_value<Json>(value_,
         "record"));
         return *cached_record_;
     }
@@ -5822,22 +5822,22 @@ namespace tt::results {
         return *cached_value_;
     }
     inline const Presence<uint64_t>& TokenBand::lower() const {
-        if (!cached_lower_) cached_lower_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_lower_) cached_lower_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "lower"));
         return *cached_lower_;
     }
     inline const Presence<uint64_t>& TokenBand::upper() const {
-        if (!cached_upper_) cached_upper_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_upper_) cached_upper_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "upper"));
         return *cached_upper_;
     }
     inline const Presence<uint64_t>& TokenUsage::input_tokens() const {
-        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_input_tokens_) cached_input_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "input_tokens"));
         return *cached_input_tokens_;
     }
     inline const Presence<uint64_t>& TokenUsage::output_tokens() const {
-        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(member_value<uint64_t>(value_,
+        if (!cached_output_tokens_) cached_output_tokens_ = std::make_shared<const Presence<uint64_t>>(detail::member_value<uint64_t>(value_,
         "output_tokens"));
         return *cached_output_tokens_;
     }
@@ -5858,21 +5858,21 @@ namespace tt::results {
     };
     inline void successful_answer(const std::vector<SessionPacket>& packets) {
         size_t terminals=0;
-        for(const auto& packet:packets) if(literal(packet.document(), "kind", "terminal")) {
+        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "terminal")) {
             ++terminals;
             if(packet.document().contains("failure")) throw AnswerCardinalityFailure("terminal contains a failure",
             packets);
         }
-        if(terminals!=1 || packets.empty() || !literal(packets.back().document(),"kind","terminal")) throw AnswerCardinalityFailure("expected one final successful terminal",
+        if(terminals!=1 || packets.empty() || !detail::literal(packets.back().document(),"kind","terminal")) throw AnswerCardinalityFailure("expected one final successful terminal",
         packets);
     }
     inline std::optional<bool> read_decide(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::optional<bool>> answer;
-        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
-        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
+        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
             const auto& judgment=packet.document().at("value").at("value").at("value");
-            if(!literal(judgment,"kind","decision")) continue;
+            if(!detail::literal(judgment,"kind","decision")) continue;
             if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
             answer.emplace(judgment.at("value").is_null() ? std::optional<bool>{
             } : std::optional<bool>(decode<bool>(judgment.at("value"))));
@@ -5883,10 +5883,10 @@ namespace tt::results {
     inline std::optional<std::string> read_choose(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::optional<std::string>> answer;
-        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
-        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
+        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
             const auto& judgment=packet.document().at("value").at("value").at("value");
-            if(!literal(judgment,"kind","choice")) continue;
+            if(!detail::literal(judgment,"kind","choice")) continue;
             if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
             answer.emplace(judgment.at("value").is_null() ? std::optional<std::string>{
             } : std::optional<std::string>(decode<std::string>(judgment.at("value"))));
@@ -5897,10 +5897,10 @@ namespace tt::results {
     inline double read_score(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<double> answer;
-        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
-        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
+        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
             const auto& judgment=packet.document().at("value").at("value").at("value");
-            if(!literal(judgment,"kind","score")) continue;
+            if(!detail::literal(judgment,"kind","score")) continue;
             if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
             answer.emplace(decode<double>(judgment.at("value")));
         }
@@ -5910,10 +5910,10 @@ namespace tt::results {
     inline std::vector<std::string> read_tag(const std::vector<SessionPacket>& packets) {
         successful_answer(packets);
         std::optional<std::vector<std::string>> answer;
-        for(const auto& packet:packets) if(literal(packet.document(), "kind", "observation") && literal(packet.document().at("value"),
-        "kind", "row") && literal(packet.document().at("value").at("value"), "kind", "judgment")) {
+        for(const auto& packet:packets) if(detail::literal(packet.document(), "kind", "observation") && detail::literal(packet.document().at("value"),
+        "kind", "row") && detail::literal(packet.document().at("value").at("value"), "kind", "judgment")) {
             const auto& judgment=packet.document().at("value").at("value").at("value");
-            if(!literal(judgment,"kind","tags")) continue;
+            if(!detail::literal(judgment,"kind","tags")) continue;
             if(answer) throw AnswerCardinalityFailure("multiple matching judgments",packets);
             answer.emplace(decode<std::vector<std::string>>(judgment.at("value")));
         }
