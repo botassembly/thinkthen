@@ -151,7 +151,7 @@ export const QUESTION_SETS_SEE = {
   '1-plan': 'The plan shows each question\'s pointers. urgent reads both fields as one object, keyed subject and body. team reads only the body.',
 };
 
-// Captions for the recording page, keyed by script name. Its examples sit
+// Captions for the replay and plan pages, keyed by script name. Its examples sit
 // in examples/reference/answer-cache/, because check-samples skips any folder
 // named recording.
 export const RECORDING_SEE = {

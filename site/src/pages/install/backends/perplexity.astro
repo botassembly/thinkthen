@@ -27,7 +27,7 @@ const page = BACKEND_PAGES.find((p) => p.slug === b.name);
   <h2>Pace requests</h2>
   <p>The backend paces nothing unless the configuration file sets <code>requests_per_minute</code>. Add <code>"perplexity": &#123;"requests_per_minute": 600&#125;</code> under <code>backends</code> to pace one process at ten requests a second.</p>
   <p>Perplexity's <a href="https://docs.perplexity.ai/docs/decisions/quickstart#rate-limits">published organization limit</a> is ten requests a second. Multiple processes share that provider limit, while each ThinkThen process gets its own configured rate. Divide the allowance across processes when they run together. Perplexity also limits token bursts, so a request can reach a provider limit before the request rate does.</p>
-  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/install/configuration/">Configuration</a></p>
+  <p class="pagelinks"><a href="/install/backends/">All backends</a> · <a href="/start/configuration/">Configuration</a></p>
 </SidePage>
 
 <style>

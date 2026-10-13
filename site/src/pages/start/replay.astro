@@ -1,0 +1,76 @@
+---
+// Goal: show that a test replays saved answers with no key and no network,
+// that a missing answer fails instead of sending, and how to keep a
+// folder of saved answers tidy.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { CACHING_SEE } from '../../data/catalog.mjs';
+import { RECORDING_SEE } from '../../data/reference.mjs';
+import { files, run } from '../../data/samples.mjs';
+import { setting } from '../../lib/settings-table.mjs';
+
+const shown = (page, name, see) => ({ ...run(page, name), see: see[name] });
+const replay = shown('learn/caching', '1-replay', CACHING_SEE);
+const unused = shown('learn/caching', '3-unused', CACHING_SEE);
+const miss = shown('reference/answer-cache', '3-miss', RECORDING_SEE);
+const facts = shown('reference/answer-cache', '4-facts', RECORDING_SEE);
+const [used] = files('learn/caching');
+const prune = setting('Prune target');
+const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md${anchor}`;
+
+const MODES = [
+  ['`--replay DIR`', 'yes', 'nothing; a miss exits 5', 'no'],
+  ['`--record DIR`', 'no', 'every question', 'if storage is permitted, replacing a held answer'],
+  ['`--cache DIR`, `THINKTHEN_CACHE`, or the default cache', 'yes', 'the questions it misses', 'if storage is permitted'],
+  ['a cache with `--refresh-cache`, or the model `jev-latest`', 'no', 'every question', 'if storage is permitted, replacing a held answer'],
+  ['`--no-cache`', 'no', 'every question', 'no'],
+];
+---
+<Base title="Replay in tests" description="Replay saved answers in a test with no key and no network. A missing answer fails instead of sending.">
+  <h1>Replay in tests</h1>
+  <p class="lede">Save the model's answers once. Every later test replays them with no key and no network, so it costs nothing and gives the same answer every time.</p>
+
+  <h2 id="replay-in-a-test">Replay in a test</h2>
+  <p>A folder of saved answers can sit beside your tests. <code>--replay</code> reads that folder alone. Every run on this page replays one small folder.</p>
+  <Terminal run={replay} caption={replay.see} />
+  <p>A run with <code>--record DIR</code> and a key saves the folder. The answer cache holds the same rows, in <code>thinkthen.sqlite</code>. A folder committed for replay keeps them in <code>thinkthen.jsonl</code>. A saved answer holds the question and the reply's answer, never a header, so no key can reach it.</p>
+
+  <h2 id="a-replay-miss">A missing answer fails</h2>
+  <p>A replay never sends. A question the folder lacks stops the run with exit 5, and the message names its key. Change the test to a question the folder holds, or save the new answer with a run that has a key.</p>
+  <Terminal run={miss} caption={miss.see} />
+
+  <h2 id="facts">Prove that nothing was sent</h2>
+  <p><code>--facts</code> prints one line of run facts last on standard error. It counts the records finished, the requests sent and the retries. It adds token counts when every live reply reported them. <code>cache_answers</code> counts answers from the answer cache, never from a replay or record folder. This example drops <code>seconds</code>, <code>call_id</code> and <code>command_ms</code>, because they change on every run.</p>
+  <Terminal run={facts} caption={facts.see} />
+
+  <h2 id="modes">The modes</h2>
+  <table>
+    <tr><th>Mode</th><th>Looks up</th><th>Sends</th><th>Saves</th></tr>
+    {MODES.map(([mode, look, send, save]) => (
+      <tr><td>{mode.split('`').map((part, i) => (i % 2 ? <code>{part}</code> : part))}</td><td>{look}</td><td>{send}</td><td>{save}</td></tr>
+    ))}
+  </table>
+  <p><code>--record</code> sends every question, even one the folder already holds, and may charge for it again. Use <code>--cache DIR</code> to reuse what a folder holds. An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run. The <a href={spec('recording', '#the-options')}>recording specification</a> holds the full table.</p>
+
+  <h2 id="the-answer-cache">The answer cache</h2>
+  <p>The answer cache is on by default. The <a href="/start/configuration/#locations">Configuration page</a> says where it lives and how <code>THINKTHEN_CACHE</code> moves it. Only a good answer with storage permission is saved.</p>
+  <p>A reply with <code>Cache-Control: no-store</code>, or malformed or over-bound cache instructions, cannot be saved. Cache mode returns an otherwise valid answer without saving it, and a repeat sends again and may charge again. Explicit <code>--record</code> fails after sending with exit 5 when the reply forbids storage, so the failed recording may still incur a charge. The <a href={spec('cache', '#response-cache-control')}>storage contract</a> gives the rules.</p>
+
+  <h2 id="unused">Find answers no test reads</h2>
+  <p>A folder can keep answers its tests no longer ask. <code>thinkthen cache unused</code> compares the folder with a list of the question keys your tests used. Here the list holds the keys of the four reviews.</p>
+  <Code code={used.text} file={used.name} caption="One question key a line." copy={false} />
+  <Terminal run={unused} caption={unused.see} />
+  <p><code>decide --details</code> prints the keys of each record in <code>meta.requests</code>. <code>filter --details</code> leaves out the records it drops, so its keys make an incomplete list. An incomplete list reports answers as unused that a test still reads. The <a href={spec('recording', '#pruning-a-cache')}>recording specification</a> gives the rules.</p>
+
+  <h2 id="pruning">Pruning</h2>
+  <ul>
+    <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>thinkthen cache prune DIR</code>.</li>
+    <li><code>DIR</code> is always explicit. The prune trims the folder to <a href={prune.href}>{prune.default}</a>, or to <code>--max-size BYTES</code> for one run. <code>cache prune --dry-run</code> lists the answers a prune would remove.</li>
+    <li><code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select answers to remove first. Either one alone is enough to select an answer.</li>
+    <li><code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code>, or a model no reply in the folder names, and removes nothing. An empty folder accepts any model name.</li>
+    <li>A saved question holds the evidence. ThinkThen creates <code>thinkthen.sqlite</code> with mode 0600, so only its owner can read it.</li>
+  </ul>
+
+  <p class="pagelinks"><a href="/start/pay-once/">Pay once</a> · <a href={spec('recording')}>The recording specification</a> · <a href="/learn/answers/#exit-codes">Every exit code</a></p>
+</Base>

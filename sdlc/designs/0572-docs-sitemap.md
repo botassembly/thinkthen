@@ -20,7 +20,14 @@ Start · Functions · Models · Languages · Databases · Recipes, then search a
   - `/`: what you get, whether it fits your setup, what to paste. Bash only.
   - `/start/`: install and get a first answer in two minutes, even with no key. Merges `/install/` and the install part of `/install/shell/`.
   - `/start/tutorial/` from `/learn/tutorial/`.
-  - How it works, grouped on the Start page: `/start/batching/` (from `/learn/functional/`), `/start/caching/` (merges `/learn/caching/` and `/learn/recording/`), `/start/files/` (from `/learn/files/`), `/start/speed/` (from `/learn/overhead/`), `/start/settings/` (from `/install/settings/`), `/start/configuration/` (from `/install/configuration/`).
+  - How it works, listed on the Start page, each built around what the reader gains:
+    - `/start/pay-once/`: many records share one request, and each question keeps its own saved answer. From `/learn/functional/` and `/learn/caching/`.
+    - `/start/replay/`: record and replay for offline tests. From `/learn/recording/` and `/learn/caching/`.
+    - `/start/tune/`: re-read saved answers at a new cut, `runs audit`, `runs diff`, and "a high probability is not proof".
+    - `/start/plan/`: see the request and its cost before you send.
+    - `/start/your-data/`: the field pointer, key secrecy, it never acts, stop and resume.
+    - `/start/speed/` from `/learn/overhead/`: one engine and its measured overhead.
+  - Reference, listed on the Start page: `/start/files/` (from `/learn/files/`), `/start/settings/` (from `/install/settings/`), `/start/configuration/` (from `/install/configuration/`).
 - **Functions**
   - `/functions/`: pick the right function from one table.
   - The ten function pages. Bash only, and each says once that the function runs in every binding. Their language samples move to the language pages.

@@ -90,7 +90,7 @@ const ARTICLES = {
     idea: [
       "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/languages/bash/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
       `Bindings bring the same ten functions to ${BINDINGS.length} programming languages and databases: ${BINDINGS.map((b, i) => `${i === BINDINGS.length - 1 ? 'and ' : ''}[${b.name}](${b.route})`).join(', ')}.`,
-      "To set one up, start at [Install](/install/).",
+      "To set one up, start at [Languages](/languages/).",
     ],
     see: {
       '1-help': "The first ten names are the functions. `help` and the six tools follow.",
@@ -336,7 +336,7 @@ const ARTICLES = {
     idea: [
       "On the slide, Python and C ask Jev the same `decide` question: does Ringo Starr sing the lead vocal on Octopus's Garden? Each stores the answer in `is_ringo` and asserts it. Both get yes.",
       "On the slide, Python heads the scripting languages and C heads the systems languages.",
-      "Each binding calls the same engine as the command. To set one up, start at [Install](/install/).",
+      "Each binding calls the same engine as the command. To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Pick your language. The question stays the same.",
     link: REPO,
@@ -350,7 +350,7 @@ const ARTICLES = {
       "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey`. The question and the band 0.3:0.7 sit inside the query as one JSON string.",
       "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Penny Lane and Hey Jude fall inside the band. Both come back not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
       "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
-      "To set one up, start at [Install](/install/).",
+      "To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Ask the question where your data already lives.",
     link: REPO,
@@ -469,7 +469,7 @@ const ARTICLES = {
       "Filter by meaning keeps the rows that are complaints. Category column picks a category for each row, and the query groups by it. Extract fields turns a receipt's free text into amount, date, and vendor columns.",
       "Find duplicates asks whether two rows name the same company and merges the matching pairs. Score and average rates how happy each review is and averages by product. Count topics tags each ticket with its topics and counts them.",
       "Check at load sends incomplete addresses to quarantine. Top N per group keeps the 3 leads in each account likeliest to buy. Second opinion lists the rows where the model and the existing label disagree.",
-      "The [tables and frames page](/learn/beatles-bench/data/) shows a real query on Beatles songs. To set one up, start at [Install](/install/).",
+      "The [tables and frames page](/learn/beatles-bench/data/) shows a real query on Beatles songs. To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Ask your data a question, row by row, where it already lives.",
     link: REPO,

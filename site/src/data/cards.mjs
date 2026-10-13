@@ -24,7 +24,6 @@ const LANGUAGES = ['python', 'typescript', 'ruby', 'r', 'rust', 'c'];
 const DATA = ['polars', 'duckdb', 'sqlite', 'postgresql'];
 const ROUTES = {
   '/functions/': 'runs-in',
-  '/install/': 'runs-in',
   '/languages/': 'runs-in',
   '/languages/bash/': 'runs-in',
   '/install/backends/': 'backends',

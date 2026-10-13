@@ -76,7 +76,7 @@ const jobsScope = name === 'annotate'
   {name === 'question-file' && (
     <>
       <p>A question file can also carry an author name, a wording version, and declarations for each record and its context. <code>--context-field</code> sends each record's own context apart from its evidence. The <a href="#more-examples">records example</a> shows a file and the request it plans. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/question-file.md">question-file specification</a> gives the full grammar.</p>
-      <p id="named-questions">Save <code>refund.json</code> in the <code>questions</code> folder beside the <a href="/install/configuration/#locations">configuration file</a>, then ask for it as <code>@refund</code>. On Linux that folder is <code>$XDG_CONFIG_HOME/thinkthen/questions</code>, else <code>$HOME/.config/thinkthen/questions</code>. On macOS it is <code>$HOME/Library/Application Support/thinkthen/questions</code>. On Windows it is <code>%APPDATA%\thinkthen\questions</code>. A local entry named <code>refund</code> wins over the named file. ThinkThen never creates the folder.</p>
+      <p id="named-questions">Save <code>refund.json</code> in the <code>questions</code> folder beside the <a href="/start/configuration/#locations">configuration file</a>, then ask for it as <code>@refund</code>. On Linux that folder is <code>$XDG_CONFIG_HOME/thinkthen/questions</code>, else <code>$HOME/.config/thinkthen/questions</code>. On macOS it is <code>$HOME/Library/Application Support/thinkthen/questions</code>. On Windows it is <code>%APPDATA%\thinkthen\questions</code>. A local entry named <code>refund</code> wins over the named file. ThinkThen never creates the folder.</p>
     </>
   )}
   {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
@@ -128,7 +128,7 @@ const jobsScope = name === 'annotate'
       <p><code>meta.usage</code> attributes token shares to logical questions. Pending equal questions may coalesce and repeat their shares across results. Sum settled call facts for observed live usage; each provider response counts once. Estimated cost requires complete reported usage and explicit prices, and does not establish an invoice. Recording stores replace the latest answer for a key, so retained responses are not a historical usage ledger.</p>
       <p>A batched detailed row carries an even share of <code>requests_sent</code>, with the remainder assigned to the earliest rows. One row can therefore show 0 beside a live request. Use <code>--facts</code> for the run total; the <a href="https://github.com/botassembly/thinkthen/blob/main/specification/result.md#the-run-facts-line">result contract</a> defines its counts.</p>
       <h3 id="global-flags">Global flags</h3>
-      <p>Every function takes these flags. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with the order in which values win.</p>
+      <p>Every function takes these flags. The <a href="/start/settings/">settings page</a> lists every setting on every surface, with the order in which values win.</p>
       <table class="flags">
         <tr><th>Flag</th><th>Takes</th><th>Default</th><th>What it does</th></tr>
         {GLOBAL_FLAGS.map((f) => (
@@ -241,7 +241,7 @@ const jobsScope = name === 'annotate'
         ))}
       </ul>
       <p>The command line comes first, then the environment, then the configuration file. The first of these that names a backend or an address decides. So <code>THINKTHEN_BASE_URL</code> in the shell outranks the configuration file's <code>backend</code>, and the key then comes from <code>THINKTHEN_API_KEY</code>. With both <code>--backend</code> and <code>--url</code>, the backend's key variables apply at that address.</p>
-      <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/install/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads, and the <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
+      <p>With the key unset or blank, a request to <code>localhost</code>, <code>127.0.0.1</code> or <code>[::1]</code> goes out with no key and no <code>Authorization</code> header. At any other address, the command exits 4. The <a href="/start/configuration/#environment">Configuration page</a> lists every variable ThinkThen reads, and the <a href="/install/backends/">Backends page</a> gives the rest of the key rules.</p>
     </>
   )}
 
@@ -260,10 +260,10 @@ const jobsScope = name === 'annotate'
     <li>The <a href="#opening"><code>{title}</code> page</a> opens with one plain call in every language.</li>
     {howtos.length > 0 && <li>These how-tos use <code>{title}</code> for a real job: {howtos.map((h, i) => <>{i > 0 && (i === howtos.length - 1 ? ' and ' : ', ')}<a href={`/how-tos/${h.slug}/`}>{h.title}</a></>)}.</li>}
     <li><a href="/learn/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</li>
-    <li>The <a href="/install/settings/">settings page</a> gives every setting on every surface, with its default.</li>
-    <li><a href="/learn/recording/">Recording and the answer cache</a> covers the answer cache, recording, replay and pruning.</li>
-    <li>The <a href="/install/configuration/#configuration-file">configuration file</a> names the default backend, address and model.</li>
-    <li>The <a href="/install/configuration/#usage-totals">usage totals</a> count requests and tokens on this machine, and <a href="/install/configuration/#status"><code>thinkthen status</code></a> prints them.</li>
+    <li>The <a href="/start/settings/">settings page</a> gives every setting on every surface, with its default.</li>
+    <li><a href="/start/replay/">Replay in tests</a> covers the answer cache, recording, replay and pruning.</li>
+    <li>The <a href="/start/configuration/#configuration-file">configuration file</a> names the default backend, address and model.</li>
+    <li>The <a href="/start/configuration/#usage-totals">usage totals</a> count requests and tokens on this machine, and <a href="/start/configuration/#status"><code>thinkthen status</code></a> prints them.</li>
     {isFn ? <li>A <a href="/functions/question-file/">question file</a> saves one question with its threshold.</li> : <li><a href="/learn/question-sets/">Question sets</a> hold many questions for <code>annotate</code>.</li>}
     {name === 'annotate' && <li><a href="/learn/question-sets/">Question sets</a> give the rules a question set follows.</li>}
   </ul>

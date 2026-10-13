@@ -1,0 +1,41 @@
+---
+// Goal: show that ThinkThen packs many records into one request and keeps
+// one saved answer per question, so you pay once for each answer however
+// the records group.
+import Base from '../../layouts/Base.astro';
+import Terminal from '../../components/Terminal.astro';
+import Code from '../../components/Code.astro';
+import { START_SEE, CACHING_SEE } from '../../data/catalog.mjs';
+import { captioned, installSample, run } from '../../data/samples.mjs';
+import { REPO } from '../../data/repo.mjs';
+
+const [oneRequest, oneEach] = captioned('start/pay-once', START_SEE['pay-once']);
+const batchOne = { ...run('learn/caching', '2-batch-one'), see: CACHING_SEE['2-batch-one'] };
+const stream = installSample('python', 'functional/stream');
+const adr = `${REPO}/blob/main/sdlc/planning/adr/0055-decide-filter-and-rank-batches-send-each-record-once.md`;
+const spec = (name, anchor = '') => `${REPO}/blob/main/specification/${name}.md${anchor}`;
+---
+<Base title="Pay once" description="ThinkThen packs many records into one request and keeps one saved answer per question, so you pay once for each answer.">
+  <h1>Pay once</h1>
+  <p class="lede">Hand ThinkThen a list or a stream, and it packs the records into as few requests as it can. Each question keeps its own saved answer, so a repeat reads it instead of paying again.</p>
+
+  <h2 id="batching">Many records, one request</h2>
+  <p>In one measured run, 306 song titles went out in one request with 11,468 input tokens. One title a request sent 88,933. The packed run never fell more than 3 right answers below one title a request. <a href={adr}>ADR 0055</a> records the run.</p>
+  <p>The plan below counts the questions in the first request and the input tokens it expects. It sends nothing.</p>
+  <Terminal run={oneRequest} caption={oneRequest.see} />
+  <Terminal run={oneEach} caption={oneEach.see} />
+  <p>Records that share a request can move a borderline answer a little. <code>--batch 1</code> keeps them apart. The <a href={spec('annotate', '#cautions')}>annotate specification</a> records the measurement.</p>
+
+  <h2 id="the-key">One saved answer per question</h2>
+  <p>When the backend permits storage, ThinkThen saves each good answer under its own key. The key covers the backend address, the API type, the model you asked for and the model that answered, the shared context, and the encoded question with the text it quotes. So a change of model asks again.</p>
+  <p>A change in how records group into requests never asks again. Each record's question stays the same whatever shares its request. After a run of 100 records, a run of 120 that holds them asks only the 20 new ones. The <a href={spec('records', '#how-many-requests-each-command-makes')}>records specification</a> gives the rule, and the <a href={spec('cache', '#version-2-identity')}>cache specification</a> gives the key.</p>
+  <p>The <a href="/start/replay/#replay-in-a-test">replay page</a> reads four reviews from saved answers. This run reads the same saved answers one review a request.</p>
+  <Terminal run={batchOne} caption={batchOne.see} />
+  <p>The key covers the question as sent, so a change to the text makes a new key. <code>hello\n</code> and <code>hello\r\n</code> are two questions. A failure is never saved, so the next run asks it again.</p>
+
+  <h2 id="streams">Pay for what you read</h2>
+  <p>A library reads a stream a little ahead and packs what it read. When your code stops reading, ThinkThen stops sending. This Python reader takes the first complaint and closes the stream.</p>
+  <Code code={stream.code} file={stream.file} label="Copy the stream sample" />
+
+  <p class="pagelinks"><a href="/start/replay/">Replay in tests</a> · <a href="/start/plan/">See before you send</a> · <a href="/languages/python/">Python</a></p>
+</Base>

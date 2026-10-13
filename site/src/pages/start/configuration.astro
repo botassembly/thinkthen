@@ -51,7 +51,7 @@ const ENV = [
 
   <h2 id="which-value-wins">Which value wins</h2>
   <p set:html={inlineHtml(first.text)}></p>
-  <p>The <a href="/install/settings/#which-value-wins">Settings page</a> gives the order for each setting, and every default.</p>
+  <p>The <a href="/start/settings/#which-value-wins">Settings page</a> gives the order for each setting, and every default.</p>
   <Code code={config.text} file={config.name} caption={`${config.name}, a configuration file`} />
   <Terminal run={file} caption={file.see} />
 
@@ -91,10 +91,11 @@ const ENV = [
 
   <h2 id="usage-totals">The usage totals</h2>
   <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and answers from the answer cache. An answer from a replay or record folder never counts as a cache answer. It holds no request, no reply, no address, no model, no price and no key. Clearing the cache never resets it, and <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
+  <p>Windows keeps the usage totals in <code>%LOCALAPPDATA%\thinkthen\usage</code>. Its folder and recognized files must be owned by your user and grant access only to your user and Windows SYSTEM. ThinkThen creates missing objects privately and refuses unsafe existing objects before sending. A later count update failure keeps the judgment and prints a warning. These checks cover usage counts. The named answer-folder permission check remains Unix-only.</p>
 
   <h2 id="status">See it all</h2>
   <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md#the-options">recording specification</a> lists its fields.</p>
   <Terminal run={statusRun} caption={statusRun.see} />
 
-  <p class="pagelinks"><a href="/install/settings/">Every setting and its default</a> · <a href="/install/backends/">Backends</a> · <a href="/functions/">Functions</a></p>
+  <p class="pagelinks"><a href="/start/settings/">Every setting and its default</a> · <a href="/install/backends/">Backends</a> · <a href="/functions/">Functions</a></p>
 </Base>

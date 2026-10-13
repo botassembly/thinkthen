@@ -12,7 +12,7 @@ import { backends } from '../src/lib/backends-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const spec = fs.readFileSync(path.join(site, '..', 'specification', 'settings.md'), 'utf8');
-const page = fs.readFileSync(path.join(site, 'dist', 'install', 'settings', 'index.html'), 'utf8');
+const page = fs.readFileSync(path.join(site, 'dist', 'start', 'settings', 'index.html'), 'utf8');
 const parsed = parseSettings(spec);
 const { precedence } = parsed;
 const rows = parsed.rows.filter((r) => !LEFT_OUT.has(r.name));

@@ -67,6 +67,11 @@ const EXEMPT = [
     test: (line, file) => file.startsWith('learn/caching/') && /^(unused )?[0-9a-f]{64}$/.test(line),
   },
   {
+    name: 'the release sample report',
+    why: 'The release ships this report in its no-key sample, and the recording answers only these exact bytes.',
+    test: (line, file) => file === 'start/files/report.txt',
+  },
+  {
     name: 'the replay miss',
     why: 'thinkthen prints a replay miss as one line, and the page quotes the key sentence exactly.',
     test: (line, file) => file === 'reference/answer-cache/3-miss.out' && /^thinkthen: .*the replay folder holds no answer for question `[0-9a-f]{64}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent$/.test(line),

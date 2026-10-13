@@ -11,9 +11,9 @@ export default defineConfig({
   devToolbar: { enabled: false },
   // Pages that moved keep their old address.
   redirects: {
-    '/surfaces': '/install/',
+    '/surfaces': '/start/',
     '/backends': '/install/backends/',
-    '/tutorial': '/learn/tutorial/',
+    '/tutorial': '/start/tutorial/',
     ...(recipeSelection(RECIPE_PAGES, process.env.THINKTHEN_DRAFTS === '1' || process.argv.includes('dev')).index ? {} : { '/recipes': '/how-tos/bash/' }),
     // The shell recipes moved into the Bash techniques section.
     ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']
@@ -36,7 +36,7 @@ export default defineConfig({
     '/beatles-bench': '/learn/beatles-bench/',
     '/beatles-bench/the-data': '/learn/beatles-bench/',
     '/beatles-bench/run-it-for-free': '/learn/beatles-bench/',
-    '/beatles-bench/every-language': '/install/',
+    '/beatles-bench/every-language': '/languages/',
     ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad']
       .map((slug) => [`/beatles-bench/${slug}`, `/learn/beatles-bench/${slug}/`])),
     // The talk cut its what-jev-knows slide. The strings page compares Jev with search.
@@ -49,10 +49,21 @@ export default defineConfig({
     ...Object.fromEntries(['audit', 'diff', 'check', 'transform']
       .map((name) => [`/reference/${name}`, `/functions/${name}/`])),
     ...Object.fromEntries(['answers', 'question-sets', 'recording']
-      .map((name) => [`/reference/${name}`, `/learn/${name}/`])),
+      .map((name) => [`/reference/${name}`, name === 'recording' ? '/start/replay/' : `/learn/${name}/`])),
     '/reference': '/functions/',
     // The talk merged its bench-run slide into the bench-field slide.
     '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
+    // The install page and the how-it-works pages moved under /start/ on
+    // 2026-10-12, rebuilt around what each one gains the reader.
+    '/install': '/start/',
+    '/install/settings': '/start/settings/',
+    '/install/configuration': '/start/configuration/',
+    '/learn/tutorial': '/start/tutorial/',
+    '/learn/functional': '/start/pay-once/',
+    '/learn/caching': '/start/replay/',
+    '/learn/recording': '/start/replay/',
+    '/learn/files': '/start/files/',
+    '/learn/overhead': '/start/speed/',
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.

@@ -37,13 +37,13 @@ try {
   const alias = routeFile(dist, '/surfaces'); const original = fs.readFileSync(alias, 'utf8');
   fs.unlinkSync(alias); run('/functions/decide/#flags', 1, /alias compatibility: \/surfaces: missing redirect stub/);
   write(alias, original);
-  const dest = routeFile(dist, '/install/'); const canonical = fs.readFileSync(dest, 'utf8');
+  const dest = routeFile(dist, '/start/'); const canonical = fs.readFileSync(dest, 'utf8');
   write(dest, stub('/functions/decide/')); run('/functions/decide/#flags', 1, /redirect chain or cycle/); write(dest, canonical);
   for (const [mutate, marker] of [
     [s => s.replace('<noscript>', '').replace('</noscript>', ''), /active refresh/],
     [s => s.replace('content="noindex"', 'content="index"'), /stub publication shape/],
-    [s => s.replace('rel="canonical" href="https://thinkthen.dev/install/"', 'rel="canonical" href="https://thinkthen.dev/functions/"'), /destinations disagree/],
-    [s => s.replace(preserver('/install/'), ''), /missing fragment preserver/],
+    [s => s.replace('rel="canonical" href="https://thinkthen.dev/start/"', 'rel="canonical" href="https://thinkthen.dev/functions/"'), /destinations disagree/],
+    [s => s.replace(preserver('/start/'), ''), /missing fragment preserver/],
   ]) { write(alias, mutate(original)); run('/functions/decide/#flags', 1, marker); }
   write(alias, original); run('/functions/decide/#flags', 0);
   const recipe = routeFile(dist, '/recipes'); const recipeOriginal = fs.readFileSync(recipe, 'utf8'); const recipeStub = stub('/how-tos/bash/');
@@ -56,7 +56,7 @@ try {
   write(recipe,index.replace(' data-draft',''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing draft index marker/);
   fs.unlinkSync(recipe);assert.equal(preview().status,1);
   write(recipe,index);
-  write(alias,original.replace(preserver('/install/'),''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing fragment preserver/);
+  write(alias,original.replace(preserver('/start/'),''));assert.equal(preview().status,1);assert.match(preview().stderr,/missing fragment preserver/);
   write(alias,original);assert.equal(preview().status,0);
   write(recipe,recipeOriginal);run('/functions/decide/#flags',0);
   console.log('link checker plants: 20 cases passed, normal and explicit draft index contracts');

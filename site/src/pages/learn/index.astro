@@ -10,12 +10,12 @@ const talk = PAGES.slice(1);
   <p class="lede">Start with the tutorial. Then watch ThinkThen answer questions about Beatles songs.</p>
 
   <div class="grid">
-    <a class="tile" href="/learn/tutorial/"><b>Tutorial</b><span>From the install line to a pipeline that sorts a stream of messages.</span></a>
+    <a class="tile" href="/start/tutorial/"><b>Tutorial</b><span>From the install line to a pipeline that sorts a stream of messages.</span></a>
     <a class="tile" href="/learn/beatles-bench/"><b>Beatles Bench</b><span>The talk as {talk.length} short pages. Each shows one slide and one idea.</span></a>
     <a class="tile" href="/trust/"><b>Test it before you trust it</b><span>Outcomes, thresholds, saved answers, and checking a question against your own records.</span></a>
-    <a class="tile" href="/learn/caching/"><b>Caching and replay</b><span>Ask a question once. Read its saved answer in every later run and every test.</span></a>
-    <a class="tile" href="/learn/overhead/"><b>Overhead</b><span>How much of a call ThinkThen and each binding spend, measured against Jev.</span></a>
-    <a class="tile" href="/learn/functional/"><b>Functional patterns</b><span>Bind a question once, then apply it to a list, a column or a stream.</span></a>
+    <a class="tile" href="/start/replay/"><b>Replay in tests</b><span>Save the answers once. Replay them in every test with no key and no network.</span></a>
+    <a class="tile" href="/start/speed/"><b>Speed</b><span>How much of a call ThinkThen and each binding spend, measured against Jev.</span></a>
+    <a class="tile" href="/start/pay-once/"><b>Pay once</b><span>Many records share one request, and each question keeps its own saved answer.</span></a>
   </div>
 
   <h2>Beatles Bench</h2>
@@ -25,10 +25,9 @@ const talk = PAGES.slice(1);
 
   <h2>Questions and answers</h2>
   <ul>
-    <li><a href="/learn/files/">Files and folders</a></li>
+    <li><a href="/start/files/">Files and folders</a></li>
     <li><a href="/learn/answers/">How answers work</a></li>
     <li><a href="/learn/question-sets/">Question sets</a></li>
-    <li><a href="/learn/recording/">Recording and the answer cache</a></li>
   </ul>
   <p><a href="/functions/">Functions</a> lists each function's full reference. <a href="/refusals/">What it will not do</a> lists every line the tool will not cross.</p>
 </Base>

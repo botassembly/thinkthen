@@ -24,10 +24,10 @@ import { NOINDEX } from '../src/data/catalog.mjs';
 import { DIST, serveDist } from './serve-dist.mjs';
 
 const PAGES = [
-  '/', '/install/', '/languages/python/', '/install/backends/typesafe/',
+  '/', '/start/', '/languages/python/', '/install/backends/typesafe/',
   '/functions/', '/functions/filter/', '/functions/decide/',
   '/learn/', '/learn/beatles-bench/strings/', '/blog/introducing-thinkthen/',
-  '/learn/tutorial/', '/404.html',
+  '/start/tutorial/', '/404.html',
 ];
 const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo'];
 const BLOCKED = 'is-crawlable';

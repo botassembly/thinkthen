@@ -885,15 +885,33 @@ export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
 };
 
-// The captions for the Caching and replay page's scripts.
+// Captions for the Start pages' own examples, keyed by page and script name.
+export const START_SEE = {
+  start: {
+    '1-no-key': 'The answer comes from the recording in the sample. No key is set, and nothing is sent.',
+  },
+  'pay-once': {
+    '1-one-request': 'The plan packs all three messages into the first request. It sends nothing.',
+    '2-one-each': '--batch 1 puts one message in each request. The same three messages cost more input tokens.',
+  },
+  tune: {
+    '1-suggest': 'audit tunes a cut on part of the ten labelled songs and checks it on the rest, 20 times over. 0.78 is the steady cut. Nothing is sent.',
+    '2-diff': 'The same saved run, read at 0.5 and then at 0.78. Three songs turn from yes to no, and the right answers go from 5 to 8. No request is sent.',
+  },
+  'your-data': {
+    '1-field': 'Only each comment travels. The id column stays on your machine. The plan sends nothing.',
+  },
+};
+
+// The See before you send page's caption for install/backends/1-plan.
+export const PLAN_BODY_SEE = 'The plan names the address, the model, and the variable a key would come from. It holds no key.';
+
+// The captions for the caching scripts that Pay once and Replay show.
 export const CACHING_SEE = {
   '1-replay': 'The answers come from the folder. Nothing is sent, and no key is set.',
   '2-batch-one': 'One review a request reads the same saved answers and keeps the same two reviews.',
   '3-unused': 'The folder holds one answer the four reviews never asked for.',
 };
-
-// The Functional patterns page's caption for functions/filter/1-lines.
-export const FUNCTIONAL_PIPE_SEE = 'filter keeps the lines whose answer is yes, in order.';
 
 // The tutorial's caption for functions/decide/1-lines in its stream step.
 export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 3.";

@@ -218,7 +218,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
   )}
 
   {(functional || frames) && <h2 id="lists">Lists, data frames and streams</h2>}
-  {functional && <p>To apply one question to a list or a stream, read <a href="/learn/functional/">Functional patterns</a>.</p>}
+  {functional && <p>To apply one question to a list or a stream, read <a href="/start/pay-once/">Pay once</a>.</p>}
 
   {frames && (
     <>
@@ -247,7 +247,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
   {surface.settings && (
     <>
       <h2>Settings, caching and replay</h2>
-      <p>{parts(surface.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/install/settings/">Settings</a> page lists every setting. <a href="/learn/caching/">Caching and replay</a> shows how a test replays saved answers.</p>
+      <p>{parts(surface.settings).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/start/settings/">Settings</a> page lists every setting. <a href="/start/replay/">Replay in tests</a> shows how a test replays saved answers.</p>
     </>
   )}
 
@@ -299,7 +299,7 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
           {route === 'code' && <p>An omitted backend reads <code>THINKTHEN_BACKEND</code> and <code>THINKTHEN_BASE_URL</code>. Each named backend reads its own key variable. These constructors accept no key.</p>}
         </>
       )}
-      <p>The configuration file's <code>backend</code> names a default backend for every run. The <a href="/install/configuration/#configuration-file">Configuration</a> page shows the file.</p>
+      <p>The configuration file's <code>backend</code> names a default backend for every run. The <a href="/start/configuration/#configuration-file">Configuration</a> page shows the file.</p>
       <h3>OpenAI Decisions API from {surface.name}</h3>
       <p set:html={OPENAI_ANNOUNCED} />
     </>

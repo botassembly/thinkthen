@@ -1,0 +1,10 @@
+{
+  "q1": {
+    "type": "noul",
+    "instructions": "The text is \"Arrived a day early. Thank you!\". Is this a complaint?"
+  },
+  "q2": {
+    "type": "noul",
+    "instructions": "The text is \"The zipper broke the first time I used it.\". Is this a complaint?"
+  }
+}
