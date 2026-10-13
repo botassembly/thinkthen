@@ -272,6 +272,17 @@ impl RequestSession {
     pub fn try_read(&self) -> RequestSessionRead {
         self.queue.read()
     }
+    /// Block and transfer the next independent packet, or return End after drain.
+    /// Result interest wakes promptly on cancellation; Settlement drains final facts.
+    /// Queued output takes priority over cancellation. No provider work is joined.
+    /// # Errors
+    /// Refuses Input interest and returns cancellation when settlement is pending.
+    pub fn next_packet(
+        &self,
+        interest: RequestSessionWaitInterest,
+    ) -> Result<RequestSessionRead, Error> {
+        self.queue.next_packet(interest)
+    }
     /// Block without consuming output until requested readiness or timeout.
     /// Result waits ignore input room. Settlement waits ignore cancellation so
     /// callers can drain final facts after a cancellation wake. Cancellation

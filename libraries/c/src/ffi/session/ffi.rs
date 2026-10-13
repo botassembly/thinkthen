@@ -272,6 +272,35 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
     status: *mut u32,
     out: *mut *mut SessionResultHandle,
 ) -> std::ffi::c_int {
+    // SAFETY: the caller retains the owner and both writable slots.
+    unsafe { read_packet(session, status, out, None) }
+}
+
+/// Block and transfer one packet without polling or joining provider work.
+/// interest is WAIT_RESULT or WAIT_SETTLEMENT. RESULT wakes promptly on cancel
+/// with ECANCELLED; output already queued wins. SETTLEMENT drains later terminal
+/// facts after cancel. RESULT and END match try_read, including packet ownership.
+/// Errors preserve both output slots and affect only this thread's session error.
+/// # Safety
+/// The try_read slot obligations apply. Keep session live throughout the wait;
+/// concurrent cancel/push/finish are synchronized. Free after every call returns.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_next_packet(
+    session: *mut SessionHandle,
+    interest: u32,
+    status: *mut u32,
+    out: *mut *mut SessionResultHandle,
+) -> std::ffi::c_int {
+    // SAFETY: the caller retains the owner and both writable slots.
+    unsafe { read_packet(session, status, out, Some(interest)) }
+}
+
+unsafe fn read_packet(
+    session: *mut SessionHandle,
+    status: *mut u32,
+    out: *mut *mut SessionResultHandle,
+    interest: Option<u32>,
+) -> std::ffi::c_int {
     failures::session_call(|| {
         required(status)?;
         required(out)?;
@@ -280,7 +309,19 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
         }
         // SAFETY: the caller holds the session live during the operation.
         let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
-        let (state, owner) = match session.0.try_read() {
+        let packet = match interest {
+            None => session.0.try_read(),
+            Some(THINKTHEN_SESSION_WAIT_RESULT_V1) => session
+                .0
+                .next_packet(thinkthen::RequestSessionWaitInterest::Result)
+                .map_err(|error| error.kind())?,
+            Some(THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) => session
+                .0
+                .next_packet(thinkthen::RequestSessionWaitInterest::Settlement)
+                .map_err(|error| error.kind())?,
+            _ => return Err(ErrorKind::Usage.into()),
+        };
+        let (state, owner) = match packet {
             RequestSessionRead::Result(packet) => (
                 THINKTHEN_SESSION_RESULT_V1,
                 Box::into_raw(Box::new(SessionResultHandle {
