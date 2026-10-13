@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'tools'))
 from inputs import selected, versions  # noqa: E402
 from verify_footer import FOOTER_BYTES, verify_common  # noqa: E402
 
+PUBLIC_README = Path(__file__).resolve().parents[1] / 'README-PUBLIC.md'
+
 
 def verify_repository(source: Path, target: str, release: str) -> None:
     platform = selected(versions()[0], target)['platform']
@@ -48,8 +50,10 @@ def verify_repository(source: Path, target: str, release: str) -> None:
         if name not in files:
             raise ValueError(f'DuckDB repository is missing {name}')
     for name in files:
-        if name not in wanted and name not in ('LICENSE.thinkthen', 'LICENSE.duckdb', 'NOTICE', 'DEPENDENCIES.txt') and not name.startswith('LICENSES/'):
+        if name not in wanted and name not in ('README.md', 'LICENSE.thinkthen', 'LICENSE.duckdb', 'NOTICE', 'DEPENDENCIES.txt') and not name.startswith('LICENSES/'):
             raise ValueError(f'DuckDB repository has unexpected member {name}')
+    if 'README.md' in files and files['README.md'] != PUBLIC_README.read_bytes():
+        raise ValueError('DuckDB repository README.md differs from README-PUBLIC.md')
     for name, version in wanted.items():
         fields = verify_common(files[name], platform)
         for index, expected, label in ((4, release, 'extension version'), (5, version, 'DuckDB version')):
