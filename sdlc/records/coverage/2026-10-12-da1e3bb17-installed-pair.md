@@ -115,4 +115,3 @@ File counts below come from the second run.
 | crates/thinkthen/src/public/frame/typed_batches.rs | 61 |
 | crates/thinkthen/src/public/request/definition.rs | 60 |
 | libraries/c/src/current/question.rs | 58 |
-
