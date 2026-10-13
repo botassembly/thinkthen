@@ -2,6 +2,7 @@
 """Real process regressions for shared compiler admission and ownership."""
 import ctypes
 import fcntl
+import json
 import os
 from pathlib import Path
 import signal
@@ -163,6 +164,58 @@ class Admission(unittest.TestCase):
                     ' assert (info.st_dev,info.st_ino)!=(lock.st_dev,lock.st_ino)')
             child = self.launch('descriptor', command=[sys.executable, '-c', code, str(self.lock)])
             self.assertEqual(child.wait(timeout=2), 0)
+
+    def test_library_wrapper_preserves_shell_arguments_and_owned_build_environment(self):
+        scripts = self.root / 'scripts'
+        scripts.mkdir()
+        for name in ('heavy-lock', 'build-admission.py', 'allow-list'):
+            (scripts / name).write_bytes(HELPER.with_name(name).read_bytes())
+        caller = self.root / 'library-check.sh'
+        output = self.root / 'output'
+        caller.write_text("""#!/bin/bash
+set -eu
+unset THINKTHEN_API_KEY
+heavy_scripts=$1
+heavy_library=1
+heavy_shell=/bin/bash
+heavy_caller=$0
+. "$heavy_scripts/heavy-lock"
+mkdir -p "$CARGO_TARGET_DIR"
+cc -x c -o "$CARGO_TARGET_DIR/probe" - <<'SOURCE'
+int main(void) { return 0; }
+SOURCE
+"$CARGO_TARGET_DIR/probe"
+python3 - "$2" "$3" <<'COMPILER'
+import json,os,pathlib,signal,sys
+assert signal.pthread_sigmask(signal.SIG_BLOCK,set()) == set()
+assert 'THINKTHEN_API_KEY' not in os.environ
+names = ('CARGO_TARGET_DIR','THINKTHEN_TEST_PROFILE','THINKTHEN_ARTIFACT','THINKTHEN_HEAVY_LOCK_HELD')
+pathlib.Path(sys.argv[1]).write_text(json.dumps([sys.argv[2],*[os.environ[name] for name in names]]))
+COMPILER
+[[ -n "$BASH_VERSION" ]]
+exit 23
+""")
+        env = {'PATH': os.environ['PATH'], 'THINKTHEN_HEAVY_LOCK': str(self.lock),
+               'CARGO_TARGET_DIR': str(self.root / 'target'),
+               'THINKTHEN_TEST_PROFILE': 'full', 'THINKTHEN_ARTIFACT': 'owned archive',
+               'THINKTHEN_API_KEY': 'fake-library-boundary'}
+        result = subprocess.run(['/bin/bash', str(caller), str(scripts), str(output), 'two words'], env=env, timeout=3)
+        self.assertEqual(result.returncode, 23)
+        self.assertTrue(os.access(self.root / 'target/probe', os.X_OK))
+        self.assertEqual(json.loads(output.read_text()), ['two words', env['CARGO_TARGET_DIR'], 'full', 'owned archive', str(self.lock)])
+        # The existing standalone shell entry still passes through admission.
+        self.assertEqual(subprocess.run(['/bin/sh', str(scripts / 'heavy-lock')], env=env, timeout=3).returncode, 0)
+        rung = scripts / 'rung'
+        rung.write_text('''set -eu
+. "$(dirname -- "$0")/heavy-lock"
+python3 - <<'BOUNDARY'
+import os
+assert 'THINKTHEN_API_KEY' not in os.environ
+assert 'THINKTHEN_TEST_PROFILE' not in os.environ
+assert 'THINKTHEN_ARTIFACT' not in os.environ
+BOUNDARY
+''')
+        self.assertEqual(subprocess.run(['/bin/sh', str(rung)], env=env, timeout=3).returncode, 0)
 
     def test_compilers_keep_cache_mutation_lock_exclusive(self):
         cache = self.root / 'cache'
