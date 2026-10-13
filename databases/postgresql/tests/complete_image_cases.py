@@ -31,9 +31,9 @@ def main():
                 out, err = sql(host.socket, "SET thinkthen.model='d1'", statement)
                 assert not err, (out, err)
                 return out
-            query('CREATE TABLE images(ordinal integer, image thinkthen_image_value)')
-            query('INSERT INTO images SELECT n, (ARRAY[' + images + '])[n] FROM generate_series(1,3) n')
-            source = '(SELECT array_agg(image ORDER BY ordinal) FROM images)'
+            query('CREATE TABLE complete_images(ordinal integer, image thinkthen_image_value)')
+            query('INSERT INTO complete_images SELECT n, (ARRAY[' + images + '])[n] FROM generate_series(1,3) n')
+            source = '(SELECT array_agg(image ORDER BY ordinal) FROM complete_images)'
             def complete(options):
                 controls = {'record': '', 'replay': '', 'max_requests_total': -1, 'max_retries': 0}
                 controls.update(json.loads(options) if options is not None else {})

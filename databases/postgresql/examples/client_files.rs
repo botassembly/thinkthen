@@ -23,7 +23,7 @@ fn number(value: &Value, field: &str) -> Result<usize, Box<dyn Error>> {
 
 fn sends(count: u64) -> String {
     format!(
-        "DO $counts$ BEGIN IF (thinkthen_usage()->>'requests_sent')::bigint IS DISTINCT FROM {count} THEN RAISE EXCEPTION 'unexpected cumulative request count'; END IF; END $counts$;"
+        "DO $counts$ BEGIN IF (SELECT requests_sent FROM thinkthen_usage()) IS DISTINCT FROM {count} THEN RAISE EXCEPTION 'unexpected cumulative request count'; END IF; END $counts$;"
     )
 }
 
