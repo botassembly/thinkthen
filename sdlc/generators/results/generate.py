@@ -560,7 +560,7 @@ def main():
         filename = 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart'
         outputs = {filename: result}
         if args.inputs:
-            outputs['calls_generated.dart'] = dart.calls(definitions)
+            outputs['calls_generated.dart'] = dart.calls(definitions, prepare(graph(json.loads(args.schema.read_text()), ('completesessionPacket',))))
         for filename, result in outputs.items():
             output = output_path(ROOT, 'dart', filename)
             result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
