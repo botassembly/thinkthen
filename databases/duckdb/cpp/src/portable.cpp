@@ -464,7 +464,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, members := NULL, settings := NULL" + PortableOptionParameters() + ") AS "
 		                      "thinkthen_native_" + name + "(question, input, "
 		                      "CASE WHEN typeof(members) = 'VARCHAR[]' THEN CAST(to_json(members) AS VARCHAR) ELSE NULL END, "
-		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN members ELSE settings END") + ", "
+		                      + PortableOptions("CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END") + ", "
 		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))", purpose);
 	}
 	RegisterMacro(loader, "CREATE MACRO thinkthen_rank(question, keyed_json, settings := NULL" + PortableOptionParameters() + ") "
