@@ -1,6 +1,6 @@
 # ThinkThen for Swift
 
-ThinkThen puts ten functions on top of any model: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Your code branches on typed answers, gets not sure instead of a guess, packs many records into few requests, and caches each question so you pay once. Tests replay saved answers with no key or network. Use Jev, OpenAI or a local model from every language and database.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 ```sh
 tar -xzf thinkthen-swift-0.2.0-TARGET.tar.gz
@@ -12,12 +12,37 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```swift
 import ThinkThen
+@main enum RegistryExample {
+    static func main() async throws {
+        let client = try Client()
+        defer { client.close() }
+        let teams = InputOrderedMap<InputAuthoredDescription>([
+            .init("billing", .alternative0("Invoices, fees, and refunds.")),
+            .init("shipping", .alternative0("Parcels and delivery.")),
+            .init("account", .alternative0("Logins and passwords."))])
+        let teamQuestion = InputRequestQuestion.definition(InputRequestQuestionDefinition(value:
+            .alternative1(InputRequestDefinitionAuthoredChoose(choose: .alternative0("Which team owns this?"), options: .value(.alternative1(teams))))))
+        for text in ["Please refund my order. It arrived broken.",
+                     "Thanks for the quick help yesterday!", "I want to send this back."] {
+            let refund = try await client.decideAnswer(.text("Does the customer ask for a refund?"), input: .text(text))
+            print(refund.map { $0 ? "true" : "false" } ?? "not sure")
+        }
+        for text in ["Please refund the extra fee on my invoice.",
+                     "My parcel went to the wrong address.", "I cannot reset my password."] {
+            let team = try await client.chooseAnswer(teamQuestion, input: .text(text))
+            print(team ?? "not sure")
+        }
+    }
+}
+```
 
-let client = try Client()
-defer { client.close() }
-let answer = try await client.decideAnswer(.text("Does this ask for a refund?"),
-                                         input: .text("Please refund my order."))
-print(answer as Any)
+```text
+true
+false
+true
+billing
+shipping
+account
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

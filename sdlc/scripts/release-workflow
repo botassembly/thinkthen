@@ -815,6 +815,7 @@ draft)
 		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
 		python3 sdlc/scripts/registry-readmes.py auto "$package"
 	done
+	python3 sdlc/scripts/registry-readmes.py examples "$files"
 	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
 	if [ "$mode" = rehearse ]; then
 		# GitHub names a missing tag in a draft but should create its ref only

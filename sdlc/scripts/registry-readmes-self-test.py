@@ -109,6 +109,40 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'missing-or-repeated-member'):
                 readmes.check_package('typescript', package)
 
+    def test_example_checks_actual_page_and_refuses_single_function(self):
+        filename, code, output = readmes.example('python')
+        self.assertEqual(filename, 'sample.py')
+        self.assertIn('engine.decide(', code)
+        self.assertIn('engine.choose(', code)
+        self.assertEqual(output, 'True\nFalse\nTrue\nbilling\nshipping\naccount\n')
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            page = root / 'libraries/python/README-PUBLIC.md'
+            page.parent.mkdir(parents=True)
+            page.write_text('```python\nprint(engine.decide("Refund?", "Refund please.").value)\n```\n')
+            with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
+                readmes.example('python', root)
+
+    def test_release_refuses_when_examples_cannot_run(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            with self.assertRaisesRegex(readmes.Refusal, 'missing-or-ambiguous-example-package: command') as error:
+                readmes.check_examples(Path(scratch))
+            self.assertIn('example-needs-two-functions: typescript', str(error.exception))
+            self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
+
+    def test_replay_refuses_a_command_that_does_not_run(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            packages = tree / 'packages'; packages.mkdir()
+            package = packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz')
+            archive(package, {'README.md': readmes.source('command').read_bytes(),
+                              'thinkthen': b'#!/bin/sh\nexit 77\n'})
+            archive(packages / 'thinkthen-first-run.tar.gz', {'thinkthen-first-run/report.txt': b'fixture',
+                    'thinkthen-first-run/recording/thinkthen.jsonl': b''})
+            work = tree / 'work'; work.mkdir()
+            with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command'):
+                readmes.run_example('command', packages, work)
+
 
 if __name__ == '__main__':
     unittest.main()
