@@ -15,8 +15,8 @@ static class CarrierChecks
   Refuses(()=>((IDictionary<string,double>)choice.Probabilities).Clear());
   using var unknown=JsonDocument.Parse("{\"kind\":\"other\"}");Refuses(()=>Answer.Read(unknown.RootElement));
   using var nullOdds=JsonDocument.Parse("{\"kind\":\"yes_no\",\"probability\":null}");Refuses(()=>_=((AnswerYesNo)Answer.Read(nullOdds.RootElement)).Probability);
-  var question=new InputRequestQuestionFile {Path="β.json"};var source=new InputRequestInputSource {Source=new InputRequestSource {Paths=new[]{"β.png","β.png"},Media=new InputReaderMediaAlternative1(),Reading=new InputRequestReader {Unit=new InputSourceUnitAlternative2()}}};
-  var request=new InputRequest {Schema=new InputRequestVersionAlternative0(),Call=new InputRequestCall { Function = new InputRequestFunctionDecide(),Question=question,Input=source,Options=new InputRequestOptions {None=false}}};
+  var question=new InputRequestQuestionFile {Path="β.json"};var source=new InputRequestInputSource {Source=new InputRequestSource {Paths=new[]{"β.png","β.png"},Media=new InputReaderMediaImage(),Reading=new InputRequestReader {Unit=new InputSourceUnitFile()}}};
+  var request=new InputRequest {Schema=new InputRequestVersionThinkthenRequest1(),Call=new InputRequestCall { Function = new InputRequestFunctionDecide(),Question=question,Input=source,Options=new InputRequestOptions {None=false}}};
   using var stream=new MemoryStream();using(var writer=new Utf8JsonWriter(stream))request.Write(writer);using var input=JsonDocument.Parse(stream.ToArray());
   Check(input.RootElement.GetProperty("call").GetProperty("input").GetProperty("source").GetProperty("paths").GetArrayLength()==2);
   foreach(string member in new[]{"true","null","\"billing\"","[\"billing\",\"urgent\"]","1.2","{\"failed\":{\"kind\":\"backend\",\"cause\":\"missing_probability\",\"later\":1}}"}){using var value=JsonDocument.Parse(member);Check(AnnotatedField.Read(value.RootElement).ToJsonString()==member);}

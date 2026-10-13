@@ -99,7 +99,7 @@ public sealed class AnnotationMemberAnswerId : AnnotationMember
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Request => RequiredElement("request").GetString()!;
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
@@ -113,7 +113,7 @@ public sealed class AnnotationMemberFailureId : AnnotationMember
     public Failure Failure => new Failure(RequiredElement("failure"));
     public string FailureId => RequiredElement("failure_id").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Request => RequiredElement("request").GetString()!;
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
@@ -208,7 +208,7 @@ public sealed class AtomicArrayOfString : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -228,7 +228,7 @@ public sealed class AtomicDecideValue : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -248,7 +248,7 @@ public sealed class AtomicNonZeroUsize : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -268,7 +268,7 @@ public sealed class AtomicNullableString : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -288,7 +288,7 @@ public sealed class AtomicBoolean : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -308,7 +308,7 @@ public sealed class AtomicDouble : ResultObject
     public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
@@ -491,7 +491,7 @@ public sealed class Find : ResultObject
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
-    public Question2 Question => new Question2(RequiredElement("question"));
+    public FindQuestionDocument Question => new FindQuestionDocument(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public Presence<JsonElement> Value => RequiredNullable<JsonElement>("value", member => member.Clone());
@@ -751,196 +751,11 @@ public sealed class RankMemberResult : ResultObject
     public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
     member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public ulong Value => RequiredElement("value").GetUInt64();
-}
-public abstract class Question : ResultObject
-{
-    protected Question(JsonElement document) : base(document) {
-    }
-    public static Question Read(JsonElement document)
-    {
-        Question? result = null;
-        if (document.TryGetProperty("verb", out var tagQuestionDecide) && tagQuestionDecide.ValueKind == JsonValueKind.String && tagQuestionDecide.GetString() == "decide")
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new QuestionDecide(document);
-        }
-        if (document.TryGetProperty("verb", out var tagQuestionChoose) && tagQuestionChoose.ValueKind == JsonValueKind.String && tagQuestionChoose.GetString() == "choose")
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new QuestionChoose(document);
-        }
-        if (document.TryGetProperty("verb", out var tagQuestionTag) && tagQuestionTag.ValueKind == JsonValueKind.String && tagQuestionTag.GetString() == "tag")
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new QuestionTag(document);
-        }
-        if (document.TryGetProperty("verb", out var tagQuestionScore) && tagQuestionScore.ValueKind == JsonValueKind.String && tagQuestionScore.GetString() == "score")
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new QuestionScore(document);
-        }
-        return result ?? throw new JsonException("Unknown result variant.");
-    }
-}
-public sealed class Question2 : ResultObject
-{
-    public Question2(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public bool None => RequiredElement("none").GetBoolean();
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public JsonElement Text => RequiredElement("text").Clone();
-    public string Verb => RequiredElement("verb").GetString()!;
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-}
-public sealed class Question3 : ResultObject
-{
-    public Question3(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<JsonElement> EntityDefinition => Optional<JsonElement>("entity_definition",
-    member => member.Clone());
-    public Presence<JsonElement> Instructions => Optional<JsonElement>("instructions", member => member.Clone());
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public IReadOnlyDictionary<string, JsonElement> Kinds => new ReadOnlyDictionary<string,
-    JsonElement>(RequiredElement("kinds").EnumerateObject().ToDictionary(entry0 => entry0.Name,
-    entry0 => entry0.Value.Clone(), StringComparer.Ordinal));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<RecognitionMode> Mode => Optional<RecognitionMode>("mode", member => new RecognitionMode(member.GetString()!));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<Threshold> RelationThreshold => Optional<Threshold>("relation_threshold",
-    member => global::ThinkThen.Results.Threshold.Read(member));
-    public Presence<IReadOnlyList<RelationRule>> Relations => Optional<IReadOnlyList<RelationRule>>("relations",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray()));
-    public Presence<uint> SnippetPieces => Optional<uint>("snippet_pieces", member => member.GetUInt32());
-    public Presence<RecognitionStageContext> StageContext => Optional<RecognitionStageContext>("stage_context",
-    member => new RecognitionStageContext(member));
-    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
-    public Verb Verb => new Verb(RequiredElement("verb").GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-}
-public sealed class Question4 : ResultObject
-{
-    public Question4(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<RelateFields> Fields => RequiredNullable<RelateFields>("fields", member => new RelateFields(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public IReadOnlyList<RelationRule> Relations => Array.AsReadOnly(RequiredElement("relations").EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray());
-    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
-    public string Verb => RequiredElement("verb").GetString()!;
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-}
-public sealed class QuestionChoose : Question
-{
-    public QuestionChoose(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-    public IReadOnlyList<string> Options => Array.AsReadOnly(RequiredElement("options").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
-    public JsonElement Text => RequiredElement("text").Clone();
-    public string Verb => RequiredElement("verb").GetString()!;
-}
-public sealed class QuestionDecide : Question
-{
-    public QuestionDecide(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-    public Presence<JsonElement> False => Optional<JsonElement>("false", member => member.Clone());
-    public JsonElement Text => RequiredElement("text").Clone();
-    public Presence<JsonElement> True => Optional<JsonElement>("true", member => member.Clone());
-    public string Verb => RequiredElement("verb").GetString()!;
-}
-public sealed class QuestionScore : Question
-{
-    public QuestionScore(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-    public IReadOnlyList<string> Levels => Array.AsReadOnly(RequiredElement("levels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
-    public JsonElement Text => RequiredElement("text").Clone();
-    public string Verb => RequiredElement("verb").GetString()!;
-}
-public sealed class QuestionTag : Question
-{
-    public QuestionTag(JsonElement document) : base(document) {
-    }
-    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
-    member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
-    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
-    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
-    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
-    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
-    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
-    public IReadOnlyList<string> Labels => Array.AsReadOnly(RequiredElement("labels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
-    public JsonElement Text => RequiredElement("text").Clone();
-    public string Verb => RequiredElement("verb").GetString()!;
 }
 public sealed class Recognition : ResultObject
 {
@@ -955,7 +770,7 @@ public sealed class Recognition : ResultObject
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
-    public Question3 Question => new Question3(RequiredElement("question"));
+    public RecognizeQuestionDocument Question => new RecognizeQuestionDocument(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Recognize Value => global::ThinkThen.Results.Recognize.Read(RequiredElement("value"));
@@ -1051,7 +866,7 @@ public sealed class Relation : ResultObject
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
-    public Question4 Question => new Question4(RequiredElement("question"));
+    public RelateQuestionDocument Question => new RelateQuestionDocument(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public IReadOnlyList<RelatedEntityEdge> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new RelatedEntityEdge(item0)).ToArray());
 }
@@ -1135,7 +950,7 @@ public sealed class RelationMemberAnswerId : RelationMember
     public RelationDirection Direction => new RelationDirection(RequiredElement("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(RequiredElement("method").GetString()!);
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Reads => RequiredElement("reads").GetString()!;
     public string Relation => RequiredElement("relation").GetString()!;
@@ -1157,7 +972,7 @@ public sealed class RelationMemberFailureId : RelationMember
     public RelationDirection Direction => new RelationDirection(RequiredElement("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(RequiredElement("method").GetString()!);
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public string Reads => RequiredElement("reads").GetString()!;
     public string Relation => RequiredElement("relation").GetString()!;
@@ -1525,6 +1340,26 @@ public sealed class FindAnswer : ResultObject
     double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name,
     entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
+public sealed class FindQuestionDocument : ResultObject
+{
+    public FindQuestionDocument(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public bool None => RequiredElement("none").GetBoolean();
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public JsonElement Text => RequiredElement("text").Clone();
+    public string Verb => RequiredElement("verb").GetString()!;
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+}
 public sealed class NameOdds : ResultObject
 {
     public NameOdds(JsonElement document) : base(document) {
@@ -1584,6 +1419,117 @@ public sealed class ProfileWarning : ResultObject
     public string Running => RequiredElement("running").GetString()!;
     public string TunedFor => RequiredElement("tuned_for").GetString()!;
 }
+public abstract class QuestionDocument : ResultObject
+{
+    protected QuestionDocument(JsonElement document) : base(document) {
+    }
+    public static QuestionDocument Read(JsonElement document)
+    {
+        QuestionDocument? result = null;
+        if (document.TryGetProperty("verb", out var tagQuestionDocumentDecide) && tagQuestionDocumentDecide.ValueKind == JsonValueKind.String && tagQuestionDocumentDecide.GetString() == "decide")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionDocumentDecide(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionDocumentChoose) && tagQuestionDocumentChoose.ValueKind == JsonValueKind.String && tagQuestionDocumentChoose.GetString() == "choose")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionDocumentChoose(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionDocumentTag) && tagQuestionDocumentTag.ValueKind == JsonValueKind.String && tagQuestionDocumentTag.GetString() == "tag")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionDocumentTag(document);
+        }
+        if (document.TryGetProperty("verb", out var tagQuestionDocumentScore) && tagQuestionDocumentScore.ValueKind == JsonValueKind.String && tagQuestionDocumentScore.GetString() == "score")
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new QuestionDocumentScore(document);
+        }
+        return result ?? throw new JsonException("Unknown result variant.");
+    }
+}
+public sealed class QuestionDocumentChoose : QuestionDocument
+{
+    public QuestionDocumentChoose(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+    public IReadOnlyList<string> Options => Array.AsReadOnly(RequiredElement("options").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => RequiredElement("text").Clone();
+    public string Verb => RequiredElement("verb").GetString()!;
+}
+public sealed class QuestionDocumentDecide : QuestionDocument
+{
+    public QuestionDocumentDecide(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+    public Presence<JsonElement> False => Optional<JsonElement>("false", member => member.Clone());
+    public JsonElement Text => RequiredElement("text").Clone();
+    public Presence<JsonElement> True => Optional<JsonElement>("true", member => member.Clone());
+    public string Verb => RequiredElement("verb").GetString()!;
+}
+public sealed class QuestionDocumentScore : QuestionDocument
+{
+    public QuestionDocumentScore(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+    public IReadOnlyList<string> Levels => Array.AsReadOnly(RequiredElement("levels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => RequiredElement("text").Clone();
+    public string Verb => RequiredElement("verb").GetString()!;
+}
+public sealed class QuestionDocumentTag : QuestionDocument
+{
+    public QuestionDocumentTag(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+    public IReadOnlyList<string> Labels => Array.AsReadOnly(RequiredElement("labels").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
+    public JsonElement Text => RequiredElement("text").Clone();
+    public string Verb => RequiredElement("verb").GetString()!;
+}
 public abstract class Recognize : ResultObject
 {
     protected Recognize(JsonElement document) : base(document) {
@@ -1616,6 +1562,39 @@ public sealed class RecognizeAnswer : ResultObject
     public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
     public IReadOnlyList<RecognitionProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new RecognitionProposal(item0)).ToArray());
 }
+public sealed class RecognizeQuestionDocument : ResultObject
+{
+    public RecognizeQuestionDocument(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<JsonElement> EntityDefinition => Optional<JsonElement>("entity_definition",
+    member => member.Clone());
+    public Presence<JsonElement> Instructions => Optional<JsonElement>("instructions", member => member.Clone());
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public IReadOnlyDictionary<string, JsonElement> Kinds => new ReadOnlyDictionary<string,
+    JsonElement>(RequiredElement("kinds").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.Clone(), StringComparer.Ordinal));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<RecognitionMode> Mode => Optional<RecognitionMode>("mode", member => new RecognitionMode(member.GetString()!));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public Presence<Threshold> RelationThreshold => Optional<Threshold>("relation_threshold",
+    member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<IReadOnlyList<RelationRule>> Relations => Optional<IReadOnlyList<RelationRule>>("relations",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray()));
+    public Presence<uint> SnippetPieces => Optional<uint>("snippet_pieces", member => member.GetUInt32());
+    public Presence<RecognitionStageContext> StageContext => Optional<RecognitionStageContext>("stage_context",
+    member => new RecognitionStageContext(member));
+    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
+    public Verb Verb => new Verb(RequiredElement("verb").GetString()!);
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
+}
 public sealed class RecognizeEntities : Recognize
 {
     public RecognizeEntities(JsonElement document) : base(document) {
@@ -1637,6 +1616,27 @@ public sealed class RelateFields : ResultObject
     }
     public string Kind => RequiredElement("kind").GetString()!;
     public string Name => RequiredElement("name").GetString()!;
+}
+public sealed class RelateQuestionDocument : ResultObject
+{
+    public RelateQuestionDocument(JsonElement document) : base(document) {
+    }
+    public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<RelateFields> Fields => RequiredNullable<RelateFields>("fields", member => new RelateFields(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
+    public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
+    public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
+    public IReadOnlyList<RelationRule> Relations => Array.AsReadOnly(RequiredElement("relations").EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray());
+    public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
+    public string Verb => RequiredElement("verb").GetString()!;
+    public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
 public sealed class RelatedEntity : ResultObject
 {
@@ -2175,7 +2175,7 @@ public sealed class SessionQuestionDetail : ResultObject
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
     public Presence<SessionProbabilities> Probabilities => Optional<SessionProbabilities>("probabilities",
     member => global::ThinkThen.Results.SessionProbabilities.Read(member));
-    public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
+    public QuestionDocument Question => global::ThinkThen.Results.QuestionDocument.Read(RequiredElement("question"));
     public string QuestionSha256 => RequiredElement("question_sha256").GetString()!;
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public Presence<string> RawPick => Optional<string>("raw_pick", member => member.GetString()!);

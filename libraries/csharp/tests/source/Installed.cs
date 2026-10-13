@@ -16,7 +16,7 @@ static void CheckRows(OwnedCall call, int count, ulong sends) {
 }
 if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
     using var bulk = Engine.Open(new InputEngineSettings {
-        Batch = new InputRequestBatchAlternative1 { Value = "max" }, Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() }, Throttle = 1, MaxRetries = 0
+        Batch = new InputRequestBatchString { Value = "max" }, Cache = new InputCacheDocumentDisabledCache { Value = new InputDisabledCache() }, Throttle = 1, MaxRetries = 0
     });
     CheckRows(await bulk.DecideAsync(new InputRequestQuestionText { Text = "Is it relevant?" }, Records("alpha", "café-5544", "omega", "line 2907", "tail")),5,1);
     Console.WriteLine("PORTABLE_BATCH_CSHARP_PASS"); return;

@@ -9,7 +9,8 @@ import sys
 import subprocess
 import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from registry import OUTPUTS, invocations, output_path
+sys.path.insert(1, str(Path(__file__).resolve().parent / 'templates'))
+from registry import OUTPUTS, attributes, invocations, output_path
 from native import selected_functions, immediate_schema
 from formatting import format_source
 
@@ -328,7 +329,7 @@ def generated(schema, language="csharp"):
     spec.loader.exec_module(target)
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
-             'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint',
+             'completeUsage', 'completequestionDocument', 'completesourceRelationEndpoint',
              'completesessionPacket', 'completeplan')
     return target.render(prepare(graph(schema, roots)))
 
@@ -418,6 +419,14 @@ def main():
     args = parser.parse_args()
     if args.all:
         failures = []
+        attributes_path = ROOT / '.gitattributes'
+        attributes_source = attributes_path.read_text()
+        generated_attributes = attributes(attributes_source)
+        if args.check and attributes_source != generated_attributes:
+            print('generated Git attributes differ', file=sys.stderr)
+            failures.append('registry:attributes')
+        elif not args.check:
+            attributes_path.write_text(generated_attributes)
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
@@ -659,8 +668,15 @@ def main():
         import typescript
         definitions = prepare(graph(json.loads(args.schema.read_text()), typescript.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): typescript.runtime(definitions, version),
-                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): typescript.declarations(definitions)}
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        input_roots = getattr(typescript, 'INPUT_ROOTS', ())
+        input_definitions = prepare(graph(request_schema, input_roots))
+        runtime = (typescript.runtime(definitions, version, input_definitions) if input_roots
+                   else typescript.runtime(definitions, version))
+        declarations = (typescript.declarations(definitions, input_definitions) if input_roots
+                        else typescript.declarations(definitions))
+        outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): runtime,
+                   output_path(ROOT, 'typescript', 'results_generated.d.ts'): declarations}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
@@ -678,7 +694,8 @@ def main():
         definitions = prepare(graph(json.loads(args.schema.read_text()), ruby.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
-                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions)}
+                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions),
+                   output_path(ROOT, 'ruby', 'results_generated.rbs'): ruby.rbs(definitions)}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
@@ -751,7 +768,7 @@ def main():
         schema = json.loads((ROOT / 'specification/request.schema.json').read_text()) if args.inputs else json.loads(args.schema.read_text())
         if args.inputs:
             schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
-            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor')))
+            definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
             outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
         else:
             outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),

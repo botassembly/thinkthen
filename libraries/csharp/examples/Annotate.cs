@@ -4,7 +4,7 @@ using ThinkThen.Inputs;
 using var engine = Engine.Open();
 var question = new InputRequestQuestionDefinition { Value = new InputRequestDefinitionAnnotateDefinition {
     Questions = new Dictionary<string, InputAnnotateQuestion> { ["relevant"] = new InputAnnotateQuestionDecide {
-        Decide = new InputAuthoredQuestionTextAlternative0 { Value = "Is it?" }
+        Decide = new InputAuthoredQuestionTextString { Value = "Is it?" }
     } }
 } };
 var answer = (await engine.AnnotateAsync(question, new InputRequestInputText { Text = "example" })).Annotate();

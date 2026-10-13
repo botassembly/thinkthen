@@ -11,9 +11,13 @@ from pathlib import Path
 import re
 import tarfile
 import zipfile
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
+PROJECT = ET.parse(ROOT / "ThinkThen.csproj").getroot()
+README = ROOT / next(member.attrib["Include"] for member in PROJECT.findall("./ItemGroup/None")
+                     if member.attrib.get("Pack") == "true" and member.attrib.get("PackagePath") == PROJECT.findtext("./PropertyGroup/PackageReadmeFile"))
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 from native_guard import normalized_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
@@ -44,7 +48,7 @@ def inspect(header, package, native, expected=None):
         assert {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE"} <= members
         assert bundle.read('runtimes/linux-x64/native/libthinkthen.so') == NATIVE.read_bytes(), 'tampered packaged native asset'
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
-        assert bundle.read("README.md") == (ROOT / "README.md").read_bytes(), "stale package README"
+        assert bundle.read("README.md") == README.read_bytes(), "stale package README"
         for name in members:
             safe(name, name.encode() + bundle.read(name))
     with tarfile.open(fileobj=io.BytesIO(native), mode="r:gz") as bundle:
@@ -110,7 +114,7 @@ def abi_check(header, package):
     # Validate every installed SDK import against its generated C declaration.
     required_imports = set(actual['functions'])
     assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
-    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1'}
+    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1'}
     assert set(actual['records']) == carriers, 'unused native layouts retained'
     constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_LOAD_', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
     expected = abi.represented_abi(native, carriers, required_imports, constant_names)
@@ -141,7 +145,7 @@ def abi_plants(header):
         config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
         env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
                         DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
-        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n public nuint len;', 'public nuint len;\n public IntPtr data;'),
+        plants = [('field order', 'NativeBridge.g.cs', 'public IntPtr data;\n    public nuint len;', 'public nuint len;\n    public IntPtr data;'),
                   ('enum', 'NativeBridge.g.cs', 'Atomic = 1', 'Atomic = 19'),
                   ('return', 'NativeSession.cs', 'extern void thinkthen_session_cancel(', 'extern long thinkthen_session_cancel(')]
         for name, file, before, after in plants:

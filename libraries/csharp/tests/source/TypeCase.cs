@@ -8,7 +8,7 @@ if(args.Length==1 && args[0]=="carriers"){CarrierChecks.Run();Console.WriteLine(
 using var engine=Engine.Open(new InputEngineSettings());
 try {
  if(args[0]=="limits") {
-  using var capped=Engine.Open(new InputEngineSettings { MaxRequestsTotal=new InputEngineSettingsMaxRequestsTotalAlternative0 { Value=0 }, Cache=new InputCacheDocumentAlternative1 {Value=new InputDisabledCache()} });
+  using var capped=Engine.Open(new InputEngineSettings { MaxRequestsTotal=new InputEngineSettingsMaxRequestsTotalInteger { Value=0 }, Cache=new InputCacheDocumentDisabledCache {Value=new InputDisabledCache()} });
   try {await capped.DecideAsync(new InputRequestQuestionText {Text="Is it?"},new InputRequestInputText {Text="capped"});throw new Exception("cap admitted");}
   catch(Failure e) when(e.Kind==FailureKind.Usage && e.Message.Contains("process send budget")) {}
   catch(SessionFailure e) when(e.Failure.Error.Kind.Value=="usage" && e.Failure.Error.Message.Contains("process send budget")) {}
@@ -23,8 +23,8 @@ try {
  }
  if(args[0]=="plan") {
   using var doc=JsonDocument.Parse(args[1]);var root=doc.RootElement;
-  using var planned=Engine.Open(root.GetProperty("settings").TryGetProperty("batch",out var batch)?new InputEngineSettings {Batch=new InputRequestBatchAlternative0 {Value=batch.GetUInt64()}}:new InputEngineSettings());
-  var plan=planned.Plan(new InputRequest {Schema=new InputRequestVersionAlternative0(),Call=new InputRequestCall {Function=new InputRequestFunctionDecide(),Question=new InputRequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new InputRequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new InputRequestItem {Original=new InputRequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
+  using var planned=Engine.Open(root.GetProperty("settings").TryGetProperty("batch",out var batch)?new InputEngineSettings {Batch=new InputRequestBatchInteger {Value=batch.GetUInt64()}}:new InputEngineSettings());
+  var plan=planned.Plan(new InputRequest {Schema=new InputRequestVersionThinkthenRequest1(),Call=new InputRequestCall {Function=new InputRequestFunctionDecide(),Question=new InputRequestQuestionText {Text=root.GetProperty("question").GetString()!},Input=new InputRequestInputRecords {Items=root.GetProperty("input").EnumerateArray().Select(v=>new InputRequestItem {Original=new InputRequestOriginalText {Text=v.GetString()!}}).ToArray()}}});
   Console.WriteLine(plan.ToJsonString());return;
  }
  // Shared J1 fixtures are test data. Authored definitions go through the native parser;

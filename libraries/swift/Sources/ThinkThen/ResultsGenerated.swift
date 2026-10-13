@@ -109,7 +109,7 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
   public let `answer`: OwnedAnswer
   public let `answerId`: OwnedAnswerId
   public let `observations`: [OwnedObservation]
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionSources`: [OwnedQuestionSource]
   public let `request`: String
   public let `threshold`: OwnedThreshold?
@@ -117,7 +117,7 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
   public let `value`: OwnedValue
   public init(
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
-    `observations`: [OwnedObservation], `question`: OwnedReadableQuestion,
+    `observations`: [OwnedObservation], `question`: OwnedQuestionDocument,
     `questionSources`: [OwnedQuestionSource], `request`: String, `threshold`: OwnedThreshold?,
     `usage`: Presence<OwnedUsage> = .absent, `value`: OwnedValue
   ) {
@@ -143,7 +143,7 @@ public struct OwnedAnnotationMemberAnswerId: JSONRepresentable {
       answer: try OwnedAnswer.read(jsonRequired(object, "answer")),
       answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
       observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
       request: try String.read(jsonRequired(object, "request")),
       threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
@@ -177,14 +177,14 @@ public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
   public let `failure`: OwnedFailure
   public let `failureId`: OwnedFailureId
   public let `observations`: [OwnedObservation]
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionSources`: [OwnedQuestionSource]
   public let `request`: String
   public let `threshold`: OwnedThreshold?
   public let `usage`: Presence<OwnedUsage>
   public init(
     extensions: [String: JSONValue] = [:], `failure`: OwnedFailure, `failureId`: OwnedFailureId,
-    `observations`: [OwnedObservation], `question`: OwnedReadableQuestion,
+    `observations`: [OwnedObservation], `question`: OwnedQuestionDocument,
     `questionSources`: [OwnedQuestionSource], `request`: String, `threshold`: OwnedThreshold?,
     `usage`: Presence<OwnedUsage> = .absent
   ) {
@@ -209,7 +209,7 @@ public struct OwnedAnnotationMemberFailureId: JSONRepresentable {
       failure: try OwnedFailure.read(jsonRequired(object, "failure")),
       failureId: try OwnedFailureId.read(jsonRequired(object, "failure_id")),
       observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
       request: try String.read(jsonRequired(object, "request")),
       threshold: try OwnedThreshold?.read(jsonRequired(object, "threshold")),
@@ -487,7 +487,7 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -497,7 +497,7 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
     `value`: [String]
@@ -532,7 +532,7 @@ public struct OwnedAtomicArrayOfString: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -574,7 +574,7 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -584,7 +584,7 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
     `value`: OwnedDecideValue
@@ -619,7 +619,7 @@ public struct OwnedAtomicDecideValue: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -661,7 +661,7 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -671,7 +671,7 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: UInt64
   ) {
@@ -705,7 +705,7 @@ public struct OwnedAtomicNonZeroUsize: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -747,7 +747,7 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -757,7 +757,7 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?,
     `value`: OwnedAtomicNullableStringValue
@@ -792,7 +792,7 @@ public struct OwnedAtomicNullableString: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -849,7 +849,7 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -859,7 +859,7 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: Bool
   ) {
@@ -893,7 +893,7 @@ public struct OwnedAtomicBoolean: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -935,7 +935,7 @@ public struct OwnedAtomicDouble: JSONRepresentable {
   public let `input`: Presence<JSONValue>
   public let `members`: Presence<[OwnedRankMember]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionName`: Presence<String>
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
@@ -945,7 +945,7 @@ public struct OwnedAtomicDouble: JSONRepresentable {
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `members`: Presence<[OwnedRankMember]> = .absent,
-    `meta`: OwnedMeta, `question`: OwnedReadableQuestion,
+    `meta`: OwnedMeta, `question`: OwnedQuestionDocument,
     `questionName`: Presence<String> = .absent, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: OwnedThreshold?, `value`: Double
   ) {
@@ -979,7 +979,7 @@ public struct OwnedAtomicDouble: JSONRepresentable {
       input: try readPresence(object, "input", JSONValue.self),
       members: try readPresence(object, "members", [OwnedRankMember].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionName: try readPresence(object, "question_name", String.self),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
@@ -1584,7 +1584,7 @@ public struct OwnedFind: JSONRepresentable {
   public let `lastLine`: Presence<UInt64>
   public let `meta`: OwnedMeta
   public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedReadableQuestion2
+  public let `question`: OwnedFindQuestionDocument
   public let `schema`: OwnedVersion
   public let `threshold`: JSONValue
   public let `value`: JSONValue
@@ -1593,7 +1593,7 @@ public struct OwnedFind: JSONRepresentable {
     `candidates`: Presence<[OwnedFindCandidate]> = .absent, `file`: Presence<String> = .absent,
     `firstLine`: Presence<UInt64> = .absent, `index`: OwnedFindIndex,
     `lastLine`: Presence<UInt64> = .absent, `meta`: OwnedMeta,
-    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedReadableQuestion2,
+    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedFindQuestionDocument,
     `schema`: OwnedVersion, `threshold`: JSONValue, `value`: JSONValue
   ) {
     self.extensions = extensions
@@ -1628,7 +1628,7 @@ public struct OwnedFind: JSONRepresentable {
       lastLine: try readPresence(object, "last_line", UInt64.self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedReadableQuestion2.read(jsonRequired(object, "question")),
+      question: try OwnedFindQuestionDocument.read(jsonRequired(object, "question")),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       threshold: try JSONValue.read(jsonRequired(object, "threshold")),
       value: try JSONValue.read(jsonRequired(object, "value")))
@@ -2509,7 +2509,7 @@ public struct OwnedRankMemberResult: JSONRepresentable {
   public let `answerId`: OwnedAnswerId
   public let `images`: Presence<[OwnedImage]>
   public let `meta`: OwnedMeta
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
   public let `threshold`: JSONValue
@@ -2517,7 +2517,7 @@ public struct OwnedRankMemberResult: JSONRepresentable {
   public init(
     extensions: [String: JSONValue] = [:], `answer`: OwnedAnswer, `answerId`: OwnedAnswerId,
     `images`: Presence<[OwnedImage]> = .absent, `meta`: OwnedMeta,
-    `question`: OwnedReadableQuestion, `schema`: OwnedVersion,
+    `question`: OwnedQuestionDocument, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `threshold`: JSONValue, `value`: UInt64
   ) {
     self.extensions = extensions
@@ -2542,7 +2542,7 @@ public struct OwnedRankMemberResult: JSONRepresentable {
       answerId: try OwnedAnswerId.read(jsonRequired(object, "answer_id")),
       images: try readPresence(object, "images", [OwnedImage].self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
       threshold: try JSONValue.read(jsonRequired(object, "threshold")),
@@ -2568,665 +2568,6 @@ public struct OwnedRankMemberResult: JSONRepresentable {
     return .object(object)
   }
 }
-public indirect enum OwnedReadableQuestion: JSONRepresentable {
-  case `decide`(OwnedReadableQuestionDecide)
-  case `choose`(OwnedReadableQuestionChoose)
-  case `tag`(OwnedReadableQuestionTag)
-  case `score`(OwnedReadableQuestionScore)
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestion {
-    let object = try jsonObject(json)
-    if object["verb"] == .string("decide") {
-      return .`decide`(try OwnedReadableQuestionDecide.read(json))
-    }
-    if object["verb"] == .string("choose") {
-      return .`choose`(try OwnedReadableQuestionChoose.read(json))
-    }
-    if object["verb"] == .string("tag") { return .`tag`(try OwnedReadableQuestionTag.read(json)) }
-    if object["verb"] == .string("score") {
-      return .`score`(try OwnedReadableQuestionScore.read(json))
-    }
-    throw JSONConversionError("Unknown OwnedReadableQuestion alternative")
-  }
-  public var json: JSONValue {
-    switch self {
-    case .`decide`(let value): return value.json
-    case .`choose`(let value): return value.json
-    case .`tag`(let value): return value.json
-    case .`score`(let value): return value.json
-    }
-  }
-}
-public struct OwnedReadableQuestion2: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `none`: Bool
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `text`: JSONValue
-  public let `verb`: String
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `none`: Bool, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `text`: JSONValue, `verb`: String = "find",
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`none` = `none`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`text` = `text`
-    self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestion2 {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
-      "profile", "text", "verb", "wording_version",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      none: try Bool.read(jsonRequired(object, "none")),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
-      "profile", "text", "verb", "wording_version",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    object["none"] = `none`.json
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    object["text"] = `text`.json
-    object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestion3: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `entityDefinition`: Presence<JSONValue>
-  public let `instructions`: Presence<JSONValue>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `kinds`: [String: JSONValue]
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `mode`: Presence<OwnedRecognitionMode>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `relationThreshold`: Presence<OwnedThreshold>
-  public let `relations`: Presence<[OwnedRelationRule]>
-  public let `snippetPieces`: Presence<UInt64>
-  public let `stageContext`: Presence<OwnedRecognitionStageContext>
-  public let `threshold`: OwnedThreshold
-  public let `verb`: OwnedVerb
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `entityDefinition`: Presence<JSONValue> = .absent,
-    `instructions`: Presence<JSONValue> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent, `kinds`: [String: JSONValue],
-    `labelDetails`: Presence<[OwnedLabel]> = .absent,
-    `mode`: Presence<OwnedRecognitionMode> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `relationThreshold`: Presence<OwnedThreshold> = .absent,
-    `relations`: Presence<[OwnedRelationRule]> = .absent,
-    `snippetPieces`: Presence<UInt64> = .absent,
-    `stageContext`: Presence<OwnedRecognitionStageContext> = .absent, `threshold`: OwnedThreshold,
-    `verb`: OwnedVerb, `wordingVersion`: Presence<OwnedWordingVersion> = .absent
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`entityDefinition` = `entityDefinition`
-    self.`instructions` = `instructions`
-    self.`itemSchema` = `itemSchema`
-    self.`kinds` = `kinds`
-    self.`labelDetails` = `labelDetails`
-    self.`mode` = `mode`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`relationThreshold` = `relationThreshold`
-    self.`relations` = `relations`
-    self.`snippetPieces` = `snippetPieces`
-    self.`stageContext` = `stageContext`
-    self.`threshold` = `threshold`
-    self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestion3 {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
-      "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
-      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      entityDefinition: try readPresence(object, "entity_definition", JSONValue.self),
-      instructions: try readPresence(object, "instructions", JSONValue.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      kinds: try [String: JSONValue].read(jsonRequired(object, "kinds")),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      mode: try readPresence(object, "mode", OwnedRecognitionMode.self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      relationThreshold: try readPresence(object, "relation_threshold", OwnedThreshold.self),
-      relations: try readPresence(object, "relations", [OwnedRelationRule].self),
-      snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
-      stageContext: try readPresence(object, "stage_context", OwnedRecognitionStageContext.self),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
-      verb: try OwnedVerb.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
-      "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
-      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`entityDefinition`, "entity_definition", &object)
-    writePresence(`instructions`, "instructions", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    object["kinds"] = `kinds`.json
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`mode`, "mode", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    writePresence(`relationThreshold`, "relation_threshold", &object)
-    writePresence(`relations`, "relations", &object)
-    writePresence(`snippetPieces`, "snippet_pieces", &object)
-    writePresence(`stageContext`, "stage_context", &object)
-    object["threshold"] = `threshold`.json
-    object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestion4: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `fields`: OwnedRelateFields?
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `relations`: [OwnedRelationRule]
-  public let `threshold`: OwnedThreshold
-  public let `verb`: String
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent, `fields`: OwnedRelateFields?,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent, `relations`: [OwnedRelationRule],
-    `threshold`: OwnedThreshold, `verb`: String = "relate",
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`fields` = `fields`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`relations` = `relations`
-    self.`threshold` = `threshold`
-    self.`verb` = `verb`
-    self.`wordingVersion` = `wordingVersion`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestion4 {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
-      "profile", "relations", "threshold", "verb", "wording_version",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      fields: try OwnedRelateFields?.read(jsonRequired(object, "fields")),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      relations: try [OwnedRelationRule].read(jsonRequired(object, "relations")),
-      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
-      verb: try String.read(jsonRequired(object, "verb")),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
-      "profile", "relations", "threshold", "verb", "wording_version",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    object["fields"] = `fields`.json
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    object["relations"] = `relations`.json
-    object["threshold"] = `threshold`.json
-    object["verb"] = `verb`.json
-    writePresence(`wordingVersion`, "wording_version", &object)
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestionChoose: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public let `options`: [String]
-  public let `text`: JSONValue
-  public let `verb`: String
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `options`: [String],
-    `text`: JSONValue, `verb`: String = "choose"
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
-    self.`options` = `options`
-    self.`text` = `text`
-    self.`verb` = `verb`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestionChoose {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "options", "text", "verb",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
-      options: try [String].read(jsonRequired(object, "options")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      verb: try String.read(jsonRequired(object, "verb")))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "options", "text", "verb",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
-    object["options"] = `options`.json
-    object["text"] = `text`.json
-    object["verb"] = `verb`.json
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestionDecide: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public let `false`: Presence<JSONValue>
-  public let `text`: JSONValue
-  public let `true`: Presence<JSONValue>
-  public let `verb`: String
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent,
-    `false`: Presence<JSONValue> = .absent, `text`: JSONValue,
-    `true`: Presence<JSONValue> = .absent, `verb`: String = "decide"
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
-    self.`false` = `false`
-    self.`text` = `text`
-    self.`true` = `true`
-    self.`verb` = `verb`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestionDecide {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "false", "text", "true", "verb",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
-      false: try readPresence(object, "false", JSONValue.self),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      true: try readPresence(object, "true", JSONValue.self),
-      verb: try String.read(jsonRequired(object, "verb")))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "false", "text", "true", "verb",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
-    writePresence(`false`, "false", &object)
-    object["text"] = `text`.json
-    writePresence(`true`, "true", &object)
-    object["verb"] = `verb`.json
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestionScore: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public let `levels`: [String]
-  public let `text`: JSONValue
-  public let `verb`: String
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `levels`: [String],
-    `text`: JSONValue, `verb`: String = "score"
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
-    self.`levels` = `levels`
-    self.`text` = `text`
-    self.`verb` = `verb`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestionScore {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "levels", "text", "verb",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
-      levels: try [String].read(jsonRequired(object, "levels")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      verb: try String.read(jsonRequired(object, "verb")))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "levels", "text", "verb",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
-    object["levels"] = `levels`.json
-    object["text"] = `text`.json
-    object["verb"] = `verb`.json
-    return .object(object)
-  }
-}
-public struct OwnedReadableQuestionTag: JSONRepresentable {
-  public let extensions: [String: JSONValue]
-  private var _sourceJSON: JSONValue? = nil
-  public let `batch`: Presence<OwnedBatch>
-  public let `contextSchema`: Presence<OwnedInputDeclaration>
-  public let `itemSchema`: Presence<OwnedInputDeclaration>
-  public let `labelDetails`: Presence<[OwnedLabel]>
-  public let `model`: Presence<String>
-  public let `name`: Presence<OwnedQuestionName>
-  public let `on`: Presence<[String]>
-  public let `profile`: Presence<String>
-  public let `wordingVersion`: Presence<OwnedWordingVersion>
-  public let `labels`: [String]
-  public let `text`: JSONValue
-  public let `verb`: String
-  public init(
-    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
-    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
-    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
-    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
-    `profile`: Presence<String> = .absent,
-    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `labels`: [String],
-    `text`: JSONValue, `verb`: String = "tag"
-  ) {
-    self.extensions = extensions
-    self.`batch` = `batch`
-    self.`contextSchema` = `contextSchema`
-    self.`itemSchema` = `itemSchema`
-    self.`labelDetails` = `labelDetails`
-    self.`model` = `model`
-    self.`name` = `name`
-    self.`on` = `on`
-    self.`profile` = `profile`
-    self.`wordingVersion` = `wordingVersion`
-    self.`labels` = `labels`
-    self.`text` = `text`
-    self.`verb` = `verb`
-  }
-  public static func read(_ json: JSONValue) throws -> OwnedReadableQuestionTag {
-    let object = try jsonObject(json)
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "labels", "text", "verb",
-    ]
-    var value = Self(
-      extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", OwnedBatch.self),
-      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
-      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
-      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
-      model: try readPresence(object, "model", String.self),
-      name: try readPresence(object, "name", OwnedQuestionName.self),
-      on: try readPresence(object, "on", [String].self),
-      profile: try readPresence(object, "profile", String.self),
-      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
-      labels: try [String].read(jsonRequired(object, "labels")),
-      text: try JSONValue.read(jsonRequired(object, "text")),
-      verb: try String.read(jsonRequired(object, "verb")))
-    value._sourceJSON = json
-    return value
-  }
-  public var json: JSONValue {
-    if let _sourceJSON { return _sourceJSON }
-    let known: Set<String> = [
-      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
-      "wording_version", "labels", "text", "verb",
-    ]
-    var object = extensions.filter { !known.contains($0.key) }
-    writePresence(`batch`, "batch", &object)
-    writePresence(`contextSchema`, "context_schema", &object)
-    writePresence(`itemSchema`, "item_schema", &object)
-    writePresence(`labelDetails`, "label_details", &object)
-    writePresence(`model`, "model", &object)
-    writePresence(`name`, "name", &object)
-    writePresence(`on`, "on", &object)
-    writePresence(`profile`, "profile", &object)
-    writePresence(`wordingVersion`, "wording_version", &object)
-    object["labels"] = `labels`.json
-    object["text"] = `text`.json
-    object["verb"] = `verb`.json
-    return .object(object)
-  }
-}
 public struct OwnedRecognition: JSONRepresentable {
   public let extensions: [String: JSONValue]
   private var _sourceJSON: JSONValue? = nil
@@ -3239,7 +2580,7 @@ public struct OwnedRecognition: JSONRepresentable {
   public let `lastLine`: Presence<UInt64>
   public let `meta`: OwnedMeta
   public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedReadableQuestion3
+  public let `question`: OwnedRecognizeQuestionDocument
   public let `schema`: OwnedVersion
   public let `source`: Presence<OwnedPhysicalSource>
   public let `value`: OwnedRecognize
@@ -3249,7 +2590,7 @@ public struct OwnedRecognition: JSONRepresentable {
     `firstLine`: Presence<UInt64> = .absent, `index`: Presence<UInt64> = .absent,
     `input`: Presence<JSONValue> = .absent, `lastLine`: Presence<UInt64> = .absent,
     `meta`: OwnedMeta, `position`: Presence<OwnedPosition> = .absent,
-    `question`: OwnedReadableQuestion3, `schema`: OwnedVersion,
+    `question`: OwnedRecognizeQuestionDocument, `schema`: OwnedVersion,
     `source`: Presence<OwnedPhysicalSource> = .absent, `value`: OwnedRecognize
   ) {
     self.extensions = extensions
@@ -3284,7 +2625,7 @@ public struct OwnedRecognition: JSONRepresentable {
       lastLine: try readPresence(object, "last_line", UInt64.self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedReadableQuestion3.read(jsonRequired(object, "question")),
+      question: try OwnedRecognizeQuestionDocument.read(jsonRequired(object, "question")),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       source: try readPresence(object, "source", OwnedPhysicalSource.self),
       value: try OwnedRecognize.read(jsonRequired(object, "value")))
@@ -3580,7 +2921,7 @@ public struct OwnedRelation: JSONRepresentable {
   public let `lastLine`: Presence<UInt64>
   public let `meta`: OwnedMeta
   public let `position`: Presence<OwnedPosition>
-  public let `question`: OwnedReadableQuestion4
+  public let `question`: OwnedRelateQuestionDocument
   public let `schema`: OwnedVersion
   public let `value`: [OwnedRelatedEntityEdge]
   public init(
@@ -3589,7 +2930,7 @@ public struct OwnedRelation: JSONRepresentable {
     `index`: Presence<UInt64> = .absent, `input`: Presence<JSONValue> = .absent,
     `inputSources`: Presence<[OwnedSessionInputSource]> = .absent,
     `lastLine`: Presence<UInt64> = .absent, `meta`: OwnedMeta,
-    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedReadableQuestion4,
+    `position`: Presence<OwnedPosition> = .absent, `question`: OwnedRelateQuestionDocument,
     `schema`: OwnedVersion, `value`: [OwnedRelatedEntityEdge]
   ) {
     self.extensions = extensions
@@ -3625,7 +2966,7 @@ public struct OwnedRelation: JSONRepresentable {
       lastLine: try readPresence(object, "last_line", UInt64.self),
       meta: try OwnedMeta.read(jsonRequired(object, "meta")),
       position: try readPresence(object, "position", OwnedPosition.self),
-      question: try OwnedReadableQuestion4.read(jsonRequired(object, "question")),
+      question: try OwnedRelateQuestionDocument.read(jsonRequired(object, "question")),
       schema: try OwnedVersion.read(jsonRequired(object, "schema")),
       value: try [OwnedRelatedEntityEdge].read(jsonRequired(object, "value")))
     value._sourceJSON = json
@@ -3825,7 +3166,7 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
   public let `direction`: OwnedRelationDirection
   public let `method`: OwnedRelationMethod
   public let `observations`: [OwnedObservation]
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionSources`: [OwnedQuestionSource]
   public let `reads`: String
   public let `relation`: String
@@ -3841,7 +3182,7 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
   public init(
     extensions: [String: JSONValue] = [:], `direction`: OwnedRelationDirection,
     `method`: OwnedRelationMethod, `observations`: [OwnedObservation],
-    `question`: OwnedReadableQuestion, `questionSources`: [OwnedQuestionSource], `reads`: String,
+    `question`: OwnedQuestionDocument, `questionSources`: [OwnedQuestionSource], `reads`: String,
     `relation`: String, `request`: String, `source`: OwnedRelatedEntity,
     `target`: OwnedRelatedEntity?, `threshold`: OwnedThreshold,
     `usage`: Presence<OwnedUsage> = .absent, `accepted`: Bool, `answer`: OwnedAnswer,
@@ -3877,7 +3218,7 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
       direction: try OwnedRelationDirection.read(jsonRequired(object, "direction")),
       method: try OwnedRelationMethod.read(jsonRequired(object, "method")),
       observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
       reads: try String.read(jsonRequired(object, "reads")),
       relation: try String.read(jsonRequired(object, "relation")),
@@ -3933,7 +3274,7 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
   public let `direction`: OwnedRelationDirection
   public let `method`: OwnedRelationMethod
   public let `observations`: [OwnedObservation]
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionSources`: [OwnedQuestionSource]
   public let `reads`: String
   public let `relation`: String
@@ -3947,7 +3288,7 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
   public init(
     extensions: [String: JSONValue] = [:], `direction`: OwnedRelationDirection,
     `method`: OwnedRelationMethod, `observations`: [OwnedObservation],
-    `question`: OwnedReadableQuestion, `questionSources`: [OwnedQuestionSource], `reads`: String,
+    `question`: OwnedQuestionDocument, `questionSources`: [OwnedQuestionSource], `reads`: String,
     `relation`: String, `request`: String, `source`: OwnedRelatedEntity,
     `target`: OwnedRelatedEntity?, `threshold`: OwnedThreshold,
     `usage`: Presence<OwnedUsage> = .absent, `failure`: OwnedFailure, `failureId`: OwnedFailureId
@@ -3979,7 +3320,7 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
       direction: try OwnedRelationDirection.read(jsonRequired(object, "direction")),
       method: try OwnedRelationMethod.read(jsonRequired(object, "method")),
       observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
       reads: try String.read(jsonRequired(object, "reads")),
       relation: try String.read(jsonRequired(object, "relation")),
@@ -4946,6 +4287,89 @@ public struct OwnedFindAnswer: JSONRepresentable {
     return .object(object)
   }
 }
+public struct OwnedFindQuestionDocument: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `none`: Bool
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `text`: JSONValue
+  public let `verb`: String
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `none`: Bool, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent, `text`: JSONValue, `verb`: String = "find",
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`none` = `none`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`text` = `text`
+    self.`verb` = `verb`
+    self.`wordingVersion` = `wordingVersion`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedFindQuestionDocument {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
+      "profile", "text", "verb", "wording_version",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      none: try Bool.read(jsonRequired(object, "none")),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      text: try JSONValue.read(jsonRequired(object, "text")),
+      verb: try String.read(jsonRequired(object, "verb")),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "none", "on",
+      "profile", "text", "verb", "wording_version",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    object["none"] = `none`.json
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    object["text"] = `text`.json
+    object["verb"] = `verb`.json
+    writePresence(`wordingVersion`, "wording_version", &object)
+    return .object(object)
+  }
+}
 public struct OwnedNameOdds: JSONRepresentable {
   public let extensions: [String: JSONValue]
   private var _sourceJSON: JSONValue? = nil
@@ -5235,6 +4659,375 @@ public struct OwnedProfileWarning: JSONRepresentable {
     return .object(object)
   }
 }
+public indirect enum OwnedQuestionDocument: JSONRepresentable {
+  case `decide`(OwnedQuestionDocumentDecide)
+  case `choose`(OwnedQuestionDocumentChoose)
+  case `tag`(OwnedQuestionDocumentTag)
+  case `score`(OwnedQuestionDocumentScore)
+  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocument {
+    let object = try jsonObject(json)
+    if object["verb"] == .string("decide") {
+      return .`decide`(try OwnedQuestionDocumentDecide.read(json))
+    }
+    if object["verb"] == .string("choose") {
+      return .`choose`(try OwnedQuestionDocumentChoose.read(json))
+    }
+    if object["verb"] == .string("tag") { return .`tag`(try OwnedQuestionDocumentTag.read(json)) }
+    if object["verb"] == .string("score") {
+      return .`score`(try OwnedQuestionDocumentScore.read(json))
+    }
+    throw JSONConversionError("Unknown OwnedQuestionDocument alternative")
+  }
+  public var json: JSONValue {
+    switch self {
+    case .`decide`(let value): return value.json
+    case .`choose`(let value): return value.json
+    case .`tag`(let value): return value.json
+    case .`score`(let value): return value.json
+    }
+  }
+}
+public struct OwnedQuestionDocumentChoose: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `options`: [String]
+  public let `text`: JSONValue
+  public let `verb`: String
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `options`: [String],
+    `text`: JSONValue, `verb`: String = "choose"
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`wordingVersion` = `wordingVersion`
+    self.`options` = `options`
+    self.`text` = `text`
+    self.`verb` = `verb`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentChoose {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "options", "text", "verb",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      options: try [String].read(jsonRequired(object, "options")),
+      text: try JSONValue.read(jsonRequired(object, "text")),
+      verb: try String.read(jsonRequired(object, "verb")))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "options", "text", "verb",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    writePresence(`wordingVersion`, "wording_version", &object)
+    object["options"] = `options`.json
+    object["text"] = `text`.json
+    object["verb"] = `verb`.json
+    return .object(object)
+  }
+}
+public struct OwnedQuestionDocumentDecide: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `false`: Presence<JSONValue>
+  public let `text`: JSONValue
+  public let `true`: Presence<JSONValue>
+  public let `verb`: String
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent,
+    `false`: Presence<JSONValue> = .absent, `text`: JSONValue,
+    `true`: Presence<JSONValue> = .absent, `verb`: String = "decide"
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`wordingVersion` = `wordingVersion`
+    self.`false` = `false`
+    self.`text` = `text`
+    self.`true` = `true`
+    self.`verb` = `verb`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentDecide {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "false", "text", "true", "verb",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      false: try readPresence(object, "false", JSONValue.self),
+      text: try JSONValue.read(jsonRequired(object, "text")),
+      true: try readPresence(object, "true", JSONValue.self),
+      verb: try String.read(jsonRequired(object, "verb")))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "false", "text", "true", "verb",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    writePresence(`wordingVersion`, "wording_version", &object)
+    writePresence(`false`, "false", &object)
+    object["text"] = `text`.json
+    writePresence(`true`, "true", &object)
+    object["verb"] = `verb`.json
+    return .object(object)
+  }
+}
+public struct OwnedQuestionDocumentScore: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `levels`: [String]
+  public let `text`: JSONValue
+  public let `verb`: String
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `levels`: [String],
+    `text`: JSONValue, `verb`: String = "score"
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`wordingVersion` = `wordingVersion`
+    self.`levels` = `levels`
+    self.`text` = `text`
+    self.`verb` = `verb`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentScore {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "levels", "text", "verb",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      levels: try [String].read(jsonRequired(object, "levels")),
+      text: try JSONValue.read(jsonRequired(object, "text")),
+      verb: try String.read(jsonRequired(object, "verb")))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "levels", "text", "verb",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    writePresence(`wordingVersion`, "wording_version", &object)
+    object["levels"] = `levels`.json
+    object["text"] = `text`.json
+    object["verb"] = `verb`.json
+    return .object(object)
+  }
+}
+public struct OwnedQuestionDocumentTag: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public let `labels`: [String]
+  public let `text`: JSONValue
+  public let `verb`: String
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent,
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent, `labels`: [String],
+    `text`: JSONValue, `verb`: String = "tag"
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`wordingVersion` = `wordingVersion`
+    self.`labels` = `labels`
+    self.`text` = `text`
+    self.`verb` = `verb`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedQuestionDocumentTag {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "labels", "text", "verb",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self),
+      labels: try [String].read(jsonRequired(object, "labels")),
+      text: try JSONValue.read(jsonRequired(object, "text")),
+      verb: try String.read(jsonRequired(object, "verb")))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "item_schema", "label_details", "model", "name", "on", "profile",
+      "wording_version", "labels", "text", "verb",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    writePresence(`wordingVersion`, "wording_version", &object)
+    object["labels"] = `labels`.json
+    object["text"] = `text`.json
+    object["verb"] = `verb`.json
+    return .object(object)
+  }
+}
 public indirect enum OwnedRecognize: JSONRepresentable {
   case `alternative0`(OwnedRecognizeEntities)
   case `alternative1`(OwnedRecognizeModeProposals)
@@ -5292,6 +5085,125 @@ public struct OwnedRecognizeAnswer: JSONRepresentable {
     object["pairs"] = `pairs`.json
     object["pieces"] = `pieces`.json
     object["proposals"] = `proposals`.json
+    return .object(object)
+  }
+}
+public struct OwnedRecognizeQuestionDocument: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `entityDefinition`: Presence<JSONValue>
+  public let `instructions`: Presence<JSONValue>
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `kinds`: [String: JSONValue]
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `mode`: Presence<OwnedRecognitionMode>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `relationThreshold`: Presence<OwnedThreshold>
+  public let `relations`: Presence<[OwnedRelationRule]>
+  public let `snippetPieces`: Presence<UInt64>
+  public let `stageContext`: Presence<OwnedRecognitionStageContext>
+  public let `threshold`: OwnedThreshold
+  public let `verb`: OwnedVerb
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `entityDefinition`: Presence<JSONValue> = .absent,
+    `instructions`: Presence<JSONValue> = .absent,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent, `kinds`: [String: JSONValue],
+    `labelDetails`: Presence<[OwnedLabel]> = .absent,
+    `mode`: Presence<OwnedRecognitionMode> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent, `relationThreshold`: Presence<OwnedThreshold> = .absent,
+    `relations`: Presence<[OwnedRelationRule]> = .absent,
+    `snippetPieces`: Presence<UInt64> = .absent,
+    `stageContext`: Presence<OwnedRecognitionStageContext> = .absent, `threshold`: OwnedThreshold,
+    `verb`: OwnedVerb, `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`entityDefinition` = `entityDefinition`
+    self.`instructions` = `instructions`
+    self.`itemSchema` = `itemSchema`
+    self.`kinds` = `kinds`
+    self.`labelDetails` = `labelDetails`
+    self.`mode` = `mode`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`relationThreshold` = `relationThreshold`
+    self.`relations` = `relations`
+    self.`snippetPieces` = `snippetPieces`
+    self.`stageContext` = `stageContext`
+    self.`threshold` = `threshold`
+    self.`verb` = `verb`
+    self.`wordingVersion` = `wordingVersion`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedRecognizeQuestionDocument {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
+      "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
+      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      entityDefinition: try readPresence(object, "entity_definition", JSONValue.self),
+      instructions: try readPresence(object, "instructions", JSONValue.self),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      kinds: try [String: JSONValue].read(jsonRequired(object, "kinds")),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      mode: try readPresence(object, "mode", OwnedRecognitionMode.self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      relationThreshold: try readPresence(object, "relation_threshold", OwnedThreshold.self),
+      relations: try readPresence(object, "relations", [OwnedRelationRule].self),
+      snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
+      stageContext: try readPresence(object, "stage_context", OwnedRecognitionStageContext.self),
+      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
+      verb: try OwnedVerb.read(jsonRequired(object, "verb")),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "entity_definition", "instructions", "item_schema", "kinds",
+      "label_details", "mode", "model", "name", "on", "profile", "relation_threshold", "relations",
+      "snippet_pieces", "stage_context", "threshold", "verb", "wording_version",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    writePresence(`entityDefinition`, "entity_definition", &object)
+    writePresence(`instructions`, "instructions", &object)
+    writePresence(`itemSchema`, "item_schema", &object)
+    object["kinds"] = `kinds`.json
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`mode`, "mode", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    writePresence(`relationThreshold`, "relation_threshold", &object)
+    writePresence(`relations`, "relations", &object)
+    writePresence(`snippetPieces`, "snippet_pieces", &object)
+    writePresence(`stageContext`, "stage_context", &object)
+    object["threshold"] = `threshold`.json
+    object["verb"] = `verb`.json
+    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -5385,6 +5297,94 @@ public struct OwnedRelateFields: JSONRepresentable {
     var object = extensions.filter { !known.contains($0.key) }
     object["kind"] = `kind`.json
     object["name"] = `name`.json
+    return .object(object)
+  }
+}
+public struct OwnedRelateQuestionDocument: JSONRepresentable {
+  public let extensions: [String: JSONValue]
+  private var _sourceJSON: JSONValue? = nil
+  public let `batch`: Presence<OwnedBatch>
+  public let `contextSchema`: Presence<OwnedInputDeclaration>
+  public let `fields`: OwnedRelateFields?
+  public let `itemSchema`: Presence<OwnedInputDeclaration>
+  public let `labelDetails`: Presence<[OwnedLabel]>
+  public let `model`: Presence<String>
+  public let `name`: Presence<OwnedQuestionName>
+  public let `on`: Presence<[String]>
+  public let `profile`: Presence<String>
+  public let `relations`: [OwnedRelationRule]
+  public let `threshold`: OwnedThreshold
+  public let `verb`: String
+  public let `wordingVersion`: Presence<OwnedWordingVersion>
+  public init(
+    extensions: [String: JSONValue] = [:], `batch`: Presence<OwnedBatch> = .absent,
+    `contextSchema`: Presence<OwnedInputDeclaration> = .absent, `fields`: OwnedRelateFields?,
+    `itemSchema`: Presence<OwnedInputDeclaration> = .absent,
+    `labelDetails`: Presence<[OwnedLabel]> = .absent, `model`: Presence<String> = .absent,
+    `name`: Presence<OwnedQuestionName> = .absent, `on`: Presence<[String]> = .absent,
+    `profile`: Presence<String> = .absent, `relations`: [OwnedRelationRule],
+    `threshold`: OwnedThreshold, `verb`: String = "relate",
+    `wordingVersion`: Presence<OwnedWordingVersion> = .absent
+  ) {
+    self.extensions = extensions
+    self.`batch` = `batch`
+    self.`contextSchema` = `contextSchema`
+    self.`fields` = `fields`
+    self.`itemSchema` = `itemSchema`
+    self.`labelDetails` = `labelDetails`
+    self.`model` = `model`
+    self.`name` = `name`
+    self.`on` = `on`
+    self.`profile` = `profile`
+    self.`relations` = `relations`
+    self.`threshold` = `threshold`
+    self.`verb` = `verb`
+    self.`wordingVersion` = `wordingVersion`
+  }
+  public static func read(_ json: JSONValue) throws -> OwnedRelateQuestionDocument {
+    let object = try jsonObject(json)
+    let known: Set<String> = [
+      "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
+      "profile", "relations", "threshold", "verb", "wording_version",
+    ]
+    var value = Self(
+      extensions: object.filter { !known.contains($0.key) },
+      batch: try readPresence(object, "batch", OwnedBatch.self),
+      contextSchema: try readPresence(object, "context_schema", OwnedInputDeclaration.self),
+      fields: try OwnedRelateFields?.read(jsonRequired(object, "fields")),
+      itemSchema: try readPresence(object, "item_schema", OwnedInputDeclaration.self),
+      labelDetails: try readPresence(object, "label_details", [OwnedLabel].self),
+      model: try readPresence(object, "model", String.self),
+      name: try readPresence(object, "name", OwnedQuestionName.self),
+      on: try readPresence(object, "on", [String].self),
+      profile: try readPresence(object, "profile", String.self),
+      relations: try [OwnedRelationRule].read(jsonRequired(object, "relations")),
+      threshold: try OwnedThreshold.read(jsonRequired(object, "threshold")),
+      verb: try String.read(jsonRequired(object, "verb")),
+      wordingVersion: try readPresence(object, "wording_version", OwnedWordingVersion.self))
+    value._sourceJSON = json
+    return value
+  }
+  public var json: JSONValue {
+    if let _sourceJSON { return _sourceJSON }
+    let known: Set<String> = [
+      "batch", "context_schema", "fields", "item_schema", "label_details", "model", "name", "on",
+      "profile", "relations", "threshold", "verb", "wording_version",
+    ]
+    var object = extensions.filter { !known.contains($0.key) }
+    writePresence(`batch`, "batch", &object)
+    writePresence(`contextSchema`, "context_schema", &object)
+    object["fields"] = `fields`.json
+    writePresence(`itemSchema`, "item_schema", &object)
+    writePresence(`labelDetails`, "label_details", &object)
+    writePresence(`model`, "model", &object)
+    writePresence(`name`, "name", &object)
+    writePresence(`on`, "on", &object)
+    writePresence(`profile`, "profile", &object)
+    object["relations"] = `relations`.json
+    object["threshold"] = `threshold`.json
+    object["verb"] = `verb`.json
+    writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
   }
 }
@@ -6951,7 +6951,7 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
   public let `model`: String
   public let `observations`: [OwnedObservation]
   public let `probabilities`: Presence<OwnedSessionProbabilities>
-  public let `question`: OwnedReadableQuestion
+  public let `question`: OwnedQuestionDocument
   public let `questionSha256`: String
   public let `questionSources`: [OwnedQuestionSource]
   public let `rawPick`: Presence<String>
@@ -6970,7 +6970,7 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
     `inputSources`: [OwnedSessionInputSource], `inputs`: [JSONValue], `model`: String,
     `observations`: [OwnedObservation],
     `probabilities`: Presence<OwnedSessionProbabilities> = .absent,
-    `question`: OwnedReadableQuestion, `questionSha256`: String,
+    `question`: OwnedQuestionDocument, `questionSha256`: String,
     `questionSources`: [OwnedQuestionSource], `rawPick`: Presence<String> = .absent,
     `reportedUsage`: Presence<OwnedUsage> = .absent, `requests`: [String], `requestsSent`: UInt64,
     `threshold`: Presence<OwnedThreshold> = .absent, `url`: String,
@@ -7025,7 +7025,7 @@ public struct OwnedSessionQuestionDetail: JSONRepresentable {
       model: try String.read(jsonRequired(object, "model")),
       observations: try [OwnedObservation].read(jsonRequired(object, "observations")),
       probabilities: try readPresence(object, "probabilities", OwnedSessionProbabilities.self),
-      question: try OwnedReadableQuestion.read(jsonRequired(object, "question")),
+      question: try OwnedQuestionDocument.read(jsonRequired(object, "question")),
       questionSha256: try String.read(jsonRequired(object, "question_sha256")),
       questionSources: try [OwnedQuestionSource].read(jsonRequired(object, "question_sources")),
       rawPick: try readPresence(object, "raw_pick", String.self),

@@ -1,4 +1,5 @@
 """Lossless typed aggregate payloads derived from the shared packet graph."""
+import re
 
 
 def aggregate_answers(definitions):
@@ -12,6 +13,27 @@ def aggregate_answers(definitions):
         if isinstance(function, str):
             answers.append((function, child, fields['value']))
     return answers
+
+
+def aggregate_projection(function, payload, definitions):
+    """Project convenient collection answers without changing receipt payloads.
+
+    Rank selects the original zero-based input index, not the ranked position.
+    Filter selects the original input, including an explicit JSON null.
+    The returned member is read from each receipt after rows are collected.
+    """
+    member = {'rank': 'index', 'filter': 'input'}.get(function)
+    if member is None:
+        return payload, None
+    if payload.get('type') != 'array':
+        raise ValueError(function + ' answer requires a receipt collection')
+    item = payload['items']
+    if '$ref' in item:
+        item = definitions[item['$ref'].split('/')[-1]]
+    fields = item.get('properties', {})
+    if member not in fields:
+        raise ValueError(function + ' receipt has no ' + member)
+    return {'type': 'array', 'items': fields[member]}, member
 
 
 def named_object_fields(source, definitions):
@@ -69,3 +91,26 @@ def judgment_route(definitions):
             route = visit(child, [], [], set())
             if route: return route
     raise ValueError('packet graph has no normalized judgment route')
+
+
+def alternative_name(source):
+    """Name a union arm from its identity, never its position in the schema."""
+    if not isinstance(source, dict) or not source:
+        return 'JsonValue'
+    identity = source.get('title') or source.get('$ref', '').removeprefix('#/$defs/')
+    if not identity and 'const' in source:
+        value = source['const']
+        identity = ('True' if value else 'False') if isinstance(value, bool) else str(value)
+    if not identity:
+        literals = [field['const'] for field in source.get('properties', {}).values()
+                    if isinstance(field, dict) and isinstance(field.get('const'), str)]
+        identity = '_'.join(literals) if literals else source.get('type')
+    if not isinstance(identity, str):
+        raise ValueError('union alternative needs a semantic schema title')
+    names = {'string': 'String', 'integer': 'Integer', 'number': 'Number',
+             'boolean': 'Boolean', 'array': 'List', 'object': 'Object', 'null': 'Null'}
+    identity = names.get(identity, identity)
+    token = re.sub(r'[^A-Za-z0-9]+', '_', identity).strip('_')
+    if not token:
+        raise ValueError('union alternative needs a nonempty semantic schema title')
+    return 'Value_' + token if token[:1].isdigit() else token
