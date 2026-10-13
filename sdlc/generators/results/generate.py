@@ -546,7 +546,7 @@ def main():
     if args.target == "dart":
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import dart
-        schema = json.loads((ROOT / "specification/request.schema.json").read_text()) if args.inputs else json.loads(args.schema.read_text())
+        schema = json.loads((ROOT / "specification/request.schema.json").read_text()) if args.inputs else immediate_schema(json.loads(args.schema.read_text()))
         definitions = prepare(graph(schema, dart.INPUT_ROOTS if args.inputs else dart.ROOTS))
         result = dart.render(definitions, args.inputs)
         if args.bridge:
@@ -554,13 +554,13 @@ def main():
             spec = importlib.util.spec_from_file_location("dart_abi", path)
             abi = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(abi)
-            result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"), prepare(graph(schema, ('completesessionPacket',))))
+            result = dart.bridge(abi.header_abi(ROOT / "libraries/c/include/thinkthen.h"), prepare(graph(schema, dart.ROOTS)))
         if args.inputs:
             result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
         filename = 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart'
         outputs = {filename: result}
         if args.inputs:
-            outputs['calls_generated.dart'] = dart.calls(definitions, prepare(graph(json.loads(args.schema.read_text()), ('completesessionPacket',))))
+            outputs['calls_generated.dart'] = dart.calls(definitions, prepare(graph(immediate_schema(json.loads(args.schema.read_text())), dart.ROOTS)))
         for filename, result in outputs.items():
             output = output_path(ROOT, 'dart', filename)
             result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
@@ -610,7 +610,7 @@ def main():
             parser.error("PHP reads the generated C header directly")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import php
-        definitions = prepare(graph(json.loads(args.schema.read_text()), php.ROOTS))
+        definitions = prepare(graph(immediate_schema(json.loads(args.schema.read_text())), php.ROOTS))
         outputs = php.outputs(definitions, (ROOT / "libraries/c/include/thinkthen.h").read_text())
         schema = json.loads((ROOT / "specification/request.schema.json").read_text())
         schema['$defs']['Request'] = {key: value for key, value in schema.items() if key != '$defs'}
@@ -752,7 +752,7 @@ def main():
             outputs = {'request_generated.zig': zig.render(definitions), 'calls_generated.zig': zig.calls(definitions)}
         else:
             outputs = {'plan_generated.zig': zig.render(prepare(graph(schema, ('completeplan',)))),
-                       'results_generated.zig': zig.render_results(prepare(graph(schema, ('completesessionPacket',))))}
+                       'results_generated.zig': zig.render_results(prepare(graph(immediate_schema(schema), ('completesessionPacket', 'completeImmediateFacts'))))}
         primary = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
         for filename, result in outputs.items():
             output = args.output if filename == primary and args.output != OUTPUT else output_path(ROOT, 'zig', filename)
