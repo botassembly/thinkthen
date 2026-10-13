@@ -17,7 +17,7 @@ Every language library, database extension and the MCP server feels native to a 
   - 0568 and 0574 already cover typed options and settings everywhere, one typed answer accessor per function, typed recognize and relate builders, safe C++ accessors, the Objective-C blocking call, Zig's session wait and running every example. 0562 covers generated names.
   - Gaps no ticket covers:
     - The three databases' 0.2 complete functions take and return JSON text, while their older functions return typed columns. A caller of the newer API gets a worse experience.
-    - The MCP server embeds the whole request schema's 52 definitions in every one of its ten tools, about 600 KB of agent context for `tools/list`.
+    - The MCP server embeds the whole request schema's 52 definitions in every one of its ten tools. The marketing lead measured `tools/list` on the 2026-10-11 debug build at 1,140,455 bytes, about 280,000 tokens: about 43 KB of input schema and 71 KB of output schema per tool. A fresh agent cannot load it, and the 0.2 release gate expects a fresh agent to run the server.
     - Error facts reach callers as a JSON string in C#, Go, Swift, Kotlin and others, and several libraries have one catch-all error type.
     - Generated `Alternative0`, `alternative3(.null)`, `arm_1`, `Owned` and `Input` names remain in public types in C#, Swift, C, Go and Ada.
     - Several libraries keep their own handwritten JSON parser: Swift (about 220 lines), C++ (about 240), Java (about 190) and Dart.
@@ -32,7 +32,7 @@ Every language library, database extension and the MCP server feels native to a 
 - Keeps: Python's dataframe and pydantic adapters, and C as the shared native layer under its 1,982-line ratchet.
 - Changes:
   - Return typed rows, structs or composite types from the database complete functions, and take named typed parameters. Keep one function family per database.
-  - Have each MCP tool reference only the definitions it uses, and give each tool its own output schema and a fuller description.
+  - Give each MCP tool a short input schema with only the fields an agent writes, drop the output schema from `tools/list`, and let descriptions point to the server's help for the full grammar. The engine still validates every call against the full request schema.
   - Generate one typed error per library with typed facts and native error kinds.
   - Decode results once in Rust and hand libraries native values. Delete each library's handwritten JSON parser.
   - Hide transport JSON, the C header and schema-path names from every public API.
@@ -43,7 +43,7 @@ Every language library, database extension and the MCP server feels native to a 
   - Add the missing R help pages, Ruby RBS signatures, the Python option stubs and typed Polars columns. Fix the SQLite kinds trap.
 - Proof:
   - A fresh read-only grading on the candidate gives every library, database and the MCP server B or better on the same seven points.
-  - `tools/list` from the MCP server is under 100 KB.
+  - `tools/list` measured on the candidate is under 25 KB in total, and a fresh agent loads the server and answers one call per tool. A larger catalog blocks 0.2.
   - Every language library's routine installed checks pass.
 - Defers: nothing.
 
