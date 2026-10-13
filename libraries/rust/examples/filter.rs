@@ -14,21 +14,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Arrived a day early. Thank you!",
         "The zipper broke the first time I used it.",
     ];
-    let request = Request::named(
-        "filter",
-        RequestArguments {
-            question: RequestQuestion::Definition {
-                value: complaint.into(),
-            },
-            input: RequestInput::Feed {
-                name: "reviews".into(),
-                framing: Default::default(),
-                reading: Default::default(),
-                images: Vec::new(),
-            },
-            options: RequestOptions::default(),
+    let request = Request::filter(RequestArguments {
+        question: RequestQuestion::Definition {
+            value: complaint.into(),
         },
-    )?
+        input: RequestInput::Feed {
+            name: "reviews".into(),
+            framing: Default::default(),
+            reading: Default::default(),
+            images: Vec::new(),
+        },
+        options: RequestOptions::default(),
+    })
     .admit()?;
     let records = reviews.into_iter().map(|original| {
         Ok(RecordInput {
