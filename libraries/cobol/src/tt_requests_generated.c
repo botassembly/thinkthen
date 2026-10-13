@@ -1116,9 +1116,7 @@ static void *convert_RequestInput_json_member_value_RequestInput_json_value(aren
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestInput_records_member_items_RequestItem_list(arena *a,const void *input) {
@@ -1961,9 +1959,7 @@ static void *convert_ContextSchema_arm_2_entry_JsonValue(arena *a,const void *in
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestImage_file_RequestImage_file(arena *a,const void *input) {
@@ -1998,9 +1994,7 @@ static void *convert_OptionSchema_member_description_JsonValue(arena *a,const vo
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_OptionSchema_member_name_Text(arena *a,const void *input) {
@@ -2038,9 +2032,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_ReaderMedia_arm_1_Literal_text(arena *a,const void *input) {
@@ -2657,9 +2649,7 @@ static void *convert_RequestDefinition_AnnotateDefinition_member_batch_JsonValue
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestDefinition_AnnotateDefinition_member_questions_AnnotateQuestion_map(arena *a,
@@ -3416,9 +3406,7 @@ static void *convert_Authored_questionText_arm_2_entry_JsonValue(arena *a,const 
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_questionText_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3429,9 +3417,7 @@ static void *convert_Authored_questionText_arm_3_item_JsonValue(arena *a,const v
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_criterion_arm_2_entry_JsonValue(arena *a,const void *input) {
@@ -3442,9 +3428,7 @@ static void *convert_Authored_criterion_arm_2_entry_JsonValue(arena *a,const voi
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_criterion_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3455,9 +3439,7 @@ static void *convert_Authored_criterion_arm_3_item_JsonValue(arena *a,const void
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_pointers_arm_2_item_Text(arena *a,const void *input) {
@@ -3898,9 +3880,7 @@ static void *convert_Authored_description_arm_2_entry_JsonValue(arena *a,const v
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_description_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3911,9 +3891,7 @@ static void *convert_Authored_description_arm_3_item_JsonValue(arena *a,const vo
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_inputProperty_array_member_items_Authored_inputProperty_array_items(arena *a,
@@ -4147,11 +4125,10 @@ uint64_t length) {
     return 0;
 }
 int TT_JSON_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
-thinkthen_cobol_RequestOriginalJson *arm,thinkthen_cobol_RequestOriginalJsonValue *scalar,const char *data,
-uint64_t length) {
+thinkthen_cobol_RequestOriginalJson *arm,thinkthen_cobol_RequestOriginalJsonValue *scalar,const struct thinkthen_complete_json_v1 *value) {
     if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
     *scalar=(thinkthen_cobol_RequestOriginalJsonValue){
-        data,length
+        .value=value
     };
     *arm=(thinkthen_cobol_RequestOriginalJson){
         .m_value=scalar

@@ -67,7 +67,11 @@ def render(definitions, old_nodes):
                 body = ['if(p->value>1) a->code=THINKTHEN_COBOL_REPRESENTATION;', 'out->value=(uint32_t)p->value;']
             else:
                 body = ['out->value=p->value;']
+        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json_v1'),):
+            body = ['out->value=p->value;']
         else:
+            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8_v1'),):
+                raise ValueError('unsupported COBOL native scalar fields: ' + native)
             body = ['out->text=(thinkthen_complete_utf8_v1){p->data,p->len};']
         const = 'const' in source or source.get('type') == 'null'
         function = 'convert_' + old + '_' + native
@@ -170,10 +174,12 @@ def builders(definitions):
         kind = branch.removeprefix('RequestOriginal_')
         member = 'text' if kind == 'text' else 'value'
         scalar_key = branch + '_member_' + member
-        signature = f'int TT_{kind.upper()}_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,thinkthen_cobol_{branch} *arm,thinkthen_cobol_{scalar_key} *scalar,const char *data,uint64_t length)'
+        arguments = 'const char *data,uint64_t length' if kind == 'text' else 'const struct thinkthen_complete_json_v1 *value'
+        initializer = 'data,length' if kind == 'text' else '.value=value'
+        signature = f'int TT_{kind.upper()}_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,thinkthen_cobol_{branch} *arm,thinkthen_cobol_{scalar_key} *scalar,{arguments})'
         declarations.append(signature + ';')
         bodies += [signature + ' {', 'if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;',
-                   f'*scalar=(thinkthen_cobol_{scalar_key}){{data,length}};',
+                   f'*scalar=(thinkthen_cobol_{scalar_key}){{{initializer}}};',
                    f'*arm=(thinkthen_cobol_{branch}){{.m_{member}=scalar}};',
                    f'*original=(thinkthen_cobol_RequestOriginal){{.kind={original_index},.value=arm}};',
                    '*item=(thinkthen_cobol_RequestItem){.m_original=original};', 'return 0;', '}']

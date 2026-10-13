@@ -58,6 +58,23 @@ def ada_text(value):
     return 'Ada.Strings.Unbounded.To_Unbounded_String (' + (' & '.join(chunks) if chunks else '""') + ')'
 
 
+def native_value(value):
+    prefix = 'Thinkthen.Values.'
+    if value is None:
+        return prefix + 'Null_Item'
+    if isinstance(value, bool):
+        return prefix + 'Boolean_Item (' + str(value) + ')'
+    if isinstance(value, (int, float)):
+        return prefix + 'Number_Item (' + template.ada_string(json.dumps(value)) + ')'
+    if isinstance(value, str):
+        return prefix + 'String_Item (Ada.Strings.Unbounded.To_String (' + ada_text(value) + '))'
+    if isinstance(value, list):
+        items = [native_value(item) for item in value]
+        return prefix + "Array_Item (" + prefix + "Value_List'[" + ', '.join(items) + '])'
+    items = [prefix + 'Named (Ada.Strings.Unbounded.To_String (' + ada_text(key) + '), ' + native_value(item) + ')' for key, item in value.items()]
+    return prefix + "Object_Item (" + prefix + "Field_List'[" + ', '.join(items) + '])'
+
+
 def construct(key, source, value):
     typ = name(key)
     if not isinstance(source, dict):
@@ -121,7 +138,7 @@ def construct(key, source, value):
         if source['type'] == 'number' and '.' not in literal:
             literal = literal.replace('e', '.0e') if 'e' in literal else literal + '.0'
         return f"{typ}'(" + literal + ')'
-    return f'{typ} (' + ada_text(json.dumps(value, ensure_ascii=False)) + ')'
+    return f'{typ} (' + native_value(value) + ')'
 
 
 def cases():
