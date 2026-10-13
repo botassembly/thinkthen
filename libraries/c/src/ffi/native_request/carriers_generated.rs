@@ -7,6 +7,74 @@
 )]
 use super::{CarrierError, Context, Value, borrow, extent, optional};
 use crate::session::views::thinkthen_complete_utf8_v1;
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_engine_settings_v1 {
+    pub m_backend: *const thinkthen_request_text_v1,
+    pub m_base_url: *const thinkthen_request_text_v1,
+    pub m_batch: *const thinkthen_request_batch_v1,
+    pub m_cache: *const thinkthen_request_cache_document_v1,
+    pub m_max_estimated_input_tokens_total:
+        *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+    pub m_max_request_bytes: *const thinkthen_request_unsigned_v1,
+    pub m_max_requests: *const thinkthen_request_engine_settings_max_requests_v1,
+    pub m_max_requests_total:
+        *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+    pub m_max_retries: *const thinkthen_request_unsigned_v1,
+    pub m_model: *const thinkthen_request_text_v1,
+    pub m_profile: *const thinkthen_request_text_v1,
+    pub m_proxy: *const thinkthen_request_json_value_v1,
+    pub m_record: *const thinkthen_request_text_v1,
+    pub m_refresh_cache: *const thinkthen_request_boolean_v1,
+    pub m_replay: *const thinkthen_request_text_v1,
+    pub m_throttle: *const thinkthen_request_unsigned_v1,
+    pub m_timeout: *const thinkthen_request_unsigned_v1,
+    pub m_usd_per_million_input: *const thinkthen_request_text_v1,
+    pub m_usd_per_million_output: *const thinkthen_request_text_v1,
+}
+pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1: u32 = 2;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_request_cache_document_data_v1 {
+    pub arm_1: *const thinkthen_request_text_v1,
+    pub arm_2: *const thinkthen_request_disabled_cache_v1,
+}
+impl std::fmt::Debug for thinkthen_request_cache_document_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("request union payload")
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_cache_document_v1 {
+    pub kind: u32,
+    pub data: thinkthen_request_cache_document_data_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_disabled_cache_v1 {
+    pub reserved: u32,
+}
+pub const THINKTHEN_REQUEST_BATCH_ARM_1_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_BATCH_ARM_2_V1: u32 = 2;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_request_batch_data_v1 {
+    pub arm_1: *const thinkthen_request_unsigned_v1,
+    pub arm_2: *const thinkthen_request_text_v1,
+}
+impl std::fmt::Debug for thinkthen_request_batch_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("request union payload")
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_batch_v1 {
+    pub kind: u32,
+    pub data: thinkthen_request_batch_data_v1,
+}
 pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_1_V1: u32 = 1;
 pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_2_V1: u32 = 2;
 pub const THINKTHEN_REQUEST_READER_FAILURE_ARM_3_V1: u32 = 3;
@@ -850,25 +918,6 @@ pub struct thinkthen_request_call_threshold_v1 {
     pub kind: u32,
     pub data: thinkthen_request_call_threshold_data_v1,
 }
-pub const THINKTHEN_REQUEST_BATCH_ARM_1_V1: u32 = 1;
-pub const THINKTHEN_REQUEST_BATCH_ARM_2_V1: u32 = 2;
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub union thinkthen_request_batch_data_v1 {
-    pub arm_1: *const thinkthen_request_unsigned_v1,
-    pub arm_2: *const thinkthen_request_text_v1,
-}
-impl std::fmt::Debug for thinkthen_request_batch_data_v1 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("request union payload")
-    }
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_batch_v1 {
-    pub kind: u32,
-    pub data: thinkthen_request_batch_data_v1,
-}
 pub const THINKTHEN_REQUEST_INPUT_ARM_1_V1: u32 = 1;
 pub const THINKTHEN_REQUEST_INPUT_ARM_2_V1: u32 = 2;
 pub const THINKTHEN_REQUEST_INPUT_ARM_3_V1: u32 = 3;
@@ -1022,10 +1071,60 @@ pub struct thinkthen_request_input_text_v1 {
 pub struct thinkthen_request_text_v1 {
     pub text: thinkthen_complete_utf8_v1,
 }
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1: u32 = 2;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 {
+    pub arm_1: *const thinkthen_request_unsigned_v1,
+    pub arm_2: *const thinkthen_request_null_v1,
+}
+impl std::fmt::Debug
+    for thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("request union payload")
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 {
+    pub kind: u32,
+    pub data: thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1,
+}
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_unsigned_v1 {
     pub value: u64,
+}
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1: u32 = 1;
+pub const THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1: u32 = 2;
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_request_engine_settings_max_requests_data_v1 {
+    pub arm_1: *const thinkthen_request_unsigned_v1,
+    pub arm_2: *const thinkthen_request_null_v1,
+}
+impl std::fmt::Debug for thinkthen_request_engine_settings_max_requests_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("request union payload")
+    }
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_engine_settings_max_requests_v1 {
+    pub kind: u32,
+    pub data: thinkthen_request_engine_settings_max_requests_data_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_json_value_v1 {
+    pub text: thinkthen_complete_utf8_v1,
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_request_boolean_v1 {
+    pub value: u32,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -1054,11 +1153,6 @@ pub struct thinkthen_request_recognition_seed_span_list_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_original_json_value_v1 {
-    pub text: thinkthen_complete_utf8_v1,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_json_value_v1 {
     pub text: thinkthen_complete_utf8_v1,
 }
 #[repr(C)]
@@ -1183,11 +1277,6 @@ pub struct thinkthen_request_relation_list_v1 {
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
-pub struct thinkthen_request_boolean_v1 {
-    pub value: u32,
-}
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_literal_whole_v1 {
     pub reserved: u32,
 }
@@ -1280,6 +1369,206 @@ pub struct thinkthen_request_input_json_value_v1 {
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_literal_max_v1 {
     pub reserved: u32,
+}
+pub(super) unsafe fn read_thinkthen_request_engine_settings_v1(
+    pointer: *const thinkthen_request_engine_settings_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok({
+                let mut fields = vec![];
+                optional(
+                    "backend",
+                    input.m_backend,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "base_url",
+                    input.m_base_url,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "batch",
+                    input.m_batch,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_batch_v1,
+                )?;
+                optional(
+                    "cache",
+                    input.m_cache,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_cache_document_v1,
+                )?;
+                optional(
+                    "max_estimated_input_tokens_total",
+                    input.m_max_estimated_input_tokens_total,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+                )?;
+                optional(
+                    "max_request_bytes",
+                    input.m_max_request_bytes,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_unsigned_v1,
+                )?;
+                optional(
+                    "max_requests",
+                    input.m_max_requests,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_engine_settings_max_requests_v1,
+                )?;
+                optional(
+                    "max_requests_total",
+                    input.m_max_requests_total,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+                )?;
+                optional(
+                    "max_retries",
+                    input.m_max_retries,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_unsigned_v1,
+                )?;
+                optional(
+                    "model",
+                    input.m_model,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "profile",
+                    input.m_profile,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "proxy",
+                    input.m_proxy,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_json_value_v1,
+                )?;
+                optional(
+                    "record",
+                    input.m_record,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "refresh_cache",
+                    input.m_refresh_cache,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_boolean_v1,
+                )?;
+                optional(
+                    "replay",
+                    input.m_replay,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "throttle",
+                    input.m_throttle,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_unsigned_v1,
+                )?;
+                optional(
+                    "timeout",
+                    input.m_timeout,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_unsigned_v1,
+                )?;
+                optional(
+                    "usd_per_million_input",
+                    input.m_usd_per_million_input,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                optional(
+                    "usd_per_million_output",
+                    input.m_usd_per_million_output,
+                    context,
+                    &mut fields,
+                    read_thinkthen_request_text_v1,
+                )?;
+                Value::Object(fields)
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_cache_document_v1(
+    pointer: *const thinkthen_request_cache_document_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1 => {
+                    read_thinkthen_request_text_v1(input.data.arm_1, context)?
+                }
+                THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1 => {
+                    read_thinkthen_request_disabled_cache_v1(input.data.arm_2, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_disabled_cache_v1(
+    pointer: *const thinkthen_request_disabled_cache_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let _ = unsafe { borrow(pointer)? };
+    let _ = context;
+    Value::literal("false")
+}
+pub(super) unsafe fn read_thinkthen_request_batch_v1(
+    pointer: *const thinkthen_request_batch_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_BATCH_ARM_1_V1 => {
+                    read_thinkthen_request_unsigned_v1(input.data.arm_1, context)?
+                }
+                THINKTHEN_REQUEST_BATCH_ARM_2_V1 => {
+                    read_thinkthen_request_text_v1(input.data.arm_2, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
 }
 pub(super) unsafe fn read_thinkthen_request_reader_failure_v1(
     pointer: *const thinkthen_request_reader_failure_v1,
@@ -3783,27 +4072,6 @@ pub(super) unsafe fn read_thinkthen_request_call_threshold_v1(
         }
     })
 }
-pub(super) unsafe fn read_thinkthen_request_batch_v1(
-    pointer: *const thinkthen_request_batch_v1,
-    context: &mut Context,
-) -> Result<Value, CarrierError> {
-    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
-    let input = unsafe { borrow(pointer)? };
-    context.enter(|context| {
-        // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe {
-            Ok(match input.kind {
-                THINKTHEN_REQUEST_BATCH_ARM_1_V1 => {
-                    read_thinkthen_request_unsigned_v1(input.data.arm_1, context)?
-                }
-                THINKTHEN_REQUEST_BATCH_ARM_2_V1 => {
-                    read_thinkthen_request_text_v1(input.data.arm_2, context)?
-                }
-                _ => return Err(CarrierError::Invalid),
-            })
-        }
-    })
-}
 pub(super) unsafe fn read_thinkthen_request_input_v1(
     pointer: *const thinkthen_request_input_v1,
     context: &mut Context,
@@ -4185,6 +4453,27 @@ pub(super) unsafe fn read_thinkthen_request_text_v1(
         unsafe { Ok(Value::Text(context.text(input.text)?)) }
     })
 }
+pub(super) unsafe fn read_thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1(
+    pointer: *const thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1 => {
+                    read_thinkthen_request_unsigned_v1(input.data.arm_1, context)?
+                }
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1 => {
+                    read_thinkthen_request_null_v1(input.data.arm_2, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
+}
 pub(super) unsafe fn read_thinkthen_request_unsigned_v1(
     pointer: *const thinkthen_request_unsigned_v1,
     context: &mut Context,
@@ -4192,6 +4481,52 @@ pub(super) unsafe fn read_thinkthen_request_unsigned_v1(
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
     let input = unsafe { borrow(pointer)? };
     context.enter(|_context| Ok(Value::Number(input.value.into())))
+}
+pub(super) unsafe fn read_thinkthen_request_engine_settings_max_requests_v1(
+    pointer: *const thinkthen_request_engine_settings_max_requests_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe {
+            Ok(match input.kind {
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1 => {
+                    read_thinkthen_request_unsigned_v1(input.data.arm_1, context)?
+                }
+                THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1 => {
+                    read_thinkthen_request_null_v1(input.data.arm_2, context)?
+                }
+                _ => return Err(CarrierError::Invalid),
+            })
+        }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_json_value_v1(
+    pointer: *const thinkthen_request_json_value_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: nested pointers retain the caller's live counted carrier graph.
+        unsafe { Value::literal(&context.text(input.text)?) }
+    })
+}
+pub(super) unsafe fn read_thinkthen_request_boolean_v1(
+    pointer: *const thinkthen_request_boolean_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|_context| {
+        Ok(Value::Boolean(match input.value {
+            0 => false,
+            1 => true,
+            _ => return Err(CarrierError::Invalid),
+        }))
+    })
 }
 pub(super) unsafe fn read_thinkthen_request_recognition_example_list_v1(
     pointer: *const thinkthen_request_recognition_example_list_v1,
@@ -4275,17 +4610,6 @@ pub(super) unsafe fn read_thinkthen_request_recognition_seed_span_list_v1(
 }
 pub(super) unsafe fn read_thinkthen_request_original_json_value_v1(
     pointer: *const thinkthen_request_original_json_value_v1,
-    context: &mut Context,
-) -> Result<Value, CarrierError> {
-    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
-    let input = unsafe { borrow(pointer)? };
-    context.enter(|context| {
-        // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe { Value::literal(&context.text(input.text)?) }
-    })
-}
-pub(super) unsafe fn read_thinkthen_request_json_value_v1(
-    pointer: *const thinkthen_request_json_value_v1,
     context: &mut Context,
 ) -> Result<Value, CarrierError> {
     // SAFETY: the caller retains every referenced aligned carrier and counted extent.
@@ -4560,20 +4884,6 @@ pub(super) unsafe fn read_thinkthen_request_relation_list_v1(
                 Value::Array(values)
             })
         }
-    })
-}
-pub(super) unsafe fn read_thinkthen_request_boolean_v1(
-    pointer: *const thinkthen_request_boolean_v1,
-    context: &mut Context,
-) -> Result<Value, CarrierError> {
-    // SAFETY: the caller retains every referenced aligned carrier and counted extent.
-    let input = unsafe { borrow(pointer)? };
-    context.enter(|_context| {
-        Ok(Value::Boolean(match input.value {
-            0 => false,
-            1 => true,
-            _ => return Err(CarrierError::Invalid),
-        }))
     })
 }
 pub(super) unsafe fn read_thinkthen_request_literal_whole_v1(

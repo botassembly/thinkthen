@@ -38,6 +38,16 @@ def render(operations, statuses=(), projections=()):
         lines.extend(['#[unsafe(no_mangle)]', 'pub ' + ('unsafe ' if operation.foreign_unsafe else '') + 'extern "C" fn ' + operation.name + '('])
         lines.extend('    ' + argument.name + ': ' + abi_type(argument.abi) + ',' for argument in operation.arguments)
         lines.append(')' + ('' if operation.result == '()' else ' -> ' + abi_type(operation.result)) + ' {')
+        if operation.diagnostic == 'constructor_build':
+            if operation.outputs or operation.result != '*mut EngineHandle' or not operation.native_unsafe:
+                raise ValueError('constructor must build one owned engine from borrowed input')
+            inputs = ', '.join(operation.inputs)
+            lines.extend(['    failures::guard(None, std::ptr::null_mut(), || {',
+                '        // SAFETY: the caller retains all constructor input until admission returns.',
+                '        failures::built(|| unsafe { super::' + operation.native + '(' + inputs + ') })',
+                '            .map_or(std::ptr::null_mut(), |engine| Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine)))))',
+                '    })', '}', ''])
+            continue
         if operation.diagnostic == 'engine_guard':
             if operation.fallback not in ('NO_MESSAGE.as_ptr()', 'std::ptr::null()', '0', 'DEFECT'):
                 raise ValueError('unknown engine diagnostic fallback')
