@@ -16,7 +16,12 @@ def quoted(value):
     return json.dumps(value, ensure_ascii=False)
 
 
-def render(definitions):
+def carrier_graph(definitions):
+    """Return canonical carrier nodes and the shared inline type selector.
+
+    The selector adds inline nodes to the returned mapping as callers traverse
+    it. Adapters reuse the exact type identities that the Rust generator owns.
+    """
     nodes = dict(definitions)
     call = nodes['RequestCall']
     nodes['RequestArguments'] = {**call, 'properties': {key: value for key, value in call['properties'].items() if key != 'function'}, 'required': [key for key in call['required'] if key != 'function']}
@@ -38,7 +43,7 @@ def render(definitions):
             selected[key] = nodes[key]
             pending.extend(references(nodes[key]))
     nodes = selected
-    declarations, readers, done, inline = [], [], set(), {}
+    inline = {}
     def select(source, path):
         if isinstance(source, dict) and '$ref' in source:
             return source['$ref'].removeprefix('#/$defs/')
@@ -71,6 +76,12 @@ def render(definitions):
             nodes[key] = source
         inline[identity] = key
         return key
+    return nodes, select
+
+
+def render(definitions):
+    nodes, select = carrier_graph(definitions)
+    declarations, readers, done = [], [], set()
     def structure(typ, fields):
         declarations.append('#[repr(C)]\n#[derive(Clone, Copy, Debug)]\npub struct ' + typ + ' {\n' + '\n'.join('    pub ' + field + ': ' + value + ',' for field, value in fields) + '\n}')
     pending = list(nodes)
