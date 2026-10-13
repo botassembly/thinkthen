@@ -74,14 +74,20 @@ def facade_errors(declared, functions, manifest, config):
 
 def helper_errors(declared, manifest, config):
     errors = []
-    names = {canonical(d.name) for d in declared if d.kind in ('call', 'export')}
     helper_names = config.get('helper_names', {})
+    call_containers = {'', *config.get('function_containers', [])}
     for helper, kind in manifest['helpers'].items():
         wanted = helper_names.get(helper, config.get('function_prefix', '') + native(helper, config['naming']))
-        builder = kind == 'builder'
-        actual = {d.owner + '.' + d.name if d.owner else d.name for d in declared
-                  if builder or d.kind == 'call'}
-        if wanted not in actual and canonical(wanted) not in names:
+        if '.' in wanted:
+            container, member = wanted.rsplit('.', 1)
+            kinds = ('call', 'field') if kind == 'builder' else ('call',)
+            found = any(d.owner == container and d.name == member and d.kind in kinds for d in declared)
+        elif kind == 'builder':
+            found = any(d.name == wanted and d.kind in ('type', 'export') for d in declared)
+        else:
+            found = any(d.owner in call_containers and canonical(d.name) == canonical(wanted)
+                        and d.kind == 'call' for d in declared)
+        if not found:
             errors.append('missing helper: ' + helper)
     return errors
 
@@ -162,7 +168,7 @@ def check(root, manifest, name):
             paths = [path for path in source_files.values() if path.name == Path(filename).name]
             if not paths:
                 # Metadata and private bridge outputs are not host exports.
-                if Path(filename).suffix not in ('.json', '.c', '.m', '.js'):
+                if filename.endswith(suffixes[config['language']]):
                     errors.append('missing generated declaration file: ' + filename)
                 continue
             lang = language(paths[0], config['language'])

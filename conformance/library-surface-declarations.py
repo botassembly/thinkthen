@@ -68,10 +68,10 @@ def braces(source):
 def cstyle(source, language):
     if language == 'typescript':
         source = re.sub(r'(\breadonly\s+)"(\w+)"(?=\??\s*:)', lambda m: m[1] + ' ' + m[2] + ' ', source)
-    text = masked(re.sub(r'@"(\w+)"', lambda m: '  ' + m[1] + ' ', source) if language == 'zig' else source)
+    text = masked(re.sub(r'@"([^"]+)"', lambda m: '  ' + m[1] + ' ', source) if language == 'zig' else source)
     pairs, depths = braces(text)
     result, scopes, hidden = set(), [], []
-    type_pattern = r'\b(?:class|struct|interface|enum|record|union|trait|object|extension)\s+(\w+)'
+    type_pattern = r'\b(?:class|struct|interface|enum(?:\s+class)?|record|union|trait|object|extension)\s+(\w+)'
     if language == 'zig':
         type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum)\b'
     elif language == 'objc':
@@ -154,6 +154,24 @@ def cstyle(source, language):
         if kind == 'call' and name == container:
             continue
         result.add(Declaration(container, name, kind))
+    # Enum constants form the public contract even without a field declaration.
+    for start, end, container in scopes:
+        prefix = text[max(0, text.rfind(';', 0, start) + 1):start]
+        if not re.search(r'\benum\b[^{}]*$', prefix):
+            continue
+        body = text[start + 1:end]
+        if language == 'java':
+            body = body.split(';', 1)[0]
+        if language == 'php':
+            names = re.findall(r'\bcase\s+(\w+)', body)
+        else:
+            names = re.findall(r'(?:^|,)\s*([\w/-]+)\s*(?=[=,(]|$)', body)
+        result.update(Declaration(container, name, 'field') for name in names)
+    if language == 'php':
+        for match in re.finditer(r'\b(public\s+)?const\s+(\w+)\s*=', text):
+            container = owner(match.start())
+            if container == '' or container and match[1]:
+                result.add(Declaration(container, match[2], 'field' if container else 'export'))
     if language in ('c', 'cpp'):
         for name in re.findall(r'(?m)^\s*#define\s+([A-Za-z_]\w*)', text):
             result.add(Declaration('', name, 'export'))
@@ -163,6 +181,8 @@ def cstyle(source, language):
             if container:
                 result.add(Declaration(container, match[1], 'field'))
     if language == 'typescript':
+        for match in re.finditer(r'\bexport\s+(?:declare\s+)?function\s+(\w+)\s*\(', text):
+            result.add(Declaration('', match[1], 'call'))
         for match in re.finditer(r'\bexport\s*\{([^}]+)\}', text):
             for binding in match[1].split(','):
                 names = re.findall(r'\b\w+\b', binding)

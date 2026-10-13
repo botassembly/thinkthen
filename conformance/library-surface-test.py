@@ -155,6 +155,37 @@ class PublicSurface(unittest.TestCase):
             with self.subTest(helper=helper):
                 missing = {d for d in declared if d.name != name}
                 self.assertIn('missing helper: ' + helper, checker.helper_errors(missing, manifest, config))
+        fake_fields = {checker.READ.Declaration('OwnedAtomic', name, 'field')
+                       for name in config['helper_names'].values()}
+        self.assertEqual(len(checker.helper_errors(fake_fields, manifest, config)), 5)
+        manifest['helpers'] = {'plan': 'call', 'usage_persistence': 'call'}
+        getters = checker.READ.declarations('type OwnedFacts struct {}\n'
+                    'func (v OwnedFacts) Plan() string { return \"unused\" }\n'
+                    'func (v OwnedFacts) UsagePersistence() string { return \"unused\" }\n', 'go')
+        self.assertEqual(checker.helper_errors(getters, manifest, config),
+                         ['missing helper: plan', 'missing helper: usage_persistence'])
+
+    def test_public_enum_members_and_constants_remain_visible(self):
+        spec = importlib.util.spec_from_file_location('surface_cli_enums', CHECK)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        cases = {
+            'java': 'public enum State { FIRST("first"), SECOND("second"); private State(String s) {} }',
+            'csharp': 'public enum State { FIRST = 1, SECOND = 2 }',
+            'cpp': 'enum class State { FIRST = 1, SECOND = 2 };',
+            'typescript': 'export enum State { FIRST = 1, SECOND = 2 }',
+            'dart': 'enum State { FIRST, SECOND }',
+            'zig': 'pub const State = enum { FIRST, SECOND };',
+            'php': 'enum State: int { case FIRST = 1; case SECOND = 2; }',
+        }
+        for language, source in cases.items():
+            with self.subTest(language=language):
+                actual = checker.READ.declarations(source, language)
+                self.assertTrue({checker.READ.Declaration('State', member, 'field')
+                                 for member in ['FIRST', 'SECOND']} <= actual)
+        actual = checker.READ.declarations('const EXPORTED = 1; class Private { private const HIDDEN = 2; }', 'php')
+        self.assertIn(checker.READ.Declaration('', 'EXPORTED', 'export'), actual)
+        self.assertFalse(any(d.name == 'HIDDEN' for d in actual))
 
 
 if __name__ == '__main__':
