@@ -49,6 +49,13 @@ def generated_sources(root, target, request, result):
     elif target == 'cpp':
         outputs['results_generated.hpp'] = template.render(results, version) + template.usage(header)
         outputs['inputs_generated.hpp'] = template.input_render(inputs)
+        spec = importlib.util.spec_from_file_location('surface_cpp_abi', root / 'sdlc/scripts/check-c-exports.py')
+        abi = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(abi)
+        from csharp import enum_values
+        outputs['calls_generated.hpp'] = template.named_calls(
+            enum_values(request['$defs']['RequestFunction']),
+            abi.declarations(root / 'libraries/c/include/thinkthen.h')['functions'])
     elif target == 'csharp':
         outputs['CompleteFacts.g.cs'] = generator.generated(result, 'csharp')
         outputs['NativeBridge.g.cs'] = generator.bridge()
