@@ -434,28 +434,25 @@ fn maintenance_refuses_old_files_without_sends_or_data_changes() {
         "jsonl-mixed",
         "jsonl-mixed-unversioned",
     ] {
-        for (case, (command, extra)) in [
+        let folder = folder(&format!("maintenance-old-{old}"));
+        fill(
+            &folder,
+            EVIDENCE,
+            &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+        );
+        let (file, held) = old_store(&folder, old).expect("old store fixture");
+        let used = folder.with_extension("used");
+        fs::write(&used, "").expect("used list");
+        let before = snapshot(&folder, &file);
+        let listener = Listener::serving(vec![]).expect("listener");
+        let path = folder.to_str().expect("folder");
+        let used = used.to_str().expect("used");
+        for (command, extra) in [
             ("prune", &["--max-size", "1"][..]),
             ("prune", &["--max-size", "1", "--dry-run"][..]),
             ("unused", &[][..]),
             ("status", &["--json"][..]),
-        ]
-        .into_iter()
-        .enumerate()
-        {
-            let folder = folder(&format!("maintenance-old-{old}-{case}"));
-            fill(
-                &folder,
-                EVIDENCE,
-                &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
-            );
-            let (file, held) = old_store(&folder, old).expect("old store fixture");
-            let used = folder.with_extension("used");
-            fs::write(&used, "").expect("used list");
-            let before = snapshot(&folder, &file);
-            let listener = Listener::serving(vec![]).expect("listener");
-            let path = folder.to_str().expect("folder");
-            let used = used.to_str().expect("used");
+        ] {
             let mut arguments = if command == "status" {
                 vec![command]
             } else {
@@ -486,8 +483,8 @@ fn maintenance_refuses_old_files_without_sends_or_data_changes() {
                 "{old} {arguments:?} changed preserved files"
             );
             assert!(listener.requests().is_empty());
-            drop(held);
         }
+        drop(held);
     }
 }
 
