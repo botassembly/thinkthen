@@ -14,8 +14,6 @@ import struct
 import yaml
 import zipfile
 import unittest
-import time
-from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__).with_name('registry-readmes.py'))
@@ -158,6 +156,7 @@ class PackageText(unittest.TestCase):
                 subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
                                env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
 
+    @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')
     def test_compilers_lock_without_flock_and_replay_uses_prepared_cache(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
@@ -203,7 +202,8 @@ class PackageText(unittest.TestCase):
             self.assertIn('example-needs-two-functions: typescript', str(error.exception))
             self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
 
-    def test_timed_out_compiler_exits_before_another_replay_build_enters(self):
+    @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')
+    def test_timed_out_compiler_and_worker_exit_before_replay_releases_build(self):
         with tempfile.TemporaryDirectory() as scratch:
             tree = Path(scratch)
             root = tree / 'root'
@@ -223,9 +223,9 @@ class PackageText(unittest.TestCase):
                 'import os, pathlib, signal, subprocess, sys, time\n' +
                 'marker = pathlib.Path(' + repr(str(marker)) + ')\n' +
                 'if pathlib.Path.cwd().name.startswith("first"):\n' +
-                '    hard = pathlib.Path.cwd().name == "first-hard"\n' +
-                '    child = None if hard else subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])\n' +
-                '    marker.with_suffix(".worker").write_text(str(child.pid if child else os.getpid()))\n' +
+                '    hard = pathlib.Path.cwd().name != "first"\n' +
+                '    child = subprocess.Popen([sys.executable, "-c", ("import os, signal, time; " + ("os.setsid(); " if sys.platform == "linux" and pathlib.Path.cwd().name == "first-detached" else "") + "signal.signal(signal.SIGTERM, signal.SIG_IGN); time.sleep(30)") if hard else "import time; time.sleep(30)"])\n' +
+                '    marker.with_suffix(".worker").write_text(str(child.pid))\n' +
                 '    def stop(signum, frame): raise SystemExit(77)\n' +
                 '    signal.signal(signal.SIGTERM, signal.SIG_IGN if hard else stop)\n' +
                 '    marker.write_text(str(os.getpid()))\n' +
@@ -245,23 +245,21 @@ class PackageText(unittest.TestCase):
             communicate = subprocess.Popen.communicate
             def bounded_communicate(process, input=None, timeout=None):
                 return communicate(process, input, .4 if timeout == 300 else timeout)
-            for search_path, first_name in ((str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')):
+            cases = [(str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')]
+            if sys.platform == 'linux':
+                cases.append((str(tools), 'first-detached'))
+            for search_path, first_name in cases:
                 with self.subTest(path=search_path), patch.dict(os.environ, {
                     'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
-                        patch.object(subprocess.Popen, 'communicate', bounded_communicate), \
-                        ThreadPoolExecutor(max_workers=2) as workers:
+                        patch.object(subprocess.Popen, 'communicate', bounded_communicate):
                     marker.unlink(missing_ok=True)
                     first = tree / first_name; first.mkdir(exist_ok=True)
                     second = tree / 'second'; second.mkdir(exist_ok=True)
-                    failed = workers.submit(readmes.run_example, 'swift', packages, first, root)
-                    deadline = time.monotonic() + 3
-                    while not marker.exists() and time.monotonic() < deadline:
-                        time.sleep(.01)
-                    self.assertTrue(marker.exists(), 'first compiler did not start')
-                    contender = workers.submit(readmes.run_example, 'swift', packages, second, root)
                     with self.assertRaises(subprocess.TimeoutExpired):
-                        failed.result(timeout=5)
-                    contender.result(timeout=5)
+                        readmes.run_example('swift', packages, first, root)
+                    self.assertTrue(marker.exists(), 'first compiler did not start')
+                    self.assertNotEqual(marker.read_text(), marker.with_suffix('.worker').read_text())
+                    readmes.run_example('swift', packages, second, root)
                     for pid_file in (marker, marker.with_suffix('.worker')):
                         with self.assertRaises(ProcessLookupError):
                             os.kill(int(pid_file.read_text()), 0)

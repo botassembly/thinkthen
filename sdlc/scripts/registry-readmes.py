@@ -11,6 +11,7 @@ import re
 import shutil
 import signal
 import subprocess
+import sys
 import tempfile
 import tarfile
 import time
@@ -328,9 +329,15 @@ def run_process(command, work, env, input, timeout):
 
 
 def run_build(command, work, env, input):
-    import fcntl
-    # The runner owns the same lock on Linux and macOS; children never inherit it.
     lock_path = os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
+    if sys.platform == 'linux':
+        supervisor = REPO / 'sdlc/scripts/build-admission.py'
+        return run_process([sys.executable, str(supervisor), '--lock', lock_path,
+                            '--priority', 'normal', '--timeout', '300', '--', *command],
+                           work, env, input, 300)
+    import fcntl
+    # macOS has no Linux subreaper; keep its bounded process-group fallback.
+    # Children never inherit the exclusive lock.
     with open(lock_path, 'a') as lock:
         deadline = time.monotonic() + 180
         while True:
