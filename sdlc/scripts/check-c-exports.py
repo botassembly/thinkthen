@@ -284,7 +284,7 @@ def self_test(header):
     plants = [
         ('field', r'const char \*data;\s*size_t len;', 'size_t len; const char *data;'),
         ('union-arm', r'const (?:struct )?thinkthen_complete_session_judgment_decision_v1 \*decision;', 'uint64_t decision;'),
-        ('enum', r'#define THINKTHEN_FUNCTION_DECIDE_V1 (?:UINT32_C\(1\)|1u?\b)', '#define THINKTHEN_FUNCTION_DECIDE_V1 99'),
+        ('enum', r'#define THINKTHEN_SESSION_ACCEPTED_V1 (?:UINT32_C\(0\)|0u?\b)', '#define THINKTHEN_SESSION_ACCEPTED_V1 99'),
         ('argument', r'size_t descriptor_len\b', 'uint16_t descriptor_len'),
         ('return', 'int thinkthen_session_try_read(', 'uint64_t thinkthen_session_try_read('),
         ('pointer-depth', r'(?:struct )?thinkthen_session_result \*\*out\b', 'struct thinkthen_session_result *out'),
