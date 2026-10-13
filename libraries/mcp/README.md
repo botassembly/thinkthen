@@ -47,6 +47,8 @@ with Client.launch(("thinkthen", "mcp", "--replay",
     print(call["value"]["value"])
 ```
 
+`tools/list` provides compact input guidance for all ten tools. It preserves caller field names and native choice values, omits output schemas, and leaves full validation to native admission. Run `thinkthen mcp --help` for the full grammar links. Discovery types describe writable fields; they do not replace native checks for exclusive selectors, reader controls or authored questions.
+
 Use inline literal text, including `@` prefixes, or the ordinary native JSON
 question/set/plan grammar as `question`. `question_file` explicitly loads an
 ordinary existing file. `question_name` loads a validated name from the native

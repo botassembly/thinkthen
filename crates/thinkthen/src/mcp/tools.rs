@@ -8,15 +8,27 @@ impl Tool {
     fn description(self) -> &'static str {
         match self {
             Self::Decide => "Answer yes, no or unsure.",
-            Self::Choose => "Pick one declared option, or null.",
-            Self::Tag => "Return every applicable declared label.",
-            Self::Score => "Place evidence on declared levels.",
+            Self::Choose => {
+                "Pick one declared option, or null. question.options is an ordered list of at least two names or a name-to-description map."
+            }
+            Self::Tag => {
+                "Return every applicable declared label. question.labels is an ordered list of names or a name-to-description map."
+            }
+            Self::Score => {
+                "Place evidence on declared levels. question.levels is an ordered list of at least two names, lowest first, or a name-to-meaning map."
+            }
             Self::Filter => "Keep records passing a yes/no question.",
             Self::Rank => "Order the complete records by the declared question or set.",
             Self::Find => "Select one unit from a complete set, or none.",
-            Self::Annotate => "Ask an ordered ordinary question set for each record.",
-            Self::Recognize => "Recognize caller-defined literal entities and physical text spans.",
-            Self::Relate => "Judge relationships over the complete entity set.",
+            Self::Annotate => {
+                "Ask an ordered ordinary question set for each record. question is {version:1,questions:{name:{decide:question_text}}}; entries also accept choose, tag or score."
+            }
+            Self::Recognize => {
+                "Recognize caller-defined literal entities and physical text spans. question is {version:1,recognize:{kinds:{kind_name:description}}}."
+            }
+            Self::Relate => {
+                "Judge relationships over the complete entity set. question is {version:1,relate:{relations:[{name:relation_name}]}}; records hold entities with name and kind."
+            }
         }
     }
 }
@@ -40,10 +52,8 @@ fn input_schema(tool: Tool) -> Value {
     let canonical: Value =
         serde_json::from_str(include_str!("../public/request/request.schema.json"))
             .unwrap_or_else(|_| json!({}));
-    let mut options = canonical
-        .pointer("/$defs/RequestOptions")
-        .cloned()
-        .unwrap_or_else(|| json!({}));
+    let mut options = json!({"type":"object","additionalProperties":false,
+        "properties":canonical.pointer("/$defs/RequestOptions/properties").cloned().unwrap_or_else(|| json!({}))});
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
         map.retain(|name, _| tool.allows_option(name) && name != "details");
         for schema in map.values_mut() {
@@ -83,25 +93,8 @@ fn input_schema(tool: Tool) -> Value {
             json!({"type":"array","items":descriptor_schema(tool, &canonical)}),
         );
     }
-    let questions = [
-        "question",
-        "question_file",
-        "question_name",
-        "question_reference",
-    ];
-    let question_choices = questions
-        .iter()
-        .map(|name| json!({"required":[name]}))
-        .collect::<Vec<_>>();
-    let forms = ["evidence", "records", "source", "images", "inputs"];
-    let input_choices = forms
-        .iter()
-        .filter(|name| **name != "images" || tool.images())
-        .map(|name| json!({"required":[name]}))
-        .collect::<Vec<_>>();
-    json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
-        "additionalProperties":false,"properties":properties,
-        "allOf":[{"anyOf":question_choices},{"anyOf":input_choices}]})
+    json!({"type":"object","additionalProperties":false,"properties":properties,
+        "description":"One question selector and one input form; images may accompany evidence."})
 }
 
 fn question_schema(tool: Tool, canonical: &Value) -> Value {
@@ -171,13 +164,23 @@ fn summary(schema: &Value, canonical: &Value) -> Value {
     }
     for key in ["oneOf", "anyOf"] {
         if let Some(choices) = schema.get(key).and_then(Value::as_array) {
-            compact.insert(
-                "anyOf".into(),
-                choices
-                    .iter()
-                    .map(|choice| summary(choice, canonical))
-                    .collect(),
-            );
+            let choices: Vec<_> = choices
+                .iter()
+                .map(|choice| summary(choice, canonical))
+                .collect();
+            let mut types = Vec::new();
+            for choice in &choices {
+                if let Some(kind) = choice.get("type").and_then(Value::as_str)
+                    && !types.contains(&kind)
+                {
+                    types.push(kind);
+                }
+            }
+            if choices.iter().all(|choice| choice.get("type").is_some()) {
+                compact.insert("type".into(), json!(types));
+            } else {
+                compact.insert("anyOf".into(), json!(choices));
+            }
         }
     }
     if schema.get("type") == Some(&json!("array")) {
@@ -231,25 +234,16 @@ fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
         .unwrap_or_else(|| json!({}));
     let mut source = json!({"type":"object","additionalProperties":false,"required":if file_only { vec!["paths","unit"] } else { vec!["paths"] },
         "properties":{"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-            "unit":summary(&unit, canonical),"window":{"type":"integer","minimum":1},"media":summary(&media, canonical),"framing":summary(&framing, canonical)}});
+            "unit":summary(&unit, canonical),"window":{"type":"integer","minimum":1},"media":summary(&media, canonical),"framing":summary(&framing, canonical)},
+        "description":"Paths keep order and repeats. window requires unit=window; image media requires unit=file. Framing uses native reader controls."});
     if file_only
         && let Some(properties) = source.get_mut("properties").and_then(Value::as_object_mut)
     {
         properties.remove("window");
         properties.remove("framing");
     }
-    if !file_only && let Some(map) = source.as_object_mut() {
-        map.insert(
-            "allOf".into(),
-            json!([
-                {"if":{"properties":{"unit":{"const":"window"}},"required":["unit"]},
-                    "then":{"required":["window"]}},
-                {"if":{"required":["window"]},
-                    "then":{"properties":{"unit":{"const":"window"}},"required":["unit"]}},
-                {"if":{"properties":{"media":{"const":"image"}},"required":["media"]},
-                    "then":{"properties":{"unit":{"const":"file"}},"required":["unit"]}}
-            ]),
-        );
+    if file_only && let Some(map) = source.as_object_mut() {
+        map.remove("description");
     }
     source
 }
