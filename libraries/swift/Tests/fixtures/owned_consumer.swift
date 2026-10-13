@@ -63,7 +63,7 @@ import ThinkThen
         try expect(unknown == nil, "Nullable normalized decision")
         let authoredNull = try await client.decide(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), true: .value(.alternative3(.null)))))), input: .text("authored-null"))
         try expect(try authoredNull.decideAnswer() == true, "Authored null replaced normalized judgment")
-        let explicit = try client.start(InputRequest(call: InputRequestCall(function: .decide, input: .text("hold-explicit-swift"), question: .text("Is it?"))))
+        let explicit = try client.start(InputRequest(call: InputRequestCall(function: .decide, input: .text("hold-explicit-swift"), question: .text("Is it?")), schema: .thinkthenRequest_1))
         try explicit.finish()
         try await arrived(barrier + "/arrived-hold-explicit-swift")
         explicit.cancel()
