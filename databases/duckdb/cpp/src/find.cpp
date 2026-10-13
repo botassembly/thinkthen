@@ -170,8 +170,8 @@ void RegisterFind(ExtensionLoader &loader) {
 	ThinkThenSpecialNulls(function);
 	function.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, function, purpose);
-	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_find(question, units, settings := NULL, legacy_deadline := NULL) AS "
-	                              "thinkthen_native_find(question, units, CAST(settings AS VARCHAR), "
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_find(question, units, settings := NULL, legacy_deadline := NULL" + PortableOptionParameters() + ") AS "
+	                              "thinkthen_native_find(question, units, " + PortableOptions() + ", "
 	                              "typeof(settings), typeof(legacy_deadline))", purpose);
 }
 

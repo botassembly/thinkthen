@@ -188,8 +188,8 @@ void RegisterNested(ExtensionLoader &loader) {
 	auto described = recognize;
 	ThinkThenArgument(described, 1, LogicalType::VARCHAR);
 	RegisterDescribedScalar(loader, described, spans);
-	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL) AS "
-	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))", spans);
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL" + PortableOptionParameters() + ") AS "
+	                              "thinkthen_native_recognize(input, kinds, " + PortableOptions() + ", typeof(settings))", spans);
 	ScalarFunction relations("thinkthen_native_relations",
 	                         {LogicalType::VARCHAR, LogicalType::VARCHAR,
 	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
@@ -197,8 +197,8 @@ void RegisterNested(ExtensionLoader &loader) {
 	ThinkThenSpecialNulls(relations);
 	relations.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, relations, edges);
-	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_relations(input, spec, settings := NULL) AS "
-	                              "thinkthen_native_relations(input, spec, CAST(settings AS VARCHAR), typeof(settings))", edges);
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_relations(input, spec, settings := NULL" + PortableOptionParameters() + ") AS "
+	                              "thinkthen_native_relations(input, spec, " + PortableOptions() + ", typeof(settings))", edges);
 }
 
 } // namespace duckdb

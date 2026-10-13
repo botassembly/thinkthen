@@ -5,5 +5,7 @@
 namespace duckdb {
 void RegisterPortableDecide(ExtensionLoader &loader);
 void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose);
+string PortableOptionParameters();
+string PortableOptions(const string &settings = "settings");
 void RegisterPlan(ExtensionLoader &loader);
 } // namespace duckdb
