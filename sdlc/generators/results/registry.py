@@ -27,6 +27,8 @@ OUTPUTS = (
     *group('csharp', 'inputs', 'libraries/csharp/src/', 'RequestInputs.g.cs'),
     *group('csharp', 'bridge', 'libraries/csharp/src/', 'NativeBridge.g.cs', 'NamedCalls.g.cs'),
     *group('r', 'results', 'libraries/r/thinkthen/src/rust/src/', 'results_generated.rs'),
+    *group('python', 'inputs', 'libraries/python/thinkthen/', '_named_generated.py'),
+    *group('r', 'inputs', 'libraries/r/thinkthen/R/', 'inputs-generated.R'),
     *group('python', 'results', 'libraries/python/src/', 'results_generated.rs'),
     *group('python', 'results', 'libraries/python/thinkthen/', '_native_results.py', '_native_results.pyi'),
     *group('zig', 'results', 'libraries/zig/src/', 'plan_generated.zig'),

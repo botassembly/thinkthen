@@ -5,7 +5,7 @@
 
 # Every call runs through here (ADR 0042). The guarded check runs before the
 # crossing is forced and after it returns, and the Rust half checks before
-# its worker starts and at each 100 ms tick. A user's options(error = ...)
+# its worker starts and at each 50 ms tick. A user's options(error = ...)
 # hook is held aside while the checks run and restored before anything is
 # raised, because R consults the hook at signal time (R7-13).
 .tt_call <- function(expr) {
@@ -110,16 +110,3 @@ tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
 # Live durability for the selected native engine; no facts-snapshot timestamp.
 tt_usage_persistence <- function() .tt_call(tt_usage_persistence_native())
 tt_finish_usage_status <- function() .tt_call(tt_finish_usage_status_native())
-
-
-tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
-                      max_requests_total = NULL, max_request_bytes = NULL,
-                      cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL,
-                      ..., backend = NULL, refresh_cache = FALSE) {
-  if (length(list(...))) .tt_unknown(...)
-  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
-                        max_request_bytes, cache, timeout, max_retries, record,
-                        replay, profile, batch, backend, refresh_cache))
-  invisible(NULL)
-}

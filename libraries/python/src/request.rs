@@ -56,13 +56,13 @@ impl Session {
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .clone();
+        let interest = if input {
+            thinkthen::RequestSessionWaitInterest::Input
+        } else {
+            thinkthen::RequestSessionWaitInterest::Settlement
+        };
         if let Some(session) = session {
             py.detach(move || {
-                let interest = if input {
-                    thinkthen::RequestSessionWaitInterest::Input
-                } else {
-                    thinkthen::RequestSessionWaitInterest::Settlement
-                };
                 let _ = session.wait(interest, std::time::Duration::from_millis(50));
             });
         }

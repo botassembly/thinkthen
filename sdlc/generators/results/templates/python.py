@@ -130,3 +130,33 @@ def types(definitions, stubs=False):
                          if 'primitive_schemas' in source else annotation(source))
             lines.append(f'{name(key)} = {value}')
     return '\n'.join(lines) + '\n'
+
+
+def named_calls(schema):
+    """Derive the named family and native control inventory from RequestFunction."""
+    definitions = schema['$defs']
+    controls = list(definitions['RequestOptions']['properties'])
+    lines = ['# Generated from the canonical request schema; do not edit.',
+             'MISSING = object()', 'class NamedCalls:', '    __slots__ = ()']
+    settings = list(definitions['EngineSettings']['properties'])
+    lines += ['    def __init__(self, *, ' + ', '.join(field + '=None' for field in settings) + '):',
+              '        self._configure(dict(' + ', '.join(field + '=' + field for field in settings) + '))']
+    inline = {'decide': ('true', 'false'), 'choose': ('options',),
+              'tag': ('labels',), 'score': ('levels',),
+              'filter': ('true', 'false'), 'rank': ('true', 'false'),
+              'recognize': ('kinds', 'relations', 'either', 'descriptions', 'instructions', 'entity_definition'),
+              'relate': ('relations', 'either')}
+    for alternative in definitions['RequestFunction']['oneOf']:
+        function = alternative['const']
+        recognition = function in ('recognize', 'relate')
+        names = list(dict.fromkeys([*controls, 'token', 'on', *inline.get(function, ())]))
+        parameters = ', '.join(name + '=MISSING' for name in names)
+        value = {'filter': 'records', 'rank': 'records', 'find': 'units', 'annotate': 'records', 'relate': 'entities'}.get(function, 'text')
+        question_arg = 'questions' if function == 'annotate' else 'question'
+        arguments = value + ', ask=None' if recognition else question_arg + ', ' + value
+        values = ', '.join(name + '=' + name for name in names)
+        question = 'ask' if recognition else question_arg
+        lines += [f'    def {function}(self, {arguments}, *, {parameters}):',
+                  f'        controls = dict({values})',
+                  f'        return self._named({function!r}, {question}, {value}, **{{key: value for key, value in controls.items() if value is not MISSING}})']
+    return '\n'.join(lines) + '\n'

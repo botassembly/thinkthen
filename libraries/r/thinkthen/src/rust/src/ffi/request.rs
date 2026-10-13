@@ -40,11 +40,27 @@ struct NativeSession {
 fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed<Robj> {
     let request = ExternalPtr::<NativeRequest>::try_from(request)
         .map_err(|_| crate::usage("an admitted request is required"))?;
-    let admitted = request.admitted.clone();
+    let mut arguments = request.admitted.request().call.arguments().clone();
+    if let Some(value) = deadline_of(&deadline)? {
+        if value.fract() != 0.0 || !(-1.0..=4_294_967_295_000.0).contains(&value) {
+            return Err(crate::usage(
+                "deadline_ms is -1, 0, or at most 4294967295000 milliseconds",
+            ));
+        }
+        #[expect(
+            clippy::cast_possible_truncation,
+            reason = "checked exact millisecond range"
+        )]
+        let milliseconds = value as i64;
+        arguments.options.deadline_ms = Some(milliseconds);
+    }
+    let admitted =
+        thinkthen::Request::for_function(request.admitted.request().call.function(), arguments)
+            .admit()
+            .map_err(|e| crate::carry(&e))?;
     let function = admitted.request().call.function();
     let column = request.column.clone();
     let done = calls::call_owned(
-        deadline_of(&deadline)?,
         &interrupt_pending,
         completion_of(&completion)?,
         request
@@ -86,7 +102,11 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
                 .map(|column| column.view(value).map_err(|e| crate::carry(&e)))
                 .transpose()?
                 .flatten();
-            Ok((crate::request::written(&outcome)?, view))
+            let kind = match &outcome {
+                RequestOutcome::Complete(_) => "success",
+                RequestOutcome::Failed { error, .. } => error.kind().name(),
+            };
+            Ok(((crate::request::written(&outcome)?, view), kind))
         },
     )?;
     let (text, view) = done.result?;

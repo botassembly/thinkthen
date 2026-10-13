@@ -1,8 +1,8 @@
 {
   "directory": [
-    "thinkthen",
-    "tests"
+    "thinkthen"
   ],
   "extension": ".py",
-  "max": 2678
+  "max": 1043,
+  "scope": "handwritten-production"
 }

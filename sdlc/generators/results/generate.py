@@ -740,6 +740,23 @@ def main():
         if args.output == OUTPUT:
             filename = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
             args.output = output_path(ROOT, 'zig', filename)
+    if args.target in ("python", "r") and args.inputs:
+        path = Path(__file__).parent / ("templates/" + args.target + ".py")
+        spec = importlib.util.spec_from_file_location("host_inputs", path)
+        target = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(target)
+        schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        filename = "_named_generated.py" if args.target == "python" else "inputs-generated.R"
+        output = output_path(ROOT, args.target, filename)
+        result = target.named_calls(schema) if args.target == "python" else target.inputs(schema)
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print("generated " + args.target + " inputs differ", file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
     if args.target == "python":
         if args.inputs or args.bridge:
             parser.error("Python target generates native results only")

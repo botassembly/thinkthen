@@ -1,0 +1,16 @@
+# Read typed answers from the installed 0.2 family.
+library(thinkthen)
+stopifnot(identical(tt_decide("A complaint?", "Refund please")$answer, TRUE))
+stopifnot(identical(tt_choose(list(choose = "Which team?", options = c("billing", "shipping")), "Refund please")$answer, "billing"))
+stopifnot(identical(tt_tag(list(tag = "Which labels?", labels = c("refund", "shipping")), "Refund shipping")$answer[[1]], c("refund", "shipping")))
+stopifnot(tt_score(list(score = "How urgent?", levels = c("low", "soon", "high")), "Later")$answer == 0.15)
+stopifnot(tt_filter("A complaint?", c("first", "second"))$answer[[1]]$input == "first")
+stopifnot(tt_rank("A complaint?", c("first", "second"))$answer[[1]]$index == 0)
+stopifnot(tt_find("Which line?", c("first", "second"))$answer$value == "first")
+stopifnot(isTRUE(tt_annotate(list(version = 1L, questions = list(approved = list(decide = "Approved?"))), "Yes")$answer[[1]]$approved))
+recognition <- tt_recognize_question(kinds = list(person = NULL, organization = NULL))
+stopifnot(tt_recognize(recognition, "Maria Chen joined Northwind Freight.")$answer[[1]]$entities[[1]]$text == "Maria Chen")
+relation <- tt_relate_question(relations = list(list(name = "knows", source = "person", target = "person")))
+edges <- tt_relate(relation, list(list(name = "Ada", kind = "person"), list(name = "Bo", kind = "person")))$answer
+stopifnot(edges[[1]]$source$name == "Ada", edges[[1]]$target$name == "Bo")
+cat("ten typed answers\n")

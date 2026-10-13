@@ -2,7 +2,7 @@
 //!
 //! Every call runs on a fresh worker thread that owns its inputs, its
 //! engine clone, and a clone of the call's cancel token. The main thread
-//! waits on a channel in 100 ms ticks and runs R's interrupt check at each
+//! waits on a channel in 50 ms ticks and runs R's interrupt check at each
 //! one. A pending interrupt cancels the token and returns the marker at
 //! once, so a request already on the wire never holds the caller. The
 //! detached worker then sends nothing new and finishes what it sent.
