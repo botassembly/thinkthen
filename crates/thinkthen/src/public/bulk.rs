@@ -3,6 +3,7 @@
 mod annotate_observation;
 mod complete;
 pub(in crate::public) use complete::count_message;
+#[cfg(any(test, feature = "polars"))]
 mod details;
 pub(crate) mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};

@@ -76,14 +76,14 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
     };
     let engine = build().no_cache().build().unwrap();
     let question = Question::decide(question).unwrap().cut();
-    let rows = engine
-        .details_many_with(
-            &question,
-            inputs.iter().map(String::as_str),
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(inputs.iter().map(String::as_str)),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     let sent = listener.requests();
     assert_eq!(sent.len(), 1);
     let parts: Members = serde_json::from_slice(&sent[0].body).unwrap();
@@ -102,7 +102,7 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
             &["systemone", &url, model, model, state, actual],
         );
         assert_ne!(v2, original_key);
-        assert_eq!(row.value().requests(), std::slice::from_ref(&v2));
+        assert_eq!(row.result().meta().requests(), std::slice::from_ref(&v2));
         expected_keys.push(v2);
         fixture.push(
             json!({"key":original_key,"url":url,"model":"jev-1.13.0",
@@ -116,19 +116,22 @@ fn check_keys(question: &str, inputs: &[String], expected_questions: &[String]) 
     let path = place.join("thinkthen.jsonl");
     std::fs::write(&path, &fixture).unwrap();
     let replay = build().replay(&place).unwrap().build().unwrap();
-    let rows = replay
-        .details_many_with(
-            &question,
-            inputs.iter().map(String::as_str),
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = crate::api::pull_decisions(
+        &replay,
+        &question,
+        crate::api::plain_records(inputs.iter().map(String::as_str)),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(rows.len(), inputs.len());
     for (row, key) in rows.iter().zip(expected_keys) {
-        assert_eq!(row.value().requests(), &[key]);
-        assert_eq!(row.value().question_sources()[0].origin(), Origin::Replay);
-        assert_eq!(row.value().requests_sent(), 0);
+        assert_eq!(row.result().meta().requests(), &[key]);
+        assert_eq!(
+            row.result().identity().question_sources()[0].origin(),
+            Origin::Replay
+        );
+        assert_eq!(row.result().meta().requests_sent(), 0);
     }
     assert_eq!(listener.count(), 1);
     assert_eq!(std::fs::read_to_string(path).unwrap(), fixture);
