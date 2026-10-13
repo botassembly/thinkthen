@@ -404,12 +404,12 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
 #[test]
 fn maintenance_refuses_old_files_without_sends_or_data_changes() {
     let snapshot = |folder: &Path, file: &str| {
-        let mut names: Vec<_> = fs::read_dir(&folder)
+        let mut names: Vec<_> = fs::read_dir(folder)
             .expect("folder")
             .map(|item| item.expect("entry").file_name())
             .collect();
         names.sort();
-        let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(&file)]
+        let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(file)]
             .into_iter()
             .filter(|path| path.exists())
             .map(|path| {
