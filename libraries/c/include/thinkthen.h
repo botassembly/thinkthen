@@ -833,54 +833,6 @@ typedef struct thinkthen_request_engine_settings_max_requests_v1 {
   union thinkthen_request_engine_settings_max_requests_data_v1 data;
 } thinkthen_request_engine_settings_max_requests_v1;
 
-typedef struct thinkthen_request_json_value_v1 {
-  struct thinkthen_complete_utf8_v1 text;
-} thinkthen_request_json_value_v1;
-
-typedef struct thinkthen_request_boolean_v1 {
-  uint32_t value;
-} thinkthen_request_boolean_v1;
-
-typedef struct thinkthen_request_engine_settings_v1 {
-  const struct thinkthen_request_text_v1 *m_backend;
-  const struct thinkthen_request_text_v1 *m_base_url;
-  const struct thinkthen_request_batch_v1 *m_batch;
-  const struct thinkthen_request_cache_document_v1 *m_cache;
-  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_estimated_input_tokens_total;
-  const struct thinkthen_request_unsigned_v1 *m_max_request_bytes;
-  const struct thinkthen_request_engine_settings_max_requests_v1 *m_max_requests;
-  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_requests_total;
-  const struct thinkthen_request_unsigned_v1 *m_max_retries;
-  const struct thinkthen_request_text_v1 *m_model;
-  const struct thinkthen_request_text_v1 *m_profile;
-  const struct thinkthen_request_json_value_v1 *m_proxy;
-  const struct thinkthen_request_text_v1 *m_record;
-  const struct thinkthen_request_boolean_v1 *m_refresh_cache;
-  const struct thinkthen_request_text_v1 *m_replay;
-  const struct thinkthen_request_unsigned_v1 *m_throttle;
-  const struct thinkthen_request_unsigned_v1 *m_timeout;
-  const struct thinkthen_request_text_v1 *m_usd_per_million_input;
-  const struct thinkthen_request_text_v1 *m_usd_per_million_output;
-} thinkthen_request_engine_settings_v1;
-
-typedef struct thinkthen_complete_attempt_outcome_v1 {
-  uint32_t kind;
-} thinkthen_complete_attempt_outcome_v1;
-
-typedef struct thinkthen_complete_utf8_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_utf8_presence_v1;
-
-typedef struct thinkthen_complete_sdk_request_id_v1 {
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_sdk_request_id_v1;
-
-typedef struct thinkthen_complete_u64_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_u64_presence_v1;
-
 /*
  C descriptor or borrowed view `thinkthen_complete_json_array_v1`.
  */
@@ -962,6 +914,54 @@ typedef struct thinkthen_complete_json_v1 {
    */
   union thinkthen_complete_json_data_v1 data;
 } thinkthen_complete_json_v1;
+
+typedef struct thinkthen_request_json_value_v1 {
+  const struct thinkthen_complete_json_v1 *value;
+} thinkthen_request_json_value_v1;
+
+typedef struct thinkthen_request_boolean_v1 {
+  uint32_t value;
+} thinkthen_request_boolean_v1;
+
+typedef struct thinkthen_request_engine_settings_v1 {
+  const struct thinkthen_request_text_v1 *m_backend;
+  const struct thinkthen_request_text_v1 *m_base_url;
+  const struct thinkthen_request_batch_v1 *m_batch;
+  const struct thinkthen_request_cache_document_v1 *m_cache;
+  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_estimated_input_tokens_total;
+  const struct thinkthen_request_unsigned_v1 *m_max_request_bytes;
+  const struct thinkthen_request_engine_settings_max_requests_v1 *m_max_requests;
+  const struct thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 *m_max_requests_total;
+  const struct thinkthen_request_unsigned_v1 *m_max_retries;
+  const struct thinkthen_request_text_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_profile;
+  const struct thinkthen_request_json_value_v1 *m_proxy;
+  const struct thinkthen_request_text_v1 *m_record;
+  const struct thinkthen_request_boolean_v1 *m_refresh_cache;
+  const struct thinkthen_request_text_v1 *m_replay;
+  const struct thinkthen_request_unsigned_v1 *m_throttle;
+  const struct thinkthen_request_unsigned_v1 *m_timeout;
+  const struct thinkthen_request_text_v1 *m_usd_per_million_input;
+  const struct thinkthen_request_text_v1 *m_usd_per_million_output;
+} thinkthen_request_engine_settings_v1;
+
+typedef struct thinkthen_complete_attempt_outcome_v1 {
+  uint32_t kind;
+} thinkthen_complete_attempt_outcome_v1;
+
+typedef struct thinkthen_complete_utf8_presence_v1 {
+  uint32_t presence;
+  struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_utf8_presence_v1;
+
+typedef struct thinkthen_complete_sdk_request_id_v1 {
+  struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_sdk_request_id_v1;
+
+typedef struct thinkthen_complete_u64_presence_v1 {
+  uint32_t presence;
+  uint64_t value;
+} thinkthen_complete_u64_presence_v1;
 
 /*
  C descriptor or borrowed view `thinkthen_complete_extension_v1`.
@@ -1257,7 +1257,7 @@ typedef struct thinkthen_request_input_text_v1 {
 } thinkthen_request_input_text_v1;
 
 typedef struct thinkthen_request_input_json_value_v1 {
-  struct thinkthen_complete_utf8_v1 text;
+  const struct thinkthen_complete_json_v1 *value;
 } thinkthen_request_input_json_value_v1;
 
 typedef struct thinkthen_request_input_json_v1 {
@@ -1337,7 +1337,7 @@ typedef struct thinkthen_request_original_text_v1 {
 } thinkthen_request_original_text_v1;
 
 typedef struct thinkthen_request_original_json_value_v1 {
-  struct thinkthen_complete_utf8_v1 text;
+  const struct thinkthen_complete_json_v1 *value;
 } thinkthen_request_original_json_value_v1;
 
 typedef struct thinkthen_request_original_json_v1 {

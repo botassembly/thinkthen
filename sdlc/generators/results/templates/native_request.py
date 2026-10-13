@@ -1,6 +1,7 @@
 """Counted request carriers and Rust conversion from the prepared request graph."""
 import json
 import re
+from native import JSON_KINDS
 
 
 def name(key):
@@ -78,6 +79,41 @@ def carrier_graph(definitions, roots=('RequestArguments', 'RequestSessionDescrip
         inline[identity] = key
         return key
     return nodes, select
+
+
+def value_tree_reader():
+    """Lower the one canonical JSON layout grammar into counted recursive admission."""
+    lines = ['unsafe fn read_json_value(pointer: *const thinkthen_complete_json_v1, context: &mut Context) -> Result<Value, CarrierError> {',
+        '// SAFETY: the caller retains its aligned node and all counted children.',
+        'let input = unsafe { borrow(pointer)? };',
+        'context.enter(|context| {',
+        '// SAFETY: only the validated tag selects a payload; each extent is checked.',
+        'unsafe { match input.kind {']
+    for kind in JSON_KINDS:
+        symbol = 'THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1'
+        payload = 'input.data.' + kind
+        if kind == 'null':
+            body = ['Value::literal("null")']
+        elif kind == 'boolean':
+            body = ['Ok(Value::Boolean(match ' + payload + ' { 0 => false, 1 => true, _ => return Err(CarrierError::Invalid) }))']
+        elif kind == 'string':
+            body = ['Ok(Value::Text(context.text(' + payload + ')?))']
+        elif kind == 'number':
+            body = ['let number = context.text(' + payload + ')?;',
+                "if !matches!(number.as_bytes().first(), Some(b'-' | b'0'..=b'9')) { return Err(CarrierError::Invalid); }",
+                'Value::literal(&number)']
+        else:
+            body = ['let input = ' + payload + ';', 'let mut values = Vec::new();',
+                'for item in extent(input.data, input.len)? {']
+            if kind == 'array':
+                body.append('values.push(read_json_value(*item, context)?);')
+            elif kind == 'object':
+                body.append('values.push((context.text(item.name)?, read_json_value(item.value, context)?));')
+            else:
+                raise ValueError('unsupported canonical JSON layout kind: ' + kind)
+            body += ['}', 'Ok(Value::' + ('Array' if kind == 'array' else 'Object') + '(values))']
+        lines += [symbol + ' => {', *body, '},']
+    return '\n'.join([*lines, '_ => Err(CarrierError::Invalid),', '} }', '})', '}'])
 
 
 def render(definitions, metadata=None):
@@ -172,9 +208,16 @@ def render(definitions, metadata=None):
             scalar = 'f64' if kind == 'number' else 'u32' if kind == 'boolean' else 'u64' if source.get('format', '').startswith('u') else 'i64'
             fields = [('value', scalar)]
             body = [({'boolean':'Value::Boolean(match input.value { 0 => false, 1 => true, _ => return Err(CarrierError::Invalid) })', 'number':'Value::Number(serde_json::Number::from_f64(input.value).ok_or(CarrierError::Invalid)?)', 'integer':'Value::Number(input.value.into())'})[kind]]
-        else:
+        elif source.get('type') == 'string':
             fields = [('text', 'thinkthen_complete_utf8_v1')]
-            body = ['Value::Text(context.text(input.text)?)' if source.get('type') == 'string' else 'Value::literal(&context.text(input.text)?)?']
+            body = ['Value::Text(context.text(input.text)?)']
+        else:
+            fields = [('value', '*const thinkthen_complete_json_v1')]
+            body = ['let value = read_json_value(input.value, context)?;',
+                'if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity { return Err(CarrierError::Overflow); }',
+                'value']
+        if metadata is not None:
+            metadata.setdefault('fields', {})[key] = tuple(fields)
         structure(typ, fields)
         if 'const' in source or source.get('type') == 'null':
             read_body = 'let _ = unsafe { borrow(pointer)? };\nlet _ = context;\n' + body[0].removesuffix('?')
@@ -194,5 +237,5 @@ def render(definitions, metadata=None):
     return '''// Generated counted carriers from the canonical request graph; do not edit.
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned request carriers and conversion")]
 use super::{CarrierError, Context, Value, borrow, extent, optional};
-use crate::session::views::thinkthen_complete_utf8_v1;
-''' + '\n'.join(declarations + readers) + '\n'
+use crate::session::views::{JSON_IMPORTS};
+'''.replace('JSON_IMPORTS', ', '.join(['thinkthen_complete_utf8_v1', 'thinkthen_complete_json_v1', *('THINKTHEN_COMPLETE_JSON_' + kind.upper() + '_V1' for kind in JSON_KINDS)])) + '\n'.join(declarations + [value_tree_reader()] + readers) + '\n'
