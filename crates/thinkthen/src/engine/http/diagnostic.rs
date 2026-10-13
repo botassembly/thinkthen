@@ -123,8 +123,10 @@ fn opaque_token(word: &str) -> bool {
 pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
     !text.is_empty()
         && (body.windows(text.len()).any(|part| part == text.as_bytes())
-            || serde_json::to_vec(text)
-                .is_ok_and(|literal| body.windows(literal.len()).any(|part| part == literal)))
+            || serde_json::to_vec(text).is_ok_and(|literal| {
+                let escaped = &literal[1..literal.len() - 1];
+                body.windows(escaped.len()).any(|part| part == escaped)
+            }))
 }
 
 pub(super) fn key_echo(text: &str, key: &Key) -> bool {
