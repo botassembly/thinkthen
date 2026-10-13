@@ -21,6 +21,7 @@ OUTPUTS = (
     *group('c', 'operations', 'libraries/c/src/ffi/native_request/', 'operations_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/session/', 'primitives_generated.rs'),
     *group('c', 'operations', 'libraries/c/src/ffi/carriers/', 'layouts_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/current/', 'operations_generated.rs'),
     *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
     *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),

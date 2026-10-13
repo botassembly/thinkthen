@@ -6,6 +6,23 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
 use thinkthen::ErrorKind;
+/// Borrow the immutable last engine/thread failure, or constructor failure for NULL.
+/// NULL means that slot holds no failure. Getters and successful engine calls preserve
+/// the view, including code, safe message, retryability and typed optional facts.
+/// Root and every nested value remain stable until this thread next fails on this
+/// engine, engine_free or thread exit. A NULL-engine view ends at the next constructor.
+/// Other threads cannot replace or move this thread slot.
+/// # Safety
+/// engine is NULL or live for the call and every borrowed engine view.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_error_view(
+    engine: *const crate::EngineHandle,
+) -> *const crate::session::views::thinkthen_error_view_v1 {
+    // SAFETY: the caller retains its nullable engine owner.
+    let held = unsafe { super::held(engine) };
+    super::guard(held, std::ptr::null(), || failures::view(held))
+}
+
 /// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.
 /// Construction sends nothing; failures return NULL and occupy the constructor slot.
 /// # Safety

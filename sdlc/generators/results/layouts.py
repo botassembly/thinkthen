@@ -25,6 +25,8 @@ def optional(name, value):
 
 
 PRIMITIVES = (
+    Layout('thinkthen_error_view_v1', (('code', 'std::ffi::c_int'), ('retryable', 'std::ffi::c_int'),
+        ('message', 'thinkthen_complete_utf8_v1'), ('facts', '*const crate::session::views_generated::thinkthen_complete_immediate_facts_v1'))),
     counted('thinkthen_complete_utf8_v1', 'std::ffi::c_char'),
     Layout('thinkthen_complete_extension_v1', (('name', 'thinkthen_complete_utf8_v1'), ('json', 'thinkthen_complete_utf8_v1'), ('value', '*const thinkthen_complete_json_v1'))),
     counted('thinkthen_complete_extensions_v1', 'thinkthen_complete_extension_v1'),

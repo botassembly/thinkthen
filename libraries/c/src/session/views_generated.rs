@@ -2781,6 +2781,180 @@ pub(crate) fn read_thinkthen_complete_image_media_v1(
     Ok(thinkthen_complete_image_media_v1 { kind })
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_call_id_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_call_id_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_immediate_facts_v1 {
+    pub attempts: thinkthen_complete_attempt_list_presence_v1,
+    pub cache_answers: u64,
+    pub call_id: thinkthen_complete_call_id_presence_v1,
+    pub estimated_cost_usd: thinkthen_complete_utf8_presence_v1,
+    pub held_model_mismatch: thinkthen_complete_u32_presence_v1,
+    pub input_tokens: thinkthen_complete_u64_presence_v1,
+    pub largest_request_bytes: u64,
+    pub largest_request_estimated_input_tokens: thinkthen_complete_u64_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub output_tokens: thinkthen_complete_u64_presence_v1,
+    pub records: u64,
+    pub requests_sent: u64,
+    pub seconds: f64,
+    pub token_estimate_method: thinkthen_complete_utf8_v1,
+    pub usage_persistence: thinkthen_complete_persistence_observation_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_immediate_facts_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_immediate_facts_v1, ErrorKind> {
+    Ok(thinkthen_complete_immediate_facts_v1 {
+        attempts: {
+            let (presence, value) = read_presence(
+                node.member("attempts"),
+                false,
+                thinkthen_complete_attempt_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_attempt_list_v1,
+                store,
+            )?;
+            thinkthen_complete_attempt_list_presence_v1 { presence, value }
+        },
+        cache_answers: {
+            let value = node.required("cache_answers")?;
+            read_number(value, store)?
+        },
+        call_id: {
+            let (presence, value) = read_presence(
+                node.member("call_id"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_call_id_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_call_id_presence_v1 { presence, value }
+        },
+        estimated_cost_usd: {
+            let (presence, value) = read_presence(
+                node.member("estimated_cost_usd"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        held_model_mismatch: {
+            let (presence, value) = read_presence(
+                node.member("held_model_mismatch"),
+                false,
+                0,
+                read_boolean,
+                store,
+            )?;
+            thinkthen_complete_u32_presence_v1 { presence, value }
+        },
+        input_tokens: {
+            let (presence, value) =
+                read_presence(node.member("input_tokens"), false, 0, read_number, store)?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
+        },
+        largest_request_bytes: {
+            let value = node.required("largest_request_bytes")?;
+            read_number(value, store)?
+        },
+        largest_request_estimated_input_tokens: {
+            let (presence, value) = read_presence(
+                node.member("largest_request_estimated_input_tokens"),
+                true,
+                0,
+                read_number,
+                store,
+            )?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        output_tokens: {
+            let (presence, value) =
+                read_presence(node.member("output_tokens"), false, 0, read_number, store)?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
+        },
+        records: {
+            let value = node.required("records")?;
+            read_number(value, store)?
+        },
+        requests_sent: {
+            let value = node.required("requests_sent")?;
+            read_number(value, store)?
+        },
+        seconds: {
+            let value = node.required("seconds")?;
+            read_number(value, store)?
+        },
+        token_estimate_method: {
+            let value = node.required("token_estimate_method")?;
+            read_text(value, store)?
+        },
+        usage_persistence: {
+            let (presence, value) = read_presence(
+                node.member("usage_persistence"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_persistence_observation_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_persistence_observation_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "attempts",
+                "cache_answers",
+                "call_id",
+                "estimated_cost_usd",
+                "held_model_mismatch",
+                "input_tokens",
+                "largest_request_bytes",
+                "largest_request_estimated_input_tokens",
+                "model",
+                "output_tokens",
+                "records",
+                "requests_sent",
+                "seconds",
+                "token_estimate_method",
+                "usage_persistence",
+            ],
+        )?,
+    })
+}
+
 pub const THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT_V1: u32 = 1;
 
 pub const THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT_V1: u32 = 2;
