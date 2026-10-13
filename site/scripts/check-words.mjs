@@ -45,12 +45,6 @@ const SETTING_NAME = new RegExp(String.raw`\b(?:Plan|Prune)${GAP}$`);
 const ALLOWED = [
   ['/start/settings/', 'preview', 'uncoalesced uninterrupted', 'Settings renders the contract for exact preview bytes, not a release status.'],
   ['/start/settings/', 'preview', 'estimate of preview input tokens', 'Settings renders the contract for input-token estimates, not a release status.'],
-  ['/start/settings/', '0.1.2', 'The public release remains 0.1.2', 'Settings renders specification/settings.md verbatim, and the specification owns this sentence.'],
-  ['/start/settings/', 'admitted', 'whose admitted fields generate', 'Settings renders specification/settings.md verbatim, and the specification owns this sentence.'],
-  ['/start/settings/', 'admitted', 'admitted by actual encoded request bytes', 'Settings renders specification/settings.md verbatim, and the specification owns this sentence.'],
-  ['/start/settings/', 'admitted', 'within the admitted route', 'Settings renders specification/settings.md verbatim, and the specification owns this sentence.'],
-  ['/start/settings/', 'admitted', 'declares an admitted local image setup', 'Settings renders specification/settings.md verbatim, and the specification owns this sentence.'],
-  ['/functions/recognize/', 'admitted', 'admitted by actual encoded request bytes', 'The kinds flag reads its allowed values from specification/settings.md, which owns this sentence.'],
 ];
 
 export function prose(html) {
