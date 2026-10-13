@@ -379,11 +379,18 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
     } else if old != "digest" {
         let connection = rusqlite::Connection::open(&database)?;
         connection.execute_batch("PRAGMA user_version = 1;")?;
-        if old == "wal" {
+        if old == "wal" || old == "wal-closed" {
             connection.execute_batch(
                 "PRAGMA journal_mode = WAL; PRAGMA user_version = 1; BEGIN IMMEDIATE;",
             )?;
-            held = Some(connection);
+            if old == "wal" {
+                held = Some(connection);
+            } else {
+                connection.execute_batch("ROLLBACK;")?;
+                drop(connection);
+                assert!(!folder.join("thinkthen.sqlite-wal").exists());
+                assert!(!folder.join("thinkthen.sqlite-shm").exists());
+            }
         }
         "thinkthen.sqlite".to_owned()
     } else {
@@ -395,62 +402,69 @@ fn old_store(folder: &Path, old: &str) -> Try<(String, Option<rusqlite::Connecti
 }
 
 #[test]
-fn maintenance_refuses_old_files_without_sends_or_changes() {
+fn maintenance_refuses_old_files_without_sends_or_data_changes() {
     for old in [
         "sqlite",
         "wal",
+        "wal-closed",
         "digest",
         "jsonl",
         "jsonl-unversioned",
         "jsonl-mixed",
         "jsonl-mixed-unversioned",
     ] {
-        let folder = folder(&format!("maintenance-old-{old}"));
-        fill(
-            &folder,
-            EVIDENCE,
-            &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
-        );
-        let (file, held) = old_store(&folder, old).expect("old store fixture");
-        let used = folder.with_extension("used");
-        fs::write(&used, "").expect("used list");
-        let snapshot = || {
-            let mut names: Vec<_> = fs::read_dir(&folder)
-                .expect("folder")
-                .map(|item| item.expect("entry").file_name())
-                .collect();
-            names.sort();
-            let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(&file)]
-                .into_iter()
-                .filter(|path| path.exists())
-                .map(|path| {
-                    (
-                        fs::read(&path).expect("bytes"),
-                        fs::metadata(path)
-                            .expect("metadata")
-                            .modified()
-                            .expect("mtime"),
-                    )
-                })
-                .collect();
-            (names, contents)
-        };
-        let before = snapshot();
-        let listener = Listener::serving(vec![]).expect("listener");
-        let path = folder.to_str().expect("folder");
-        let used = used.to_str().expect("used");
-        for (command, extra) in [
-            ("prune", vec!["--max-size", "1"]),
-            ("prune", vec!["--max-size", "1", "--dry-run"]),
-            ("unused", vec!["--used", used]),
-            ("status", vec!["--json"]),
-        ] {
+        for (case, (command, extra)) in [
+            ("prune", &["--max-size", "1"][..]),
+            ("prune", &["--max-size", "1", "--dry-run"][..]),
+            ("unused", &[][..]),
+            ("status", &["--json"][..]),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let folder = folder(&format!("maintenance-old-{old}-{case}"));
+            fill(
+                &folder,
+                EVIDENCE,
+                &[(DEFAULT_MODEL, "asks for a refund", ANSWERED)],
+            );
+            let (file, held) = old_store(&folder, old).expect("old store fixture");
+            let used = folder.with_extension("used");
+            fs::write(&used, "").expect("used list");
+            let snapshot = || {
+                let mut names: Vec<_> = fs::read_dir(&folder)
+                    .expect("folder")
+                    .map(|item| item.expect("entry").file_name())
+                    .collect();
+                names.sort();
+                let contents: Vec<_> = [folder.join("thinkthen.sqlite"), folder.join(&file)]
+                    .into_iter()
+                    .filter(|path| path.exists())
+                    .map(|path| {
+                        (
+                            fs::read(&path).expect("bytes"),
+                            fs::metadata(path)
+                                .expect("metadata")
+                                .modified()
+                                .expect("mtime"),
+                        )
+                    })
+                    .collect();
+                ((!file.ends_with(".sqlite")).then_some(names), contents)
+            };
+            let before = snapshot();
+            let listener = Listener::serving(vec![]).expect("listener");
+            let path = folder.to_str().expect("folder");
+            let used = used.to_str().expect("used");
             let mut arguments = if command == "status" {
                 vec![command]
             } else {
                 vec!["cache", command, path]
             };
-            arguments.extend(extra);
+            arguments.extend_from_slice(extra);
+            if command == "unused" {
+                arguments.extend(["--used", used]);
+            }
             let output = run(
                 &arguments,
                 &[
@@ -469,11 +483,11 @@ fn maintenance_refuses_old_files_without_sends_or_changes() {
             );
             assert!(
                 snapshot() == before,
-                "{old} {arguments:?} changed the folder"
+                "{old} {arguments:?} changed preserved files"
             );
             assert!(listener.requests().is_empty());
+            drop(held);
         }
-        drop(held);
     }
 }
 
