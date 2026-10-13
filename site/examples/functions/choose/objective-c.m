@@ -7,15 +7,9 @@ int main(void) {
         initWithSettings:nil
         error:&error];
     assert(client);
-    NSString *question = @"Which team owns this?";
-    NSDictionary *teams = @{
-        @"billing": @"Invoices, fees, and refunds.",
-        @"shipping": @"Parcels and delivery.",
-        @"account": @"Logins and passwords.",
-    };
     NSDictionary *whichTeam = @{
-        @"kind": @"definition",
-        @"value": @{@"choose": question, @"options": teams},
+        @"kind": @"file",
+        @"path": @"teams.json",
     };
     NSDictionary *parcel = @{
         @"kind": @"text",

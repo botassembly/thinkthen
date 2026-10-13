@@ -1,9 +1,10 @@
 // Retained Rust site examples build in a normal Cargo project.
 // Other language package guides own their native-bearing install commands.
-// The binding replay builds the C, C++, Ada and COBOL function samples
+// The binding replay builds the C, C++, Objective-C, Ada and COBOL function samples
 // beside the unpacked C archive, thinkthen-c/, and the binding's folder.
 const program = sample => sample.replace(/\.[^.]+$/, '');
 const C_LIB = ['-L thinkthen-c/lib -lthinkthen', '-Wl,-rpath,"$PWD/thinkthen-c/lib"'];
+const OBJC = 'thinkthen-objective-c/Sources/Foundation';
 // The Go, PHP, Dart and C# lines build a function page sample beside the
 // unpacked release archive, as scripts/smoke-bindings.mjs lays it out.
 const GO_MODULE = 'github.com/botassembly/thinkthen/libraries/go';
@@ -39,6 +40,19 @@ export const BUILD_LINES = {
       ['cp thinkthen-c/include/thinkthen.h', 'thinkthen-cpp/include/thinkthen/'],
       ['c++ -std=c++17', '-I thinkthen-cpp/include', `${sample} -o ${program(sample)}`, ...C_LIB],
     ],
+    run: [`./${program(sample)}`],
+  }),
+  // Objective-C builds the Foundation sources from the binding's folder
+  // with the sample, on macOS.
+  'objective-c': ({ sample }) => ({
+    archive: 'thinkthen-objective-c',
+    lines: [[
+      'clang -fobjc-arc -fblocks',
+      `-I ${OBJC} -I thinkthen-c/include`,
+      `${OBJC}/*.m ${sample} -o ${program(sample)}`,
+      '-framework Foundation',
+      ...C_LIB,
+    ]],
     run: [`./${program(sample)}`],
   }),
   // The Swift and Zig packages carry their own native library, so their
