@@ -25,6 +25,10 @@ mod request_preview;
 #[path = "ffi/session/ffi.rs"]
 pub mod session;
 
+/// Counted typed request construction and feed operations.
+#[path = "ffi/native_request/ffi.rs"]
+pub mod native_request;
+
 use crate::EngineHandle;
 use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, USAGE, guard};
 

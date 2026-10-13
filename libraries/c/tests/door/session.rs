@@ -129,7 +129,7 @@ fn assert_definition_admission_refusals(backend: &Backend) {
 
 #[test]
 fn session_owns_inputs_engine_and_transferred_packets() {
-    for surface in ["c", "go", "php"] {
+    for (surface, typed) in [("c", false), ("go", false), ("php", false), ("c", true)] {
         let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
         r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":0}}"#
     )).expect("owned loopback");
@@ -137,13 +137,15 @@ fn session_owns_inputs_engine_and_transferred_packets() {
             &compile(&crate_dir().join("tests/c/session.c")),
             backend.base(),
             b"",
-            &if surface == "c" {
-                vec![("SESSION_PARTIAL", Path::new("1"))]
-            } else {
-                vec![
-                    ("SESSION_PARTIAL", Path::new("1")),
-                    ("SESSION_SURFACE", Path::new(surface)),
-                ]
+            &{
+                let mut values = vec![("SESSION_PARTIAL", Path::new("1"))];
+                if surface != "c" {
+                    values.push(("SESSION_SURFACE", Path::new(surface)));
+                }
+                if typed {
+                    values.push(("SESSION_TYPED", Path::new("1")));
+                }
+                values
             },
         );
         super::successful(&output);
@@ -241,31 +243,14 @@ fn session_wait_and_packet_read_cancel_promptly_and_drain_terminal_facts() {
             .expect("released listener delivered its response");
         if blocking {
             input.write_all(b"r").expect("settlement signal");
-            let mut terminal = None;
-            loop {
-                let mut line = String::new();
-                if output
-                    .read_line(&mut line)
-                    .expect("drain after cancellation")
-                    == 0
-                {
-                    let result = finished(child);
-                    panic!(
-                        "cancelled drain stopped: {:?} {}",
-                        result.status,
-                        text(&result.stderr)
-                    );
-                }
-                if line == "freed\n" {
-                    break;
-                }
-                let packet: serde_json::Value =
-                    serde_json::from_str(&line).expect("complete packet");
-                if packet["kind"] == "terminal" {
-                    terminal = Some(packet);
-                }
-            }
-            let terminal = terminal.expect("later terminal survives prompt cancellation");
+            let Some(terminal) = cancelled_terminal(&mut output) else {
+                let result = finished(child);
+                panic!(
+                    "cancelled drain stopped: {:?} {}",
+                    result.status,
+                    text(&result.stderr)
+                );
+            };
             assert_eq!(terminal["failure"]["error"]["kind"], "cancelled");
             assert_eq!(terminal["facts"]["requests_sent"], 1);
         }
@@ -278,5 +263,28 @@ fn session_wait_and_packet_read_cancel_promptly_and_drain_terminal_facts() {
         );
         assert_eq!(backend.count(), 1);
         drop(backend); // Retire and join all fixture listener workers.
+    }
+}
+
+fn cancelled_terminal(
+    output: &mut BufReader<std::process::ChildStdout>,
+) -> Option<serde_json::Value> {
+    let mut terminal = None;
+    loop {
+        let mut line = String::new();
+        if output
+            .read_line(&mut line)
+            .expect("drain after cancellation")
+            == 0
+        {
+            return None;
+        }
+        if line == "freed\n" {
+            return terminal;
+        }
+        let packet: serde_json::Value = serde_json::from_str(&line).expect("complete packet");
+        if packet["kind"] == "terminal" {
+            terminal = Some(packet);
+        }
     }
 }

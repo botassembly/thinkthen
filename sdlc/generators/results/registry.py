@@ -16,6 +16,7 @@ def group(target, mode, base, *names):
 
 OUTPUTS = (
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
+    *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
     *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),
     *group('csharp', 'inputs', 'libraries/csharp/src/', 'RequestInputs.g.cs'),

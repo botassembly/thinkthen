@@ -13,7 +13,10 @@ spec.loader.exec_module(template)
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
 schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
 definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
-name = template.identifier
+type_names = {}
+template.render(definitions, type_names)
+def name(key):
+    return type_names.get(key, template.identifier(key))
 
 
 def matches(source, value):
@@ -62,13 +65,16 @@ def construct(key, source, value):
     if '$ref' in source:
         original = source['$ref'].removeprefix('#/$defs/')
         return construct(original, definitions[original], value)
+    values = template.enum_values(source)
+    if values:
+        return template.identifier(key + '_' + value)
     variants = source.get('variants')
     alternatives = source.get('anyOf', source.get('oneOf'))
     if isinstance(source.get('type'), list):
         alternatives = [{**source, 'type': k} for k in source['type']]
     if variants:
         index, (branch, _) = next((i, pair) for i, pair in enumerate(variants) if matches(definitions[pair[0]], value))
-        return f"{typ}'(Kind => {name(key + '_arm_' + branch)}, V_{index} => " + construct(branch, definitions[branch], value) + ')'
+        return f"{typ}'(Kind => {template.identifier(key + '_arm_' + branch.removeprefix(key + '_'))}, V_{index} => " + construct(branch, definitions[branch], value) + ')'
     if alternatives and len(alternatives) > 1:
         index, branch = next((i, branch) for i, branch in enumerate(alternatives) if matches(branch, value))
         return f"{typ}'(Kind => {name(key + '_arm_' + str(index))}, V_{index} => " + construct(key + '_value_' + str(index), branch, value) + ')'
@@ -109,7 +115,7 @@ def construct(key, source, value):
 def cases():
     corpus = json.loads((ROOT / 'conformance/cases.json').read_text())['cases']
     result = []
-    for verb in (arm['properties']['function']['const'] for arm in schema['$defs']['RequestCall']['oneOf']):
+    for verb in template.enum_values(schema['$defs']['RequestFunction']):
         case = next(case for case in corpus if case['verb'] == verb)
         question = dict(case.get('question', case.get('question_set', {})))
         question.pop('relation_threshold', None)
@@ -129,6 +135,6 @@ def cases():
             value['options']['details'] = True
         if none is not None:
             value['options']['none'] = none
-        key = 'RequestCall_' + verb
+        key = 'RequestCall'
         result.append((verb, case['id'], construct(key, definitions[key], value)))
     return result

@@ -59,6 +59,11 @@
  */
 #define THINKTHEN_BATCH_RECORDS_V1 1u
 
+/*
+ A counted COBOL scalar exceeds its documented representation capacity.
+ */
+#define THINKTHEN_COBOL_OVERFLOW 1002
+
 #define THINKTHEN_COMPLETE_ANNOTATED_FIELD_ARRAY_V1 4
 
 #define THINKTHEN_COMPLETE_ANNOTATED_FIELD_BOOLEAN_V1 1
@@ -111,12 +116,6 @@
 
 #define THINKTHEN_COMPLETE_BOUNDARY_MODE_BOUNDARY_ONLY_V1 1
 
-#define THINKTHEN_COMPLETE_ESTIMATED_INPUT_DENIAL_ADDITIONAL_REQUEST_V1 2
-
-#define THINKTHEN_COMPLETE_ESTIMATED_INPUT_DENIAL_INITIAL_REQUEST_V1 1
-
-#define THINKTHEN_COMPLETE_ESTIMATED_INPUT_DENIAL_RETRY_V1 3
-
 #define THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_DISTRIBUTION_V1 5
 
 #define THINKTHEN_COMPLETE_FAILURE_CAUSE_INVALID_PROBABILITY_V1 4
@@ -147,9 +146,15 @@
 
 #define THINKTHEN_COMPLETE_IMAGE_MEDIA_IMAGE_PNG_V1 2
 
-#define THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_V1 2
+#define THINKTHEN_COMPLETE_INPUT_DECLARATION_OBJECT_ROOT_V1 2
 
-#define THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_V1 1
+#define THINKTHEN_COMPLETE_INPUT_DECLARATION_STRING_ROOT_V1 1
+
+#define THINKTHEN_COMPLETE_INPUT_DENIAL_ADDITIONAL_REQUEST_V1 2
+
+#define THINKTHEN_COMPLETE_INPUT_DENIAL_INITIAL_REQUEST_V1 1
+
+#define THINKTHEN_COMPLETE_INPUT_DENIAL_RETRY_V1 3
 
 #define THINKTHEN_COMPLETE_INPUT_PROPERTY_TYPE_ARRAY_V1 4
 
@@ -205,21 +210,21 @@
 
 #define THINKTHEN_COMPLETE_RECOGNITION_MODE_WHOLE_V1 1
 
-#define THINKTHEN_COMPLETE_RECOGNITION_ODDS_FIELDS_NAMES_PAIRS_PIECES_PROPOSALS_V1 1
+#define THINKTHEN_COMPLETE_RECOGNITION_ODDS_BOUNDARY_ODDS_V1 2
 
-#define THINKTHEN_COMPLETE_RECOGNITION_ODDS_FIELDS_PIECES_PROPOSALS_V1 2
+#define THINKTHEN_COMPLETE_RECOGNITION_ODDS_RECOGNIZE_ANSWER_V1 1
 
-#define THINKTHEN_COMPLETE_RECOGNIZE_FIELDS_ENTITIES_V1 1
+#define THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1 1
 
-#define THINKTHEN_COMPLETE_RECOGNIZE_FIELDS_MODE_PROPOSALS_V1 2
-
-#define THINKTHEN_COMPLETE_RELATED_ENTITY_EDGE_PROPERTIES_SOURCE_FIELDS_FILE_KIND_NAME_ORDINAL_RECORD_V1 2
-
-#define THINKTHEN_COMPLETE_RELATED_ENTITY_EDGE_PROPERTIES_SOURCE_FIELDS_KIND_NAME_V1 1
+#define THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS_V1 2
 
 #define THINKTHEN_COMPLETE_RELATION_DIRECTION_EITHER_V1 2
 
 #define THINKTHEN_COMPLETE_RELATION_DIRECTION_SOURCE_TO_TARGET_V1 1
+
+#define THINKTHEN_COMPLETE_RELATION_ENDPOINT_RELATED_ENTITY_V1 1
+
+#define THINKTHEN_COMPLETE_RELATION_ENDPOINT_SOURCE_V1 2
 
 #define THINKTHEN_COMPLETE_RELATION_MEMBER_ANSWER_ID_V1 1
 
@@ -249,11 +254,11 @@
 
 #define THINKTHEN_COMPLETE_REQUEST_FUNCTION_TAG_V1 3
 
-#define THINKTHEN_COMPLETE_SEND_BUDGET_DENIAL_BEFORE_ADDITIONAL_SEND_V1 2
+#define THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_ADDITIONAL_SEND_V1 2
 
-#define THINKTHEN_COMPLETE_SEND_BUDGET_DENIAL_BEFORE_FIRST_SEND_V1 1
+#define THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_FIRST_SEND_V1 1
 
-#define THINKTHEN_COMPLETE_SEND_BUDGET_DENIAL_BEFORE_RETRY_V1 3
+#define THINKTHEN_COMPLETE_SEND_DENIAL_BEFORE_RETRY_V1 3
 
 #define THINKTHEN_COMPLETE_SESSION_JUDGMENT_CHOICE_V1 2
 
@@ -617,6 +622,176 @@
  C value `THINKTHEN_RELATION_YES_NO_V1`.
  */
 #define THINKTHEN_RELATION_YES_NO_V1 1u
+
+#define THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_BATCH_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_BATCH_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_CRITERION_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_CRITERION_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_CRITERION_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_CRITERION_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_CUT_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_CUT_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_5_V1 5
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_6_V1 6
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_7_V1 7
+
+#define THINKTHEN_REQUEST_DEFINITION_ARM_8_V1 8
+
+#define THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_DEFINITION_AUTHORED_SCORE_BATCH_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_DESCRIPTION_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_DESCRIPTION_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_FRAMING_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_FRAMING_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_FRAMING_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_FRAMING_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_FRAMING_ARM_5_V1 5
+
+#define THINKTHEN_REQUEST_IMAGE_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_IMAGE_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_IMAGE_MEDIA_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_INPUT_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_INPUT_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_INPUT_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_INPUT_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_INPUT_ARM_5_V1 5
+
+#define THINKTHEN_REQUEST_INPUT_ARM_6_V1 6
+
+#define THINKTHEN_REQUEST_INPUT_ARM_7_V1 7
+
+#define THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_INPUT_DECLARATION_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_INPUT_PROPERTY_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_LABELS_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_LABELS_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_LEVELS_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_LEVELS_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_OPTIONS_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_OPTIONS_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_ORIGINAL_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_ORIGINAL_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_POINTERS_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_POINTERS_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_QUESTION_SELECTOR_ARM_5_V1 5
+
+#define THINKTHEN_REQUEST_QUESTION_TEXT_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_QUESTION_TEXT_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_QUESTION_TEXT_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_READER_FAILURE_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_READER_FAILURE_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_READER_FAILURE_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_READER_FAILURE_ARM_4_V1 4
+
+#define THINKTHEN_REQUEST_READER_MEDIA_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_READER_MEDIA_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_RECOGNITION_EXAMPLE_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_RECOGNITION_MODE_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_SOURCE_UNIT_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_SOURCE_UNIT_ARM_2_V1 2
+
+#define THINKTHEN_REQUEST_SOURCE_UNIT_ARM_3_V1 3
+
+#define THINKTHEN_REQUEST_THRESHOLD_ARM_1_V1 1
+
+#define THINKTHEN_REQUEST_THRESHOLD_ARM_2_V1 2
 
 /*
  C value `THINKTHEN_RESULT_FAILURE_V1`.
@@ -1085,6 +1260,48 @@ typedef struct thinkthen_question_author_v1 {
   struct thinkthen_input_declaration_v1 context_schema;
 } thinkthen_question_author_v1;
 
+typedef struct thinkthen_request_reader_failure_producer_v1 {
+  uint32_t reserved;
+} thinkthen_request_reader_failure_producer_v1;
+
+typedef struct thinkthen_request_text_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_text_v1;
+
+typedef struct thinkthen_request_unsigned_v1 {
+  uint64_t value;
+} thinkthen_request_unsigned_v1;
+
+typedef struct thinkthen_request_session_source_location_v1 {
+  const struct thinkthen_request_text_v1 *m_file;
+  const struct thinkthen_request_unsigned_v1 *m_first_line;
+  const struct thinkthen_request_unsigned_v1 *m_last_line;
+} thinkthen_request_session_source_location_v1;
+
+typedef struct thinkthen_request_reader_failure_io_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_io_v1;
+
+typedef struct thinkthen_request_reader_failure_utf_8_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_utf_8_v1;
+
+typedef struct thinkthen_request_reader_failure_invalid_input_v1 {
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_reader_failure_invalid_input_v1;
+
+typedef union thinkthen_request_reader_failure_data_v1 {
+  const struct thinkthen_request_reader_failure_producer_v1 *arm_1;
+  const struct thinkthen_request_reader_failure_io_v1 *arm_2;
+  const struct thinkthen_request_reader_failure_utf_8_v1 *arm_3;
+  const struct thinkthen_request_reader_failure_invalid_input_v1 *arm_4;
+} thinkthen_request_reader_failure_data_v1;
+
+typedef struct thinkthen_request_reader_failure_v1 {
+  uint32_t kind;
+  union thinkthen_request_reader_failure_data_v1 data;
+} thinkthen_request_reader_failure_v1;
+
 /*
  Existing canonical components for one named request. Every view is counted
  UTF-8, without a trailing NUL. No bytes or foreign pointers survive return.
@@ -1108,6 +1325,851 @@ typedef struct thinkthen_named_request_v1 {
   struct thinkthen_complete_utf8_v1 options_json;
 } thinkthen_named_request_v1;
 
+typedef struct thinkthen_request_literal_image_jpeg_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_image_jpeg_v1;
+
+typedef struct thinkthen_request_literal_image_png_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_image_png_v1;
+
+typedef union thinkthen_request_image_media_data_v1 {
+  const struct thinkthen_request_literal_image_jpeg_v1 *arm_1;
+  const struct thinkthen_request_literal_image_png_v1 *arm_2;
+} thinkthen_request_image_media_data_v1;
+
+typedef struct thinkthen_request_image_media_v1 {
+  uint32_t kind;
+  union thinkthen_request_image_media_data_v1 data;
+} thinkthen_request_image_media_v1;
+
+typedef struct thinkthen_request_image_file_v1 {
+  const struct thinkthen_request_image_media_v1 *m_media;
+  const struct thinkthen_request_text_v1 *m_path;
+} thinkthen_request_image_file_v1;
+
+typedef struct thinkthen_request_image_bytes_v1 {
+  const struct thinkthen_request_text_v1 *m_bytes;
+  const struct thinkthen_request_image_media_v1 *m_media;
+} thinkthen_request_image_bytes_v1;
+
+typedef union thinkthen_request_image_data_v1 {
+  const struct thinkthen_request_image_file_v1 *arm_1;
+  const struct thinkthen_request_image_bytes_v1 *arm_2;
+} thinkthen_request_image_data_v1;
+
+typedef struct thinkthen_request_image_v1 {
+  uint32_t kind;
+  union thinkthen_request_image_data_v1 data;
+} thinkthen_request_image_v1;
+
+typedef struct thinkthen_request_image_list_v1 {
+  const struct thinkthen_request_image_v1 *const *data;
+  size_t len;
+} thinkthen_request_image_list_v1;
+
+typedef struct thinkthen_request_input_text_v1 {
+  const struct thinkthen_request_image_list_v1 *m_images;
+  const struct thinkthen_request_text_v1 *m_text;
+} thinkthen_request_input_text_v1;
+
+typedef struct thinkthen_request_input_json_value_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_input_json_value_v1;
+
+typedef struct thinkthen_request_input_json_v1 {
+  const struct thinkthen_request_image_list_v1 *m_images;
+  const struct thinkthen_request_input_json_value_v1 *m_value;
+} thinkthen_request_input_json_v1;
+
+typedef struct thinkthen_request_json_value_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_json_value_v1;
+
+typedef struct thinkthen_request_json_value_map_entry_v1 {
+  struct thinkthen_complete_utf8_v1 key;
+  const struct thinkthen_request_json_value_v1 *value;
+} thinkthen_request_json_value_map_entry_v1;
+
+typedef struct thinkthen_request_json_value_map_v1 {
+  const struct thinkthen_request_json_value_map_entry_v1 *data;
+  size_t len;
+} thinkthen_request_json_value_map_v1;
+
+typedef union thinkthen_request_context_schema_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_json_value_map_v1 *arm_2;
+} thinkthen_request_context_schema_data_v1;
+
+typedef struct thinkthen_request_context_schema_v1 {
+  uint32_t kind;
+  union thinkthen_request_context_schema_data_v1 data;
+} thinkthen_request_context_schema_v1;
+
+typedef struct thinkthen_request_recognition_example_entity_v1 {
+  const struct thinkthen_request_unsigned_v1 *m_end;
+  const struct thinkthen_request_text_v1 *m_kind;
+  const struct thinkthen_request_unsigned_v1 *m_start;
+} thinkthen_request_recognition_example_entity_v1;
+
+typedef struct thinkthen_request_recognition_example_entity_list_v1 {
+  const struct thinkthen_request_recognition_example_entity_v1 *const *data;
+  size_t len;
+} thinkthen_request_recognition_example_entity_list_v1;
+
+typedef struct thinkthen_request_text_list_v1 {
+  const struct thinkthen_request_text_v1 *const *data;
+  size_t len;
+} thinkthen_request_text_list_v1;
+
+typedef struct thinkthen_request_recognition_example_text_v1 {
+  const struct thinkthen_request_recognition_example_entity_list_v1 *m_entities;
+  const struct thinkthen_request_text_list_v1 *m_kinds;
+  const struct thinkthen_request_text_v1 *m_text;
+} thinkthen_request_recognition_example_text_v1;
+
+typedef union thinkthen_request_recognition_example_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_recognition_example_text_v1 *arm_2;
+} thinkthen_request_recognition_example_data_v1;
+
+typedef struct thinkthen_request_recognition_example_v1 {
+  uint32_t kind;
+  union thinkthen_request_recognition_example_data_v1 data;
+} thinkthen_request_recognition_example_v1;
+
+typedef struct thinkthen_request_recognition_example_list_v1 {
+  const struct thinkthen_request_recognition_example_v1 *const *data;
+  size_t len;
+} thinkthen_request_recognition_example_list_v1;
+
+typedef struct thinkthen_request_option_schema_v1 {
+  const struct thinkthen_request_json_value_v1 *m_description;
+  const struct thinkthen_request_text_v1 *m_name;
+} thinkthen_request_option_schema_v1;
+
+typedef struct thinkthen_request_option_schema_list_v1 {
+  const struct thinkthen_request_option_schema_v1 *const *data;
+  size_t len;
+} thinkthen_request_option_schema_list_v1;
+
+typedef struct thinkthen_request_original_text_v1 {
+  const struct thinkthen_request_text_v1 *m_text;
+} thinkthen_request_original_text_v1;
+
+typedef struct thinkthen_request_original_json_value_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_original_json_value_v1;
+
+typedef struct thinkthen_request_original_json_v1 {
+  const struct thinkthen_request_original_json_value_v1 *m_value;
+} thinkthen_request_original_json_v1;
+
+typedef union thinkthen_request_original_data_v1 {
+  const struct thinkthen_request_original_text_v1 *arm_1;
+  const struct thinkthen_request_original_json_v1 *arm_2;
+} thinkthen_request_original_data_v1;
+
+typedef struct thinkthen_request_original_v1 {
+  uint32_t kind;
+  union thinkthen_request_original_data_v1 data;
+} thinkthen_request_original_v1;
+
+typedef struct thinkthen_request_recognition_seed_span_v1 {
+  const struct thinkthen_request_unsigned_v1 *m_end;
+  const struct thinkthen_request_text_v1 *m_kind;
+  const struct thinkthen_request_unsigned_v1 *m_start;
+} thinkthen_request_recognition_seed_span_v1;
+
+typedef struct thinkthen_request_recognition_seed_span_list_v1 {
+  const struct thinkthen_request_recognition_seed_span_v1 *const *data;
+  size_t len;
+} thinkthen_request_recognition_seed_span_list_v1;
+
+typedef struct thinkthen_request_item_v1 {
+  const struct thinkthen_request_context_schema_v1 *m_context;
+  const struct thinkthen_request_recognition_example_list_v1 *m_examples;
+  const struct thinkthen_request_image_list_v1 *m_images;
+  const struct thinkthen_request_option_schema_list_v1 *m_options;
+  const struct thinkthen_request_original_v1 *m_original;
+  const struct thinkthen_request_recognition_seed_span_list_v1 *m_seed_spans;
+} thinkthen_request_item_v1;
+
+typedef struct thinkthen_request_item_list_v1 {
+  const struct thinkthen_request_item_v1 *const *data;
+  size_t len;
+} thinkthen_request_item_list_v1;
+
+typedef struct thinkthen_request_input_records_v1 {
+  const struct thinkthen_request_item_list_v1 *m_items;
+} thinkthen_request_input_records_v1;
+
+typedef struct thinkthen_request_input_units_v1 {
+  const struct thinkthen_request_item_list_v1 *m_items;
+} thinkthen_request_input_units_v1;
+
+typedef struct thinkthen_request_input_entities_v1 {
+  const struct thinkthen_request_item_list_v1 *m_items;
+} thinkthen_request_input_entities_v1;
+
+typedef struct thinkthen_request_literal_document_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_document_v1;
+
+typedef struct thinkthen_request_literal_lines_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_lines_v1;
+
+typedef struct thinkthen_request_literal_jsonl_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_jsonl_v1;
+
+typedef struct thinkthen_request_literal_csv_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_csv_v1;
+
+typedef struct thinkthen_request_literal_tsv_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_tsv_v1;
+
+typedef union thinkthen_request_framing_data_v1 {
+  const struct thinkthen_request_literal_document_v1 *arm_1;
+  const struct thinkthen_request_literal_lines_v1 *arm_2;
+  const struct thinkthen_request_literal_jsonl_v1 *arm_3;
+  const struct thinkthen_request_literal_csv_v1 *arm_4;
+  const struct thinkthen_request_literal_tsv_v1 *arm_5;
+} thinkthen_request_framing_data_v1;
+
+typedef struct thinkthen_request_framing_v1 {
+  uint32_t kind;
+  union thinkthen_request_framing_data_v1 data;
+} thinkthen_request_framing_v1;
+
+typedef struct thinkthen_request_literal_text_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_text_v1;
+
+typedef struct thinkthen_request_literal_image_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_image_v1;
+
+typedef union thinkthen_request_reader_media_data_v1 {
+  const struct thinkthen_request_literal_text_v1 *arm_1;
+  const struct thinkthen_request_literal_image_v1 *arm_2;
+} thinkthen_request_reader_media_data_v1;
+
+typedef struct thinkthen_request_reader_media_v1 {
+  uint32_t kind;
+  union thinkthen_request_reader_media_data_v1 data;
+} thinkthen_request_reader_media_v1;
+
+typedef struct thinkthen_request_literal_line_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_line_v1;
+
+typedef struct thinkthen_request_literal_window_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_window_v1;
+
+typedef struct thinkthen_request_literal_file_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_file_v1;
+
+typedef union thinkthen_request_source_unit_data_v1 {
+  const struct thinkthen_request_literal_line_v1 *arm_1;
+  const struct thinkthen_request_literal_window_v1 *arm_2;
+  const struct thinkthen_request_literal_file_v1 *arm_3;
+} thinkthen_request_source_unit_data_v1;
+
+typedef struct thinkthen_request_source_unit_v1 {
+  uint32_t kind;
+  union thinkthen_request_source_unit_data_v1 data;
+} thinkthen_request_source_unit_v1;
+
+typedef struct thinkthen_request_reader_v1 {
+  const struct thinkthen_request_source_unit_v1 *m_unit;
+  const struct thinkthen_request_unsigned_v1 *m_window;
+} thinkthen_request_reader_v1;
+
+typedef struct thinkthen_request_source_v1 {
+  const struct thinkthen_request_framing_v1 *m_framing;
+  const struct thinkthen_request_reader_media_v1 *m_media;
+  const struct thinkthen_request_text_list_v1 *m_paths;
+  const struct thinkthen_request_reader_v1 *m_reading;
+} thinkthen_request_source_v1;
+
+typedef struct thinkthen_request_input_source_v1 {
+  const struct thinkthen_request_source_v1 *m_source;
+} thinkthen_request_input_source_v1;
+
+typedef struct thinkthen_request_input_feed_v1 {
+  const struct thinkthen_request_framing_v1 *m_framing;
+  const struct thinkthen_request_image_list_v1 *m_images;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_reader_v1 *m_reading;
+} thinkthen_request_input_feed_v1;
+
+typedef union thinkthen_request_input_data_v1 {
+  const struct thinkthen_request_input_text_v1 *arm_1;
+  const struct thinkthen_request_input_json_v1 *arm_2;
+  const struct thinkthen_request_input_records_v1 *arm_3;
+  const struct thinkthen_request_input_units_v1 *arm_4;
+  const struct thinkthen_request_input_entities_v1 *arm_5;
+  const struct thinkthen_request_input_source_v1 *arm_6;
+  const struct thinkthen_request_input_feed_v1 *arm_7;
+} thinkthen_request_input_data_v1;
+
+typedef struct thinkthen_request_input_v1 {
+  uint32_t kind;
+  union thinkthen_request_input_data_v1 data;
+} thinkthen_request_input_v1;
+
+typedef struct thinkthen_request_boolean_v1 {
+  uint32_t value;
+} thinkthen_request_boolean_v1;
+
+typedef union thinkthen_request_batch_data_v1 {
+  const struct thinkthen_request_unsigned_v1 *arm_1;
+  const struct thinkthen_request_text_v1 *arm_2;
+} thinkthen_request_batch_data_v1;
+
+typedef struct thinkthen_request_batch_v1 {
+  uint32_t kind;
+  union thinkthen_request_batch_data_v1 data;
+} thinkthen_request_batch_v1;
+
+typedef struct thinkthen_request_integer_v1 {
+  int64_t value;
+} thinkthen_request_integer_v1;
+
+typedef struct thinkthen_request_literal_whole_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_whole_v1;
+
+typedef struct thinkthen_request_literal_boundary_only_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_boundary_only_v1;
+
+typedef union thinkthen_request_recognition_mode_data_v1 {
+  const struct thinkthen_request_literal_whole_v1 *arm_1;
+  const struct thinkthen_request_literal_boundary_only_v1 *arm_2;
+} thinkthen_request_recognition_mode_data_v1;
+
+typedef struct thinkthen_request_recognition_mode_v1 {
+  uint32_t kind;
+  union thinkthen_request_recognition_mode_data_v1 data;
+} thinkthen_request_recognition_mode_v1;
+
+typedef struct thinkthen_request_number_v1 {
+  double value;
+} thinkthen_request_number_v1;
+
+typedef union thinkthen_request_call_threshold_data_v1 {
+  const struct thinkthen_request_number_v1 *arm_1;
+  const struct thinkthen_request_text_v1 *arm_2;
+} thinkthen_request_call_threshold_data_v1;
+
+typedef struct thinkthen_request_call_threshold_v1 {
+  uint32_t kind;
+  union thinkthen_request_call_threshold_data_v1 data;
+} thinkthen_request_call_threshold_v1;
+
+typedef struct thinkthen_request_recognition_stage_context_v1 {
+  const struct thinkthen_request_text_v1 *m_boundary;
+  const struct thinkthen_request_text_v1 *m_kind_edge;
+  const struct thinkthen_request_text_v1 *m_relation;
+} thinkthen_request_recognition_stage_context_v1;
+
+typedef struct thinkthen_request_call_options_v1 {
+  const struct thinkthen_request_boolean_v1 *m_attempts;
+  const struct thinkthen_request_batch_v1 *m_batch;
+  const struct thinkthen_request_text_v1 *m_context;
+  const struct thinkthen_request_text_v1 *m_context_field;
+  const struct thinkthen_request_integer_v1 *m_deadline_ms;
+  const struct thinkthen_request_boolean_v1 *m_details;
+  const struct thinkthen_request_recognition_example_list_v1 *m_examples;
+  const struct thinkthen_request_text_v1 *m_examples_field;
+  const struct thinkthen_request_text_list_v1 *m_field;
+  const struct thinkthen_request_boolean_v1 *m_files_only;
+  const struct thinkthen_request_unsigned_v1 *m_max_requests_total;
+  const struct thinkthen_request_recognition_mode_v1 *m_mode;
+  const struct thinkthen_request_text_v1 *m_model;
+  const struct thinkthen_request_boolean_v1 *m_none;
+  const struct thinkthen_request_text_v1 *m_options_field;
+  const struct thinkthen_request_call_threshold_v1 *m_relation_threshold;
+  const struct thinkthen_request_recognition_seed_span_list_v1 *m_seed_spans;
+  const struct thinkthen_request_text_v1 *m_seed_spans_field;
+  const struct thinkthen_request_unsigned_v1 *m_snippet_pieces;
+  const struct thinkthen_request_recognition_stage_context_v1 *m_stage_context;
+  const struct thinkthen_request_call_threshold_v1 *m_threshold;
+  const struct thinkthen_request_unsigned_v1 *m_top;
+} thinkthen_request_call_options_v1;
+
+typedef struct thinkthen_request_question_selector_text_v1 {
+  const struct thinkthen_request_text_v1 *m_text;
+} thinkthen_request_question_selector_text_v1;
+
+typedef struct thinkthen_request_literal_max_v1 {
+  uint32_t reserved;
+} thinkthen_request_literal_max_v1;
+
+typedef union thinkthen_request_definition_authored_score_batch_data_v1 {
+  const struct thinkthen_request_literal_max_v1 *arm_1;
+  const struct thinkthen_request_integer_v1 *arm_2;
+} thinkthen_request_definition_authored_score_batch_data_v1;
+
+typedef struct thinkthen_request_definition_authored_score_batch_v1 {
+  uint32_t kind;
+  union thinkthen_request_definition_authored_score_batch_data_v1 data;
+} thinkthen_request_definition_authored_score_batch_v1;
+
+typedef struct thinkthen_request_input_declaration_string_v1 {
+  uint32_t reserved;
+} thinkthen_request_input_declaration_string_v1;
+
+typedef struct thinkthen_request_input_property_string_v1 {
+  uint32_t reserved;
+} thinkthen_request_input_property_string_v1;
+
+typedef struct thinkthen_request_input_property_number_v1 {
+  uint32_t reserved;
+} thinkthen_request_input_property_number_v1;
+
+typedef struct thinkthen_request_input_property_boolean_v1 {
+  uint32_t reserved;
+} thinkthen_request_input_property_boolean_v1;
+
+typedef struct thinkthen_request_input_property_array_items_v1 {
+  uint32_t reserved;
+} thinkthen_request_input_property_array_items_v1;
+
+typedef struct thinkthen_request_input_property_array_v1 {
+  const struct thinkthen_request_input_property_array_items_v1 *m_items;
+} thinkthen_request_input_property_array_v1;
+
+typedef union thinkthen_request_input_property_data_v1 {
+  const struct thinkthen_request_input_property_string_v1 *arm_1;
+  const struct thinkthen_request_input_property_number_v1 *arm_2;
+  const struct thinkthen_request_input_property_boolean_v1 *arm_3;
+  const struct thinkthen_request_input_property_array_v1 *arm_4;
+} thinkthen_request_input_property_data_v1;
+
+typedef struct thinkthen_request_input_property_v1 {
+  uint32_t kind;
+  union thinkthen_request_input_property_data_v1 data;
+} thinkthen_request_input_property_v1;
+
+typedef struct thinkthen_request_input_property_map_entry_v1 {
+  struct thinkthen_complete_utf8_v1 key;
+  const struct thinkthen_request_input_property_v1 *value;
+} thinkthen_request_input_property_map_entry_v1;
+
+typedef struct thinkthen_request_input_property_map_v1 {
+  const struct thinkthen_request_input_property_map_entry_v1 *data;
+  size_t len;
+} thinkthen_request_input_property_map_v1;
+
+typedef struct thinkthen_request_input_declaration_object_v1 {
+  const struct thinkthen_request_input_property_map_v1 *m_properties;
+  const struct thinkthen_request_text_list_v1 *m_required;
+} thinkthen_request_input_declaration_object_v1;
+
+typedef union thinkthen_request_input_declaration_data_v1 {
+  const struct thinkthen_request_input_declaration_string_v1 *arm_1;
+  const struct thinkthen_request_input_declaration_object_v1 *arm_2;
+} thinkthen_request_input_declaration_data_v1;
+
+typedef struct thinkthen_request_input_declaration_v1 {
+  uint32_t kind;
+  union thinkthen_request_input_declaration_data_v1 data;
+} thinkthen_request_input_declaration_v1;
+
+typedef struct thinkthen_request_json_value_list_v1 {
+  const struct thinkthen_request_json_value_v1 *const *data;
+  size_t len;
+} thinkthen_request_json_value_list_v1;
+
+typedef union thinkthen_request_question_text_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_json_value_map_v1 *arm_2;
+  const struct thinkthen_request_json_value_list_v1 *arm_3;
+} thinkthen_request_question_text_data_v1;
+
+typedef struct thinkthen_request_question_text_v1 {
+  uint32_t kind;
+  union thinkthen_request_question_text_data_v1 data;
+} thinkthen_request_question_text_v1;
+
+typedef struct thinkthen_request_null_v1 {
+  uint32_t reserved;
+} thinkthen_request_null_v1;
+
+typedef union thinkthen_request_criterion_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_json_value_map_v1 *arm_2;
+  const struct thinkthen_request_json_value_list_v1 *arm_3;
+  const struct thinkthen_request_null_v1 *arm_4;
+} thinkthen_request_criterion_data_v1;
+
+typedef struct thinkthen_request_criterion_v1 {
+  uint32_t kind;
+  union thinkthen_request_criterion_data_v1 data;
+} thinkthen_request_criterion_v1;
+
+typedef struct thinkthen_request_name_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_name_v1;
+
+typedef union thinkthen_request_pointers_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_text_list_v1 *arm_2;
+} thinkthen_request_pointers_data_v1;
+
+typedef struct thinkthen_request_pointers_v1 {
+  uint32_t kind;
+  union thinkthen_request_pointers_data_v1 data;
+} thinkthen_request_pointers_v1;
+
+typedef struct thinkthen_request_profile_v1 {
+  struct thinkthen_complete_utf8_v1 text;
+} thinkthen_request_profile_v1;
+
+typedef union thinkthen_request_threshold_data_v1 {
+  const struct thinkthen_request_number_v1 *arm_1;
+  const struct thinkthen_request_text_v1 *arm_2;
+} thinkthen_request_threshold_data_v1;
+
+typedef struct thinkthen_request_threshold_v1 {
+  uint32_t kind;
+  union thinkthen_request_threshold_data_v1 data;
+} thinkthen_request_threshold_v1;
+
+typedef struct thinkthen_request_definition_authored_decide_v1 {
+  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_question_text_v1 *m_decide;
+  const struct thinkthen_request_criterion_v1 *m_false;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_threshold_v1 *m_threshold;
+  const struct thinkthen_request_criterion_v1 *m_true;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_decide_v1;
+
+typedef struct thinkthen_request_name_list_v1 {
+  const struct thinkthen_request_name_v1 *const *data;
+  size_t len;
+} thinkthen_request_name_list_v1;
+
+typedef union thinkthen_request_description_data_v1 {
+  const struct thinkthen_request_text_v1 *arm_1;
+  const struct thinkthen_request_json_value_map_v1 *arm_2;
+  const struct thinkthen_request_json_value_list_v1 *arm_3;
+  const struct thinkthen_request_null_v1 *arm_4;
+} thinkthen_request_description_data_v1;
+
+typedef struct thinkthen_request_description_v1 {
+  uint32_t kind;
+  union thinkthen_request_description_data_v1 data;
+} thinkthen_request_description_v1;
+
+typedef struct thinkthen_request_description_map_entry_v1 {
+  struct thinkthen_complete_utf8_v1 key;
+  const struct thinkthen_request_description_v1 *value;
+} thinkthen_request_description_map_entry_v1;
+
+typedef struct thinkthen_request_description_map_v1 {
+  const struct thinkthen_request_description_map_entry_v1 *data;
+  size_t len;
+} thinkthen_request_description_map_v1;
+
+typedef union thinkthen_request_options_data_v1 {
+  const struct thinkthen_request_name_list_v1 *arm_1;
+  const struct thinkthen_request_description_map_v1 *arm_2;
+} thinkthen_request_options_data_v1;
+
+typedef struct thinkthen_request_options_v1 {
+  uint32_t kind;
+  union thinkthen_request_options_data_v1 data;
+} thinkthen_request_options_v1;
+
+typedef union thinkthen_request_cut_data_v1 {
+  const struct thinkthen_request_number_v1 *arm_1;
+  const struct thinkthen_request_text_v1 *arm_2;
+} thinkthen_request_cut_data_v1;
+
+typedef struct thinkthen_request_cut_v1 {
+  uint32_t kind;
+  union thinkthen_request_cut_data_v1 data;
+} thinkthen_request_cut_v1;
+
+typedef struct thinkthen_request_definition_authored_choose_v1 {
+  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_question_text_v1 *m_choose;
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_options_v1 *m_options;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_choose_v1;
+
+typedef union thinkthen_request_labels_data_v1 {
+  const struct thinkthen_request_name_list_v1 *arm_1;
+  const struct thinkthen_request_description_map_v1 *arm_2;
+} thinkthen_request_labels_data_v1;
+
+typedef struct thinkthen_request_labels_v1 {
+  uint32_t kind;
+  union thinkthen_request_labels_data_v1 data;
+} thinkthen_request_labels_v1;
+
+typedef struct thinkthen_request_definition_authored_tag_v1 {
+  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_labels_v1 *m_labels;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_question_text_v1 *m_tag;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_tag_v1;
+
+typedef struct thinkthen_request_criterion_map_entry_v1 {
+  struct thinkthen_complete_utf8_v1 key;
+  const struct thinkthen_request_criterion_v1 *value;
+} thinkthen_request_criterion_map_entry_v1;
+
+typedef struct thinkthen_request_criterion_map_v1 {
+  const struct thinkthen_request_criterion_map_entry_v1 *data;
+  size_t len;
+} thinkthen_request_criterion_map_v1;
+
+typedef union thinkthen_request_levels_data_v1 {
+  const struct thinkthen_request_name_list_v1 *arm_1;
+  const struct thinkthen_request_criterion_map_v1 *arm_2;
+} thinkthen_request_levels_data_v1;
+
+typedef struct thinkthen_request_levels_v1 {
+  uint32_t kind;
+  union thinkthen_request_levels_data_v1 data;
+} thinkthen_request_levels_v1;
+
+typedef struct thinkthen_request_definition_authored_score_v1 {
+  const struct thinkthen_request_definition_authored_score_batch_v1 *m_batch;
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_levels_v1 *m_levels;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_question_text_v1 *m_score;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_score_v1;
+
+typedef struct thinkthen_request_relate_fields_v1 {
+  const struct thinkthen_request_text_v1 *m_kind;
+  const struct thinkthen_request_text_v1 *m_name;
+} thinkthen_request_relate_fields_v1;
+
+typedef struct thinkthen_request_relation_v1 {
+  const struct thinkthen_request_boolean_v1 *m_either;
+  const struct thinkthen_request_name_v1 *m_name;
+  const struct thinkthen_request_name_v1 *m_reads;
+  const struct thinkthen_request_boolean_v1 *m_single;
+  const struct thinkthen_request_name_v1 *m_source;
+  const struct thinkthen_request_name_v1 *m_target;
+} thinkthen_request_relation_v1;
+
+typedef struct thinkthen_request_relation_list_v1 {
+  const struct thinkthen_request_relation_v1 *const *data;
+  size_t len;
+} thinkthen_request_relation_list_v1;
+
+typedef struct thinkthen_request_relate_question_v1 {
+  const struct thinkthen_request_relate_fields_v1 *m_fields;
+  const struct thinkthen_request_relation_list_v1 *m_relations;
+} thinkthen_request_relate_question_v1;
+
+typedef struct thinkthen_request_definition_authored_relate_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_relate_question_v1 *m_relate;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_relate_v1;
+
+typedef struct thinkthen_request_definition_authored_find_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_question_text_v1 *m_find;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_authored_find_v1;
+
+typedef struct thinkthen_request_recognize_question_v1 {
+  const struct thinkthen_request_question_text_v1 *m_entity_definition;
+  const struct thinkthen_request_question_text_v1 *m_instructions;
+  const struct thinkthen_request_description_map_v1 *m_kinds;
+  const struct thinkthen_request_recognition_mode_v1 *m_mode;
+  const struct thinkthen_request_relation_list_v1 *m_relations;
+  const struct thinkthen_request_unsigned_v1 *m_snippet_pieces;
+  const struct thinkthen_request_recognition_stage_context_v1 *m_stage_context;
+} thinkthen_request_recognize_question_v1;
+
+typedef struct thinkthen_request_definition_recognize_definition_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_name_v1 *m_model;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_recognize_question_v1 *m_recognize;
+  const struct thinkthen_request_cut_v1 *m_relation_threshold;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_definition_recognize_definition_v1;
+
+typedef struct thinkthen_request_annotate_question_decide_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_question_text_v1 *m_decide;
+  const struct thinkthen_request_criterion_v1 *m_false;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_threshold_v1 *m_threshold;
+  const struct thinkthen_request_criterion_v1 *m_true;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_annotate_question_decide_v1;
+
+typedef struct thinkthen_request_annotate_question_choose_v1 {
+  const struct thinkthen_request_question_text_v1 *m_choose;
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_options_v1 *m_options;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_annotate_question_choose_v1;
+
+typedef struct thinkthen_request_annotate_question_tag_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_labels_v1 *m_labels;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_question_text_v1 *m_tag;
+  const struct thinkthen_request_cut_v1 *m_threshold;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_annotate_question_tag_v1;
+
+typedef struct thinkthen_request_annotate_question_score_v1 {
+  const struct thinkthen_request_input_declaration_v1 *m_context_schema;
+  const struct thinkthen_request_input_declaration_v1 *m_item_schema;
+  const struct thinkthen_request_levels_v1 *m_levels;
+  const struct thinkthen_request_text_v1 *m_name;
+  const struct thinkthen_request_pointers_v1 *m_on;
+  const struct thinkthen_request_question_text_v1 *m_score;
+  const struct thinkthen_request_integer_v1 *m_wording_version;
+} thinkthen_request_annotate_question_score_v1;
+
+typedef union thinkthen_request_annotate_question_data_v1 {
+  const struct thinkthen_request_annotate_question_decide_v1 *arm_1;
+  const struct thinkthen_request_annotate_question_choose_v1 *arm_2;
+  const struct thinkthen_request_annotate_question_tag_v1 *arm_3;
+  const struct thinkthen_request_annotate_question_score_v1 *arm_4;
+} thinkthen_request_annotate_question_data_v1;
+
+typedef struct thinkthen_request_annotate_question_v1 {
+  uint32_t kind;
+  union thinkthen_request_annotate_question_data_v1 data;
+} thinkthen_request_annotate_question_v1;
+
+typedef struct thinkthen_request_annotate_question_map_entry_v1 {
+  struct thinkthen_complete_utf8_v1 key;
+  const struct thinkthen_request_annotate_question_v1 *value;
+} thinkthen_request_annotate_question_map_entry_v1;
+
+typedef struct thinkthen_request_annotate_question_map_v1 {
+  const struct thinkthen_request_annotate_question_map_entry_v1 *data;
+  size_t len;
+} thinkthen_request_annotate_question_map_v1;
+
+typedef struct thinkthen_request_definition_annotate_definition_v1 {
+  const struct thinkthen_request_json_value_v1 *m_batch;
+  const struct thinkthen_request_profile_v1 *m_profile;
+  const struct thinkthen_request_annotate_question_map_v1 *m_questions;
+  const struct thinkthen_request_threshold_v1 *m_threshold;
+} thinkthen_request_definition_annotate_definition_v1;
+
+typedef union thinkthen_request_definition_data_v1 {
+  const struct thinkthen_request_definition_authored_decide_v1 *arm_1;
+  const struct thinkthen_request_definition_authored_choose_v1 *arm_2;
+  const struct thinkthen_request_definition_authored_tag_v1 *arm_3;
+  const struct thinkthen_request_definition_authored_score_v1 *arm_4;
+  const struct thinkthen_request_definition_authored_relate_v1 *arm_5;
+  const struct thinkthen_request_definition_authored_find_v1 *arm_6;
+  const struct thinkthen_request_definition_recognize_definition_v1 *arm_7;
+  const struct thinkthen_request_definition_annotate_definition_v1 *arm_8;
+} thinkthen_request_definition_data_v1;
+
+typedef struct thinkthen_request_definition_v1 {
+  uint32_t kind;
+  union thinkthen_request_definition_data_v1 data;
+} thinkthen_request_definition_v1;
+
+typedef struct thinkthen_request_question_selector_definition_v1 {
+  const struct thinkthen_request_definition_v1 *m_value;
+} thinkthen_request_question_selector_definition_v1;
+
+typedef struct thinkthen_request_question_selector_file_v1 {
+  const struct thinkthen_request_text_v1 *m_path;
+} thinkthen_request_question_selector_file_v1;
+
+typedef struct thinkthen_request_question_selector_name_v1 {
+  const struct thinkthen_request_text_v1 *m_name;
+} thinkthen_request_question_selector_name_v1;
+
+typedef struct thinkthen_request_question_selector_reference_v1 {
+  const struct thinkthen_request_text_v1 *m_reference;
+} thinkthen_request_question_selector_reference_v1;
+
+typedef union thinkthen_request_question_selector_data_v1 {
+  const struct thinkthen_request_question_selector_text_v1 *arm_1;
+  const struct thinkthen_request_question_selector_definition_v1 *arm_2;
+  const struct thinkthen_request_question_selector_file_v1 *arm_3;
+  const struct thinkthen_request_question_selector_name_v1 *arm_4;
+  const struct thinkthen_request_question_selector_reference_v1 *arm_5;
+} thinkthen_request_question_selector_data_v1;
+
+typedef struct thinkthen_request_question_selector_v1 {
+  uint32_t kind;
+  union thinkthen_request_question_selector_data_v1 data;
+} thinkthen_request_question_selector_v1;
+
+typedef struct thinkthen_request_arguments_v1 {
+  const struct thinkthen_request_input_v1 *m_input;
+  const struct thinkthen_request_call_options_v1 *m_options;
+  const struct thinkthen_request_question_selector_v1 *m_question;
+} thinkthen_request_arguments_v1;
+
 typedef struct thinkthen_complete_extension_v1 {
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_utf8_v1 json;
@@ -1124,65 +2186,40 @@ typedef struct thinkthen_complete_answer_yes_no_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_answer_yes_no_v1;
 
-typedef struct thinkthen_complete_answer_choice_field_confidence_presence_v1 {
+typedef struct thinkthen_complete_f64_presence_v1 {
   uint32_t presence;
   double value;
-} thinkthen_complete_answer_choice_field_confidence_presence_v1;
+} thinkthen_complete_f64_presence_v1;
 
-typedef struct thinkthen_complete_answer_choice_field_probabilities_entry_v1 {
+typedef struct thinkthen_complete_number_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 name;
   double value;
-} thinkthen_complete_answer_choice_field_probabilities_entry_v1;
+} thinkthen_complete_number_map_entry_v1;
 
-typedef struct thinkthen_complete_answer_choice_field_probabilities_v1 {
-  const struct thinkthen_complete_answer_choice_field_probabilities_entry_v1 *data;
+typedef struct thinkthen_complete_number_map_v1 {
+  const struct thinkthen_complete_number_map_entry_v1 *data;
   size_t len;
-} thinkthen_complete_answer_choice_field_probabilities_v1;
+} thinkthen_complete_number_map_v1;
 
 typedef struct thinkthen_complete_answer_choice_v1 {
-  struct thinkthen_complete_answer_choice_field_confidence_presence_v1 confidence;
+  struct thinkthen_complete_f64_presence_v1 confidence;
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_utf8_v1 pick;
-  struct thinkthen_complete_answer_choice_field_probabilities_v1 probabilities;
+  struct thinkthen_complete_number_map_v1 probabilities;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_answer_choice_v1;
 
-typedef struct thinkthen_complete_answer_tag_field_probabilities_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_answer_tag_field_probabilities_entry_v1;
-
-typedef struct thinkthen_complete_answer_tag_field_probabilities_v1 {
-  const struct thinkthen_complete_answer_tag_field_probabilities_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_answer_tag_field_probabilities_v1;
-
 typedef struct thinkthen_complete_answer_tag_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_answer_tag_field_probabilities_v1 probabilities;
+  struct thinkthen_complete_number_map_v1 probabilities;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_answer_tag_v1;
 
-typedef struct thinkthen_complete_answer_score_field_confidence_presence_v1 {
-  uint32_t presence;
-  double value;
-} thinkthen_complete_answer_score_field_confidence_presence_v1;
-
-typedef struct thinkthen_complete_answer_score_field_probabilities_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_answer_score_field_probabilities_entry_v1;
-
-typedef struct thinkthen_complete_answer_score_field_probabilities_v1 {
-  const struct thinkthen_complete_answer_score_field_probabilities_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_answer_score_field_probabilities_v1;
-
 typedef struct thinkthen_complete_answer_score_v1 {
-  struct thinkthen_complete_answer_score_field_confidence_presence_v1 confidence;
+  struct thinkthen_complete_f64_presence_v1 confidence;
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_utf8_v1 level;
-  struct thinkthen_complete_answer_score_field_probabilities_v1 probabilities;
+  struct thinkthen_complete_number_map_v1 probabilities;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_answer_score_v1;
 
@@ -1214,20 +2251,20 @@ typedef struct thinkthen_complete_image_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_image_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_images_v1 {
+typedef struct thinkthen_complete_image_list_v1 {
   const struct thinkthen_complete_image_v1 *const *data;
   size_t len;
-} thinkthen_complete_atomic_decide_value_field_images_v1;
+} thinkthen_complete_image_list_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_images_presence_v1 {
+typedef struct thinkthen_complete_image_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_atomic_decide_value_field_images_v1 value;
-} thinkthen_complete_atomic_decide_value_field_images_presence_v1;
+  struct thinkthen_complete_image_list_v1 value;
+} thinkthen_complete_image_list_presence_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_index_presence_v1 {
+typedef struct thinkthen_complete_u64_presence_v1 {
   uint32_t presence;
   uint64_t value;
-} thinkthen_complete_atomic_decide_value_field_index_presence_v1;
+} thinkthen_complete_u64_presence_v1;
 
 typedef struct thinkthen_complete_json_array_v1 {
   const struct thinkthen_complete_json_v1 *const *data;
@@ -1257,70 +2294,45 @@ typedef struct thinkthen_complete_json_v1 {
   union thinkthen_complete_json_data_v1 data;
 } thinkthen_complete_json_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_input_presence_v1 {
+typedef struct thinkthen_complete_json_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_decide_value_field_input_presence_v1;
+} thinkthen_complete_json_presence_v1;
 
-typedef struct thinkthen_complete_rank_member_result_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_rank_member_result_field_images_v1;
-
-typedef struct thinkthen_complete_rank_member_result_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_rank_member_result_field_images_v1 value;
-} thinkthen_complete_rank_member_result_field_images_presence_v1;
-
-typedef struct thinkthen_complete_meta_field_answered_by_presence_v1 {
+typedef struct thinkthen_complete_utf8_presence_v1 {
   uint32_t presence;
   struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_meta_field_answered_by_presence_v1;
+} thinkthen_complete_utf8_presence_v1;
 
 typedef struct thinkthen_complete_attempt_outcome_v1 {
   uint32_t kind;
 } thinkthen_complete_attempt_outcome_v1;
 
-typedef struct thinkthen_complete_attempt_field_request_id_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_attempt_field_request_id_presence_v1;
-
 typedef struct thinkthen_complete_sdk_request_id_v1 {
   struct thinkthen_complete_utf8_v1 value;
 } thinkthen_complete_sdk_request_id_v1;
 
-typedef struct thinkthen_complete_attempt_field_server_ms_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_attempt_field_server_ms_presence_v1;
-
-typedef struct thinkthen_complete_attempt_field_status_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_attempt_field_status_presence_v1;
-
 typedef struct thinkthen_complete_attempt_v1 {
   uint64_t ordinal;
   const struct thinkthen_complete_attempt_outcome_v1 *outcome;
-  struct thinkthen_complete_attempt_field_request_id_presence_v1 request_id;
+  struct thinkthen_complete_utf8_presence_v1 request_id;
   struct thinkthen_complete_utf8_v1 request_sha256;
   const struct thinkthen_complete_sdk_request_id_v1 *sdk_request_id;
-  struct thinkthen_complete_attempt_field_server_ms_presence_v1 server_ms;
-  struct thinkthen_complete_attempt_field_status_presence_v1 status;
+  struct thinkthen_complete_u64_presence_v1 server_ms;
+  struct thinkthen_complete_u64_presence_v1 status;
   uint64_t wall_ms;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_attempt_v1;
 
-typedef struct thinkthen_complete_meta_field_attempts_v1 {
+typedef struct thinkthen_complete_attempt_list_v1 {
   const struct thinkthen_complete_attempt_v1 *const *data;
   size_t len;
-} thinkthen_complete_meta_field_attempts_v1;
+} thinkthen_complete_attempt_list_v1;
 
-typedef struct thinkthen_complete_meta_field_attempts_presence_v1 {
+typedef struct thinkthen_complete_attempt_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_meta_field_attempts_v1 value;
-} thinkthen_complete_meta_field_attempts_presence_v1;
+  struct thinkthen_complete_attempt_list_v1 value;
+} thinkthen_complete_attempt_list_presence_v1;
 
 typedef union thinkthen_complete_batch_setting_data_v1 {
   uint64_t integer;
@@ -1332,10 +2344,10 @@ typedef struct thinkthen_complete_batch_setting_v1 {
   union thinkthen_complete_batch_setting_data_v1 data;
 } thinkthen_complete_batch_setting_v1;
 
-typedef struct thinkthen_complete_meta_field_batch_setting_presence_v1 {
+typedef struct thinkthen_complete_batch_setting_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_batch_setting_v1 *value;
-} thinkthen_complete_meta_field_batch_setting_presence_v1;
+} thinkthen_complete_batch_setting_presence_v1;
 
 typedef struct thinkthen_complete_batch_warning_v1 {
   const struct thinkthen_complete_batch_setting_v1 *running;
@@ -1343,15 +2355,10 @@ typedef struct thinkthen_complete_batch_warning_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_batch_warning_v1;
 
-typedef struct thinkthen_complete_meta_field_batch_warning_presence_v1 {
+typedef struct thinkthen_complete_batch_warning_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_batch_warning_v1 *value;
-} thinkthen_complete_meta_field_batch_warning_presence_v1;
-
-typedef struct thinkthen_complete_meta_field_context_sha_256_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_meta_field_context_sha_256_presence_v1;
+} thinkthen_complete_batch_warning_presence_v1;
 
 typedef struct thinkthen_complete_observation_id_v1 {
   struct thinkthen_complete_utf8_v1 value;
@@ -1381,19 +2388,19 @@ typedef struct thinkthen_complete_observation_v1 {
   union thinkthen_complete_observation_data_v1 data;
 } thinkthen_complete_observation_v1;
 
-typedef struct thinkthen_complete_meta_field_observations_v1 {
+typedef struct thinkthen_complete_observation_list_v1 {
   const struct thinkthen_complete_observation_v1 *const *data;
   size_t len;
-} thinkthen_complete_meta_field_observations_v1;
+} thinkthen_complete_observation_list_v1;
 
 typedef struct thinkthen_complete_origin_v1 {
   uint32_t kind;
 } thinkthen_complete_origin_v1;
 
-typedef struct thinkthen_complete_meta_field_origin_presence_v1 {
+typedef struct thinkthen_complete_origin_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_origin_v1 *value;
-} thinkthen_complete_meta_field_origin_presence_v1;
+} thinkthen_complete_origin_presence_v1;
 
 typedef struct thinkthen_complete_profile_warning_v1 {
   struct thinkthen_complete_utf8_v1 running;
@@ -1401,84 +2408,59 @@ typedef struct thinkthen_complete_profile_warning_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_profile_warning_v1;
 
-typedef struct thinkthen_complete_meta_field_profile_warning_presence_v1 {
+typedef struct thinkthen_complete_profile_warning_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_profile_warning_v1 *value;
-} thinkthen_complete_meta_field_profile_warning_presence_v1;
-
-typedef struct thinkthen_complete_meta_field_question_sha_256_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_meta_field_question_sha_256_presence_v1;
-
-typedef struct thinkthen_complete_question_source_field_batch_size_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_question_source_field_batch_size_presence_v1;
+} thinkthen_complete_profile_warning_presence_v1;
 
 typedef struct thinkthen_complete_question_source_v1 {
   struct thinkthen_complete_utf8_v1 answered_by;
-  struct thinkthen_complete_question_source_field_batch_size_presence_v1 batch_size;
+  struct thinkthen_complete_u64_presence_v1 batch_size;
   const struct thinkthen_complete_origin_v1 *origin;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_question_source_v1;
 
-typedef struct thinkthen_complete_meta_field_question_sources_v1 {
+typedef struct thinkthen_complete_question_source_list_v1 {
   const struct thinkthen_complete_question_source_v1 *const *data;
   size_t len;
-} thinkthen_complete_meta_field_question_sources_v1;
+} thinkthen_complete_question_source_list_v1;
 
-typedef struct thinkthen_complete_meta_field_questions_sha_256_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_meta_field_questions_sha_256_presence_v1;
-
-typedef struct thinkthen_complete_meta_field_requests_v1 {
+typedef struct thinkthen_complete_string_list_v1 {
   const struct thinkthen_complete_utf8_v1 *data;
   size_t len;
-} thinkthen_complete_meta_field_requests_v1;
-
-typedef struct thinkthen_complete_usage_field_input_tokens_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_usage_field_input_tokens_presence_v1;
-
-typedef struct thinkthen_complete_usage_field_output_tokens_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_usage_field_output_tokens_presence_v1;
+} thinkthen_complete_string_list_v1;
 
 typedef struct thinkthen_complete_usage_v1 {
-  struct thinkthen_complete_usage_field_input_tokens_presence_v1 input_tokens;
-  struct thinkthen_complete_usage_field_output_tokens_presence_v1 output_tokens;
+  struct thinkthen_complete_u64_presence_v1 input_tokens;
+  struct thinkthen_complete_u64_presence_v1 output_tokens;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_usage_v1;
 
-typedef struct thinkthen_complete_meta_field_usage_presence_v1 {
+typedef struct thinkthen_complete_usage_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_meta_field_usage_presence_v1;
+} thinkthen_complete_usage_presence_v1;
 
 typedef struct thinkthen_complete_meta_v1 {
-  struct thinkthen_complete_meta_field_answered_by_presence_v1 answered_by;
-  struct thinkthen_complete_meta_field_attempts_presence_v1 attempts;
-  struct thinkthen_complete_meta_field_batch_setting_presence_v1 batch_setting;
-  struct thinkthen_complete_meta_field_batch_warning_presence_v1 batch_warning;
+  struct thinkthen_complete_utf8_presence_v1 answered_by;
+  struct thinkthen_complete_attempt_list_presence_v1 attempts;
+  struct thinkthen_complete_batch_setting_presence_v1 batch_setting;
+  struct thinkthen_complete_batch_warning_presence_v1 batch_warning;
   uint32_t cached;
-  struct thinkthen_complete_meta_field_context_sha_256_presence_v1 context_sha256;
+  struct thinkthen_complete_utf8_presence_v1 context_sha256;
   uint64_t failed_questions;
   struct thinkthen_complete_utf8_v1 model;
-  struct thinkthen_complete_meta_field_observations_v1 observations;
-  struct thinkthen_complete_meta_field_origin_presence_v1 origin;
-  struct thinkthen_complete_meta_field_profile_warning_presence_v1 profile_warning;
-  struct thinkthen_complete_meta_field_question_sha_256_presence_v1 question_sha256;
-  struct thinkthen_complete_meta_field_question_sources_v1 question_sources;
-  struct thinkthen_complete_meta_field_questions_sha_256_presence_v1 questions_sha256;
-  struct thinkthen_complete_meta_field_requests_v1 requests;
+  struct thinkthen_complete_observation_list_v1 observations;
+  struct thinkthen_complete_origin_presence_v1 origin;
+  struct thinkthen_complete_profile_warning_presence_v1 profile_warning;
+  struct thinkthen_complete_utf8_presence_v1 question_sha256;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
+  struct thinkthen_complete_utf8_presence_v1 questions_sha256;
+  struct thinkthen_complete_string_list_v1 requests;
   uint64_t requests_sent;
   struct thinkthen_complete_utf8_v1 tool;
   struct thinkthen_complete_utf8_v1 url;
-  struct thinkthen_complete_meta_field_usage_presence_v1 usage;
+  struct thinkthen_complete_usage_presence_v1 usage;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_meta_v1;
 
@@ -1496,19 +2478,19 @@ typedef struct thinkthen_complete_batch_v1 {
   union thinkthen_complete_batch_data_v1 data;
 } thinkthen_complete_batch_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_batch_presence_v1 {
+typedef struct thinkthen_complete_batch_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_decide_field_batch_presence_v1;
+} thinkthen_complete_batch_presence_v1;
 
 typedef struct thinkthen_complete_string_type_v1 {
   uint32_t kind;
 } thinkthen_complete_string_type_v1;
 
-typedef struct thinkthen_complete_input_declaration_string_v1 {
+typedef struct thinkthen_complete_input_declaration_string_root_v1 {
   const struct thinkthen_complete_string_type_v1 *type;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_input_declaration_string_v1;
+} thinkthen_complete_input_declaration_string_root_v1;
 
 typedef struct thinkthen_complete_input_property_type_string_v1 {
   struct thinkthen_complete_utf8_v1 type;
@@ -1548,40 +2530,35 @@ typedef struct thinkthen_complete_input_property_type_v1 {
   union thinkthen_complete_input_property_type_data_v1 data;
 } thinkthen_complete_input_property_type_v1;
 
-typedef struct thinkthen_complete_input_declaration_object_field_properties_entry_v1 {
+typedef struct thinkthen_complete_input_property_type_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 name;
   const struct thinkthen_complete_input_property_type_v1 *value;
-} thinkthen_complete_input_declaration_object_field_properties_entry_v1;
+} thinkthen_complete_input_property_type_map_entry_v1;
 
-typedef struct thinkthen_complete_input_declaration_object_field_properties_v1 {
-  const struct thinkthen_complete_input_declaration_object_field_properties_entry_v1 *data;
+typedef struct thinkthen_complete_input_property_type_map_v1 {
+  const struct thinkthen_complete_input_property_type_map_entry_v1 *data;
   size_t len;
-} thinkthen_complete_input_declaration_object_field_properties_v1;
+} thinkthen_complete_input_property_type_map_v1;
 
-typedef struct thinkthen_complete_input_declaration_object_field_required_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_input_declaration_object_field_required_v1;
-
-typedef struct thinkthen_complete_input_declaration_object_field_required_presence_v1 {
+typedef struct thinkthen_complete_string_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_input_declaration_object_field_required_v1 value;
-} thinkthen_complete_input_declaration_object_field_required_presence_v1;
+  struct thinkthen_complete_string_list_v1 value;
+} thinkthen_complete_string_list_presence_v1;
 
 typedef struct thinkthen_complete_object_type_v1 {
   uint32_t kind;
 } thinkthen_complete_object_type_v1;
 
-typedef struct thinkthen_complete_input_declaration_object_v1 {
-  struct thinkthen_complete_input_declaration_object_field_properties_v1 properties;
-  struct thinkthen_complete_input_declaration_object_field_required_presence_v1 required;
+typedef struct thinkthen_complete_input_declaration_object_root_v1 {
+  struct thinkthen_complete_input_property_type_map_v1 properties;
+  struct thinkthen_complete_string_list_presence_v1 required;
   const struct thinkthen_complete_object_type_v1 *type;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_input_declaration_object_v1;
+} thinkthen_complete_input_declaration_object_root_v1;
 
 typedef union thinkthen_complete_input_declaration_data_v1 {
-  const struct thinkthen_complete_input_declaration_string_v1 *string;
-  const struct thinkthen_complete_input_declaration_object_v1 *object;
+  const struct thinkthen_complete_input_declaration_string_root_v1 *string_root;
+  const struct thinkthen_complete_input_declaration_object_root_v1 *object_root;
 } thinkthen_complete_input_declaration_data_v1;
 
 typedef struct thinkthen_complete_input_declaration_v1 {
@@ -1589,346 +2566,106 @@ typedef struct thinkthen_complete_input_declaration_v1 {
   union thinkthen_complete_input_declaration_data_v1 data;
 } thinkthen_complete_input_declaration_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_context_schema_presence_v1 {
+typedef struct thinkthen_complete_input_declaration_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_decide_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_decide_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_label_field_description_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_label_field_description_presence_v1;
+} thinkthen_complete_input_declaration_presence_v1;
 
 typedef struct thinkthen_complete_label_v1 {
-  struct thinkthen_complete_label_field_description_presence_v1 description;
+  struct thinkthen_complete_json_presence_v1 description;
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_label_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_label_details_v1 {
+typedef struct thinkthen_complete_label_list_v1 {
   const struct thinkthen_complete_label_v1 *const *data;
   size_t len;
-} thinkthen_complete_readable_question_decide_field_label_details_v1;
+} thinkthen_complete_label_list_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_label_details_presence_v1 {
+typedef struct thinkthen_complete_label_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_readable_question_decide_field_label_details_v1 value;
-} thinkthen_complete_readable_question_decide_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_decide_field_model_presence_v1;
+  struct thinkthen_complete_label_list_v1 value;
+} thinkthen_complete_label_list_presence_v1;
 
 typedef struct thinkthen_complete_question_name_v1 {
   struct thinkthen_complete_utf8_v1 value;
 } thinkthen_complete_question_name_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_name_presence_v1 {
+typedef struct thinkthen_complete_question_name_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_decide_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_decide_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_decide_field_on_v1 value;
-} thinkthen_complete_readable_question_decide_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_decide_field_profile_presence_v1;
+} thinkthen_complete_question_name_presence_v1;
 
 typedef struct thinkthen_complete_wording_version_v1 {
   uint64_t value;
 } thinkthen_complete_wording_version_v1;
 
-typedef struct thinkthen_complete_readable_question_decide_field_wording_version_presence_v1 {
+typedef struct thinkthen_complete_wording_version_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_decide_field_wording_version_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_false_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_decide_field_false_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_text_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_decide_field_text_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_decide_field_true_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_decide_field_true_presence_v1;
+} thinkthen_complete_wording_version_presence_v1;
 
 typedef struct thinkthen_complete_readable_question_decide_v1 {
-  struct thinkthen_complete_readable_question_decide_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_decide_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_decide_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_decide_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_decide_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_decide_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_decide_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_decide_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_decide_field_wording_version_presence_v1 wording_version;
-  struct thinkthen_complete_readable_question_decide_field_false_presence_v1 false_;
-  struct thinkthen_complete_readable_question_decide_field_text_presence_v1 text;
-  struct thinkthen_complete_readable_question_decide_field_true_presence_v1 true_;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_json_presence_v1 false_;
+  struct thinkthen_complete_json_presence_v1 text;
+  struct thinkthen_complete_json_presence_v1 true_;
   struct thinkthen_complete_utf8_v1 verb;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_decide_v1;
 
-typedef struct thinkthen_complete_readable_question_choose_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_choose_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_choose_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_choose_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_choose_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_choose_field_label_details_v1 value;
-} thinkthen_complete_readable_question_choose_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_choose_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_choose_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_choose_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_choose_field_on_v1 value;
-} thinkthen_complete_readable_question_choose_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_choose_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_choose_field_wording_version_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_options_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_choose_field_options_v1;
-
-typedef struct thinkthen_complete_readable_question_choose_field_text_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_choose_field_text_presence_v1;
-
 typedef struct thinkthen_complete_readable_question_choose_v1 {
-  struct thinkthen_complete_readable_question_choose_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_choose_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_choose_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_choose_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_choose_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_choose_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_choose_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_choose_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_choose_field_wording_version_presence_v1 wording_version;
-  struct thinkthen_complete_readable_question_choose_field_options_v1 options;
-  struct thinkthen_complete_readable_question_choose_field_text_presence_v1 text;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_string_list_v1 options;
+  struct thinkthen_complete_json_presence_v1 text;
   struct thinkthen_complete_utf8_v1 verb;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_choose_v1;
 
-typedef struct thinkthen_complete_readable_question_tag_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_tag_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_tag_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_tag_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_tag_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_tag_field_label_details_v1 value;
-} thinkthen_complete_readable_question_tag_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_tag_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_tag_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_tag_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_tag_field_on_v1 value;
-} thinkthen_complete_readable_question_tag_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_tag_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_tag_field_wording_version_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_labels_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_tag_field_labels_v1;
-
-typedef struct thinkthen_complete_readable_question_tag_field_text_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_tag_field_text_presence_v1;
-
 typedef struct thinkthen_complete_readable_question_tag_v1 {
-  struct thinkthen_complete_readable_question_tag_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_tag_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_tag_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_tag_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_tag_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_tag_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_tag_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_tag_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_tag_field_wording_version_presence_v1 wording_version;
-  struct thinkthen_complete_readable_question_tag_field_labels_v1 labels;
-  struct thinkthen_complete_readable_question_tag_field_text_presence_v1 text;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_string_list_v1 labels;
+  struct thinkthen_complete_json_presence_v1 text;
   struct thinkthen_complete_utf8_v1 verb;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_tag_v1;
 
-typedef struct thinkthen_complete_readable_question_score_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_score_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_score_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_score_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_score_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_score_field_label_details_v1 value;
-} thinkthen_complete_readable_question_score_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_score_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_score_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_score_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_score_field_on_v1 value;
-} thinkthen_complete_readable_question_score_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_score_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_score_field_wording_version_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_levels_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_score_field_levels_v1;
-
-typedef struct thinkthen_complete_readable_question_score_field_text_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_score_field_text_presence_v1;
-
 typedef struct thinkthen_complete_readable_question_score_v1 {
-  struct thinkthen_complete_readable_question_score_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_score_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_score_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_score_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_score_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_score_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_score_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_score_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_score_field_wording_version_presence_v1 wording_version;
-  struct thinkthen_complete_readable_question_score_field_levels_v1 levels;
-  struct thinkthen_complete_readable_question_score_field_text_presence_v1 text;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_string_list_v1 levels;
+  struct thinkthen_complete_json_presence_v1 text;
   struct thinkthen_complete_utf8_v1 verb;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_score_v1;
@@ -1949,42 +2686,27 @@ typedef struct thinkthen_complete_version_v1 {
   uint32_t kind;
 } thinkthen_complete_version_v1;
 
-typedef struct thinkthen_complete_physical_source_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_physical_source_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_physical_source_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_physical_source_field_last_line_presence_v1;
-
 typedef struct thinkthen_complete_physical_source_v1 {
   struct thinkthen_complete_utf8_v1 file;
-  struct thinkthen_complete_physical_source_field_first_line_presence_v1 first_line;
-  struct thinkthen_complete_physical_source_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_u64_presence_v1 first_line;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_physical_source_v1;
 
-typedef struct thinkthen_complete_rank_member_result_field_source_presence_v1 {
+typedef struct thinkthen_complete_physical_source_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_rank_member_result_field_source_presence_v1;
-
-typedef struct thinkthen_complete_rank_member_result_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_rank_member_result_field_threshold_presence_v1;
+} thinkthen_complete_physical_source_presence_v1;
 
 typedef struct thinkthen_complete_rank_member_result_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_rank_member_result_field_images_presence_v1 images;
+  struct thinkthen_complete_image_list_presence_v1 images;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_rank_member_result_field_source_presence_v1 source;
-  struct thinkthen_complete_rank_member_result_field_threshold_presence_v1 threshold;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_json_presence_v1 threshold;
   uint64_t value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_rank_member_result_v1;
@@ -1995,25 +2717,15 @@ typedef struct thinkthen_complete_rank_member_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_rank_member_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_members_v1 {
+typedef struct thinkthen_complete_rank_member_list_v1 {
   const struct thinkthen_complete_rank_member_v1 *const *data;
   size_t len;
-} thinkthen_complete_atomic_decide_value_field_members_v1;
+} thinkthen_complete_rank_member_list_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_members_presence_v1 {
+typedef struct thinkthen_complete_rank_member_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_atomic_decide_value_field_members_v1 value;
-} thinkthen_complete_atomic_decide_value_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_decide_value_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_decide_value_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_decide_value_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_decide_value_field_source_presence_v1;
+  struct thinkthen_complete_rank_member_list_v1 value;
+} thinkthen_complete_rank_member_list_presence_v1;
 
 typedef union thinkthen_complete_threshold_data_v1 {
   double number;
@@ -2025,34 +2737,34 @@ typedef struct thinkthen_complete_threshold_v1 {
   union thinkthen_complete_threshold_data_v1 data;
 } thinkthen_complete_threshold_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_threshold_presence_v1 {
+typedef struct thinkthen_complete_threshold_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_decide_value_field_threshold_presence_v1;
+} thinkthen_complete_threshold_presence_v1;
 
 typedef struct thinkthen_complete_decide_value_v1 {
   const struct thinkthen_complete_json_v1 *value;
 } thinkthen_complete_decide_value_v1;
 
-typedef struct thinkthen_complete_atomic_decide_value_field_value_presence_v1 {
+typedef struct thinkthen_complete_decide_value_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_decide_value_v1 *value;
-} thinkthen_complete_atomic_decide_value_field_value_presence_v1;
+} thinkthen_complete_decide_value_presence_v1;
 
 typedef struct thinkthen_complete_atomic_decide_value_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_decide_value_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_decide_value_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_decide_value_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_decide_value_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_decide_value_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_decide_value_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_decide_value_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_atomic_decide_value_field_value_presence_v1 value;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
+  struct thinkthen_complete_decide_value_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_decide_value_v1;
 
@@ -2063,70 +2775,20 @@ typedef struct thinkthen_complete_session_packet_decide_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_decide_row_v1;
 
-typedef struct thinkthen_complete_atomic_nullable_string_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_nullable_string_field_images_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_nullable_string_field_images_v1 value;
-} thinkthen_complete_atomic_nullable_string_field_images_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_atomic_nullable_string_field_index_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_nullable_string_field_input_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_members_v1 {
-  const struct thinkthen_complete_rank_member_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_nullable_string_field_members_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_members_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_nullable_string_field_members_v1 value;
-} thinkthen_complete_atomic_nullable_string_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_nullable_string_field_source_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_nullable_string_field_threshold_presence_v1;
-
-typedef struct thinkthen_complete_atomic_nullable_string_field_value_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_nullable_string_field_value_presence_v1;
-
 typedef struct thinkthen_complete_atomic_nullable_string_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_nullable_string_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_nullable_string_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_nullable_string_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_nullable_string_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_nullable_string_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_nullable_string_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_nullable_string_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_atomic_nullable_string_field_value_presence_v1 value;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
+  struct thinkthen_complete_utf8_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_nullable_string_v1;
 
@@ -2137,70 +2799,20 @@ typedef struct thinkthen_complete_session_packet_choose_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_choose_row_v1;
 
-typedef struct thinkthen_complete_atomic_array_of_string_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_array_of_string_field_images_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_array_of_string_field_images_v1 value;
-} thinkthen_complete_atomic_array_of_string_field_images_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_atomic_array_of_string_field_index_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_array_of_string_field_input_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_members_v1 {
-  const struct thinkthen_complete_rank_member_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_array_of_string_field_members_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_members_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_array_of_string_field_members_v1 value;
-} thinkthen_complete_atomic_array_of_string_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_array_of_string_field_source_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_array_of_string_field_threshold_presence_v1;
-
-typedef struct thinkthen_complete_atomic_array_of_string_field_value_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_atomic_array_of_string_field_value_v1;
-
 typedef struct thinkthen_complete_atomic_array_of_string_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_array_of_string_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_array_of_string_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_array_of_string_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_array_of_string_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_array_of_string_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_array_of_string_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_array_of_string_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_atomic_array_of_string_field_value_v1 value;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
+  struct thinkthen_complete_string_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_array_of_string_v1;
 
@@ -2211,64 +2823,19 @@ typedef struct thinkthen_complete_session_packet_tag_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_tag_row_v1;
 
-typedef struct thinkthen_complete_atomic_double_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_double_field_images_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_double_field_images_v1 value;
-} thinkthen_complete_atomic_double_field_images_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_atomic_double_field_index_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_double_field_input_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_members_v1 {
-  const struct thinkthen_complete_rank_member_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_double_field_members_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_members_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_double_field_members_v1 value;
-} thinkthen_complete_atomic_double_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_double_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_double_field_source_presence_v1;
-
-typedef struct thinkthen_complete_atomic_double_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_double_field_threshold_presence_v1;
-
 typedef struct thinkthen_complete_atomic_double_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_double_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_double_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_double_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_double_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_double_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_double_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_double_field_threshold_presence_v1 threshold;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
   double value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_double_v1;
@@ -2280,64 +2847,19 @@ typedef struct thinkthen_complete_session_packet_score_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_score_row_v1;
 
-typedef struct thinkthen_complete_atomic_boolean_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_boolean_field_images_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_boolean_field_images_v1 value;
-} thinkthen_complete_atomic_boolean_field_images_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_atomic_boolean_field_index_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_boolean_field_input_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_members_v1 {
-  const struct thinkthen_complete_rank_member_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_boolean_field_members_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_members_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_boolean_field_members_v1 value;
-} thinkthen_complete_atomic_boolean_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_boolean_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_boolean_field_source_presence_v1;
-
-typedef struct thinkthen_complete_atomic_boolean_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_boolean_field_threshold_presence_v1;
-
 typedef struct thinkthen_complete_atomic_boolean_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_boolean_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_boolean_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_boolean_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_boolean_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_boolean_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_boolean_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_boolean_field_threshold_presence_v1 threshold;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
   uint32_t value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_boolean_v1;
@@ -2349,36 +2871,11 @@ typedef struct thinkthen_complete_session_packet_filter_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_filter_row_v1;
 
-typedef struct thinkthen_complete_annotation_member_answer_id_field_observations_v1 {
-  const struct thinkthen_complete_observation_v1 *const *data;
-  size_t len;
-} thinkthen_complete_annotation_member_answer_id_field_observations_v1;
-
-typedef struct thinkthen_complete_annotation_member_answer_id_field_question_sources_v1 {
-  const struct thinkthen_complete_question_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_annotation_member_answer_id_field_question_sources_v1;
-
-typedef struct thinkthen_complete_annotation_member_answer_id_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_annotation_member_answer_id_field_threshold_presence_v1;
-
-typedef struct thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1;
-
-typedef struct thinkthen_complete_value_array_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_value_array_v1;
-
 typedef union thinkthen_complete_value_data_v1 {
   uint32_t boolean;
   uint32_t null;
   struct thinkthen_complete_utf8_v1 string;
-  struct thinkthen_complete_value_array_v1 array;
+  struct thinkthen_complete_string_list_v1 array;
   double number;
 } thinkthen_complete_value_data_v1;
 
@@ -2387,21 +2884,21 @@ typedef struct thinkthen_complete_value_v1 {
   union thinkthen_complete_value_data_v1 data;
 } thinkthen_complete_value_v1;
 
-typedef struct thinkthen_complete_annotation_member_answer_id_field_value_presence_v1 {
+typedef struct thinkthen_complete_value_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_value_v1 *value;
-} thinkthen_complete_annotation_member_answer_id_field_value_presence_v1;
+} thinkthen_complete_value_presence_v1;
 
 typedef struct thinkthen_complete_annotation_member_answer_id_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_annotation_member_answer_id_field_observations_v1 observations;
+  struct thinkthen_complete_observation_list_v1 observations;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_annotation_member_answer_id_field_question_sources_v1 question_sources;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
   struct thinkthen_complete_utf8_v1 request;
-  struct thinkthen_complete_annotation_member_answer_id_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_annotation_member_answer_id_field_usage_presence_v1 usage;
-  struct thinkthen_complete_annotation_member_answer_id_field_value_presence_v1 value;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
+  struct thinkthen_complete_usage_presence_v1 usage;
+  struct thinkthen_complete_value_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_member_answer_id_v1;
 
@@ -2419,35 +2916,15 @@ typedef struct thinkthen_complete_failure_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_failure_v1;
 
-typedef struct thinkthen_complete_annotation_member_failure_id_field_observations_v1 {
-  const struct thinkthen_complete_observation_v1 *const *data;
-  size_t len;
-} thinkthen_complete_annotation_member_failure_id_field_observations_v1;
-
-typedef struct thinkthen_complete_annotation_member_failure_id_field_question_sources_v1 {
-  const struct thinkthen_complete_question_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_annotation_member_failure_id_field_question_sources_v1;
-
-typedef struct thinkthen_complete_annotation_member_failure_id_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_annotation_member_failure_id_field_threshold_presence_v1;
-
-typedef struct thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1;
-
 typedef struct thinkthen_complete_annotation_member_failure_id_v1 {
   const struct thinkthen_complete_failure_v1 *failure;
   const struct thinkthen_complete_failure_id_v1 *failure_id;
-  struct thinkthen_complete_annotation_member_failure_id_field_observations_v1 observations;
+  struct thinkthen_complete_observation_list_v1 observations;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_annotation_member_failure_id_field_question_sources_v1 question_sources;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
   struct thinkthen_complete_utf8_v1 request;
-  struct thinkthen_complete_annotation_member_failure_id_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_annotation_member_failure_id_field_usage_presence_v1 usage;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
+  struct thinkthen_complete_usage_presence_v1 usage;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_member_failure_id_v1;
 
@@ -2461,88 +2938,28 @@ typedef struct thinkthen_complete_annotation_member_v1 {
   union thinkthen_complete_annotation_member_data_v1 data;
 } thinkthen_complete_annotation_member_v1;
 
-typedef struct thinkthen_complete_annotation_field_answers_entry_v1 {
+typedef struct thinkthen_complete_annotation_member_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 name;
   const struct thinkthen_complete_annotation_member_v1 *value;
-} thinkthen_complete_annotation_field_answers_entry_v1;
+} thinkthen_complete_annotation_member_map_entry_v1;
 
-typedef struct thinkthen_complete_annotation_field_answers_v1 {
-  const struct thinkthen_complete_annotation_field_answers_entry_v1 *data;
+typedef struct thinkthen_complete_annotation_member_map_v1 {
+  const struct thinkthen_complete_annotation_member_map_entry_v1 *data;
   size_t len;
-} thinkthen_complete_annotation_field_answers_v1;
-
-typedef struct thinkthen_complete_annotation_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_annotation_field_file_presence_v1;
-
-typedef struct thinkthen_complete_annotation_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_annotation_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_annotation_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_annotation_field_index_presence_v1;
-
-typedef struct thinkthen_complete_annotation_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_annotation_field_input_presence_v1;
-
-typedef struct thinkthen_complete_annotation_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_annotation_field_last_line_presence_v1;
-
-typedef struct thinkthen_complete_position_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_position_field_file_presence_v1;
-
-typedef struct thinkthen_complete_position_field_first_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_position_field_first_presence_v1;
-
-typedef struct thinkthen_complete_position_field_images_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_position_field_images_v1;
-
-typedef struct thinkthen_complete_position_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_position_field_images_v1 value;
-} thinkthen_complete_position_field_images_presence_v1;
-
-typedef struct thinkthen_complete_position_field_last_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_position_field_last_presence_v1;
+} thinkthen_complete_annotation_member_map_v1;
 
 typedef struct thinkthen_complete_position_v1 {
-  struct thinkthen_complete_position_field_file_presence_v1 file;
-  struct thinkthen_complete_position_field_first_presence_v1 first;
-  struct thinkthen_complete_position_field_images_presence_v1 images;
-  struct thinkthen_complete_position_field_last_presence_v1 last;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first;
+  struct thinkthen_complete_string_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 last;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_position_v1;
 
-typedef struct thinkthen_complete_annotation_field_position_presence_v1 {
+typedef struct thinkthen_complete_position_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_position_v1 *value;
-} thinkthen_complete_annotation_field_position_presence_v1;
-
-typedef struct thinkthen_complete_annotation_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_annotation_field_source_presence_v1;
-
-typedef struct thinkthen_complete_annotated_field_array_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_annotated_field_array_v1;
+} thinkthen_complete_position_presence_v1;
 
 typedef struct thinkthen_complete_failed_v1 {
   const struct thinkthen_complete_failure_v1 *failed;
@@ -2553,7 +2970,7 @@ typedef union thinkthen_complete_annotated_field_data_v1 {
   uint32_t boolean;
   uint32_t null;
   struct thinkthen_complete_utf8_v1 string;
-  struct thinkthen_complete_annotated_field_array_v1 array;
+  struct thinkthen_complete_string_list_v1 array;
   double number;
   const struct thinkthen_complete_failed_v1 *object;
 } thinkthen_complete_annotated_field_data_v1;
@@ -2563,32 +2980,32 @@ typedef struct thinkthen_complete_annotated_field_v1 {
   union thinkthen_complete_annotated_field_data_v1 data;
 } thinkthen_complete_annotated_field_v1;
 
-typedef struct thinkthen_complete_annotated_row_value_entry_v1 {
+typedef struct thinkthen_complete_annotated_field_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 name;
   const struct thinkthen_complete_annotated_field_v1 *value;
-} thinkthen_complete_annotated_row_value_entry_v1;
+} thinkthen_complete_annotated_field_map_entry_v1;
 
-typedef struct thinkthen_complete_annotated_row_value_v1 {
-  const struct thinkthen_complete_annotated_row_value_entry_v1 *data;
+typedef struct thinkthen_complete_annotated_field_map_v1 {
+  const struct thinkthen_complete_annotated_field_map_entry_v1 *data;
   size_t len;
-} thinkthen_complete_annotated_row_value_v1;
+} thinkthen_complete_annotated_field_map_v1;
 
 typedef struct thinkthen_complete_annotated_row_v1 {
-  struct thinkthen_complete_annotated_row_value_v1 value;
+  struct thinkthen_complete_annotated_field_map_v1 value;
 } thinkthen_complete_annotated_row_v1;
 
 typedef struct thinkthen_complete_annotation_v1 {
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_annotation_field_answers_v1 answers;
-  struct thinkthen_complete_annotation_field_file_presence_v1 file;
-  struct thinkthen_complete_annotation_field_first_line_presence_v1 first_line;
-  struct thinkthen_complete_annotation_field_index_presence_v1 index;
-  struct thinkthen_complete_annotation_field_input_presence_v1 input;
-  struct thinkthen_complete_annotation_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_annotation_member_map_v1 answers;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
-  struct thinkthen_complete_annotation_field_position_presence_v1 position;
+  struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_annotation_field_source_presence_v1 source;
+  struct thinkthen_complete_physical_source_presence_v1 source;
   const struct thinkthen_complete_annotated_row_v1 *value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_v1;
@@ -2600,321 +3017,151 @@ typedef struct thinkthen_complete_session_packet_annotate_row_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_annotate_row_v1;
 
-typedef struct thinkthen_complete_session_packet_decide_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_decide_value_list_v1 {
   const struct thinkthen_complete_atomic_decide_value_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_decide_aggregate_field_value_v1;
+} thinkthen_complete_atomic_decide_value_list_v1;
 
 typedef struct thinkthen_complete_session_packet_decide_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_decide_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_decide_value_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_decide_aggregate_v1;
 
-typedef struct thinkthen_complete_session_packet_choose_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_nullable_string_list_v1 {
   const struct thinkthen_complete_atomic_nullable_string_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_choose_aggregate_field_value_v1;
+} thinkthen_complete_atomic_nullable_string_list_v1;
 
 typedef struct thinkthen_complete_session_packet_choose_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_choose_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_nullable_string_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_choose_aggregate_v1;
 
-typedef struct thinkthen_complete_session_packet_tag_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_array_of_string_list_v1 {
   const struct thinkthen_complete_atomic_array_of_string_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_tag_aggregate_field_value_v1;
+} thinkthen_complete_atomic_array_of_string_list_v1;
 
 typedef struct thinkthen_complete_session_packet_tag_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_tag_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_array_of_string_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_tag_aggregate_v1;
 
-typedef struct thinkthen_complete_session_packet_score_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_double_list_v1 {
   const struct thinkthen_complete_atomic_double_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_score_aggregate_field_value_v1;
+} thinkthen_complete_atomic_double_list_v1;
 
 typedef struct thinkthen_complete_session_packet_score_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_score_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_double_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_score_aggregate_v1;
 
-typedef struct thinkthen_complete_session_packet_filter_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_boolean_list_v1 {
   const struct thinkthen_complete_atomic_boolean_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_filter_aggregate_field_value_v1;
+} thinkthen_complete_atomic_boolean_list_v1;
 
 typedef struct thinkthen_complete_session_packet_filter_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_filter_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_boolean_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_filter_aggregate_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_images_v1 {
-  const struct thinkthen_complete_image_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_non_zero_usize_field_images_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_non_zero_usize_field_images_v1 value;
-} thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_members_v1 {
-  const struct thinkthen_complete_rank_member_v1 *const *data;
-  size_t len;
-} thinkthen_complete_atomic_non_zero_usize_field_members_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_atomic_non_zero_usize_field_members_v1 value;
-} thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1;
-
-typedef struct thinkthen_complete_atomic_non_zero_usize_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_atomic_non_zero_usize_field_threshold_presence_v1;
 
 typedef struct thinkthen_complete_atomic_non_zero_usize_v1 {
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_atomic_non_zero_usize_field_images_presence_v1 images;
-  struct thinkthen_complete_atomic_non_zero_usize_field_index_presence_v1 index;
-  struct thinkthen_complete_atomic_non_zero_usize_field_input_presence_v1 input;
-  struct thinkthen_complete_atomic_non_zero_usize_field_members_presence_v1 members;
+  struct thinkthen_complete_image_list_presence_v1 images;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_rank_member_list_presence_v1 members;
   const struct thinkthen_complete_meta_v1 *meta;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_atomic_non_zero_usize_field_question_name_presence_v1 question_name;
+  struct thinkthen_complete_utf8_presence_v1 question_name;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_atomic_non_zero_usize_field_source_presence_v1 source;
-  struct thinkthen_complete_atomic_non_zero_usize_field_threshold_presence_v1 threshold;
+  struct thinkthen_complete_physical_source_presence_v1 source;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
   uint64_t value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_atomic_non_zero_usize_v1;
 
-typedef struct thinkthen_complete_session_packet_rank_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_atomic_non_zero_usize_list_v1 {
   const struct thinkthen_complete_atomic_non_zero_usize_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_rank_aggregate_field_value_v1;
+} thinkthen_complete_atomic_non_zero_usize_list_v1;
 
 typedef struct thinkthen_complete_session_packet_rank_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_rank_aggregate_field_value_v1 value;
+  struct thinkthen_complete_atomic_non_zero_usize_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_rank_aggregate_v1;
 
-typedef struct thinkthen_complete_find_answer_field_confidence_presence_v1 {
-  uint32_t presence;
-  double value;
-} thinkthen_complete_find_answer_field_confidence_presence_v1;
-
-typedef struct thinkthen_complete_find_answer_field_probabilities_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_find_answer_field_probabilities_entry_v1;
-
-typedef struct thinkthen_complete_find_answer_field_probabilities_v1 {
-  const struct thinkthen_complete_find_answer_field_probabilities_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_find_answer_field_probabilities_v1;
-
 typedef struct thinkthen_complete_find_answer_v1 {
-  struct thinkthen_complete_find_answer_field_confidence_presence_v1 confidence;
+  struct thinkthen_complete_f64_presence_v1 confidence;
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_utf8_v1 pick;
-  struct thinkthen_complete_find_answer_field_probabilities_v1 probabilities;
+  struct thinkthen_complete_number_map_v1 probabilities;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_find_answer_v1;
 
-typedef struct thinkthen_complete_find_candidate_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_find_candidate_field_index_presence_v1;
-
-typedef struct thinkthen_complete_find_candidate_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_find_candidate_field_input_presence_v1;
-
-typedef struct thinkthen_complete_find_candidate_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_find_candidate_field_source_presence_v1;
-
 typedef struct thinkthen_complete_find_candidate_v1 {
-  struct thinkthen_complete_find_candidate_field_index_presence_v1 index;
-  struct thinkthen_complete_find_candidate_field_input_presence_v1 input;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
   double probability;
-  struct thinkthen_complete_find_candidate_field_source_presence_v1 source;
+  struct thinkthen_complete_physical_source_presence_v1 source;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_find_candidate_v1;
 
-typedef struct thinkthen_complete_find_field_candidates_v1 {
+typedef struct thinkthen_complete_find_candidate_list_v1 {
   const struct thinkthen_complete_find_candidate_v1 *const *data;
   size_t len;
-} thinkthen_complete_find_field_candidates_v1;
+} thinkthen_complete_find_candidate_list_v1;
 
-typedef struct thinkthen_complete_find_field_candidates_presence_v1 {
+typedef struct thinkthen_complete_find_candidate_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_find_field_candidates_v1 value;
-} thinkthen_complete_find_field_candidates_presence_v1;
-
-typedef struct thinkthen_complete_find_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_find_field_file_presence_v1;
-
-typedef struct thinkthen_complete_find_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_find_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_find_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_find_field_index_presence_v1;
-
-typedef struct thinkthen_complete_find_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_find_field_last_line_presence_v1;
-
-typedef struct thinkthen_complete_find_field_position_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_position_v1 *value;
-} thinkthen_complete_find_field_position_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_2_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_2_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_2_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_2_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_2_field_label_details_v1 value;
-} thinkthen_complete_readable_question_2_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_2_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_2_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_2_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_2_field_on_v1 value;
-} thinkthen_complete_readable_question_2_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_2_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_text_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_2_field_text_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_2_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_2_field_wording_version_presence_v1;
+  struct thinkthen_complete_find_candidate_list_v1 value;
+} thinkthen_complete_find_candidate_list_presence_v1;
 
 typedef struct thinkthen_complete_readable_question_2_v1 {
-  struct thinkthen_complete_readable_question_2_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_2_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_2_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_2_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_2_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_2_field_name_presence_v1 name;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
   uint32_t none;
-  struct thinkthen_complete_readable_question_2_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_2_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_2_field_text_presence_v1 text;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_json_presence_v1 text;
   struct thinkthen_complete_utf8_v1 verb;
-  struct thinkthen_complete_readable_question_2_field_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_2_v1;
-
-typedef struct thinkthen_complete_find_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_find_field_threshold_presence_v1;
-
-typedef struct thinkthen_complete_find_field_value_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_find_field_value_presence_v1;
 
 typedef struct thinkthen_complete_find_v1 {
   const struct thinkthen_complete_find_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_find_field_candidates_presence_v1 candidates;
-  struct thinkthen_complete_find_field_file_presence_v1 file;
-  struct thinkthen_complete_find_field_first_line_presence_v1 first_line;
-  struct thinkthen_complete_find_field_index_presence_v1 index;
-  struct thinkthen_complete_find_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_find_candidate_list_presence_v1 candidates;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
-  struct thinkthen_complete_find_field_position_presence_v1 position;
+  struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_readable_question_2_v1 *question;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_find_field_threshold_presence_v1 threshold;
-  struct thinkthen_complete_find_field_value_presence_v1 value;
+  struct thinkthen_complete_json_presence_v1 threshold;
+  struct thinkthen_complete_json_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_find_v1;
 
@@ -2925,60 +3172,35 @@ typedef struct thinkthen_complete_session_packet_find_aggregate_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_find_aggregate_v1;
 
-typedef struct thinkthen_complete_session_packet_annotate_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_annotation_list_v1 {
   const struct thinkthen_complete_annotation_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_annotate_aggregate_field_value_v1;
+} thinkthen_complete_annotation_list_v1;
 
 typedef struct thinkthen_complete_session_packet_annotate_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_annotate_aggregate_field_value_v1 value;
+  struct thinkthen_complete_annotation_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_annotate_aggregate_v1;
 
-typedef struct thinkthen_complete_name_odds_field_edges_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_name_odds_field_edges_entry_v1;
-
-typedef struct thinkthen_complete_name_odds_field_edges_v1 {
-  const struct thinkthen_complete_name_odds_field_edges_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_name_odds_field_edges_v1;
-
-typedef struct thinkthen_complete_name_odds_field_edges_presence_v1 {
+typedef struct thinkthen_complete_number_map_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_name_odds_field_edges_v1 value;
-} thinkthen_complete_name_odds_field_edges_presence_v1;
-
-typedef struct thinkthen_complete_name_odds_field_kinds_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_name_odds_field_kinds_entry_v1;
-
-typedef struct thinkthen_complete_name_odds_field_kinds_v1 {
-  const struct thinkthen_complete_name_odds_field_kinds_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_name_odds_field_kinds_v1;
-
-typedef struct thinkthen_complete_name_odds_field_kinds_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_name_odds_field_kinds_v1 value;
-} thinkthen_complete_name_odds_field_kinds_presence_v1;
+  struct thinkthen_complete_number_map_v1 value;
+} thinkthen_complete_number_map_presence_v1;
 
 typedef struct thinkthen_complete_name_odds_v1 {
-  struct thinkthen_complete_name_odds_field_edges_presence_v1 edges;
+  struct thinkthen_complete_number_map_presence_v1 edges;
   uint64_t end;
-  struct thinkthen_complete_name_odds_field_kinds_presence_v1 kinds;
+  struct thinkthen_complete_number_map_presence_v1 kinds;
   uint64_t start;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_name_odds_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_names_v1 {
+typedef struct thinkthen_complete_name_odds_list_v1 {
   const struct thinkthen_complete_name_odds_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_names_v1;
+} thinkthen_complete_name_odds_list_v1;
 
 typedef struct thinkthen_complete_place_v1 {
   uint64_t end;
@@ -2994,76 +3216,51 @@ typedef struct thinkthen_complete_pair_odds_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_pair_odds_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pairs_v1 {
+typedef struct thinkthen_complete_pair_odds_list_v1 {
   const struct thinkthen_complete_pair_odds_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pairs_v1;
-
-typedef struct thinkthen_complete_piece_odds_field_tags_entry_v1 {
-  struct thinkthen_complete_utf8_v1 name;
-  double value;
-} thinkthen_complete_piece_odds_field_tags_entry_v1;
-
-typedef struct thinkthen_complete_piece_odds_field_tags_v1 {
-  const struct thinkthen_complete_piece_odds_field_tags_entry_v1 *data;
-  size_t len;
-} thinkthen_complete_piece_odds_field_tags_v1;
+} thinkthen_complete_pair_odds_list_v1;
 
 typedef struct thinkthen_complete_piece_odds_v1 {
   uint64_t end;
   uint64_t start;
-  struct thinkthen_complete_piece_odds_field_tags_v1 tags;
+  struct thinkthen_complete_number_map_v1 tags;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_piece_odds_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pieces_v1 {
+typedef struct thinkthen_complete_piece_odds_list_v1 {
   const struct thinkthen_complete_piece_odds_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pieces_v1;
+} thinkthen_complete_piece_odds_list_v1;
 
-typedef struct thinkthen_complete_recognition_proposal_field_kind_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_recognition_proposal_field_kind_presence_v1;
-
-typedef struct thinkthen_complete_recognition_proposal_field_selected_presence_v1 {
+typedef struct thinkthen_complete_place_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_place_v1 *value;
-} thinkthen_complete_recognition_proposal_field_selected_presence_v1;
-
-typedef struct thinkthen_complete_recognition_proposal_field_strength_presence_v1 {
-  uint32_t presence;
-  double value;
-} thinkthen_complete_recognition_proposal_field_strength_presence_v1;
+} thinkthen_complete_place_presence_v1;
 
 typedef struct thinkthen_complete_recognition_proposal_v1 {
   uint64_t end;
   uint32_t kept;
-  struct thinkthen_complete_recognition_proposal_field_kind_presence_v1 kind;
-  struct thinkthen_complete_recognition_proposal_field_selected_presence_v1 selected;
+  struct thinkthen_complete_utf8_presence_v1 kind;
+  struct thinkthen_complete_place_presence_v1 selected;
   double span_probability;
   uint64_t start;
-  struct thinkthen_complete_recognition_proposal_field_strength_presence_v1 strength;
+  struct thinkthen_complete_f64_presence_v1 strength;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_recognition_proposal_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_proposals_v1 {
+typedef struct thinkthen_complete_recognition_proposal_list_v1 {
   const struct thinkthen_complete_recognition_proposal_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_proposals_v1;
+} thinkthen_complete_recognition_proposal_list_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_v1 {
-  struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_names_v1 names;
-  struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pairs_v1 pairs;
-  struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_pieces_v1 pieces;
-  struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_field_proposals_v1 proposals;
+typedef struct thinkthen_complete_recognition_odds_recognize_answer_v1 {
+  struct thinkthen_complete_name_odds_list_v1 names;
+  struct thinkthen_complete_pair_odds_list_v1 pairs;
+  struct thinkthen_complete_piece_odds_list_v1 pieces;
+  struct thinkthen_complete_recognition_proposal_list_v1 proposals;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_v1;
-
-typedef struct thinkthen_complete_recognition_odds_fields_pieces_proposals_field_pieces_v1 {
-  const struct thinkthen_complete_piece_odds_v1 *const *data;
-  size_t len;
-} thinkthen_complete_recognition_odds_fields_pieces_proposals_field_pieces_v1;
+} thinkthen_complete_recognition_odds_recognize_answer_v1;
 
 typedef struct thinkthen_complete_boundary_proposal_v1 {
   uint64_t end;
@@ -3074,20 +3271,20 @@ typedef struct thinkthen_complete_boundary_proposal_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_boundary_proposal_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_pieces_proposals_field_proposals_v1 {
+typedef struct thinkthen_complete_boundary_proposal_list_v1 {
   const struct thinkthen_complete_boundary_proposal_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognition_odds_fields_pieces_proposals_field_proposals_v1;
+} thinkthen_complete_boundary_proposal_list_v1;
 
-typedef struct thinkthen_complete_recognition_odds_fields_pieces_proposals_v1 {
-  struct thinkthen_complete_recognition_odds_fields_pieces_proposals_field_pieces_v1 pieces;
-  struct thinkthen_complete_recognition_odds_fields_pieces_proposals_field_proposals_v1 proposals;
+typedef struct thinkthen_complete_recognition_odds_boundary_odds_v1 {
+  struct thinkthen_complete_piece_odds_list_v1 pieces;
+  struct thinkthen_complete_boundary_proposal_list_v1 proposals;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_recognition_odds_fields_pieces_proposals_v1;
+} thinkthen_complete_recognition_odds_boundary_odds_v1;
 
 typedef union thinkthen_complete_recognition_odds_data_v1 {
-  const struct thinkthen_complete_recognition_odds_fields_names_pairs_pieces_proposals_v1 *fields_names_pairs_pieces_proposals;
-  const struct thinkthen_complete_recognition_odds_fields_pieces_proposals_v1 *fields_pieces_proposals;
+  const struct thinkthen_complete_recognition_odds_recognize_answer_v1 *recognize_answer;
+  const struct thinkthen_complete_recognition_odds_boundary_odds_v1 *boundary_odds;
 } thinkthen_complete_recognition_odds_data_v1;
 
 typedef struct thinkthen_complete_recognition_odds_v1 {
@@ -3095,235 +3292,95 @@ typedef struct thinkthen_complete_recognition_odds_v1 {
   union thinkthen_complete_recognition_odds_data_v1 data;
 } thinkthen_complete_recognition_odds_v1;
 
-typedef struct thinkthen_complete_recognition_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_recognition_field_file_presence_v1;
-
-typedef struct thinkthen_complete_recognition_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_recognition_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_recognition_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_recognition_field_index_presence_v1;
-
-typedef struct thinkthen_complete_recognition_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_recognition_field_input_presence_v1;
-
-typedef struct thinkthen_complete_recognition_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_recognition_field_last_line_presence_v1;
-
-typedef struct thinkthen_complete_recognition_field_position_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_position_v1 *value;
-} thinkthen_complete_recognition_field_position_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_3_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_3_field_context_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_entity_definition_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_3_field_entity_definition_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_instructions_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_3_field_instructions_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_3_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_kinds_entry_v1 {
+typedef struct thinkthen_complete_json_map_entry_v1 {
   struct thinkthen_complete_utf8_v1 name;
   const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_readable_question_3_field_kinds_entry_v1;
+} thinkthen_complete_json_map_entry_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_kinds_v1 {
-  const struct thinkthen_complete_readable_question_3_field_kinds_entry_v1 *data;
+typedef struct thinkthen_complete_json_map_v1 {
+  const struct thinkthen_complete_json_map_entry_v1 *data;
   size_t len;
-} thinkthen_complete_readable_question_3_field_kinds_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_3_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_3_field_label_details_v1 value;
-} thinkthen_complete_readable_question_3_field_label_details_presence_v1;
+} thinkthen_complete_json_map_v1;
 
 typedef struct thinkthen_complete_recognition_mode_v1 {
   uint32_t kind;
 } thinkthen_complete_recognition_mode_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_mode_presence_v1 {
+typedef struct thinkthen_complete_recognition_mode_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_recognition_mode_v1 *value;
-} thinkthen_complete_readable_question_3_field_mode_presence_v1;
+} thinkthen_complete_recognition_mode_presence_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_3_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_3_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_3_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_3_field_on_v1 value;
-} thinkthen_complete_readable_question_3_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_3_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1;
-
-typedef struct thinkthen_complete_relation_rule_field_single_presence_v1 {
+typedef struct thinkthen_complete_u32_presence_v1 {
   uint32_t presence;
   uint32_t value;
-} thinkthen_complete_relation_rule_field_single_presence_v1;
+} thinkthen_complete_u32_presence_v1;
 
 typedef struct thinkthen_complete_relation_rule_v1 {
   uint32_t either;
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_utf8_v1 reads;
-  struct thinkthen_complete_relation_rule_field_single_presence_v1 single;
+  struct thinkthen_complete_u32_presence_v1 single;
   struct thinkthen_complete_utf8_v1 source;
   struct thinkthen_complete_utf8_v1 target;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_relation_rule_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_relations_v1 {
+typedef struct thinkthen_complete_relation_rule_list_v1 {
   const struct thinkthen_complete_relation_rule_v1 *const *data;
   size_t len;
-} thinkthen_complete_readable_question_3_field_relations_v1;
+} thinkthen_complete_relation_rule_list_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_relations_presence_v1 {
+typedef struct thinkthen_complete_relation_rule_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_readable_question_3_field_relations_v1 value;
-} thinkthen_complete_readable_question_3_field_relations_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1;
-
-typedef struct thinkthen_complete_recognition_stage_context_field_boundary_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_recognition_stage_context_field_boundary_presence_v1;
-
-typedef struct thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1;
-
-typedef struct thinkthen_complete_recognition_stage_context_field_relation_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_recognition_stage_context_field_relation_presence_v1;
+  struct thinkthen_complete_relation_rule_list_v1 value;
+} thinkthen_complete_relation_rule_list_presence_v1;
 
 typedef struct thinkthen_complete_recognition_stage_context_v1 {
-  struct thinkthen_complete_recognition_stage_context_field_boundary_presence_v1 boundary;
-  struct thinkthen_complete_recognition_stage_context_field_kind_edge_presence_v1 kind_edge;
-  struct thinkthen_complete_recognition_stage_context_field_relation_presence_v1 relation;
+  struct thinkthen_complete_utf8_presence_v1 boundary;
+  struct thinkthen_complete_utf8_presence_v1 kind_edge;
+  struct thinkthen_complete_utf8_presence_v1 relation;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_recognition_stage_context_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_stage_context_presence_v1 {
+typedef struct thinkthen_complete_recognition_stage_context_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_recognition_stage_context_v1 *value;
-} thinkthen_complete_readable_question_3_field_stage_context_presence_v1;
+} thinkthen_complete_recognition_stage_context_presence_v1;
 
 typedef struct thinkthen_complete_verb_v1 {
   uint32_t kind;
 } thinkthen_complete_verb_v1;
 
-typedef struct thinkthen_complete_readable_question_3_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_3_field_wording_version_presence_v1;
-
 typedef struct thinkthen_complete_readable_question_3_v1 {
-  struct thinkthen_complete_readable_question_3_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_3_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_3_field_entity_definition_presence_v1 entity_definition;
-  struct thinkthen_complete_readable_question_3_field_instructions_presence_v1 instructions;
-  struct thinkthen_complete_readable_question_3_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_3_field_kinds_v1 kinds;
-  struct thinkthen_complete_readable_question_3_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_3_field_mode_presence_v1 mode;
-  struct thinkthen_complete_readable_question_3_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_3_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_3_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_3_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_3_field_relation_threshold_presence_v1 relation_threshold;
-  struct thinkthen_complete_readable_question_3_field_relations_presence_v1 relations;
-  struct thinkthen_complete_readable_question_3_field_snippet_pieces_presence_v1 snippet_pieces;
-  struct thinkthen_complete_readable_question_3_field_stage_context_presence_v1 stage_context;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_json_presence_v1 entity_definition;
+  struct thinkthen_complete_json_presence_v1 instructions;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_json_map_v1 kinds;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_recognition_mode_presence_v1 mode;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_threshold_presence_v1 relation_threshold;
+  struct thinkthen_complete_relation_rule_list_presence_v1 relations;
+  struct thinkthen_complete_u64_presence_v1 snippet_pieces;
+  struct thinkthen_complete_recognition_stage_context_presence_v1 stage_context;
   const struct thinkthen_complete_threshold_v1 *threshold;
   const struct thinkthen_complete_verb_v1 *verb;
-  struct thinkthen_complete_readable_question_3_field_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_3_v1;
 
-typedef struct thinkthen_complete_recognition_field_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_recognition_field_source_presence_v1;
-
-typedef struct thinkthen_complete_entity_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_entity_field_file_presence_v1;
-
-typedef struct thinkthen_complete_entity_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_entity_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_entity_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_entity_field_last_line_presence_v1;
-
 typedef struct thinkthen_complete_entity_v1 {
   uint64_t end;
-  struct thinkthen_complete_entity_field_file_presence_v1 file;
-  struct thinkthen_complete_entity_field_first_line_presence_v1 first_line;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_entity_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   uint64_t length;
   uint64_t start;
   double strength;
@@ -3331,18 +3388,13 @@ typedef struct thinkthen_complete_entity_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_entity_v1;
 
-typedef struct thinkthen_complete_recognize_fields_entities_field_entities_v1 {
+typedef struct thinkthen_complete_entity_list_v1 {
   const struct thinkthen_complete_entity_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognize_fields_entities_field_entities_v1;
-
-typedef struct thinkthen_complete_entity_edge_field_either_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_entity_edge_field_either_presence_v1;
+} thinkthen_complete_entity_list_v1;
 
 typedef struct thinkthen_complete_entity_edge_v1 {
-  struct thinkthen_complete_entity_edge_field_either_presence_v1 either;
+  struct thinkthen_complete_u32_presence_v1 either;
   double probability;
   struct thinkthen_complete_utf8_v1 relation;
   const struct thinkthen_complete_entity_v1 *source;
@@ -3350,40 +3402,35 @@ typedef struct thinkthen_complete_entity_edge_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_entity_edge_v1;
 
-typedef struct thinkthen_complete_recognize_fields_entities_field_relations_v1 {
+typedef struct thinkthen_complete_entity_edge_list_v1 {
   const struct thinkthen_complete_entity_edge_v1 *const *data;
   size_t len;
-} thinkthen_complete_recognize_fields_entities_field_relations_v1;
+} thinkthen_complete_entity_edge_list_v1;
 
-typedef struct thinkthen_complete_recognize_fields_entities_field_relations_presence_v1 {
+typedef struct thinkthen_complete_entity_edge_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_recognize_fields_entities_field_relations_v1 value;
-} thinkthen_complete_recognize_fields_entities_field_relations_presence_v1;
+  struct thinkthen_complete_entity_edge_list_v1 value;
+} thinkthen_complete_entity_edge_list_presence_v1;
 
-typedef struct thinkthen_complete_recognize_fields_entities_v1 {
-  struct thinkthen_complete_recognize_fields_entities_field_entities_v1 entities;
-  struct thinkthen_complete_recognize_fields_entities_field_relations_presence_v1 relations;
+typedef struct thinkthen_complete_recognize_entities_v1 {
+  struct thinkthen_complete_entity_list_v1 entities;
+  struct thinkthen_complete_entity_edge_list_presence_v1 relations;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_recognize_fields_entities_v1;
+} thinkthen_complete_recognize_entities_v1;
 
 typedef struct thinkthen_complete_boundary_mode_v1 {
   uint32_t kind;
 } thinkthen_complete_boundary_mode_v1;
 
-typedef struct thinkthen_complete_recognize_fields_mode_proposals_field_proposals_v1 {
-  const struct thinkthen_complete_boundary_proposal_v1 *const *data;
-  size_t len;
-} thinkthen_complete_recognize_fields_mode_proposals_field_proposals_v1;
-
-typedef struct thinkthen_complete_recognize_fields_mode_proposals_v1 {
+typedef struct thinkthen_complete_recognize_mode_proposals_v1 {
   const struct thinkthen_complete_boundary_mode_v1 *mode;
-  struct thinkthen_complete_recognize_fields_mode_proposals_field_proposals_v1 proposals;
+  struct thinkthen_complete_boundary_proposal_list_v1 proposals;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_recognize_fields_mode_proposals_v1;
+} thinkthen_complete_recognize_mode_proposals_v1;
 
 typedef union thinkthen_complete_recognize_data_v1 {
-  const struct thinkthen_complete_recognize_fields_entities_v1 *fields_entities;
-  const struct thinkthen_complete_recognize_fields_mode_proposals_v1 *fields_mode_proposals;
+  const struct thinkthen_complete_recognize_entities_v1 *entities;
+  const struct thinkthen_complete_recognize_mode_proposals_v1 *mode_proposals;
 } thinkthen_complete_recognize_data_v1;
 
 typedef struct thinkthen_complete_recognize_v1 {
@@ -3394,29 +3441,29 @@ typedef struct thinkthen_complete_recognize_v1 {
 typedef struct thinkthen_complete_recognition_v1 {
   const struct thinkthen_complete_recognition_odds_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_recognition_field_file_presence_v1 file;
-  struct thinkthen_complete_recognition_field_first_line_presence_v1 first_line;
-  struct thinkthen_complete_recognition_field_index_presence_v1 index;
-  struct thinkthen_complete_recognition_field_input_presence_v1 input;
-  struct thinkthen_complete_recognition_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
-  struct thinkthen_complete_recognition_field_position_presence_v1 position;
+  struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_readable_question_3_v1 *question;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_recognition_field_source_presence_v1 source;
+  struct thinkthen_complete_physical_source_presence_v1 source;
   const struct thinkthen_complete_recognize_v1 *value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_recognition_v1;
 
-typedef struct thinkthen_complete_session_packet_recognize_aggregate_field_value_v1 {
+typedef struct thinkthen_complete_recognition_list_v1 {
   const struct thinkthen_complete_recognition_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_packet_recognize_aggregate_field_value_v1;
+} thinkthen_complete_recognition_list_v1;
 
 typedef struct thinkthen_complete_session_packet_recognize_aggregate_v1 {
   struct thinkthen_complete_utf8_v1 function;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_packet_recognize_aggregate_field_value_v1 value;
+  struct thinkthen_complete_recognition_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_recognize_aggregate_v1;
 
@@ -3428,45 +3475,30 @@ typedef struct thinkthen_complete_relation_method_v1 {
   uint32_t kind;
 } thinkthen_complete_relation_method_v1;
 
-typedef struct thinkthen_complete_relation_member_answer_id_field_observations_v1 {
-  const struct thinkthen_complete_observation_v1 *const *data;
-  size_t len;
-} thinkthen_complete_relation_member_answer_id_field_observations_v1;
-
-typedef struct thinkthen_complete_relation_member_answer_id_field_question_sources_v1 {
-  const struct thinkthen_complete_question_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_relation_member_answer_id_field_question_sources_v1;
-
 typedef struct thinkthen_complete_related_entity_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_related_entity_v1;
 
-typedef struct thinkthen_complete_relation_member_answer_id_field_target_presence_v1 {
+typedef struct thinkthen_complete_related_entity_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_related_entity_v1 *value;
-} thinkthen_complete_relation_member_answer_id_field_target_presence_v1;
-
-typedef struct thinkthen_complete_relation_member_answer_id_field_usage_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_relation_member_answer_id_field_usage_presence_v1;
+} thinkthen_complete_related_entity_presence_v1;
 
 typedef struct thinkthen_complete_relation_member_answer_id_v1 {
   const struct thinkthen_complete_relation_direction_v1 *direction;
   const struct thinkthen_complete_relation_method_v1 *method;
-  struct thinkthen_complete_relation_member_answer_id_field_observations_v1 observations;
+  struct thinkthen_complete_observation_list_v1 observations;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_relation_member_answer_id_field_question_sources_v1 question_sources;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
   struct thinkthen_complete_utf8_v1 reads;
   struct thinkthen_complete_utf8_v1 relation;
   struct thinkthen_complete_utf8_v1 request;
   const struct thinkthen_complete_related_entity_v1 *source;
-  struct thinkthen_complete_relation_member_answer_id_field_target_presence_v1 target;
+  struct thinkthen_complete_related_entity_presence_v1 target;
   const struct thinkthen_complete_threshold_v1 *threshold;
-  struct thinkthen_complete_relation_member_answer_id_field_usage_presence_v1 usage;
+  struct thinkthen_complete_usage_presence_v1 usage;
   uint32_t accepted;
   const struct thinkthen_complete_answer_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
@@ -3474,39 +3506,19 @@ typedef struct thinkthen_complete_relation_member_answer_id_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_relation_member_answer_id_v1;
 
-typedef struct thinkthen_complete_relation_member_failure_id_field_observations_v1 {
-  const struct thinkthen_complete_observation_v1 *const *data;
-  size_t len;
-} thinkthen_complete_relation_member_failure_id_field_observations_v1;
-
-typedef struct thinkthen_complete_relation_member_failure_id_field_question_sources_v1 {
-  const struct thinkthen_complete_question_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_relation_member_failure_id_field_question_sources_v1;
-
-typedef struct thinkthen_complete_relation_member_failure_id_field_target_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_related_entity_v1 *value;
-} thinkthen_complete_relation_member_failure_id_field_target_presence_v1;
-
-typedef struct thinkthen_complete_relation_member_failure_id_field_usage_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_relation_member_failure_id_field_usage_presence_v1;
-
 typedef struct thinkthen_complete_relation_member_failure_id_v1 {
   const struct thinkthen_complete_relation_direction_v1 *direction;
   const struct thinkthen_complete_relation_method_v1 *method;
-  struct thinkthen_complete_relation_member_failure_id_field_observations_v1 observations;
+  struct thinkthen_complete_observation_list_v1 observations;
   const struct thinkthen_complete_readable_question_v1 *question;
-  struct thinkthen_complete_relation_member_failure_id_field_question_sources_v1 question_sources;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
   struct thinkthen_complete_utf8_v1 reads;
   struct thinkthen_complete_utf8_v1 relation;
   struct thinkthen_complete_utf8_v1 request;
   const struct thinkthen_complete_related_entity_v1 *source;
-  struct thinkthen_complete_relation_member_failure_id_field_target_presence_v1 target;
+  struct thinkthen_complete_related_entity_presence_v1 target;
   const struct thinkthen_complete_threshold_v1 *threshold;
-  struct thinkthen_complete_relation_member_failure_id_field_usage_presence_v1 usage;
+  struct thinkthen_complete_usage_presence_v1 usage;
   const struct thinkthen_complete_failure_v1 *failure;
   const struct thinkthen_complete_failure_id_v1 *failure_id;
   struct thinkthen_complete_extensions_v1 extensions;
@@ -3522,35 +3534,15 @@ typedef struct thinkthen_complete_relation_member_v1 {
   union thinkthen_complete_relation_member_data_v1 data;
 } thinkthen_complete_relation_member_v1;
 
-typedef struct thinkthen_complete_answers_field_questions_v1 {
+typedef struct thinkthen_complete_relation_member_list_v1 {
   const struct thinkthen_complete_relation_member_v1 *const *data;
   size_t len;
-} thinkthen_complete_answers_field_questions_v1;
+} thinkthen_complete_relation_member_list_v1;
 
 typedef struct thinkthen_complete_answers_v1 {
-  struct thinkthen_complete_answers_field_questions_v1 questions;
+  struct thinkthen_complete_relation_member_list_v1 questions;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_answers_v1;
-
-typedef struct thinkthen_complete_relation_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_relation_field_file_presence_v1;
-
-typedef struct thinkthen_complete_relation_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_relation_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_relation_field_index_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_relation_field_index_presence_v1;
-
-typedef struct thinkthen_complete_relation_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_relation_field_input_presence_v1;
 
 typedef struct thinkthen_complete_session_input_source_v1 {
   uint64_t index;
@@ -3558,35 +3550,15 @@ typedef struct thinkthen_complete_session_input_source_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_input_source_v1;
 
-typedef struct thinkthen_complete_relation_field_input_sources_v1 {
+typedef struct thinkthen_complete_session_input_source_list_v1 {
   const struct thinkthen_complete_session_input_source_v1 *const *data;
   size_t len;
-} thinkthen_complete_relation_field_input_sources_v1;
+} thinkthen_complete_session_input_source_list_v1;
 
-typedef struct thinkthen_complete_relation_field_input_sources_presence_v1 {
+typedef struct thinkthen_complete_session_input_source_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_relation_field_input_sources_v1 value;
-} thinkthen_complete_relation_field_input_sources_presence_v1;
-
-typedef struct thinkthen_complete_relation_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_relation_field_last_line_presence_v1;
-
-typedef struct thinkthen_complete_relation_field_position_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_position_v1 *value;
-} thinkthen_complete_relation_field_position_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_batch_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_batch_v1 *value;
-} thinkthen_complete_readable_question_4_field_batch_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_context_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_4_field_context_schema_presence_v1;
+  struct thinkthen_complete_session_input_source_list_v1 value;
+} thinkthen_complete_session_input_source_list_presence_v1;
 
 typedef struct thinkthen_complete_relate_fields_v1 {
   struct thinkthen_complete_utf8_v1 kind;
@@ -3594,158 +3566,83 @@ typedef struct thinkthen_complete_relate_fields_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_relate_fields_v1;
 
-typedef struct thinkthen_complete_readable_question_4_field_fields_presence_v1 {
+typedef struct thinkthen_complete_relate_fields_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_relate_fields_v1 *value;
-} thinkthen_complete_readable_question_4_field_fields_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_item_schema_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_input_declaration_v1 *value;
-} thinkthen_complete_readable_question_4_field_item_schema_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_label_details_v1 {
-  const struct thinkthen_complete_label_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_4_field_label_details_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_label_details_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_4_field_label_details_v1 value;
-} thinkthen_complete_readable_question_4_field_label_details_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_4_field_model_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_name_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_question_name_v1 *value;
-} thinkthen_complete_readable_question_4_field_name_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_on_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_readable_question_4_field_on_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_on_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_readable_question_4_field_on_v1 value;
-} thinkthen_complete_readable_question_4_field_on_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_profile_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_readable_question_4_field_profile_presence_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_relations_v1 {
-  const struct thinkthen_complete_relation_rule_v1 *const *data;
-  size_t len;
-} thinkthen_complete_readable_question_4_field_relations_v1;
-
-typedef struct thinkthen_complete_readable_question_4_field_wording_version_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_wording_version_v1 *value;
-} thinkthen_complete_readable_question_4_field_wording_version_presence_v1;
+} thinkthen_complete_relate_fields_presence_v1;
 
 typedef struct thinkthen_complete_readable_question_4_v1 {
-  struct thinkthen_complete_readable_question_4_field_batch_presence_v1 batch;
-  struct thinkthen_complete_readable_question_4_field_context_schema_presence_v1 context_schema;
-  struct thinkthen_complete_readable_question_4_field_fields_presence_v1 fields;
-  struct thinkthen_complete_readable_question_4_field_item_schema_presence_v1 item_schema;
-  struct thinkthen_complete_readable_question_4_field_label_details_presence_v1 label_details;
-  struct thinkthen_complete_readable_question_4_field_model_presence_v1 model;
-  struct thinkthen_complete_readable_question_4_field_name_presence_v1 name;
-  struct thinkthen_complete_readable_question_4_field_on_presence_v1 on;
-  struct thinkthen_complete_readable_question_4_field_profile_presence_v1 profile;
-  struct thinkthen_complete_readable_question_4_field_relations_v1 relations;
+  struct thinkthen_complete_batch_presence_v1 batch;
+  struct thinkthen_complete_input_declaration_presence_v1 context_schema;
+  struct thinkthen_complete_relate_fields_presence_v1 fields;
+  struct thinkthen_complete_input_declaration_presence_v1 item_schema;
+  struct thinkthen_complete_label_list_presence_v1 label_details;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_question_name_presence_v1 name;
+  struct thinkthen_complete_string_list_presence_v1 on;
+  struct thinkthen_complete_utf8_presence_v1 profile;
+  struct thinkthen_complete_relation_rule_list_v1 relations;
   const struct thinkthen_complete_threshold_v1 *threshold;
   struct thinkthen_complete_utf8_v1 verb;
-  struct thinkthen_complete_readable_question_4_field_wording_version_presence_v1 wording_version;
+  struct thinkthen_complete_wording_version_presence_v1 wording_version;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_readable_question_4_v1;
 
-typedef struct thinkthen_complete_related_entity_edge_field_either_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_related_entity_edge_field_either_presence_v1;
-
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_kind_name_v1 {
+typedef struct thinkthen_complete_relation_endpoint_related_entity_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_related_entity_edge_properties_source_fields_kind_name_v1;
+} thinkthen_complete_relation_endpoint_related_entity_v1;
 
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1;
-
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1;
-
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1;
-
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1;
-
-typedef struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_v1 {
-  struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_file_presence_v1 file;
-  struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_first_line_presence_v1 first_line;
+typedef struct thinkthen_complete_relation_endpoint_source_v1 {
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   struct thinkthen_complete_utf8_v1 name;
   uint64_t ordinal;
-  struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_field_record_presence_v1 record;
+  struct thinkthen_complete_json_presence_v1 record;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_v1;
+} thinkthen_complete_relation_endpoint_source_v1;
 
-typedef union thinkthen_complete_related_entity_edge_properties_source_data_v1 {
-  const struct thinkthen_complete_related_entity_edge_properties_source_fields_kind_name_v1 *fields_kind_name;
-  const struct thinkthen_complete_related_entity_edge_properties_source_fields_file_kind_name_ordinal_record_v1 *fields_file_kind_name_ordinal_record;
-} thinkthen_complete_related_entity_edge_properties_source_data_v1;
+typedef union thinkthen_complete_relation_endpoint_data_v1 {
+  const struct thinkthen_complete_relation_endpoint_related_entity_v1 *related_entity;
+  const struct thinkthen_complete_relation_endpoint_source_v1 *source;
+} thinkthen_complete_relation_endpoint_data_v1;
 
-typedef struct thinkthen_complete_related_entity_edge_properties_source_v1 {
+typedef struct thinkthen_complete_relation_endpoint_v1 {
   uint32_t kind;
-  union thinkthen_complete_related_entity_edge_properties_source_data_v1 data;
-} thinkthen_complete_related_entity_edge_properties_source_v1;
+  union thinkthen_complete_relation_endpoint_data_v1 data;
+} thinkthen_complete_relation_endpoint_v1;
 
 typedef struct thinkthen_complete_related_entity_edge_v1 {
-  struct thinkthen_complete_related_entity_edge_field_either_presence_v1 either;
+  struct thinkthen_complete_u32_presence_v1 either;
   double probability;
   struct thinkthen_complete_utf8_v1 relation;
-  const struct thinkthen_complete_related_entity_edge_properties_source_v1 *source;
-  const struct thinkthen_complete_related_entity_edge_properties_source_v1 *target;
+  const struct thinkthen_complete_relation_endpoint_v1 *source;
+  const struct thinkthen_complete_relation_endpoint_v1 *target;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_related_entity_edge_v1;
 
-typedef struct thinkthen_complete_relation_field_value_v1 {
+typedef struct thinkthen_complete_related_entity_edge_list_v1 {
   const struct thinkthen_complete_related_entity_edge_v1 *const *data;
   size_t len;
-} thinkthen_complete_relation_field_value_v1;
+} thinkthen_complete_related_entity_edge_list_v1;
 
 typedef struct thinkthen_complete_relation_v1 {
   const struct thinkthen_complete_answers_v1 *answer;
   const struct thinkthen_complete_answer_id_v1 *answer_id;
-  struct thinkthen_complete_relation_field_file_presence_v1 file;
-  struct thinkthen_complete_relation_field_first_line_presence_v1 first_line;
-  struct thinkthen_complete_relation_field_index_presence_v1 index;
-  struct thinkthen_complete_relation_field_input_presence_v1 input;
-  struct thinkthen_complete_relation_field_input_sources_presence_v1 input_sources;
-  struct thinkthen_complete_relation_field_last_line_presence_v1 last_line;
+  struct thinkthen_complete_utf8_presence_v1 file;
+  struct thinkthen_complete_u64_presence_v1 first_line;
+  struct thinkthen_complete_u64_presence_v1 index;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_session_input_source_list_presence_v1 input_sources;
+  struct thinkthen_complete_u64_presence_v1 last_line;
   const struct thinkthen_complete_meta_v1 *meta;
-  struct thinkthen_complete_relation_field_position_presence_v1 position;
+  struct thinkthen_complete_position_presence_v1 position;
   const struct thinkthen_complete_readable_question_4_v1 *question;
   const struct thinkthen_complete_version_v1 *schema;
-  struct thinkthen_complete_relation_field_value_v1 value;
+  struct thinkthen_complete_related_entity_edge_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_relation_v1;
 
@@ -3760,50 +3657,25 @@ typedef struct thinkthen_complete_request_function_v1 {
   uint32_t kind;
 } thinkthen_complete_request_function_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_answer_id_presence_v1 {
+typedef struct thinkthen_complete_answer_id_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_answer_id_v1 *value;
-} thinkthen_complete_session_question_detail_field_answer_id_presence_v1;
+} thinkthen_complete_answer_id_presence_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_confidence_presence_v1 {
-  uint32_t presence;
-  double value;
-} thinkthen_complete_session_question_detail_field_confidence_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_failure_presence_v1 {
+typedef struct thinkthen_complete_failure_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_failure_v1 *value;
-} thinkthen_complete_session_question_detail_field_failure_presence_v1;
+} thinkthen_complete_failure_presence_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_failure_id_presence_v1 {
+typedef struct thinkthen_complete_failure_id_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_failure_id_v1 *value;
-} thinkthen_complete_session_question_detail_field_failure_id_presence_v1;
+} thinkthen_complete_failure_id_presence_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_input_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_json_v1 *value;
-} thinkthen_complete_session_question_detail_field_input_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_input_source_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_physical_source_v1 *value;
-} thinkthen_complete_session_question_detail_field_input_source_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_input_sources_v1 {
-  const struct thinkthen_complete_session_input_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_session_question_detail_field_input_sources_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_inputs_v1 {
+typedef struct thinkthen_complete_json_list_v1 {
   const struct thinkthen_complete_json_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_question_detail_field_inputs_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_observations_v1 {
-  const struct thinkthen_complete_observation_v1 *const *data;
-  size_t len;
-} thinkthen_complete_session_question_detail_field_observations_v1;
+} thinkthen_complete_json_list_v1;
 
 typedef struct thinkthen_complete_session_probabilities_yes_no_v1 {
   struct thinkthen_complete_utf8_v1 kind;
@@ -3817,14 +3689,14 @@ typedef struct thinkthen_complete_session_named_probability_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_named_probability_v1;
 
-typedef struct thinkthen_complete_session_probabilities_named_field_value_v1 {
+typedef struct thinkthen_complete_session_named_probability_list_v1 {
   const struct thinkthen_complete_session_named_probability_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_probabilities_named_field_value_v1;
+} thinkthen_complete_session_named_probability_list_v1;
 
 typedef struct thinkthen_complete_session_probabilities_named_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_probabilities_named_field_value_v1 value;
+  struct thinkthen_complete_session_named_probability_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_probabilities_named_v1;
 
@@ -3838,35 +3710,10 @@ typedef struct thinkthen_complete_session_probabilities_v1 {
   union thinkthen_complete_session_probabilities_data_v1 data;
 } thinkthen_complete_session_probabilities_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_probabilities_presence_v1 {
+typedef struct thinkthen_complete_session_probabilities_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_session_probabilities_v1 *value;
-} thinkthen_complete_session_question_detail_field_probabilities_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_question_sources_v1 {
-  const struct thinkthen_complete_question_source_v1 *const *data;
-  size_t len;
-} thinkthen_complete_session_question_detail_field_question_sources_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_raw_pick_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_session_question_detail_field_raw_pick_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_reported_usage_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_usage_v1 *value;
-} thinkthen_complete_session_question_detail_field_reported_usage_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_requests_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_session_question_detail_field_requests_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_threshold_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_threshold_v1 *value;
-} thinkthen_complete_session_question_detail_field_threshold_presence_v1;
+} thinkthen_complete_session_probabilities_presence_v1;
 
 typedef struct thinkthen_complete_token_usage_v1 {
   uint64_t input_tokens;
@@ -3874,83 +3721,58 @@ typedef struct thinkthen_complete_token_usage_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_token_usage_v1;
 
-typedef struct thinkthen_complete_session_question_detail_field_usage_presence_v1 {
+typedef struct thinkthen_complete_token_usage_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_token_usage_v1 *value;
-} thinkthen_complete_session_question_detail_field_usage_presence_v1;
-
-typedef struct thinkthen_complete_session_question_detail_field_value_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_value_v1 *value;
-} thinkthen_complete_session_question_detail_field_value_presence_v1;
+} thinkthen_complete_token_usage_presence_v1;
 
 typedef struct thinkthen_complete_session_question_detail_v1 {
-  struct thinkthen_complete_session_question_detail_field_answer_id_presence_v1 answer_id;
+  struct thinkthen_complete_answer_id_presence_v1 answer_id;
   uint32_t cached;
-  struct thinkthen_complete_session_question_detail_field_confidence_presence_v1 confidence;
+  struct thinkthen_complete_f64_presence_v1 confidence;
   uint64_t failed_questions;
-  struct thinkthen_complete_session_question_detail_field_failure_presence_v1 failure;
-  struct thinkthen_complete_session_question_detail_field_failure_id_presence_v1 failure_id;
-  struct thinkthen_complete_session_question_detail_field_input_presence_v1 input;
-  struct thinkthen_complete_session_question_detail_field_input_source_presence_v1 input_source;
-  struct thinkthen_complete_session_question_detail_field_input_sources_v1 input_sources;
-  struct thinkthen_complete_session_question_detail_field_inputs_v1 inputs;
+  struct thinkthen_complete_failure_presence_v1 failure;
+  struct thinkthen_complete_failure_id_presence_v1 failure_id;
+  struct thinkthen_complete_json_presence_v1 input;
+  struct thinkthen_complete_physical_source_presence_v1 input_source;
+  struct thinkthen_complete_session_input_source_list_v1 input_sources;
+  struct thinkthen_complete_json_list_v1 inputs;
   struct thinkthen_complete_utf8_v1 model;
-  struct thinkthen_complete_session_question_detail_field_observations_v1 observations;
-  struct thinkthen_complete_session_question_detail_field_probabilities_presence_v1 probabilities;
+  struct thinkthen_complete_observation_list_v1 observations;
+  struct thinkthen_complete_session_probabilities_presence_v1 probabilities;
   const struct thinkthen_complete_readable_question_v1 *question;
   struct thinkthen_complete_utf8_v1 question_sha256;
-  struct thinkthen_complete_session_question_detail_field_question_sources_v1 question_sources;
-  struct thinkthen_complete_session_question_detail_field_raw_pick_presence_v1 raw_pick;
-  struct thinkthen_complete_session_question_detail_field_reported_usage_presence_v1 reported_usage;
-  struct thinkthen_complete_session_question_detail_field_requests_v1 requests;
+  struct thinkthen_complete_question_source_list_v1 question_sources;
+  struct thinkthen_complete_utf8_presence_v1 raw_pick;
+  struct thinkthen_complete_usage_presence_v1 reported_usage;
+  struct thinkthen_complete_string_list_v1 requests;
   uint64_t requests_sent;
-  struct thinkthen_complete_session_question_detail_field_threshold_presence_v1 threshold;
+  struct thinkthen_complete_threshold_presence_v1 threshold;
   struct thinkthen_complete_utf8_v1 url;
-  struct thinkthen_complete_session_question_detail_field_usage_presence_v1 usage;
-  struct thinkthen_complete_session_question_detail_field_value_presence_v1 value;
+  struct thinkthen_complete_token_usage_presence_v1 usage;
+  struct thinkthen_complete_value_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_question_detail_v1;
-
-typedef struct thinkthen_complete_session_observation_question_field_member_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_session_observation_question_field_member_presence_v1;
-
-typedef struct thinkthen_complete_session_observation_question_field_stage_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_session_observation_question_field_stage_presence_v1;
 
 typedef struct thinkthen_complete_session_observation_question_v1 {
   const struct thinkthen_complete_session_question_detail_v1 *detail;
   uint64_t index;
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_observation_question_field_member_presence_v1 member;
+  struct thinkthen_complete_utf8_presence_v1 member;
   uint64_t position;
-  struct thinkthen_complete_session_observation_question_field_stage_presence_v1 stage;
+  struct thinkthen_complete_utf8_presence_v1 stage;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observation_question_v1;
 
-typedef struct thinkthen_complete_session_judgment_decision_field_value_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_session_judgment_decision_field_value_presence_v1;
-
 typedef struct thinkthen_complete_session_judgment_decision_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_judgment_decision_field_value_presence_v1 value;
+  struct thinkthen_complete_u32_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_judgment_decision_v1;
 
-typedef struct thinkthen_complete_session_judgment_choice_field_value_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_session_judgment_choice_field_value_presence_v1;
-
 typedef struct thinkthen_complete_session_judgment_choice_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_judgment_choice_field_value_presence_v1 value;
+  struct thinkthen_complete_utf8_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_judgment_choice_v1;
 
@@ -3960,14 +3782,9 @@ typedef struct thinkthen_complete_session_judgment_score_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_judgment_score_v1;
 
-typedef struct thinkthen_complete_session_judgment_tags_field_value_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_session_judgment_tags_field_value_v1;
-
 typedef struct thinkthen_complete_session_judgment_tags_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_judgment_tags_field_value_v1 value;
+  struct thinkthen_complete_string_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_judgment_tags_v1;
 
@@ -3989,25 +3806,15 @@ typedef struct thinkthen_complete_session_observed_row_judgment_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observed_row_judgment_v1;
 
-typedef struct thinkthen_complete_annotation_value_decision_field_value_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_annotation_value_decision_field_value_presence_v1;
-
 typedef struct thinkthen_complete_annotation_value_decision_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_annotation_value_decision_field_value_presence_v1 value;
+  struct thinkthen_complete_u32_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_value_decision_v1;
 
-typedef struct thinkthen_complete_annotation_value_choice_field_value_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_annotation_value_choice_field_value_presence_v1;
-
 typedef struct thinkthen_complete_annotation_value_choice_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_annotation_value_choice_field_value_presence_v1 value;
+  struct thinkthen_complete_utf8_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_value_choice_v1;
 
@@ -4017,14 +3824,9 @@ typedef struct thinkthen_complete_annotation_value_score_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_value_score_v1;
 
-typedef struct thinkthen_complete_annotation_value_tags_field_value_v1 {
-  const struct thinkthen_complete_utf8_v1 *data;
-  size_t len;
-} thinkthen_complete_annotation_value_tags_field_value_v1;
-
 typedef struct thinkthen_complete_annotation_value_tags_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_annotation_value_tags_field_value_v1 value;
+  struct thinkthen_complete_string_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_annotation_value_tags_v1;
 
@@ -4053,56 +3855,46 @@ typedef struct thinkthen_complete_session_annotation_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_annotation_v1;
 
-typedef struct thinkthen_complete_session_observed_row_annotated_field_value_v1 {
+typedef struct thinkthen_complete_session_annotation_list_v1 {
   const struct thinkthen_complete_session_annotation_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_observed_row_annotated_field_value_v1;
+} thinkthen_complete_session_annotation_list_v1;
 
 typedef struct thinkthen_complete_session_observed_row_annotated_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_observed_row_annotated_field_value_v1 value;
+  struct thinkthen_complete_session_annotation_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observed_row_annotated_v1;
 
-typedef struct thinkthen_complete_session_recognition_field_entities_v1 {
-  const struct thinkthen_complete_entity_v1 *const *data;
-  size_t len;
-} thinkthen_complete_session_recognition_field_entities_v1;
-
-typedef struct thinkthen_complete_session_recognition_field_proposals_v1 {
-  const struct thinkthen_complete_boundary_proposal_v1 *const *data;
-  size_t len;
-} thinkthen_complete_session_recognition_field_proposals_v1;
-
-typedef struct thinkthen_complete_session_recognition_field_proposals_presence_v1 {
+typedef struct thinkthen_complete_boundary_proposal_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_session_recognition_field_proposals_v1 value;
-} thinkthen_complete_session_recognition_field_proposals_presence_v1;
+  struct thinkthen_complete_boundary_proposal_list_v1 value;
+} thinkthen_complete_boundary_proposal_list_presence_v1;
 
-typedef struct thinkthen_complete_recognition_edge_document_v1 {
+typedef struct thinkthen_complete_recognition_edge_v1 {
   uint32_t either;
   double probability;
   struct thinkthen_complete_utf8_v1 relation;
   const struct thinkthen_complete_entity_v1 *source;
   const struct thinkthen_complete_entity_v1 *target;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_recognition_edge_document_v1;
+} thinkthen_complete_recognition_edge_v1;
 
-typedef struct thinkthen_complete_session_recognition_field_relations_v1 {
-  const struct thinkthen_complete_recognition_edge_document_v1 *const *data;
+typedef struct thinkthen_complete_recognition_edge_list_v1 {
+  const struct thinkthen_complete_recognition_edge_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_recognition_field_relations_v1;
+} thinkthen_complete_recognition_edge_list_v1;
 
-typedef struct thinkthen_complete_session_recognition_field_relations_presence_v1 {
+typedef struct thinkthen_complete_recognition_edge_list_presence_v1 {
   uint32_t presence;
-  struct thinkthen_complete_session_recognition_field_relations_v1 value;
-} thinkthen_complete_session_recognition_field_relations_presence_v1;
+  struct thinkthen_complete_recognition_edge_list_v1 value;
+} thinkthen_complete_recognition_edge_list_presence_v1;
 
 typedef struct thinkthen_complete_session_recognition_v1 {
-  struct thinkthen_complete_session_recognition_field_entities_v1 entities;
+  struct thinkthen_complete_entity_list_v1 entities;
   const struct thinkthen_complete_recognition_mode_v1 *mode;
-  struct thinkthen_complete_session_recognition_field_proposals_presence_v1 proposals;
-  struct thinkthen_complete_session_recognition_field_relations_presence_v1 relations;
+  struct thinkthen_complete_boundary_proposal_list_presence_v1 proposals;
+  struct thinkthen_complete_recognition_edge_list_presence_v1 relations;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_recognition_v1;
 
@@ -4112,14 +3904,9 @@ typedef struct thinkthen_complete_session_observed_row_recognized_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observed_row_recognized_v1;
 
-typedef struct thinkthen_complete_session_observed_row_find_field_value_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_session_observed_row_find_field_value_presence_v1;
-
 typedef struct thinkthen_complete_session_observed_row_find_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_observed_row_find_field_value_presence_v1 value;
+  struct thinkthen_complete_u64_presence_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observed_row_find_v1;
 
@@ -4138,14 +3925,14 @@ typedef struct thinkthen_complete_session_relation_edge_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_relation_edge_v1;
 
-typedef struct thinkthen_complete_session_observed_row_relations_field_value_v1 {
+typedef struct thinkthen_complete_session_relation_edge_list_v1 {
   const struct thinkthen_complete_session_relation_edge_v1 *const *data;
   size_t len;
-} thinkthen_complete_session_observed_row_relations_field_value_v1;
+} thinkthen_complete_session_relation_edge_list_v1;
 
 typedef struct thinkthen_complete_session_observed_row_relations_v1 {
   struct thinkthen_complete_utf8_v1 kind;
-  struct thinkthen_complete_session_observed_row_relations_field_value_v1 value;
+  struct thinkthen_complete_session_relation_edge_list_v1 value;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_observed_row_relations_v1;
 
@@ -4186,213 +3973,153 @@ typedef struct thinkthen_complete_session_packet_observation_v1 {
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_observation_v1;
 
-typedef struct thinkthen_complete_facts_field_attempts_v1 {
-  const struct thinkthen_complete_attempt_v1 *const *data;
-  size_t len;
-} thinkthen_complete_facts_field_attempts_v1;
-
-typedef struct thinkthen_complete_facts_field_attempts_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_facts_field_attempts_v1 value;
-} thinkthen_complete_facts_field_attempts_presence_v1;
-
 typedef struct thinkthen_complete_call_id_v1 {
   struct thinkthen_complete_utf8_v1 value;
 } thinkthen_complete_call_id_v1;
 
-typedef struct thinkthen_complete_facts_field_estimated_cost_usd_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_facts_field_estimated_cost_usd_presence_v1;
-
-typedef struct thinkthen_complete_facts_field_held_model_mismatch_presence_v1 {
-  uint32_t presence;
-  uint32_t value;
-} thinkthen_complete_facts_field_held_model_mismatch_presence_v1;
-
-typedef struct thinkthen_complete_facts_field_input_tokens_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_facts_field_input_tokens_presence_v1;
-
-typedef struct thinkthen_complete_facts_field_largest_request_estimated_input_tokens_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_facts_field_largest_request_estimated_input_tokens_presence_v1;
-
-typedef struct thinkthen_complete_facts_field_model_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_facts_field_model_presence_v1;
-
-typedef struct thinkthen_complete_facts_field_output_tokens_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_facts_field_output_tokens_presence_v1;
-
-typedef struct thinkthen_complete_persistence_observation_field_advice_presence_v1 {
-  uint32_t presence;
-  struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_persistence_observation_field_advice_presence_v1;
-
 typedef struct thinkthen_complete_persistence_observation_v1 {
-  struct thinkthen_complete_persistence_observation_field_advice_presence_v1 advice;
+  struct thinkthen_complete_utf8_presence_v1 advice;
   struct thinkthen_complete_utf8_v1 observed_at;
   const struct thinkthen_complete_usage_persistence_v1 *state;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_persistence_observation_v1;
 
-typedef struct thinkthen_complete_facts_field_usage_persistence_presence_v1 {
+typedef struct thinkthen_complete_persistence_observation_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_persistence_observation_v1 *value;
-} thinkthen_complete_facts_field_usage_persistence_presence_v1;
+} thinkthen_complete_persistence_observation_presence_v1;
 
 typedef struct thinkthen_complete_facts_v1 {
-  struct thinkthen_complete_facts_field_attempts_presence_v1 attempts;
+  struct thinkthen_complete_attempt_list_presence_v1 attempts;
   uint64_t cache_answers;
   const struct thinkthen_complete_call_id_v1 *call_id;
-  struct thinkthen_complete_facts_field_estimated_cost_usd_presence_v1 estimated_cost_usd;
-  struct thinkthen_complete_facts_field_held_model_mismatch_presence_v1 held_model_mismatch;
-  struct thinkthen_complete_facts_field_input_tokens_presence_v1 input_tokens;
+  struct thinkthen_complete_utf8_presence_v1 estimated_cost_usd;
+  struct thinkthen_complete_u32_presence_v1 held_model_mismatch;
+  struct thinkthen_complete_u64_presence_v1 input_tokens;
   uint64_t largest_request_bytes;
-  struct thinkthen_complete_facts_field_largest_request_estimated_input_tokens_presence_v1 largest_request_estimated_input_tokens;
-  struct thinkthen_complete_facts_field_model_presence_v1 model;
-  struct thinkthen_complete_facts_field_output_tokens_presence_v1 output_tokens;
+  struct thinkthen_complete_u64_presence_v1 largest_request_estimated_input_tokens;
+  struct thinkthen_complete_utf8_presence_v1 model;
+  struct thinkthen_complete_u64_presence_v1 output_tokens;
   uint64_t records;
   uint64_t requests_sent;
   double seconds;
   struct thinkthen_complete_utf8_v1 token_estimate_method;
-  struct thinkthen_complete_facts_field_usage_persistence_presence_v1 usage_persistence;
+  struct thinkthen_complete_persistence_observation_presence_v1 usage_persistence;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_facts_v1;
 
-typedef struct thinkthen_complete_session_packet_terminal_field_facts_presence_v1 {
+typedef struct thinkthen_complete_facts_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_facts_v1 *value;
-} thinkthen_complete_session_packet_terminal_field_facts_presence_v1;
+} thinkthen_complete_facts_presence_v1;
 
-typedef struct thinkthen_complete_estimated_input_denial_initial_request_v1 {
+typedef struct thinkthen_complete_input_denial_initial_request_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   uint64_t limit;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_estimated_input_denial_initial_request_v1;
+} thinkthen_complete_input_denial_initial_request_v1;
 
-typedef struct thinkthen_complete_estimated_input_denial_additional_request_v1 {
+typedef struct thinkthen_complete_input_denial_additional_request_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   uint64_t limit;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_estimated_input_denial_additional_request_v1;
+} thinkthen_complete_input_denial_additional_request_v1;
 
-typedef struct thinkthen_complete_estimated_input_denial_retry_v1 {
+typedef struct thinkthen_complete_input_denial_retry_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   uint64_t last_status;
   uint64_t limit;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_estimated_input_denial_retry_v1;
+} thinkthen_complete_input_denial_retry_v1;
 
-typedef union thinkthen_complete_estimated_input_denial_data_v1 {
-  const struct thinkthen_complete_estimated_input_denial_initial_request_v1 *initial_request;
-  const struct thinkthen_complete_estimated_input_denial_additional_request_v1 *additional_request;
-  const struct thinkthen_complete_estimated_input_denial_retry_v1 *retry;
-} thinkthen_complete_estimated_input_denial_data_v1;
+typedef union thinkthen_complete_input_denial_data_v1 {
+  const struct thinkthen_complete_input_denial_initial_request_v1 *initial_request;
+  const struct thinkthen_complete_input_denial_additional_request_v1 *additional_request;
+  const struct thinkthen_complete_input_denial_retry_v1 *retry;
+} thinkthen_complete_input_denial_data_v1;
 
-typedef struct thinkthen_complete_estimated_input_denial_v1 {
+typedef struct thinkthen_complete_input_denial_v1 {
   uint32_t kind;
-  union thinkthen_complete_estimated_input_denial_data_v1 data;
-} thinkthen_complete_estimated_input_denial_v1;
+  union thinkthen_complete_input_denial_data_v1 data;
+} thinkthen_complete_input_denial_v1;
 
-typedef struct thinkthen_complete_error_field_estimated_input_denial_presence_v1 {
+typedef struct thinkthen_complete_input_denial_presence_v1 {
   uint32_t presence;
-  const struct thinkthen_complete_estimated_input_denial_v1 *value;
-} thinkthen_complete_error_field_estimated_input_denial_presence_v1;
+  const struct thinkthen_complete_input_denial_v1 *value;
+} thinkthen_complete_input_denial_presence_v1;
 
 typedef struct thinkthen_complete_failure_kind_v1 {
   uint32_t kind;
 } thinkthen_complete_failure_kind_v1;
 
-typedef struct thinkthen_complete_send_budget_denial_before_first_send_v1 {
+typedef struct thinkthen_complete_send_denial_before_first_send_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_send_budget_denial_before_first_send_v1;
+} thinkthen_complete_send_denial_before_first_send_v1;
 
-typedef struct thinkthen_complete_send_budget_denial_before_additional_send_v1 {
+typedef struct thinkthen_complete_send_denial_before_additional_send_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_send_budget_denial_before_additional_send_v1;
+} thinkthen_complete_send_denial_before_additional_send_v1;
 
-typedef struct thinkthen_complete_send_budget_denial_before_retry_v1 {
+typedef struct thinkthen_complete_send_denial_before_retry_v1 {
   struct thinkthen_complete_utf8_v1 kind;
   uint64_t last_status;
   struct thinkthen_complete_extensions_v1 extensions;
-} thinkthen_complete_send_budget_denial_before_retry_v1;
+} thinkthen_complete_send_denial_before_retry_v1;
 
-typedef union thinkthen_complete_send_budget_denial_data_v1 {
-  const struct thinkthen_complete_send_budget_denial_before_first_send_v1 *before_first_send;
-  const struct thinkthen_complete_send_budget_denial_before_additional_send_v1 *before_additional_send;
-  const struct thinkthen_complete_send_budget_denial_before_retry_v1 *before_retry;
-} thinkthen_complete_send_budget_denial_data_v1;
+typedef union thinkthen_complete_send_denial_data_v1 {
+  const struct thinkthen_complete_send_denial_before_first_send_v1 *before_first_send;
+  const struct thinkthen_complete_send_denial_before_additional_send_v1 *before_additional_send;
+  const struct thinkthen_complete_send_denial_before_retry_v1 *before_retry;
+} thinkthen_complete_send_denial_data_v1;
 
-typedef struct thinkthen_complete_send_budget_denial_v1 {
+typedef struct thinkthen_complete_send_denial_v1 {
   uint32_t kind;
-  union thinkthen_complete_send_budget_denial_data_v1 data;
-} thinkthen_complete_send_budget_denial_v1;
+  union thinkthen_complete_send_denial_data_v1 data;
+} thinkthen_complete_send_denial_v1;
 
-typedef struct thinkthen_complete_error_field_send_budget_denial_presence_v1 {
+typedef struct thinkthen_complete_send_denial_presence_v1 {
   uint32_t presence;
-  const struct thinkthen_complete_send_budget_denial_v1 *value;
-} thinkthen_complete_error_field_send_budget_denial_presence_v1;
-
-typedef struct thinkthen_complete_stopped_field_at_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_stopped_field_at_presence_v1;
+  const struct thinkthen_complete_send_denial_v1 *value;
+} thinkthen_complete_send_denial_presence_v1;
 
 typedef struct thinkthen_complete_stop_cause_v1 {
   uint32_t kind;
 } thinkthen_complete_stop_cause_v1;
 
-typedef struct thinkthen_complete_stopped_field_status_presence_v1 {
-  uint32_t presence;
-  uint64_t value;
-} thinkthen_complete_stopped_field_status_presence_v1;
-
 typedef struct thinkthen_complete_stopped_v1 {
-  struct thinkthen_complete_stopped_field_at_presence_v1 at;
+  struct thinkthen_complete_u64_presence_v1 at;
   const struct thinkthen_complete_stop_cause_v1 *cause;
   uint32_t retryable;
-  struct thinkthen_complete_stopped_field_status_presence_v1 status;
+  struct thinkthen_complete_u64_presence_v1 status;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_stopped_v1;
 
 typedef struct thinkthen_complete_error_v1 {
-  struct thinkthen_complete_error_field_estimated_input_denial_presence_v1 estimated_input_denial;
+  struct thinkthen_complete_input_denial_presence_v1 estimated_input_denial;
   const struct thinkthen_complete_failure_kind_v1 *kind;
   struct thinkthen_complete_utf8_v1 message;
   uint32_t retryable;
-  struct thinkthen_complete_error_field_send_budget_denial_presence_v1 send_budget_denial;
+  struct thinkthen_complete_send_denial_presence_v1 send_budget_denial;
   const struct thinkthen_complete_stopped_v1 *stopped;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_error_v1;
 
-typedef struct thinkthen_complete_call_error_field_facts_presence_v1 {
-  uint32_t presence;
-  const struct thinkthen_complete_facts_v1 *value;
-} thinkthen_complete_call_error_field_facts_presence_v1;
-
 typedef struct thinkthen_complete_call_error_v1 {
   const struct thinkthen_complete_error_v1 *error;
-  struct thinkthen_complete_call_error_field_facts_presence_v1 facts;
+  struct thinkthen_complete_facts_presence_v1 facts;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_call_error_v1;
 
-typedef struct thinkthen_complete_session_packet_terminal_field_failure_presence_v1 {
+typedef struct thinkthen_complete_call_error_presence_v1 {
   uint32_t presence;
   const struct thinkthen_complete_call_error_v1 *value;
-} thinkthen_complete_session_packet_terminal_field_failure_presence_v1;
+} thinkthen_complete_call_error_presence_v1;
 
 typedef struct thinkthen_complete_session_packet_terminal_v1 {
-  struct thinkthen_complete_session_packet_terminal_field_facts_presence_v1 facts;
-  struct thinkthen_complete_session_packet_terminal_field_failure_presence_v1 failure;
+  struct thinkthen_complete_facts_presence_v1 facts;
+  struct thinkthen_complete_call_error_presence_v1 failure;
   struct thinkthen_complete_utf8_v1 kind;
   struct thinkthen_complete_extensions_v1 extensions;
 } thinkthen_complete_session_packet_terminal_v1;
@@ -4422,6 +4149,11 @@ typedef struct thinkthen_complete_session_packet_v1 {
   uint32_t kind;
   union thinkthen_complete_session_packet_data_v1 data;
 } thinkthen_complete_session_packet_v1;
+
+typedef struct thinkthen_request_session_descriptor_v1 {
+  const struct thinkthen_request_item_v1 *m_item;
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_session_descriptor_v1;
 
 #ifdef __cplusplus
 extern "C" {
@@ -4643,6 +4375,16 @@ int thinkthen_session_finish(struct thinkthen_session *session,
                              size_t failure_len);
 
 /*
+ Finish input with a counted typed failure; NULL means EOF.
+ Rust preserves the safe diagnostic after the completed prefix and final facts.
+ # Safety
+ session is live. A nonnull failure satisfies the finite aligned carrier-tree
+ obligations of the typed constructor. No foreign pointer survives return.
+ */
+int thinkthen_session_finish_typed(const struct thinkthen_session *session,
+                                   const struct thinkthen_request_reader_failure_v1 *failure);
+
+/*
  Close the output receiver and release this owner without joining native work.
  NULL is ignored. Free once after all concurrent operations return.
  # Safety
@@ -4684,6 +4426,26 @@ int thinkthen_session_new_named_with_surface(const struct thinkthen_engine *engi
                                              struct thinkthen_session **out);
 
 /*
+ Construct a named request from counted typed argument records through Rust.
+ The carrier tree copies strings, arrays, maps and explicit null alternatives;
+ no pointer survives return. Rust alone admits questions, controls and evidence.
+ COBOL retains its 8192-byte capacity per scalar, including image/base64 text;
+ overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.
+ All output, error-slot and engine lifetime rules match the named constructor.
+ # Safety
+ engine is live and out is writable, nonnull. function and surface are counted
+ UTF-8 views. arguments and its entire finite carrier tree remain aligned and
+ readable throughout the call. Each pointer/length covers its declared element
+ type and fits Rust slices. Required pointers are nonnull; optional NULL means
+ missing. A tagged null arm means explicit null. Inputs may be freed on return.
+ */
+int thinkthen_session_new_typed_with_surface(const struct thinkthen_engine *engine,
+                                             struct thinkthen_complete_utf8_v1 function,
+                                             const struct thinkthen_request_arguments_v1 *arguments,
+                                             struct thinkthen_complete_utf8_v1 surface_name,
+                                             struct thinkthen_session **out);
+
+/*
  Create an owned session attributed to its outer language wrapper.
  surface names an exact native Surface token, without a trailing NUL.
  Invalid tokens return Usage without retaining or printing their spelling.
@@ -4698,6 +4460,21 @@ int thinkthen_session_new_with_surface(const struct thinkthen_engine *engine,
                                        const char *surface,
                                        size_t surface_len,
                                        struct thinkthen_session **out);
+
+/*
+ Block and transfer one packet without polling or joining provider work.
+ interest is WAIT_RESULT or WAIT_SETTLEMENT. RESULT wakes promptly on cancel
+ with ECANCELLED; output already queued wins. SETTLEMENT drains later terminal
+ facts after cancel. RESULT and END match try_read, including packet ownership.
+ Errors preserve both output slots and affect only this thread's session error.
+ # Safety
+ The try_read slot obligations apply. Keep session live throughout the wait;
+ concurrent cancel/push/finish are synchronized. Free after every call returns.
+ */
+int thinkthen_session_next_packet(struct thinkthen_session *session,
+                                  uint32_t interest,
+                                  uint32_t *status,
+                                  struct thinkthen_session_result **out);
 
 /*
  Release an independent packet owner. NULL is ignored.
@@ -4744,6 +4521,17 @@ int thinkthen_session_try_push(struct thinkthen_session *session,
                                const char *descriptor_json,
                                size_t descriptor_len,
                                uint32_t *status);
+
+/*
+ Push a counted typed feed descriptor. Rust owns framing and admission.
+ No input pointer survives return; status is published only on success.
+ # Safety
+ session is live, status is writable and nonnull, and descriptor satisfies
+ the finite aligned carrier-tree obligations of the typed constructor.
+ */
+int thinkthen_session_try_push_typed(const struct thinkthen_session *session,
+                                     const struct thinkthen_request_session_descriptor_v1 *descriptor,
+                                     uint32_t *status);
 
 /*
  Transfer one owned packet without waiting for native work.

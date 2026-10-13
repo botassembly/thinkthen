@@ -174,26 +174,26 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         "completeImageMedia" => plain(py, value),
         "completeInputDeclaration" => {
             if value.get("type").and_then(Value::as_str) == Some("string") {
-                return convert(py, "completeInputDeclaration_string", value);
+                return convert(py, "completeInputDeclaration_StringRoot", value);
             }
             if value.get("type").and_then(Value::as_str) == Some("object") {
-                return convert(py, "completeInputDeclaration_object", value);
+                return convert(py, "completeInputDeclaration_ObjectRoot", value);
             }
             Err(crate::defect(
                 py,
                 "native result has no generated alternative",
             ))
         }
-        "completeInputDeclaration_object" => object(
+        "completeInputDeclaration_ObjectRoot" => object(
             py,
-            "NativeInputDeclarationObject",
-            "completeInputDeclaration_object",
+            "NativeInputDeclarationObjectRoot",
+            "completeInputDeclaration_ObjectRoot",
             value,
         ),
-        "completeInputDeclaration_string" => object(
+        "completeInputDeclaration_StringRoot" => object(
             py,
-            "NativeInputDeclarationString",
-            "completeInputDeclaration_string",
+            "NativeInputDeclarationStringRoot",
+            "completeInputDeclaration_StringRoot",
             value,
         ),
         "completeInputPropertyType" => {
@@ -363,34 +363,30 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
                 && value.get("pieces").is_some()
                 && value.get("proposals").is_some()
             {
-                return convert(
-                    py,
-                    "completeRecognitionOdds_fields_names_pairs_pieces_proposals",
-                    value,
-                );
+                return convert(py, "completeRecognitionOdds_recognizeAnswer", value);
             }
             if value.get("pieces").is_some()
                 && value.get("proposals").is_some()
                 && value.get("names").is_none()
                 && value.get("pairs").is_none()
             {
-                return convert(py, "completeRecognitionOdds_fields_pieces_proposals", value);
+                return convert(py, "completeRecognitionOdds_BoundaryOdds", value);
             }
             Err(crate::defect(
                 py,
                 "native result has no generated alternative",
             ))
         }
-        "completeRecognitionOdds_fields_names_pairs_pieces_proposals" => object(
+        "completeRecognitionOdds_BoundaryOdds" => object(
             py,
-            "NativeRecognitionOddsFieldsNamesPairsPiecesProposals",
-            "completeRecognitionOdds_fields_names_pairs_pieces_proposals",
+            "NativeRecognitionOddsBoundaryOdds",
+            "completeRecognitionOdds_BoundaryOdds",
             value,
         ),
-        "completeRecognitionOdds_fields_pieces_proposals" => object(
+        "completeRecognitionOdds_recognizeAnswer" => object(
             py,
-            "NativeRecognitionOddsFieldsPiecesProposals",
-            "completeRecognitionOdds_fields_pieces_proposals",
+            "NativeRecognitionOddsRecognizeAnswer",
+            "completeRecognitionOdds_recognizeAnswer",
             value,
         ),
         "completeRecognitionProposal" => object(
@@ -407,6 +403,40 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
         ),
         "completeRelation" => object(py, "NativeRelation", "completeRelation", value),
         "completeRelationDirection" => plain(py, value),
+        "completeRelationEndpoint" => {
+            if value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("file").is_none()
+                && value.get("ordinal").is_none()
+                && value.get("record").is_none()
+            {
+                return convert(py, "completeRelationEndpoint_relatedEntity", value);
+            }
+            if value.get("file").is_some()
+                && value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("ordinal").is_some()
+                && value.get("record").is_some()
+            {
+                return convert(py, "completeRelationEndpoint_source", value);
+            }
+            Err(crate::defect(
+                py,
+                "native result has no generated alternative",
+            ))
+        }
+        "completeRelationEndpoint_relatedEntity" => object(
+            py,
+            "NativeRelationEndpointRelatedEntity",
+            "completeRelationEndpoint_relatedEntity",
+            value,
+        ),
+        "completeRelationEndpoint_source" => object(
+            py,
+            "NativeRelationEndpointSource",
+            "completeRelationEndpoint_source",
+            value,
+        ),
         "completeRelationMember" => {
             if value.get("answer_id").is_some() {
                 return convert(py, "completeRelationMember_answer_id", value);
@@ -530,13 +560,13 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
                 && value.get("mode").is_none()
                 && value.get("proposals").is_none()
             {
-                return convert(py, "completerecognize_fields_entities", value);
+                return convert(py, "completerecognize_entities", value);
             }
             if value.get("mode").is_some()
                 && value.get("proposals").is_some()
                 && value.get("entities").is_none()
             {
-                return convert(py, "completerecognize_fields_mode_proposals", value);
+                return convert(py, "completerecognize_mode_proposals", value);
             }
             Err(crate::defect(
                 py,
@@ -549,16 +579,16 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             "completerecognizeAnswer",
             value,
         ),
-        "completerecognize_fields_entities" => object(
+        "completerecognize_entities" => object(
             py,
-            "NativeRecognizeFieldsEntities",
-            "completerecognize_fields_entities",
+            "NativeRecognizeEntities",
+            "completerecognize_entities",
             value,
         ),
-        "completerecognize_fields_mode_proposals" => object(
+        "completerecognize_mode_proposals" => object(
             py,
-            "NativeRecognizeFieldsModeProposals",
-            "completerecognize_fields_mode_proposals",
+            "NativeRecognizeModeProposals",
+            "completerecognize_mode_proposals",
             value,
         ),
         "completerelateFields" => object(py, "NativeRelateFields", "completerelateFields", value),
@@ -569,50 +599,6 @@ pub(crate) fn convert(py: Python<'_>, kind: &str, value: &Value) -> PyResult<Py<
             py,
             "NativeRelatedEntityEdge",
             "completerelatedEntityEdge",
-            value,
-        ),
-        "completerelatedEntityEdge_properties_source" => {
-            if value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("file").is_none()
-                && value.get("ordinal").is_none()
-                && value.get("record").is_none()
-            {
-                return convert(
-                    py,
-                    "completerelatedEntityEdge_properties_source_fields_kind_name",
-                    value,
-                );
-            }
-            if value.get("file").is_some()
-                && value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("ordinal").is_some()
-                && value.get("record").is_some()
-            {
-                return convert(
-                    py,
-                    "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                    value,
-                );
-            }
-            Err(crate::defect(
-                py,
-                "native result has no generated alternative",
-            ))
-        }
-        "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record" => {
-            object(
-                py,
-                "NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord",
-                "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                value,
-            )
-        }
-        "completerelatedEntityEdge_properties_source_fields_kind_name" => object(
-            py,
-            "NativeRelatedEntityEdgePropertiesSourceFieldsKindName",
-            "completerelatedEntityEdge_properties_source_fields_kind_name",
             value,
         ),
         "completerelationRule" => object(py, "NativeRelationRule", "completerelationRule", value),
@@ -1395,14 +1381,14 @@ pub(crate) fn field(
         ("completeImage", "height") => plain(py, value),
         ("completeImage", "media") => convert(py, "completeImageMedia", value),
         ("completeImage", "width") => plain(py, value),
-        ("completeInputDeclaration_object", "properties") => mapping(py, value, |value| {
+        ("completeInputDeclaration_ObjectRoot", "properties") => mapping(py, value, |value| {
             convert(py, "completeInputPropertyType", value)
         }),
-        ("completeInputDeclaration_object", "required") => {
+        ("completeInputDeclaration_ObjectRoot", "required") => {
             array(py, value, |value| plain(py, value))
         }
-        ("completeInputDeclaration_object", "type") => convert(py, "completeObjectType", value),
-        ("completeInputDeclaration_string", "type") => convert(py, "completeStringType", value),
+        ("completeInputDeclaration_ObjectRoot", "type") => convert(py, "completeObjectType", value),
+        ("completeInputDeclaration_StringRoot", "type") => convert(py, "completeStringType", value),
         ("completeInputPropertyType_array", "items") => convert(py, "completeStringRoot", value),
         ("completeInputPropertyType_array", "type") => plain(py, value),
         ("completeInputPropertyType_boolean", "type") => plain(py, value),
@@ -1869,28 +1855,24 @@ pub(crate) fn field(
         ("completeRecognitionEdgeDocument", "relation") => plain(py, value),
         ("completeRecognitionEdgeDocument", "source") => convert(py, "completeentity", value),
         ("completeRecognitionEdgeDocument", "target") => convert(py, "completeentity", value),
-        ("completeRecognitionOdds_fields_names_pairs_pieces_proposals", "names") => {
+        ("completeRecognitionOdds_BoundaryOdds", "pieces") => {
+            array(py, value, |value| convert(py, "completepieceOdds", value))
+        }
+        ("completeRecognitionOdds_BoundaryOdds", "proposals") => array(py, value, |value| {
+            convert(py, "completeBoundaryProposal", value)
+        }),
+        ("completeRecognitionOdds_recognizeAnswer", "names") => {
             array(py, value, |value| convert(py, "completenameOdds", value))
         }
-        ("completeRecognitionOdds_fields_names_pairs_pieces_proposals", "pairs") => {
+        ("completeRecognitionOdds_recognizeAnswer", "pairs") => {
             array(py, value, |value| convert(py, "completepairOdds", value))
         }
-        ("completeRecognitionOdds_fields_names_pairs_pieces_proposals", "pieces") => {
+        ("completeRecognitionOdds_recognizeAnswer", "pieces") => {
             array(py, value, |value| convert(py, "completepieceOdds", value))
         }
-        ("completeRecognitionOdds_fields_names_pairs_pieces_proposals", "proposals") => {
-            array(py, value, |value| {
-                convert(py, "completeRecognitionProposal", value)
-            })
-        }
-        ("completeRecognitionOdds_fields_pieces_proposals", "pieces") => {
-            array(py, value, |value| convert(py, "completepieceOdds", value))
-        }
-        ("completeRecognitionOdds_fields_pieces_proposals", "proposals") => {
-            array(py, value, |value| {
-                convert(py, "completeBoundaryProposal", value)
-            })
-        }
+        ("completeRecognitionOdds_recognizeAnswer", "proposals") => array(py, value, |value| {
+            convert(py, "completeRecognitionProposal", value)
+        }),
         ("completeRecognitionProposal", "end") => plain(py, value),
         ("completeRecognitionProposal", "kept") => plain(py, value),
         ("completeRecognitionProposal", "kind") => plain(py, value),
@@ -1924,6 +1906,15 @@ pub(crate) fn field(
         ("completeRelation", "value") => array(py, value, |value| {
             convert(py, "completerelatedEntityEdge", value)
         }),
+        ("completeRelationEndpoint_relatedEntity", "kind") => plain(py, value),
+        ("completeRelationEndpoint_relatedEntity", "name") => plain(py, value),
+        ("completeRelationEndpoint_source", "file") => plain(py, value),
+        ("completeRelationEndpoint_source", "first_line") => plain(py, value),
+        ("completeRelationEndpoint_source", "kind") => plain(py, value),
+        ("completeRelationEndpoint_source", "last_line") => plain(py, value),
+        ("completeRelationEndpoint_source", "name") => plain(py, value),
+        ("completeRelationEndpoint_source", "ordinal") => plain(py, value),
+        ("completeRelationEndpoint_source", "record") => plain(py, value),
         ("completeRelationMember_answer_id", "direction") => {
             convert(py, "completeRelationDirection", value)
         }
@@ -2081,16 +2072,14 @@ pub(crate) fn field(
         ("completerecognizeAnswer", "proposals") => array(py, value, |value| {
             convert(py, "completeRecognitionProposal", value)
         }),
-        ("completerecognize_fields_entities", "entities") => {
+        ("completerecognize_entities", "entities") => {
             array(py, value, |value| convert(py, "completeentity", value))
         }
-        ("completerecognize_fields_entities", "relations") => {
+        ("completerecognize_entities", "relations") => {
             array(py, value, |value| convert(py, "completeentityEdge", value))
         }
-        ("completerecognize_fields_mode_proposals", "mode") => {
-            convert(py, "completeBoundaryMode", value)
-        }
-        ("completerecognize_fields_mode_proposals", "proposals") => array(py, value, |value| {
+        ("completerecognize_mode_proposals", "mode") => convert(py, "completeBoundaryMode", value),
+        ("completerecognize_mode_proposals", "proposals") => array(py, value, |value| {
             convert(py, "completeBoundaryProposal", value)
         }),
         ("completerelateFields", "kind") => plain(py, value),
@@ -2100,46 +2089,8 @@ pub(crate) fn field(
         ("completerelatedEntityEdge", "either") => plain(py, value),
         ("completerelatedEntityEdge", "probability") => plain(py, value),
         ("completerelatedEntityEdge", "relation") => plain(py, value),
-        ("completerelatedEntityEdge", "source") => {
-            convert(py, "completerelatedEntityEdge_properties_source", value)
-        }
-        ("completerelatedEntityEdge", "target") => {
-            convert(py, "completerelatedEntityEdge_properties_source", value)
-        }
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "file",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "first_line",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "kind",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "last_line",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "name",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "ordinal",
-        ) => plain(py, value),
-        (
-            "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-            "record",
-        ) => plain(py, value),
-        ("completerelatedEntityEdge_properties_source_fields_kind_name", "kind") => {
-            plain(py, value)
-        }
-        ("completerelatedEntityEdge_properties_source_fields_kind_name", "name") => {
-            plain(py, value)
-        }
+        ("completerelatedEntityEdge", "source") => convert(py, "completeRelationEndpoint", value),
+        ("completerelatedEntityEdge", "target") => convert(py, "completeRelationEndpoint", value),
         ("completerelationRule", "either") => plain(py, value),
         ("completerelationRule", "name") => plain(py, value),
         ("completerelationRule", "reads") => plain(py, value),

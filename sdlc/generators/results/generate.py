@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import subprocess
+import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
 from native import selected_functions
@@ -448,6 +449,7 @@ def main():
                     return 1
             else:
                 loader.write_text(linux_bridge)
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print('generated Swift types differ', file=sys.stderr)
@@ -493,6 +495,7 @@ def main():
         definitions = prepare(graph(schema, ("Request", "RequestSessionDescriptor")))
         for filename, result in cobol.outputs(ROOT, definitions).items():
             output = output_path(ROOT, 'cobol', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print(f"generated COBOL records differ: {output}", file=sys.stderr)
@@ -515,8 +518,9 @@ def main():
         if args.inputs:
             result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
         output = output_path(ROOT, 'dart', 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart')
-        result = subprocess.run([os.environ.get("TT_DART", "dart"), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
+        result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated Dart types differ", file=sys.stderr)
@@ -540,6 +544,7 @@ def main():
         else:
             result = cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")
             output = output_path(ROOT, 'cpp', 'results_generated.hpp')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated C++ results differ", file=sys.stderr)
@@ -561,6 +566,7 @@ def main():
         outputs = declarations if args.inputs else {**outputs, **declarations}
         for filename, result in outputs.items():
             output = output_path(ROOT, 'php', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated PHP results differ", file=sys.stderr)
@@ -582,6 +588,7 @@ def main():
         result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'go', 'owned_results_generated.go')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated Go results differ", file=sys.stderr)
@@ -599,6 +606,7 @@ def main():
         outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): typescript.runtime(definitions, version),
                    output_path(ROOT, 'typescript', 'results_generated.d.ts'): typescript.declarations(definitions)}
         for output, result in outputs.items():
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated TypeScript results differ", file=sys.stderr)
@@ -616,6 +624,7 @@ def main():
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
                    output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions)}
         for output, result in outputs.items():
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Ruby results differ", file=sys.stderr)
@@ -650,7 +659,7 @@ def main():
             source = selected[key] = input_definitions[key]
             pending.extend(references(source))
             pending.extend(child for child, _ in source.get("variants", []))
-        input_source = jvm.inputs(selected)
+        input_source = format_source("Inputs.java", jvm.inputs(selected), child_env())
         input_output = output_path(ROOT, 'jvm', 'Inputs.java')
         if args.check and (not input_output.exists() or input_output.read_text() != input_source):
             print("generated JVM inputs differ", file=sys.stderr)
@@ -658,7 +667,7 @@ def main():
         if not args.check:
             input_output.write_text(input_source)
         definitions = prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS))
-        result = jvm.render(definitions)
+        result = format_source("Results.java", jvm.render(definitions), child_env())
         for language, extension in (('kotlin', 'kt'), ('scala', 'scala')):
             source = jvm_languages.render(definitions, language)
             output = output_path(ROOT, 'jvm', 'Results.' + extension)
@@ -707,6 +716,7 @@ def main():
         for extension in ("py", "pyi"):
             output = output_path(ROOT, 'python', '_native_results.' + extension)
             result = target.types(definitions, stubs=extension == "pyi")
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Python types differ", file=sys.stderr)
@@ -718,6 +728,23 @@ def main():
             parser.error("R target generates native result conversions only")
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'r', 'results_generated.rs')
+    if args.target == "c" and args.inputs:
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import native_request
+        schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'],
+            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure')))),
+            text=True, capture_output=True, check=True,
+            env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+        output = output_path(ROOT, 'c', 'carriers_generated.rs')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print('generated native request carriers differ', file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
     if args.target == "c":
         if args.inputs or args.bridge:
             parser.error("C target generates result views only")
@@ -763,7 +790,7 @@ def main():
         spec = importlib.util.spec_from_file_location('request_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
+        inputs = format_source('RequestInputs.g.cs', target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph), child_env())
         output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
         if not output.exists() or output.read_text() != inputs:
             print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)

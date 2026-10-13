@@ -1,4 +1,4 @@
-"""Compare generated full-header Ada declarations with actual C compiler layouts."""
+"""Compare selected Ada declarations with actual C compiler layouts."""
 from pathlib import Path
 import re
 import subprocess
@@ -10,7 +10,9 @@ from children import child_env
 ROOT = Path(__file__).resolve().parents[3]
 HEADER = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / 'libraries/c/include/thinkthen.h'
 ADA = Path(sys.argv[2]) if len(sys.argv) > 2 else ROOT / 'libraries/ada/src/thinkthen_session_c.ads'
-source = re.sub(r'/\*.*?\*/', '', HEADER.read_text(), flags=re.S)
+sys.path.insert(0, str(ROOT / 'sdlc/generators/results'))
+from native import selected_header
+source = re.sub(r'/\*.*?\*/', '', selected_header(HEADER.read_text(), 'ada'), flags=re.S)
 imports = set(re.findall(r'External_Name => "(thinkthen_\w+)"', ADA.read_text()))
 functions = set(re.findall(r'\b(thinkthen_\w+)\s*\([^;{}]*\)\s*;', source))
 assert functions == imports, (functions - imports, imports - functions)
@@ -47,4 +49,4 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-layout-') as temporary:
     (work / 'layout.adb').write_text('\n'.join(ada))
     build = subprocess.run(['gnatmake', '-q', '-gnat2022', '-gnatc', '-I' + str(ADA.parent), 'layout.adb'], cwd=work, env=child_env(), text=True, capture_output=True)
     assert build.returncode == 0, build.stdout + build.stderr
-    print(f'Ada full-header ABI: {len(imports)} imports, {len(layouts)} layouts, {len(constants)} constants, {len(measured)} compiler measurements')
+    print(f'Ada selected ABI: {len(imports)} imports, {len(layouts)} layouts, {len(constants)} constants, {len(measured)} compiler measurements')

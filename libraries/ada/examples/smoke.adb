@@ -10,11 +10,11 @@ procedure Smoke is
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
-   Request : T_RequestCall_decide;
+   Request : T_RequestCall;
 begin
-   Request.T_question.V_0.T_text := T_RequestQuestion_text_field_text
+   Request.T_question.V_0.T_text := T_Text
      (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_QUESTION")));
-   Request.T_input.V_0.T_text := T_RequestInput_text_field_text
+   Request.T_input.V_0.T_text := T_Text
      (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_TEXT")));
    Thinkthen.Sessions.Calls.Decide (Owner, Request);
    Finish (Owner);

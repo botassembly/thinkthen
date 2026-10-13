@@ -1,4 +1,5 @@
 {
+  "$comment": "Generated from the shared Rust result graph; do not edit.",
   "completeAnnotation": {
     "properties": {
       "answer_id": {
@@ -11,34 +12,26 @@
         "type": "object"
       },
       "file": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "first_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "last_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -386,26 +379,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -414,9 +401,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -470,26 +455,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -498,9 +477,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -551,26 +528,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -579,9 +550,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -635,26 +604,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -663,9 +626,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -719,26 +680,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -747,9 +702,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -800,26 +753,20 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "members": {
         "items": {
           "$ref": "#/$defs/completeRankMember"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -828,9 +775,7 @@
         "$ref": "#/$defs/completeReadableQuestion"
       },
       "question_name": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "schema": {
         "$ref": "#/$defs/completeVersion"
@@ -882,9 +827,7 @@
         "$ref": "#/$defs/completeattemptOutcome"
       },
       "request_id": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "request_sha256": {
         "pattern": "^[0-9a-f]{64}$",
@@ -897,17 +840,13 @@
         "format": "uint64",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "status": {
         "format": "uint16",
         "maximum": 65535,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "wall_ms": {
         "format": "uint64",
@@ -1206,9 +1145,7 @@
         "items": {
           "$ref": "#/$defs/completeAttempt"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "cache_answers": {
         "format": "uint64",
@@ -1220,22 +1157,16 @@
         "$ref": "#/$defs/completeCallId"
       },
       "estimated_cost_usd": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "held_model_mismatch": {
-        "type": [
-          "boolean"
-        ]
+        "type": "boolean"
       },
       "input_tokens": {
         "format": "uint64",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "largest_request_bytes": {
         "format": "uint",
@@ -1253,17 +1184,13 @@
         ]
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "output_tokens": {
         "format": "uint64",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "records": {
         "format": "uint64",
@@ -1322,22 +1249,16 @@
         "items": {
           "$ref": "#/$defs/completeFindCandidate"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "file": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "first_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "index": {
         "format": "uint",
@@ -1352,9 +1273,7 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -1466,7 +1385,7 @@
   "completeInputDeclaration": {
     "variants": [
       [
-        "completeInputDeclaration_string",
+        "completeInputDeclaration_StringRoot",
         [
           "literal",
           "type",
@@ -1474,7 +1393,7 @@
         ]
       ],
       [
-        "completeInputDeclaration_object",
+        "completeInputDeclaration_ObjectRoot",
         [
           "literal",
           "type",
@@ -1483,7 +1402,7 @@
       ]
     ]
   },
-  "completeInputDeclaration_object": {
+  "completeInputDeclaration_ObjectRoot": {
     "properties": {
       "properties": {
         "additionalProperties": {
@@ -1495,9 +1414,7 @@
         "items": {
           "type": "string"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "type": {
         "$ref": "#/$defs/completeObjectType"
@@ -1509,9 +1426,9 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
-    "class": "NativeInputDeclarationObject"
+    "class": "NativeInputDeclarationObjectRoot"
   },
-  "completeInputDeclaration_string": {
+  "completeInputDeclaration_StringRoot": {
     "properties": {
       "type": {
         "$ref": "#/$defs/completeStringType"
@@ -1522,7 +1439,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
-    "class": "NativeInputDeclarationString"
+    "class": "NativeInputDeclarationStringRoot"
   },
   "completeInputPropertyType": {
     "variants": [
@@ -1637,17 +1554,13 @@
   "completeMeta": {
     "properties": {
       "answered_by": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "attempts": {
         "items": {
           "$ref": "#/$defs/completeAttempt"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "batch_setting": {
         "anyOf": [
@@ -1668,9 +1581,7 @@
       },
       "context_sha256": {
         "pattern": "^[0-9a-f]{64}$",
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "failed_questions": {
         "format": "uint",
@@ -1706,9 +1617,7 @@
       },
       "question_sha256": {
         "pattern": "^[0-9a-f]{64}$",
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "question_sources": {
         "items": {
@@ -1718,9 +1627,7 @@
       },
       "questions_sha256": {
         "pattern": "^[0-9a-f]{64}$",
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "requests": {
         "items": {
@@ -1777,9 +1684,7 @@
         "items": {
           "type": "string"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "type": {
         "$ref": "#/$defs/completeObjectType"
@@ -1876,9 +1781,7 @@
   "completePersistenceObservation": {
     "properties": {
       "advice": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "observed_at": {
         "type": "string"
@@ -1912,17 +1815,13 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 1,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "last_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 1,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       }
     },
     "required": [
@@ -1944,25 +1843,19 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "images": {
         "items": {
           "type": "string"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "last": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       }
     },
     "required": [
@@ -1985,9 +1878,7 @@
         "format": "uint32",
         "maximum": 4294967295,
         "minimum": 1,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "origin": {
         "$ref": "#/$defs/completeOrigin"
@@ -2031,9 +1922,7 @@
         "items": {
           "$ref": "#/$defs/completeImage"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -2137,14 +2026,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2163,9 +2048,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "text": {},
       "verb": {
@@ -2221,17 +2104,13 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "mode": {
         "$ref": "#/$defs/completeRecognitionMode"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2247,9 +2126,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "relation_threshold": {
         "anyOf": [
@@ -2262,9 +2139,7 @@
         "items": {
           "$ref": "#/$defs/completerelationRule"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "snippet_pieces": {
         "format": "uint32",
@@ -2335,14 +2210,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2358,9 +2229,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "relations": {
         "items": {
@@ -2419,14 +2288,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2442,9 +2307,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "wording_version": {
         "anyOf": [
@@ -2500,14 +2363,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2523,9 +2382,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "wording_version": {
         "anyOf": [
@@ -2576,14 +2433,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2599,9 +2452,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "wording_version": {
         "anyOf": [
@@ -2657,14 +2508,10 @@
         "items": {
           "$ref": "#/$defs/completeLabel"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "model": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "name": {
         "anyOf": [
@@ -2680,9 +2527,7 @@
         "type": "array"
       },
       "profile": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "wording_version": {
         "anyOf": [
@@ -2720,34 +2565,26 @@
         "$ref": "#/$defs/completeAnswerId"
       },
       "file": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "first_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "last_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -2829,7 +2666,7 @@
   "completeRecognitionOdds": {
     "variants": [
       [
-        "completeRecognitionOdds_fields_names_pairs_pieces_proposals",
+        "completeRecognitionOdds_recognizeAnswer",
         [
           "structure",
           "",
@@ -2845,7 +2682,7 @@
         ]
       ],
       [
-        "completeRecognitionOdds_fields_pieces_proposals",
+        "completeRecognitionOdds_BoundaryOdds",
         [
           "structure",
           "",
@@ -2863,7 +2700,30 @@
       ]
     ]
   },
-  "completeRecognitionOdds_fields_names_pairs_pieces_proposals": {
+  "completeRecognitionOdds_BoundaryOdds": {
+    "properties": {
+      "pieces": {
+        "items": {
+          "$ref": "#/$defs/completepieceOdds"
+        },
+        "type": "array"
+      },
+      "proposals": {
+        "items": {
+          "$ref": "#/$defs/completeBoundaryProposal"
+        },
+        "type": "array"
+      }
+    },
+    "required": [
+      "pieces",
+      "proposals"
+    ],
+    "type": "object",
+    "unevaluatedProperties": false,
+    "class": "NativeRecognitionOddsBoundaryOdds"
+  },
+  "completeRecognitionOdds_recognizeAnswer": {
     "properties": {
       "names": {
         "items": {
@@ -2898,30 +2758,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
-    "class": "NativeRecognitionOddsFieldsNamesPairsPiecesProposals"
-  },
-  "completeRecognitionOdds_fields_pieces_proposals": {
-    "properties": {
-      "pieces": {
-        "items": {
-          "$ref": "#/$defs/completepieceOdds"
-        },
-        "type": "array"
-      },
-      "proposals": {
-        "items": {
-          "$ref": "#/$defs/completeBoundaryProposal"
-        },
-        "type": "array"
-      }
-    },
-    "required": [
-      "pieces",
-      "proposals"
-    ],
-    "type": "object",
-    "unevaluatedProperties": false,
-    "class": "NativeRecognitionOddsFieldsPiecesProposals"
+    "class": "NativeRecognitionOddsRecognizeAnswer"
   },
   "completeRecognitionProposal": {
     "properties": {
@@ -2935,9 +2772,7 @@
         "type": "boolean"
       },
       "kind": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "selected": {
         "anyOf": [
@@ -2958,9 +2793,7 @@
       },
       "strength": {
         "format": "double",
-        "type": [
-          "number"
-        ]
+        "type": "number"
       }
     },
     "required": [
@@ -2999,42 +2832,32 @@
         "$ref": "#/$defs/completeAnswerId"
       },
       "file": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "first_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "index": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "input": true,
       "input_sources": {
         "items": {
           "$ref": "#/$defs/completesessionInputSource"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "last_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "meta": {
         "$ref": "#/$defs/completeMeta"
@@ -3078,6 +2901,107 @@
         "type": "string"
       }
     ]
+  },
+  "completeRelationEndpoint": {
+    "variants": [
+      [
+        "completeRelationEndpoint_relatedEntity",
+        [
+          "structure",
+          "",
+          {
+            "required": [
+              "kind",
+              "name"
+            ],
+            "excluded": [
+              "file",
+              "ordinal",
+              "record"
+            ]
+          }
+        ]
+      ],
+      [
+        "completeRelationEndpoint_source",
+        [
+          "structure",
+          "",
+          {
+            "required": [
+              "file",
+              "kind",
+              "name",
+              "ordinal",
+              "record"
+            ],
+            "excluded": []
+          }
+        ]
+      ]
+    ]
+  },
+  "completeRelationEndpoint_relatedEntity": {
+    "properties": {
+      "kind": {
+        "type": "string"
+      },
+      "name": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "name",
+      "kind"
+    ],
+    "type": "object",
+    "unevaluatedProperties": false,
+    "class": "NativeRelationEndpointRelatedEntity"
+  },
+  "completeRelationEndpoint_source": {
+    "properties": {
+      "file": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "first_line": {
+        "format": "uint",
+        "maximum": 18446744073709551615,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "kind": {
+        "type": "string"
+      },
+      "last_line": {
+        "format": "uint",
+        "maximum": 18446744073709551615,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "name": {
+        "type": "string"
+      },
+      "ordinal": {
+        "format": "uint",
+        "maximum": 18446744073709551615,
+        "minimum": 0,
+        "type": "integer"
+      },
+      "record": {}
+    },
+    "required": [
+      "name",
+      "kind",
+      "ordinal",
+      "record",
+      "file"
+    ],
+    "type": "object",
+    "unevaluatedProperties": false,
+    "class": "NativeRelationEndpointSource"
   },
   "completeRelationMember": {
     "variants": [
@@ -3459,9 +3383,7 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "cause": {
         "$ref": "#/$defs/completeStopCause"
@@ -3473,9 +3395,7 @@
         "format": "uint16",
         "maximum": 65535,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       }
     },
     "required": [
@@ -3511,17 +3431,13 @@
         "format": "uint64",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "output_tokens": {
         "format": "uint64",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       }
     },
     "type": "object",
@@ -3647,9 +3563,7 @@
     "properties": {
       "confidence": {
         "format": "double",
-        "type": [
-          "number"
-        ]
+        "type": "number"
       },
       "kind": {
         "const": "choice",
@@ -3679,9 +3593,7 @@
     "properties": {
       "confidence": {
         "format": "double",
-        "type": [
-          "number"
-        ]
+        "type": "number"
       },
       "kind": {
         "const": "score",
@@ -3803,17 +3715,13 @@
         "type": "integer"
       },
       "file": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "first_line": {
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "kind": {
         "type": "string"
@@ -3822,9 +3730,7 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "length": {
         "format": "uint",
@@ -3982,9 +3888,7 @@
     "properties": {
       "confidence": {
         "format": "double",
-        "type": [
-          "number"
-        ]
+        "type": "number"
       },
       "kind": {
         "const": "find"
@@ -4154,7 +4058,7 @@
   "completerecognize": {
     "variants": [
       [
-        "completerecognize_fields_entities",
+        "completerecognize_entities",
         [
           "structure",
           "",
@@ -4170,7 +4074,7 @@
         ]
       ],
       [
-        "completerecognize_fields_mode_proposals",
+        "completerecognize_mode_proposals",
         [
           "structure",
           "",
@@ -4224,7 +4128,7 @@
     "unevaluatedProperties": false,
     "class": "NativeRecognizeAnswer"
   },
-  "completerecognize_fields_entities": {
+  "completerecognize_entities": {
     "properties": {
       "entities": {
         "items": {
@@ -4236,9 +4140,7 @@
         "items": {
           "$ref": "#/$defs/completeentityEdge"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       }
     },
     "required": [
@@ -4246,9 +4148,9 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
-    "class": "NativeRecognizeFieldsEntities"
+    "class": "NativeRecognizeEntities"
   },
-  "completerecognize_fields_mode_proposals": {
+  "completerecognize_mode_proposals": {
     "properties": {
       "mode": {
         "$ref": "#/$defs/completeBoundaryMode"
@@ -4266,7 +4168,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
-    "class": "NativeRecognizeFieldsModeProposals"
+    "class": "NativeRecognizeModeProposals"
   },
   "completerelateFields": {
     "properties": {
@@ -4316,10 +4218,10 @@
         "type": "string"
       },
       "source": {
-        "$ref": "#/$defs/completerelatedEntityEdge_properties_source"
+        "$ref": "#/$defs/completeRelationEndpoint"
       },
       "target": {
-        "$ref": "#/$defs/completerelatedEntityEdge_properties_source"
+        "$ref": "#/$defs/completeRelationEndpoint"
       }
     },
     "required": [
@@ -4331,111 +4233,6 @@
     "type": "object",
     "unevaluatedProperties": false,
     "class": "NativeRelatedEntityEdge"
-  },
-  "completerelatedEntityEdge_properties_source": {
-    "variants": [
-      [
-        "completerelatedEntityEdge_properties_source_fields_kind_name",
-        [
-          "structure",
-          "",
-          {
-            "required": [
-              "kind",
-              "name"
-            ],
-            "excluded": [
-              "file",
-              "ordinal",
-              "record"
-            ]
-          }
-        ]
-      ],
-      [
-        "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-        [
-          "structure",
-          "",
-          {
-            "required": [
-              "file",
-              "kind",
-              "name",
-              "ordinal",
-              "record"
-            ],
-            "excluded": []
-          }
-        ]
-      ]
-    ]
-  },
-  "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record": {
-    "properties": {
-      "file": {
-        "type": [
-          "string",
-          "null"
-        ]
-      },
-      "first_line": {
-        "format": "uint",
-        "maximum": 18446744073709551615,
-        "minimum": 0,
-        "type": [
-          "integer"
-        ]
-      },
-      "kind": {
-        "type": "string"
-      },
-      "last_line": {
-        "format": "uint",
-        "maximum": 18446744073709551615,
-        "minimum": 0,
-        "type": [
-          "integer"
-        ]
-      },
-      "name": {
-        "type": "string"
-      },
-      "ordinal": {
-        "format": "uint",
-        "maximum": 18446744073709551615,
-        "minimum": 0,
-        "type": "integer"
-      },
-      "record": {}
-    },
-    "required": [
-      "name",
-      "kind",
-      "ordinal",
-      "record",
-      "file"
-    ],
-    "type": "object",
-    "unevaluatedProperties": false,
-    "class": "NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord"
-  },
-  "completerelatedEntityEdge_properties_source_fields_kind_name": {
-    "properties": {
-      "kind": {
-        "type": "string"
-      },
-      "name": {
-        "type": "string"
-      }
-    },
-    "required": [
-      "name",
-      "kind"
-    ],
-    "type": "object",
-    "unevaluatedProperties": false,
-    "class": "NativeRelatedEntityEdgePropertiesSourceFieldsKindName"
   },
   "completerelationRule": {
     "properties": {
@@ -4678,9 +4475,7 @@
         "type": "string"
       },
       "member": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "position": {
         "format": "uint",
@@ -4689,9 +4484,7 @@
         "type": "integer"
       },
       "stage": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       }
     },
     "required": [
@@ -5591,9 +5384,7 @@
       },
       "confidence": {
         "format": "double",
-        "type": [
-          "number"
-        ]
+        "type": "number"
       },
       "failed_questions": {
         "format": "uint",
@@ -5662,9 +5453,7 @@
         "type": "array"
       },
       "raw_pick": {
-        "type": [
-          "string"
-        ]
+        "type": "string"
       },
       "reported_usage": {
         "anyOf": [
@@ -5743,17 +5532,13 @@
         "items": {
           "$ref": "#/$defs/completeBoundaryProposal"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       },
       "relations": {
         "items": {
           "$ref": "#/$defs/completeRecognitionEdgeDocument"
         },
-        "type": [
-          "array"
-        ]
+        "type": "array"
       }
     },
     "required": [
@@ -5806,9 +5591,7 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "kind": {
         "type": "string"
@@ -5817,9 +5600,7 @@
         "format": "uint",
         "maximum": 18446744073709551615,
         "minimum": 0,
-        "type": [
-          "integer"
-        ]
+        "type": "integer"
       },
       "name": {
         "type": "string"
