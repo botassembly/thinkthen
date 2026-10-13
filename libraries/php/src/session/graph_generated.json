@@ -4358,6 +4358,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
+    "x-request-function": "choose",
     "class": "NativeSessionJudgmentChoice"
   },
   "completesessionJudgment_decision": {
@@ -4379,6 +4380,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
+    "x-request-function": "decide",
     "class": "NativeSessionJudgmentDecision"
   },
   "completesessionJudgment_score": {
@@ -4398,6 +4400,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
+    "x-request-function": "score",
     "class": "NativeSessionJudgmentScore"
   },
   "completesessionJudgment_tags": {
@@ -4419,6 +4422,7 @@
     ],
     "type": "object",
     "unevaluatedProperties": false,
+    "x-request-function": "tag",
     "class": "NativeSessionJudgmentTags"
   },
   "completesessionNamedProbability": {

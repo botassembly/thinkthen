@@ -394,6 +394,11 @@ def bridge():
                          'uint32_t *': 'out uint status', 'thinkthen_session_result **': 'out IntPtr result'}
     lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_next_packet('
               + ', '.join(packet_parameters[argument] for argument in prototype['arguments']) + ');']
+    prototype = native['functions']['thinkthen_session_push']
+    push_parameters = {'thinkthen_session *': 'SessionHandle session', 'const char *': 'byte[] descriptor',
+                       'size_t': 'nuint length', 'uint32_t *': 'out uint status'}
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_push('
+              + ', '.join(push_parameters[argument] for argument in prototype['arguments']) + ');']
     for state in ('RESULT', 'PENDING', 'END'):
         lines += [' internal const uint Read' + state.title() + ' = ' + str(native['constants']['THINKTHEN_SESSION_' + state + '_V1']) + ';']
     lines += ['}']

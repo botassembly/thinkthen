@@ -59,6 +59,21 @@ def outputs(root):
     prototype = native['functions']['thinkthen_session_wait']
     carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
     waits += ['static int waitReady(MemorySegment session, int interest, int timeout, MemorySegment ready) {',
-              'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}', '}']
+              'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}']
+    for prefix in ('THINKTHEN_SESSION_RESULT_', 'THINKTHEN_SESSION_PENDING_', 'THINKTHEN_SESSION_END_'):
+        for name, value in native['constants'].items():
+            if name == prefix + 'V1':
+                waits += ['static final int READ_' + name.removeprefix('THINKTHEN_SESSION_').removesuffix('_V1') + ' = ' + str(value) + ';']
+    for method, function, arguments in [
+        ('nextPacket', 'thinkthen_session_next_packet', 'MemorySegment session, int interest, MemorySegment status, MemorySegment result'),
+        ('push', 'thinkthen_session_push', 'MemorySegment session, MemorySegment descriptor, long length, MemorySegment status')]:
+        parameters = native['functions'][function]['arguments']
+        layouts_by_type.update({'thinkthen_session *': 'ValueLayout.ADDRESS', 'const char *': 'ValueLayout.ADDRESS',
+                                'size_t': 'ValueLayout.JAVA_LONG', 'thinkthen_session_result **': 'ValueLayout.ADDRESS'})
+        carriers = ', '.join(layouts_by_type[typ] for typ in parameters)
+        values = ', '.join(argument.rsplit(' ', 1)[-1] for argument in arguments.split(', '))
+        waits += ['static int ' + method + '(' + arguments + ') {',
+                  'return (int)NativeSession.call("' + function + '", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, ' + values + ');', '}']
+    waits += ['}']
     return {'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}
