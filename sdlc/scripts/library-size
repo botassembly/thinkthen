@@ -32,7 +32,7 @@ def registry(root):
     sys.modules[module.__name__] = module
     source = git(root, 'show', 'HEAD:sdlc/generators/results/registry.py')
     exec(compile(source, 'registry.py', 'exec'), module.__dict__)
-    return module.generated_paths()
+    return module.generated_paths(), {output.path: output.target for output in module.OUTPUTS}
 
 
 def blobs(root, paths):
@@ -47,22 +47,23 @@ def blobs(root, paths):
         cursor += size + 1
 
 
-def owner(path, manifest):
+def owner(path, manifest, outputs):
     for name, config in manifest['libraries'].items():
         if path.startswith(config['root'] + '/'):
             return name
-    if path == 'sdlc/generators/results/csharp/CompleteFacts.g.cs':
-        return 'csharp'
+    target = outputs.get(path)
+    if target in manifest['libraries']:
+        return target
     return None
 
 
 def classification(path, name, manifest, generated):
+    if path in generated or path in TOOL_GENERATED:
+        return 'generated'
     if Path(path).suffix not in EXTENSIONS:
         return None
     config = manifest['libraries'][name]
     parts = Path(path).parts
-    if path in generated or path in TOOL_GENERATED:
-        return 'generated'
     if Path(path).name == 'tests.rs' or any(folder in parts for folder in config['test_folders']):
         return 'test'
     return 'handwritten'
@@ -78,7 +79,7 @@ def release_base(root):
     return max(tags, key=lambda tag: tuple(int(part) for part in tag.removeprefix('v').split('.')))
 
 
-def additions(root, since, manifest, generated):
+def additions(root, since, manifest, generated, outputs):
     result = []
     for commit in git(root, 'rev-list', '--reverse', '--topo-order', since + '..HEAD').splitlines():
         counts = {name: 0 for name in manifest['libraries']}
@@ -86,8 +87,7 @@ def additions(root, since, manifest, generated):
         merge = len(parents) > 1
         prefix = '+' * len(parents) if merge else '+'
         patch = git(root, 'show', '--format=', '--cc' if merge else '--patch', '--unified=0',
-                    '--no-renames', commit, '--', 'libraries',
-                    'sdlc/generators/results/csharp/CompleteFacts.g.cs')
+                    '--no-renames', commit, '--', 'libraries', *sorted(generated))
         path = None
         for line in patch.splitlines():
             if line.startswith('+++ b/'):
@@ -95,7 +95,7 @@ def additions(root, since, manifest, generated):
             elif line.startswith('+++ '):
                 path = None
             elif line.startswith(prefix) and line[len(prefix):].strip() and path:
-                name = owner(path, manifest)
+                name = owner(path, manifest, outputs)
                 if name and classification(path, name, manifest, generated) == 'handwritten':
                     counts[name] += 1
         result.append({'commit': commit, 'kind': 'merge_resolution' if merge else 'change',
@@ -104,13 +104,13 @@ def additions(root, since, manifest, generated):
 
 
 def measure(root, manifest, since):
-    generated = registry(root)
+    generated, outputs = registry(root)
     counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
                          languages={}) for name in manifest['libraries']}
     paths = [path for path in git(root, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines()
-             if owner(path, manifest) and classification(path, owner(path, manifest), manifest, generated)]
+             if owner(path, manifest, outputs) and classification(path, owner(path, manifest, outputs), manifest, generated)]
     for path, source in blobs(root, paths):
-        name = owner(path, manifest)
+        name = owner(path, manifest, outputs)
         if not name:
             continue
         kind = classification(path, name, manifest, generated)
@@ -136,7 +136,7 @@ def measure(root, manifest, since):
     return {'revision': git(root, 'rev-parse', 'HEAD').strip(), 'since': since,
             'units': 'nonblank source lines', 'history_classification': 'committed registry and conventions; merges count only combined additions',
             'medians': medians, 'libraries': counts,
-            'commits': additions(root, since, manifest, generated)}
+            'commits': additions(root, since, manifest, generated, outputs)}
 
 
 def summary(report):

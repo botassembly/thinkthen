@@ -26,10 +26,11 @@ class SizeReport(unittest.TestCase):
             libraries['dart']['test_folders'].extend(['test', 'example'])
             manifest = {'libraries': libraries, 'exceptions': {'python': {'paths': ['libraries/python/adapter.py']}}}
             write('conformance/library-surface.json', json.dumps(manifest))
-            write('sdlc/generators/results/registry.py', "def generated_paths():\n    return {'libraries/python/generated.py'}\n")
+            write('sdlc/generators/results/registry.py', "from types import SimpleNamespace\nOUTPUTS = (SimpleNamespace(target='python', path='libraries/python/generated.py'), SimpleNamespace(target='python', path='sdlc/generators/side/inputs.json'))\ndef generated_paths():\n    return {output.path for output in OUTPUTS}\n")
             write('libraries/python/main.py', 'one\n\ntwo\n')
             write('libraries/python/adapter.py', 'adapter\n')
             write('libraries/python/generated.py', 'generated\n' * 5)
+            write('sdlc/generators/side/inputs.json', '{\n}\n')
             write('libraries/python/tests/check.py', 'test\n' * 4)
             write('libraries/jvm/session/Test.java', 'java\n' * 2)
             write('libraries/jvm/session/Test.kt', 'kotlin\n')
@@ -56,7 +57,7 @@ class SizeReport(unittest.TestCase):
             run('git', 'commit', '-qm', 'Add handwritten behavior')
             report = json.loads(run(str(SCRIPT), '--root', str(root), '--json'))
             python = report['libraries']['python']
-            self.assertEqual((python['handwritten'], python['generated'], python['test'], python['exception']), (4, 7, 8, 1))
+            self.assertEqual((python['handwritten'], python['generated'], python['test'], python['exception']), (4, 9, 8, 1))
             self.assertEqual(report['medians']['handwritten'], 4)
             self.assertEqual(report['libraries']['dart']['ratios']['handwritten'], 0.5)
             self.assertEqual(report['libraries']['jvm']['languages']['kotlin']['handwritten'], 1)
