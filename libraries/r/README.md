@@ -172,3 +172,7 @@ From `libraries/r`, `./check.sh` installs the vendored source archive and runs t
 `tt_usage_persistence()` observes without waiting; `tt_finish_usage_status()` drains current usage deltas. Both return a `thinkthen_UsageStatus` named list with `state` and optional `advice`. They observe the engine already selected by `tt_engine()` or the process default; they introduce no separate engine owner.
 
 Written covers this engine's current deltas, not later calls or other engines. Only usage-lock acquisition has a deadline; other filesystem work can take longer. Failed reports incomplete durable totals while answers and in-memory counts remain usable. These live observations contain no facts-snapshot timestamp, credentials or filesystem paths, and add no model requests.
+
+## Typed questions and answers
+
+Use `tt_options()` for named request controls, `tt_recognize_question()` for recognition and `tt_relate_question()` for relation rules. Native admission validates their values. Each successful call exposes `$answer` beside its complete `$results` and `$facts`. Atomic columns retain missing positions; aggregate answers contain owned typed carriers. The [ten-function example](examples/native.R) runs from the installed package and replays saved answers during routine checks.

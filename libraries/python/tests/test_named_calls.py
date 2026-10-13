@@ -274,3 +274,30 @@ def test_producer_exception_and_admission_message_survive_native_boundary(backen
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ['retained']
     assert backend.count() == 0
+
+
+def test_shipped_function_examples_replay_installed_answers_without_sending(backend, tmp_path):
+    import json
+    from conftest import REPO
+    examples = json.loads((REPO / 'libraries/python/examples.json').read_text())['examples']
+    functions = ('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate')
+    for function in functions:
+        sample = examples[function]
+        folder = tmp_path / function
+        folder.mkdir()
+        for name, content in sample.get('files', {}).items():
+            (folder / name).write_text(content)
+        code = f'''
+            import ast, os, thinkthen
+            os.chdir({str(folder)!r})
+            with thinkthen.Engine(cache=False, **SETTINGS) as tt:
+                answer = {sample['python']}
+                assert answer == ast.literal_eval({sample['expected']!r}), repr(answer)
+                print(repr(answer))
+        '''
+        env = child_env(backend, folder)
+        recorded = run(code.replace('SETTINGS', repr({'record': str(folder / 'recording')})), env)
+        count = backend.count()
+        replayed = run(code.replace('SETTINGS', repr({'replay': str(folder / 'recording')})), env)
+        assert replayed == recorded
+        assert backend.count() == count, function

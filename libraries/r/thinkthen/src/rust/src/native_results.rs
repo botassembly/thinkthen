@@ -146,7 +146,15 @@ pub(crate) fn request_packet(text: &str, function: thinkthen::RequestFunction) -
     } else {
         List::from_values([convert(kind, rows)?]).into()
     };
-    let mut fields = vec![("results", results)];
+    let function = serde_json::to_value(function)
+        .map_err(|_| crate::defect("native function could not be written"))?;
+    let answer = crate::results_generated::request_answer(
+        function
+            .as_str()
+            .ok_or_else(|| crate::defect("native function has no name"))?,
+        rows,
+    )?;
+    let mut fields = vec![("results", results), ("answer", answer)];
     if let Some(facts) = value.get("facts") {
         fields.push(("facts", convert("completeFacts", facts)?));
     }
