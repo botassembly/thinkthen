@@ -23,7 +23,7 @@ object ScalaUsageStatus {
     assert(status.state == (if (args(0) == "written") UsagePersistence.State.Written else UsagePersistence.State.Failed))
     assert(engine.usagePersistence() == status)
     engine.close()
-    assert(call.packets().asScala.collect { case row: thinkthen.Results.SessionPacketDecideRow => row.value().value().value() }.contains(true))
+    assert(call.packets().collect { case row: thinkthen.Results.SessionPacketDecideRow => row.value().value().value() }.contains(true))
     assert(call.terminal().facts().value().requestsSent().intValueExact() == 1)
     assert(status.advice == (if (args(0) == "written") None else Some("check the usage folder permissions and free space")))
     try { engine.usagePersistence(); assert(false, "closed engine observed") } catch { case _: IllegalStateException => () }
