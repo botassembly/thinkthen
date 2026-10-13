@@ -31,6 +31,7 @@ def render():
         if kind == 'integer':
             unsigned = source.get('minimum', -1) >= 0 or source.get('format', '').startswith('uint')
             return 'printf("%" PRI' + ('u64, (uint64_t)(' if unsigned else 'd64, (int64_t)(') + expression + '));'
+        path = c.container_key(source, path)
         emit(path, source, direct=True)
         return 'emit_' + c.ident(path) + '(' + expression + ');'
     def emit(path, source, direct=False):
@@ -44,7 +45,7 @@ def render():
         elif 'variants' in source:
             body += ['switch(v.kind) {']
             for i,(child,_) in enumerate(source['variants'],1):
-                arm=child.removeprefix(path+'_')
+                arm=c.variant_member(path,child)
                 body.append('case %d: %s break;' % (i,value({'$ref':'#/$defs/'+child},child,'v.data.'+arm)))
             body += ['default: abort(); }']
         elif 'primitive_variants' in source:

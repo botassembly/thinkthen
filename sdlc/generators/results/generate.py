@@ -7,8 +7,10 @@ import json
 from pathlib import Path
 import sys
 import subprocess
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
 from native import selected_functions
+from formatting import format_source
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
@@ -189,9 +191,22 @@ def native_value_union(schema, definitions):
             'nullable_json': 'null' in selected}
 
 
+def normalize(value):
+    """Remove only redundant singleton type syntax throughout the source graph."""
+    if isinstance(value, list):
+        return [normalize(child) for child in value]
+    if not isinstance(value, dict):
+        return value
+    result = {key: normalize(child) for key, child in value.items()}
+    kinds = result.get('type')
+    if isinstance(kinds, list) and len(kinds) == 1:
+        result['type'] = kinds[0]
+    return result
+
+
 def lift_inline(definitions):
     """Name nested object alternatives from their native schema position."""
-    definitions = dict(definitions)
+    definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
     def visit(value, path):
@@ -202,7 +217,7 @@ def lift_inline(definitions):
         if object_variants(value, definitions):
             identity = json.dumps(value, sort_keys=True)
             if identity not in seen:
-                key = path
+                key = value.get('title', path)
                 if key in definitions:
                     raise ValueError('colliding nested result alternative name')
                 seen[identity] = key
@@ -242,14 +257,32 @@ def prepare(definitions):
             result[key] = source
             continue
         tags = discriminator(variants, definitions)
-        names = [key + '_' + (value if mode == 'literal' else
-                             '_'.join(value.values()) if mode == 'literals' else
-                             'fields_' + '_'.join(value['required']) if mode == 'structure' else member)
-                 for mode, member, value in tags]
-        if len(set(names)) != len(names) or any(name in definitions for name in names):
+        alternatives = source.get('oneOf', source.get('anyOf', []))
+        names = []
+        for index, (mode, member, value) in enumerate(tags):
+            original = alternatives[index]
+            reference = original.get('$ref', '').removeprefix('#/$defs/')
+            if reference and not source.get('properties'):
+                suffix = reference.removeprefix('complete')
+                parent = key.removeprefix('complete')
+                if suffix.lower().endswith(parent.lower()) and len(suffix) > len(parent):
+                    suffix = suffix[:-len(parent)]
+                name = key + '_' + suffix
+            elif 'title' in original:
+                name = original['title']
+            else:
+                suffix = (value if mode == 'literal' else
+                          '_'.join(value.values()) if mode == 'literals' else
+                          '_'.join(value['required']) if mode == 'structure' else member)
+                name = key + '_' + suffix
+            names.append(name)
+        if len(set(names)) != len(names):
             raise ValueError('colliding generated object variant names')
         result[key] = {'variants': list(zip(names, tags))}
-        result.update(zip(names, variants))
+        for name, variant in zip(names, variants):
+            if name in definitions and definitions[name] != variant:
+                raise ValueError('colliding generated object variant definition')
+            result[name] = variant
     return dict(sorted(result.items()))
 
 
@@ -313,10 +346,10 @@ def bridge():
     abi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(abi)
     native = abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
-    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint'}
+    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint', 'thinkthen_complete_utf8_v1': 'CompleteUtf8V1'}
     lines = ['// Generated from the compiler-derived C header ABI; do not edit.',
              'using System.Runtime.InteropServices;', 'namespace ThinkThen;']
-    carriers = ('thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1')
+    carriers = ('thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1')
     def host(name):
         return ''.join(word.title() for word in name.removeprefix('thinkthen_').split('_'))
     for carrier in carriers:
@@ -337,7 +370,15 @@ def bridge():
         lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern '
                   + {'int': 'int'}[prototype['return']] + ' ' + name + '('
                   + ', '.join(parameters[argument] for argument in prototype['arguments']) + ');']
-    lines += ['}', 'internal static class NativeWait {']
+    prototype = native['functions']['thinkthen_session_new_named_with_surface']
+    named_parameters = {'const thinkthen_engine *': 'EngineHandle engine',
+                        'const thinkthen_named_request_v1 *': 'in NamedRequestV1 request',
+                        'thinkthen_complete_utf8_v1': 'CompleteUtf8V1 surface',
+                        'thinkthen_session **': 'out IntPtr session'}
+    lines += ['}', 'internal static class NativeNamed {',
+              ' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new_named_with_surface('
+              + ', '.join(named_parameters[argument] for argument in prototype['arguments']) + ');',
+              '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
             lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
@@ -517,7 +558,10 @@ def main():
         import go
         definitions = prepare(graph(json.loads(args.schema.read_text()), go.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        result = subprocess.run(["gofmt"], input=go.render(definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
+        request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
+        input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
+        result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'go', 'owned_results_generated.go')
         if args.check:
@@ -662,6 +706,16 @@ def main():
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'c', 'views_generated.rs')
     if args.bridge:
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import csharp
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        calls_path = output_path(ROOT, 'csharp', 'NamedCalls.g.cs')
+        calls = format_source(calls_path, csharp.named_calls(csharp.enum_values(request_schema['$defs']['RequestFunction'])), child_env())
+        if args.check and (not calls_path.exists() or calls_path.read_text() != calls):
+            print('generated C# named calls differ', file=sys.stderr)
+            return 1
+        if not args.check:
+            calls_path.write_text(calls)
         result = bridge()
         args.output = output_path(ROOT, 'csharp', 'NativeBridge.g.cs')
     elif args.inputs and args.target == 'zig':
@@ -673,10 +727,11 @@ def main():
         spec = importlib.util.spec_from_file_location('result_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
         args.output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
     else:
         result = generated(json.loads(args.schema.read_text()), args.target)
+    result = format_source(args.output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
             print('generated results differ; run sdlc/generators/results/generate.py',
@@ -690,7 +745,7 @@ def main():
         spec = importlib.util.spec_from_file_location('request_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
         output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
         if not output.exists() or output.read_text() != inputs:
             print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)

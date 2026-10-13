@@ -8,7 +8,7 @@ COMMON = (
     'thinkthen_session_cancel', 'thinkthen_session_error_message',
     'thinkthen_session_finish', 'thinkthen_session_free',
     'thinkthen_session_result_free', 'thinkthen_session_try_push',
-    'thinkthen_session_try_read', 'thinkthen_session_wait',
+    'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_next_packet',
 )
 USE = {
     'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json'),

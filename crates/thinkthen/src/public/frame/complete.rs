@@ -3,7 +3,7 @@ use super::column::text;
 use super::request;
 use crate::public::{
     Call, CallOptions, Edge, Engine, Error, FindSelection, InputEvidence, Question, RawRecord,
-    Recognize, Recognized, RecordReading, Relate, RequestCall,
+    Recognize, Recognized, RecordReading, Relate,
 };
 use polars::prelude::{DataFrame, NamedFrom, Series};
 
@@ -20,7 +20,14 @@ pub(super) fn filter(
     texts: &Series,
     options: CallOptions<'_>,
 ) -> Result<Call<Series>, Error> {
-    request::execute(engine, question, texts, RequestCall::Filter, options)?.try_map(|value| {
+    request::execute(
+        engine,
+        question,
+        texts,
+        crate::RequestFunction::Filter,
+        options,
+    )?
+    .try_map(|value| {
         let rows = value.filtered("filter returned another result kind")?;
         let originals = rows
             .iter()
@@ -37,7 +44,14 @@ pub(super) fn rank(
 ) -> Result<Call<DataFrame>, Error> {
     let positions = request::positions(texts)?;
     crate::public::engine::only(question, &[crate::public::question::Kind::Rank], "rank")?;
-    request::execute(engine, question, texts, RequestCall::Rank, options)?.try_map(|value| {
+    request::execute(
+        engine,
+        question,
+        texts,
+        crate::RequestFunction::Rank,
+        options,
+    )?
+    .try_map(|value| {
         let rows = value.ranked("rank returned another result kind")?;
         let indices = rows
             .iter()
@@ -77,7 +91,14 @@ pub(super) fn find(
     options: CallOptions<'_>,
 ) -> Result<Call<DataFrame>, Error> {
     let positions = request::positions(texts)?;
-    request::execute(engine, question, texts, RequestCall::Find, options)?.try_map(|value| {
+    request::execute(
+        engine,
+        question,
+        texts,
+        crate::RequestFunction::Find,
+        options,
+    )?
+    .try_map(|value| {
         let found = value.found("find returned another result kind")?;
         let rows = found.candidates();
         let indices = rows
@@ -129,7 +150,7 @@ pub(super) fn recognize(
         engine,
         ask.clone().into(),
         texts,
-        RequestCall::Recognize,
+        crate::RequestFunction::Recognize,
         options,
     )?
     .try_map(|value| {
@@ -187,10 +208,15 @@ pub(super) fn relate(
             _ => Some(Err(Error::usage("an entity has only one null field"))),
         });
     let ask = ask.clone().record_fields("/name", "/kind")?;
-    request::execute_records(engine, ask.into(), RequestCall::Relate, options, records)?.try_map(
-        |value| {
-            let row = value.related("relate returned another result kind")?;
-            Ok(row.result().value().to_vec())
-        },
-    )
+    request::execute_records(
+        engine,
+        ask.into(),
+        crate::RequestFunction::Relate,
+        options,
+        records,
+    )?
+    .try_map(|value| {
+        let row = value.related("relate returned another result kind")?;
+        Ok(row.result().value().to_vec())
+    })
 }

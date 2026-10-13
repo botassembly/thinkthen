@@ -7,6 +7,7 @@
 )]
 use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
+use thinkthen::RequestFunction;
 use thinkthen::*;
 
 fn engine(listener: &Listener) -> Engine {
@@ -100,24 +101,27 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
         r#"{"body":"Same.","extra":false}"#,
         r#"{"body":"Same.","extra":null}"#,
     ] {
-        let admitted = Request::new(RequestCall::Decide(RequestArguments {
-            question: RequestQuestion::Definition {
-                value: definition.clone().into(),
+        let admitted = Request::new(RequestCall::new(
+            RequestFunction::Decide,
+            RequestArguments {
+                question: RequestQuestion::Definition {
+                    value: definition.clone().into(),
+                },
+                input: RequestInput::Records {
+                    items: vec![RequestItem {
+                        original: Some(RequestOriginal::Json {
+                            value: RawRecord::json(original).unwrap(),
+                        }),
+                        context: None,
+                        options: None,
+                        examples: None,
+                        seed_spans: None,
+                        images: vec![],
+                    }],
+                },
+                options: RequestOptions::default(),
             },
-            input: RequestInput::Records {
-                items: vec![RequestItem {
-                    original: Some(RequestOriginal::Json {
-                        value: RawRecord::json(original).unwrap(),
-                    }),
-                    context: None,
-                    options: None,
-                    examples: None,
-                    seed_spans: None,
-                    images: vec![],
-                }],
-            },
-            options: RequestOptions::default(),
-        }))
+        ))
         .admit()
         .unwrap();
         let RequestOutcome::Complete(call) = engine

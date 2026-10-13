@@ -75,7 +75,6 @@ fn generated(reference: &str) -> String {
     let mut generator = SchemaSettings::draft2020_12()
         .for_serialize()
         .with_transform(RecursiveTransform(|schema: &mut Schema| {
-            schema.remove("title");
             schema.remove("description");
         }))
         .into_generator();

@@ -126,6 +126,22 @@ impl Storage {
     }
 }
 
+pub(crate) fn read_text(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_utf8_v1, ErrorKind> {
+    Ok(store.text(node.text()?))
+}
+pub(crate) fn read_boolean(node: &Node, _store: &mut Storage) -> Result<u32, ErrorKind> {
+    node.boolean()
+}
+pub(crate) fn read_number<T: std::str::FromStr>(
+    node: &Node,
+    _store: &mut Storage,
+) -> Result<T, ErrorKind> {
+    node.number()
+}
+
 /// Presence belongs to result conversion, independently of scalar conversion.
 pub(crate) fn read_presence<T>(
     node: Option<&Node>,

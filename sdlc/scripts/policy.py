@@ -78,7 +78,12 @@ BINDING_SOURCE_EXTENSIONS = {
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
 sys.path.insert(0, str(REPO / "sdlc/generators/results"))
 from registry import generated_paths
-GENERATED_BINDING_SOURCES = generated_paths()
+# Flutter owns these platform registrations; schema generation does not.
+TOOL_GENERATED_SOURCES = {
+    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc",
+    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h",
+}
+GENERATED_BINDING_SOURCES = generated_paths() | TOOL_GENERATED_SOURCES
 
 # Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
 MAX_FORMAT_SKIPS = 3
