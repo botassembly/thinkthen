@@ -95,7 +95,6 @@ fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let _: Call<Recognized> = e.recognize_with(&rec, "text", o)?;
     let rel = Relate::builder().relation(RelationRule::one_way("treats", "drug", "disease")?)?.build()?;
     let _: Call<Vec<Edge>> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
-    let _: Vec<Result<Row<&str, Answer>, Error>> = e.decide_many(&b, ["a"]).collect();
     let _: Call<Details> = e.details(&desk(), "text")?;
     let _: Counters = e.usage();
     Ok(())

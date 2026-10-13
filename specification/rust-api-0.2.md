@@ -12,11 +12,13 @@ The public API inventory applies these reviewed declaration changes after the hi
 - [0556](../sdlc/tickets/0556-blocking-session-read.md) adds `RequestSession::wait`, `RequestSessionWaitInterest` and `RequestSessionReady` to replace binding polls with native readiness waits.
 - [0558 and its six amendments](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) retire the unpublished complete, fallible-record and image wrappers below. The third and fourth amendments permit private production primitives with unchanged ownership tests. The fifth amendment retires `decide_many_complete_with` after its unchanged ownership test moves to existing `RequestRows::Decisions(batch).into_call()`.
 
-[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires the choose, score, tag, filter and details bulk pairs. Their behavioral tests use the existing Request row carriers. It also retains the approved `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` exceptions. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; the declarations below retain the approved source ceiling.
+[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires all twelve shipped bulk wrappers. Their behavioral tests use the existing Request row carriers. Exact packed Details and original-serialization assertions use the private primitive called by the Polars frame path, under the accepted private-production exception. The delta also retains the previously approved `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` exceptions. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; the declarations below retain the approved source ceiling.
 
 ### Retired public declarations
 
 ```text
+fn Engine::decide_many<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, &'a Q, I) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
 fn Engine::details_many<'a, I, Q: DetailQuestion + ?Sized>(&'a self, &'a Q, I) -> Batch<'a, Row<I::Item, Details>> where I: IntoIterator + 'a, I::Item: Evidence + Serialize
 fn Engine::details_many_with<'a, I, Q: DetailQuestion + ?Sized>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Details>> where I: IntoIterator + 'a, I::Item: Evidence + Serialize
 fn Engine::filter<'a, I>(&'a self, &'a Question, I) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence

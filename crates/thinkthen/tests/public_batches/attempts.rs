@@ -41,9 +41,10 @@ fn a_terminal_batch_error_keeps_the_joined_late_reply_in_final_facts() {
         }
         events.lock().expect("attempts").push(event);
     };
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new()
             .batch(BatchSetting::Max)
             .observe_attempt(&observe),
@@ -125,9 +126,10 @@ fn attempt_callback_panic_waits_for_a_held_later_worker() {
         std::panic::resume_unwind(Box::new("attempt observer payload"));
     };
     let asked = question();
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new()
             .batch(BatchSetting::Max)
             .observe_attempt(&observe),
@@ -196,15 +198,16 @@ fn dropping_a_lazy_batch_drains_attempts_and_resumes_panic_after_join() {
         }
     };
     let asked = question();
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new()
             .batch(BatchSetting::Max)
             .observe_attempt(&observe),
     );
     assert_eq!(
-        rows.next().expect("first row").expect("answer").input(),
+        rows.next().expect("first row").expect("answer").original(),
         &"alpha"
     );
     let began = Instant::now();

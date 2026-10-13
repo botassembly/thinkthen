@@ -248,9 +248,13 @@ fn loaded(
     match kind {
         Some("filter") => {
             let rows = crate::api::rows(
-                engine, thinkthen::RequestFunction::Filter, asked.clone().into(),
-                crate::api::plain_records(texts.iter().copied()), singleton_requests(),
-            ).map_err(said)?;
+                engine,
+                thinkthen::RequestFunction::Filter,
+                asked.clone().into(),
+                crate::api::plain_records(texts.iter().copied()),
+                singleton_requests(),
+            )
+            .map_err(said)?;
             let kept: Result<Vec<_>, _> = crate::api::filter_rows(rows)
                 .ok_or("filter rows")?
                 .filter_map(|row| match row {
@@ -266,11 +270,15 @@ fn loaded(
             same("indexes", &kept, &success["operation"]["indexes"])
         }
         Some("decide_many") => {
-            let rows: Result<Vec<_>, _> = engine
-                .decide_many_with(&asked, texts.to_vec(), singleton_requests())
-                .collect();
+            let rows: Result<Vec<_>, _> = crate::api::pull_decisions(
+                engine,
+                &asked,
+                crate::api::plain_records(texts.to_vec()),
+                singleton_requests(),
+            )
+            .collect();
             let rows = rows.map_err(said)?;
-            let bare = rows.iter().map(|row| json!(decision(*row.value())));
+            let bare = rows.iter().map(|row| json!(decision(row.result().value())));
             let expected = success["answers"].as_array().into_iter().flatten();
             same(
                 "bare",

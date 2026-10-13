@@ -9,17 +9,15 @@ pub(crate) mod observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 pub(crate) mod annotation;
 
-use crate::core::{self, Value};
+use crate::core;
 use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
-use crate::public::batch::Batch;
-use crate::public::engine::{DecisionQuestion, Engine, Evidence};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::pull;
 use crate::public::question::Question;
 use crate::public::results::{
-    self, Answer, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation, Row,
+    self, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation,
 };
 
 /// One record's named values and bounded per-member observations.
@@ -27,10 +25,6 @@ pub(crate) struct Values {
     pub(crate) values: Vec<(String, core::AnnotatedValue)>,
     pub(crate) observed: Vec<(String, ObservedQuestion)>,
 }
-
-/// One record's answer and its probability of yes.
-type Decided = (Value, f64);
-type Pair<I, T> = fn(I, Decided) -> Result<Option<T>, Error>;
 
 pub(super) fn selected_batch(
     question: &Question,
@@ -82,66 +76,6 @@ pub(crate) fn selected_set_batch(
             wanted: "takes max or a whole number of at least 1",
         })
     })
-}
-
-impl Engine {
-    /// Each record with its answer, lazily, in input order.
-    pub fn decide_many<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.decide_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::decide_many`] under these controls.
-    pub fn decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Answer>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.try_decide_input_many_with(question, records.into_iter().map(Ok), options)
-    }
-
-    pub(crate) fn try_decisions<'a, I, R: super::InputEvidence + 'a, T: 'a>(
-        &self,
-        function: crate::InputFunction,
-        question: &Question,
-        records: I,
-        options: CallOptions<'a>,
-        pair: Pair<R, T>,
-    ) -> Result<Batch<'a, T>, Error>
-    where
-        I: IntoIterator<Item = Result<R, Error>> + 'a,
-    {
-        crate::public::request::pull::project(
-            self,
-            function,
-            question.clone(),
-            records
-                .into_iter()
-                .map(|row| row.map(crate::public::record_input::plain)),
-            options,
-            move |original, _, canonical| {
-                pair(
-                    original,
-                    (
-                        canonical.value().clone(),
-                        canonical.answer().yes().unwrap_or_default(),
-                    ),
-                )
-            },
-        )
-    }
 }
 
 /// One pipeline row as its judgment, after the observer sees its question

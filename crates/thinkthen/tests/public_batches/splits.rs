@@ -332,14 +332,18 @@ fn a_refused_request_and_both_halves_keep_exact_send_shares() {
         }
     };
     let question = question();
-    let mut rows =
-        engine.decide_many_with(&question, ["alpha", "beta"], packed().observe(&observe));
+    let mut rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        packed().observe(&observe),
+    );
     let values = rows
         .by_ref()
         .collect::<Result<Vec<_>, _>>()
         .expect("halves");
     assert_eq!(values.len(), 2);
-    assert!(values.iter().all(|row| *row.value() == Answer::Yes));
+    assert!(values.iter().all(|row| row.result().value() == Answer::Yes));
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
@@ -386,8 +390,12 @@ fn a_failed_left_half_prevents_a_right_send_and_row() {
         }
     };
     let question = question();
-    let mut rows =
-        engine.decide_many_with(&question, ["alpha", "beta"], packed().observe(&observe));
+    let mut rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        packed().observe(&observe),
+    );
     let error = rows
         .next()
         .expect("terminal error")

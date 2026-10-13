@@ -88,7 +88,12 @@ fn refused_parent_and_split_children_share_invocation_but_have_separate_prepared
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
     ));
-    let mut batch = engine.decide_many_with(&question, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     assert_eq!(
         batch.by_ref().collect::<Result<Vec<_>, _>>().unwrap().len(),
         2

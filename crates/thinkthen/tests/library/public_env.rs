@@ -304,10 +304,14 @@ fn batch(case: &str) -> Vec<String> {
         "batch-env" => {
             let engine = from_env().no_cache().build().expect("environment batch");
             let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["alpha", "beta"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("two rows");
+            let rows = crate::api::pull_decisions(
+                &engine,
+                &question,
+                crate::api::plain_records(["alpha", "beta"]),
+                thinkthen::CallOptions::new(),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .expect("two rows");
             vec![format!("rows {}", rows.len())]
         }
         "batch-override" => {
@@ -318,10 +322,14 @@ fn batch(case: &str) -> Vec<String> {
                 .build()
                 .expect("explicit batch overrides an invalid environment");
             let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["gamma"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("explicit batch row");
+            let rows = crate::api::pull_decisions(
+                &engine,
+                &question,
+                crate::api::plain_records(["gamma"]),
+                thinkthen::CallOptions::new(),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .expect("explicit batch row");
             vec![refused, format!("rows {}", rows.len())]
         }
         "batch-conflict" => {
@@ -331,10 +339,14 @@ fn batch(case: &str) -> Vec<String> {
                 .build()
                 .expect("explicit batch outranks environment max");
             let question = Question::decide("Refund?").unwrap().cut();
-            let rows = engine
-                .decide_many(&question, ["delta", "epsilon"])
-                .collect::<Result<Vec<_>, _>>()
-                .expect("two explicit batch rows");
+            let rows = crate::api::pull_decisions(
+                &engine,
+                &question,
+                crate::api::plain_records(["delta", "epsilon"]),
+                thinkthen::CallOptions::new(),
+            )
+            .collect::<Result<Vec<_>, _>>()
+            .expect("two explicit batch rows");
             vec![format!("rows {}", rows.len())]
         }
         _ => unreachable!("a batch case"),
@@ -379,10 +391,14 @@ fn overrides(argument: &str) -> Vec<String> {
         .build()
         .unwrap();
     let question = Question::decide("asks for a refund").unwrap().cut();
-    let kinds: Vec<String> = limited
-        .decide_many(&question, ["one", "two"])
-        .map(|row| row.map_or_else(|e| format!("{:?}", e.kind()), |_| "row".to_owned()))
-        .collect();
+    let kinds: Vec<String> = crate::api::pull_decisions(
+        &limited,
+        &question,
+        crate::api::plain_records(["one", "two"]),
+        thinkthen::CallOptions::new(),
+    )
+    .map(|row| row.map_or_else(|e| format!("{:?}", e.kind()), |_| "row".to_owned()))
+    .collect();
     let uncached = seed().default_cache().no_cache().build().unwrap();
     vec![
         ask(&moved.build().unwrap()),

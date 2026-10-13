@@ -127,7 +127,12 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     let engine = engine(listener.base());
     let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let asked = question();
-    let mut batch = engine.decide_many_with(&asked, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &asked,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     assert!(
         batch.facts().is_none(),
         "facts wait for the final ordered row"
@@ -141,15 +146,15 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     assert_eq!((facts.records(), facts.requests_sent()), (2, 2));
     assert_eq!(listener.count(), 2);
 
-    let thinkthen::LoadedQuestion::Question(saved) =
-        Question::from_json(r#"{"decide":"Refund?","batch":1}"#).expect("question file")
-    else {
-        panic!("a decide question with no band");
-    };
-    let decided = engine
-        .decide_many(&saved, ["gamma", "delta"])
-        .collect::<Result<Vec<_>, _>>()
-        .expect("question-file batch one");
+    let saved = Question::from_json(r#"{"decide":"Refund?","batch":1}"#).expect("question file");
+    let decided = crate::api::pull_decisions(
+        &engine,
+        &saved,
+        crate::api::plain_records(["gamma", "delta"]),
+        thinkthen::CallOptions::new(),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("question-file batch one");
     assert_eq!(decided.len(), 2);
     assert_eq!(listener.count(), 4);
 
@@ -160,45 +165,56 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
         .map(|builder| builder.batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)))
         .and_then(EngineBuilder::build)
         .expect("engine with a batch default");
-    let thinkthen::LoadedQuestion::Question(file_max) =
-        Question::from_json(r#"{"decide":"Refund?","batch":"max"}"#).expect("question file")
-    else {
-        panic!("a decide question with no band");
-    };
-    let decided = engine_default
-        .decide_many(&file_max, ["one", "two"])
-        .collect::<Result<Vec<_>, _>>()
-        .expect("engine batch one outranks file max");
+    let file_max =
+        Question::from_json(r#"{"decide":"Refund?","batch":"max"}"#).expect("question file");
+    let decided = crate::api::pull_decisions(
+        &engine_default,
+        &file_max,
+        crate::api::plain_records(["one", "two"]),
+        thinkthen::CallOptions::new(),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("engine batch one outranks file max");
     assert_eq!(decided.len(), 2);
     assert_eq!(listener.count(), 6);
 
-    let thinkthen::LoadedQuestion::Question(invalid_file_tier) =
-        Question::from_json(r#"{"decide":"Refund?","batch":"bad"}"#)
-            .expect("a lower-priority file tier")
-    else {
-        panic!("a decide question with no band");
-    };
-    let failed = engine.decide_many(&invalid_file_tier, ["epsilon"]).next();
-    assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
+    let invalid_file_tier = Question::from_json(r#"{"decide":"Refund?","batch":"bad"}"#)
+        .expect("a lower-priority file tier");
+    let failed = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        invalid_file_tier.clone().into(),
+        crate::api::plain_records(["epsilon"]),
+        thinkthen::CallOptions::new(),
+    );
+    assert!(failed.is_err_and(|error| error.kind() == ErrorKind::Usage));
     assert_eq!(
         listener.count(),
         6,
         "selected invalid file tier sends nothing"
     );
-    let decided = engine
-        .decide_many_with(&invalid_file_tier, ["epsilon"], options)
-        .collect::<Result<Vec<_>, _>>()
-        .expect("typed batch wins over the unused file tier");
+    let decided = crate::api::pull_decisions(
+        &engine,
+        &invalid_file_tier,
+        crate::api::plain_records(["epsilon"]),
+        options,
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("typed batch wins over the unused file tier");
     assert_eq!(decided.len(), 1);
     assert_eq!(listener.count(), 7);
 
     let blank = CallOptions::new()
         .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
         .context(" ");
-    let failed = engine
-        .decide_many_with(&question(), ["epsilon"], blank)
-        .next();
-    assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
+    let failed = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        question().into(),
+        crate::api::plain_records(["epsilon"]),
+        blank,
+    );
+    assert!(failed.is_err_and(|error| error.kind() == ErrorKind::Usage));
     assert_eq!(listener.count(), 7, "invalid context sends nothing");
 }
 
@@ -211,37 +227,41 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
     let engine = engine(listener.base());
     let asked = question();
     let texts: Vec<String> = (0..8).map(|at| format!("record {at}")).collect();
-    let rows: Vec<Vec<Row<&str, Answer>>> = thread::scope(|scope| {
-        let callers: Vec<_> = (0..2)
-            .map(|_| {
-                let records = texts.iter().map(String::as_str);
-                let (engine, asked) = (&engine, &asked);
-                scope.spawn(move || {
-                    let rows: Result<Vec<Row<&str, Answer>>, Error> = engine
-                        .decide_many_with(
+    let rows: Vec<Vec<thinkthen::CompleteRecord<&str, thinkthen::CompleteDecision>>> =
+        thread::scope(|scope| {
+            let callers: Vec<_> = (0..2)
+                .map(|_| {
+                    let records = texts.iter().map(String::as_str);
+                    let (engine, asked) = (&engine, &asked);
+                    scope.spawn(move || {
+                        let rows: Result<
+                            Vec<thinkthen::CompleteRecord<&str, thinkthen::CompleteDecision>>,
+                            Error,
+                        > = crate::api::pull_decisions(
+                            engine,
                             asked,
-                            records,
+                            crate::api::plain_records(records),
                             CallOptions::new()
                                 .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
                         )
                         .collect();
-                    rows
+                        rows
+                    })
                 })
-            })
-            .collect();
-        callers
-            .into_iter()
-            .map(|caller| caller.join().expect("caller").expect("rows"))
-            .collect()
-    });
+                .collect();
+            callers
+                .into_iter()
+                .map(|caller| caller.join().expect("caller").expect("rows"))
+                .collect()
+        });
     for rows in rows {
-        let inputs: Vec<&str> = rows.iter().map(|row| *row.input()).collect();
+        let inputs: Vec<&str> = rows.iter().map(|row| *row.original()).collect();
         assert_eq!(
             inputs,
             texts.iter().map(String::as_str).collect::<Vec<_>>(),
             "input order"
         );
-        assert!(rows.iter().all(|row| *row.value() == Answer::Yes));
+        assert!(rows.iter().all(|row| row.result().value() == Answer::Yes));
     }
     assert_eq!(listener.count(), 16);
     assert!(
@@ -292,11 +312,30 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         .and_then(QuestionSetBuilder::build)
         .expect("set");
 
-    let by_slice = keyed(engine.decide_many(&asked, texts), |row| {
-        let (text, answer) = row.into_parts();
-        (text.to_owned(), answer)
-    });
-    let by_cursor = keyed(engine.decide_many(&asked, cursor(&texts)), Row::into_parts);
+    let by_slice = keyed(
+        crate::api::pull_decisions(
+            &engine,
+            &asked,
+            crate::api::plain_records(texts),
+            thinkthen::CallOptions::new(),
+        ),
+        |row| {
+            let (text, answer) = row.into_parts();
+            (text.to_owned(), answer.value())
+        },
+    );
+    let by_cursor = keyed(
+        crate::api::pull_decisions(
+            &engine,
+            &asked,
+            crate::api::plain_records(cursor(&texts)),
+            thinkthen::CallOptions::new(),
+        ),
+        |row| {
+            let (input, result) = row.into_parts();
+            (input, result.value())
+        },
+    );
     assert_eq!(by_slice, by_cursor);
     let by_slice = keyed(engine.annotate(&set, texts), |row| {
         (row.input().to_string(), row.values().to_vec())

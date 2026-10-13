@@ -127,9 +127,10 @@ fn duplicate_records_share_one_question_key_in_one_literal_request() {
             ));
         }
     };
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["Come Together", "Because", "Come Together"],
+        crate::api::plain_records(["Come Together", "Because", "Come Together"]),
         CallOptions::new()
             .batch(BatchSetting::Records(
                 std::num::NonZeroUsize::new(3).expect("three"),
@@ -254,10 +255,14 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
         .expect("record")
         .build()
         .expect("engine");
-    let rows = recorded
-        .decide_many_with(&asked, ["alpha"], CallOptions::new().batch(setting))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("recorded");
+    let rows = crate::api::pull_decisions(
+        &recorded,
+        &asked,
+        crate::api::plain_records(["alpha"]),
+        CallOptions::new().batch(setting),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("recorded");
     assert_eq!(rows.len(), 1);
     let replay = Engine::builder()
         .base_url(listener.base())
@@ -266,7 +271,12 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
         .expect("replay")
         .build()
         .expect("engine");
-    let mut rows = replay.decide_many_with(&asked, ["alpha"], CallOptions::new().batch(setting));
+    let mut rows = crate::api::pull_decisions(
+        &replay,
+        &asked,
+        crate::api::plain_records(["alpha"]),
+        CallOptions::new().batch(setting),
+    );
     assert_eq!(
         rows.by_ref()
             .collect::<Result<Vec<_>, _>>()
@@ -282,15 +292,15 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
         )),
         Some((0, 0, None))
     );
-    let missed = replay
-        .decide_many_with(
-            &asked,
-            ["alpha"],
-            CallOptions::new().batch(setting).context("changed"),
-        )
-        .next()
-        .expect("strict replay miss")
-        .expect_err("changed context missed the recorded question");
+    let missed = crate::api::pull_decisions(
+        &replay,
+        &asked,
+        crate::api::plain_records(["alpha"]),
+        CallOptions::new().batch(setting).context("changed"),
+    )
+    .next()
+    .expect("strict replay miss")
+    .expect_err("changed context missed the recorded question");
     assert_eq!(missed.kind(), ErrorKind::Local);
     assert_eq!(
         missed.to_string(),
@@ -315,25 +325,25 @@ fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     let asked = question();
     let oversized = "x".repeat(600);
     let one = BatchSetting::Records(std::num::NonZeroUsize::MIN);
-    let early = engine
-        .decide_many_with(
-            &asked,
-            ["short"],
-            CallOptions::new().batch(one).context(&oversized),
-        )
-        .next()
-        .expect("early refusal")
-        .expect_err("context is too large");
+    let early = crate::api::rows(
+        &engine,
+        thinkthen::RequestFunction::Decide,
+        asked.clone().into(),
+        crate::api::plain_records(["short"]),
+        CallOptions::new().batch(one).context(&oversized),
+    )
+    .expect_err("context is too large");
     assert_eq!(early.kind(), ErrorKind::Usage);
     assert_eq!(listener.count(), 0);
 
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["short", oversized.as_str()],
+        crate::api::plain_records(["short", oversized.as_str()]),
         CallOptions::new().batch(one),
     );
     assert_eq!(
-        rows.next().expect("prefix").expect("short row").input(),
+        rows.next().expect("prefix").expect("short row").original(),
         &"short"
     );
     let late = rows.next().expect("later refusal").expect_err("long row");

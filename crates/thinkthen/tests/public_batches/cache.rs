@@ -66,7 +66,12 @@ fn a_longer_batch_sends_only_the_new_records_questions() {
         .expect("engine");
     let asked = question();
     let facts = |count: usize| {
-        let mut rows = engine.decide_many(&asked, texts(count));
+        let mut rows = crate::api::pull_decisions(
+            &engine,
+            &asked,
+            crate::api::plain_records(texts(count)),
+            thinkthen::CallOptions::new(),
+        );
         let answered = rows.by_ref().filter(Result::is_ok).count();
         let facts = rows.facts().expect("final facts");
         (
@@ -130,17 +135,22 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
     .expect("listener");
     let engine = engine(listener.base());
     let asked = question();
-    let rows = engine
-        .decide_many_with(
-            &asked,
-            texts(8),
-            CallOptions::new().batch(BatchSetting::Records(
-                std::num::NonZeroUsize::new(2).expect("two"),
-            )),
-        )
-        .map(|row| row.map(Row::into_parts))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("rows");
+    let rows = crate::api::pull_decisions(
+        &engine,
+        &asked,
+        crate::api::plain_records(texts(8)),
+        CallOptions::new().batch(BatchSetting::Records(
+            std::num::NonZeroUsize::new(2).expect("two"),
+        )),
+    )
+    .map(|row| {
+        row.map(|row| {
+            let (input, result) = row.into_parts();
+            (input, result.value())
+        })
+    })
+    .collect::<Result<Vec<_>, _>>()
+    .expect("rows");
     let expected: Vec<(String, Answer)> = texts(8)
         .into_iter()
         .enumerate()

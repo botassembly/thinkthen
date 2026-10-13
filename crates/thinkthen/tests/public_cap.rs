@@ -74,14 +74,14 @@ fn held_request_exhausts_one_limit_while_raised_and_unset_engines_keep_counting(
     );
     assert_eq!(later_listener.count(), 2);
     let next = build(later_listener.base(), Some(4));
-    let later = next
-        .decide_many_with(
-            &question,
-            ["first of two", "second of two"],
-            CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .expect_err("the second ordinary request crosses this engine's limit");
+    let later = crate::api::pull_decisions(
+        &next,
+        &question,
+        crate::api::plain_records(["first of two", "second of two"]),
+        CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect_err("the second ordinary request crosses this engine's limit");
     assert_eq!(later.kind(), ErrorKind::Usage);
     assert_eq!(
         later.send_budget_denial(),

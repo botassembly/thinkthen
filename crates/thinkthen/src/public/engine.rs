@@ -59,7 +59,7 @@ pub(crate) trait Sealed {
     fn question(&self) -> &Question;
 }
 
-/// A question `decide` and `decide_many` accept.
+/// A question `decide` accepts.
 #[expect(
     private_bounds,
     reason = "the sealed bound keeps the question kinds closed"
@@ -127,8 +127,6 @@ pub(crate) fn evidence(text: &str) -> Result<core::Evidence, Error> {
 pub(crate) fn evidence_error(_: core::BlankTextError) -> Error {
     Error::usage("evidence is text, not white space")
 }
-
-pub(super) const DECISIONS: &[Kind] = &[Kind::Decide, Kind::Banded];
 
 impl Engine {
     /// Check a zero-based record ordinal against this engine's call admission cap.

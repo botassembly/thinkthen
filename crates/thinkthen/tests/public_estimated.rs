@@ -198,14 +198,14 @@ fn final_body_charge_selects_each_limit_and_distinguishes_later_and_retry_denial
     assert_eq!(listener.count(), 2, "denial sent nothing");
 
     let batch_engine = build(Some(charge * 3));
-    let later = batch_engine
-        .decide_many_with(
-            &question,
-            ["item red", "item blu"],
-            CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN)),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .expect_err("second request exceeds limit");
+    let later = crate::api::pull_decisions(
+        &batch_engine,
+        &question,
+        crate::api::plain_records(["item red", "item blu"]),
+        CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN)),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect_err("second request exceeds limit");
     assert_eq!(
         later.estimated_input_denial(),
         Some(EstimatedInputDenial::AdditionalRequest { limit: charge * 3 })

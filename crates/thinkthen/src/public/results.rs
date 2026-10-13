@@ -408,7 +408,7 @@ macro_rules! withheld_debug {
     };
 }
 
-/// One `decide_many` record and its answer.
+/// One record and its answer.
 #[derive(Clone, PartialEq)]
 pub struct Row<T, V> {
     input: T,
@@ -423,6 +423,7 @@ impl<T, V> fmt::Debug for Row<T, V> {
 }
 
 impl<T, V> Row<T, V> {
+    #[cfg(any(test, feature = "polars"))]
     pub(crate) const fn new(input: T, value: V, probability: f64) -> Self {
         Self {
             input,

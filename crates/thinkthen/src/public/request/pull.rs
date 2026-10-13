@@ -218,6 +218,7 @@ where
 }
 
 /// Compatibility rows project the same admitted Request execution and scheduler.
+#[cfg(any(test, feature = "polars"))]
 pub(in crate::public) fn project<'a, I, T, R: 'a>(
     engine: &Engine,
     function: InputFunction,
