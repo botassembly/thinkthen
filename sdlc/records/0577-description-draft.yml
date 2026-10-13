@@ -1,0 +1,28 @@
+# Draft for approval. Replace both ref placeholders with the reviewed 0.2 candidate.
+extension:
+  name: thinkthen
+  description: Ask questions about text in SQL and return answers, labels or scores.
+  version: '0.2.0'
+  language: C++
+  build: cmake
+  license: MIT
+  maintainers:
+    - imaurer
+  requires_toolchains: rust
+  excluded_platforms: "windows_amd64;windows_amd64_mingw;windows_arm64;wasm_mvp;wasm_eh;wasm_threads"
+
+repo:
+  github: botassembly/thinkthen
+  ref: '<reviewed-0.2-candidate-commit>'
+  ref_next: '<reviewed-0.2-candidate-commit>'
+
+docs:
+  hello_world: |
+    -- Preview one request without a key or a model call.
+    SELECT (thinkthen_plan('Does the writer ask for a refund?', '{"7":"Please refund my order."}', '{}')).records;
+  extended_description: |
+    ThinkThen answers questions about text in SQL. Use it to find messages that ask for a refund, label support requests or score answers against a rubric.
+
+    The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use on your own machine.
+
+    The example previews one request and makes no model call. To judge text, select a backend and model first. A hosted call sends the question and text to that backend. See https://thinkthen.dev/install/backends/ for setup and https://github.com/botassembly/thinkthen/tree/main/databases/duckdb for the SQL reference.
