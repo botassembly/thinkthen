@@ -154,6 +154,13 @@ unset RUBYLIB
   abort "loaded outside gem" unless ours.any? && ours.all? { |p| p.start_with?(ARGV[0]) }' "$scratch/gems/gems/"
 THINKTHEN_TEST_LIBRARY=$scratch/gems/gems/$(basename "$THINKTHEN_ARTIFACT" .gem)/lib
 export THINKTHEN_TEST_LIBRARY
+# Validate the shipped contract, not signatures from the source checkout.
+"$RUBY" -rrubygems/package -e 'package = Gem::Package.new(ARGV[1]).spec
+  expected = Dir.glob("sig/**/*.rbs", base: ARGV[0]).sort
+  abort "native gem signature inventory differs from manifest" unless !expected.empty? && expected == package.files.grep(/\.rbs$/).sort
+  expected.each { |path| abort "installed signature is absent" unless File.file?(File.join(ARGV[2], path)) }' \
+  "$repo/libraries/ruby" "$THINKTHEN_ARTIFACT" "${THINKTHEN_TEST_LIBRARY%/lib}"
+"$prefix/bin/rbs" _3.8.0_ -I "${THINKTHEN_TEST_LIBRARY%/lib}/sig" validate
 if [ -n "${THINKTHEN_COVERAGE_OBJECT:-}" ]; then
   extension=$("$RUBY" -e 'print RbConfig::CONFIG["DLEXT"]')
   cp "$THINKTHEN_TEST_LIBRARY/thinkthen/thinkthen.$extension" "$THINKTHEN_COVERAGE_OBJECT"

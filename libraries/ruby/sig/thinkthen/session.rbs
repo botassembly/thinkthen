@@ -36,40 +36,19 @@ module ThinkThen
   class Client
     FUNCTIONS: Array[String]
 
-    # The named calls, in FUNCTIONS order. Each takes a question (literal
-    # text, an ordinary hash holding the native definition, or a selector),
-    # one record, an Array or Enumerable of them, a Source, or an Item.
-    def decide: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def choose: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def tag: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def score: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def filter: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def rank: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def find: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def annotate: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def recognize: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
-    def relate: (String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Results::Completed
+    # Named calls and schema-defined keyword controls are generated in
+    # results_generated.rbs from the canonical request grammar.
 
-    def initialize: (**untyped settings) -> void
-
-    def self.open: (**untyped settings) { (Client client) -> untyped } -> untyped
-                 | (**untyped settings) -> Client
     # Close the owner, keeping any exception already in flight.
     def self.cleanup: (Client | Client::Operation owner) -> void
     def self.question_file: (String path) -> Client::Question
     def self.question_name: (String name) -> Client::Question
     def self.question_reference: (String reference) -> Client::Question
-    def self.files: (untyped paths, ?framing: String?, ?media: String, **untyped reading) -> Client::Source
-    def self.item: (untyped value, **untyped fields) -> Client::Item
     # Native JSON of a value; the native extension itself reads this.
     def self.dump: (untyped value) -> String
     def self.original: (untyped value) -> Hash[Symbol, untyped]
     def self.descriptor: (untyped value) -> Hash[Symbol, untyped]
 
-    # The native preview of one call, without sends, keys or cache reads.
-    def plan: (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, **untyped options) -> Hash[String, untyped]
-    def start: (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) { (Client::Operation operation) -> untyped } -> untyped
-             | (String verb, String | Hash[untyped, untyped] | Client::Question question, untyped input, ?cancel: Cancel?, **untyped options) -> Client::Operation
     def close: () -> nil
     def inspect: () -> String
     # The engine's count-only totals since it was built.
