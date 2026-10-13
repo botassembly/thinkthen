@@ -4,8 +4,8 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
     AdmittedRequest, CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request,
-    RequestArguments,  RequestDefinition, RequestEnvironment, RequestFeed,
-    RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
+    RequestArguments, RequestDefinition, RequestEnvironment, RequestFeed, RequestInput,
+    RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
 };
 
 pub fn run(
@@ -125,8 +125,7 @@ pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, 
 fn render(outcome: RequestOutcome) -> Result<Value, Error> {
     match outcome {
         RequestOutcome::Complete(call) => {
-            let mut value =
-                serde_json::to_value(call.complete().ok_or_else(defect)?).map_err(|_| defect())?;
+            let mut value = serde_json::to_value(&call).map_err(|_| defect())?;
             supplement(&mut value, call.value())?;
             Ok(value)
         }
