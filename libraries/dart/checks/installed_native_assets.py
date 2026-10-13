@@ -17,9 +17,12 @@ sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from usage import run_usage
 from native_assets import configure, package_members
+from fixture_types import write as write_fixture_types
 
 
 def run(command, cwd, env, expected=None, timeout=180):
+    if len(command) > 1 and command[1] == "build":
+        command = ["/usr/bin/flock", "-w", "180", "-o", os.environ.get("THINKTHEN_HEAVY_LOCK", "/tmp/thinkthen-heavy.lock"), *command]
     result = subprocess.run(command, cwd=cwd, env=env, text=True, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT, timeout=timeout)
     if expected:
@@ -129,6 +132,8 @@ def main():
     consumer = scratch / 'consumer'
     (consumer / 'bin').mkdir(parents=True)
     shutil.copytree(ROOT / 'libraries/dart/checks/session_consumer/bin', consumer / 'bin', dirs_exist_ok=True)
+    shutil.copyfile(packages / 'dart/example/main.dart', consumer / 'bin/shipped_example.dart')
+    write_fixture_types(consumer / 'bin/fixture_values_generated.dart')
     data_case = consumer / 'bin/data_cases.dart'
     data_case.write_text(data_case.read_text().replace('__CANONICAL_IMAGE__', base64.b64encode((ROOT / 'specification/fixtures/images/red.png').read_bytes()).decode()))
     spec = ("name: installed_native_assets\npublish_to: none\nenvironment:\n  sdk: '>=3.10.0 <4.0.0'\ndependencies:\n  thinkthen_dart:\n    path: ../packages/dart\nhooks:\n  user_defines:\n    thinkthen_dart:\n      offline: true\n      asset_cache: ../packages/dart/checks/scratch/native-assets/\n")
@@ -160,6 +165,7 @@ def main():
         cached.with_suffix('.held').replace(cached)
         run([str(dart), 'run', 'bin/main.dart'], consumer, env)
         run([str(dart), 'run', 'bin/main.dart', 'stream-regressions'], consumer, env)
+        run([str(dart), 'run', 'bin/main.dart', 'examples'], consumer, env)
         # The same installed consumer owns tiny usage cases; it runs one local call.
         for mode in ('written', 'failed', 'disabled'):
             usage_env = dict(env, XDG_STATE_HOME=str(scratch / ('usage-' + mode)))
@@ -231,11 +237,14 @@ def main():
     (app / 'lib').mkdir()
     shutil.copyfile(consumer / 'bin/stream_cases.dart', app / 'lib/stream_cases.dart')
     shutil.copyfile(consumer / 'bin/data_cases.dart', app / 'lib/data_cases.dart')
+    shutil.copyfile(consumer / 'bin/fixture_values.dart', app / 'lib/fixture_values.dart')
+    write_fixture_types(app / 'lib/fixture_values_generated.dart', 'flutter')
     for streams in [app / 'lib/stream_cases.dart', app / 'lib/data_cases.dart']:
         streams.write_text(streams.read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart'))
     source = (consumer / 'bin/main.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart').replace('(dart)', '(flutter)')
     source = source.replace('Future<void> main(List<String> args) async {', 'Future<void> exercise([List<String> args = const []]) async {')
-    source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
+    shutil.copyfile(packages / 'flutter/example/lib/main.dart', app / 'lib/shipped_example.dart')
+    source += '\nFuture<void> main() async {\n  try { await exercise(); await exercise(["stream-regressions"]); await exercise(["examples"]); exit(0); } catch (error, stack) { stderr.writeln("$error\\n$stack"); exit(1); }\n}\n'
     (app / 'lib/main.dart').write_text(source)
     if full:
         parity_source = (consumer / 'bin/parity_consumer.dart').read_text().replace('package:thinkthen_dart/thinkthen_dart.dart', 'package:thinkthen_flutter/thinkthen_flutter.dart')

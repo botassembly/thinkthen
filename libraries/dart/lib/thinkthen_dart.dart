@@ -7,17 +7,14 @@ import 'dart:ffi';
 import 'dart:isolate';
 import 'dart:io' show IOException;
 import 'dart:typed_data';
-import 'src/session/abi_generated.dart';
-import 'src/session/inputs_generated.dart';
-import 'src/session/results_generated.dart';
-import 'src/session/native.dart';
-import 'src/session/values.dart';
-export 'src/session/native.dart' show NativeFailure;
-export 'src/session/values.dart' show Presence;
-export 'src/session/inputs_generated.dart';
-export 'src/session/results_generated.dart';
-export 'src/session/abi_generated.dart'
-    show NativeErrorKind, UsagePersistenceState;
+import 'package:ffi/ffi.dart';
+part 'src/session/abi_generated.dart';
+part 'src/session/inputs_generated.dart';
+part 'src/session/results_generated.dart';
+part 'src/session/native.dart';
+part 'src/session/values.dart';
 part 'src/session/client.dart';
+
+part 'src/session/calls_generated.dart';
 
 const _surfaceToken = 'dart';
