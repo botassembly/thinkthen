@@ -576,20 +576,28 @@ def main():
         definitions = prepare(graph(json.loads(args.schema.read_text()), cpp.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         if args.inputs:
+            from csharp import enum_values
             schema = json.loads((ROOT / "specification/request.schema.json").read_text())
             schema["$defs"]["Request"] = {key: value for key, value in schema.items() if key != "$defs"}
-            result = cpp.input_render(prepare(graph(schema, ("Request", "RequestSessionDescriptor"))))
-            output = output_path(ROOT, 'cpp', 'inputs_generated.hpp')
+            abi_spec = importlib.util.spec_from_file_location('cpp_native_abi', ROOT / 'sdlc/scripts/check-c-exports.py')
+            abi = importlib.util.module_from_spec(abi_spec)
+            abi_spec.loader.exec_module(abi)
+            functions = abi.declarations(ROOT / 'libraries/c/include/thinkthen.h')['functions']
+            outputs = {
+                'inputs_generated.hpp': cpp.input_render(prepare(graph(schema, ("Request", "RequestSessionDescriptor", "EngineSettings")))),
+                'calls_generated.hpp': cpp.named_calls(enum_values(schema['$defs']['RequestFunction']), functions),
+            }
         else:
-            result = cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")
-            output = output_path(ROOT, 'cpp', 'results_generated.hpp')
-        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
-        if args.check:
-            if not output.exists() or output.read_text() != result:
-                print("generated C++ results differ", file=sys.stderr)
-                return 1
-        else:
-            output.write_text(result)
+            outputs = {'results_generated.hpp': cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")}
+        for filename, result in outputs.items():
+            output = output_path(ROOT, 'cpp', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
+            if args.check:
+                if not output.exists() or output.read_text() != result:
+                    print(f"generated C++ declarations differ: {output}", file=sys.stderr)
+                    return 1
+            else:
+                output.write_text(result)
         return 0
     if args.target == "php":
         if args.bridge:
