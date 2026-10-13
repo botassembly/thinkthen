@@ -1,3 +1,5 @@
+from native import selected_header
+from registry import output_path
 """Generate Ada transport records from the shared graph and C layouts from its header."""
 import json
 import re
@@ -151,7 +153,7 @@ def header(root, env):
     with tempfile.TemporaryDirectory(prefix='thinkthen-ada-header-') as temporary:
         work = Path(temporary)
         # Use a relative canonical basename so no checkout path reaches output.
-        (work / 'thinkthen.h').write_bytes((root / 'libraries/c/include/thinkthen.h').read_bytes())
+        (work / 'thinkthen.h').write_text(selected_header((root / 'libraries/c/include/thinkthen.h').read_text(), 'ada'))
         subprocess.run(['gcc', '-c', '-fdump-ada-spec', 'thinkthen.h'], cwd=work,
                        env=env, check=True, capture_output=True)
         source = (work / 'thinkthen_h.ads').read_text()
@@ -174,7 +176,7 @@ def generate(root, graph, prepare, env, check):
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
                   'with Thinkthen.Requests; use Thinkthen.Requests;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['package body Thinkthen.Sessions.Calls is']
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'package body Thinkthen.Sessions.Calls is']
     for i, arm in enumerate(schema['$defs']['RequestCall']['oneOf']):
         function = arm['properties']['function']['const']
         typename = identifier('RequestCall_' + function)
@@ -190,7 +192,7 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-requests.ads': spec, 'thinkthen-requests.adb': body,
                'thinkthen_session_c.ads': header(root, env)}
     for name, content in outputs.items():
-        path = root / 'libraries/ada/src' / name
+        path = output_path(root, 'ada', name)
         if check:
             if not path.exists() or path.read_text() != content:
                 raise SystemExit(f'generated Ada declaration differs: {path}')
