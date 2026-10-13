@@ -21,6 +21,15 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
+def stop_backend(backend):
+    backend.terminate()
+    try:
+        backend.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        backend.kill()
+        backend.wait()
+
+
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
@@ -31,7 +40,7 @@ if os.environ.get("THINKTHEN_BACKEND_BIN"):
     try:
         port = int(read_process_line(backend.stdout))
     except BaseException:
-        shared.stop_backend(backend)
+        stop_backend(backend)
         raise
 else:
     backend, port = shared.start_backend()
@@ -253,7 +262,7 @@ try:
         print("C# named native: ten functions, typed fields and physical file locations PASS",flush=True)
 
 finally:
-    shared.stop_backend(backend)
+    stop_backend(backend)
 print(f"C# J1 public binding: {len(corpus['cases'])} schema cases, {count} typed runtime cases, plan P1, limits and annotate fields passed; 14 frozen C JSON syntax/control cases retain schema validation")
 
 raise SystemExit(native_parity("csharp", [str(resolve_dotnet()), str(run)]))

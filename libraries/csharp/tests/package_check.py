@@ -11,9 +11,13 @@ from pathlib import Path
 import re
 import tarfile
 import zipfile
+import xml.etree.ElementTree as ET
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 ROOT = Path(__file__).resolve().parents[1]
+PROJECT = ET.parse(ROOT / "ThinkThen.csproj").getroot()
+README = ROOT / next(member.attrib["Include"] for member in PROJECT.findall("./ItemGroup/None")
+                     if member.attrib.get("Pack") == "true" and member.attrib.get("PackagePath") == PROJECT.findtext("./PropertyGroup/PackageReadmeFile"))
 sys.path.insert(0, str(ROOT.parents[1] / 'conformance/children'))
 from native_guard import normalized_bytes
 VERSION = re.search(r"<Version>([^<]+)</Version>", (ROOT / "ThinkThen.csproj").read_text())[1]
@@ -44,7 +48,7 @@ def inspect(header, package, native, expected=None):
         assert {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE"} <= members
         assert bundle.read('runtimes/linux-x64/native/libthinkthen.so') == NATIVE.read_bytes(), 'tampered packaged native asset'
         assert b"<id>Botassembly.ThinkThen</id>" in bundle.read("Botassembly.ThinkThen.nuspec")
-        assert bundle.read("README.md") == (ROOT / "README.md").read_bytes(), "stale package README"
+        assert bundle.read("README.md") == README.read_bytes(), "stale package README"
         for name in members:
             safe(name, name.encode() + bundle.read(name))
     with tarfile.open(fileobj=io.BytesIO(native), mode="r:gz") as bundle:
