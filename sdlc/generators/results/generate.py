@@ -10,7 +10,7 @@ import subprocess
 import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
-from native import selected_functions
+from native import selected_functions, immediate_schema
 from formatting import format_source
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -307,8 +307,8 @@ def generated(schema, language="csharp"):
         spec = importlib.util.spec_from_file_location("result_c", path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        definitions = prepare(graph(schema, ("completesessionPacket",)))
-        selected, pending = {}, ["completesessionPacket"]
+        definitions = prepare(graph(immediate_schema(schema), ("completesessionPacket", "completeImmediateFacts")))
+        selected, pending = {}, ["completesessionPacket", "completeImmediateFacts"]
         while pending:
             name = pending.pop()
             if name in selected:
@@ -440,7 +440,7 @@ def main():
         emitter = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(emitter)
         from registry import paths
-        for module, output in zip(('engine', 'session', 'typed'), paths('c', 'operations')[:3]):
+        for module, output in zip(('engine', 'session', 'typed', 'question'), (*paths('c', 'operations')[:3], paths('c', 'operations')[5])):
             result = emitter.render([operation for operation in OPERATIONS if operation.module == module], STATUSES if module == 'session' else (), PROJECTIONS if module == 'session' else ())
             output = ROOT / output
             result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))

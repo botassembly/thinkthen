@@ -11,7 +11,7 @@ def abi_type(value):
                'NamedRequestV1': 'crate::ffi::session::NamedRequestV1',
                'thinkthen_complete_utf8_v1': 'crate::session::views::thinkthen_complete_utf8_v1'}
     value = re.sub(r'(?<!:)\b(?:EngineHandle|SessionHandle|SessionResultHandle|c_char|NamedRequestV1|thinkthen_complete_utf8_v1)\b', lambda match: aliases[match[0]], value)
-    return value.replace('carriers::', 'super::carriers::')
+    return re.sub(r'(?<!:)\bcarriers::', 'super::carriers::', value)
 
 
 
@@ -19,7 +19,7 @@ def render(operations, statuses=(), projections=()):
     lines = ['//! Generated native operation transport. Do not edit.',
              '#![allow(unsafe_code, reason = "foreign slots follow the operation ownership contract")]',
              '#![deny(unsafe_op_in_unsafe_fn)]', 'use crate::failures;']
-    if any(operation.diagnostic in ('session_call', 'session_native_call') for operation in operations):
+    if any(operation.diagnostic in ('session_call', 'session_native_call', 'plain_call') for operation in operations):
         lines.append('use thinkthen::ErrorKind;')
     for name, value, documentation in statuses:
         lines.extend(['/// ' + documentation, 'pub const ' + name + ': u32 = ' + str(value) + ';'])
@@ -80,8 +80,18 @@ def render(operations, statuses=(), projections=()):
                 lines.append('        ' + call)
             lines.extend(['    })', '}', ''])
             continue
-        lines.append('    failures::' + operation.diagnostic + '(|| {')
-        usage = 'ErrorKind::Usage' + ('.into()' if operation.diagnostic == 'session_native_call' else '')
+        if operation.diagnostic in ('engine_call', 'plain_call'):
+            if operation.diagnostic == 'engine_call':
+                lines.extend(['    // SAFETY: the caller retains its nullable engine throughout admission.',
+                    '    let Some(held) = (unsafe { crate::ffi::held(engine) }) else { return failures::USAGE; };',
+                    '    failures::guard(Some(held), failures::DEFECT, || {'])
+            else:
+                lines.append('    failures::guard(None, failures::DEFECT, || {')
+            lines.append('        let outcome = (|| {')
+        else:
+            lines.append('    failures::' + operation.diagnostic + '(|| {')
+        usage = ('failures::Failure::usage("a null required pointer")' if operation.diagnostic == 'engine_call' else
+                 'ErrorKind::Usage' + ('.into()' if operation.diagnostic == 'session_native_call' else ''))
         for slot in operation.outputs:
             lines.extend(['        if ' + slot + '.is_null() {',
                           '            return Err(' + usage + ');', '        }'])
@@ -107,5 +117,12 @@ def render(operations, statuses=(), projections=()):
         lines.append('        let ' + binding + ' = ' + result + '?;')
         lines.extend(['        // SAFETY: every slot was validated before the native operation; success publishes once.', '        unsafe {'])
         lines.extend('            *' + slot + ' = value_' + slot + ';' for slot in operation.outputs)
-        lines.extend(['        }', '        Ok(())', '    })', '}', ''])
+        lines.extend(['        }', '        Ok(())'])
+        if operation.diagnostic in ('engine_call', 'plain_call'):
+            lines.append('        })();')
+            outcome = 'held.settle(outcome)' if operation.diagnostic == 'engine_call' else 'outcome'
+            error = 'code' if operation.diagnostic == 'engine_call' else '_error'
+            code = 'code' if operation.diagnostic == 'engine_call' else 'failures::USAGE'
+            lines.append('        match ' + outcome + ' { Ok(()) => failures::OK, Err(' + error + ') => ' + code + ' }')
+        lines.extend(['    })', '}', ''])
     return '\n'.join(lines)

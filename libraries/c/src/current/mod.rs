@@ -15,24 +15,13 @@ impl fmt::Debug for QuestionHandle {
     }
 }
 
-/// Owned view allocations. Moving the owner cannot move their bytes.
-#[derive(Default)]
-pub(crate) struct Storage(Vec<Box<dyn std::any::Any>>);
+pub(crate) use crate::session::views::Storage;
 impl Storage {
-    pub(crate) fn array<T: 'static>(&mut self, values: Vec<T>) -> (*const T, usize) {
-        if values.is_empty() {
-            return (std::ptr::null(), 0);
-        }
-        let values = values.into_boxed_slice();
-        let pair = (values.as_ptr(), values.len());
-        self.0.push(Box::new(values));
-        pair
-    }
     pub(crate) fn string(&mut self, value: &str) -> StringV1 {
-        let (data, len) = self.array(value.as_bytes().to_vec());
+        let value = self.text(value);
         StringV1 {
-            data: data.cast(),
-            len,
+            data: value.data,
+            len: value.len,
         }
     }
     pub(crate) fn optional_string(&mut self, value: Option<&str>) -> OptionalStringV1 {
@@ -43,7 +32,7 @@ impl Storage {
     }
     pub(crate) fn strings(&mut self, strings: &[String]) -> StringsV1 {
         let strings = strings.iter().map(|string| self.string(string)).collect();
-        let (data, len) = self.array(strings);
+        let (data, len) = self.slice(strings);
         StringsV1 { data, len }
     }
 }

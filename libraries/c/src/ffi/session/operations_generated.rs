@@ -53,6 +53,16 @@ pub(crate) fn ready_status(value: thinkthen::RequestSessionReady) -> u32 {
         thinkthen::RequestSessionReady::Timeout => THINKTHEN_SESSION_READY_TIMEOUT_V1,
     }
 }
+/// Borrow the calling thread immediate session failure, or NULL before failure.
+/// Success, getters, engine calls and terminal packets preserve this independent slot.
+/// The root, safe message and every typed optional fact remain valid until the next
+/// immediate session failure on this thread or thread exit.
+#[unsafe(no_mangle)]
+pub extern "C" fn thinkthen_session_error_view()
+-> *const crate::session::views::thinkthen_error_view_v1 {
+    failures::session_guard(std::ptr::null(), failures::session_view)
+}
+
 /// Block for requested readiness without consuming a packet or joining provider
 /// work. timeout_ms is the maximum condition wait in milliseconds; zero checks
 /// readiness immediately. RESULT ignores input room; INPUT also watches intake;

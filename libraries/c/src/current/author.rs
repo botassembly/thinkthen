@@ -82,7 +82,7 @@ impl Storage {
                         },
                     })
                     .collect();
-                let (data, len) = self.array(properties);
+                let (data, len) = self.slice(properties);
                 InputDeclarationV1 {
                     kind: abi::DECLARATION_OBJECT_V1,
                     properties: InputPropertiesV1 { data, len },
