@@ -37,12 +37,14 @@ The [specification](https://github.com/botassembly/thinkthen/blob/main/specifica
 
 ## Why not call the model yourself?
 
-- You write the question in plain words. Jev needs no labelled data ahead of time. [decide](https://thinkthen.dev/functions/decide/) shows one question and its answer.
-- Jev is fast and cheap. On 2026-10-01 a call to Jev through a library took a median of 138 ms. ThinkThen's own work took about 2 ms of it. [Overhead](https://thinkthen.dev/learn/overhead/) gives every measurement and the published price.
-- ThinkThen batches for you. Hand it a list or a stream of records, and it packs the records into as few requests as the batch settings allow. See [Functional patterns](https://thinkthen.dev/learn/functional/).
-- ThinkThen caches and replays. A repeated question can reuse its saved answer. A test replays recorded answers with no key and no network. See [Caching and replay](https://thinkthen.dev/learn/caching/).
-- You can swap the model and the provider. One `--backend` option points the same call at TypeSafe, another hosted vendor, or a model on your own machine. See [Backends](https://thinkthen.dev/models/).
-- ThinkThen is yours under the [MIT license](https://github.com/botassembly/thinkthen/blob/main/LICENSE). It runs from the command line and 24 bindings, 3 of them databases. Your questions live in your own code and SQL, not in one vendor's database function. See [Install](https://thinkthen.dev/install/).
+- Your code can branch on the answer. `decide` exits 0 for yes, 1 for no and 3 for not sure, and a failure never looks like no. See [How answers work](https://thinkthen.dev/functions/answers/).
+- You pay once. 306 song titles went out in one request: [11,468 input tokens instead of 88,933](sdlc/planning/adr/0055-decide-filter-and-rank-batches-send-each-record-once.md) one at a time. Each question keeps its own saved answer, however records group. See [Pay once](https://thinkthen.dev/start/pay-once/).
+- Tests replay saved answers with no key and no network. See [Replay in tests](https://thinkthen.dev/start/replay/).
+- You tune for free. Change the threshold on saved answers with zero new calls, and let `runs audit` pick it from your own labels. See [Tune for free](https://thinkthen.dev/start/tune/).
+- `--plan` prints the first request and counts every request and its expected tokens. It sends nothing. See [See before you send](https://thinkthen.dev/start/plan/).
+- One option switches the model or the provider: TypeSafe, another hosted vendor, or a model on your own machine. See [Models](https://thinkthen.dev/models/).
+- The same code runs from the command line, 21 languages and 3 databases. In a library, ThinkThen's own work takes about 2 ms of a 138 ms call. See [Speed](https://thinkthen.dev/start/speed/), [Languages](https://thinkthen.dev/languages/) and [Databases](https://thinkthen.dev/databases/).
+- ThinkThen is yours under the [MIT license](https://github.com/botassembly/thinkthen/blob/main/LICENSE). Your questions live in your own code and SQL, not in one vendor's database function.
 
 ## Install
 
@@ -56,9 +58,9 @@ On a Mac, Homebrew works too:
 brew install botassembly/thinkthen/thinkthen
 ```
 
-With Rust installed, `cargo install thinkthen` builds the command from crates.io. [Install](https://thinkthen.dev/install/) covers every other route and each of the 24 bindings.
+With Rust installed, `cargo install thinkthen` builds the command from crates.io. [Start](https://thinkthen.dev/start/) covers every other route, and [Languages](https://thinkthen.dev/languages/) and [Databases](https://thinkthen.dev/databases/) cover each of the 24 bindings.
 
-A live run needs a backend. A hosted backend needs a key. [Backends](https://thinkthen.dev/models/) shows how to get a TypeSafe key or point ThinkThen at another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
+A live run needs a backend. A hosted backend needs a key. [Models](https://thinkthen.dev/models/) shows how to point ThinkThen at TypeSafe or another server, such as Ollama on your own machine. By default ThinkThen sends your question and text to TypeSafe. Read the terms that page links before you send sensitive text.
 
 ### Try it with no key
 
@@ -82,6 +84,6 @@ true
 - The [specification](https://github.com/botassembly/thinkthen/blob/main/specification/README.md) holds the contracts.
 - For agents, the [agent skill](skills/thinkthen/SKILL.md) explains function selection, evidence framing, abstention and bounded requests.
 - For agent builders, the [MCP guide](libraries/mcp/README.md) runs the ten functions as tools over local stdio.
-- [All how-tos](https://github.com/botassembly/thinkthen/blob/main/demos/README.md) lists every worked shell job.
+- [All recipes](https://thinkthen.dev/recipes/) lists every finished job, by reader.
 - [CONTRIBUTING.md](https://github.com/botassembly/thinkthen/blob/main/CONTRIBUTING.md) explains how to build from a checkout and run the gate. No gate touches the network.
 - [LICENSE](https://github.com/botassembly/thinkthen/blob/main/LICENSE) holds the MIT license text.

@@ -2,7 +2,8 @@
 // 33 language and Bash technique pages moved under /languages/, and 9
 // install and how-it-works pages moved under /start/, and 11 backends
 // pages moved under /models/, 3 database pages moved under /databases/,
-// and 19 how-to, shell job and guide pages merged into /recipes/.
+// 19 how-to, shell job and guide pages merged into /recipes/, and 3 Learn
+// pages moved to Functions and Start.
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
@@ -34,7 +35,8 @@ export const ALIASES = Object.freeze({
   ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file'].map(s => [`/reference/functions/${s}`, `/functions/${s}/`])),
   ...Object.fromEntries(['audit', 'diff', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
   '/reference/check': '/models/check/',
-  ...Object.fromEntries(['answers', 'question-sets'].map(s => [`/reference/${s}`, `/learn/${s}/`])),
+  '/reference/answers': '/functions/answers/', '/reference/question-sets': '/functions/question-file/#question-sets',
+  '/learn': '/start/', '/learn/answers': '/functions/answers/', '/learn/question-sets': '/functions/question-file/#question-sets',
   '/reference/recording': '/start/replay/',
   '/reference': '/functions/',
   '/install': '/start/', '/install/settings': '/start/settings/', '/install/configuration': '/start/configuration/',

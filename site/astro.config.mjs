@@ -58,7 +58,7 @@ export default defineConfig({
     ...Object.fromEntries(['audit', 'diff', 'check', 'transform']
       .map((name) => [`/reference/${name}`, name === 'check' ? '/models/check/' : `/functions/${name}/`])),
     ...Object.fromEntries(['answers', 'question-sets', 'recording']
-      .map((name) => [`/reference/${name}`, name === 'recording' ? '/start/replay/' : `/learn/${name}/`])),
+      .map((name) => [`/reference/${name}`, { answers: '/functions/answers/', 'question-sets': '/functions/question-file/#question-sets', recording: '/start/replay/' }[name]])),
     '/reference': '/functions/',
     // The talk merged its bench-run slide into the bench-field slide.
     '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
@@ -78,6 +78,11 @@ export default defineConfig({
     ...Object.fromEntries(['typesafe', 'liquid', 'openai', 'perplexity', 'openrouter', 'ollama', 'local', 'system-one', 'other-servers']
       .map((slug) => [`/install/backends/${slug}`, `/models/${slug}/`])),
     '/functions/check': '/models/check/',
+    // The Learn section closed on 2026-10-12. Its pages moved to Functions
+    // and Start, and Beatles Bench sits in the footer.
+    '/learn': '/start/',
+    '/learn/answers': '/functions/answers/',
+    '/learn/question-sets': '/functions/question-file/#question-sets',
   },
   // Articles place examples with <!-- example: --> and <!-- file: -->.
   // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.

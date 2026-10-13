@@ -1,6 +1,6 @@
 ---
 name: site-writing
-description: Use when writing or editing any page or code example on the ThinkThen site (thinkthen.dev, the site/ folder), including function pages, language and install pages, how-tos, Bash techniques, Beatles Bench pages, the tutorial, the reference, and blog articles.
+description: Use when writing or editing any page or code example on the ThinkThen site (thinkthen.dev, the site/ folder), including function pages, language, model and database pages, recipes, Bash techniques, Beatles Bench pages, the tutorial, the reference, and blog articles.
 ---
 
 # Writing for the ThinkThen site

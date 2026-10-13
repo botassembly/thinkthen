@@ -17,7 +17,7 @@ const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/bl
   <h2 id="field">Send one field</h2>
   <p><code>--field</code> takes a pointer to one field of each record. ThinkThen sends that field and keeps the rest of the record on your machine. The output still carries the whole record.</p>
   <Terminal run={field} caption={field.see} />
-  <p>The <a href={spec('records', '#order-and-requests')}>records specification</a> gives the pointer rules. A question set picks a field for each question with <code>on</code>; <a href="/learn/question-sets/#on">Question sets</a> shows it.</p>
+  <p>The <a href={spec('records', '#order-and-requests')}>records specification</a> gives the pointer rules. A question set picks a field for each question with <code>on</code>; <a href="/functions/question-file/#on">Question sets</a> shows it.</p>
 
   <h2 id="key">Your API key stays secret</h2>
   <p>ThinkThen reads the API key from one environment variable and sends it only to the address you named. The API key never shows in a plan, a result, a recording, a log line or an error. A plan names the variable and never its value; <a href="/start/plan/#the-request">See before you send</a> shows one. An address that holds the API key is refused before anything is sent. The <a href={spec('backends', '#the-key')}>backends specification</a> gives every rule.</p>

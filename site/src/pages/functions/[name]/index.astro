@@ -1,6 +1,7 @@
 ---
 // Goal: show one function's plain call, value, and exit code in Bash first,
 // then its own flags and more examples lower down.
+import QuestionSets from '../../../components/QuestionSets.astro';
 import Base from '../../../layouts/Base.astro';
 import Code from '../../../components/Code.astro';
 import Terminal from '../../../components/Terminal.astro';
@@ -92,11 +93,13 @@ const jobsScope = name === 'annotate'
   )}
   {fn.toPerson && <p>Send the not-sure answers to a person.</p>}
 
+  {name === 'question-file' && <QuestionSets />}
+
   <h2 id="reference">Reference</h2>
   <h3 id="arguments">Arguments</h3>
   <p>The command takes {signature.map((x) => x.code ? <code>{x.part}</code> : x.part)}.</p>
   {ARGUMENTS[name] ? <p set:html={inlineHtml(ARGUMENTS[name])} /> : fn.argsNote && <p set:html={inlineHtml(fn.argsNote)} />}
-  {name === 'annotate' && <p>The <a href="/learn/question-sets/">question set rules</a> give every key.</p>}
+  {name === 'annotate' && <p>The <a href="/functions/question-file/#question-sets">question set rules</a> give every key.</p>}
 
   {own.length > 0 && (
     <>
@@ -228,7 +231,7 @@ const jobsScope = name === 'annotate'
       <tr><td><span class={`exit ${exitClass(code)}`}>{code}</span></td><td>{what}</td></tr>
     ))}
   </table>
-  {isFn && <p>{RUN_RULE} A completed run exits 0 unless a code above says otherwise. A valid answer on standard output can sit beside a code other than 0. <a href="/learn/answers/#exit-codes">Every exit code</a> lists the codes of all the functions.</p>}
+  {isFn && <p>{RUN_RULE} A completed run exits 0 unless a code above says otherwise. A valid answer on standard output can sit beside a code other than 0. <a href="/functions/answers/#exit-codes">Every exit code</a> lists the codes of all the functions.</p>}
 
   {isFn && (
     <>
@@ -251,13 +254,13 @@ const jobsScope = name === 'annotate'
   <ul>
     <li>The <a href="#opening"><code>{title}</code> page</a> opens with one plain call in every language.</li>
     {howtos.length > 0 && <li>These recipes use <code>{title}</code> for a real job: {howtos.map((h, i) => <>{i > 0 && (i === howtos.length - 1 ? ' and ' : ', ')}<a href={`/recipes/${h.slug}/`}>{h.title}</a></>)}.</li>}
-    <li><a href="/learn/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</li>
+    <li><a href="/functions/answers/">How answers work</a> says when an answer is yes, no, not sure, or a number.</li>
     <li>The <a href="/start/settings/">settings page</a> gives every setting on every surface, with its default.</li>
     <li><a href="/start/replay/">Replay in tests</a> covers the answer cache, recording, replay and pruning.</li>
     <li>The <a href="/start/configuration/#configuration-file">configuration file</a> names the default backend, address and model.</li>
     <li>The <a href="/start/configuration/#usage-totals">usage totals</a> count requests and tokens on this machine, and <a href="/start/configuration/#status"><code>thinkthen status</code></a> prints them.</li>
-    {isFn ? <li>A <a href="/functions/question-file/">question file</a> saves one question with its threshold.</li> : <li><a href="/learn/question-sets/">Question sets</a> hold many questions for <code>annotate</code>.</li>}
-    {name === 'annotate' && <li><a href="/learn/question-sets/">Question sets</a> give the rules a question set follows.</li>}
+    {isFn ? <li>A <a href="/functions/question-file/">question file</a> saves one question with its threshold.</li> : <li><a href="#question-sets">Question sets</a> hold many questions for <code>annotate</code>.</li>}
+    {name === 'annotate' && <li><a href="/functions/question-file/#question-sets">Question sets</a> give the rules a question set follows.</li>}
   </ul>
 
   <MoreExamples fn={fn} level="h2" />

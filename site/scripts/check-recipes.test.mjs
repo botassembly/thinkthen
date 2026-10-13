@@ -59,6 +59,6 @@ try {
       assert.throws(()=>validateCompatibility(h.replace('<main','<meta http-equiv="refresh"><main'),'/recipes',ALIASES['/recipes'],own,true,selected),/found redirect/);count++;
     }
   }
-  assert.equal(Object.keys(ALIASES).length,136);
+  assert.equal(Object.keys(ALIASES).length,139);
   console.log(`recipe independent controls: ${count} passed; exact unsupported-literal exit/cause, supported HTML/Markdown/llms and four selection states`);
 } finally {cleanup(own);}

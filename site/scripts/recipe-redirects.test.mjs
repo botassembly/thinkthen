@@ -20,7 +20,9 @@ try{
   const state=recipeSelection(RECIPE_PAGES,preview);
   const recipeIndex=state.draftIndex?index:index.replace(' data-draft','').replace('Draft catalog: waiting.','Published recipes.');
   const cwd=path.join(root,preview?'preview':'normal'),dist=path.join(cwd,'dist');
-  for(const f of Object.values(ALIASES))put(routeFile(dist,new URL(f,'https://thinkthen.dev').pathname),'<main><h2 id="edge-cases">Edges</h2></main>');
+  const at=new Map();
+  for(const f of Object.values(ALIASES)){const u=new URL(f,'https://thinkthen.dev');if(!at.has(u.pathname))at.set(u.pathname,new Set());if(u.hash)at.get(u.pathname).add(decodeURIComponent(u.hash.slice(1)));}
+  for(const [pn,ids] of at)put(routeFile(dist,pn),'<main><h2 id="edge-cases">Edges</h2>'+[...ids].filter(i=>i!=='edge-cases').map(i=>`<p id="${i}">${i}</p>`).join('')+'</main>');
   for(const [a,f] of Object.entries(ALIASES))put(routeFile(dist,a),a==='/recipes'&&state.index?recipeIndex:stub(f));
   const run=()=>spawnSync(process.execPath,[script],{cwd,encoding:'utf8',env:{...process.env,THINKTHEN_DRAFTS:preview?'1':'0'}});
   const alias=routeFile(dist,'/surfaces');fs.unlinkSync(alias);

@@ -19,8 +19,16 @@ const stub = fixed => `<!doctype html><title>Redirect</title>${preserver(fixed)}
 try {
   // Write every destination first, so an alias file that is also a
   // destination, such as the recipe index, is not overwritten.
+  // Each destination holds the anchor every alias names for it.
+  const anchorsAt = new Map();
   for (const fixed of Object.values(ALIASES)) {
-    write(routeFile(dist, new URL(fixed, 'https://thinkthen.dev').pathname), '<main><h1 id="flags">Flags</h1><h2 id="edge-cases">Edges</h2></main>');
+    const url = new URL(fixed, 'https://thinkthen.dev');
+    if (!anchorsAt.has(url.pathname)) anchorsAt.set(url.pathname, new Set());
+    if (url.hash) anchorsAt.get(url.pathname).add(decodeURIComponent(url.hash.slice(1)));
+  }
+  for (const [pathname, ids] of anchorsAt) {
+    const extra = [...ids].filter((id) => !['flags', 'edge-cases'].includes(id)).map((id) => `<p id="${id}">${id}</p>`).join('');
+    write(routeFile(dist, pathname), `<main><h1 id="flags">Flags</h1><h2 id="edge-cases">Edges</h2>${extra}</main>`);
   }
   for (const [alias, fixed] of Object.entries(ALIASES)) {
     write(routeFile(dist, alias), alias === '/recipes' && published
