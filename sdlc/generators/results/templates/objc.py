@@ -215,11 +215,13 @@ def inputs(definitions):
     """Prepared question builders keep Foundation values and Rust admission."""
     objects = {key: value for key, value in definitions.items()
                if 'properties' in value}
+    enums = {key: enum_values(value) for key, value in definitions.items() if enum_values(value)}
     def typ(source):
         if not isinstance(source, dict): return 'id'
         if '$ref' in source:
             key = source['$ref'].split('/')[-1]
             if key in objects: return 'TTInput' + name(key)[2:] + ' *'
+            if key in enums: return 'TTInput' + name(key)[2:]
             return typ(definitions[key])
         if source.get('x-preserve-order'): return 'TTOrderedMap *'
         kind = source.get('type')
@@ -233,6 +235,13 @@ def inputs(definitions):
               '@property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;', '@end']
     implementation = ['@implementation TTRequestObject',
                       '- (instancetype)init { if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary]; return self; }', '@end']
+    for key, values in enums.items():
+        cls = 'TTInput' + name(key)[2:]
+        header += [f'typedef NSString *{cls} NS_TYPED_ENUM;']
+        for value in values:
+            constant = cls + name(value)[2:]
+            header += [f'FOUNDATION_EXPORT {cls} const {constant};']
+            implementation += [f'{cls} const {constant} = {literal(value)};']
     if objects: header += ['@class ' + ', '.join('TTInput' + name(key)[2:] for key in objects) + ';']
     for key, source in objects.items():
         cls = 'TTInput' + name(key)[2:]
@@ -244,7 +253,7 @@ def inputs(definitions):
                 constants[prop] = field['const']; continue
             accessor, quoted = member(prop), literal(prop)
             target = typ(field)
-            header += [f'@property(nonatomic, strong, nullable) {target}{" " if target == "id" else ""}{accessor};']
+            header += [f'@property(nonatomic, strong, nullable) {target} {accessor};']
             setter = accessor[:1].upper() + accessor[1:]
             implementation += [f'- ({target}){accessor} {{ return self.requestFields[{quoted}]; }}',
                                f'- (void)set{setter}:({target})value {{ if (value) self.requestFields[{quoted}] = value; else [self.requestFields removeObjectForKey:{quoted}]; }}']
