@@ -7,14 +7,14 @@
     <PackageId>Botassembly.ThinkThen</PackageId>
     <Version>0.2.0</Version>
     <Authors>ThinkThen contributors</Authors>
-    <Description>Owned native sessions and typed judging calls</Description>
+    <Description>ThinkThen answers typed questions about text: decisions, labels, scores and selected records.</Description>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <IncludeSymbols>false</IncludeSymbols>
     <DebugType>none</DebugType>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
-  <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../sdlc/generators/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
+  <ItemGroup><Compile Include="src/*.cs"/><Compile Include="../../sdlc/generators/results/csharp/CompleteFacts.g.cs" Link="CompleteFacts.g.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README-PUBLIC.md" Pack="true" PackagePath="README.md"/></ItemGroup>
   <ItemGroup Condition="'$(ThinkThenNativeAsset)' != ''">
     <None Include="$(ThinkThenNativeAsset)" Pack="true" PackagePath="runtimes/$(ThinkThenNativeRid)/native/$(ThinkThenNativeName)" Link="$(ThinkThenNativeName)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>

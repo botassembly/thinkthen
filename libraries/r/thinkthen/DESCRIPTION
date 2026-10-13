@@ -3,10 +3,9 @@ Type: Package
 Title: The ThinkThen Verbs for R
 Version: 0.2.0
 Authors@R: person("Ian", "Maurer", role = c("aut", "cre"), email = "imaurer@gmail.com")
-Description: Ten named typed judging functions over the thinkthen Rust library.
-    Ordinary R values enter native request admission. Generated results preserve
-    missing and null fields. Native conditions retain error kinds and facts.
-    Calls use R interruption and native cleanup.
+Description: ThinkThen answers typed questions about text. Use it for yes or no
+    decisions, labels, scores and records selected and ranked by meaning.
+    Failed calls remain separate from answers.
 License: MIT + file LICENSE
 URL: https://thinkthen.dev, https://github.com/botassembly/thinkthen
 BugReports: https://github.com/botassembly/thinkthen/issues
