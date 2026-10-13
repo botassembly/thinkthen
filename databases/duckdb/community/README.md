@@ -18,6 +18,8 @@ make release
 make test
 ```
 
+The root `vcpkg.json` follows DuckDB’s extension template. Community CI enables `VCPKG_BUILD` and supplies its pinned vcpkg toolchain; the manifest retains the template’s OpenSSL dependency and CI tool overlays. A build without that toolchain does not reproduce community CI.
+
 The bridge builds offline with its release profile, bundled SQLite and position-independent objects. Cargo checks source changes on each build. Rust's reported native libraries follow the archive in the link command. Linux hides archive symbols; macOS hides the Rust archive and retains DuckDB's initialization export. DuckDB appends the footer after linking.
 
 Community source starts at DuckDB 1.5.6. Community CI can select later DuckDB releases and rebuild against them. A C++ extension requires a matching DuckDB host version and platform. A signed artifact for one DuckDB version does not establish compatibility with a different version embedded in dbt.
