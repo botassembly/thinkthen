@@ -5816,7 +5816,8 @@
             {
               "$ref": "#/$defs/completesourceRelationEndpoint"
             }
-          ]
+          ],
+          "title": "completeRelationEndpoint"
         },
         "target": {
           "anyOf": [
@@ -5826,7 +5827,8 @@
             {
               "$ref": "#/$defs/completesourceRelationEndpoint"
             }
-          ]
+          ],
+          "title": "completeRelationEndpoint"
         }
       },
       "required": [

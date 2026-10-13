@@ -44,7 +44,7 @@ def outputs(definitions, header):
             # Every accessor returns presence independently of the field value.
             lines += [f'    /** @return Presence<{hint(field, definitions)}> */ public function {member}(): Presence {{ return $this->field({member!r}); }}']
         lines += ['}']
-    declarations = selected_header(header, 'php')
+    declarations = re.sub(r'^#.*$', '', selected_header(header, 'php'), flags=re.M)
     constants = ['<?php', '// Generated from the native C header; do not edit.',
                  'declare(strict_types=1);', 'namespace ThinkThen\\Session;']
     for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):

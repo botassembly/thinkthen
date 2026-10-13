@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import subprocess
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
 from native import selected_functions
 
@@ -189,9 +190,22 @@ def native_value_union(schema, definitions):
             'nullable_json': 'null' in selected}
 
 
+def normalize(value):
+    """Remove only redundant singleton type syntax throughout the source graph."""
+    if isinstance(value, list):
+        return [normalize(child) for child in value]
+    if not isinstance(value, dict):
+        return value
+    result = {key: normalize(child) for key, child in value.items()}
+    kinds = result.get('type')
+    if isinstance(kinds, list) and len(kinds) == 1:
+        result['type'] = kinds[0]
+    return result
+
+
 def lift_inline(definitions):
     """Name nested object alternatives from their native schema position."""
-    definitions = dict(definitions)
+    definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
     def visit(value, path):
@@ -202,7 +216,7 @@ def lift_inline(definitions):
         if object_variants(value, definitions):
             identity = json.dumps(value, sort_keys=True)
             if identity not in seen:
-                key = path
+                key = value.get('title', path)
                 if key in definitions:
                     raise ValueError('colliding nested result alternative name')
                 seen[identity] = key
@@ -242,14 +256,32 @@ def prepare(definitions):
             result[key] = source
             continue
         tags = discriminator(variants, definitions)
-        names = [key + '_' + (value if mode == 'literal' else
-                             '_'.join(value.values()) if mode == 'literals' else
-                             'fields_' + '_'.join(value['required']) if mode == 'structure' else member)
-                 for mode, member, value in tags]
-        if len(set(names)) != len(names) or any(name in definitions for name in names):
+        alternatives = source.get('oneOf', source.get('anyOf', []))
+        names = []
+        for index, (mode, member, value) in enumerate(tags):
+            original = alternatives[index]
+            reference = original.get('$ref', '').removeprefix('#/$defs/')
+            if reference and not source.get('properties'):
+                suffix = reference.removeprefix('complete')
+                parent = key.removeprefix('complete')
+                if suffix.lower().endswith(parent.lower()) and len(suffix) > len(parent):
+                    suffix = suffix[:-len(parent)]
+                name = key + '_' + suffix
+            elif 'title' in original:
+                name = original['title']
+            else:
+                suffix = (value if mode == 'literal' else
+                          '_'.join(value.values()) if mode == 'literals' else
+                          '_'.join(value['required']) if mode == 'structure' else member)
+                name = key + '_' + suffix
+            names.append(name)
+        if len(set(names)) != len(names):
             raise ValueError('colliding generated object variant names')
         result[key] = {'variants': list(zip(names, tags))}
-        result.update(zip(names, variants))
+        for name, variant in zip(names, variants):
+            if name in definitions and definitions[name] != variant:
+                raise ValueError('colliding generated object variant definition')
+            result[name] = variant
     return dict(sorted(result.items()))
 
 
@@ -673,7 +705,7 @@ def main():
         spec = importlib.util.spec_from_file_location('result_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        result = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
         args.output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
     else:
         result = generated(json.loads(args.schema.read_text()), args.target)
@@ -690,7 +722,7 @@ def main():
         spec = importlib.util.spec_from_file_location('request_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()))
+        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
         output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
         if not output.exists() or output.read_text() != inputs:
             print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)
