@@ -47,10 +47,10 @@ export default defineConfig({
     '/beatles-bench/run-it-for-free': '/learn/beatles-bench/',
     '/beatles-bench/every-language': '/languages/',
     ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad']
-      .map((slug) => [`/beatles-bench/${slug}`, `/learn/beatles-bench/${slug}/`])),
+      .map((slug) => [`/beatles-bench/${slug}`, `/learn/beatles-bench/#${slug}`])),
     // The talk cut its what-jev-knows slide. The strings page compares Jev with search.
-    '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
-    '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+    '/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
+    '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
     // annotate's edge cases moved onto its reference page.
     '/reference/annotate': '/functions/annotate/#edge-cases',
     ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file']
@@ -61,7 +61,10 @@ export default defineConfig({
       .map((name) => [`/reference/${name}`, { answers: '/functions/answers/', 'question-sets': '/functions/question-file/#question-sets', recording: '/start/replay/' }[name]])),
     '/reference': '/functions/',
     // The talk merged its bench-run slide into the bench-field slide.
-    '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
+    '/learn/beatles-bench/bench-run': '/learn/beatles-bench/#bench-field',
+    // The talk became one page with a section per slide on 2026-10-12.
+    ...Object.fromEntries(['strings', 'jev', 'runs-in', 'decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate', 'bash', 'languages', 'data', 'blind-spots', 'rad', 'audit', 'diff', 'use-cases', 'shell-uses', 'data-uses', 'retrieval', 'competitors', 'bench-field', 'backends']
+      .map((slug) => [`/learn/beatles-bench/${slug}`, `/learn/beatles-bench/#${slug}`])),
     // The install page and the how-it-works pages moved under /start/ on
     // 2026-10-12, rebuilt around what each one gains the reader.
     '/install': '/start/',

@@ -1,5 +1,6 @@
-// The Beatles Bench pages under /learn/beatles-bench/, in the order of the
-// talk "Introducing ThinkThen". Each page is a short article: the
+// The Beatles Bench page at /learn/beatles-bench/ holds one section per
+// slide, in the order of the talk "Introducing ThinkThen". Each section is a
+// short article: the
 // slide, the idea, one example, the same example at another bar, and the
 // lesson. A page with no example shows the slide and the idea. `goal` says
 // what the page must communicate. `lesson` says what the runs showed, and
@@ -361,7 +362,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's no-context column shows these answers. The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The first example below runs `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/#diff) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
@@ -379,7 +380,7 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit section](/learn/beatles-bench/#audit). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's last column shows the answers with context. The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
@@ -469,7 +470,7 @@ const ARTICLES = {
       "Filter by meaning keeps the rows that are complaints. Category column picks a category for each row, and the query groups by it. Extract fields turns a receipt's free text into amount, date, and vendor columns.",
       "Find duplicates asks whether two rows name the same company and merges the matching pairs. Score and average rates how happy each review is and averages by product. Count topics tags each ticket with its topics and counts them.",
       "Check at load sends incomplete addresses to quarantine. Top N per group keeps the 3 leads in each account likeliest to buy. Second opinion lists the rows where the model and the existing label disagree.",
-      "The [tables and frames page](/learn/beatles-bench/data/) shows a real query on Beatles songs. To set one up, start at [Languages](/languages/).",
+      "The [tables and frames section](/learn/beatles-bench/#data) shows a real query on Beatles songs. To set one up, start at [Languages](/languages/).",
     ],
     takeaway: "Ask your data a question, row by row, where it already lives.",
     link: REPO,
@@ -552,8 +553,8 @@ const ARTICLES = {
   },
 };
 
-// The ordered list the side list and the pager follow. The section's first
-// page comes first.
+// The ordered list the side list follows. The page itself comes first, then
+// each slide's section.
 export const FIRST = { slug: '', title: 'Beatles Bench', label: 'Beatles Bench', route: '/learn/beatles-bench/', group: null };
 
 export const PAGES = [FIRST, ...GROUPS.flatMap(([group, slugs]) => slugs.map((slug) => {
@@ -565,7 +566,7 @@ export const PAGES = [FIRST, ...GROUPS.flatMap(([group, slugs]) => slugs.map((sl
     group,
     label: a.label || slug,
     command: a.command ?? !a.label,
-    route: `/learn/beatles-bench/${slug}/`,
+    route: `/learn/beatles-bench/#${slug}`,
     slide: `/learn/beatles-bench/${slug}.webp`,
   };
 }))];

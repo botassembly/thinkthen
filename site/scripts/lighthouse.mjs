@@ -26,7 +26,7 @@ import { DIST, serveDist } from './serve-dist.mjs';
 const PAGES = [
   '/', '/start/', '/languages/python/', '/models/typesafe/',
   '/functions/', '/functions/filter/', '/functions/decide/',
-  '/recipes/', '/learn/beatles-bench/strings/', '/blog/introducing-thinkthen/',
+  '/recipes/', '/learn/beatles-bench/', '/blog/introducing-thinkthen/',
   '/start/tutorial/', '/404.html',
 ];
 const CATEGORIES = ['performance', 'accessibility', 'best-practices', 'seo'];

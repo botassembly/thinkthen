@@ -3,7 +3,8 @@
 // install and how-it-works pages moved under /start/, and 11 backends
 // pages moved under /models/, 3 database pages moved under /databases/,
 // 19 how-to, shell job and guide pages merged into /recipes/, and 3 Learn
-// pages moved to Functions and Start.
+// pages moved to Functions and Start, and 29 Beatles Bench slide pages
+// became sections of one page.
 import { RECIPE_PAGES } from '../src/data/catalog.mjs';
 import { recipeSelection } from '../src/data/recipes.mjs';
 import fs from 'node:fs';
@@ -27,11 +28,12 @@ export const ALIASES = Object.freeze({
   '/beatles-bench/the-data': '/learn/beatles-bench/',
   '/beatles-bench/run-it-for-free': '/learn/beatles-bench/',
   '/beatles-bench/every-language': '/languages/',
-  ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad'].map(s => [`/beatles-bench/${s}`, `/learn/beatles-bench/${s}/`])),
-  '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
-  '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+  ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad'].map(s => [`/beatles-bench/${s}`, `/learn/beatles-bench/#${s}`])),
+  '/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
+  '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
   '/reference/annotate': '/functions/annotate/#edge-cases',
-  '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
+  '/learn/beatles-bench/bench-run': '/learn/beatles-bench/#bench-field',
+  ...Object.fromEntries(['strings', 'jev', 'runs-in', 'decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate', 'bash', 'languages', 'data', 'blind-spots', 'rad', 'audit', 'diff', 'use-cases', 'shell-uses', 'data-uses', 'retrieval', 'competitors', 'bench-field', 'backends'].map(s => [`/learn/beatles-bench/${s}`, `/learn/beatles-bench/#${s}`])),
   ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file'].map(s => [`/reference/functions/${s}`, `/functions/${s}/`])),
   ...Object.fromEntries(['audit', 'diff', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
   '/reference/check': '/models/check/',

@@ -1,25 +1,34 @@
 ---
 // Goal: introduce the talk and Beatles Bench as a place where every answer
-// is known, and point to the pages that follow the talk.
+// is known, then follow the talk one slide and one idea at a time.
 import BeatlesPage from '../../../layouts/BeatlesPage.astro';
 import Video from '../../../components/Video.astro';
-import { FIRST, PAGES } from '../../../data/beatles.mjs';
+import BeatlesSlide from '../../../components/BeatlesSlide.astro';
+import { FIRST, PAGES, GROUPS } from '../../../data/beatles.mjs';
 
 const TALK = 'Introducing ThinkThen';
 // The recorded talk, also embedded in the launch article.
 const VIDEO = 'YbzrlpAyCV4';
 const field = PAGES.find((p) => p.slug === 'bench-field');
+const sections = GROUPS.map(([name, slugs]) => ({ name, pages: slugs.map((slug) => PAGES.find((p) => p.slug === slug)) }));
+const id = (name) => `part-${name.toLowerCase().replace(/[^a-z]+/g, '-')}`;
 ---
-<BeatlesPage page={{ ...FIRST, description: `The talk "${TALK}" as short pages: one slide and one idea each.` }}>
-  <div class="eyebrow">Learn</div>
+<BeatlesPage page={{ ...FIRST, description: `The talk "${TALK}" on one page: one slide and one idea each.` }}>
   <h1>Beatles Bench</h1>
-  <p class="lede">Watch the talk "{TALK}". These pages follow it one slide at a time.</p>
+  <p class="lede">Watch the talk "{TALK}". This page follows it one slide at a time.</p>
   <Video id={VIDEO} title={TALK} />
 
   <p>Beatles Bench is the playground for the talk. It asks Jev questions about Beatles songs. A script set the right answer to each scored question ahead of time, from Wikipedia and Wikidata. The bench shows ThinkThen at work and shows where it goes wrong.</p>
-  <p>Each page shows one slide and one idea. Most pages show a command and the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
-  <p>The slides show the talk's own runs. The examples replay on the current thinkthen. A page says so under its slide when the slide shows other output.</p>
+  <p>Each section shows one slide and one idea. Most sections show a command and the same command at another bar. Every command answers from a saved recording. You need no key, and nothing leaves your machine.</p>
+  <p>The slides show the talk's own runs. The examples replay on the current thinkthen. A section says so under its slide when the slide shows other output.</p>
   <p><a href={field.route}>{field.title.replace(/\.$/, '')}</a> gives the scores and shows how to get the bench and replay every answer.</p>
   <p>The <a href="/learn/beatles-bench/jev-thinkthen-beatles-bench.pdf">talk's slides as one PDF</a> hold every slide in order.</p>
   <p>It is not an official benchmark. Please don't tune a model on it. The bench's author also builds ThinkThen.</p>
+
+  {sections.map((sec) => (
+    <Fragment>
+      <h2 id={id(sec.name)}>{sec.name}</h2>
+      {sec.pages.map((page) => <BeatlesSlide page={page} />)}
+    </Fragment>
+  ))}
 </BeatlesPage>

@@ -99,7 +99,7 @@ The command builds `thinkthen` from this working tree and runs `npm run build`, 
 
 ## Where the Beatles Bench pages come from
 
-The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. `src/pages/learn/beatles-bench/[name]-800.webp.js` writes an 800-pixel copy of each slide at build time, and a phone takes that copy. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/bench-pin`. To copy those files again from a checkout at that commit:
+The page at `/learn/beatles-bench/` follows the talk "Analyzing the Beatles using Jev", with one section per slide. `src/components/BeatlesSlide.astro` draws each section, and each old slide address redirects to its anchor. `src/data/beatles.mjs` holds each section's words. The slides sit in `public/learn/beatles-bench/`. `src/pages/learn/beatles-bench/[name]-800.webp.js` writes an 800-pixel copy of each slide at build time, and a phone takes that copy. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/bench-pin`. To copy those files again from a checkout at that commit:
 
 ```
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
