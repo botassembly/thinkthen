@@ -49,4 +49,5 @@ libraries/typescript/results_generated.js linguist-generated
 libraries/zig/src/plan_generated.zig linguist-generated
 libraries/zig/src/request_generated.zig linguist-generated
 sdlc/generators/results/csharp/CompleteFacts.g.cs linguist-generated
+libraries/c/src/ffi/native_request/carriers_generated.rs linguist-generated
 libraries/csharp/src/NamedCalls.g.cs linguist-generated

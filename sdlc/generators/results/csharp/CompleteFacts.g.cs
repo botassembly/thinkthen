@@ -6,26 +6,31 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-
 namespace ThinkThen.Results;
-
-public enum PresenceState { Missing, Null, Value }
-
+public enum PresenceState {
+    Missing, Null, Value
+}
 public readonly struct Presence<T>
 {
     private readonly T? value;
-    public PresenceState State { get; }
-    private Presence(PresenceState state, T? value) { State = state; this.value = value; }
+    public PresenceState State {
+        get;
+    }
+    private Presence(PresenceState state, T? value) {
+        State = state;
+        this.value = value;
+    }
     public T Value => State == PresenceState.Value ? value! :
-        throw new InvalidOperationException($"Member is {State}.");
+    throw new InvalidOperationException($"Member is {State}.");
     internal static Presence<T> Null => new(PresenceState.Null, default);
     internal static Presence<T> Present(T value) => new(PresenceState.Value, value);
 }
-
 public abstract class ResultObject
 {
     private readonly JsonElement document;
-    protected ResultObject(JsonElement document) { this.document = document.Clone(); }
+    protected ResultObject(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement RequiredElement(string name) => document.GetProperty(name);
     protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
@@ -39,14 +44,19 @@ public abstract class ResultObject
     }
     // Cloning and plain conversion retain every JSON member, including unknown nested data.
     public JsonElement ToJson() => document.Clone();
-    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!.AsObject();
+    public JsonObject ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!.AsObject();
     public string ToJsonString() => document.GetRawText();
 }
 public sealed class Annotation : ResultObject
 {
-    public Annotation(JsonElement document) : base(document) { }
+    public Annotation(JsonElement document) : base(document) {
+    }
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public IReadOnlyDictionary<string, AnnotationMember> Answers => new ReadOnlyDictionary<string, AnnotationMember>(RequiredElement("answers").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.AnnotationMember.Read(entry0.Value), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, AnnotationMember> Answers => new ReadOnlyDictionary<string,
+    AnnotationMember>(RequiredElement("answers").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => global::ThinkThen.Results.AnnotationMember.Read(entry0.Value), StringComparer.Ordinal));
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
@@ -56,12 +66,14 @@ public sealed class Annotation : ResultObject
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
-    public IReadOnlyDictionary<string, AnnotatedField> Value => new ReadOnlyDictionary<string, AnnotatedField>(RequiredElement("value").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.AnnotatedField.Read(entry0.Value), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, AnnotatedField> Value => new ReadOnlyDictionary<string,
+    AnnotatedField>(RequiredElement("value").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => global::ThinkThen.Results.AnnotatedField.Read(entry0.Value), StringComparer.Ordinal));
 }
-
 public abstract class AnnotationMember : ResultObject
 {
-    protected AnnotationMember(JsonElement document) : base(document) { }
+    protected AnnotationMember(JsonElement document) : base(document) {
+    }
     public static AnnotationMember Read(JsonElement document)
     {
         AnnotationMember? result = null;
@@ -80,10 +92,10 @@ public abstract class AnnotationMember : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class AnnotationMemberAnswerId : AnnotationMember
 {
-    public AnnotationMemberAnswerId(JsonElement document) : base(document) { }
+    public AnnotationMemberAnswerId(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
@@ -94,10 +106,10 @@ public sealed class AnnotationMemberAnswerId : AnnotationMember
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public Presence<Value> Value => RequiredNullable<Value>("value", member => global::ThinkThen.Results.Value.Read(member));
 }
-
 public sealed class AnnotationMemberFailureId : AnnotationMember
 {
-    public AnnotationMemberFailureId(JsonElement document) : base(document) { }
+    public AnnotationMemberFailureId(JsonElement document) : base(document) {
+    }
     public Failure Failure => new Failure(RequiredElement("failure"));
     public string FailureId => RequiredElement("failure_id").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
@@ -107,10 +119,10 @@ public sealed class AnnotationMemberFailureId : AnnotationMember
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
 }
-
 public abstract class AnnotationValue : ResultObject
 {
-    protected AnnotationValue(JsonElement document) : base(document) { }
+    protected AnnotationValue(JsonElement document) : base(document) {
+    }
     public static AnnotationValue Read(JsonElement document)
     {
         AnnotationValue? result = null;
@@ -142,57 +154,59 @@ public abstract class AnnotationValue : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class AnnotationValueChoice : AnnotationValue
 {
-    public AnnotationValueChoice(JsonElement document) : base(document) { }
+    public AnnotationValueChoice(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
-
 public sealed class AnnotationValueDecision : AnnotationValue
 {
-    public AnnotationValueDecision(JsonElement document) : base(document) { }
+    public AnnotationValueDecision(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<bool> Value => RequiredNullable<bool>("value", member => member.GetBoolean());
 }
-
 public sealed class AnnotationValueFailed : AnnotationValue
 {
-    public AnnotationValueFailed(JsonElement document) : base(document) { }
+    public AnnotationValueFailed(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Failure Value => new Failure(RequiredElement("value"));
 }
-
 public sealed class AnnotationValueScore : AnnotationValue
 {
-    public AnnotationValueScore(JsonElement document) : base(document) { }
+    public AnnotationValueScore(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public double Value => RequiredElement("value").GetDouble();
 }
-
 public sealed class AnnotationValueTags : AnnotationValue
 {
-    public AnnotationValueTags(JsonElement document) : base(document) { }
+    public AnnotationValueTags(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
-
 public sealed class Answers : ResultObject
 {
-    public Answers(JsonElement document) : base(document) { }
+    public Answers(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<RelationMember> Questions => Array.AsReadOnly(RequiredElement("questions").EnumerateArray().Select(item0 => global::ThinkThen.Results.RelationMember.Read(item0)).ToArray());
 }
-
 public sealed class AtomicArrayOfString : ResultObject
 {
-    public AtomicArrayOfString(JsonElement document) : base(document) { }
+    public AtomicArrayOfString(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -201,16 +215,18 @@ public sealed class AtomicArrayOfString : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
-
 public sealed class AtomicDecideValue : ResultObject
 {
-    public AtomicDecideValue(JsonElement document) : base(document) { }
+    public AtomicDecideValue(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -219,16 +235,18 @@ public sealed class AtomicDecideValue : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public JsonElement Value => RequiredElement("value").Clone();
 }
-
 public sealed class AtomicNonZeroUsize : ResultObject
 {
-    public AtomicNonZeroUsize(JsonElement document) : base(document) { }
+    public AtomicNonZeroUsize(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -237,16 +255,18 @@ public sealed class AtomicNonZeroUsize : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public ulong Value => RequiredElement("value").GetUInt64();
 }
-
 public sealed class AtomicNullableString : ResultObject
 {
-    public AtomicNullableString(JsonElement document) : base(document) { }
+    public AtomicNullableString(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -255,16 +275,18 @@ public sealed class AtomicNullableString : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
-
 public sealed class AtomicBoolean : ResultObject
 {
-    public AtomicBoolean(JsonElement document) : base(document) { }
+    public AtomicBoolean(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -273,16 +295,18 @@ public sealed class AtomicBoolean : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public bool Value => RequiredElement("value").GetBoolean();
 }
-
 public sealed class AtomicDouble : ResultObject
 {
-    public AtomicDouble(JsonElement document) : base(document) { }
+    public AtomicDouble(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
+    public Presence<IReadOnlyList<RankMember>> Members => Optional<IReadOnlyList<RankMember>>("members",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RankMember(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Presence<string> QuestionName => Optional<string>("question_name", member => member.GetString()!);
@@ -291,10 +315,10 @@ public sealed class AtomicDouble : ResultObject
     public Presence<Threshold> Threshold => RequiredNullable<Threshold>("threshold", member => global::ThinkThen.Results.Threshold.Read(member));
     public double Value => RequiredElement("value").GetDouble();
 }
-
 public sealed class Attempt : ResultObject
 {
-    public Attempt(JsonElement document) : base(document) { }
+    public Attempt(JsonElement document) : base(document) {
+    }
     public ulong Ordinal => RequiredElement("ordinal").GetUInt64();
     public AttemptOutcome Outcome => new AttemptOutcome(RequiredElement("outcome").GetString()!);
     public Presence<string> RequestId => Optional<string>("request_id", member => member.GetString()!);
@@ -304,14 +328,17 @@ public sealed class Attempt : ResultObject
     public Presence<ushort> Status => Optional<ushort>("status", member => member.GetUInt16());
     public ulong WallMs => RequiredElement("wall_ms").GetUInt64();
 }
-
 public abstract class Batch
 {
     private readonly JsonElement document;
-    protected Batch(JsonElement document) { this.document = document.Clone(); }
+    protected Batch(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
     public string ToJsonString() => document.GetRawText();
     public static Batch Read(JsonElement document) => document.ValueKind switch
     {
@@ -320,69 +347,70 @@ public abstract class Batch
         _ => throw new JsonException("Unknown primitive result variant.")
     };
 }
-
 public sealed class BatchInteger : Batch
 {
-    public BatchInteger(JsonElement document) : base(document) { }
+    public BatchInteger(JsonElement document) : base(document) {
+    }
     public ulong Value => Document.GetUInt64();
 }
-
 public sealed class BatchString : Batch
 {
-    public BatchString(JsonElement document) : base(document) { }
+    public BatchString(JsonElement document) : base(document) {
+    }
     public string Value => Document.GetString()!;
 }
-
 public readonly record struct BoundaryMode(string Value)
 {
     public static BoundaryMode BoundaryOnly => new("boundary_only");
 }
-
 public sealed class BoundaryOdds : ResultObject
 {
-    public BoundaryOdds(JsonElement document) : base(document) { }
+    public BoundaryOdds(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
     public IReadOnlyList<BoundaryProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray());
 }
-
 public sealed class BoundaryProposal : ResultObject
 {
-    public BoundaryProposal(JsonElement document) : base(document) { }
+    public BoundaryProposal(JsonElement document) : base(document) {
+    }
     public ulong End => RequiredElement("end").GetUInt64();
     public ulong Length => RequiredElement("length").GetUInt64();
     public double Probability => RequiredElement("probability").GetDouble();
     public ulong Start => RequiredElement("start").GetUInt64();
     public string Text => RequiredElement("text").GetString()!;
 }
-
 public sealed class CallError : ResultObject
 {
-    public CallError(JsonElement document) : base(document) { }
+    public CallError(JsonElement document) : base(document) {
+    }
     public Error Error => new Error(RequiredElement("error"));
     public Presence<Facts> Facts => Optional<Facts>("facts", member => new Facts(member));
 }
-
 public sealed class EntityDocument : ResultObject
 {
-    public EntityDocument(JsonElement document) : base(document) { }
+    public EntityDocument(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public string Name => RequiredElement("name").GetString()!;
 }
-
 public sealed class Error : ResultObject
 {
-    public Error(JsonElement document) : base(document) { }
-    public Presence<EstimatedInputDenial> EstimatedInputDenial => Optional<EstimatedInputDenial>("estimated_input_denial", member => global::ThinkThen.Results.EstimatedInputDenial.Read(member));
+    public Error(JsonElement document) : base(document) {
+    }
+    public Presence<EstimatedInputDenial> EstimatedInputDenial => Optional<EstimatedInputDenial>("estimated_input_denial",
+    member => global::ThinkThen.Results.EstimatedInputDenial.Read(member));
     public FailureKind Kind => new FailureKind(RequiredElement("kind").GetString()!);
     public string Message => RequiredElement("message").GetString()!;
     public bool Retryable => RequiredElement("retryable").GetBoolean();
-    public Presence<SendBudgetDenial> SendBudgetDenial => Optional<SendBudgetDenial>("send_budget_denial", member => global::ThinkThen.Results.SendBudgetDenial.Read(member));
+    public Presence<SendBudgetDenial> SendBudgetDenial => Optional<SendBudgetDenial>("send_budget_denial",
+    member => global::ThinkThen.Results.SendBudgetDenial.Read(member));
     public Stopped Stopped => new Stopped(RequiredElement("stopped"));
 }
-
 public abstract class EstimatedInputDenial : ResultObject
 {
-    protected EstimatedInputDenial(JsonElement document) : base(document) { }
+    protected EstimatedInputDenial(JsonElement document) : base(document) {
+    }
     public static EstimatedInputDenial Read(JsonElement document)
     {
         EstimatedInputDenial? result = null;
@@ -404,55 +432,59 @@ public abstract class EstimatedInputDenial : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class EstimatedInputDenialAdditionalRequest : EstimatedInputDenial
 {
-    public EstimatedInputDenialAdditionalRequest(JsonElement document) : base(document) { }
+    public EstimatedInputDenialAdditionalRequest(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public ulong Limit => RequiredElement("limit").GetUInt64();
 }
-
 public sealed class EstimatedInputDenialInitialRequest : EstimatedInputDenial
 {
-    public EstimatedInputDenialInitialRequest(JsonElement document) : base(document) { }
+    public EstimatedInputDenialInitialRequest(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public ulong Limit => RequiredElement("limit").GetUInt64();
 }
-
 public sealed class EstimatedInputDenialRetry : EstimatedInputDenial
 {
-    public EstimatedInputDenialRetry(JsonElement document) : base(document) { }
+    public EstimatedInputDenialRetry(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public ushort LastStatus => RequiredElement("last_status").GetUInt16();
     public ulong Limit => RequiredElement("limit").GetUInt64();
 }
-
 public sealed class Facts : ResultObject
 {
-    public Facts(JsonElement document) : base(document) { }
-    public Presence<IReadOnlyList<Attempt>> Attempts => Optional<IReadOnlyList<Attempt>>("attempts", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Attempt(item0)).ToArray()));
+    public Facts(JsonElement document) : base(document) {
+    }
+    public Presence<IReadOnlyList<Attempt>> Attempts => Optional<IReadOnlyList<Attempt>>("attempts",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Attempt(item0)).ToArray()));
     public ulong CacheAnswers => RequiredElement("cache_answers").GetUInt64();
     public string CallId => RequiredElement("call_id").GetString()!;
     public Presence<string> EstimatedCostUsd => Optional<string>("estimated_cost_usd", member => member.GetString()!);
     public Presence<bool> HeldModelMismatch => Optional<bool>("held_model_mismatch", member => member.GetBoolean());
     public Presence<ulong> InputTokens => Optional<ulong>("input_tokens", member => member.GetUInt64());
     public ulong LargestRequestBytes => RequiredElement("largest_request_bytes").GetUInt64();
-    public Presence<ulong> LargestRequestEstimatedInputTokens => RequiredNullable<ulong>("largest_request_estimated_input_tokens", member => member.GetUInt64());
+    public Presence<ulong> LargestRequestEstimatedInputTokens => RequiredNullable<ulong>("largest_request_estimated_input_tokens",
+    member => member.GetUInt64());
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<ulong> OutputTokens => Optional<ulong>("output_tokens", member => member.GetUInt64());
     public ulong Records => RequiredElement("records").GetUInt64();
     public ulong RequestsSent => RequiredElement("requests_sent").GetUInt64();
     public double Seconds => RequiredElement("seconds").GetDouble();
     public string TokenEstimateMethod => RequiredElement("token_estimate_method").GetString()!;
-    public Presence<PersistenceObservation> UsagePersistence => Optional<PersistenceObservation>("usage_persistence", member => new PersistenceObservation(member));
+    public Presence<PersistenceObservation> UsagePersistence => Optional<PersistenceObservation>("usage_persistence",
+    member => new PersistenceObservation(member));
 }
-
 public sealed class Find : ResultObject
 {
-    public Find(JsonElement document) : base(document) { }
+    public Find(JsonElement document) : base(document) {
+    }
     public FindAnswer Answer => new FindAnswer(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<FindCandidate>> Candidates => Optional<IReadOnlyList<FindCandidate>>("candidates", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new FindCandidate(item0)).ToArray()));
+    public Presence<IReadOnlyList<FindCandidate>> Candidates => Optional<IReadOnlyList<FindCandidate>>("candidates",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new FindCandidate(item0)).ToArray()));
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> Index => RequiredNullable<ulong>("index", member => member.GetUInt64());
@@ -464,68 +496,70 @@ public sealed class Find : ResultObject
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public Presence<JsonElement> Value => RequiredNullable<JsonElement>("value", member => member.Clone());
 }
-
 public sealed class FindCandidate : ResultObject
 {
-    public FindCandidate(JsonElement document) : base(document) { }
+    public FindCandidate(JsonElement document) : base(document) {
+    }
     public Presence<ulong> Index => RequiredNullable<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => RequiredNullable<JsonElement>("input", member => member.Clone());
     public double Probability => RequiredElement("probability").GetDouble();
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
 }
-
 public sealed class Image : ResultObject
 {
-    public Image(JsonElement document) : base(document) { }
+    public Image(JsonElement document) : base(document) {
+    }
     public string Base64 => RequiredElement("base64").GetString()!;
     public uint Height => RequiredElement("height").GetUInt32();
     public ImageMedia Media => new ImageMedia(RequiredElement("media").GetString()!);
     public uint Width => RequiredElement("width").GetUInt32();
 }
-
 public readonly record struct ImageMedia(string Value)
 {
     public static ImageMedia ImageJpeg => new("image/jpeg");
     public static ImageMedia ImagePng => new("image/png");
 }
-
 public abstract class InputDeclaration : ResultObject
 {
-    protected InputDeclaration(JsonElement document) : base(document) { }
+    protected InputDeclaration(JsonElement document) : base(document) {
+    }
     public static InputDeclaration Read(JsonElement document)
     {
         InputDeclaration? result = null;
-        if (document.TryGetProperty("type", out var tagInputDeclarationString) && tagInputDeclarationString.ValueKind == JsonValueKind.String && tagInputDeclarationString.GetString() == "string")
+        if (document.TryGetProperty("type", out var tagInputDeclarationStringRoot) && tagInputDeclarationStringRoot.ValueKind == JsonValueKind.String && tagInputDeclarationStringRoot.GetString() == "string")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new InputDeclarationString(document);
+            result = new InputDeclarationStringRoot(document);
         }
-        if (document.TryGetProperty("type", out var tagInputDeclarationObject) && tagInputDeclarationObject.ValueKind == JsonValueKind.String && tagInputDeclarationObject.GetString() == "object")
+        if (document.TryGetProperty("type", out var tagInputDeclarationObjectRoot) && tagInputDeclarationObjectRoot.ValueKind == JsonValueKind.String && tagInputDeclarationObjectRoot.GetString() == "object")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new InputDeclarationObject(document);
+            result = new InputDeclarationObjectRoot(document);
         }
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
-public sealed class InputDeclarationObject : InputDeclaration
+public sealed class InputDeclarationObjectRoot : InputDeclaration
 {
-    public InputDeclarationObject(JsonElement document) : base(document) { }
-    public IReadOnlyDictionary<string, InputPropertyType> Properties => new ReadOnlyDictionary<string, InputPropertyType>(RequiredElement("properties").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.InputPropertyType.Read(entry0.Value), StringComparer.Ordinal));
-    public Presence<IReadOnlyList<string>> Required => Optional<IReadOnlyList<string>>("required", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public InputDeclarationObjectRoot(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, InputPropertyType> Properties => new ReadOnlyDictionary<string,
+    InputPropertyType>(RequiredElement("properties").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => global::ThinkThen.Results.InputPropertyType.Read(entry0.Value), StringComparer.Ordinal));
+    public Presence<IReadOnlyList<string>> Required => Optional<IReadOnlyList<string>>("required",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public ObjectType Type => new ObjectType(RequiredElement("type").GetString()!);
 }
-
-public sealed class InputDeclarationString : InputDeclaration
+public sealed class InputDeclarationStringRoot : InputDeclaration
 {
-    public InputDeclarationString(JsonElement document) : base(document) { }
+    public InputDeclarationStringRoot(JsonElement document) : base(document) {
+    }
     public StringType Type => new StringType(RequiredElement("type").GetString()!);
 }
-
 public abstract class InputPropertyType : ResultObject
 {
-    protected InputPropertyType(JsonElement document) : base(document) { }
+    protected InputPropertyType(JsonElement document) : base(document) {
+    }
     public static InputPropertyType Read(JsonElement document)
     {
         InputPropertyType? result = null;
@@ -552,44 +586,45 @@ public abstract class InputPropertyType : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class InputPropertyTypeArray : InputPropertyType
 {
-    public InputPropertyTypeArray(JsonElement document) : base(document) { }
+    public InputPropertyTypeArray(JsonElement document) : base(document) {
+    }
     public StringRoot Items => new StringRoot(RequiredElement("items"));
     public string Type => RequiredElement("type").GetString()!;
 }
-
 public sealed class InputPropertyTypeBoolean : InputPropertyType
 {
-    public InputPropertyTypeBoolean(JsonElement document) : base(document) { }
+    public InputPropertyTypeBoolean(JsonElement document) : base(document) {
+    }
     public string Type => RequiredElement("type").GetString()!;
 }
-
 public sealed class InputPropertyTypeNumber : InputPropertyType
 {
-    public InputPropertyTypeNumber(JsonElement document) : base(document) { }
+    public InputPropertyTypeNumber(JsonElement document) : base(document) {
+    }
     public string Type => RequiredElement("type").GetString()!;
 }
-
 public sealed class InputPropertyTypeString : InputPropertyType
 {
-    public InputPropertyTypeString(JsonElement document) : base(document) { }
+    public InputPropertyTypeString(JsonElement document) : base(document) {
+    }
     public string Type => RequiredElement("type").GetString()!;
 }
-
 public sealed class Label : ResultObject
 {
-    public Label(JsonElement document) : base(document) { }
+    public Label(JsonElement document) : base(document) {
+    }
     public Presence<JsonElement> Description => Optional<JsonElement>("description", member => member.Clone());
     public string Name => RequiredElement("name").GetString()!;
 }
-
 public sealed class Meta : ResultObject
 {
-    public Meta(JsonElement document) : base(document) { }
+    public Meta(JsonElement document) : base(document) {
+    }
     public Presence<string> AnsweredBy => Optional<string>("answered_by", member => member.GetString()!);
-    public Presence<IReadOnlyList<Attempt>> Attempts => Optional<IReadOnlyList<Attempt>>("attempts", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Attempt(item0)).ToArray()));
+    public Presence<IReadOnlyList<Attempt>> Attempts => Optional<IReadOnlyList<Attempt>>("attempts",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Attempt(item0)).ToArray()));
     public Presence<BatchSetting> BatchSetting => Optional<BatchSetting>("batch_setting", member => global::ThinkThen.Results.BatchSetting.Read(member));
     public Presence<BatchWarning> BatchWarning => Optional<BatchWarning>("batch_warning", member => new BatchWarning(member));
     public bool Cached => RequiredElement("cached").GetBoolean();
@@ -598,7 +633,8 @@ public sealed class Meta : ResultObject
     public string Model => RequiredElement("model").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
     public Presence<Origin> Origin => RequiredNullable<Origin>("origin", member => new Origin(member.GetString()!));
-    public Presence<ProfileWarning> ProfileWarning => Optional<ProfileWarning>("profile_warning", member => new ProfileWarning(member));
+    public Presence<ProfileWarning> ProfileWarning => Optional<ProfileWarning>("profile_warning",
+    member => new ProfileWarning(member));
     public Presence<string> QuestionSha256 => Optional<string>("question_sha256", member => member.GetString()!);
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
     public Presence<string> QuestionsSha256 => Optional<string>("questions_sha256", member => member.GetString()!);
@@ -608,23 +644,25 @@ public sealed class Meta : ResultObject
     public string Url => RequiredElement("url").GetString()!;
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
 }
-
 public sealed class ObjectRoot : ResultObject
 {
-    public ObjectRoot(JsonElement document) : base(document) { }
-    public IReadOnlyDictionary<string, InputPropertyType> Properties => new ReadOnlyDictionary<string, InputPropertyType>(RequiredElement("properties").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => global::ThinkThen.Results.InputPropertyType.Read(entry0.Value), StringComparer.Ordinal));
-    public Presence<IReadOnlyList<string>> Required => Optional<IReadOnlyList<string>>("required", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public ObjectRoot(JsonElement document) : base(document) {
+    }
+    public IReadOnlyDictionary<string, InputPropertyType> Properties => new ReadOnlyDictionary<string,
+    InputPropertyType>(RequiredElement("properties").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => global::ThinkThen.Results.InputPropertyType.Read(entry0.Value), StringComparer.Ordinal));
+    public Presence<IReadOnlyList<string>> Required => Optional<IReadOnlyList<string>>("required",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public ObjectType Type => new ObjectType(RequiredElement("type").GetString()!);
 }
-
 public readonly record struct ObjectType(string Value)
 {
     public static ObjectType Object => new("object");
 }
-
 public abstract class Observation : ResultObject
 {
-    protected Observation(JsonElement document) : base(document) { }
+    protected Observation(JsonElement document) : base(document) {
+    }
     public static Observation Read(JsonElement document)
     {
         Observation? result = null;
@@ -643,19 +681,18 @@ public abstract class Observation : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class ObservationFailureId : Observation
 {
-    public ObservationFailureId(JsonElement document) : base(document) { }
+    public ObservationFailureId(JsonElement document) : base(document) {
+    }
     public string FailureId => RequiredElement("failure_id").GetString()!;
 }
-
 public sealed class ObservationObservationId : Observation
 {
-    public ObservationObservationId(JsonElement document) : base(document) { }
+    public ObservationObservationId(JsonElement document) : base(document) {
+    }
     public string ObservationId => RequiredElement("observation_id").GetString()!;
 }
-
 public readonly record struct Origin(string Value)
 {
     public static Origin Live => new("live");
@@ -664,53 +701,55 @@ public readonly record struct Origin(string Value)
     public static Origin Proxy => new("proxy");
     public static Origin Memory => new("memory");
 }
-
 public sealed class PersistenceObservation : ResultObject
 {
-    public PersistenceObservation(JsonElement document) : base(document) { }
+    public PersistenceObservation(JsonElement document) : base(document) {
+    }
     public Presence<string> Advice => Optional<string>("advice", member => member.GetString()!);
     public string ObservedAt => RequiredElement("observed_at").GetString()!;
     public UsagePersistence State => new UsagePersistence(RequiredElement("state").GetString()!);
 }
-
 public sealed class PhysicalSource : ResultObject
 {
-    public PhysicalSource(JsonElement document) : base(document) { }
+    public PhysicalSource(JsonElement document) : base(document) {
+    }
     public string File => RequiredElement("file").GetString()!;
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
 }
-
 public sealed class Position : ResultObject
 {
-    public Position(JsonElement document) : base(document) { }
+    public Position(JsonElement document) : base(document) {
+    }
     public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
     public Presence<ulong> First => Optional<ulong>("first", member => member.GetUInt64());
-    public Presence<IReadOnlyList<string>> Images => Optional<IReadOnlyList<string>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
+    public Presence<IReadOnlyList<string>> Images => Optional<IReadOnlyList<string>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<ulong> Last => Optional<ulong>("last", member => member.GetUInt64());
 }
-
 public sealed class QuestionSource : ResultObject
 {
-    public QuestionSource(JsonElement document) : base(document) { }
+    public QuestionSource(JsonElement document) : base(document) {
+    }
     public string AnsweredBy => RequiredElement("answered_by").GetString()!;
     public Presence<uint> BatchSize => Optional<uint>("batch_size", member => member.GetUInt32());
     public Origin Origin => new Origin(RequiredElement("origin").GetString()!);
 }
-
 public sealed class RankMember : ResultObject
 {
-    public RankMember(JsonElement document) : base(document) { }
+    public RankMember(JsonElement document) : base(document) {
+    }
     public string Name => RequiredElement("name").GetString()!;
     public RankMemberResult Result => new RankMemberResult(RequiredElement("result"));
 }
-
 public sealed class RankMemberResult : ResultObject
 {
-    public RankMemberResult(JsonElement document) : base(document) { }
+    public RankMemberResult(JsonElement document) : base(document) {
+    }
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
-    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
+    public Presence<IReadOnlyList<Image>> Images => Optional<IReadOnlyList<Image>>("images",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Image(item0)).ToArray()));
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
@@ -718,10 +757,10 @@ public sealed class RankMemberResult : ResultObject
     public Presence<JsonElement> Threshold => RequiredNullable<JsonElement>("threshold", member => member.Clone());
     public ulong Value => RequiredElement("value").GetUInt64();
 }
-
 public abstract class Question : ResultObject
 {
-    protected Question(JsonElement document) : base(document) { }
+    protected Question(JsonElement document) : base(document) {
+    }
     public static Question Read(JsonElement document)
     {
         Question? result = null;
@@ -748,14 +787,17 @@ public abstract class Question : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class Question2 : ResultObject
 {
-    public Question2(JsonElement document) : base(document) { }
+    public Question2(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public bool None => RequiredElement("none").GetBoolean();
@@ -765,39 +807,51 @@ public sealed class Question2 : ResultObject
     public string Verb => RequiredElement("verb").GetString()!;
     public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
-
 public sealed class Question3 : ResultObject
 {
-    public Question3(JsonElement document) : base(document) { }
+    public Question3(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<JsonElement> EntityDefinition => Optional<JsonElement>("entity_definition", member => member.Clone());
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<JsonElement> EntityDefinition => Optional<JsonElement>("entity_definition",
+    member => member.Clone());
     public Presence<JsonElement> Instructions => Optional<JsonElement>("instructions", member => member.Clone());
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public IReadOnlyDictionary<string, JsonElement> Kinds => new ReadOnlyDictionary<string, JsonElement>(RequiredElement("kinds").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.Clone(), StringComparer.Ordinal));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public IReadOnlyDictionary<string, JsonElement> Kinds => new ReadOnlyDictionary<string,
+    JsonElement>(RequiredElement("kinds").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.Clone(), StringComparer.Ordinal));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<RecognitionMode> Mode => Optional<RecognitionMode>("mode", member => new RecognitionMode(member.GetString()!));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
     public Presence<string> Profile => Optional<string>("profile", member => member.GetString()!);
-    public Presence<Threshold> RelationThreshold => Optional<Threshold>("relation_threshold", member => global::ThinkThen.Results.Threshold.Read(member));
-    public Presence<IReadOnlyList<RelationRule>> Relations => Optional<IReadOnlyList<RelationRule>>("relations", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray()));
+    public Presence<Threshold> RelationThreshold => Optional<Threshold>("relation_threshold",
+    member => global::ThinkThen.Results.Threshold.Read(member));
+    public Presence<IReadOnlyList<RelationRule>> Relations => Optional<IReadOnlyList<RelationRule>>("relations",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RelationRule(item0)).ToArray()));
     public Presence<uint> SnippetPieces => Optional<uint>("snippet_pieces", member => member.GetUInt32());
-    public Presence<RecognitionStageContext> StageContext => Optional<RecognitionStageContext>("stage_context", member => new RecognitionStageContext(member));
+    public Presence<RecognitionStageContext> StageContext => Optional<RecognitionStageContext>("stage_context",
+    member => new RecognitionStageContext(member));
     public Threshold Threshold => global::ThinkThen.Results.Threshold.Read(RequiredElement("threshold"));
     public Verb Verb => new Verb(RequiredElement("verb").GetString()!);
     public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
-
 public sealed class Question4 : ResultObject
 {
-    public Question4(JsonElement document) : base(document) { }
+    public Question4(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
     public Presence<RelateFields> Fields => RequiredNullable<RelateFields>("fields", member => new RelateFields(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
@@ -807,14 +861,17 @@ public sealed class Question4 : ResultObject
     public string Verb => RequiredElement("verb").GetString()!;
     public Presence<uint> WordingVersion => Optional<uint>("wording_version", member => member.GetUInt32());
 }
-
 public sealed class QuestionChoose : Question
 {
-    public QuestionChoose(JsonElement document) : base(document) { }
+    public QuestionChoose(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
@@ -824,14 +881,17 @@ public sealed class QuestionChoose : Question
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
 }
-
 public sealed class QuestionDecide : Question
 {
-    public QuestionDecide(JsonElement document) : base(document) { }
+    public QuestionDecide(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
@@ -842,14 +902,17 @@ public sealed class QuestionDecide : Question
     public Presence<JsonElement> True => Optional<JsonElement>("true", member => member.Clone());
     public string Verb => RequiredElement("verb").GetString()!;
 }
-
 public sealed class QuestionScore : Question
 {
-    public QuestionScore(JsonElement document) : base(document) { }
+    public QuestionScore(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
@@ -859,14 +922,17 @@ public sealed class QuestionScore : Question
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
 }
-
 public sealed class QuestionTag : Question
 {
-    public QuestionTag(JsonElement document) : base(document) { }
+    public QuestionTag(JsonElement document) : base(document) {
+    }
     public Presence<Batch> Batch => Optional<Batch>("batch", member => global::ThinkThen.Results.Batch.Read(member));
-    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema", member => global::ThinkThen.Results.InputDeclaration.Read(member));
-    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
+    public Presence<InputDeclaration> ContextSchema => Optional<InputDeclaration>("context_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<InputDeclaration> ItemSchema => Optional<InputDeclaration>("item_schema",
+    member => global::ThinkThen.Results.InputDeclaration.Read(member));
+    public Presence<IReadOnlyList<Label>> LabelDetails => Optional<IReadOnlyList<Label>>("label_details",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new Label(item0)).ToArray()));
     public Presence<string> Model => Optional<string>("model", member => member.GetString()!);
     public Presence<string> Name => Optional<string>("name", member => member.GetString()!);
     public Presence<IReadOnlyList<string>> On => Optional<IReadOnlyList<string>>("on", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => item0.GetString()!).ToArray()));
@@ -876,10 +942,10 @@ public sealed class QuestionTag : Question
     public JsonElement Text => RequiredElement("text").Clone();
     public string Verb => RequiredElement("verb").GetString()!;
 }
-
 public sealed class Recognition : ResultObject
 {
-    public Recognition(JsonElement document) : base(document) { }
+    public Recognition(JsonElement document) : base(document) {
+    }
     public RecognitionOdds Answer => global::ThinkThen.Results.RecognitionOdds.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
@@ -894,62 +960,66 @@ public sealed class Recognition : ResultObject
     public Presence<PhysicalSource> Source => Optional<PhysicalSource>("source", member => new PhysicalSource(member));
     public Recognize Value => global::ThinkThen.Results.Recognize.Read(RequiredElement("value"));
 }
-
 public sealed class RecognitionEdgeDocument : ResultObject
 {
-    public RecognitionEdgeDocument(JsonElement document) : base(document) { }
+    public RecognitionEdgeDocument(JsonElement document) : base(document) {
+    }
     public bool Either => RequiredElement("either").GetBoolean();
     public double Probability => RequiredElement("probability").GetDouble();
     public string Relation => RequiredElement("relation").GetString()!;
     public Entity Source => new Entity(RequiredElement("source"));
     public Entity Target => new Entity(RequiredElement("target"));
 }
-
 public readonly record struct RecognitionMode(string Value)
 {
     public static RecognitionMode Whole => new("whole");
     public static RecognitionMode BoundaryOnly => new("boundary_only");
 }
-
 public abstract class RecognitionOdds : ResultObject
 {
-    protected RecognitionOdds(JsonElement document) : base(document) { }
+    protected RecognitionOdds(JsonElement document) : base(document) {
+    }
     public static RecognitionOdds Read(JsonElement document)
     {
         RecognitionOdds? result = null;
-        if (document.TryGetProperty("names", out var tagRecognitionOddsFieldsNamesPairsPiecesProposals0) && (tagRecognitionOddsFieldsNamesPairsPiecesProposals0.ValueKind == JsonValueKind.Array) && document.TryGetProperty("pairs", out var tagRecognitionOddsFieldsNamesPairsPiecesProposals1) && (tagRecognitionOddsFieldsNamesPairsPiecesProposals1.ValueKind == JsonValueKind.Array) && document.TryGetProperty("pieces", out var tagRecognitionOddsFieldsNamesPairsPiecesProposals2) && (tagRecognitionOddsFieldsNamesPairsPiecesProposals2.ValueKind == JsonValueKind.Array) && document.TryGetProperty("proposals", out var tagRecognitionOddsFieldsNamesPairsPiecesProposals3) && (tagRecognitionOddsFieldsNamesPairsPiecesProposals3.ValueKind == JsonValueKind.Array))
+        if (document.TryGetProperty("names", out var tagRecognitionOddsRecognizeAnswer0) && (tagRecognitionOddsRecognizeAnswer0.ValueKind == JsonValueKind.Array) && document.TryGetProperty("pairs",
+        out var tagRecognitionOddsRecognizeAnswer1) && (tagRecognitionOddsRecognizeAnswer1.ValueKind == JsonValueKind.Array) && document.TryGetProperty("pieces",
+        out var tagRecognitionOddsRecognizeAnswer2) && (tagRecognitionOddsRecognizeAnswer2.ValueKind == JsonValueKind.Array) && document.TryGetProperty("proposals",
+        out var tagRecognitionOddsRecognizeAnswer3) && (tagRecognitionOddsRecognizeAnswer3.ValueKind == JsonValueKind.Array))
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RecognitionOddsFieldsNamesPairsPiecesProposals(document);
+            result = new RecognitionOddsRecognizeAnswer(document);
         }
-        if (document.TryGetProperty("pieces", out var tagRecognitionOddsFieldsPiecesProposals0) && (tagRecognitionOddsFieldsPiecesProposals0.ValueKind == JsonValueKind.Array) && document.TryGetProperty("proposals", out var tagRecognitionOddsFieldsPiecesProposals1) && (tagRecognitionOddsFieldsPiecesProposals1.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("names", out _) && !document.TryGetProperty("pairs", out _))
+        if (document.TryGetProperty("pieces", out var tagRecognitionOddsBoundaryOdds0) && (tagRecognitionOddsBoundaryOdds0.ValueKind == JsonValueKind.Array) && document.TryGetProperty("proposals",
+        out var tagRecognitionOddsBoundaryOdds1) && (tagRecognitionOddsBoundaryOdds1.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("names",
+        out _) && !document.TryGetProperty("pairs", out _))
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RecognitionOddsFieldsPiecesProposals(document);
+            result = new RecognitionOddsBoundaryOdds(document);
         }
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
-public sealed class RecognitionOddsFieldsNamesPairsPiecesProposals : RecognitionOdds
+public sealed class RecognitionOddsBoundaryOdds : RecognitionOdds
 {
-    public RecognitionOddsFieldsNamesPairsPiecesProposals(JsonElement document) : base(document) { }
+    public RecognitionOddsBoundaryOdds(JsonElement document) : base(document) {
+    }
+    public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
+    public IReadOnlyList<BoundaryProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray());
+}
+public sealed class RecognitionOddsRecognizeAnswer : RecognitionOdds
+{
+    public RecognitionOddsRecognizeAnswer(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<NameOdds> Names => Array.AsReadOnly(RequiredElement("names").EnumerateArray().Select(item0 => new NameOdds(item0)).ToArray());
     public IReadOnlyList<PairOdds> Pairs => Array.AsReadOnly(RequiredElement("pairs").EnumerateArray().Select(item0 => new PairOdds(item0)).ToArray());
     public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
     public IReadOnlyList<RecognitionProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new RecognitionProposal(item0)).ToArray());
 }
-
-public sealed class RecognitionOddsFieldsPiecesProposals : RecognitionOdds
-{
-    public RecognitionOddsFieldsPiecesProposals(JsonElement document) : base(document) { }
-    public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
-    public IReadOnlyList<BoundaryProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray());
-}
-
 public sealed class RecognitionProposal : ResultObject
 {
-    public RecognitionProposal(JsonElement document) : base(document) { }
+    public RecognitionProposal(JsonElement document) : base(document) {
+    }
     public ulong End => RequiredElement("end").GetUInt64();
     public bool Kept => RequiredElement("kept").GetBoolean();
     public Presence<string> Kind => Optional<string>("kind", member => member.GetString()!);
@@ -958,25 +1028,26 @@ public sealed class RecognitionProposal : ResultObject
     public ulong Start => RequiredElement("start").GetUInt64();
     public Presence<double> Strength => Optional<double>("strength", member => member.GetDouble());
 }
-
 public sealed class RecognitionStageContext : ResultObject
 {
-    public RecognitionStageContext(JsonElement document) : base(document) { }
+    public RecognitionStageContext(JsonElement document) : base(document) {
+    }
     public Presence<string> Boundary => Optional<string>("boundary", member => member.GetString()!);
     public Presence<string> KindEdge => Optional<string>("kind_edge", member => member.GetString()!);
     public Presence<string> Relation => Optional<string>("relation", member => member.GetString()!);
 }
-
 public sealed class Relation : ResultObject
 {
-    public Relation(JsonElement document) : base(document) { }
+    public Relation(JsonElement document) : base(document) {
+    }
     public Answers Answer => new Answers(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public Presence<ulong> Index => Optional<ulong>("index", member => member.GetUInt64());
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<IReadOnlyList<SessionInputSource>> InputSources => Optional<IReadOnlyList<SessionInputSource>>("input_sources", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new SessionInputSource(item0)).ToArray()));
+    public Presence<IReadOnlyList<SessionInputSource>> InputSources => Optional<IReadOnlyList<SessionInputSource>>("input_sources",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new SessionInputSource(item0)).ToArray()));
     public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
     public Meta Meta => new Meta(RequiredElement("meta"));
     public Presence<Position> Position => Optional<Position>("position", member => new Position(member));
@@ -984,16 +1055,61 @@ public sealed class Relation : ResultObject
     public Version Schema => new Version(RequiredElement("schema").GetString()!);
     public IReadOnlyList<RelatedEntityEdge> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new RelatedEntityEdge(item0)).ToArray());
 }
-
 public readonly record struct RelationDirection(string Value)
 {
     public static RelationDirection SourceToTarget => new("source_to_target");
     public static RelationDirection Either => new("either");
 }
-
+public abstract class RelationEndpoint : ResultObject
+{
+    protected RelationEndpoint(JsonElement document) : base(document) {
+    }
+    public static RelationEndpoint Read(JsonElement document)
+    {
+        RelationEndpoint? result = null;
+        if (document.TryGetProperty("kind", out var tagRelationEndpointRelatedEntity0) && (tagRelationEndpointRelatedEntity0.ValueKind == JsonValueKind.String) && document.TryGetProperty("name",
+        out var tagRelationEndpointRelatedEntity1) && (tagRelationEndpointRelatedEntity1.ValueKind == JsonValueKind.String) && !document.TryGetProperty("file",
+        out _) && !document.TryGetProperty("ordinal", out _) && !document.TryGetProperty("record",
+        out _))
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new RelationEndpointRelatedEntity(document);
+        }
+        if (document.TryGetProperty("file", out var tagRelationEndpointSource0) && (tagRelationEndpointSource0.ValueKind == JsonValueKind.String) && document.TryGetProperty("kind",
+        out var tagRelationEndpointSource1) && (tagRelationEndpointSource1.ValueKind == JsonValueKind.String) && document.TryGetProperty("name",
+        out var tagRelationEndpointSource2) && (tagRelationEndpointSource2.ValueKind == JsonValueKind.String) && document.TryGetProperty("ordinal",
+        out var tagRelationEndpointSource3) && (tagRelationEndpointSource3.ValueKind == JsonValueKind.Number) && document.TryGetProperty("record",
+        out var tagRelationEndpointSource4) && (true))
+        {
+            if (result is not null) throw new JsonException("Ambiguous result variant.");
+            result = new RelationEndpointSource(document);
+        }
+        return result ?? throw new JsonException("Unknown result variant.");
+    }
+}
+public sealed class RelationEndpointRelatedEntity : RelationEndpoint
+{
+    public RelationEndpointRelatedEntity(JsonElement document) : base(document) {
+    }
+    public string Kind => RequiredElement("kind").GetString()!;
+    public string Name => RequiredElement("name").GetString()!;
+}
+public sealed class RelationEndpointSource : RelationEndpoint
+{
+    public RelationEndpointSource(JsonElement document) : base(document) {
+    }
+    public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
+    public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
+    public string Kind => RequiredElement("kind").GetString()!;
+    public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
+    public string Name => RequiredElement("name").GetString()!;
+    public ulong Ordinal => RequiredElement("ordinal").GetUInt64();
+    public JsonElement Record => RequiredElement("record").Clone();
+}
 public abstract class RelationMember : ResultObject
 {
-    protected RelationMember(JsonElement document) : base(document) { }
+    protected RelationMember(JsonElement document) : base(document) {
+    }
     public static RelationMember Read(JsonElement document)
     {
         RelationMember? result = null;
@@ -1012,10 +1128,10 @@ public abstract class RelationMember : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class RelationMemberAnswerId : RelationMember
 {
-    public RelationMemberAnswerId(JsonElement document) : base(document) { }
+    public RelationMemberAnswerId(JsonElement document) : base(document) {
+    }
     public RelationDirection Direction => new RelationDirection(RequiredElement("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(RequiredElement("method").GetString()!);
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
@@ -1033,10 +1149,10 @@ public sealed class RelationMemberAnswerId : RelationMember
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public double Probability => RequiredElement("probability").GetDouble();
 }
-
 public sealed class RelationMemberFailureId : RelationMember
 {
-    public RelationMemberFailureId(JsonElement document) : base(document) { }
+    public RelationMemberFailureId(JsonElement document) : base(document) {
+    }
     public RelationDirection Direction => new RelationDirection(RequiredElement("direction").GetString()!);
     public RelationMethod Method => new RelationMethod(RequiredElement("method").GetString()!);
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
@@ -1052,13 +1168,11 @@ public sealed class RelationMemberFailureId : RelationMember
     public Failure Failure => new Failure(RequiredElement("failure"));
     public string FailureId => RequiredElement("failure_id").GetString()!;
 }
-
 public readonly record struct RelationMethod(string Value)
 {
     public static RelationMethod YesNo => new("yes_no");
     public static RelationMethod Choice => new("choice");
 }
-
 public readonly record struct RequestFunction(string Value)
 {
     public static RequestFunction Decide => new("decide");
@@ -1072,10 +1186,10 @@ public readonly record struct RequestFunction(string Value)
     public static RequestFunction Recognize => new("recognize");
     public static RequestFunction Relate => new("relate");
 }
-
 public abstract class SendBudgetDenial : ResultObject
 {
-    protected SendBudgetDenial(JsonElement document) : base(document) { }
+    protected SendBudgetDenial(JsonElement document) : base(document) {
+    }
     public static SendBudgetDenial Read(JsonElement document)
     {
         SendBudgetDenial? result = null;
@@ -1097,26 +1211,25 @@ public abstract class SendBudgetDenial : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SendBudgetDenialBeforeAdditionalSend : SendBudgetDenial
 {
-    public SendBudgetDenialBeforeAdditionalSend(JsonElement document) : base(document) { }
+    public SendBudgetDenialBeforeAdditionalSend(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
 }
-
 public sealed class SendBudgetDenialBeforeFirstSend : SendBudgetDenial
 {
-    public SendBudgetDenialBeforeFirstSend(JsonElement document) : base(document) { }
+    public SendBudgetDenialBeforeFirstSend(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
 }
-
 public sealed class SendBudgetDenialBeforeRetry : SendBudgetDenial
 {
-    public SendBudgetDenialBeforeRetry(JsonElement document) : base(document) { }
+    public SendBudgetDenialBeforeRetry(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public ushort LastStatus => RequiredElement("last_status").GetUInt16();
 }
-
 public readonly record struct StopCause(string Value)
 {
     public static StopCause Usage => new("usage");
@@ -1131,34 +1244,32 @@ public readonly record struct StopCause(string Value)
     public static StopCause Deadline => new("deadline");
     public static StopCause Defect => new("defect");
 }
-
 public sealed class Stopped : ResultObject
 {
-    public Stopped(JsonElement document) : base(document) { }
+    public Stopped(JsonElement document) : base(document) {
+    }
     public Presence<ulong> At => Optional<ulong>("at", member => member.GetUInt64());
     public StopCause Cause => new StopCause(RequiredElement("cause").GetString()!);
     public bool Retryable => RequiredElement("retryable").GetBoolean();
     public Presence<ushort> Status => Optional<ushort>("status", member => member.GetUInt16());
 }
-
 public sealed class StringRoot : ResultObject
 {
-    public StringRoot(JsonElement document) : base(document) { }
+    public StringRoot(JsonElement document) : base(document) {
+    }
     public StringType Type => new StringType(RequiredElement("type").GetString()!);
 }
-
 public readonly record struct StringType(string Value)
 {
     public static StringType String => new("string");
 }
-
 public sealed class Usage : ResultObject
 {
-    public Usage(JsonElement document) : base(document) { }
+    public Usage(JsonElement document) : base(document) {
+    }
     public Presence<ulong> InputTokens => Optional<ulong>("input_tokens", member => member.GetUInt64());
     public Presence<ulong> OutputTokens => Optional<ulong>("output_tokens", member => member.GetUInt64());
 }
-
 public readonly record struct UsagePersistence(string Value)
 {
     public static UsagePersistence Disabled => new("disabled");
@@ -1166,24 +1277,25 @@ public readonly record struct UsagePersistence(string Value)
     public static UsagePersistence Written => new("written");
     public static UsagePersistence Failed => new("failed");
 }
-
 public readonly record struct Verb(string Value)
 {
     public static Verb Recognize => new("recognize");
 }
-
 public readonly record struct Version(string Value)
 {
     public static Version ThinkthenResult2 => new("thinkthen.result/2");
 }
-
 public abstract class AnnotatedField
 {
     private readonly JsonElement document;
-    protected AnnotatedField(JsonElement document) { this.document = document.Clone(); }
+    protected AnnotatedField(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
     public string ToJsonString() => document.GetRawText();
     public static AnnotatedField Read(JsonElement document) => document.ValueKind switch
     {
@@ -1197,46 +1309,46 @@ public abstract class AnnotatedField
         _ => throw new JsonException("Unknown primitive result variant.")
     };
 }
-
 public sealed class AnnotatedFieldBoolean : AnnotatedField
 {
-    public AnnotatedFieldBoolean(JsonElement document) : base(document) { }
+    public AnnotatedFieldBoolean(JsonElement document) : base(document) {
+    }
     public bool Value => Document.GetBoolean();
 }
-
 public sealed class AnnotatedFieldNull : AnnotatedField
 {
-    public AnnotatedFieldNull(JsonElement document) : base(document) { }
+    public AnnotatedFieldNull(JsonElement document) : base(document) {
+    }
     public JsonElement Value => Document.Clone();
 }
-
 public sealed class AnnotatedFieldString : AnnotatedField
 {
-    public AnnotatedFieldString(JsonElement document) : base(document) { }
+    public AnnotatedFieldString(JsonElement document) : base(document) {
+    }
     public string Value => Document.GetString()!;
 }
-
 public sealed class AnnotatedFieldArray : AnnotatedField
 {
-    public AnnotatedFieldArray(JsonElement document) : base(document) { }
+    public AnnotatedFieldArray(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<string> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
-
 public sealed class AnnotatedFieldNumber : AnnotatedField
 {
-    public AnnotatedFieldNumber(JsonElement document) : base(document) { }
+    public AnnotatedFieldNumber(JsonElement document) : base(document) {
+    }
     public double Value => Document.GetDouble();
 }
-
 public sealed class AnnotatedFieldObject : AnnotatedField
 {
-    public AnnotatedFieldObject(JsonElement document) : base(document) { }
+    public AnnotatedFieldObject(JsonElement document) : base(document) {
+    }
     public Failed Value => new Failed(Document);
 }
-
 public abstract class Answer : ResultObject
 {
-    protected Answer(JsonElement document) : base(document) { }
+    protected Answer(JsonElement document) : base(document) {
+    }
     public static Answer Read(JsonElement document)
     {
         Answer? result = null;
@@ -1263,53 +1375,61 @@ public abstract class Answer : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class AnswerChoice : Answer
 {
-    public AnswerChoice(JsonElement document) : base(document) { }
+    public AnswerChoice(JsonElement document) : base(document) {
+    }
     public Presence<double> Confidence => Optional<double>("confidence", member => member.GetDouble());
     public string Kind => RequiredElement("kind").GetString()!;
     public string Pick => RequiredElement("pick").GetString()!;
-    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string, double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string,
+    double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
-
 public sealed class AnswerScore : Answer
 {
-    public AnswerScore(JsonElement document) : base(document) { }
+    public AnswerScore(JsonElement document) : base(document) {
+    }
     public Presence<double> Confidence => Optional<double>("confidence", member => member.GetDouble());
     public string Kind => RequiredElement("kind").GetString()!;
     public string Level => RequiredElement("level").GetString()!;
-    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string, double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string,
+    double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
-
 public sealed class AnswerTag : Answer
 {
-    public AnswerTag(JsonElement document) : base(document) { }
+    public AnswerTag(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
-    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string, double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string,
+    double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
-
 public sealed class AnswerYesNo : Answer
 {
-    public AnswerYesNo(JsonElement document) : base(document) { }
+    public AnswerYesNo(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public double Probability => RequiredElement("probability").GetDouble();
 }
-
 public readonly record struct AttemptOutcome(string Value)
 {
     public static AttemptOutcome Ok => new("ok");
     public static AttemptOutcome Status => new("status");
     public static AttemptOutcome Transport => new("transport");
 }
-
 public abstract class BatchSetting
 {
     private readonly JsonElement document;
-    protected BatchSetting(JsonElement document) { this.document = document.Clone(); }
+    protected BatchSetting(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
     public string ToJsonString() => document.GetRawText();
     public static BatchSetting Read(JsonElement document) => document.ValueKind switch
     {
@@ -1318,29 +1438,29 @@ public abstract class BatchSetting
         _ => throw new JsonException("Unknown primitive result variant.")
     };
 }
-
 public sealed class BatchSettingInteger : BatchSetting
 {
-    public BatchSettingInteger(JsonElement document) : base(document) { }
+    public BatchSettingInteger(JsonElement document) : base(document) {
+    }
     public ulong Value => Document.GetUInt64();
 }
-
 public sealed class BatchSettingString : BatchSetting
 {
-    public BatchSettingString(JsonElement document) : base(document) { }
+    public BatchSettingString(JsonElement document) : base(document) {
+    }
     public string Value => Document.GetString()!;
 }
-
 public sealed class BatchWarning : ResultObject
 {
-    public BatchWarning(JsonElement document) : base(document) { }
+    public BatchWarning(JsonElement document) : base(document) {
+    }
     public BatchSetting Running => global::ThinkThen.Results.BatchSetting.Read(RequiredElement("running"));
     public BatchSetting TunedFor => global::ThinkThen.Results.BatchSetting.Read(RequiredElement("tuned_for"));
 }
-
 public sealed class Entity : ResultObject
 {
-    public Entity(JsonElement document) : base(document) { }
+    public Entity(JsonElement document) : base(document) {
+    }
     public ulong End => RequiredElement("end").GetUInt64();
     public Presence<string> File => Optional<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
@@ -1351,30 +1471,29 @@ public sealed class Entity : ResultObject
     public double Strength => RequiredElement("strength").GetDouble();
     public string Text => RequiredElement("text").GetString()!;
 }
-
 public sealed class EntityEdge : ResultObject
 {
-    public EntityEdge(JsonElement document) : base(document) { }
+    public EntityEdge(JsonElement document) : base(document) {
+    }
     public Presence<bool> Either => Optional<bool>("either", member => member.GetBoolean());
     public double Probability => RequiredElement("probability").GetDouble();
     public string Relation => RequiredElement("relation").GetString()!;
     public Entity Source => new Entity(RequiredElement("source"));
     public Entity Target => new Entity(RequiredElement("target"));
 }
-
 public sealed class Failed : ResultObject
 {
-    public Failed(JsonElement document) : base(document) { }
+    public Failed(JsonElement document) : base(document) {
+    }
     public Failure FailedValue => new Failure(RequiredElement("failed"));
 }
-
 public sealed class Failure : ResultObject
 {
-    public Failure(JsonElement document) : base(document) { }
+    public Failure(JsonElement document) : base(document) {
+    }
     public FailureCause Cause => new FailureCause(RequiredElement("cause").GetString()!);
     public string Kind => RequiredElement("kind").GetString()!;
 }
-
 public readonly record struct FailureCause(string Value)
 {
     public static FailureCause MissingAnswer => new("missing_answer");
@@ -1384,7 +1503,6 @@ public readonly record struct FailureCause(string Value)
     public static FailureCause InvalidDistribution => new("invalid_distribution");
     public static FailureCause UnexpectedProbability => new("unexpected_probability");
 }
-
 public readonly record struct FailureKind(string Value)
 {
     public static FailureKind Usage => new("usage");
@@ -1394,52 +1512,59 @@ public readonly record struct FailureKind(string Value)
     public static FailureKind Deadline => new("deadline");
     public static FailureKind Defect => new("defect");
 }
-
 public sealed class FindAnswer : ResultObject
 {
-    public FindAnswer(JsonElement document) : base(document) { }
+    public FindAnswer(JsonElement document) : base(document) {
+    }
     public Presence<double> Confidence => Optional<double>("confidence", member => member.GetDouble());
     public string Kind => RequiredElement("kind").GetString()!;
     public string Pick => RequiredElement("pick").GetString()!;
-    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string, double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, double> Probabilities => new ReadOnlyDictionary<string,
+    double>(RequiredElement("probabilities").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
-
 public sealed class NameOdds : ResultObject
 {
-    public NameOdds(JsonElement document) : base(document) { }
-    public Presence<IReadOnlyDictionary<string, double>> Edges => RequiredNullable<IReadOnlyDictionary<string, double>>("edges", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
+    public NameOdds(JsonElement document) : base(document) {
+    }
+    public Presence<IReadOnlyDictionary<string, double>> Edges => RequiredNullable<IReadOnlyDictionary<string,
+    double>>("edges", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
     public ulong End => RequiredElement("end").GetUInt64();
-    public Presence<IReadOnlyDictionary<string, double>> Kinds => RequiredNullable<IReadOnlyDictionary<string, double>>("kinds", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
+    public Presence<IReadOnlyDictionary<string, double>> Kinds => RequiredNullable<IReadOnlyDictionary<string,
+    double>>("kinds", member => new ReadOnlyDictionary<string, double>(member.EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal)));
     public ulong Start => RequiredElement("start").GetUInt64();
 }
-
 public sealed class PairOdds : ResultObject
 {
-    public PairOdds(JsonElement document) : base(document) { }
+    public PairOdds(JsonElement document) : base(document) {
+    }
     public double Probability => RequiredElement("probability").GetDouble();
     public string Relation => RequiredElement("relation").GetString()!;
     public Place Source => new Place(RequiredElement("source"));
     public Place Target => new Place(RequiredElement("target"));
 }
-
 public sealed class PieceOdds : ResultObject
 {
-    public PieceOdds(JsonElement document) : base(document) { }
+    public PieceOdds(JsonElement document) : base(document) {
+    }
     public ulong End => RequiredElement("end").GetUInt64();
     public ulong Start => RequiredElement("start").GetUInt64();
-    public IReadOnlyDictionary<string, double> Tags => new ReadOnlyDictionary<string, double>(RequiredElement("tags").EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
+    public IReadOnlyDictionary<string, double> Tags => new ReadOnlyDictionary<string, double>(RequiredElement("tags").EnumerateObject().ToDictionary(entry0 => entry0.Name,
+    entry0 => entry0.Value.GetDouble(), StringComparer.Ordinal));
 }
-
 public sealed class Place : ResultObject
 {
-    public Place(JsonElement document) : base(document) { }
+    public Place(JsonElement document) : base(document) {
+    }
     public ulong End => RequiredElement("end").GetUInt64();
     public ulong Start => RequiredElement("start").GetUInt64();
 }
-
 public sealed class Plan : ResultObject
 {
-    public Plan(JsonElement document) : base(document) { }
+    public Plan(JsonElement document) : base(document) {
+    }
     public ulong EstimatedBytes => RequiredElement("estimated_bytes").GetUInt64();
     public TokenBand EstimatedInputTokens => new TokenBand(RequiredElement("estimated_input_tokens"));
     public Presence<string> FirstBodyUtf8 => RequiredNullable<string>("first_body_utf8", member => member.GetString()!);
@@ -1450,123 +1575,88 @@ public sealed class Plan : ResultObject
     public string TokenEstimateMethod => RequiredElement("token_estimate_method").GetString()!;
     public bool UpperBound => RequiredElement("upper_bound").GetBoolean();
 }
-
 public sealed class ProfileWarning : ResultObject
 {
-    public ProfileWarning(JsonElement document) : base(document) { }
+    public ProfileWarning(JsonElement document) : base(document) {
+    }
     public string Running => RequiredElement("running").GetString()!;
     public string TunedFor => RequiredElement("tuned_for").GetString()!;
 }
-
 public abstract class Recognize : ResultObject
 {
-    protected Recognize(JsonElement document) : base(document) { }
+    protected Recognize(JsonElement document) : base(document) {
+    }
     public static Recognize Read(JsonElement document)
     {
         Recognize? result = null;
-        if (document.TryGetProperty("entities", out var tagRecognizeFieldsEntities0) && (tagRecognizeFieldsEntities0.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("mode", out _) && !document.TryGetProperty("proposals", out _))
+        if (document.TryGetProperty("entities", out var tagRecognizeEntities0) && (tagRecognizeEntities0.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("mode",
+        out _) && !document.TryGetProperty("proposals", out _))
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RecognizeFieldsEntities(document);
+            result = new RecognizeEntities(document);
         }
-        if (document.TryGetProperty("mode", out var tagRecognizeFieldsModeProposals0) && (tagRecognizeFieldsModeProposals0.ValueKind == JsonValueKind.String) && document.TryGetProperty("proposals", out var tagRecognizeFieldsModeProposals1) && (tagRecognizeFieldsModeProposals1.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("entities", out _))
+        if (document.TryGetProperty("mode", out var tagRecognizeModeProposals0) && (tagRecognizeModeProposals0.ValueKind == JsonValueKind.String) && document.TryGetProperty("proposals",
+        out var tagRecognizeModeProposals1) && (tagRecognizeModeProposals1.ValueKind == JsonValueKind.Array) && !document.TryGetProperty("entities",
+        out _))
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RecognizeFieldsModeProposals(document);
+            result = new RecognizeModeProposals(document);
         }
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class RecognizeAnswer : ResultObject
 {
-    public RecognizeAnswer(JsonElement document) : base(document) { }
+    public RecognizeAnswer(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<NameOdds> Names => Array.AsReadOnly(RequiredElement("names").EnumerateArray().Select(item0 => new NameOdds(item0)).ToArray());
     public IReadOnlyList<PairOdds> Pairs => Array.AsReadOnly(RequiredElement("pairs").EnumerateArray().Select(item0 => new PairOdds(item0)).ToArray());
     public IReadOnlyList<PieceOdds> Pieces => Array.AsReadOnly(RequiredElement("pieces").EnumerateArray().Select(item0 => new PieceOdds(item0)).ToArray());
     public IReadOnlyList<RecognitionProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new RecognitionProposal(item0)).ToArray());
 }
-
-public sealed class RecognizeFieldsEntities : Recognize
+public sealed class RecognizeEntities : Recognize
 {
-    public RecognizeFieldsEntities(JsonElement document) : base(document) { }
+    public RecognizeEntities(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<Entity> Entities => Array.AsReadOnly(RequiredElement("entities").EnumerateArray().Select(item0 => new Entity(item0)).ToArray());
-    public Presence<IReadOnlyList<EntityEdge>> Relations => Optional<IReadOnlyList<EntityEdge>>("relations", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new EntityEdge(item0)).ToArray()));
+    public Presence<IReadOnlyList<EntityEdge>> Relations => Optional<IReadOnlyList<EntityEdge>>("relations",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new EntityEdge(item0)).ToArray()));
 }
-
-public sealed class RecognizeFieldsModeProposals : Recognize
+public sealed class RecognizeModeProposals : Recognize
 {
-    public RecognizeFieldsModeProposals(JsonElement document) : base(document) { }
+    public RecognizeModeProposals(JsonElement document) : base(document) {
+    }
     public BoundaryMode Mode => new BoundaryMode(RequiredElement("mode").GetString()!);
     public IReadOnlyList<BoundaryProposal> Proposals => Array.AsReadOnly(RequiredElement("proposals").EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray());
 }
-
 public sealed class RelateFields : ResultObject
 {
-    public RelateFields(JsonElement document) : base(document) { }
+    public RelateFields(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public string Name => RequiredElement("name").GetString()!;
 }
-
 public sealed class RelatedEntity : ResultObject
 {
-    public RelatedEntity(JsonElement document) : base(document) { }
+    public RelatedEntity(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public string Name => RequiredElement("name").GetString()!;
 }
-
 public sealed class RelatedEntityEdge : ResultObject
 {
-    public RelatedEntityEdge(JsonElement document) : base(document) { }
+    public RelatedEntityEdge(JsonElement document) : base(document) {
+    }
     public Presence<bool> Either => Optional<bool>("either", member => member.GetBoolean());
     public double Probability => RequiredElement("probability").GetDouble();
     public string Relation => RequiredElement("relation").GetString()!;
-    public RelatedEntityEdgePropertiesSource Source => global::ThinkThen.Results.RelatedEntityEdgePropertiesSource.Read(RequiredElement("source"));
-    public RelatedEntityEdgePropertiesSource Target => global::ThinkThen.Results.RelatedEntityEdgePropertiesSource.Read(RequiredElement("target"));
+    public RelationEndpoint Source => global::ThinkThen.Results.RelationEndpoint.Read(RequiredElement("source"));
+    public RelationEndpoint Target => global::ThinkThen.Results.RelationEndpoint.Read(RequiredElement("target"));
 }
-
-public abstract class RelatedEntityEdgePropertiesSource : ResultObject
-{
-    protected RelatedEntityEdgePropertiesSource(JsonElement document) : base(document) { }
-    public static RelatedEntityEdgePropertiesSource Read(JsonElement document)
-    {
-        RelatedEntityEdgePropertiesSource? result = null;
-        if (document.TryGetProperty("kind", out var tagRelatedEntityEdgePropertiesSourceFieldsKindName0) && (tagRelatedEntityEdgePropertiesSourceFieldsKindName0.ValueKind == JsonValueKind.String) && document.TryGetProperty("name", out var tagRelatedEntityEdgePropertiesSourceFieldsKindName1) && (tagRelatedEntityEdgePropertiesSourceFieldsKindName1.ValueKind == JsonValueKind.String) && !document.TryGetProperty("file", out _) && !document.TryGetProperty("ordinal", out _) && !document.TryGetProperty("record", out _))
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RelatedEntityEdgePropertiesSourceFieldsKindName(document);
-        }
-        if (document.TryGetProperty("file", out var tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord0) && (tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord0.ValueKind == JsonValueKind.String) && document.TryGetProperty("kind", out var tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord1) && (tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord1.ValueKind == JsonValueKind.String) && document.TryGetProperty("name", out var tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord2) && (tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord2.ValueKind == JsonValueKind.String) && document.TryGetProperty("ordinal", out var tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord3) && (tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord3.ValueKind == JsonValueKind.Number) && document.TryGetProperty("record", out var tagRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord4) && (true))
-        {
-            if (result is not null) throw new JsonException("Ambiguous result variant.");
-            result = new RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(document);
-        }
-        return result ?? throw new JsonException("Unknown result variant.");
-    }
-}
-
-public sealed class RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord : RelatedEntityEdgePropertiesSource
-{
-    public RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(JsonElement document) : base(document) { }
-    public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
-    public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
-    public string Kind => RequiredElement("kind").GetString()!;
-    public Presence<ulong> LastLine => Optional<ulong>("last_line", member => member.GetUInt64());
-    public string Name => RequiredElement("name").GetString()!;
-    public ulong Ordinal => RequiredElement("ordinal").GetUInt64();
-    public JsonElement Record => RequiredElement("record").Clone();
-}
-
-public sealed class RelatedEntityEdgePropertiesSourceFieldsKindName : RelatedEntityEdgePropertiesSource
-{
-    public RelatedEntityEdgePropertiesSourceFieldsKindName(JsonElement document) : base(document) { }
-    public string Kind => RequiredElement("kind").GetString()!;
-    public string Name => RequiredElement("name").GetString()!;
-}
-
 public sealed class RelationRule : ResultObject
 {
-    public RelationRule(JsonElement document) : base(document) { }
+    public RelationRule(JsonElement document) : base(document) {
+    }
     public bool Either => RequiredElement("either").GetBoolean();
     public string Name => RequiredElement("name").GetString()!;
     public string Reads => RequiredElement("reads").GetString()!;
@@ -1574,24 +1664,24 @@ public sealed class RelationRule : ResultObject
     public string Source => RequiredElement("source").GetString()!;
     public string Target => RequiredElement("target").GetString()!;
 }
-
 public sealed class SessionAnnotation : ResultObject
 {
-    public SessionAnnotation(JsonElement document) : base(document) { }
+    public SessionAnnotation(JsonElement document) : base(document) {
+    }
     public string Name => RequiredElement("name").GetString()!;
     public AnnotationValue Value => global::ThinkThen.Results.AnnotationValue.Read(RequiredElement("value"));
 }
-
 public sealed class SessionInputSource : ResultObject
 {
-    public SessionInputSource(JsonElement document) : base(document) { }
+    public SessionInputSource(JsonElement document) : base(document) {
+    }
     public ulong Index => RequiredElement("index").GetUInt64();
     public PhysicalSource Source => new PhysicalSource(RequiredElement("source"));
 }
-
 public abstract class SessionJudgment : ResultObject
 {
-    protected SessionJudgment(JsonElement document) : base(document) { }
+    protected SessionJudgment(JsonElement document) : base(document) {
+    }
     public static SessionJudgment Read(JsonElement document)
     {
         SessionJudgment? result = null;
@@ -1618,45 +1708,45 @@ public abstract class SessionJudgment : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SessionJudgmentChoice : SessionJudgment
 {
-    public SessionJudgmentChoice(JsonElement document) : base(document) { }
+    public SessionJudgmentChoice(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<string> Value => RequiredNullable<string>("value", member => member.GetString()!);
 }
-
 public sealed class SessionJudgmentDecision : SessionJudgment
 {
-    public SessionJudgmentDecision(JsonElement document) : base(document) { }
+    public SessionJudgmentDecision(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<bool> Value => RequiredNullable<bool>("value", member => member.GetBoolean());
 }
-
 public sealed class SessionJudgmentScore : SessionJudgment
 {
-    public SessionJudgmentScore(JsonElement document) : base(document) { }
+    public SessionJudgmentScore(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public double Value => RequiredElement("value").GetDouble();
 }
-
 public sealed class SessionJudgmentTags : SessionJudgment
 {
-    public SessionJudgmentTags(JsonElement document) : base(document) { }
+    public SessionJudgmentTags(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<string> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
-
 public sealed class SessionNamedProbability : ResultObject
 {
-    public SessionNamedProbability(JsonElement document) : base(document) { }
+    public SessionNamedProbability(JsonElement document) : base(document) {
+    }
     public string Name => RequiredElement("name").GetString()!;
     public double Probability => RequiredElement("probability").GetDouble();
 }
-
 public abstract class SessionObservation : ResultObject
 {
-    protected SessionObservation(JsonElement document) : base(document) { }
+    protected SessionObservation(JsonElement document) : base(document) {
+    }
     public static SessionObservation Read(JsonElement document)
     {
         SessionObservation? result = null;
@@ -1673,10 +1763,10 @@ public abstract class SessionObservation : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SessionObservationQuestion : SessionObservation
 {
-    public SessionObservationQuestion(JsonElement document) : base(document) { }
+    public SessionObservationQuestion(JsonElement document) : base(document) {
+    }
     public SessionQuestionDetail Detail => new SessionQuestionDetail(RequiredElement("detail"));
     public ulong Index => RequiredElement("index").GetUInt64();
     public string Kind => RequiredElement("kind").GetString()!;
@@ -1684,18 +1774,18 @@ public sealed class SessionObservationQuestion : SessionObservation
     public ulong Position => RequiredElement("position").GetUInt64();
     public Presence<string> Stage => Optional<string>("stage", member => member.GetString()!);
 }
-
 public sealed class SessionObservationRow : SessionObservation
 {
-    public SessionObservationRow(JsonElement document) : base(document) { }
+    public SessionObservationRow(JsonElement document) : base(document) {
+    }
     public ulong Index => RequiredElement("index").GetUInt64();
     public string Kind => RequiredElement("kind").GetString()!;
     public SessionObservedRow Value => global::ThinkThen.Results.SessionObservedRow.Read(RequiredElement("value"));
 }
-
 public abstract class SessionObservedRow : ResultObject
 {
-    protected SessionObservedRow(JsonElement document) : base(document) { }
+    protected SessionObservedRow(JsonElement document) : base(document) {
+    }
     public static SessionObservedRow Read(JsonElement document)
     {
         SessionObservedRow? result = null;
@@ -1727,124 +1817,140 @@ public abstract class SessionObservedRow : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SessionObservedRowAnnotated : SessionObservedRow
 {
-    public SessionObservedRowAnnotated(JsonElement document) : base(document) { }
+    public SessionObservedRowAnnotated(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<SessionAnnotation> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new SessionAnnotation(item0)).ToArray());
 }
-
 public sealed class SessionObservedRowFind : SessionObservedRow
 {
-    public SessionObservedRowFind(JsonElement document) : base(document) { }
+    public SessionObservedRowFind(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public Presence<ulong> Value => RequiredNullable<ulong>("value", member => member.GetUInt64());
 }
-
 public sealed class SessionObservedRowJudgment : SessionObservedRow
 {
-    public SessionObservedRowJudgment(JsonElement document) : base(document) { }
+    public SessionObservedRowJudgment(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public SessionJudgment Value => global::ThinkThen.Results.SessionJudgment.Read(RequiredElement("value"));
 }
-
 public sealed class SessionObservedRowRecognized : SessionObservedRow
 {
-    public SessionObservedRowRecognized(JsonElement document) : base(document) { }
+    public SessionObservedRowRecognized(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public SessionRecognition Value => new SessionRecognition(RequiredElement("value"));
 }
-
 public sealed class SessionObservedRowRelations : SessionObservedRow
 {
-    public SessionObservedRowRelations(JsonElement document) : base(document) { }
+    public SessionObservedRowRelations(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<SessionRelationEdge> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new SessionRelationEdge(item0)).ToArray());
 }
-
 public abstract class SessionPacket : ResultObject
 {
-    protected SessionPacket(JsonElement document) : base(document) { }
+    protected SessionPacket(JsonElement document) : base(document) {
+    }
     public static SessionPacket Read(JsonElement document)
     {
         SessionPacket? result = null;
-        if (document.TryGetProperty("function", out var tagSessionPacketDecideRow0) && tagSessionPacketDecideRow0.ValueKind == JsonValueKind.String && tagSessionPacketDecideRow0.GetString() == "decide" && document.TryGetProperty("kind", out var tagSessionPacketDecideRow1) && tagSessionPacketDecideRow1.ValueKind == JsonValueKind.String && tagSessionPacketDecideRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketDecideRow0) && tagSessionPacketDecideRow0.ValueKind == JsonValueKind.String && tagSessionPacketDecideRow0.GetString() == "decide" && document.TryGetProperty("kind",
+        out var tagSessionPacketDecideRow1) && tagSessionPacketDecideRow1.ValueKind == JsonValueKind.String && tagSessionPacketDecideRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketDecideRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketChooseRow0) && tagSessionPacketChooseRow0.ValueKind == JsonValueKind.String && tagSessionPacketChooseRow0.GetString() == "choose" && document.TryGetProperty("kind", out var tagSessionPacketChooseRow1) && tagSessionPacketChooseRow1.ValueKind == JsonValueKind.String && tagSessionPacketChooseRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketChooseRow0) && tagSessionPacketChooseRow0.ValueKind == JsonValueKind.String && tagSessionPacketChooseRow0.GetString() == "choose" && document.TryGetProperty("kind",
+        out var tagSessionPacketChooseRow1) && tagSessionPacketChooseRow1.ValueKind == JsonValueKind.String && tagSessionPacketChooseRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketChooseRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketTagRow0) && tagSessionPacketTagRow0.ValueKind == JsonValueKind.String && tagSessionPacketTagRow0.GetString() == "tag" && document.TryGetProperty("kind", out var tagSessionPacketTagRow1) && tagSessionPacketTagRow1.ValueKind == JsonValueKind.String && tagSessionPacketTagRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketTagRow0) && tagSessionPacketTagRow0.ValueKind == JsonValueKind.String && tagSessionPacketTagRow0.GetString() == "tag" && document.TryGetProperty("kind",
+        out var tagSessionPacketTagRow1) && tagSessionPacketTagRow1.ValueKind == JsonValueKind.String && tagSessionPacketTagRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketTagRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketScoreRow0) && tagSessionPacketScoreRow0.ValueKind == JsonValueKind.String && tagSessionPacketScoreRow0.GetString() == "score" && document.TryGetProperty("kind", out var tagSessionPacketScoreRow1) && tagSessionPacketScoreRow1.ValueKind == JsonValueKind.String && tagSessionPacketScoreRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketScoreRow0) && tagSessionPacketScoreRow0.ValueKind == JsonValueKind.String && tagSessionPacketScoreRow0.GetString() == "score" && document.TryGetProperty("kind",
+        out var tagSessionPacketScoreRow1) && tagSessionPacketScoreRow1.ValueKind == JsonValueKind.String && tagSessionPacketScoreRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketScoreRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketFilterRow0) && tagSessionPacketFilterRow0.ValueKind == JsonValueKind.String && tagSessionPacketFilterRow0.GetString() == "filter" && document.TryGetProperty("kind", out var tagSessionPacketFilterRow1) && tagSessionPacketFilterRow1.ValueKind == JsonValueKind.String && tagSessionPacketFilterRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketFilterRow0) && tagSessionPacketFilterRow0.ValueKind == JsonValueKind.String && tagSessionPacketFilterRow0.GetString() == "filter" && document.TryGetProperty("kind",
+        out var tagSessionPacketFilterRow1) && tagSessionPacketFilterRow1.ValueKind == JsonValueKind.String && tagSessionPacketFilterRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketFilterRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketAnnotateRow0) && tagSessionPacketAnnotateRow0.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateRow0.GetString() == "annotate" && document.TryGetProperty("kind", out var tagSessionPacketAnnotateRow1) && tagSessionPacketAnnotateRow1.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateRow1.GetString() == "row")
+        if (document.TryGetProperty("function", out var tagSessionPacketAnnotateRow0) && tagSessionPacketAnnotateRow0.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateRow0.GetString() == "annotate" && document.TryGetProperty("kind",
+        out var tagSessionPacketAnnotateRow1) && tagSessionPacketAnnotateRow1.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateRow1.GetString() == "row")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketAnnotateRow(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketDecideAggregate0) && tagSessionPacketDecideAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketDecideAggregate0.GetString() == "decide" && document.TryGetProperty("kind", out var tagSessionPacketDecideAggregate1) && tagSessionPacketDecideAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketDecideAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketDecideAggregate0) && tagSessionPacketDecideAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketDecideAggregate0.GetString() == "decide" && document.TryGetProperty("kind",
+        out var tagSessionPacketDecideAggregate1) && tagSessionPacketDecideAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketDecideAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketDecideAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketChooseAggregate0) && tagSessionPacketChooseAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketChooseAggregate0.GetString() == "choose" && document.TryGetProperty("kind", out var tagSessionPacketChooseAggregate1) && tagSessionPacketChooseAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketChooseAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketChooseAggregate0) && tagSessionPacketChooseAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketChooseAggregate0.GetString() == "choose" && document.TryGetProperty("kind",
+        out var tagSessionPacketChooseAggregate1) && tagSessionPacketChooseAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketChooseAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketChooseAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketTagAggregate0) && tagSessionPacketTagAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketTagAggregate0.GetString() == "tag" && document.TryGetProperty("kind", out var tagSessionPacketTagAggregate1) && tagSessionPacketTagAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketTagAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketTagAggregate0) && tagSessionPacketTagAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketTagAggregate0.GetString() == "tag" && document.TryGetProperty("kind",
+        out var tagSessionPacketTagAggregate1) && tagSessionPacketTagAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketTagAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketTagAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketScoreAggregate0) && tagSessionPacketScoreAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketScoreAggregate0.GetString() == "score" && document.TryGetProperty("kind", out var tagSessionPacketScoreAggregate1) && tagSessionPacketScoreAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketScoreAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketScoreAggregate0) && tagSessionPacketScoreAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketScoreAggregate0.GetString() == "score" && document.TryGetProperty("kind",
+        out var tagSessionPacketScoreAggregate1) && tagSessionPacketScoreAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketScoreAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketScoreAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketFilterAggregate0) && tagSessionPacketFilterAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketFilterAggregate0.GetString() == "filter" && document.TryGetProperty("kind", out var tagSessionPacketFilterAggregate1) && tagSessionPacketFilterAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketFilterAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketFilterAggregate0) && tagSessionPacketFilterAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketFilterAggregate0.GetString() == "filter" && document.TryGetProperty("kind",
+        out var tagSessionPacketFilterAggregate1) && tagSessionPacketFilterAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketFilterAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketFilterAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketRankAggregate0) && tagSessionPacketRankAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRankAggregate0.GetString() == "rank" && document.TryGetProperty("kind", out var tagSessionPacketRankAggregate1) && tagSessionPacketRankAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRankAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketRankAggregate0) && tagSessionPacketRankAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRankAggregate0.GetString() == "rank" && document.TryGetProperty("kind",
+        out var tagSessionPacketRankAggregate1) && tagSessionPacketRankAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRankAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketRankAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketFindAggregate0) && tagSessionPacketFindAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketFindAggregate0.GetString() == "find" && document.TryGetProperty("kind", out var tagSessionPacketFindAggregate1) && tagSessionPacketFindAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketFindAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketFindAggregate0) && tagSessionPacketFindAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketFindAggregate0.GetString() == "find" && document.TryGetProperty("kind",
+        out var tagSessionPacketFindAggregate1) && tagSessionPacketFindAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketFindAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketFindAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketAnnotateAggregate0) && tagSessionPacketAnnotateAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateAggregate0.GetString() == "annotate" && document.TryGetProperty("kind", out var tagSessionPacketAnnotateAggregate1) && tagSessionPacketAnnotateAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketAnnotateAggregate0) && tagSessionPacketAnnotateAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateAggregate0.GetString() == "annotate" && document.TryGetProperty("kind",
+        out var tagSessionPacketAnnotateAggregate1) && tagSessionPacketAnnotateAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketAnnotateAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketAnnotateAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketRecognizeAggregate0) && tagSessionPacketRecognizeAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRecognizeAggregate0.GetString() == "recognize" && document.TryGetProperty("kind", out var tagSessionPacketRecognizeAggregate1) && tagSessionPacketRecognizeAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRecognizeAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketRecognizeAggregate0) && tagSessionPacketRecognizeAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRecognizeAggregate0.GetString() == "recognize" && document.TryGetProperty("kind",
+        out var tagSessionPacketRecognizeAggregate1) && tagSessionPacketRecognizeAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRecognizeAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketRecognizeAggregate(document);
         }
-        if (document.TryGetProperty("function", out var tagSessionPacketRelateAggregate0) && tagSessionPacketRelateAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRelateAggregate0.GetString() == "relate" && document.TryGetProperty("kind", out var tagSessionPacketRelateAggregate1) && tagSessionPacketRelateAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRelateAggregate1.GetString() == "aggregate")
+        if (document.TryGetProperty("function", out var tagSessionPacketRelateAggregate0) && tagSessionPacketRelateAggregate0.ValueKind == JsonValueKind.String && tagSessionPacketRelateAggregate0.GetString() == "relate" && document.TryGetProperty("kind",
+        out var tagSessionPacketRelateAggregate1) && tagSessionPacketRelateAggregate1.ValueKind == JsonValueKind.String && tagSessionPacketRelateAggregate1.GetString() == "aggregate")
         {
             if (result is not null) throw new JsonException("Ambiguous result variant.");
             result = new SessionPacketRelateAggregate(document);
@@ -1862,154 +1968,154 @@ public abstract class SessionPacket : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SessionPacketAnnotateAggregate : SessionPacket
 {
-    public SessionPacketAnnotateAggregate(JsonElement document) : base(document) { }
+    public SessionPacketAnnotateAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<Annotation> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new Annotation(item0)).ToArray());
 }
-
 public sealed class SessionPacketAnnotateRow : SessionPacket
 {
-    public SessionPacketAnnotateRow(JsonElement document) : base(document) { }
+    public SessionPacketAnnotateRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public Annotation Value => new Annotation(RequiredElement("value"));
 }
-
 public sealed class SessionPacketChooseAggregate : SessionPacket
 {
-    public SessionPacketChooseAggregate(JsonElement document) : base(document) { }
+    public SessionPacketChooseAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicNullableString> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicNullableString(item0)).ToArray());
 }
-
 public sealed class SessionPacketChooseRow : SessionPacket
 {
-    public SessionPacketChooseRow(JsonElement document) : base(document) { }
+    public SessionPacketChooseRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public AtomicNullableString Value => new AtomicNullableString(RequiredElement("value"));
 }
-
 public sealed class SessionPacketDecideAggregate : SessionPacket
 {
-    public SessionPacketDecideAggregate(JsonElement document) : base(document) { }
+    public SessionPacketDecideAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicDecideValue> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicDecideValue(item0)).ToArray());
 }
-
 public sealed class SessionPacketDecideRow : SessionPacket
 {
-    public SessionPacketDecideRow(JsonElement document) : base(document) { }
+    public SessionPacketDecideRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public AtomicDecideValue Value => new AtomicDecideValue(RequiredElement("value"));
 }
-
 public sealed class SessionPacketFilterAggregate : SessionPacket
 {
-    public SessionPacketFilterAggregate(JsonElement document) : base(document) { }
+    public SessionPacketFilterAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicBoolean> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicBoolean(item0)).ToArray());
 }
-
 public sealed class SessionPacketFilterRow : SessionPacket
 {
-    public SessionPacketFilterRow(JsonElement document) : base(document) { }
+    public SessionPacketFilterRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public AtomicBoolean Value => new AtomicBoolean(RequiredElement("value"));
 }
-
 public sealed class SessionPacketFindAggregate : SessionPacket
 {
-    public SessionPacketFindAggregate(JsonElement document) : base(document) { }
+    public SessionPacketFindAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public Find Value => new Find(RequiredElement("value"));
 }
-
 public sealed class SessionPacketObservation : SessionPacket
 {
-    public SessionPacketObservation(JsonElement document) : base(document) { }
+    public SessionPacketObservation(JsonElement document) : base(document) {
+    }
     public RequestFunction Function => new RequestFunction(RequiredElement("function").GetString()!);
     public string Kind => RequiredElement("kind").GetString()!;
     public SessionObservation Value => global::ThinkThen.Results.SessionObservation.Read(RequiredElement("value"));
 }
-
 public sealed class SessionPacketRankAggregate : SessionPacket
 {
-    public SessionPacketRankAggregate(JsonElement document) : base(document) { }
+    public SessionPacketRankAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicNonZeroUsize> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicNonZeroUsize(item0)).ToArray());
 }
-
 public sealed class SessionPacketRecognizeAggregate : SessionPacket
 {
-    public SessionPacketRecognizeAggregate(JsonElement document) : base(document) { }
+    public SessionPacketRecognizeAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<Recognition> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new Recognition(item0)).ToArray());
 }
-
 public sealed class SessionPacketRelateAggregate : SessionPacket
 {
-    public SessionPacketRelateAggregate(JsonElement document) : base(document) { }
+    public SessionPacketRelateAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public Relation Value => new Relation(RequiredElement("value"));
 }
-
 public sealed class SessionPacketScoreAggregate : SessionPacket
 {
-    public SessionPacketScoreAggregate(JsonElement document) : base(document) { }
+    public SessionPacketScoreAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicDouble> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicDouble(item0)).ToArray());
 }
-
 public sealed class SessionPacketScoreRow : SessionPacket
 {
-    public SessionPacketScoreRow(JsonElement document) : base(document) { }
+    public SessionPacketScoreRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public AtomicDouble Value => new AtomicDouble(RequiredElement("value"));
 }
-
 public sealed class SessionPacketTagAggregate : SessionPacket
 {
-    public SessionPacketTagAggregate(JsonElement document) : base(document) { }
+    public SessionPacketTagAggregate(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<AtomicArrayOfString> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new AtomicArrayOfString(item0)).ToArray());
 }
-
 public sealed class SessionPacketTagRow : SessionPacket
 {
-    public SessionPacketTagRow(JsonElement document) : base(document) { }
+    public SessionPacketTagRow(JsonElement document) : base(document) {
+    }
     public string Function => RequiredElement("function").GetString()!;
     public string Kind => RequiredElement("kind").GetString()!;
     public AtomicArrayOfString Value => new AtomicArrayOfString(RequiredElement("value"));
 }
-
 public sealed class SessionPacketTerminal : SessionPacket
 {
-    public SessionPacketTerminal(JsonElement document) : base(document) { }
+    public SessionPacketTerminal(JsonElement document) : base(document) {
+    }
     public Presence<Facts> Facts => Optional<Facts>("facts", member => new Facts(member));
     public Presence<CallError> Failure => Optional<CallError>("failure", member => new CallError(member));
     public string Kind => RequiredElement("kind").GetString()!;
 }
-
 public abstract class SessionProbabilities : ResultObject
 {
-    protected SessionProbabilities(JsonElement document) : base(document) { }
+    protected SessionProbabilities(JsonElement document) : base(document) {
+    }
     public static SessionProbabilities Read(JsonElement document)
     {
         SessionProbabilities? result = null;
@@ -2026,24 +2132,24 @@ public abstract class SessionProbabilities : ResultObject
         return result ?? throw new JsonException("Unknown result variant.");
     }
 }
-
 public sealed class SessionProbabilitiesNamed : SessionProbabilities
 {
-    public SessionProbabilitiesNamed(JsonElement document) : base(document) { }
+    public SessionProbabilitiesNamed(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public IReadOnlyList<SessionNamedProbability> Value => Array.AsReadOnly(RequiredElement("value").EnumerateArray().Select(item0 => new SessionNamedProbability(item0)).ToArray());
 }
-
 public sealed class SessionProbabilitiesYesNo : SessionProbabilities
 {
-    public SessionProbabilitiesYesNo(JsonElement document) : base(document) { }
+    public SessionProbabilitiesYesNo(JsonElement document) : base(document) {
+    }
     public string Kind => RequiredElement("kind").GetString()!;
     public double Value => RequiredElement("value").GetDouble();
 }
-
 public sealed class SessionQuestionDetail : ResultObject
 {
-    public SessionQuestionDetail(JsonElement document) : base(document) { }
+    public SessionQuestionDetail(JsonElement document) : base(document) {
+    }
     public Presence<string> AnswerId => Optional<string>("answer_id", member => member.GetString()!);
     public bool Cached => RequiredElement("cached").GetBoolean();
     public Presence<double> Confidence => Optional<double>("confidence", member => member.GetDouble());
@@ -2051,12 +2157,14 @@ public sealed class SessionQuestionDetail : ResultObject
     public Presence<Failure> Failure => Optional<Failure>("failure", member => new Failure(member));
     public Presence<string> FailureId => Optional<string>("failure_id", member => member.GetString()!);
     public Presence<JsonElement> Input => Optional<JsonElement>("input", member => member.Clone());
-    public Presence<PhysicalSource> InputSource => Optional<PhysicalSource>("input_source", member => new PhysicalSource(member));
+    public Presence<PhysicalSource> InputSource => Optional<PhysicalSource>("input_source",
+    member => new PhysicalSource(member));
     public IReadOnlyList<SessionInputSource> InputSources => Array.AsReadOnly(RequiredElement("input_sources").EnumerateArray().Select(item0 => new SessionInputSource(item0)).ToArray());
     public IReadOnlyList<JsonElement> Inputs => Array.AsReadOnly(RequiredElement("inputs").EnumerateArray().Select(item0 => item0.Clone()).ToArray());
     public string Model => RequiredElement("model").GetString()!;
     public IReadOnlyList<Observation> Observations => Array.AsReadOnly(RequiredElement("observations").EnumerateArray().Select(item0 => global::ThinkThen.Results.Observation.Read(item0)).ToArray());
-    public Presence<SessionProbabilities> Probabilities => Optional<SessionProbabilities>("probabilities", member => global::ThinkThen.Results.SessionProbabilities.Read(member));
+    public Presence<SessionProbabilities> Probabilities => Optional<SessionProbabilities>("probabilities",
+    member => global::ThinkThen.Results.SessionProbabilities.Read(member));
     public Question Question => global::ThinkThen.Results.Question.Read(RequiredElement("question"));
     public string QuestionSha256 => RequiredElement("question_sha256").GetString()!;
     public IReadOnlyList<QuestionSource> QuestionSources => Array.AsReadOnly(RequiredElement("question_sources").EnumerateArray().Select(item0 => new QuestionSource(item0)).ToArray());
@@ -2069,29 +2177,31 @@ public sealed class SessionQuestionDetail : ResultObject
     public Presence<TokenUsage> Usage => Optional<TokenUsage>("usage", member => new TokenUsage(member));
     public Presence<Value> Value => Optional<Value>("value", member => global::ThinkThen.Results.Value.Read(member));
 }
-
 public sealed class SessionRecognition : ResultObject
 {
-    public SessionRecognition(JsonElement document) : base(document) { }
+    public SessionRecognition(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<Entity> Entities => Array.AsReadOnly(RequiredElement("entities").EnumerateArray().Select(item0 => new Entity(item0)).ToArray());
     public RecognitionMode Mode => new RecognitionMode(RequiredElement("mode").GetString()!);
-    public Presence<IReadOnlyList<BoundaryProposal>> Proposals => Optional<IReadOnlyList<BoundaryProposal>>("proposals", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray()));
-    public Presence<IReadOnlyList<RecognitionEdgeDocument>> Relations => Optional<IReadOnlyList<RecognitionEdgeDocument>>("relations", member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RecognitionEdgeDocument(item0)).ToArray()));
+    public Presence<IReadOnlyList<BoundaryProposal>> Proposals => Optional<IReadOnlyList<BoundaryProposal>>("proposals",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new BoundaryProposal(item0)).ToArray()));
+    public Presence<IReadOnlyList<RecognitionEdgeDocument>> Relations => Optional<IReadOnlyList<RecognitionEdgeDocument>>("relations",
+    member => Array.AsReadOnly(member.EnumerateArray().Select(item0 => new RecognitionEdgeDocument(item0)).ToArray()));
 }
-
 public sealed class SessionRelationEdge : ResultObject
 {
-    public SessionRelationEdge(JsonElement document) : base(document) { }
+    public SessionRelationEdge(JsonElement document) : base(document) {
+    }
     public bool Either => RequiredElement("either").GetBoolean();
     public double Probability => RequiredElement("probability").GetDouble();
     public string Relation => RequiredElement("relation").GetString()!;
     public EntityDocument Source => new EntityDocument(RequiredElement("source"));
     public EntityDocument Target => new EntityDocument(RequiredElement("target"));
 }
-
 public sealed class SourceRelationEndpoint : ResultObject
 {
-    public SourceRelationEndpoint(JsonElement document) : base(document) { }
+    public SourceRelationEndpoint(JsonElement document) : base(document) {
+    }
     public Presence<string> File => RequiredNullable<string>("file", member => member.GetString()!);
     public Presence<ulong> FirstLine => Optional<ulong>("first_line", member => member.GetUInt64());
     public string Kind => RequiredElement("kind").GetString()!;
@@ -2100,14 +2210,17 @@ public sealed class SourceRelationEndpoint : ResultObject
     public ulong Ordinal => RequiredElement("ordinal").GetUInt64();
     public JsonElement Record => RequiredElement("record").Clone();
 }
-
 public abstract class Threshold
 {
     private readonly JsonElement document;
-    protected Threshold(JsonElement document) { this.document = document.Clone(); }
+    protected Threshold(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
     public string ToJsonString() => document.GetRawText();
     public static Threshold Read(JsonElement document) => document.ValueKind switch
     {
@@ -2116,40 +2229,43 @@ public abstract class Threshold
         _ => throw new JsonException("Unknown primitive result variant.")
     };
 }
-
 public sealed class ThresholdNumber : Threshold
 {
-    public ThresholdNumber(JsonElement document) : base(document) { }
+    public ThresholdNumber(JsonElement document) : base(document) {
+    }
     public double Value => Document.GetDouble();
 }
-
 public sealed class ThresholdString : Threshold
 {
-    public ThresholdString(JsonElement document) : base(document) { }
+    public ThresholdString(JsonElement document) : base(document) {
+    }
     public string Value => Document.GetString()!;
 }
-
 public sealed class TokenBand : ResultObject
 {
-    public TokenBand(JsonElement document) : base(document) { }
+    public TokenBand(JsonElement document) : base(document) {
+    }
     public ulong Lower => RequiredElement("lower").GetUInt64();
     public ulong Upper => RequiredElement("upper").GetUInt64();
 }
-
 public sealed class TokenUsage : ResultObject
 {
-    public TokenUsage(JsonElement document) : base(document) { }
+    public TokenUsage(JsonElement document) : base(document) {
+    }
     public ulong InputTokens => RequiredElement("input_tokens").GetUInt64();
     public ulong OutputTokens => RequiredElement("output_tokens").GetUInt64();
 }
-
 public abstract class Value
 {
     private readonly JsonElement document;
-    protected Value(JsonElement document) { this.document = document.Clone(); }
+    protected Value(JsonElement document) {
+        this.document = document.Clone();
+    }
     protected JsonElement Document => document;
     public JsonElement ToJson() => document.Clone();
-    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;
+    public JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
+        MaxDepth = int.MaxValue
+    })!;
     public string ToJsonString() => document.GetRawText();
     public static Value Read(JsonElement document) => document.ValueKind switch
     {
@@ -2162,34 +2278,33 @@ public abstract class Value
         _ => throw new JsonException("Unknown primitive result variant.")
     };
 }
-
 public sealed class ValueBoolean : Value
 {
-    public ValueBoolean(JsonElement document) : base(document) { }
+    public ValueBoolean(JsonElement document) : base(document) {
+    }
     public bool Value => Document.GetBoolean();
 }
-
 public sealed class ValueNull : Value
 {
-    public ValueNull(JsonElement document) : base(document) { }
+    public ValueNull(JsonElement document) : base(document) {
+    }
     public JsonElement Value => Document.Clone();
 }
-
 public sealed class ValueString : Value
 {
-    public ValueString(JsonElement document) : base(document) { }
+    public ValueString(JsonElement document) : base(document) {
+    }
     public string Value => Document.GetString()!;
 }
-
 public sealed class ValueArray : Value
 {
-    public ValueArray(JsonElement document) : base(document) { }
+    public ValueArray(JsonElement document) : base(document) {
+    }
     public IReadOnlyList<string> Value => Array.AsReadOnly(Document.EnumerateArray().Select(item0 => item0.GetString()!).ToArray());
 }
-
 public sealed class ValueNumber : Value
 {
-    public ValueNumber(JsonElement document) : base(document) { }
+    public ValueNumber(JsonElement document) : base(document) {
+    }
     public double Value => Document.GetDouble();
 }
-

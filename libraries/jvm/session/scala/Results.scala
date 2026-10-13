@@ -351,21 +351,21 @@ sealed trait InputDeclaration { def json: Any }
 object InputDeclaration {
 def read(value: Any): InputDeclaration = {
 val objectValue = Values.`object`(value)
-if (objectValue.get("type") == "string") return InputDeclarationString.read(value)
-if (objectValue.get("type") == "object") return InputDeclarationObject.read(value)
+if (objectValue.get("type") == "string") return InputDeclarationStringRoot.read(value)
+if (objectValue.get("type") == "object") return InputDeclarationObjectRoot.read(value)
 throw new IllegalStateException("Unknown native result alternative")
 }
 }
-final class InputDeclarationObject(rawValue: Any) extends View(rawValue) with InputDeclaration {
+final class InputDeclarationObjectRoot(rawValue: Any) extends View(rawValue) with InputDeclaration {
 def `properties`: Map[String, InputPropertyType] = { val value = required("properties"); require(value != null, "Null native member: " + "properties"); Values.`object`(value).asScala.toMap.map { case (key, item0) => key -> (InputPropertyType.read(item0)) } }
 def `required`: Option[List[String]] = optional("required").flatMap(value => Option(value).map(value => value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => item0.asInstanceOf[String])))
 def `type`: ObjectType = { val value = required("type"); require(value != null, "Null native member: " + "type"); ObjectType.read(value) }
 }
-object InputDeclarationObject { def read(value: Any): InputDeclarationObject = new InputDeclarationObject(value) }
-final class InputDeclarationString(rawValue: Any) extends View(rawValue) with InputDeclaration {
+object InputDeclarationObjectRoot { def read(value: Any): InputDeclarationObjectRoot = new InputDeclarationObjectRoot(value) }
+final class InputDeclarationStringRoot(rawValue: Any) extends View(rawValue) with InputDeclaration {
 def `type`: StringType = { val value = required("type"); require(value != null, "Null native member: " + "type"); StringType.read(value) }
 }
-object InputDeclarationString { def read(value: Any): InputDeclarationString = new InputDeclarationString(value) }
+object InputDeclarationStringRoot { def read(value: Any): InputDeclarationStringRoot = new InputDeclarationStringRoot(value) }
 sealed trait InputPropertyType { def json: Any }
 object InputPropertyType {
 def read(value: Any): InputPropertyType = {
@@ -659,23 +659,23 @@ sealed trait RecognitionOdds { def json: Any }
 object RecognitionOdds {
 def read(value: Any): RecognitionOdds = {
 val objectValue = Values.`object`(value)
-if (objectValue.containsKey("names") && objectValue.containsKey("pairs") && objectValue.containsKey("pieces") && objectValue.containsKey("proposals")) return RecognitionOddsFieldsNamesPairsPiecesProposals.read(value)
-if (objectValue.containsKey("pieces") && objectValue.containsKey("proposals") && !objectValue.containsKey("names") && !objectValue.containsKey("pairs")) return RecognitionOddsFieldsPiecesProposals.read(value)
+if (objectValue.containsKey("names") && objectValue.containsKey("pairs") && objectValue.containsKey("pieces") && objectValue.containsKey("proposals")) return RecognitionOddsRecognizeAnswer.read(value)
+if (objectValue.containsKey("pieces") && objectValue.containsKey("proposals") && !objectValue.containsKey("names") && !objectValue.containsKey("pairs")) return RecognitionOddsBoundaryOdds.read(value)
 throw new IllegalStateException("Unknown native result alternative")
 }
 }
-final class RecognitionOddsFieldsNamesPairsPiecesProposals(rawValue: Any) extends View(rawValue) with RecognitionOdds {
+final class RecognitionOddsBoundaryOdds(rawValue: Any) extends View(rawValue) with RecognitionOdds {
+def `pieces`: List[PieceOdds] = { val value = required("pieces"); require(value != null, "Null native member: " + "pieces"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => PieceOdds.read(item0)) }
+def `proposals`: List[BoundaryProposal] = { val value = required("proposals"); require(value != null, "Null native member: " + "proposals"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => BoundaryProposal.read(item0)) }
+}
+object RecognitionOddsBoundaryOdds { def read(value: Any): RecognitionOddsBoundaryOdds = new RecognitionOddsBoundaryOdds(value) }
+final class RecognitionOddsRecognizeAnswer(rawValue: Any) extends View(rawValue) with RecognitionOdds {
 def `names`: List[NameOdds] = { val value = required("names"); require(value != null, "Null native member: " + "names"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => NameOdds.read(item0)) }
 def `pairs`: List[PairOdds] = { val value = required("pairs"); require(value != null, "Null native member: " + "pairs"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => PairOdds.read(item0)) }
 def `pieces`: List[PieceOdds] = { val value = required("pieces"); require(value != null, "Null native member: " + "pieces"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => PieceOdds.read(item0)) }
 def `proposals`: List[RecognitionProposal] = { val value = required("proposals"); require(value != null, "Null native member: " + "proposals"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => RecognitionProposal.read(item0)) }
 }
-object RecognitionOddsFieldsNamesPairsPiecesProposals { def read(value: Any): RecognitionOddsFieldsNamesPairsPiecesProposals = new RecognitionOddsFieldsNamesPairsPiecesProposals(value) }
-final class RecognitionOddsFieldsPiecesProposals(rawValue: Any) extends View(rawValue) with RecognitionOdds {
-def `pieces`: List[PieceOdds] = { val value = required("pieces"); require(value != null, "Null native member: " + "pieces"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => PieceOdds.read(item0)) }
-def `proposals`: List[BoundaryProposal] = { val value = required("proposals"); require(value != null, "Null native member: " + "proposals"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => BoundaryProposal.read(item0)) }
-}
-object RecognitionOddsFieldsPiecesProposals { def read(value: Any): RecognitionOddsFieldsPiecesProposals = new RecognitionOddsFieldsPiecesProposals(value) }
+object RecognitionOddsRecognizeAnswer { def read(value: Any): RecognitionOddsRecognizeAnswer = new RecognitionOddsRecognizeAnswer(value) }
 final class RecognitionProposal(rawValue: Any) extends View(rawValue) {
 def `end`: BigInt = { val value = required("end"); require(value != null, "Null native member: " + "end"); BigInt(Values.integer(value)) }
 def `kept`: Boolean = { val value = required("kept"); require(value != null, "Null native member: " + "kept"); value.asInstanceOf[Boolean] }
@@ -712,6 +712,30 @@ final class RelationDirection(rawValue: Any) extends View(rawValue) {
 def value: String = json.asInstanceOf[String]
 }
 object RelationDirection { def read(value: Any): RelationDirection = new RelationDirection(value) }
+sealed trait RelationEndpoint { def json: Any }
+object RelationEndpoint {
+def read(value: Any): RelationEndpoint = {
+val objectValue = Values.`object`(value)
+if (objectValue.containsKey("kind") && objectValue.containsKey("name") && !objectValue.containsKey("file") && !objectValue.containsKey("ordinal") && !objectValue.containsKey("record")) return RelationEndpointRelatedEntity.read(value)
+if (objectValue.containsKey("file") && objectValue.containsKey("kind") && objectValue.containsKey("name") && objectValue.containsKey("ordinal") && objectValue.containsKey("record")) return RelationEndpointSource.read(value)
+throw new IllegalStateException("Unknown native result alternative")
+}
+}
+final class RelationEndpointRelatedEntity(rawValue: Any) extends View(rawValue) with RelationEndpoint {
+def `kind`: String = { val value = required("kind"); require(value != null, "Null native member: " + "kind"); value.asInstanceOf[String] }
+def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }
+}
+object RelationEndpointRelatedEntity { def read(value: Any): RelationEndpointRelatedEntity = new RelationEndpointRelatedEntity(value) }
+final class RelationEndpointSource(rawValue: Any) extends View(rawValue) with RelationEndpoint {
+def `file`: Option[String] = Option(required("file")).map(value => value.asInstanceOf[String])
+def `firstLine`: Option[BigInt] = optional("first_line").flatMap(value => Option(value).map(value => BigInt(Values.integer(value))))
+def `kind`: String = { val value = required("kind"); require(value != null, "Null native member: " + "kind"); value.asInstanceOf[String] }
+def `lastLine`: Option[BigInt] = optional("last_line").flatMap(value => Option(value).map(value => BigInt(Values.integer(value))))
+def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }
+def `ordinal`: BigInt = { val value = required("ordinal"); require(value != null, "Null native member: " + "ordinal"); BigInt(Values.integer(value)) }
+def `record`: Any = { val value = required("record"); require(value != null, "Null native member: " + "record"); Values.freeze(value) }
+}
+object RelationEndpointSource { def read(value: Any): RelationEndpointSource = new RelationEndpointSource(value) }
 sealed trait RelationMember { def json: Any }
 object RelationMember {
 def read(value: Any): RelationMember = {
@@ -1006,8 +1030,8 @@ sealed trait Recognize { def json: Any }
 object Recognize {
 def read(value: Any): Recognize = {
 val objectValue = Values.`object`(value)
-if (objectValue.containsKey("entities") && !objectValue.containsKey("mode") && !objectValue.containsKey("proposals")) return RecognizeFieldsEntities.read(value)
-if (objectValue.containsKey("mode") && objectValue.containsKey("proposals") && !objectValue.containsKey("entities")) return RecognizeFieldsModeProposals.read(value)
+if (objectValue.containsKey("entities") && !objectValue.containsKey("mode") && !objectValue.containsKey("proposals")) return RecognizeEntities.read(value)
+if (objectValue.containsKey("mode") && objectValue.containsKey("proposals") && !objectValue.containsKey("entities")) return RecognizeModeProposals.read(value)
 throw new IllegalStateException("Unknown native result alternative")
 }
 }
@@ -1018,16 +1042,16 @@ def `pieces`: List[PieceOdds] = { val value = required("pieces"); require(value 
 def `proposals`: List[RecognitionProposal] = { val value = required("proposals"); require(value != null, "Null native member: " + "proposals"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => RecognitionProposal.read(item0)) }
 }
 object RecognizeAnswer { def read(value: Any): RecognizeAnswer = new RecognizeAnswer(value) }
-final class RecognizeFieldsEntities(rawValue: Any) extends View(rawValue) with Recognize {
+final class RecognizeEntities(rawValue: Any) extends View(rawValue) with Recognize {
 def `entities`: List[Entity] = { val value = required("entities"); require(value != null, "Null native member: " + "entities"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => Entity.read(item0)) }
 def `relations`: Option[List[EntityEdge]] = optional("relations").flatMap(value => Option(value).map(value => value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => EntityEdge.read(item0))))
 }
-object RecognizeFieldsEntities { def read(value: Any): RecognizeFieldsEntities = new RecognizeFieldsEntities(value) }
-final class RecognizeFieldsModeProposals(rawValue: Any) extends View(rawValue) with Recognize {
+object RecognizeEntities { def read(value: Any): RecognizeEntities = new RecognizeEntities(value) }
+final class RecognizeModeProposals(rawValue: Any) extends View(rawValue) with Recognize {
 def `mode`: BoundaryMode = { val value = required("mode"); require(value != null, "Null native member: " + "mode"); BoundaryMode.read(value) }
 def `proposals`: List[BoundaryProposal] = { val value = required("proposals"); require(value != null, "Null native member: " + "proposals"); value.asInstanceOf[java.util.List[Any]].asScala.toList.map(item0 => BoundaryProposal.read(item0)) }
 }
-object RecognizeFieldsModeProposals { def read(value: Any): RecognizeFieldsModeProposals = new RecognizeFieldsModeProposals(value) }
+object RecognizeModeProposals { def read(value: Any): RecognizeModeProposals = new RecognizeModeProposals(value) }
 final class RelateFields(rawValue: Any) extends View(rawValue) {
 def `kind`: String = { val value = required("kind"); require(value != null, "Null native member: " + "kind"); value.asInstanceOf[String] }
 def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }
@@ -1042,34 +1066,10 @@ final class RelatedEntityEdge(rawValue: Any) extends View(rawValue) {
 def `either`: Option[Boolean] = optional("either").flatMap(value => Option(value).map(value => value.asInstanceOf[Boolean]))
 def `probability`: BigDecimal = { val value = required("probability"); require(value != null, "Null native member: " + "probability"); BigDecimal(value.asInstanceOf[java.math.BigDecimal]) }
 def `relation`: String = { val value = required("relation"); require(value != null, "Null native member: " + "relation"); value.asInstanceOf[String] }
-def `source`: RelatedEntityEdgePropertiesSource = { val value = required("source"); require(value != null, "Null native member: " + "source"); RelatedEntityEdgePropertiesSource.read(value) }
-def `target`: RelatedEntityEdgePropertiesSource = { val value = required("target"); require(value != null, "Null native member: " + "target"); RelatedEntityEdgePropertiesSource.read(value) }
+def `source`: RelationEndpoint = { val value = required("source"); require(value != null, "Null native member: " + "source"); RelationEndpoint.read(value) }
+def `target`: RelationEndpoint = { val value = required("target"); require(value != null, "Null native member: " + "target"); RelationEndpoint.read(value) }
 }
 object RelatedEntityEdge { def read(value: Any): RelatedEntityEdge = new RelatedEntityEdge(value) }
-sealed trait RelatedEntityEdgePropertiesSource { def json: Any }
-object RelatedEntityEdgePropertiesSource {
-def read(value: Any): RelatedEntityEdgePropertiesSource = {
-val objectValue = Values.`object`(value)
-if (objectValue.containsKey("kind") && objectValue.containsKey("name") && !objectValue.containsKey("file") && !objectValue.containsKey("ordinal") && !objectValue.containsKey("record")) return RelatedEntityEdgePropertiesSourceFieldsKindName.read(value)
-if (objectValue.containsKey("file") && objectValue.containsKey("kind") && objectValue.containsKey("name") && objectValue.containsKey("ordinal") && objectValue.containsKey("record")) return RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord.read(value)
-throw new IllegalStateException("Unknown native result alternative")
-}
-}
-final class RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(rawValue: Any) extends View(rawValue) with RelatedEntityEdgePropertiesSource {
-def `file`: Option[String] = Option(required("file")).map(value => value.asInstanceOf[String])
-def `firstLine`: Option[BigInt] = optional("first_line").flatMap(value => Option(value).map(value => BigInt(Values.integer(value))))
-def `kind`: String = { val value = required("kind"); require(value != null, "Null native member: " + "kind"); value.asInstanceOf[String] }
-def `lastLine`: Option[BigInt] = optional("last_line").flatMap(value => Option(value).map(value => BigInt(Values.integer(value))))
-def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }
-def `ordinal`: BigInt = { val value = required("ordinal"); require(value != null, "Null native member: " + "ordinal"); BigInt(Values.integer(value)) }
-def `record`: Any = { val value = required("record"); require(value != null, "Null native member: " + "record"); Values.freeze(value) }
-}
-object RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord { def read(value: Any): RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord = new RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(value) }
-final class RelatedEntityEdgePropertiesSourceFieldsKindName(rawValue: Any) extends View(rawValue) with RelatedEntityEdgePropertiesSource {
-def `kind`: String = { val value = required("kind"); require(value != null, "Null native member: " + "kind"); value.asInstanceOf[String] }
-def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }
-}
-object RelatedEntityEdgePropertiesSourceFieldsKindName { def read(value: Any): RelatedEntityEdgePropertiesSourceFieldsKindName = new RelatedEntityEdgePropertiesSourceFieldsKindName(value) }
 final class RelationRule(rawValue: Any) extends View(rawValue) {
 def `either`: Boolean = { val value = required("either"); require(value != null, "Null native member: " + "either"); value.asInstanceOf[Boolean] }
 def `name`: String = { val value = required("name"); require(value != null, "Null native member: " + "name"); value.asInstanceOf[String] }

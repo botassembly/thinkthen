@@ -357,21 +357,21 @@ sealed interface InputDeclaration { val json: Any?
 companion object {
 fun read(value: Any?): InputDeclaration {
 val objectValue = Values.`object`(value)
-if (objectValue["type"] == "string") return InputDeclarationString.read(value)
-if (objectValue["type"] == "object") return InputDeclarationObject.read(value)
+if (objectValue["type"] == "string") return InputDeclarationStringRoot.read(value)
+if (objectValue["type"] == "object") return InputDeclarationObjectRoot.read(value)
 throw IllegalStateException("Unknown native result alternative")
 }
 }
 }
-class InputDeclarationObject(rawValue: Any?) : View(rawValue), InputDeclaration {
+class InputDeclarationObjectRoot(rawValue: Any?) : View(rawValue), InputDeclaration {
 val `properties`: Map<String, InputPropertyType> get() = required("properties").let { value -> Values.map(value) { item0 -> InputPropertyType.read(item0) } }
 val `required`: List<String>? get() = optional("required")?.let { value -> Values.list(value) { item0 -> item0 as String } }
 val `type`: ObjectType get() = required("type").let { value -> ObjectType.read(value) }
-companion object { fun read(value: Any?): InputDeclarationObject = InputDeclarationObject(value) }
+companion object { fun read(value: Any?): InputDeclarationObjectRoot = InputDeclarationObjectRoot(value) }
 }
-class InputDeclarationString(rawValue: Any?) : View(rawValue), InputDeclaration {
+class InputDeclarationStringRoot(rawValue: Any?) : View(rawValue), InputDeclaration {
 val `type`: StringType get() = required("type").let { value -> StringType.read(value) }
-companion object { fun read(value: Any?): InputDeclarationString = InputDeclarationString(value) }
+companion object { fun read(value: Any?): InputDeclarationStringRoot = InputDeclarationStringRoot(value) }
 }
 sealed interface InputPropertyType { val json: Any?
 companion object {
@@ -669,23 +669,23 @@ sealed interface RecognitionOdds { val json: Any?
 companion object {
 fun read(value: Any?): RecognitionOdds {
 val objectValue = Values.`object`(value)
-if (objectValue.containsKey("names") && objectValue.containsKey("pairs") && objectValue.containsKey("pieces") && objectValue.containsKey("proposals")) return RecognitionOddsFieldsNamesPairsPiecesProposals.read(value)
-if (objectValue.containsKey("pieces") && objectValue.containsKey("proposals") && !objectValue.containsKey("names") && !objectValue.containsKey("pairs")) return RecognitionOddsFieldsPiecesProposals.read(value)
+if (objectValue.containsKey("names") && objectValue.containsKey("pairs") && objectValue.containsKey("pieces") && objectValue.containsKey("proposals")) return RecognitionOddsRecognizeAnswer.read(value)
+if (objectValue.containsKey("pieces") && objectValue.containsKey("proposals") && !objectValue.containsKey("names") && !objectValue.containsKey("pairs")) return RecognitionOddsBoundaryOdds.read(value)
 throw IllegalStateException("Unknown native result alternative")
 }
 }
 }
-class RecognitionOddsFieldsNamesPairsPiecesProposals(rawValue: Any?) : View(rawValue), RecognitionOdds {
+class RecognitionOddsBoundaryOdds(rawValue: Any?) : View(rawValue), RecognitionOdds {
+val `pieces`: List<PieceOdds> get() = required("pieces").let { value -> Values.list(value) { item0 -> PieceOdds.read(item0) } }
+val `proposals`: List<BoundaryProposal> get() = required("proposals").let { value -> Values.list(value) { item0 -> BoundaryProposal.read(item0) } }
+companion object { fun read(value: Any?): RecognitionOddsBoundaryOdds = RecognitionOddsBoundaryOdds(value) }
+}
+class RecognitionOddsRecognizeAnswer(rawValue: Any?) : View(rawValue), RecognitionOdds {
 val `names`: List<NameOdds> get() = required("names").let { value -> Values.list(value) { item0 -> NameOdds.read(item0) } }
 val `pairs`: List<PairOdds> get() = required("pairs").let { value -> Values.list(value) { item0 -> PairOdds.read(item0) } }
 val `pieces`: List<PieceOdds> get() = required("pieces").let { value -> Values.list(value) { item0 -> PieceOdds.read(item0) } }
 val `proposals`: List<RecognitionProposal> get() = required("proposals").let { value -> Values.list(value) { item0 -> RecognitionProposal.read(item0) } }
-companion object { fun read(value: Any?): RecognitionOddsFieldsNamesPairsPiecesProposals = RecognitionOddsFieldsNamesPairsPiecesProposals(value) }
-}
-class RecognitionOddsFieldsPiecesProposals(rawValue: Any?) : View(rawValue), RecognitionOdds {
-val `pieces`: List<PieceOdds> get() = required("pieces").let { value -> Values.list(value) { item0 -> PieceOdds.read(item0) } }
-val `proposals`: List<BoundaryProposal> get() = required("proposals").let { value -> Values.list(value) { item0 -> BoundaryProposal.read(item0) } }
-companion object { fun read(value: Any?): RecognitionOddsFieldsPiecesProposals = RecognitionOddsFieldsPiecesProposals(value) }
+companion object { fun read(value: Any?): RecognitionOddsRecognizeAnswer = RecognitionOddsRecognizeAnswer(value) }
 }
 class RecognitionProposal(rawValue: Any?) : View(rawValue) {
 val `end`: BigInteger get() = required("end").let { value -> Values.integer(value) }
@@ -722,6 +722,31 @@ companion object { fun read(value: Any?): Relation = Relation(value) }
 class RelationDirection(rawValue: Any?) : View(rawValue) {
 val value: String get() = json as String
 companion object { fun read(value: Any?): RelationDirection = RelationDirection(value) }
+}
+sealed interface RelationEndpoint { val json: Any?
+companion object {
+fun read(value: Any?): RelationEndpoint {
+val objectValue = Values.`object`(value)
+if (objectValue.containsKey("kind") && objectValue.containsKey("name") && !objectValue.containsKey("file") && !objectValue.containsKey("ordinal") && !objectValue.containsKey("record")) return RelationEndpointRelatedEntity.read(value)
+if (objectValue.containsKey("file") && objectValue.containsKey("kind") && objectValue.containsKey("name") && objectValue.containsKey("ordinal") && objectValue.containsKey("record")) return RelationEndpointSource.read(value)
+throw IllegalStateException("Unknown native result alternative")
+}
+}
+}
+class RelationEndpointRelatedEntity(rawValue: Any?) : View(rawValue), RelationEndpoint {
+val `kind`: String get() = required("kind").let { value -> value as String }
+val `name`: String get() = required("name").let { value -> value as String }
+companion object { fun read(value: Any?): RelationEndpointRelatedEntity = RelationEndpointRelatedEntity(value) }
+}
+class RelationEndpointSource(rawValue: Any?) : View(rawValue), RelationEndpoint {
+val `file`: String? get() = required("file")?.let { value -> value as String }
+val `firstLine`: BigInteger? get() = optional("first_line")?.let { value -> Values.integer(value) }
+val `kind`: String get() = required("kind").let { value -> value as String }
+val `lastLine`: BigInteger? get() = optional("last_line")?.let { value -> Values.integer(value) }
+val `name`: String get() = required("name").let { value -> value as String }
+val `ordinal`: BigInteger get() = required("ordinal").let { value -> Values.integer(value) }
+val `record`: Any? get() = required("record").let { value -> Values.freeze(value) }
+companion object { fun read(value: Any?): RelationEndpointSource = RelationEndpointSource(value) }
 }
 sealed interface RelationMember { val json: Any?
 companion object {
@@ -1030,8 +1055,8 @@ sealed interface Recognize { val json: Any?
 companion object {
 fun read(value: Any?): Recognize {
 val objectValue = Values.`object`(value)
-if (objectValue.containsKey("entities") && !objectValue.containsKey("mode") && !objectValue.containsKey("proposals")) return RecognizeFieldsEntities.read(value)
-if (objectValue.containsKey("mode") && objectValue.containsKey("proposals") && !objectValue.containsKey("entities")) return RecognizeFieldsModeProposals.read(value)
+if (objectValue.containsKey("entities") && !objectValue.containsKey("mode") && !objectValue.containsKey("proposals")) return RecognizeEntities.read(value)
+if (objectValue.containsKey("mode") && objectValue.containsKey("proposals") && !objectValue.containsKey("entities")) return RecognizeModeProposals.read(value)
 throw IllegalStateException("Unknown native result alternative")
 }
 }
@@ -1043,15 +1068,15 @@ val `pieces`: List<PieceOdds> get() = required("pieces").let { value -> Values.l
 val `proposals`: List<RecognitionProposal> get() = required("proposals").let { value -> Values.list(value) { item0 -> RecognitionProposal.read(item0) } }
 companion object { fun read(value: Any?): RecognizeAnswer = RecognizeAnswer(value) }
 }
-class RecognizeFieldsEntities(rawValue: Any?) : View(rawValue), Recognize {
+class RecognizeEntities(rawValue: Any?) : View(rawValue), Recognize {
 val `entities`: List<Entity> get() = required("entities").let { value -> Values.list(value) { item0 -> Entity.read(item0) } }
 val `relations`: List<EntityEdge>? get() = optional("relations")?.let { value -> Values.list(value) { item0 -> EntityEdge.read(item0) } }
-companion object { fun read(value: Any?): RecognizeFieldsEntities = RecognizeFieldsEntities(value) }
+companion object { fun read(value: Any?): RecognizeEntities = RecognizeEntities(value) }
 }
-class RecognizeFieldsModeProposals(rawValue: Any?) : View(rawValue), Recognize {
+class RecognizeModeProposals(rawValue: Any?) : View(rawValue), Recognize {
 val `mode`: BoundaryMode get() = required("mode").let { value -> BoundaryMode.read(value) }
 val `proposals`: List<BoundaryProposal> get() = required("proposals").let { value -> Values.list(value) { item0 -> BoundaryProposal.read(item0) } }
-companion object { fun read(value: Any?): RecognizeFieldsModeProposals = RecognizeFieldsModeProposals(value) }
+companion object { fun read(value: Any?): RecognizeModeProposals = RecognizeModeProposals(value) }
 }
 class RelateFields(rawValue: Any?) : View(rawValue) {
 val `kind`: String get() = required("kind").let { value -> value as String }
@@ -1067,34 +1092,9 @@ class RelatedEntityEdge(rawValue: Any?) : View(rawValue) {
 val `either`: Boolean? get() = optional("either")?.let { value -> value as Boolean }
 val `probability`: BigDecimal get() = required("probability").let { value -> value as BigDecimal }
 val `relation`: String get() = required("relation").let { value -> value as String }
-val `source`: RelatedEntityEdgePropertiesSource get() = required("source").let { value -> RelatedEntityEdgePropertiesSource.read(value) }
-val `target`: RelatedEntityEdgePropertiesSource get() = required("target").let { value -> RelatedEntityEdgePropertiesSource.read(value) }
+val `source`: RelationEndpoint get() = required("source").let { value -> RelationEndpoint.read(value) }
+val `target`: RelationEndpoint get() = required("target").let { value -> RelationEndpoint.read(value) }
 companion object { fun read(value: Any?): RelatedEntityEdge = RelatedEntityEdge(value) }
-}
-sealed interface RelatedEntityEdgePropertiesSource { val json: Any?
-companion object {
-fun read(value: Any?): RelatedEntityEdgePropertiesSource {
-val objectValue = Values.`object`(value)
-if (objectValue.containsKey("kind") && objectValue.containsKey("name") && !objectValue.containsKey("file") && !objectValue.containsKey("ordinal") && !objectValue.containsKey("record")) return RelatedEntityEdgePropertiesSourceFieldsKindName.read(value)
-if (objectValue.containsKey("file") && objectValue.containsKey("kind") && objectValue.containsKey("name") && objectValue.containsKey("ordinal") && objectValue.containsKey("record")) return RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord.read(value)
-throw IllegalStateException("Unknown native result alternative")
-}
-}
-}
-class RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(rawValue: Any?) : View(rawValue), RelatedEntityEdgePropertiesSource {
-val `file`: String? get() = required("file")?.let { value -> value as String }
-val `firstLine`: BigInteger? get() = optional("first_line")?.let { value -> Values.integer(value) }
-val `kind`: String get() = required("kind").let { value -> value as String }
-val `lastLine`: BigInteger? get() = optional("last_line")?.let { value -> Values.integer(value) }
-val `name`: String get() = required("name").let { value -> value as String }
-val `ordinal`: BigInteger get() = required("ordinal").let { value -> Values.integer(value) }
-val `record`: Any? get() = required("record").let { value -> Values.freeze(value) }
-companion object { fun read(value: Any?): RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord = RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord(value) }
-}
-class RelatedEntityEdgePropertiesSourceFieldsKindName(rawValue: Any?) : View(rawValue), RelatedEntityEdgePropertiesSource {
-val `kind`: String get() = required("kind").let { value -> value as String }
-val `name`: String get() = required("name").let { value -> value as String }
-companion object { fun read(value: Any?): RelatedEntityEdgePropertiesSourceFieldsKindName = RelatedEntityEdgePropertiesSourceFieldsKindName(value) }
 }
 class RelationRule(rawValue: Any?) : View(rawValue) {
 val `either`: Boolean get() = required("either").let { value -> value as Boolean }

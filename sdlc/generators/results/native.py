@@ -18,7 +18,9 @@ USE = {
               'thinkthen_session_result_json'),
     'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_error_retryable',
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
-            'thinkthen_session_result_view',
+            'thinkthen_session_result_view', 'thinkthen_session_new_typed_with_surface',
+            'thinkthen_session_try_push_typed', 'thinkthen_session_finish_typed',
+            'THINKTHEN_COBOL_OVERFLOW',
             'THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1',
             'THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1',
             'THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE_V1',
@@ -67,7 +69,11 @@ def selected_header(header, language):
         text = definitions.get(name, macros.get(name))
         if text is None:
             raise ValueError('missing native declaration: ' + name)
-        for dependency in re.findall(r'\b(?:thinkthen_\w+|THINKTHEN_\w+)\b', text):
+        dependencies = set(re.findall(r'\b(?:thinkthen_\w+|THINKTHEN_\w+)\b', text))
+        if name.startswith('thinkthen_') and name.endswith('_v1') and text.startswith('typedef'):
+            prefix = name.removesuffix('_v1').upper() + '_'
+            dependencies.update(constant for constant in macros if constant.startswith(prefix))
+        for dependency in dependencies:
             if dependency not in wanted:
                 wanted.add(dependency)
                 pending.append(dependency)

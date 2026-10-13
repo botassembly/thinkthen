@@ -3,7 +3,40 @@
 NS_ASSUME_NONNULL_BEGIN
 FOUNDATION_EXPORT NSString * const TTRequestVersion;
 FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
-@class TTAnnotation, TTAnnotationMember, TTAnnotationMemberAnswerId, TTAnnotationMemberFailureId, TTAnnotationValue, TTAnnotationValueChoice, TTAnnotationValueDecision, TTAnnotationValueFailed, TTAnnotationValueScore, TTAnnotationValueTags, TTAnswers, TTAtomicArrayOfString, TTAtomicDecideValue, TTAtomicNonZeroUsize, TTAtomicNullableString, TTAtomicBoolean, TTAtomicDouble, TTAttempt, TTBatch, TTBoundaryOdds, TTBoundaryProposal, TTCallError, TTEntityDocument, TTError, TTEstimatedInputDenial, TTEstimatedInputDenialAdditionalRequest, TTEstimatedInputDenialInitialRequest, TTEstimatedInputDenialRetry, TTFacts, TTFind, TTFindCandidate, TTImage, TTInputDeclaration, TTInputDeclarationObject, TTInputDeclarationString, TTInputPropertyType, TTInputPropertyTypeArray, TTInputPropertyTypeBoolean, TTInputPropertyTypeNumber, TTInputPropertyTypeString, TTLabel, TTMeta, TTObjectRoot, TTObservation, TTObservationFailureId, TTObservationObservationId, TTPersistenceObservation, TTPhysicalSource, TTPosition, TTQuestionSource, TTRankMember, TTRankMemberResult, TTReadableQuestion, TTReadableQuestion2, TTReadableQuestion3, TTReadableQuestion4, TTReadableQuestionChoose, TTReadableQuestionDecide, TTReadableQuestionScore, TTReadableQuestionTag, TTRecognition, TTRecognitionEdgeDocument, TTRecognitionOdds, TTRecognitionOddsFieldsNamesPairsPiecesProposals, TTRecognitionOddsFieldsPiecesProposals, TTRecognitionProposal, TTRecognitionStageContext, TTRelation, TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId, TTSendBudgetDenial, TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend, TTSendBudgetDenialBeforeRetry, TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer, TTAnswerChoice, TTAnswerScore, TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning, TTEntity, TTEntityEdge, TTFailed, TTFailure, TTFindAnswer, TTNameOdds, TTPairOdds, TTPieceOdds, TTPlace, TTPlan, TTProfileWarning, TTRecognize, TTRecognizeAnswer, TTRecognizeFieldsEntities, TTRecognizeFieldsModeProposals, TTRelateFields, TTRelatedEntity, TTRelatedEntityEdge, TTRelatedEntityEdgePropertiesSource, TTRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord, TTRelatedEntityEdgePropertiesSourceFieldsKindName, TTRelationRule, TTSessionAnnotation, TTSessionInputSource, TTSessionJudgment, TTSessionJudgmentChoice, TTSessionJudgmentDecision, TTSessionJudgmentScore, TTSessionJudgmentTags, TTSessionNamedProbability, TTSessionObservation, TTSessionObservationQuestion, TTSessionObservationRow, TTSessionObservedRow, TTSessionObservedRowAnnotated, TTSessionObservedRowFind, TTSessionObservedRowJudgment, TTSessionObservedRowRecognized, TTSessionObservedRowRelations, TTSessionPacket, TTSessionPacketAnnotateAggregate, TTSessionPacketAnnotateRow, TTSessionPacketChooseAggregate, TTSessionPacketChooseRow, TTSessionPacketDecideAggregate, TTSessionPacketDecideRow, TTSessionPacketFilterAggregate, TTSessionPacketFilterRow, TTSessionPacketFindAggregate, TTSessionPacketObservation, TTSessionPacketRankAggregate, TTSessionPacketRecognizeAggregate, TTSessionPacketRelateAggregate, TTSessionPacketScoreAggregate, TTSessionPacketScoreRow, TTSessionPacketTagAggregate, TTSessionPacketTagRow, TTSessionPacketTerminal, TTSessionProbabilities, TTSessionProbabilitiesNamed, TTSessionProbabilitiesYesNo, TTSessionQuestionDetail, TTSessionRecognition, TTSessionRelationEdge, TTSourceRelationEndpoint, TTThreshold, TTTokenBand, TTTokenUsage, TTValue;
+@class TTAnnotation, TTAnnotationMember, TTAnnotationMemberAnswerId, TTAnnotationMemberFailureId,
+TTAnnotationValue, TTAnnotationValueChoice, TTAnnotationValueDecision, TTAnnotationValueFailed,
+TTAnnotationValueScore, TTAnnotationValueTags, TTAnswers, TTAtomicArrayOfString, TTAtomicDecideValue,
+TTAtomicNonZeroUsize, TTAtomicNullableString, TTAtomicBoolean, TTAtomicDouble, TTAttempt, TTBatch,
+TTBoundaryOdds, TTBoundaryProposal, TTCallError, TTEntityDocument, TTError, TTEstimatedInputDenial,
+TTEstimatedInputDenialAdditionalRequest, TTEstimatedInputDenialInitialRequest, TTEstimatedInputDenialRetry,
+TTFacts, TTFind, TTFindCandidate, TTImage, TTInputDeclaration, TTInputDeclarationObjectRoot,
+TTInputDeclarationStringRoot, TTInputPropertyType, TTInputPropertyTypeArray, TTInputPropertyTypeBoolean,
+TTInputPropertyTypeNumber, TTInputPropertyTypeString, TTLabel, TTMeta, TTObjectRoot, TTObservation,
+TTObservationFailureId, TTObservationObservationId, TTPersistenceObservation, TTPhysicalSource,
+TTPosition, TTQuestionSource, TTRankMember, TTRankMemberResult, TTReadableQuestion, TTReadableQuestion2,
+TTReadableQuestion3, TTReadableQuestion4, TTReadableQuestionChoose, TTReadableQuestionDecide,
+TTReadableQuestionScore, TTReadableQuestionTag, TTRecognition, TTRecognitionEdgeDocument, TTRecognitionOdds,
+TTRecognitionOddsBoundaryOdds, TTRecognitionOddsRecognizeAnswer, TTRecognitionProposal, TTRecognitionStageContext,
+TTRelation, TTRelationEndpoint, TTRelationEndpointRelatedEntity, TTRelationEndpointSource,
+TTRelationMember, TTRelationMemberAnswerId, TTRelationMemberFailureId, TTSendBudgetDenial,
+TTSendBudgetDenialBeforeAdditionalSend, TTSendBudgetDenialBeforeFirstSend, TTSendBudgetDenialBeforeRetry,
+TTStopped, TTStringRoot, TTUsage, TTAnnotatedField, TTAnswer, TTAnswerChoice, TTAnswerScore,
+TTAnswerTag, TTAnswerYesNo, TTBatchSetting, TTBatchWarning, TTEntity, TTEntityEdge, TTFailed,
+TTFailure, TTFindAnswer, TTNameOdds, TTPairOdds, TTPieceOdds, TTPlace, TTPlan, TTProfileWarning,
+TTRecognize, TTRecognizeAnswer, TTRecognizeEntities, TTRecognizeModeProposals, TTRelateFields,
+TTRelatedEntity, TTRelatedEntityEdge, TTRelationRule, TTSessionAnnotation, TTSessionInputSource,
+TTSessionJudgment, TTSessionJudgmentChoice, TTSessionJudgmentDecision, TTSessionJudgmentScore,
+TTSessionJudgmentTags, TTSessionNamedProbability, TTSessionObservation, TTSessionObservationQuestion,
+TTSessionObservationRow, TTSessionObservedRow, TTSessionObservedRowAnnotated, TTSessionObservedRowFind,
+TTSessionObservedRowJudgment, TTSessionObservedRowRecognized, TTSessionObservedRowRelations,
+TTSessionPacket, TTSessionPacketAnnotateAggregate, TTSessionPacketAnnotateRow, TTSessionPacketChooseAggregate,
+TTSessionPacketChooseRow, TTSessionPacketDecideAggregate, TTSessionPacketDecideRow, TTSessionPacketFilterAggregate,
+TTSessionPacketFilterRow, TTSessionPacketFindAggregate, TTSessionPacketObservation, TTSessionPacketRankAggregate,
+TTSessionPacketRecognizeAggregate, TTSessionPacketRelateAggregate, TTSessionPacketScoreAggregate,
+TTSessionPacketScoreRow, TTSessionPacketTagAggregate, TTSessionPacketTagRow, TTSessionPacketTerminal,
+TTSessionProbabilities, TTSessionProbabilitiesNamed, TTSessionProbabilitiesYesNo, TTSessionQuestionDetail,
+TTSessionRecognition, TTSessionRelationEdge, TTSourceRelationEndpoint, TTThreshold, TTTokenBand,
+TTTokenUsage, TTValue;
 @interface TTAnnotation : TTResultNode
 @property(nonatomic, readonly) TTPresence<NSString *> *answerId;
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, TTAnnotationMember *> *> *answers;
@@ -423,6 +456,9 @@ FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @property(nonatomic, readonly) TTPresence<NSArray<TTRelatedEntityEdge *> *> *value;
 + (instancetype)read:(id)value;
 @end
+@interface TTRelationEndpoint : TTResultNode
++ (instancetype)read:(id)value;
+@end
 @interface TTRelationMember : TTResultNode
 + (instancetype)read:(id)value;
 @end
@@ -565,11 +601,8 @@ FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @property(nonatomic, readonly) TTPresence<NSNumber *> *either;
 @property(nonatomic, readonly) TTPresence<NSNumber *> *probability;
 @property(nonatomic, readonly) TTPresence<NSString *> *relation;
-@property(nonatomic, readonly) TTPresence<TTRelatedEntityEdgePropertiesSource *> *source;
-@property(nonatomic, readonly) TTPresence<TTRelatedEntityEdgePropertiesSource *> *target;
-+ (instancetype)read:(id)value;
-@end
-@interface TTRelatedEntityEdgePropertiesSource : TTResultNode
+@property(nonatomic, readonly) TTPresence<TTRelationEndpoint *> *source;
+@property(nonatomic, readonly) TTPresence<TTRelationEndpoint *> *target;
 + (instancetype)read:(id)value;
 @end
 @interface TTRelationRule : TTResultNode
@@ -747,13 +780,13 @@ FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @property(nonatomic, readonly) TTPresence<NSNumber *> *limit;
 + (instancetype)read:(id)value;
 @end
-@interface TTInputDeclarationObject : TTInputDeclaration
+@interface TTInputDeclarationObjectRoot : TTInputDeclaration
 @property(nonatomic, readonly) TTPresence<NSDictionary<NSString *, TTInputPropertyType *> *> *properties;
 @property(nonatomic, readonly) TTPresence<NSArray<NSString *> *> *required;
 @property(nonatomic, readonly) TTPresence<NSString *> *type;
 + (instancetype)read:(id)value;
 @end
-@interface TTInputDeclarationString : TTInputDeclaration
+@interface TTInputDeclarationStringRoot : TTInputDeclaration
 @property(nonatomic, readonly) TTPresence<NSString *> *type;
 + (instancetype)read:(id)value;
 @end
@@ -843,16 +876,31 @@ FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @property(nonatomic, readonly) TTPresence<NSString *> *verb;
 + (instancetype)read:(id)value;
 @end
-@interface TTRecognitionOddsFieldsNamesPairsPiecesProposals : TTRecognitionOdds
+@interface TTRecognitionOddsBoundaryOdds : TTRecognitionOdds
+@property(nonatomic, readonly) TTPresence<NSArray<TTPieceOdds *> *> *pieces;
+@property(nonatomic, readonly) TTPresence<NSArray<TTBoundaryProposal *> *> *proposals;
++ (instancetype)read:(id)value;
+@end
+@interface TTRecognitionOddsRecognizeAnswer : TTRecognitionOdds
 @property(nonatomic, readonly) TTPresence<NSArray<TTNameOdds *> *> *names;
 @property(nonatomic, readonly) TTPresence<NSArray<TTPairOdds *> *> *pairs;
 @property(nonatomic, readonly) TTPresence<NSArray<TTPieceOdds *> *> *pieces;
 @property(nonatomic, readonly) TTPresence<NSArray<TTRecognitionProposal *> *> *proposals;
 + (instancetype)read:(id)value;
 @end
-@interface TTRecognitionOddsFieldsPiecesProposals : TTRecognitionOdds
-@property(nonatomic, readonly) TTPresence<NSArray<TTPieceOdds *> *> *pieces;
-@property(nonatomic, readonly) TTPresence<NSArray<TTBoundaryProposal *> *> *proposals;
+@interface TTRelationEndpointRelatedEntity : TTRelationEndpoint
+@property(nonatomic, readonly) TTPresence<NSString *> *kind;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
++ (instancetype)read:(id)value;
+@end
+@interface TTRelationEndpointSource : TTRelationEndpoint
+@property(nonatomic, readonly) TTPresence<NSString *> *file;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *firstLine;
+@property(nonatomic, readonly) TTPresence<NSString *> *kind;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *lastLine;
+@property(nonatomic, readonly) TTPresence<NSString *> *name;
+@property(nonatomic, readonly) TTPresence<NSNumber *> *ordinal;
+@property(nonatomic, readonly) TTPresence<id> *record;
 + (instancetype)read:(id)value;
 @end
 @interface TTRelationMemberAnswerId : TTRelationMember
@@ -928,29 +976,14 @@ FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);
 @property(nonatomic, readonly) TTPresence<NSNumber *> *probability;
 + (instancetype)read:(id)value;
 @end
-@interface TTRecognizeFieldsEntities : TTRecognize
+@interface TTRecognizeEntities : TTRecognize
 @property(nonatomic, readonly) TTPresence<NSArray<TTEntity *> *> *entities;
 @property(nonatomic, readonly) TTPresence<NSArray<TTEntityEdge *> *> *relations;
 + (instancetype)read:(id)value;
 @end
-@interface TTRecognizeFieldsModeProposals : TTRecognize
+@interface TTRecognizeModeProposals : TTRecognize
 @property(nonatomic, readonly) TTPresence<NSString *> *mode;
 @property(nonatomic, readonly) TTPresence<NSArray<TTBoundaryProposal *> *> *proposals;
-+ (instancetype)read:(id)value;
-@end
-@interface TTRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord : TTRelatedEntityEdgePropertiesSource
-@property(nonatomic, readonly) TTPresence<NSString *> *file;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *firstLine;
-@property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *lastLine;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
-@property(nonatomic, readonly) TTPresence<NSNumber *> *ordinal;
-@property(nonatomic, readonly) TTPresence<id> *record;
-+ (instancetype)read:(id)value;
-@end
-@interface TTRelatedEntityEdgePropertiesSourceFieldsKindName : TTRelatedEntityEdgePropertiesSource
-@property(nonatomic, readonly) TTPresence<NSString *> *kind;
-@property(nonatomic, readonly) TTPresence<NSString *> *name;
 + (instancetype)read:(id)value;
 @end
 @interface TTSessionJudgmentChoice : TTSessionJudgment

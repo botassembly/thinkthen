@@ -59,6 +59,12 @@ pub(crate) fn facts_json(facts: &Facts) -> String {
 }
 
 impl Failure {
+    pub(crate) fn carrier_overflow() -> Self {
+        Self {
+            code: crate::ffi::values::THINKTHEN_COBOL_OVERFLOW,
+            ..Self::usage("a counted COBOL scalar exceeds its representation capacity")
+        }
+    }
     /// A refusal of the interface's own argument rules.
     pub(crate) fn usage(message: impl Into<String>) -> Self {
         Self {

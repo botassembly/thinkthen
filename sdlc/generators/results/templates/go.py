@@ -2,6 +2,7 @@
 import re
 import json
 from csharp import shape
+from host_answers import aggregate_answers, named_object_fields, usage_operations
 ROOTS = ('completesessionPacket', 'completeplan')
 def name(key):
     return 'Owned' + ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
@@ -19,7 +20,7 @@ def condition(tag):
     if mode=='member': return f'ownedHas(v.raw, {json.dumps(field)})'
     return ' && '.join([f'ownedHas(v.raw, {json.dumps(k)})' for k in value['required']]+[f'!ownedHas(v.raw, {json.dumps(k)})' for k in value['excluded']])
 def render(definitions, input_definitions):
-    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import "encoding/json"']
+    lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import ("encoding/json"; "bytes"; "reflect"; "context")']
     for key, raw in definitions.items():
         n=name(key); s=shape(raw)
         lines += [f'type {n} struct {{ ownedJSON }}']
@@ -29,17 +30,36 @@ def render(definitions, input_definitions):
             for member,field in s['properties'].items():
                 method=name(member).removeprefix('Owned')
                 lines += [f'func (v {n}) {method}() Presence[{typ(field)}] {{ return ownedMember[{typ(field)}](v.raw, "{member}") }}']
+            for member in named_object_fields(s, definitions):
+                method = name(member).removeprefix('Owned') + 'Name'
+                lines += [f'func (v {n}) {method}() Presence[string] {{ nested:=ownedMember[json.RawMessage](v.raw,{json.dumps(member)}); if nested.Err!=nil || !nested.Present || nested.Null {{ return Presence[string]{{Present:nested.Present,Null:nested.Null,Err:nested.Err}} }}; return ownedMember[string](nested.Value,"name") }}']
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'func (v {n}) As{cn.removeprefix("Owned")}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errOwnedAlternative }}; return ownedDecode[{cn}](v.raw) }}']
-    return '\n'.join(lines)+'\n'+inputs(input_definitions)
+    for function, _, payload in aggregate_answers(definitions):
+        result = typ(payload)
+        lines += [f'func (v OwnedSessionPacket) {function.title()}Answer() Presence[{result}] {{ if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", {json.dumps(function)}) {{ return Presence[{result}]{{Err:errOwnedAlternative}} }}; return ownedMember[{result}](v.raw, "value") }}']
+    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)+answer_helpers(definitions)
 
 
 def usage(header):
     members = re.findall(r'^#define (THINKTHEN_COMPLETE_USAGE_PERSISTENCE_(\w+)_V1) (\d+)\s*$', header, re.M)
     lines = ['// Generated from the compiler-derived C header; do not edit.', 'package thinkthen', 'type UsagePersistenceState uint32', 'const (']
     lines += ['Usage' + word.title() + ' UsagePersistenceState = ' + value for _, word, value in members]
-    return '\n'.join(lines + [')']) + '\n'
+    lines += [')', 'type ErrorKind int', 'const (']
+    errors = re.findall(r'^#define THINKTHEN_E([A-Z]+) (\d+)\s*$', header, re.M)
+    lines += ['Kind' + word.title() + ' ErrorKind = ' + value for word, value in errors]
+    lines += [')', 'func (k ErrorKind) String() string { switch k {']
+    lines += ['case Kind' + word.title() + ': return ' + json.dumps(word.lower()) for word, _ in errors]
+    lines += ['default: return "unknown"', '} }']
+    functions = {symbol: {'arguments': arguments.split(',')}
+                 for symbol, arguments in re.findall(r'\bint\s+(thinkthen_engine_\w+)\s*\(([^;]+)\);', header, re.S)}
+    for _, public in usage_operations(functions):
+        method = name(public).removeprefix('Owned')
+        finish = 'true' if public.startswith('finish_') else 'false'
+        lines += [f'func (c *Client) {method}() (UsageStatus,error) {{ return c.engine.{method}() }}',
+                  f'func (e *nativeEngine) {method}() (UsageStatus,error) {{ return e.usageStatus({finish}) }}']
+    return '\n'.join(lines) + '\n'
 
 
 def inputs(definitions):
@@ -47,7 +67,7 @@ def inputs(definitions):
     definitions = dict(definitions)
     pending = ['RequestSessionDescriptor', 'Request', 'EngineSettings', 'RequestOptions', 'RequestQuestion', 'RequestItem', 'RequestSource', 'RequestInput']
     generated = {}
-    lines = []
+    lines = [ordered_maps()]
     def ident(key):
         if key == 'SourceUnit': return 'RequestSourceUnit'
         return ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key))
@@ -64,7 +84,7 @@ def inputs(definitions):
         if t == 'array': return '[]' + field_type(s.get('items', {}), key+'Item')
         if t == 'object' and 'properties' not in s:
             values = s.get('additionalProperties', True)
-            return 'map[string]' + field_type(values, key+'Value')
+            return ('OrderedMap[' + field_type(values, key+'Value') + ']' if s.get('x-preserve-order') else 'map[string]' + field_type(values, key+'Value'))
         if t == 'object' or 'anyOf' in s or 'oneOf' in s:
             definitions[key] = s; pending.append(key); return ident(key)
         return {'string':'string', 'boolean':'bool', 'integer':('uint64' if str(s.get('format','')).startswith('uint') else 'int64'), 'number':'float64'}.get(t, 'any')
@@ -126,4 +146,76 @@ def inputs(definitions):
         ft=field_type(s,key+'Value')
         nullable = isinstance(s.get('type'),list) and 'null' in s['type']
         lines.append(f'type {n} = *{ft}' if nullable else f'type {n} {ft}')
+        if s.get('x-preserve-order'):
+            lines += [f'func (v {n}) MarshalJSON() ([]byte,error) {{ return {ft}(v).MarshalJSON() }}', f'func (v *{n}) UnmarshalJSON(data []byte) error {{ return (*{ft})(v).UnmarshalJSON(data) }}']
     return '\n'.join(lines)+'\n'
+
+
+def ordered_maps():
+    """JSON object transport keeps pair order, including duplicates for Rust refusal."""
+    return r'''// OrderedEntry carries one authored object member.
+type OrderedEntry[V any] struct { Key string; Value V }
+type OrderedMap[V any] []OrderedEntry[V]
+func (v OrderedMap[V]) MarshalJSON() ([]byte,error) {
+    if v == nil { return []byte("null"),nil }
+    var out bytes.Buffer; out.WriteByte('{')
+    for i,entry := range v {
+        key,err:=json.Marshal(entry.Key); if err!=nil { return nil,err }
+        value,err:=json.Marshal(entry.Value); if err!=nil { return nil,err }
+        if i>0 { out.WriteByte(',') }; out.Write(key); out.WriteByte(':'); out.Write(value)
+    }
+    out.WriteByte('}'); return out.Bytes(),nil
+}
+func (v *OrderedMap[V]) UnmarshalJSON(data []byte) error {
+    if bytes.Equal(bytes.TrimSpace(data),[]byte("null")) { *v=nil; return nil }
+    decoder:=json.NewDecoder(bytes.NewReader(data)); token,err:=decoder.Token()
+    if err!=nil { return err }; if token!=json.Delim('{') { return &json.UnmarshalTypeError{Value:"non-object",Type:reflect.TypeOf(*v)} }
+    entries:=make(OrderedMap[V],0)
+    for decoder.More() {
+        token,err=decoder.Token(); if err!=nil { return err }; var value V
+        if err=decoder.Decode(&value);err!=nil { return err }
+        entries=append(entries,OrderedEntry[V]{Key:token.(string),Value:value})
+    }
+    if _,err=decoder.Token();err!=nil { return err }; *v=entries; return nil
+}
+'''
+
+
+def named_calls(definitions):
+    functions = definitions['RequestFunction'].get('oneOf', [])
+    return '\n'.join(
+        f'func (c *Client) {item["const"].title()}(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall,error) {{ return c.call(ctx,{json.dumps(item["const"])},question,input,options) }}'
+        for item in functions) + '\n'
+
+
+def answer_helpers(definitions):
+    from host_answers import scalar_answers, judgment_route
+    route, guards = judgment_route(definitions)
+    checks = []
+    for path, value in guards:
+        checks.append('ownedLiteral(ownedAnswerPath(packet.raw, []string{' + ','.join(json.dumps(field) for field in path[:-1]) + '}).Value,' + json.dumps(path[-1]) + ',' + json.dumps(value) + ')')
+    path = '[]string{' + ','.join(json.dumps(field) for field in route) + '}'
+    lines = ['type AnswerCardinalityError struct { Function string; Count int; Call OwnedCall }',
+             'func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }',
+             'func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] { result:=Presence[json.RawMessage]{Present:true,Value:raw}; for _,field:=range path { result=ownedMember[json.RawMessage](result.Value,field); if result.Err!=nil || !result.Present || result.Null { return result } }; return result }',
+             'func (v OwnedCall) answerTerminal() error { if v.Terminal==nil { return &AnswerCardinalityError{Call:v} }; failure:=v.Terminal.Failure(); if failure.Err!=nil { return failure.Err }; if failure.Present && !failure.Null { detail:=failure.Value.Error(); if detail.Err!=nil { return detail.Err }; return &SessionError{Call:v,Detail:detail.Value} }; return nil }',
+             'func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage,error) {',
+             'if err:=v.answerTerminal();err!=nil { return nil,err }; values:=make([]json.RawMessage,0)',
+             'for _,packet:=range v.Packets { if !ownedLiteral(packet.raw,"function",function) { continue }; var value Presence[json.RawMessage]',
+             'if judgment=="" { if !ownedLiteral(packet.raw,"kind","aggregate") { continue }; value=ownedMember[json.RawMessage](packet.raw,"value") } else {',
+             'if !(' + ' && '.join(checks) + ') { continue }; carrier:=ownedAnswerPath(packet.raw,' + path + '); if !ownedLiteral(carrier.Value,"kind",judgment) { continue }; value=ownedMember[json.RawMessage](carrier.Value,"value")',
+             '}; if value.Err!=nil { return nil,value.Err }; if value.Present { if value.Null { values=append(values,json.RawMessage("null")) } else { values=append(values,value.Value) } }',
+             '}; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
+    answers = {function: (typ(payload), '') for function, _, payload in aggregate_answers(definitions)}
+    for function, kind, payload in scalar_answers(definitions):
+        source = dict(payload)
+        kinds = source.get('type')
+        nullable = isinstance(kinds, list) and 'null' in kinds
+        if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
+        target = 'float64' if source.get('type') == 'number' else typ(source)
+        answers[function] = (('*' if nullable else '') + target, kind)
+    for function, (target, kind) in answers.items():
+        title = function.title()
+        lines += [f'func (v OwnedCall) {title}Answer() ({target},error) {{ raw,err:=v.answerJSON({json.dumps(function)},{json.dumps(kind)}); if err!=nil {{ var zero {target}; return zero,err }}; return ownedDecode[{target}](raw) }}',
+                  f'func (c *Client) {title}Answer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ({target},error) {{ call,err:=c.{title}(ctx,question,input,options); if err!=nil {{ var zero {target}; return zero,err }}; return call.{title}Answer() }}']
+    return '\n'.join(lines) + '\n'

@@ -49,10 +49,10 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
         raise SystemExit(0)
     declarations, calls = [], []
     for verb, case, expression in cases():
-        declarations.append(f'R_{verb} : constant T_RequestCall_{verb} := {expression};')
+        declarations.append(f'R_{verb} : constant T_RequestCall := {expression};')
         calls.append(f'Select_Route ("case/{case}/v1"); Thinkthen.Sessions.Calls.{verb.title()} (Client, Owner, R_{verb}); Finish (Owner); Drain{" (Odds => 0.99)" if verb == "decide" else ""}; Put_Line ("SHARED_CASE {case}");')
     # Admission, cancellation and execution failures add no host-side semantic rules.
-    key = 'RequestCall_decide'
+    key = 'RequestCall'
     def request(question, original):
         return construct(key, definitions[key], {'function':'decide', 'question':question, 'input':original, 'options':{'details':True}})
     failure = request({'kind':'text','text':'Does it pass?'}, {'kind':'text','text':'failure-one'})
@@ -61,7 +61,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     false_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':0.95}}, {'kind':'text','text':'False evidence.'})
     null_request = request({'kind':'definition','value':{'decide':'Does it pass?', 'threshold':'0.7:0.95'}}, {'kind':'text','text':'Null evidence.'})
     item = construct('RequestSessionDescriptor', definitions['RequestSessionDescriptor'], {'item':{'original':{'kind':'text','text':'Located evidence.'}}, 'location':{'file':'owned.txt','first_line':1,'last_line':1}})
-    declarations += [f'False_Request : constant T_RequestCall_decide := {false_request};', f'Null_Request : constant T_RequestCall_decide := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall_decide := {failure};', f'Feed : constant T_RequestCall_decide := {feed};', f'Invalid : constant T_RequestCall_decide := {invalid};']
+    declarations += [f'False_Request : constant T_RequestCall := {false_request};', f'Null_Request : constant T_RequestCall := {null_request};', f'Item : T_RequestSessionDescriptor := {item};', 'Pushed : Push_Status;', f'Failed : constant T_RequestCall := {failure};', f'Feed : constant T_RequestCall := {feed};', f'Invalid : constant T_RequestCall := {invalid};']
     calls += ['Select_Route ("generic/v1");', 'Thinkthen.Sessions.Calls.Decide (Owner, False_Request); Finish (Owner); Drain (Decision => 0);', 'Thinkthen.Sessions.Calls.Decide (Owner, Null_Request); Finish (Owner); Drain (Decision => 1);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Push (Owner, Item, Pushed); if Pushed /= Accepted then raise Program_Error with "feed refused"; end if; Finish (Owner); Drain (Located => True);', 'Thinkthen.Sessions.Calls.Decide (Owner, Feed); Cancel (Owner); Drain (Cancelled);', '''declare
 Refused : Boolean := False;
 begin
@@ -82,7 +82,7 @@ end;''']
         'Recorded_Request': request({'kind':'text','text':'Does it pass?'}, {'kind':'text','text':'Recorded evidence.'}),
         'Image_Request': request({'kind':'text','text':'Is red visible?'}, {'kind':'records','items':[{'images':[{'kind':'file','path':str(red)}, {'kind':'file','path':str(red)}]}]}),
     }
-    declarations += [f'{name} : constant T_RequestCall_decide := {expression};' for name, expression in extras.items()]
+    declarations += [f'{name} : constant T_RequestCall := {expression};' for name, expression in extras.items()]
     calls += [
         'Thinkthen.Sessions.Calls.Decide (Client, Owner, File_Request); Finish (Owner); Drain (Located => True, Expected_Sends => 1);',
         'Select_Settings ("generic/v1", "' + json.dumps({'cache':str(work / 'answer-cache')})[1:-1].replace('"','""') + '");',

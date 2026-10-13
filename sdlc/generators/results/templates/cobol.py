@@ -1,5 +1,4 @@
 """COBOL records and mechanical serialization from Rust schemas and measured C ABI."""
-import hashlib
 import importlib.util
 import json
 import re
@@ -8,8 +7,8 @@ from pathlib import Path
 
 def identifier(value):
     text = value.removeprefix('thinkthen_').replace('_', '-')
-    if len(text) > 52:
-        text = text[:43] + '-' + hashlib.sha256(text.encode()).hexdigest()[:8]
+    if len(text) > 55:
+        raise ValueError('COBOL native name exceeds 60 characters: ' + value)
     return 'tt-n-' + text
 
 
@@ -25,7 +24,9 @@ def copybook(facts):
     def members(record, level, path=""):
         def label(key):
             text = "v-" + (path + key).replace("_", "-").rstrip("-")
-            return text if len(text) <= 60 else text[:51] + "-" + hashlib.sha256(text.encode()).hexdigest()[:8]
+            if len(text) > 60:
+                raise ValueError("COBOL field name exceeds 60 characters: " + text)
+            return text
         output, cursor = [], 0
         direct = [(key, field) for key, field in record['fields'].items() if '.' not in key]
         union = len(direct) > 1 and all(field['offset'] == 0 for _, field in direct)
@@ -72,7 +73,7 @@ def copybook(facts):
         lines.append('01 ' + identifier(name) + ' based.')
         lines.extend(members(record, 2))
     for key, value in facts['constants'].items():
-        lines.append('78 ' + identifier(key.lower() + '_constant') + ' value ' + str(value) + '.')
+        lines.append('78 ' + identifier(key.lower()) + ' value ' + str(value) + '.')
     return '\n'.join(lines) + '\n'
 
 
@@ -181,9 +182,10 @@ def requests(definitions):
                 header.append(f'#define THINKTHEN_COBOL_{key.upper()}_ARM_{index}_KIND {index}')
     for name, fields in layouts.items():
         header += ['typedef struct ' + name + ' {'] + [' '+kind+' '+member+';' for kind, member in fields] + ['} '+name+';']
-    named = definitions['RequestCall']['variants']
-    for index, (target, (_, _, function)) in enumerate(named, 1):
-        header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_{target} *,void **);')
+    from templates.csharp import enum_values
+    named = enum_values(definitions['RequestFunction'])
+    for index, function in enumerate(named, 1):
+        header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_RequestCall *,void **);')
     header += ['int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
     code = [SUPPORT]
     for key in bodies:
@@ -197,9 +199,25 @@ def requests(definitions):
         code.append('}')
     code += ['int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out) {', 'writer w={0}; int encoded=encode(&w,request,emit_Request);', 'int code=encoded ? encoded : thinkthen_session_new_with_surface(engine,w.data,w.len,"cobol",5,(thinkthen_session **)out);', 'free(w.data); return code;', '}']
     code += ['int TT_SESSION_PUSH(const void *session,const thinkthen_cobol_RequestSessionDescriptor *descriptor,uint32_t *status) {', 'writer w={0}; int encoded=encode(&w,descriptor,emit_RequestSessionDescriptor);', 'int code=encoded ? encoded : thinkthen_session_try_push((thinkthen_session *)session,w.data,w.len,status);', 'free(w.data); return code;', '}']
-    for index, (target, (_, _, function)) in enumerate(named, 1):
-        code += [f'int TT_SESSION_{function.upper()}(const void *engine,const thinkthen_cobol_{target} *input,void **out) {{', f'thinkthen_cobol_RequestCall call={{.kind={index},.value=input}};', 'thinkthen_cobol_Request request={.m_call=&call};', 'return TT_SESSION_REQUEST(engine,&request,out);', '}']
-    return '\n'.join(header)+'\n', '\n'.join(code)+'\n'
+    for index, function in enumerate(named, 1):
+        code += [f'int TT_SESSION_{function.upper()}(const void *engine,const thinkthen_cobol_RequestCall *input,void **out) {{', f'thinkthen_cobol_RequestFunction function={{.kind={index},.value=NULL}};', 'if(!input) return THINKTHEN_COBOL_REPRESENTATION;', 'thinkthen_cobol_RequestCall call=*input; call.m_function=&function;', 'thinkthen_cobol_Request request={.m_call=&call};', 'return TT_SESSION_REQUEST(engine,&request,out);', '}']
+    def native_name(key):
+        key = key.replace('RequestDefinition_', 'Definition_').replace('Authored_', '')
+        key = key.replace('_member_', '_').replace('_properties_', '_')
+        return ''.join(part[:1].upper() + part[1:] for part in key.split('_'))
+    names = {key: native_name(key) for key in nodes}
+    if len(set(names.values())) != len(names):
+        raise ValueError('colliding semantic COBOL native names')
+    # Rename whole identifiers only; schema strings and private emitters retain
+    # their graph identity. Both measured layouts and declarations use this map.
+    substitutions = {'thinkthen_cobol_' + key: 'thinkthen_cobol_' + value
+                     for key, value in names.items()}
+    for key, value in names.items():
+        for suffix in re.findall(r'\bTHINKTHEN_COBOL_' + re.escape(key.upper()) + r'(_ARM_\d+_KIND|_KIND)\b', '\n'.join(header)):
+            substitutions['THINKTHEN_COBOL_' + key.upper() + suffix] = 'THINKTHEN_COBOL_' + value.upper() + suffix
+    def rename(text):
+        return re.sub(r'\b[A-Za-z_][A-Za-z_0-9]*\b', lambda token: substitutions.get(token[0], token[0]), text)
+    return rename('\n'.join(header) + '\n'), rename('\n'.join(code) + '\n')
 
 
 def outputs(root, definitions):

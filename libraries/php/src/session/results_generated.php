@@ -244,12 +244,12 @@ final class NativeImage extends Node {
     /** @return Presence<mixed> */ public function media(): Presence { return $this->field('media'); }
     /** @return Presence<int|string> */ public function width(): Presence { return $this->field('width'); }
 }
-final class NativeInputDeclarationObject extends Node {
+final class NativeInputDeclarationObjectRoot extends Node {
     /** @return Presence<\stdClass> */ public function properties(): Presence { return $this->field('properties'); }
     /** @return Presence<list<string>> */ public function required(): Presence { return $this->field('required'); }
     /** @return Presence<string> */ public function type(): Presence { return $this->field('type'); }
 }
-final class NativeInputDeclarationString extends Node {
+final class NativeInputDeclarationStringRoot extends Node {
     /** @return Presence<string> */ public function type(): Presence { return $this->field('type'); }
 }
 final class NativeInputPropertyTypeArray extends Node {
@@ -339,8 +339,8 @@ final class NativeRankMemberResult extends Node {
 }
 final class NativeReadableQuestion2 extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -353,10 +353,10 @@ final class NativeReadableQuestion2 extends Node {
 }
 final class NativeReadableQuestion3 extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
     /** @return Presence<mixed> */ public function entity_definition(): Presence { return $this->field('entity_definition'); }
     /** @return Presence<mixed> */ public function instructions(): Presence { return $this->field('instructions'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<\stdClass> */ public function kinds(): Presence { return $this->field('kinds'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<mixed> */ public function mode(): Presence { return $this->field('mode'); }
@@ -374,9 +374,9 @@ final class NativeReadableQuestion3 extends Node {
 }
 final class NativeReadableQuestion4 extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
     /** @return Presence<NativeRelateFields|null> */ public function fields(): Presence { return $this->field('fields'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -389,8 +389,8 @@ final class NativeReadableQuestion4 extends Node {
 }
 final class NativeReadableQuestionChoose extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -403,8 +403,8 @@ final class NativeReadableQuestionChoose extends Node {
 }
 final class NativeReadableQuestionDecide extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -418,8 +418,8 @@ final class NativeReadableQuestionDecide extends Node {
 }
 final class NativeReadableQuestionScore extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -432,8 +432,8 @@ final class NativeReadableQuestionScore extends Node {
 }
 final class NativeReadableQuestionTag extends Node {
     /** @return Presence<int|string|string> */ public function batch(): Presence { return $this->field('batch'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function context_schema(): Presence { return $this->field('context_schema'); }
-    /** @return Presence<NativeInputDeclarationString|NativeInputDeclarationObject> */ public function item_schema(): Presence { return $this->field('item_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function context_schema(): Presence { return $this->field('context_schema'); }
+    /** @return Presence<NativeInputDeclarationStringRoot|NativeInputDeclarationObjectRoot> */ public function item_schema(): Presence { return $this->field('item_schema'); }
     /** @return Presence<list<NativeLabel>> */ public function label_details(): Presence { return $this->field('label_details'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
@@ -445,7 +445,7 @@ final class NativeReadableQuestionTag extends Node {
     /** @return Presence<string> */ public function verb(): Presence { return $this->field('verb'); }
 }
 final class NativeRecognition extends Node {
-    /** @return Presence<NativeRecognitionOddsFieldsNamesPairsPiecesProposals|NativeRecognitionOddsFieldsPiecesProposals> */ public function answer(): Presence { return $this->field('answer'); }
+    /** @return Presence<NativeRecognitionOddsRecognizeAnswer|NativeRecognitionOddsBoundaryOdds> */ public function answer(): Presence { return $this->field('answer'); }
     /** @return Presence<string> */ public function answer_id(): Presence { return $this->field('answer_id'); }
     /** @return Presence<string> */ public function file(): Presence { return $this->field('file'); }
     /** @return Presence<int|string> */ public function first_line(): Presence { return $this->field('first_line'); }
@@ -457,7 +457,7 @@ final class NativeRecognition extends Node {
     /** @return Presence<NativeReadableQuestion3> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<NativePhysicalSource> */ public function source(): Presence { return $this->field('source'); }
-    /** @return Presence<NativeRecognizeFieldsEntities|NativeRecognizeFieldsModeProposals> */ public function value(): Presence { return $this->field('value'); }
+    /** @return Presence<NativeRecognizeEntities|NativeRecognizeModeProposals> */ public function value(): Presence { return $this->field('value'); }
 }
 final class NativeRecognitionEdgeDocument extends Node {
     /** @return Presence<bool> */ public function either(): Presence { return $this->field('either'); }
@@ -466,15 +466,15 @@ final class NativeRecognitionEdgeDocument extends Node {
     /** @return Presence<NativeEntity> */ public function source(): Presence { return $this->field('source'); }
     /** @return Presence<NativeEntity> */ public function target(): Presence { return $this->field('target'); }
 }
-final class NativeRecognitionOddsFieldsNamesPairsPiecesProposals extends Node {
+final class NativeRecognitionOddsBoundaryOdds extends Node {
+    /** @return Presence<list<NativePieceOdds>> */ public function pieces(): Presence { return $this->field('pieces'); }
+    /** @return Presence<list<NativeBoundaryProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
+}
+final class NativeRecognitionOddsRecognizeAnswer extends Node {
     /** @return Presence<list<NativeNameOdds>> */ public function names(): Presence { return $this->field('names'); }
     /** @return Presence<list<NativePairOdds>> */ public function pairs(): Presence { return $this->field('pairs'); }
     /** @return Presence<list<NativePieceOdds>> */ public function pieces(): Presence { return $this->field('pieces'); }
     /** @return Presence<list<NativeRecognitionProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
-}
-final class NativeRecognitionOddsFieldsPiecesProposals extends Node {
-    /** @return Presence<list<NativePieceOdds>> */ public function pieces(): Presence { return $this->field('pieces'); }
-    /** @return Presence<list<NativeBoundaryProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
 }
 final class NativeRecognitionProposal extends Node {
     /** @return Presence<int|string> */ public function end(): Presence { return $this->field('end'); }
@@ -504,6 +504,19 @@ final class NativeRelation extends Node {
     /** @return Presence<NativeReadableQuestion4> */ public function question(): Presence { return $this->field('question'); }
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<list<NativeRelatedEntityEdge>> */ public function value(): Presence { return $this->field('value'); }
+}
+final class NativeRelationEndpointRelatedEntity extends Node {
+    /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+}
+final class NativeRelationEndpointSource extends Node {
+    /** @return Presence<string|null> */ public function file(): Presence { return $this->field('file'); }
+    /** @return Presence<int|string> */ public function first_line(): Presence { return $this->field('first_line'); }
+    /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
+    /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
+    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<int|string> */ public function ordinal(): Presence { return $this->field('ordinal'); }
+    /** @return Presence<mixed> */ public function record(): Presence { return $this->field('record'); }
 }
 final class NativeRelationMemberAnswerId extends Node {
     /** @return Presence<mixed> */ public function direction(): Presence { return $this->field('direction'); }
@@ -648,11 +661,11 @@ final class NativeRecognizeAnswer extends Node {
     /** @return Presence<list<NativePieceOdds>> */ public function pieces(): Presence { return $this->field('pieces'); }
     /** @return Presence<list<NativeRecognitionProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
 }
-final class NativeRecognizeFieldsEntities extends Node {
+final class NativeRecognizeEntities extends Node {
     /** @return Presence<list<NativeEntity>> */ public function entities(): Presence { return $this->field('entities'); }
     /** @return Presence<list<NativeEntityEdge>> */ public function relations(): Presence { return $this->field('relations'); }
 }
-final class NativeRecognizeFieldsModeProposals extends Node {
+final class NativeRecognizeModeProposals extends Node {
     /** @return Presence<string> */ public function mode(): Presence { return $this->field('mode'); }
     /** @return Presence<list<NativeBoundaryProposal>> */ public function proposals(): Presence { return $this->field('proposals'); }
 }
@@ -668,21 +681,8 @@ final class NativeRelatedEntityEdge extends Node {
     /** @return Presence<bool> */ public function either(): Presence { return $this->field('either'); }
     /** @return Presence<int|float> */ public function probability(): Presence { return $this->field('probability'); }
     /** @return Presence<string> */ public function relation(): Presence { return $this->field('relation'); }
-    /** @return Presence<NativeRelatedEntityEdgePropertiesSourceFieldsKindName|NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord> */ public function source(): Presence { return $this->field('source'); }
-    /** @return Presence<NativeRelatedEntityEdgePropertiesSourceFieldsKindName|NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord> */ public function target(): Presence { return $this->field('target'); }
-}
-final class NativeRelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord extends Node {
-    /** @return Presence<string|null> */ public function file(): Presence { return $this->field('file'); }
-    /** @return Presence<int|string> */ public function first_line(): Presence { return $this->field('first_line'); }
-    /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
-    /** @return Presence<int|string> */ public function last_line(): Presence { return $this->field('last_line'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
-    /** @return Presence<int|string> */ public function ordinal(): Presence { return $this->field('ordinal'); }
-    /** @return Presence<mixed> */ public function record(): Presence { return $this->field('record'); }
-}
-final class NativeRelatedEntityEdgePropertiesSourceFieldsKindName extends Node {
-    /** @return Presence<string> */ public function kind(): Presence { return $this->field('kind'); }
-    /** @return Presence<string> */ public function name(): Presence { return $this->field('name'); }
+    /** @return Presence<NativeRelationEndpointRelatedEntity|NativeRelationEndpointSource> */ public function source(): Presence { return $this->field('source'); }
+    /** @return Presence<NativeRelationEndpointRelatedEntity|NativeRelationEndpointSource> */ public function target(): Presence { return $this->field('target'); }
 }
 final class NativeRelationRule extends Node {
     /** @return Presence<bool> */ public function either(): Presence { return $this->field('either'); }
