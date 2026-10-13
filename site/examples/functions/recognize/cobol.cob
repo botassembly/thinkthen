@@ -25,45 +25,45 @@ copy "tt-native-generated.cpy".
 procedure division.
     call "thinkthen_engine_new" returning engine
     allocate tt-n-cobol-RequestQuestion initialized
-    allocate tt-n-cobol-RequestQuestion-file initialized
-    allocate tt-n-cobol-RequestQuestion-file-member-path
+    allocate tt-n-cobol-RequestQuestionFile initialized
+    allocate tt-n-cobol-RequestQuestionFilePath
     set v-data of
-       tt-n-cobol-RequestQuestion-file-member-path
+       tt-n-cobol-RequestQuestionFilePath
        to address of names-file
     move length of names-file to v-len of
-       tt-n-cobol-RequestQuestion-file-member-path
-    set v-m-path of tt-n-cobol-RequestQuestion-file
+       tt-n-cobol-RequestQuestionFilePath
+    set v-m-path of tt-n-cobol-RequestQuestionFile
        to address of
-       tt-n-cobol-RequestQuestion-file-member-path
-    move tt-n-cobol-requestquestion-file-kind-constant
+       tt-n-cobol-RequestQuestionFilePath
+    move tt-n-cobol-requestquestionfile-kind-k
        to v-kind of tt-n-cobol-RequestQuestion
     set v-value of tt-n-cobol-RequestQuestion
-       to address of tt-n-cobol-RequestQuestion-file
+       to address of tt-n-cobol-RequestQuestionFile
     allocate tt-n-cobol-RequestInput initialized
-    allocate tt-n-cobol-RequestInput-text initialized
-    allocate tt-n-cobol-RequestInput-text-member-text
-    set v-data of tt-n-cobol-RequestInput-text-member-text
+    allocate tt-n-cobol-RequestInputText initialized
+    allocate tt-n-cobol-RequestInputTextText
+    set v-data of tt-n-cobol-RequestInputTextText
        to address of text-in
     move length of text-in to v-len of
-       tt-n-cobol-RequestInput-text-member-text
-    set v-m-text of tt-n-cobol-RequestInput-text
+       tt-n-cobol-RequestInputTextText
+    set v-m-text of tt-n-cobol-RequestInputText
        to address of
-       tt-n-cobol-RequestInput-text-member-text
-    move tt-n-cobol-requestinput-text-kind-constant
+       tt-n-cobol-RequestInputTextText
+    move tt-n-cobol-requestinputtext-kind-k
        to v-kind of tt-n-cobol-RequestInput
     set v-value of tt-n-cobol-RequestInput
-       to address of tt-n-cobol-RequestInput-text
-    allocate tt-n-cobol-RequestCall-recognize initialized
-    set v-m-question of tt-n-cobol-RequestCall-recognize
+       to address of tt-n-cobol-RequestInputText
+    allocate tt-n-cobol-RequestCall initialized
+    set v-m-question of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestQuestion
-    set v-m-input of tt-n-cobol-RequestCall-recognize
+    set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
     call "TT_SESSION_RECOGNIZE" using by value engine
-       by reference tt-n-cobol-RequestCall-recognize
+       by reference tt-n-cobol-RequestCall
        session-owner returning status-code
     if status-code not = 0 stop run returning 1 end-if
     perform read-packet
-       until read-status = tt-n-session-end-v1-constant
+       until read-status = tt-n-session-end-v1-k
     call "thinkthen_session_free"
        using by value session-owner returning omitted
     call "thinkthen_engine_free"
@@ -77,7 +77,7 @@ read-packet.
     call "TT_SESSION_NEXT" using by value session-owner
        by reference read-status packet-owner
        returning status-code
-    if read-status not = tt-n-session-result-v1-constant
+    if read-status not = tt-n-session-result-v1-k
        exit paragraph
     end-if
     call "thinkthen_session_result_view"
@@ -86,9 +86,9 @@ read-packet.
     set address of tt-n-complete-session-packet-v1
        to packet-view
     if v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-terminal-v1-constant
+       tt-n-complete-session-packet-terminal-v1-k
        and v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-observation-v1-constant
+       tt-n-complete-session-packet-observation-v1-k
        perform read-names
     end-if
     call "thinkthen_session_result_free"
@@ -110,13 +110,13 @@ read-names.
     set address of tt-n-complete-recognize-v1
        to v-value of tt-n-complete-recognition-v1
     set address of
-       tt-n-complete-recognize-fields-entities-v1
-       to v-data-fields-entities of
+       tt-n-complete-recognize-entities-v1
+       to v-data-entities of
        tt-n-complete-recognize-v1
     set entity-at to v-entities-data of
-       tt-n-complete-recognize-fields-entities-v1
+       tt-n-complete-recognize-entities-v1
     perform read-entity v-entities-len of
-       tt-n-complete-recognize-fields-entities-v1 times.
+       tt-n-complete-recognize-entities-v1 times.
 read-entity.
     set address of entity-address to entity-at
     set address of tt-n-complete-entity-v1

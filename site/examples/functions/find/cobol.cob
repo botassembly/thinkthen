@@ -29,48 +29,48 @@ copy "tt-native-generated.cpy".
 procedure division.
     call "thinkthen_engine_new" returning engine
     allocate tt-n-cobol-RequestQuestion initialized
-    allocate tt-n-cobol-RequestQuestion-text initialized
-    allocate tt-n-cobol-RequestQuestion-text-member-text
+    allocate tt-n-cobol-RequestQuestionText initialized
+    allocate tt-n-cobol-RequestQuestionTextText
     set v-data of
-       tt-n-cobol-RequestQuestion-text-member-text
+       tt-n-cobol-RequestQuestionTextText
        to address of question
     move length of question to v-len of
-       tt-n-cobol-RequestQuestion-text-member-text
-    set v-m-text of tt-n-cobol-RequestQuestion-text
+       tt-n-cobol-RequestQuestionTextText
+    set v-m-text of tt-n-cobol-RequestQuestionText
        to address of
-       tt-n-cobol-RequestQuestion-text-member-text
-    move tt-n-cobol-requestquestion-text-kind-constant
+       tt-n-cobol-RequestQuestionTextText
+    move tt-n-cobol-requestquestiontext-kind-k
        to v-kind of tt-n-cobol-RequestQuestion
     set v-value of tt-n-cobol-RequestQuestion
-       to address of tt-n-cobol-RequestQuestion-text
+       to address of tt-n-cobol-RequestQuestionText
     perform add-line varying at-line from 1 by 1
        until at-line > 4
     allocate tt-n-cobol-RequestInput initialized
-    allocate tt-n-cobol-RequestInput-records initialized
-    allocate tt-n-cobol-RequestInput-records-member-items
+    allocate tt-n-cobol-RequestInputRecords initialized
+    allocate tt-n-cobol-RequestInputRecordsItems
     set v-data of
-       tt-n-cobol-RequestInput-records-member-items
+       tt-n-cobol-RequestInputRecordsItems
        to address of line-address(1)
     move 4 to v-len of
-       tt-n-cobol-RequestInput-records-member-items
-    set v-m-items of tt-n-cobol-RequestInput-records
+       tt-n-cobol-RequestInputRecordsItems
+    set v-m-items of tt-n-cobol-RequestInputRecords
        to address of
-       tt-n-cobol-RequestInput-records-member-items
-    move tt-n-cobol-requestinput-records-kind-constant
+       tt-n-cobol-RequestInputRecordsItems
+    move tt-n-cobol-requestinputrecords-kind-k
        to v-kind of tt-n-cobol-RequestInput
     set v-value of tt-n-cobol-RequestInput
-       to address of tt-n-cobol-RequestInput-records
-    allocate tt-n-cobol-RequestCall-find initialized
-    set v-m-question of tt-n-cobol-RequestCall-find
+       to address of tt-n-cobol-RequestInputRecords
+    allocate tt-n-cobol-RequestCall initialized
+    set v-m-question of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestQuestion
-    set v-m-input of tt-n-cobol-RequestCall-find
+    set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
     call "TT_SESSION_FIND" using by value engine
-       by reference tt-n-cobol-RequestCall-find
+       by reference tt-n-cobol-RequestCall
        session-owner returning status-code
     if status-code not = 0 stop run returning 1 end-if
     perform read-packet
-       until read-status = tt-n-session-end-v1-constant
+       until read-status = tt-n-session-end-v1-k
     call "thinkthen_session_free"
        using by value session-owner returning omitted
     call "thinkthen_engine_free"
@@ -82,21 +82,21 @@ procedure division.
 add-line.
     allocate tt-n-cobol-RequestItem initialized
     allocate tt-n-cobol-RequestOriginal
-    allocate tt-n-cobol-RequestOriginal-text initialized
-    allocate tt-n-cobol-RequestOriginal-text-member-text
+    allocate tt-n-cobol-RequestOriginalText initialized
+    allocate tt-n-cobol-RequestOriginalTextText
     set v-data of
-       tt-n-cobol-RequestOriginal-text-member-text
+       tt-n-cobol-RequestOriginalTextText
        to address of policy-line(at-line)
     move function length(function trim(
        policy-line(at-line) trailing)) to v-len of
-       tt-n-cobol-RequestOriginal-text-member-text
-    set v-m-text of tt-n-cobol-RequestOriginal-text
+       tt-n-cobol-RequestOriginalTextText
+    set v-m-text of tt-n-cobol-RequestOriginalText
        to address of
-       tt-n-cobol-RequestOriginal-text-member-text
-    move tt-n-cobol-requestoriginal-text-kind-constant
+       tt-n-cobol-RequestOriginalTextText
+    move tt-n-cobol-requestoriginaltext-kind-k
        to v-kind of tt-n-cobol-RequestOriginal
     set v-value of tt-n-cobol-RequestOriginal
-       to address of tt-n-cobol-RequestOriginal-text
+       to address of tt-n-cobol-RequestOriginalText
     set v-m-original of tt-n-cobol-RequestItem
        to address of tt-n-cobol-RequestOriginal
     set line-address(at-line)
@@ -105,7 +105,7 @@ read-packet.
     call "TT_SESSION_NEXT" using by value session-owner
        by reference read-status packet-owner
        returning status-code
-    if read-status not = tt-n-session-result-v1-constant
+    if read-status not = tt-n-session-result-v1-k
        exit paragraph
     end-if
     call "thinkthen_session_result_view"
@@ -114,9 +114,9 @@ read-packet.
     set address of tt-n-complete-session-packet-v1
        to packet-view
     if v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-terminal-v1-constant
+       tt-n-complete-session-packet-terminal-v1-k
        and v-kind of tt-n-complete-session-packet-v1 not =
-       tt-n-complete-session-packet-observation-v1-constant
+       tt-n-complete-session-packet-observation-v1-k
        perform read-deadline
     end-if
     call "thinkthen_session_result_free"
@@ -130,7 +130,7 @@ read-deadline.
        to v-value of
        tt-n-complete-session-packet-find-aggregate-v1
     if v-value-presence of tt-n-complete-find-v1 =
-       tt-n-complete-presence-value-v1-constant
+       tt-n-complete-presence-value-v1-k
        set address of tt-n-complete-json-v1
           to v-value-value of tt-n-complete-find-v1
        call "TT_SESSION_TEXT" using by reference

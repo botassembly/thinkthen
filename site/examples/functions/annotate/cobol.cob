@@ -22,45 +22,45 @@ copy "tt-native-generated.cpy".
 procedure division.
     call "thinkthen_engine_new" returning engine
     allocate tt-n-cobol-RequestQuestion initialized
-    allocate tt-n-cobol-RequestQuestion-file initialized
-    allocate tt-n-cobol-RequestQuestion-file-member-path
+    allocate tt-n-cobol-RequestQuestionFile initialized
+    allocate tt-n-cobol-RequestQuestionFilePath
     set v-data of
-       tt-n-cobol-RequestQuestion-file-member-path
+       tt-n-cobol-RequestQuestionFilePath
        to address of form
     move length of form to v-len of
-       tt-n-cobol-RequestQuestion-file-member-path
-    set v-m-path of tt-n-cobol-RequestQuestion-file
+       tt-n-cobol-RequestQuestionFilePath
+    set v-m-path of tt-n-cobol-RequestQuestionFile
        to address of
-       tt-n-cobol-RequestQuestion-file-member-path
-    move tt-n-cobol-requestquestion-file-kind-constant
+       tt-n-cobol-RequestQuestionFilePath
+    move tt-n-cobol-requestquestionfile-kind-k
        to v-kind of tt-n-cobol-RequestQuestion
     set v-value of tt-n-cobol-RequestQuestion
-       to address of tt-n-cobol-RequestQuestion-file
+       to address of tt-n-cobol-RequestQuestionFile
     allocate tt-n-cobol-RequestInput initialized
-    allocate tt-n-cobol-RequestInput-text initialized
-    allocate tt-n-cobol-RequestInput-text-member-text
-    set v-data of tt-n-cobol-RequestInput-text-member-text
+    allocate tt-n-cobol-RequestInputText initialized
+    allocate tt-n-cobol-RequestInputTextText
+    set v-data of tt-n-cobol-RequestInputTextText
        to address of bug-report
     move length of bug-report to v-len of
-       tt-n-cobol-RequestInput-text-member-text
-    set v-m-text of tt-n-cobol-RequestInput-text
+       tt-n-cobol-RequestInputTextText
+    set v-m-text of tt-n-cobol-RequestInputText
        to address of
-       tt-n-cobol-RequestInput-text-member-text
-    move tt-n-cobol-requestinput-text-kind-constant
+       tt-n-cobol-RequestInputTextText
+    move tt-n-cobol-requestinputtext-kind-k
        to v-kind of tt-n-cobol-RequestInput
     set v-value of tt-n-cobol-RequestInput
-       to address of tt-n-cobol-RequestInput-text
-    allocate tt-n-cobol-RequestCall-annotate initialized
-    set v-m-question of tt-n-cobol-RequestCall-annotate
+       to address of tt-n-cobol-RequestInputText
+    allocate tt-n-cobol-RequestCall initialized
+    set v-m-question of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestQuestion
-    set v-m-input of tt-n-cobol-RequestCall-annotate
+    set v-m-input of tt-n-cobol-RequestCall
        to address of tt-n-cobol-RequestInput
     call "TT_SESSION_ANNOTATE" using by value engine
-       by reference tt-n-cobol-RequestCall-annotate
+       by reference tt-n-cobol-RequestCall
        session-owner returning status-code
     if status-code not = 0 stop run returning 1 end-if
     perform read-packet
-       until read-status = tt-n-session-end-v1-constant
+       until read-status = tt-n-session-end-v1-k
     call "thinkthen_session_free"
        using by value session-owner returning omitted
     call "thinkthen_engine_free"
@@ -74,7 +74,7 @@ read-packet.
     call "TT_SESSION_NEXT" using by value session-owner
        by reference read-status packet-owner
        returning status-code
-    if read-status not = tt-n-session-result-v1-constant
+    if read-status not = tt-n-session-result-v1-k
        exit paragraph
     end-if
     call "thinkthen_session_result_view"
@@ -83,7 +83,7 @@ read-packet.
     set address of tt-n-complete-session-packet-v1
        to packet-view
     if v-kind of tt-n-complete-session-packet-v1 =
-       tt-n-complete-session-packet-annotate-row-v1-constant
+       tt-n-complete-session-packet-annotate-row-v1-k
        perform read-triage
     end-if
     call "thinkthen_session_result_free"
@@ -104,14 +104,14 @@ read-triage.
        tt-n-complete-annotated-row-v1 times.
 read-field.
     set address of
-       tt-n-complete-annotated-row-value-entry-v1
+       tt-n-complete-annotated-field-map-entry-v1
        to field-at
     call "TT_SESSION_TEXT" using by reference
-       v-name of tt-n-complete-annotated-row-value-entry-v1
+       v-name of tt-n-complete-annotated-field-map-entry-v1
        field-name name-length returning status-code
     set address of tt-n-complete-annotated-field-v1
        to v-value of
-       tt-n-complete-annotated-row-value-entry-v1
+       tt-n-complete-annotated-field-map-entry-v1
     evaluate field-name
        when "steps"
           if v-data-boolean of
@@ -128,4 +128,4 @@ read-field.
              tt-n-complete-annotated-field-v1
     end-evaluate
     set field-at up by length of
-       tt-n-complete-annotated-row-value-entry-v1.
+       tt-n-complete-annotated-field-map-entry-v1.
