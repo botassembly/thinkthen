@@ -133,7 +133,7 @@ def archives(root):
         refused(lambda: C.check(archive), cause)
     for mode in (0o120777, 0o040755, 0o010644):
         with zipfile.ZipFile(archive, 'w') as out:
-            for name, data in zip(C.MEMBERS, original):
+            for name, data in zip(C.MEMBERS + ('README.md',), original + [C.PUBLIC_TEXT['source']('c').read_bytes()]):
                 info = zipfile.ZipInfo(name)
                 info.external_attr = mode << 16
                 out.writestr(info, data)
@@ -219,8 +219,12 @@ def pack_routing(root):
     source = root / 'source'
     scripts = source / 'sdlc/scripts'
     scripts.mkdir(parents=True)
-    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py', 'package-inventory.py'):
+    for name in ('release-pack', 'scratch.sh', 'release-windows-command.py', 'release-windows-c.py', 'release-bounded.py', 'release-owned-job.py', 'package-inventory.py', 'registry-readmes.py', 'release-windows-c-fixture.py'):
         shutil.copyfile(REPO / 'sdlc/scripts' / name, scripts / name)
+    for relative in ('README.md', 'libraries/c/README-PUBLIC.md', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md'):
+        path = source / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(REPO / relative, path)
     for manifest in ('crates/thinkthen/Cargo.toml', 'libraries/c/Cargo.toml'):
         path = source / manifest
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -230,12 +234,15 @@ def pack_routing(root):
     shutil.copyfile(C.HEADER, include / 'thinkthen.h')
     shutil.copytree(REPO / 'demos/27-test-with-no-network', source / 'demos/27-test-with-no-network')
     python = source / 'libraries/python'
-    python.mkdir()
+    python.mkdir(exist_ok=True)
+    builder = ('import runpy; from pathlib import Path; '
+               'runpy.run_path("sdlc/scripts/release-windows-c-fixture.py")["python_package"]'
+               f'(Path("libraries/python/target/release-wheel/thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"))')
     (python / 'build-wheel.sh').write_text(
-        f'#!/bin/sh\nmkdir -p libraries/python/target/release-wheel\n'
-        f'printf "wheel fixture" >libraries/python/target/release-wheel/thinkthen-{VERSION}-cp310-abi3-win_amd64.whl\n')
+        '#!/bin/sh\nmkdir -p libraries/python/target/release-wheel\n'
+        + sys.executable + " -c '" + builder + "'\n")
     typescript = source / 'libraries/typescript'
-    typescript.mkdir()
+    typescript.mkdir(exist_ok=True)
     for name in ('build-addon.sh', 'package.json'):
         shutil.copyfile(REPO / 'libraries/typescript' / name, typescript / name)
     workflow = source / '.github/workflows'
@@ -275,7 +282,7 @@ def pack_routing(root):
         'npm': f'#!{sys.executable}\nimport pathlib, sys\n' +
             "assert sys.argv[1:]==['pack','--silent','--offline','--pack-destination','target/pack']\n" +
             f"assert pathlib.Path('thinkthen-win32-x64.node').read_bytes()==pathlib.Path({str(saved_dll)!r}).read_bytes()\n" +
-            f"pathlib.Path('target/pack/thinkthen-{VERSION}.tgz').write_bytes(b'npm fixture')\n",
+            f"__import__('runpy').run_path('../../sdlc/scripts/release-windows-c-fixture.py')['npm_package'](pathlib.Path('target/pack/thinkthen-{VERSION}.tgz'))\n",
         'lib.exe': f'#!{sys.executable}\n' +
             "import pathlib, shutil, sys\n" +
             "assert '/MACHINE:X64' in sys.argv\n" +

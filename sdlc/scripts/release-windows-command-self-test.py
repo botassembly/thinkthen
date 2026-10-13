@@ -155,7 +155,7 @@ def main():
             f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}\r\n".encode("ascii"))
         expect(run("python3", str(SCRIPT), "check", str(archive)))
         with zipfile.ZipFile(archive) as source:
-            assert source.namelist() == ["thinkthen.exe"]
+            assert source.namelist() == ["thinkthen.exe", "README.md"]
             assert source.read("thinkthen.exe") == binary.read_bytes()
         for data, sentence in ((b"not PE", "not a Windows executable"),
                                (pe(machine=0xAA64), "PE32+ x86-64"),
@@ -182,6 +182,7 @@ def main():
             member = zipfile.ZipInfo("thinkthen.exe")
             member.external_attr = 0o120777 << 16
             output.writestr(member, pe())
+            output.writestr("README.md", (REPO / "README.md").read_bytes())
         checksum(archive)
         expect(run("python3", str(SCRIPT), "check", str(archive)), 1, "linked executable")
         expect(run("python3", str(SCRIPT), "pack", str(binary), str(archive)))
@@ -198,8 +199,12 @@ def main():
         scripts = source / "sdlc/scripts"
         scripts.mkdir(parents=True)
         for name in ("release-pack", "scratch.sh", "release-windows-command.py", "release-windows-c.py",
-                     "release-bounded.py", "release-owned-job.py"):
+                     "release-bounded.py", "release-owned-job.py", "registry-readmes.py"):
             shutil.copy2(REPO / "sdlc/scripts" / name, scripts / name)
+        for relative in ('README.md', 'libraries/python/README-PUBLIC.md', 'libraries/python/pyproject.toml', 'libraries/typescript/README.md', 'libraries/typescript/package.json'):
+            path = source / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(REPO / relative, path)
         crate = source / "crates/thinkthen"
         crate.mkdir(parents=True)
         (crate / "Cargo.toml").write_text(f'[package]\nversion = "{VERSION}"\n')
@@ -243,7 +248,7 @@ def main():
         wheels = source / "libraries/python/target/release-wheel"
         wheels.mkdir(parents=True)
         wheel = wheels / f"thinkthen-{VERSION}-cp310-abi3-win_amd64.whl"
-        wheel.write_bytes(b"wheel fixture\r\n")
+        C_FIXTURE["python_package"](wheel)
         packed_wheels = base / "packed-wheels" / ("platform-" + TARGET)
         expect(run("sh", str(scripts / "release-pack"), "--reuse", TARGET, str(packed_wheels), "python", env=env))
         assert (packed_wheels / (wheel.name + ".sha256")).read_bytes() == (
@@ -276,7 +281,7 @@ def main():
         addon_pack = source / 'libraries/typescript/target/pack'
         addon_pack.mkdir(parents=True)
         addon = addon_pack / f'thinkthen-{VERSION}.tgz'
-        addon.write_bytes(b'synthetic win32-x64 addon package')
+        C_FIXTURE['npm_package'](addon)
         packed_addon = base / 'packed-addon'
         expect(run('sh', str(scripts / 'release-pack'), '--reuse', TARGET, str(packed_addon), 'typescript', env=env))
         assert (packed_addon / addon.name).read_bytes() == addon.read_bytes()

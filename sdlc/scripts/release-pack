@@ -147,11 +147,13 @@ PYTHON
 # pack NAME FOLDER: tar FOLDER's contents into OUT/NAME and write OUT/NAME.sha256.
 pack() {
 	tar -czf "$OUT/$1" -C "$2" .
+	python3 sdlc/scripts/registry-readmes.py auto "$OUT/$1"
 	(cd -- "$OUT" && sha256 "$1" >"$1.sha256")
 }
 # keep FILE: copy a file a tool already packed into OUT, with its checksum.
 keep() {
 	[ -f "$1" ] || { echo "release-pack: $1 is missing; build it first" >&2; exit 1; }
+	python3 sdlc/scripts/registry-readmes.py auto "$1"
 	cp -- "$1" "$OUT/"
 	(cd -- "$OUT" && sha256 "${1##*/}" >"${1##*/}.sha256")
 }
@@ -183,6 +185,7 @@ part_command() {
 	fi
 	folder=$(fresh command)
 	cp -- "$binary" "$folder/thinkthen$suffix"
+	cp README.md "$folder/README.md"
 	if [ -n "$suffix" ]; then
 		name=thinkthen-$V-$command_target.zip
 		python3 sdlc/scripts/release-windows-command.py pack "$folder/thinkthen.exe" "$OUT/$name"
@@ -232,6 +235,7 @@ part_c() {
 		Libs.private: $private
 		Cflags: -I\${includedir}
 	EOF
+	cp libraries/c/README-PUBLIC.md "$folder/README.md"
 	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
 	c_built=1
 }
@@ -388,6 +392,11 @@ cobol)
 		tar -xzf "$OUT/$c_name" -C "$folder/native" ./include ./lib
 		;;
 	esac
+	case $1 in
+	go) ;;
+	flutter) cp libraries/dart/flutter/README-PUBLIC.md "$folder/flutter/README.md" ;;
+	*) cp "libraries/$1/README-PUBLIC.md" "$folder/README.md" ;;
+	esac
 	# A case-blind volume, such as a default Mac one, keeps only one of two names that differ only in case.
 	twins=$(cd -- "$folder" && find . | LC_ALL=C tr '[:upper:]' '[:lower:]' | LC_ALL=C sort | uniq -d)
 	[ -z "$twins" ] || { echo "release-pack: $1 holds names that differ only in case: $twins" >&2; exit 1; }
@@ -396,6 +405,7 @@ cobol)
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
+			if [ "$relative" = README.md ] && [ "$1" != go ]; then member=libraries/$1/README-PUBLIC.md; fi
 			if [ "$1" = swift ] && [ "$relative" = "Sources/ThinkThen/Native/$TARGET/libthinkthen.so" ]; then
 				native_input=$(mktemp "$stage/swift-native.XXXXXX")
 				tar -xOzf "$OUT/$c_name" ./lib/libthinkthen.so >"$native_input" || {
@@ -447,6 +457,7 @@ DART_ASSET
 	if [ "$1" = php ]; then
 		# Composer's Phar extractor refuses a root directory member named '.'.
 		(cd -- "$folder" && tar -czf "$OUT/thinkthen-$1-$V-$TARGET.tar.gz" ./*)
+		python3 sdlc/scripts/registry-readmes.py "$1" "$OUT/thinkthen-$1-$V-$TARGET.tar.gz"
 		(cd -- "$OUT" && sha256 "thinkthen-$1-$V-$TARGET.tar.gz" >"thinkthen-$1-$V-$TARGET.tar.gz.sha256")
 	else
 		pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
@@ -468,6 +479,7 @@ part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
 	folder=$(fresh sqlite)
 	cp -- "$(built databases/sqlite)/release/libthinkthen0.$dl" "$folder/"
+	cp databases/sqlite/README-PUBLIC.md "$folder/README.md"
 	pack "thinkthen-sqlite-$V-$TARGET.tar.gz" "$folder"
 }
 
@@ -528,6 +540,7 @@ part_duckdb() {
 	done
 	python3 databases/duckdb/cpp/package_notices.py "$folder" "$V" "$@"
 	python3 databases/duckdb/cpp/verify_repository.py "$folder" "$TARGET" "$V"
+	cp databases/duckdb/README-PUBLIC.md "$folder/README.md"
 	find "$folder" -type f -exec chmod 644 {} +
 	pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
 }
@@ -535,6 +548,7 @@ part_duckdb() {
 part_postgresql() {
 	folder=$(fresh postgresql)
 	sh databases/postgresql/package.sh ${reuse:+--reuse} "$folder"
+	cp databases/postgresql/README-PUBLIC.md "$folder/README.md"
 	pack "thinkthen-postgresql16-$V-$TARGET.tar.gz" "$folder"
 }
 

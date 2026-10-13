@@ -122,7 +122,7 @@ def csharp_inventory(out=None, target=None):
         native[entry['target']] = dict(rid=rid, file=path)
     if target is not None and target not in native:
         raise ValueError('unsupported C# target: ' + target)
-    docs = sorted(node.get('PackagePath').strip('/') + ('/' if node.get('PackagePath').strip('/') else '') + Path(node.get('Include')).name
+    docs = sorted(('README.md' if node.get('Include') == 'README-PUBLIC.md' else node.get('PackagePath').strip('/') + ('/' if node.get('PackagePath').strip('/') else '') + Path(node.get('Include')).name)
                   for node in packed if '$(' not in node.get('Include'))
     result = dict(package=props['PackageId'] + '.' + props['Version'] + '.nupkg',
                   files=sorted(docs + [props['PackageId'] + '.' + props['Version'] + '.nupkg']), native=native)
