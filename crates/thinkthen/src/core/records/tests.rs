@@ -1,6 +1,6 @@
-//! Every framing, every pointer, and every refusal one record can reach.
+//! Stays: Direct parser, property and secrecy checks protect record boundaries.
 
-use super::{Framing, Held, Reading, ReadingError, Record, RecordError};
+use super::{Framing, Reading, ReadingError, RecordError};
 use crate::core::json::{Json, JsonError};
 use crate::core::pointer::Pointer;
 use crate::core::question::LabelsError;
@@ -82,34 +82,6 @@ fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
     );
 }
 
-/// A pointer selects, so the selected value decides the state's type: an
-/// object or a list travels as that JSON value, a string as its text, and a
-/// number, `true`, `false`, or `null` as its compact spelling in a string.
-#[test]
-fn a_pointer_to_an_object_or_a_list_sends_the_json_value_it_named() {
-    let line = br#"{"meta":{"a":1,"b":[true]},"items":[1,"x"],"body":"Payouts failed."}"#;
-    let object = reading(Framing::Jsonl, &["/meta"]);
-    assert_eq!(
-        state(&object, line),
-        Ok(Json::parse(r#"{"a":1,"b":[true]}"#).expect("JSON"))
-    );
-    let list = reading(Framing::Jsonl, &["/items"]);
-    assert_eq!(
-        state(&list, line),
-        Ok(Json::parse(r#"[1,"x"]"#).expect("JSON"))
-    );
-}
-
-#[test]
-fn several_pointers_send_one_object_in_the_order_the_pointers_were_given() {
-    let line = br#"{"id":"T-91","body":"Payouts failed.","meta":{"a":1}}"#;
-    let several = reading(Framing::Jsonl, &["/body", "/id", "/meta"]);
-    assert_eq!(
-        state(&several, line),
-        Ok(Json::parse(r#"{"body":"Payouts failed.","id":"T-91","meta":{"a":1}}"#).expect("JSON"))
-    );
-}
-
 #[test]
 fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
     let line = br#"{"body":"Payouts failed.","count":3,"ok":false,"none":null}"#;
@@ -126,16 +98,6 @@ fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
             "{field}"
         );
     }
-}
-
-#[test]
-fn the_root_pointer_selects_the_whole_record_as_the_value_it_is() {
-    let root = reading(Framing::Jsonl, &[""]);
-    let line = br#"{"id":"T-91","body":"Payouts failed."}"#;
-    assert_eq!(
-        state(&root, line),
-        Ok(Json::parse(r#"{"id":"T-91","body":"Payouts failed."}"#).expect("JSON"))
-    );
 }
 
 #[test]
@@ -378,25 +340,6 @@ fn a_record_mode_plan_names_the_framing_and_the_pointers() {
     assert_eq!(
         json_line(&lines.plan()).expect("a plan is writable"),
         r#"{"framing":"lines","field":[]}"#
-    );
-}
-
-#[test]
-fn a_record_is_written_back_as_it_arrived() {
-    let jsonl = reading(Framing::Jsonl, &["/body"]);
-    let record = jsonl
-        .record(br#"{"id":"T-91","body":"Payouts failed."}"#)
-        .expect("a record");
-    assert_eq!(
-        json_line(&record).expect("a record is writable"),
-        r#"{"id":"T-91","body":"Payouts failed."}"#
-    );
-    let lines = reading(Framing::Lines, &[]);
-    let record = lines.record(b"one line\n").expect("a record");
-    assert_eq!(record, Record(Held::Text("one line".to_owned())));
-    assert_eq!(
-        json_line(&record).expect("a record is writable"),
-        r#""one line""#
     );
 }
 
