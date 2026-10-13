@@ -644,7 +644,6 @@ def main():
             parser.error("JVM uses the shared stable native session ABI")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import jvm
-        import jvm_languages
         import jvm_usage
         for filename, lines in jvm_usage.outputs(ROOT).items():
             output = output_path(ROOT, 'jvm', filename)
@@ -674,15 +673,6 @@ def main():
             input_output.write_text(input_source)
         definitions = prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS))
         result = format_source("Results.java", jvm.render(definitions), child_env())
-        for language, extension in (('kotlin', 'kt'), ('scala', 'scala')):
-            source = jvm_languages.render(definitions, language)
-            output = output_path(ROOT, 'jvm', 'Results.' + extension)
-            if args.check and (not output.exists() or output.read_text() != source):
-                print('generated ' + language + ' results differ', file=sys.stderr)
-                return 1
-            if not args.check:
-                output.parent.mkdir(parents=True, exist_ok=True)
-                output.write_text(source)
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'jvm', 'Results.java')
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
