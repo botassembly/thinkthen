@@ -24,7 +24,7 @@ The [binding author guide](../libraries/BINDING-AUTHOR.md) defines the recommend
 | [backends.md](backends.md) | One wire shape, the key, the address, the request, retries, the `systemone` adapter | Settled, with Draft sections |
 | [sdk-boundary.md](sdk-boundary.md) | One configured route per engine, retained caller controls and proxy business policy | Settled |
 | [recording.md](recording.md) | `--record` and `--replay`: offline answers, usage/privacy and bounded optional timing history | Settled; native and host timing implemented |
-| [cache.md](cache.md) | Versioned question keys, offline validation/migration, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native and host adoption implemented |
+| [cache.md](cache.md) | Versioned question keys, offline validation and refusals, model freshness and bounded Cache-Control storage policy | Settled for 0.2; native and host adoption implemented |
 | [decide.md](decide.md) | `decide` | Settled |
 | [choose.md](choose.md) | `choose` | Settled |
 | [tag.md](tag.md) | `tag` | Settled |
