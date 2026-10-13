@@ -6,6 +6,7 @@ import java.lang.foreign.*;
 public final class OwnedSession implements AutoCloseable {
     private MemorySegment pointer;
     private int waiters;
+    private Read buffered;
     private boolean closed;
     private java.util.concurrent.CompletableFuture<Void> inputWait, resultWait;
     private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(2, task -> {
@@ -42,13 +43,17 @@ public final class OwnedSession implements AutoCloseable {
     public record Read(Results.SessionPacket packet, boolean ended) {}
     public synchronized Read tryRead() {
         live();
+        if (buffered != null) { var read = buffered; buffered = null; return read; }
         NativeSession.check((int)NativeSession.call("thinkthen_session_try_read", ValueLayout.JAVA_INT,
             new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, pointer, status, output));
-        int state = status.get(ValueLayout.JAVA_INT, 0);
-        if (state == 1) return new Read(null, false);
-        if (state == 2) return new Read(null, true);
-        if (state != 0) throw new IllegalStateException("Unknown native read status");
-        var packet = output.get(ValueLayout.ADDRESS, 0);
+        return readPacket(status, output);
+    }
+    private Read readPacket(MemorySegment stateSlot, MemorySegment packetSlot) {
+        int state = stateSlot.get(ValueLayout.JAVA_INT, 0);
+        if (state == NativeWait.READ_PENDING) return new Read(null, false);
+        if (state == NativeWait.READ_END) return new Read(null, true);
+        if (state != NativeWait.READ_RESULT) throw new IllegalStateException("Unknown native read status");
+        var packet = packetSlot.get(ValueLayout.ADDRESS, 0);
         try (Arena arguments = Arena.ofConfined()) {
             var json = arguments.allocate(ValueLayout.ADDRESS);
             var length = arguments.allocate(NativeSession.SIZE);
@@ -56,6 +61,40 @@ public final class OwnedSession implements AutoCloseable {
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, ValueLayout.ADDRESS}, packet, json, length));
             return new Read(Results.SessionPacket.read(NativeSession.copied(json.get(ValueLayout.ADDRESS, 0), length.get(NativeSession.SIZE, 0))), false);
         } finally { NativeSession.free("thinkthen_session_result_free", packet); }
+    }
+    /** Block for a packet; settlement drains the terminal facts after cancellation. */
+    public Read nextPacket(boolean settlement) {
+        final MemorySegment retained;
+        synchronized (this) {
+            live();
+            if (buffered != null) { var read = buffered; buffered = null; return read; }
+            retained = pointer; waiters++;
+        }
+        try (Arena outputs = Arena.ofConfined()) {
+            var state = outputs.allocate(ValueLayout.JAVA_INT);
+            var packet = outputs.allocate(ValueLayout.ADDRESS);
+            NativeSession.check(NativeWait.nextPacket(retained, settlement ? NativeWait.SETTLEMENT : NativeWait.RESULT, state, packet));
+            return readPacket(state, packet);
+        } finally { completedWait(); }
+    }
+    public Read nextPacket() { return nextPacket(false); }
+    /** Transfer one descriptor when native input room is available. */
+    public java.util.concurrent.CompletableFuture<Integer> push(Inputs.RequestSessionDescriptor descriptor) {
+        var pending = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
+            final MemorySegment retained;
+            synchronized (this) { live(); retained = pointer; waiters++; }
+            try (Arena arguments = Arena.ofConfined()) {
+                var bytes = NativeSession.bytes(arguments, descriptor.json());
+                var state = arguments.allocate(ValueLayout.JAVA_INT);
+                NativeSession.check(NativeWait.push(retained, bytes, bytes.byteSize(), state));
+                return state.get(ValueLayout.JAVA_INT, 0);
+            } finally { completedWait(); }
+        }, workers);
+        pending.whenComplete((value, error) -> { if (pending.isCancelled()) cancel(); });
+        return pending;
+    }
+    private synchronized void completedWait() {
+        waiters--; if (closed && waiters == 0) release();
     }
     /** Wait consumes nothing and runs on a dedicated platform thread. Close defers free until it returns. */
     public synchronized java.util.concurrent.CompletableFuture<Void> waitReady(boolean input) {
@@ -80,14 +119,17 @@ public final class OwnedSession implements AutoCloseable {
         return result;
     }
     void waitNative(boolean input) {
+        if (!input) {
+            var read = nextPacket(true);
+            synchronized (this) { buffered = read; }
+            return;
+        }
         final MemorySegment retained;
         synchronized (this) { live(); retained = pointer; waiters++; }
         try (Arena outputs = Arena.ofConfined()) {
             var ready = outputs.allocate(ValueLayout.JAVA_INT);
-            NativeSession.check(NativeWait.waitReady(retained, input ? NativeWait.INPUT : NativeWait.SETTLEMENT, 50, ready));
-        } finally {
-            synchronized (this) { waiters--; if (closed && waiters == 0) release(); }
-        }
+            NativeSession.check(NativeWait.waitReady(retained, NativeWait.INPUT, -1, ready));
+        } finally { completedWait(); }
     }
     private void release() {
         NativeSession.free("thinkthen_session_free", pointer);

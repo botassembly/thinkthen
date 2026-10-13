@@ -83,7 +83,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
         expected = []
         expected_agents = []
         if 'java' in languages:
-            parser_result = subprocess.run(command[:-1] + ["JsonTest"], env=env, capture_output=True, timeout=5)
+            parser_result = subprocess.run(command[:-1] + ["thinkthen.JsonTest"], env=env, capture_output=True, timeout=5)
             assert parser_result.returncode == 0 and b"JSON_READER_PASS" in parser_result.stdout, (parser_result.stdout, parser_result.stderr)
             print("Installed JSON interchange regressions PASS")
             result = subprocess.run(command,env=env,capture_output=True,timeout=50)
