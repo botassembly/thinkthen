@@ -93,9 +93,9 @@ func main() {
 		plan, err := planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: input}})
 		require(err == nil, "canonical decide plan")
 		for _, call := range []tt.RequestCall{
-			tt.RequestCallChoose{Question: tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"})}), Input: input},
-			tt.RequestCallTag{Question: tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), Input: input},
-			tt.RequestCallScore{Question: tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), Input: input},
+			tt.RequestCallChoose{Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"})}), Input: input},
+			tt.RequestCallTag{Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), Input: input},
+			tt.RequestCallScore{Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), Input: input},
 		} {
 			preview, err := planClient.Plan(tt.Request{Call: call})
 			require(err == nil && preview.FirstBodyUtf8().Present && !preview.FirstBodyUtf8().Null, "atomic preview")
@@ -278,15 +278,15 @@ func main() {
 	}
 	asks := []ask{
 		{"decide", tt.TextQuestion("Is it?"), "text"},
-		{"choose", tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsObject{"a": tt.AuthoredDescriptionObject{"what": "Charges and refunds.", "examples": []string{"refund"}}, "b": tt.AuthoredDescriptionArray{"other", "shipping"}})}), "text"},
-		{"tag", tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), "text"},
-		{"score", tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), "text"},
+		{"choose", tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsObject{{Key: "a", Value: tt.AuthoredDescriptionObject{"what": "Charges and refunds.", "examples": []string{"refund"}}}, {Key: "b", Value: tt.AuthoredDescriptionArray{"other", "shipping"}}})}), "text"},
+		{"tag", tt.DefinedQuestion(tt.RequestDefinitionAuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), "text"},
+		{"score", tt.DefinedQuestion(tt.RequestDefinitionAuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), "text"},
 		{"filter", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
 		{"rank", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
 		{"find", tt.TextQuestion("Which?"), []string{"alpha", "beta"}},
-		{"annotate", tt.DefinedQuestion(tt.RequestDefinitionQuestions{Questions: map[string]tt.RequestDefinitionQuestionsQuestionsValue{"ok": tt.RequestDefinitionQuestionsQuestionsValueDecide{Decide: tt.AuthoredQuestionTextString("Is it?")}}}), []string{"text"}},
-		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognize{Recognize: tt.RequestDefinitionRecognizeRecognize{Kinds: tt.Ptr(map[string]tt.AuthoredDescription{"person": tt.AuthoredDescriptionNull{}})}}), "Ana Lima"},
-		{"relate", tt.DefinedQuestion(tt.AuthoredRelate{Relate: tt.AuthoredRelateRelate{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
+		{"annotate", tt.DefinedQuestion(tt.RequestDefinitionAnnotateDefinition{Questions: tt.OrderedMap[tt.AnnotateQuestion]{{Key: "ok", Value: tt.AnnotateQuestionDecide{Decide: tt.AuthoredQuestionTextString("Is it?")}}}}), []string{"text"}},
+		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognizeDefinition{Recognize: tt.RecognizeQuestion{Kinds: tt.Ptr(tt.OrderedMap[tt.AuthoredDescription]{{Key: "person", Value: tt.AuthoredDescriptionNull{}}})}}), "Ana Lima"},
+		{"relate", tt.DefinedQuestion(tt.RequestDefinitionAuthoredRelate{Relate: tt.RelateQuestion{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
 	}
 	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
 	retained := []tt.OwnedCall{}
@@ -304,7 +304,7 @@ func main() {
 		expectedRequests += n
 	}
 	// A false value must remain false, not absent or null.
-	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
+	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -327,7 +327,7 @@ func main() {
 	require(falseErr == nil, "nonboolean decision")
 	require(value.Present && !value.Null && falseValue == false, "false changed")
 	// Authored null is different from a missing field, and file positions survive.
-	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
+	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
 	if err != nil {
 		panic(err)
 	}

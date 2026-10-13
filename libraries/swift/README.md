@@ -7,13 +7,9 @@ import ThinkThen
 
 let client = try Client()
 defer { client.close() }
-let call = try await client.decide(.text("Does the writer request a refund?"),
-                                   input: .text("Please refund my order."))
-for packet in call.packets {
-    if case .decideRow(let row) = packet {
-        print(row.value.value)
-    }
-}
+let answer = try await client.decideAnswer(.text("Does the writer request a refund?"),
+                                         input: .text("Please refund my order."))
+print(answer as Any)
 ```
 
 Use ordinary generated Swift inputs. `InputEngineSettings` configures the client. `InputRequestQuestion` selects literal text, a typed definition, an exact file, a configured name or an explicit reference. Strings supplied through `.text` remain literal text. `client.parseQuestion(.atomic, authored:)` admits an authored `JSONValue` through the native parser and returns its generated definition; parsing preserves authored field order and numeric spelling. `client.plan` accepts the same generated `InputRequest` and returns `OwnedPlan` without sending a request.
@@ -41,3 +37,7 @@ On Linux, the Swift target carries `Native/<rust-target>/libthinkthen.so` as a c
 The old `Engine`, JSON-string calls and handwritten `Native*` complete readers have been removed. New callers use `Client` and the generated `Input*` and `Owned*` values. Old `Engine.decide(question, text)` maps to `await client.decide(.text(question), input: .text(text))`; old `Engine.call` maps to a named typed function; old `NativeQuestion` and `NativeSource` map to `InputRequestQuestion` and `InputRequestInput`; old failure snapshots map to `SessionFailure.call`. Frozen C compatibility remains separate.
 
 `generate.py --target swift --check`, repeated with `--inputs` and `--bridge`, compares generated results, inputs and compiler-derived ABI enums. `Tests/fixtures/owned_consumer.swift` checks typed success and failure, presence, unknown numeric fields, independent task progress and cancellation/cleanup while a provider remains held. The routine checker builds a consumer with an exact versioned SwiftPM dependency, loads the bundled Linux asset and runs selected shared cases through the installed typed API. `THINKTHEN_TEST_PROFILE=full` runs every required shared case at a candidate. Apple linkage, alternate targets, large-input behavior and release qualification remain candidate checks. The ordinary published installation remains the released version until publication is authorized.
+
+The generated `decideAnswer`, `chooseAnswer`, `tagAnswer` and `scoreAnswer` read one native normalized judgment after successful settlement. Decisions and choices preserve null. Zero or multiple judgments throw `AnswerCardinalityError`; native failure preserves `SessionFailure.call` and its completed prefix. The other six answer helpers return complete typed aggregates with originals, provenance and unknown extensions.
+
+Use `InputOrderedMap` entries for authored options, recognize kinds and annotate questions. The [executable example](Examples/main.swift) calls all ten answer helpers, builds `InputRecognizeQuestion` and `InputRelateQuestion` without JSON parsing, and reads relation edge names with `sourceName()` and `targetName()`.
