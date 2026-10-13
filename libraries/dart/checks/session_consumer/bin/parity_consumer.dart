@@ -1,20 +1,19 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
-import 'package:thinkthen_dart/src/session/values.dart'
-    show decodeNative, encodeNative;
+import 'fixture_values.dart';
 
 Future<void> main(List<String> args) async {
   final home = Platform.environment['TT_CASE_HOME'];
   if (home != null) Directory.current = home;
-  final fixture = decodeNative(File(args[0]).readAsStringSync()) as Map;
+  final fixture = decodeFixture(File(args[0]).readAsStringSync()) as Map;
   Engine? engine;
   Map<String, Object?> payload;
   try {
     engine =
-        Engine.open(settings: InputEngineSettings.read(decodeNative(args[2])));
+        Engine.open(settings: EngineSettings.read(decodeFixture(args[2])));
     payload = await consumeFixture(fixture, engine);
-  } on NativeFailure catch (error) {
+  } on CallFailure catch (error) {
     payload = {
       'admission': {
         'code': error.kind.code,
@@ -25,14 +24,14 @@ Future<void> main(List<String> args) async {
   } on CallCancelled {
     payload = {
       'admission': {
-        'code': NativeErrorKind.cancelled.code,
+        'code': ErrorKind.cancelled.code,
         'message': 'the call was cancelled'
       }
     };
   } finally {
     engine?.close();
   }
-  final output = encodeNative(payload);
+  final output = encodeFixture(payload);
   final file = Platform.environment['TT_OUTPUT'];
   if (file == null)
     stdout.writeln(output);
@@ -52,27 +51,27 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
       ? switch (loader) {
           'file' ||
           'load' =>
-            InputRequestQuestionFile(path: fixture['reference']),
+            QuestionFile(path: fixture['reference']),
           'named' ||
           'load_named' =>
-            InputRequestQuestionName(name: fixture['reference']),
+            QuestionName(name: fixture['reference']),
           'reference' ||
           'load_reference' =>
-            InputRequestQuestionReference(reference: fixture['reference']),
+            QuestionReference(reference: fixture['reference']),
           _ => throw StateError('unknown question loader')
         }
       : fixture['question_form'] == 'file'
-          ? InputRequestQuestionFile(path: 'fixture-question.json')
+          ? QuestionFile(path: 'fixture-question.json')
           : fixture['raw'] != null
-              ? InputRequestQuestionFile(
+              ? QuestionFile(
                   path: (File('raw-question.json')
                         ..writeAsStringSync(fixture['raw']))
                       .path)
-              : InputRequestQuestionDefinition(
-                  value: InputRequestDefinition.read(definition));
+              : DefinedQuestion(
+                  value: Definition.read(definition));
   final injection = fixture['operation']?['injection'];
-  InputRequestInput input;
-  Stream<InputRequestSessionDescriptor>? feed;
+  Input input;
+  Stream<FeedItem>? feed;
   if (fixture['paths'] != null || injection == 'recording_read_failure') {
     final unit = switch (fixture['source_unit'] ?? 3) {
       1 => 'line',
@@ -80,8 +79,8 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
       5 => 'line',
       _ => 'file'
     };
-    input = InputRequestInputSource(
-        source: InputRequestSource(
+    input = InputSource(
+        source: Source(
             paths: [
           for (final path in fixture['paths'] ?? ['target/missing-input'])
             fixture['owned_jsonl'] == true ? path : '$root/$path'
@@ -93,7 +92,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
             media: fixture['image_reader'] == true || fixture['source_unit'] == 4
                 ? const Presence.present('image')
                 : const Presence.absent(),
-            reading: Presence.present(InputRequestReader(
+            reading: Presence.present(Reader(
                 unit: Presence.present(unit),
                 window: fixture['window'] != null && fixture['window'] != 0
                     ? Presence.present(BigInt.from(fixture['window']))
@@ -101,53 +100,53 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   } else {
     final images = [
       for (final path in fixture['image_paths'] ?? [])
-        InputRequestImageFile(
+        ImageFile(
             path: '$root/$path',
             media: Presence.present(fixture['media'] ?? 'image/png'))
     ];
     final items = fixture['items'] as List;
     final records = [
       for (var i = 0; i < items.length; i++)
-        InputRequestItem(
+        Item(
             original: fixture['image_only'] == true
                 ? const Presence.absent()
                 : Presence.present(fixture['caption_files'] == true
-                    ? InputRequestOriginalText(
+                    ? OriginalText(
                         text: File('caption-$i.txt').readAsStringSync())
                     : fixture['text'] == true && items[i] is String
-                        ? InputRequestOriginalText(text: items[i])
-                        : InputRequestOriginalJson(value: items[i])),
+                        ? OriginalText(text: items[i])
+                        : OriginalJson(value: items[i])),
             images: images.isEmpty
                 ? const Presence.absent()
                 : Presence.present(images),
             context: fixture['contexts'] != null
                 ? Presence.present(
-                    InputContextSchema.read(fixture['contexts'][i]))
+                    ContextSchema.read(fixture['contexts'][i]))
                 : fixture['context_present'] == true
                     ? Presence.present(
-                        InputContextSchema.read(fixture['context']))
+                        ContextSchema.read(fixture['context']))
                     : const Presence.absent(),
             options: fixture['candidate_orders'] != null
                 ? Presence.present([
                     for (final name in fixture['candidate_orders'][i])
-                      InputOptionSchema(name: name)
+                      OptionSchema(name: name)
                   ])
                 : const Presence.absent())
     ];
     if (fixture['incremental'] == true) {
       feed = Stream.fromIterable([
-        for (final record in records) InputRequestSessionDescriptor(item: record)
+        for (final record in records) FeedItem(item: record)
       ]);
     }
     input = feed != null
-        ? InputRequestInputFeed(name: 'owned')
+        ? InputFeed(name: 'owned')
         : verb == 'find'
-        ? InputRequestInputUnits(items: records)
+        ? InputUnits(items: records)
         : verb == 'relate'
-            ? InputRequestInputEntities(items: records)
-            : InputRequestInputRecords(items: records);
+            ? InputEntities(items: records)
+            : InputRecords(items: records);
   }
-  final options = InputRequestOptions(
+  final options = Options(
       attempts: const Presence.present(true),
       none: verb == 'find' ? Presence.present(none) : const Presence.absent(),
       deadlineMs: injection == 'expired_deadline'
@@ -161,7 +160,7 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
   List<SessionPacket> packets;
   if (fixture['held_cancel'] == true) {
     final session =
-        engine.startSession(question, input, verb, options: options);
+        startFixture(engine, verb, question, input, options: options);
     final signal = File('${Platform.environment['HOME']}/cancel');
     final watcher = Timer.periodic(const Duration(milliseconds: 10), (_) {
       if (signal.existsSync()) {
@@ -194,11 +193,11 @@ Future<Map<String, Object?>> consumeFixture(Map fixture, Engine engine) async {
       packets = (await method(question, input,
               options: options, cancellation: cancellation, feed: feed))
           .packets;
-    } on SessionFailure catch (error) {
-      packets = error.call.packets;
+    } on CallFailure catch (error) {
+      packets = error.call!.packets;
     }
   }
   return {
-    'packets': [for (final packet in packets) packet.toJson()]
+    'packets': [for (final packet in packets) fixtureValue(packet)]
   };
 }

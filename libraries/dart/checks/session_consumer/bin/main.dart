@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 import 'stream_cases.dart';
 import 'data_cases.dart';
+import 'fixture_values.dart';
+import 'shipped_example.dart' as shipped;
 
 void check(bool value, String message) {
   if (!value) throw StateError(message);
@@ -14,10 +16,10 @@ Future<void> main(List<String> args) async {
     final engine = Engine.open();
     try {
       final call = await engine.decide(
-        InputRequestQuestionText(
+        QuestionText(
           text: Platform.environment['THINKTHEN_TEST_SMOKE_QUESTION']!,
         ),
-        InputRequestInputText(
+        InputText(
           text: Platform.environment['THINKTHEN_TEST_SMOKE_TEXT']!,
         ),
       );
@@ -79,17 +81,18 @@ Future<void> main(List<String> args) async {
     if (jsonEncode(body).contains('reader-prefix')) prefixAnswered.complete();
   });
   final engine = Engine.open(
-      settings: InputEngineSettings(
+      settings: EngineSettings(
           backend: const Presence.present('typesafe'),
           baseUrl: Presence.present('http://127.0.0.1:${server.port}'),
-          cache: const Presence.present(InputCacheDocument.alternative1(false)),
+          cache: const Presence.present(CacheDocument.boolean(false)),
           maxRetries: Presence.present(BigInt.zero),
           maxRequests: const Presence.present(null),
           maxRequestsTotal: const Presence.present(null),
           maxEstimatedInputTokensTotal: const Presence.present(null)));
-  final text = InputRequestInputText(text: 'owned');
-  final question = InputRequestQuestionText(text: 'Is it?');
+  final text = InputText(text: 'owned');
+  final question = QuestionText(text: 'Is it?');
   try {
+    if (args.contains('examples')) { await shipped.showAnswers(engine); print('PASS: ten shipped examples'); return; }
     if (args.contains('stream-regressions') ||
         args.contains('cancel-regression')) {
       await streamCases(engine, arrived.future, release, prefixAnswered.future,
@@ -126,11 +129,11 @@ Future<void> main(List<String> args) async {
             'held writer remains pending');
       try {
         await engine.decide(question, text,
-            options: InputRequestOptions(
+            options: Options(
                 maxRequestsTotal: Presence.present(BigInt.zero)));
         throw StateError('budget accepted');
-      } on SessionFailure catch (error) {
-        check(error.call.terminal.facts.isPresent, 'failure retains facts');
+      } on CallFailure catch (error) {
+        check(error.call!.terminal.facts.isPresent, 'failure retains facts');
       }
       final status = engine.finishUsageStatus();
       check(
@@ -172,15 +175,15 @@ Future<void> main(List<String> args) async {
       return;
     }
     final wide = BigInt.parse('18446744073709551615');
-    final authored = InputRequestQuestionDefinition(
-        value: InputRequestDefinitionFieldsDecide(
-            decide: InputAuthoredQuestionText.alternative0('Is it?'),
+    final authored = DefinedQuestion(
+        value: DecideQuestion(
+            decide: Wording.text('Is it?'),
             trueValue: const Presence.present(null),
             falseValue: const Presence.present(
-                InputAuthoredCriterion.alternative0('No.'))));
+                Reading.text('No.'))));
     final present = await engine.decide(
         authored,
-        InputRequestInputJson(
+        InputJson(
             value: {'wide': wide, 'false': false, 'null': null}));
     final value =
         present.packets.whereType<SessionPacketDecideRow>().single.value;
@@ -194,20 +197,20 @@ Future<void> main(List<String> args) async {
         'false evidence retained');
     check((value.input.value as Map)['wide'] == wide,
         'wide original integer survives native round trip');
-    final extended = AtomicDecideValue.read({
-      ...value.json,
+    final extended = DecisionResult.read({
+      ...fixtureValue(value) as Map<String, Object?>,
       'future': {'wide': wide}
     });
-    check((extended.json['future'] as Map)['wide'] == wide,
+    check((extended.extensions['future'] as Map)['wide'] == wide,
         'unknown output retained');
     final absent =
         ReadableQuestionDecide.read({'verb': 'decide', 'text': 'Is it?'});
     check(!absent.trueValue.isPresent, 'absent reading differs from null');
     final unresolved = await engine.decide(
-        question, InputRequestInputText(text: 'uncertain'),
-        options: InputRequestOptions(
+        question, InputText(text: 'uncertain'),
+        options: Options(
             threshold: const Presence.present(
-                InputRequestThreshold.alternative1('0.2:0.8'))));
+                Threshold.text('0.2:0.8'))));
     check(
         unresolved.packets
                 .whereType<SessionPacketDecideRow>()
@@ -222,13 +225,13 @@ Future<void> main(List<String> args) async {
     final beforeBudget = sends;
     try {
       await engine.decide(question, text,
-          options: InputRequestOptions(
+          options: Options(
               maxRequestsTotal: Presence.present(BigInt.zero)));
       throw StateError('budget succeeded');
-    } on SessionFailure catch (error) {
+    } on CallFailure catch (error) {
       check(
-          error.call.terminal.failure.isPresent &&
-              error.call.terminal.facts.isPresent,
+          error.call!.terminal.failure.isPresent &&
+              error.call!.terminal.facts.isPresent,
           'typed failure retains terminal facts');
     }
     check(sends == beforeBudget, 'budget refusal sends nothing');
@@ -244,42 +247,42 @@ Future<void> main(List<String> args) async {
       engine.recognize,
       engine.relate
     ];
-    final questions = <InputRequestQuestion>[
+    final questions = <Question>[
       question,
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      DefinedQuestion(
+          value: Definition.read({
         'choose': 'Which?',
         'options': ['a', 'b']
       })),
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      DefinedQuestion(
+          value: Definition.read({
         'tag': 'Which?',
         'labels': ['a', 'b']
       })),
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      DefinedQuestion(
+          value: Definition.read({
         'score': 'Which?',
         'levels': ['low', 'high']
       })),
       question,
       question,
-      InputRequestQuestionText(text: 'Which text?'),
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      QuestionText(text: 'Which text?'),
+      DefinedQuestion(
+          value: Definition.read({
         'version': 1,
         'questions': {
           'refund': {'decide': 'Is it?'}
         }
       })),
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      DefinedQuestion(
+          value: Definition.read({
         'version': 1,
         'recognize': {
           'kinds': {'person': 'Person.'}
         }
       })),
-      InputRequestQuestionDefinition(
-          value: InputRequestDefinition.read({
+      DefinedQuestion(
+          value: Definition.read({
         'version': 1,
         'relate': {
           'fields': {'name': '/name', 'kind': '/kind'},
@@ -289,25 +292,25 @@ Future<void> main(List<String> args) async {
         }
       })),
     ];
-    final records = InputRequestInputRecords(items: [
-      InputRequestItem(
-          original: Presence.present(InputRequestOriginalText(text: 'owned')))
+    final records = InputRecords(items: [
+      Item(
+          original: Presence.present(OriginalText(text: 'owned')))
     ]);
     for (var i = 0; i < methods.length; i++) {
       final input = i == 6
-          ? InputRequestInputUnits(items: [
+          ? InputUnits(items: [
               ...records.items,
-              InputRequestItem(
+              Item(
                   original:
-                      Presence.present(InputRequestOriginalText(text: "other")))
+                      Presence.present(OriginalText(text: "other")))
             ])
           : i == 9
-              ? InputRequestInputEntities(items: [
-                  InputRequestItem(
-                      original: Presence.present(InputRequestOriginalJson(
+              ? InputEntities(items: [
+                  Item(
+                      original: Presence.present(OriginalJson(
                           value: {'name': 'Alice', 'kind': 'person'}))),
-                  InputRequestItem(
-                      original: Presence.present(InputRequestOriginalJson(
+                  Item(
+                      original: Presence.present(OriginalJson(
                           value: {'name': 'Bob', 'kind': 'person'})))
                 ])
               : i >= 4 && i != 8
@@ -318,44 +321,44 @@ Future<void> main(List<String> args) async {
     }
     await dataCases(engine, 'http://127.0.0.1:${server.port}', () => sends);
     final streamed =
-        await engine.decide(question, InputRequestInputFeed(name: 'feed'),
+        await engine.decide(question, InputFeed(name: 'feed'),
             feed: Stream.fromIterable([
-              InputRequestSessionDescriptor(
-                  item: InputRequestItem(
+              FeedItem(
+                  item: Item(
                       original: Presence.present(
-                          InputRequestOriginalText(text: 'feed-one')))),
-              InputRequestSessionDescriptor(
-                  item: InputRequestItem(
+                          OriginalText(text: 'feed-one')))),
+              FeedItem(
+                  item: Item(
                       original: Presence.present(
-                          InputRequestOriginalText(text: 'feed-two')))),
+                          OriginalText(text: 'feed-two')))),
             ]));
     check(streamed.packets.whereType<SessionPacketDecideRow>().length == 2,
         'bounded host stream feeds typed rows');
     final before = sends;
     try {
-      await engine.decide(InputRequestQuestionText(text: ''), text);
+      await engine.decide(QuestionText(text: ''), text);
       throw StateError('invalid accepted');
-    } on NativeFailure catch (error) {
-      check(error.kind == NativeErrorKind.usage, 'native typed usage error');
+    } on CallFailure catch (error) {
+      check(error.kind == ErrorKind.usage, 'native typed usage error');
     }
     check(sends == before, 'invalid admission sends nothing');
     var cleanupCalls = 0;
     final cancellation = Cancellation();
     final heldFeed =
-        StreamController<InputRequestSessionDescriptor>(onCancel: () {
+        StreamController<FeedItem>(onCancel: () {
       cleanupCalls++;
       throw StateError('feed cleanup failed');
     });
     var intake = 0;
-    final held = engine.decide(question, InputRequestInputFeed(name: 'feed'),
+    final held = engine.decide(question, InputFeed(name: 'feed'),
         cancellation: cancellation, feed: heldFeed.stream.map((item) {
       intake++;
       return item;
     }));
-    heldFeed.add(InputRequestSessionDescriptor(
-        item: InputRequestItem(
+    heldFeed.add(FeedItem(
+        item: Item(
             original:
-                Presence.present(InputRequestOriginalText(text: 'held')))));
+                Presence.present(OriginalText(text: 'held')))));
     await arrived.future.timeout(const Duration(seconds: 5));
     var progressed = false;
     await Future<void>(() {
@@ -368,10 +371,10 @@ Future<void> main(List<String> args) async {
       await held.timeout(const Duration(seconds: 1));
       throw StateError('cancel returned answer');
     } on CallCancelled {}
-    heldFeed.add(InputRequestSessionDescriptor(
-        item: InputRequestItem(
+    heldFeed.add(FeedItem(
+        item: Item(
             original:
-                Presence.present(InputRequestOriginalText(text: 'extra')))));
+                Presence.present(OriginalText(text: 'extra')))));
     await Future<void>(() {});
     check(intake == 1 && cleanupCalls == 1,
         'throwing cleanup cancels each feed without extra reads');
