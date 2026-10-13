@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Depends on: 0561, 0565
 
+Reviews: revision dcafe90, accept
+
 ## Outcome
 
 Lint checks every generated file against its generator. Each language carries only the generated declarations it uses. Generated public names read as real names, not schema paths. The C view layout shares one presence struct per value type. These changes land before the candidate, because the names and the `_v1` layouts become public API at 0.2.

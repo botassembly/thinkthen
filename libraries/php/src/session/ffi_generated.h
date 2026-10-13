@@ -2,6 +2,7 @@
 typedef struct thinkthen_engine thinkthen_engine;
 typedef struct thinkthen_session thinkthen_session;
 typedef struct thinkthen_session_result thinkthen_session_result;
+typedef struct thinkthen_value thinkthen_value;
 typedef struct thinkthen_complete_usage_persistence_v1 {
     uint32_t kind;
 } thinkthen_complete_usage_persistence_v1;
@@ -9,20 +10,6 @@ typedef struct thinkthen_complete_utf8_v1 {
     const char *data;
     size_t len;
 } thinkthen_complete_utf8_v1;
-typedef struct thinkthen_complete_attempt_outcome_v1 {
-    uint32_t kind;
-} thinkthen_complete_attempt_outcome_v1;
-typedef struct thinkthen_complete_utf8_presence_v1 {
-    uint32_t presence;
-    struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_utf8_presence_v1;
-typedef struct thinkthen_complete_sdk_request_id_v1 {
-    struct thinkthen_complete_utf8_v1 value;
-} thinkthen_complete_sdk_request_id_v1;
-typedef struct thinkthen_complete_u64_presence_v1 {
-    uint32_t presence;
-    uint64_t value;
-} thinkthen_complete_u64_presence_v1;
 typedef struct thinkthen_complete_json_array_v1 {
     const struct thinkthen_complete_json_v1 *const *data;
     size_t len;
@@ -46,6 +33,20 @@ typedef struct thinkthen_complete_json_v1 {
     uint32_t kind;
     union thinkthen_complete_json_data_v1 data;
 } thinkthen_complete_json_v1;
+typedef struct thinkthen_complete_attempt_outcome_v1 {
+    uint32_t kind;
+} thinkthen_complete_attempt_outcome_v1;
+typedef struct thinkthen_complete_utf8_presence_v1 {
+    uint32_t presence;
+    struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_utf8_presence_v1;
+typedef struct thinkthen_complete_sdk_request_id_v1 {
+    struct thinkthen_complete_utf8_v1 value;
+} thinkthen_complete_sdk_request_id_v1;
+typedef struct thinkthen_complete_u64_presence_v1 {
+    uint32_t presence;
+    uint64_t value;
+} thinkthen_complete_u64_presence_v1;
 typedef struct thinkthen_complete_extension_v1 {
     struct thinkthen_complete_utf8_v1 name;
     struct thinkthen_complete_utf8_v1 json;
@@ -1743,6 +1744,9 @@ int thinkthen_error_code(const struct thinkthen_engine *engine);
 const char *thinkthen_error_message(const struct thinkthen_engine *engine);
 int thinkthen_error_retryable(const struct thinkthen_engine *engine);
 const struct thinkthen_error_view_v1 *thinkthen_error_view(const struct thinkthen_engine *engine);
+int thinkthen_request_plan_named_value(const struct thinkthen_engine *engine,
+const struct thinkthen_named_request_v1 *request,
+struct thinkthen_value **out);
 void thinkthen_session_cancel(struct thinkthen_session *session);
 const char *thinkthen_session_error_message(void);
 const struct thinkthen_error_view_v1 *thinkthen_session_error_view(void);
@@ -1779,3 +1783,6 @@ int thinkthen_session_wait(const struct thinkthen_session *session,
 uint32_t interest,
 uint32_t timeout_ms,
 uint32_t *out_ready);
+void thinkthen_value_free(struct thinkthen_value *owner);
+int thinkthen_value_view(const struct thinkthen_value *owner,
+const struct thinkthen_complete_json_v1 **out);
