@@ -11,7 +11,7 @@ const RETRIED_OUT: &str =
     "the backend failed after the allowed attempts; try again later or change --max-retries\n";
 
 #[test]
-fn a_status_names_its_fixed_action_and_only_the_known_reason() {
+fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
     let marked = format!(r#"{{"detail":{{"error_type":"{EVIDENCE}"}}}}"#);
     let long = format!(
         r#"{{"detail":{{"error_type":"max_tokens_exceeded"}},"pad":"{}"}}"#,
@@ -31,7 +31,11 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
         (400, marked.as_str(), REFUSED),
         (400, "", REFUSED),
         (400, "not json", REFUSED),
-        (400, r#"{"detail":"max_tokens_exceeded"}"#, REFUSED),
+        (
+            400,
+            r#"{"detail":"max_tokens_exceeded"}"#,
+            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size; provider message: max_tokens_exceeded\n",
+        ),
         (400, long.as_str(), REFUSED),
         (
             413,

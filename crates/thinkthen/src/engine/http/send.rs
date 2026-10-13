@@ -82,35 +82,7 @@ fn send(
         exchange,
     );
     if !(200..300).contains(&status) {
-        let plain = header("content-type")
-            .and_then(|value| value.split(';').next())
-            .is_some_and(|value| value.trim().eq_ignore_ascii_case("text/plain"));
-        let header = |name: &str| {
-            response
-                .headers()
-                .get(name)
-                .and_then(|value| value.to_str().ok())
-        };
-        let asked = honored(header("retry-after-ms"), header("retry-after"));
-        let body = response
-            .body_mut()
-            .with_config()
-            .limit(MAX_RESPONSE_BYTES)
-            .read_to_vec()
-            .ok();
-        let failure = if status == 400 && body.as_deref().is_some_and(names_token_limit) {
-            Error::TokenLimit
-        } else {
-            Error::Status(status)
-        };
-        let failure =
-            super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api, plain);
-        return Err(Box::new(Attempt {
-            failure,
-            asked,
-            info,
-            unopened: false,
-        }));
+        return Err(refused(response, exchange, api, info));
     }
     let sent = u64::try_from(exchange.body.len()).unwrap_or(u64::MAX);
     let most = MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(sent));
@@ -258,4 +230,44 @@ impl Resolver for OpeningResolver {
     ) -> Result<ResolvedSocketAddrs, ureq::Error> {
         self.0.resolve(uri, config, timeout).map_err(marked)
     }
+}
+
+/// Read one refused response and retain only screened diagnostics and retry scalars.
+fn refused(
+    mut response: ureq::http::Response<ureq::Body>,
+    exchange: &Exchange<'_>,
+    api: crate::core::adapters::ApiType,
+    info: ResponseInfo,
+) -> Box<Attempt> {
+    let status = response.status().as_u16();
+    let header =
+        |name: &str| unique(response.headers(), name).and_then(|value| value.to_str().ok());
+    let plain = header("content-type")
+        .and_then(|value| value.split(';').next())
+        .is_some_and(|value| value.trim().eq_ignore_ascii_case("text/plain"));
+    let header = |name: &str| {
+        response
+            .headers()
+            .get(name)
+            .and_then(|value| value.to_str().ok())
+    };
+    let asked = honored(header("retry-after-ms"), header("retry-after"));
+    let body = response
+        .body_mut()
+        .with_config()
+        .limit(MAX_RESPONSE_BYTES)
+        .read_to_vec()
+        .ok();
+    let failure = if status == 400 && body.as_deref().is_some_and(names_token_limit) {
+        Error::TokenLimit
+    } else {
+        Error::Status(status)
+    };
+    let failure = super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api, plain);
+    Box::new(Attempt {
+        failure,
+        asked,
+        info,
+        unopened: false,
+    })
 }

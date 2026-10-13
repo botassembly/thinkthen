@@ -33,7 +33,7 @@ A retried status resends the whole request. When a backend refuses a request of 
 
 ## Live attempt observations
 
-Opt-in live attempt observations inspect only `x-envoy-upstream-service-time` and `x-typesafe-request-id` from a System One response, on success or status failure. Exactly one value of each name is required; a duplicate or malformed value is omitted without failing the answer. Server time is unsigned ASCII decimal milliseconds. A request ID is 1–128 ASCII letters, digits, periods, underscores or hyphens, then omitted if it contains the configured nonempty key or occurs verbatim in the posting URL or request body. No other response header becomes result metadata. A transport failure has no response headers. The local `wall_ms` includes transport and bounded body read, excludes waits and parsing, and does not measure model-only time.
+Opt-in live attempt observations inspect only `x-envoy-upstream-service-time` and `x-typesafe-request-id` from a System One response, on success or status failure. Exactly one value of each name is required; a duplicate or malformed value is omitted without failing the answer. Server time is unsigned ASCII decimal milliseconds. A request ID is 1–128 ASCII letters, digits, periods, underscores or hyphens, then omitted if it contains the configured nonempty key or a recognizable base64, hexadecimal or percent-encoded echo of that key, or occurs verbatim in the posting URL or request body. No other response header becomes result metadata. A transport failure has no response headers. The local `wall_ms` includes transport and bounded body read, excludes waits and parsing, and does not measure model-only time.
 
 ## The key
 

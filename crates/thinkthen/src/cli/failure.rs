@@ -285,16 +285,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
         Failure::Status(status) => (4, status::said(*status)),
-        Failure::Provider { cause, diagnostic } => {
-            let mut bytes = Vec::new();
-            let code = say(cause, &mut bytes);
-            let text = String::from_utf8_lossy(&bytes);
-            let text = text
-                .trim_end()
-                .strip_prefix("thinkthen: ")
-                .unwrap_or(text.trim_end());
-            (code, diagnostic.sentence(text.to_owned()))
-        }
+        Failure::Provider { cause, diagnostic } => provider_message(cause, diagnostic),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::QuestionMiss { .. }
         | Failure::StoreAmbiguous
@@ -541,4 +532,22 @@ fn native_failure(failure: &Failure) -> Option<(u8, String)> {
         },
         message.clone(),
     ))
+}
+
+/// The common diagnostic without its command prefix, for composed failure reports.
+pub(crate) fn sentence(failure: &Failure) -> (u8, String) {
+    let mut bytes = Vec::new();
+    let code = say(failure, &mut bytes);
+    let text = String::from_utf8_lossy(&bytes);
+    let text = text.trim_end();
+    let prefix = format!("{}: ", crate::core::NAME);
+    (code, text.strip_prefix(&prefix).unwrap_or(text).to_owned())
+}
+
+fn provider_message(
+    cause: &Failure,
+    diagnostic: &crate::engine::error::ProviderDiagnostic,
+) -> (u8, String) {
+    let (code, text) = sentence(cause);
+    (code, diagnostic.sentence(text))
 }

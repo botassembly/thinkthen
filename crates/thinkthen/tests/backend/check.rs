@@ -222,7 +222,12 @@ fn a_failure_no_body_causes_stops_the_check_at_the_first_probe() {
         };
         let stops = [
             ("/arm/status/401/v1", key("401: the key was refused")),
-            ("/arm/status/402/v1", key("402: the account has no credit")),
+            (
+                "/arm/status/402/v1",
+                format!(
+                    "ok connection\ncritical key: the backend systemone account is out of credit\nunchecked endpoint\n{later}"
+                ),
+            ),
             (
                 "/arm/status/403/v1",
                 key("403: the key may not use this model or address"),

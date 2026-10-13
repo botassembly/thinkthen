@@ -210,8 +210,9 @@ fn a_transport_failure_after_the_request_arrived_never_resends() {
         .unwrap()
         .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
         .unwrap_err();
-    assert_eq!(listener.count(), 1);
-    assert_eq!(listener.requests()[0].body, BODY);
+    let received = listener.requests();
+    assert_eq!(received.len(), 1);
+    assert_eq!(received[0].body, BODY);
     let attempts = error.facts().unwrap().attempts().unwrap();
     assert_eq!(attempts.len(), 1);
     assert_eq!(attempts[0].outcome(), AttemptOutcome::Transport);
@@ -298,7 +299,7 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
         assert!(!error.stopped().retryable());
         assert!(!error.retryable());
         assert_eq!(error.facts().unwrap().requests_sent(), 1);
-        assert_eq!(listener.count(), 1);
+        assert_eq!(listener.requests().len(), 1);
         assert!(
             error
                 .to_string()
@@ -309,5 +310,37 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
             message != "fixture-native-attempts"
         );
         assert!(!format!("{error:?}").contains("fixture-native-attempts"));
+    }
+}
+
+#[test]
+fn encoded_key_response_ids_are_omitted_and_ordinary_ids_survive_failures() {
+    let normal = "15ca30aa-539c-4bad-a112-9912cbb2ce73";
+    for (id, expected) in [("c2stdGVzdC0_", None), (normal, Some(normal))] {
+        let listener = Listener::serving(vec![
+            Canned::status(400, "{}").asking("x-typesafe-request-id", id),
+        ])
+        .unwrap();
+        let engine = Engine::builder()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("sk-test-?")
+            .unwrap()
+            .max_retries(0)
+            .no_cache()
+            .build()
+            .unwrap();
+        let question = Question::decide("Refund?").unwrap().cut();
+        let error = engine
+            .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+            .unwrap_err();
+        assert_eq!(listener.requests().len(), 1);
+        let attempts = error.facts().unwrap().attempts().unwrap();
+        assert_eq!(attempts.len(), 1);
+        assert_eq!(attempts[0].status(), Some(400));
+        assert_eq!(attempts[0].request_id(), expected);
+        assert!(!format!("{error:?}").contains("sk-test-?"));
     }
 }

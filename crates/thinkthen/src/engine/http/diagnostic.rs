@@ -86,7 +86,6 @@ fn safe_message(text: &str, key: &Key) -> Option<String> {
         "sha256:",
     ];
     if text.trim().is_empty()
-        || (!key.as_str().is_empty() && text.contains(key.as_str()))
         || forbidden.iter().any(|word| lower.contains(word))
         || header_lines(text)
         || text
@@ -94,11 +93,9 @@ fn safe_message(text: &str, key: &Key) -> Option<String> {
             .any(|character| character.is_control() && !character.is_whitespace())
         || text.contains(['{', '}', '[', ']', '<', '>'])
         || text.split_whitespace().any(|word| {
-            unsafe_token(word, key)
-                || word
-                    .split([':', '=', '.'])
-                    .any(|part| unsafe_token(part, key))
+            opaque_token(word) || word.split([':', '=', '.']).any(|part| opaque_token(part))
         })
+        || key_echo(text, key)
     {
         return None;
     }
@@ -111,19 +108,29 @@ fn safe_message(text: &str, key: &Key) -> Option<String> {
     Some(message)
 }
 
-fn unsafe_token(word: &str, key: &Key) -> bool {
+fn opaque_token(word: &str) -> bool {
     let word =
         word.trim_matches(|ch: char| matches!(ch, '.' | ',' | ':' | ';' | '\'' | '"' | '(' | ')'));
-    if word.len() >= 32
+    word.len() >= 32
         && word
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b"_-/+=".contains(&byte))
-    {
-        return true;
-    }
-    if key.as_str().is_empty() {
-        return false;
-    }
+}
+
+pub(super) fn key_echo(text: &str, key: &Key) -> bool {
+    !key.as_str().is_empty()
+        && (text.contains(key.as_str())
+            || text.split_whitespace().any(|word| {
+                encoded_key(word, key)
+                    || word
+                        .split([':', '=', '.'])
+                        .any(|part| encoded_key(part, key))
+            }))
+}
+
+fn encoded_key(word: &str, key: &Key) -> bool {
+    let word =
+        word.trim_matches(|ch: char| matches!(ch, '.' | ',' | ':' | ';' | '\'' | '"' | '(' | ')'));
     let bytes = key.as_str().as_bytes();
     if percent_decoded(word)
         .is_some_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
