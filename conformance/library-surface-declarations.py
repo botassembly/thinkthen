@@ -1,0 +1,263 @@
+"""Read public declarations, excluding comments, strings and method bodies."""
+import ast
+from dataclasses import dataclass
+import re
+
+
+@dataclass(frozen=True, order=True)
+class Declaration:
+    owner: str
+    name: str
+    kind: str
+
+
+def python(source):
+    tree = ast.parse(source)
+    result = set()
+    exports = None
+    for node in tree.body:
+        if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == '__all__' for t in node.targets):
+            exports = set(ast.literal_eval(node.value))
+    def visit(nodes, owner=''):
+        for node in nodes:
+            name = getattr(node, 'name', None)
+            if isinstance(node, ast.ClassDef) and not name.startswith('_'):
+                result.add(Declaration(owner, name, 'type'))
+                visit(node.body, name)
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if not name.startswith('_') or name == '__init__':
+                    is_property = any(isinstance(d, ast.Name) and d.id == 'property' for d in node.decorator_list)
+                    result.add(Declaration(owner, name, 'field' if is_property else 'call'))
+                    container = owner + '.' + name if owner else name
+                    for arg in [*node.args.posonlyargs, *node.args.args]:
+                        if arg.arg not in ('self', 'cls'):
+                            result.add(Declaration(container, arg.arg, 'parameter'))
+                    for arg in node.args.kwonlyargs:
+                        result.add(Declaration(container, arg.arg, 'field'))
+            elif isinstance(node, ast.Assign) and isinstance(node.value, (ast.Name, ast.Subscript, ast.BinOp)):
+                for target in node.targets:
+                    if isinstance(target, ast.Name) and not target.id.startswith('_'):
+                        result.add(Declaration(owner, target.id, 'type'))
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                if not node.target.id.startswith('_'):
+                    result.add(Declaration(owner, node.target.id, 'field'))
+    visit(tree.body)
+    if exports is not None:
+        result = {d for d in result if d.owner or d.name in exports}
+        result.update(Declaration('', name, 'export') for name in exports)
+    return result
+
+
+def masked(source):
+    # Preserve positions and newlines for scope matching, but never match words in comments/strings.
+    pattern = r'//[^\n]*|/\*[\s\S]*?\*/|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\''
+    return re.sub(pattern, lambda m: ''.join('\n' if c == '\n' else ' ' for c in m[0]), source)
+
+
+def braces(source):
+    stack, pairs, depths = [], {}, []
+    for pos, char in enumerate(source):
+        depths.append(len(stack))
+        if char == '{':
+            stack.append(pos)
+        elif char == '}' and stack:
+            pairs[stack.pop()] = pos
+    return pairs, depths
+
+
+def cstyle(source, language):
+    if language == 'typescript':
+        source = re.sub(r'(\breadonly\s+)"(\w+)"(?=\??\s*:)', lambda m: m[1] + ' ' + m[2] + ' ', source)
+    text = masked(re.sub(r'@"(\w+)"', lambda m: '  ' + m[1] + ' ', source) if language == 'zig' else source)
+    pairs, depths = braces(text)
+    result, scopes, hidden = set(), [], []
+    type_pattern = r'\b(?:class|struct|interface|enum|record|union|trait|object|extension)\s+(\w+)'
+    if language == 'zig':
+        type_pattern = r'\bpub\s+const\s+(\w+)\s*=\s*(?:struct|union|enum)\b'
+    elif language == 'objc':
+        type_pattern = r'@interface\s+(\w+)'
+    for match in re.finditer(type_pattern, text):
+        start = text.find('{', match.end())
+        end_marker = text.find(';', match.end())
+        if start < 0 or start not in pairs or 0 <= end_marker < start:
+            continue
+        prefix = text[max(text.rfind('\n', 0, match.start()), text.rfind('}', 0, match.start())) + 1:match.start()]
+        if language in ('java', 'csharp', 'swift') and not match[0].startswith('extension') and not re.search(r'\bpublic\b', prefix):
+            continue
+        name = match[1]
+        if language == 'go' and not name[:1].isupper():
+            continue
+        end = pairs[start]
+        if language in ('dart', 'kotlin', 'scala') and (name.startswith('_') or re.search(r'\b(private|protected)\b', prefix)):
+            hidden.append((start, end))
+            continue
+        if language == 'c':
+            alias = re.match(r'\s*(\w+)\s*;', text[end + 1:])
+            if alias:
+                name = alias[1]
+        scopes.append((start, end, name))
+        if not match[0].startswith('extension'):
+            result.add(Declaration('', name, 'type'))
+    if language == 'go':
+        for match in re.finditer(r'\btype\s+([A-Z]\w*)\s+(?:struct|interface)\s*\{', text):
+            start = text.rfind('{', match.start(), match.end())
+            if start in pairs:
+                scopes.append((start, pairs[start], match[1]))
+                result.add(Declaration('', match[1], 'type'))
+    if language == 'objc':
+        for match in re.finditer(r'@interface\s+(\w+)[\s\S]*?@end', text):
+            scopes.append((match.start(), match.end(), match[1]))
+            result.add(Declaration('', match[1], 'type'))
+    def owner(pos):
+        if any(start < pos < end for start, end in hidden):
+            return None
+        matches = [s for s in scopes if s[0] < pos < s[1]]
+        scope = max(matches, default=None)
+        if scope and language != 'objc' and depths[pos] != depths[scope[0]] + 1:
+            return None
+        if not scope and depths[pos] > (1 if language in ('cpp', 'c') else 0):
+            return None
+        return scope[2] if scope else ''
+    patterns = {
+        'typescript': r'(?m)(?:^|[;{}\n])\s*(?:(?:export|declare|readonly|static|async)\s+)*(\w+)\s*(?:\??\s*:|(?:<[^\n]*?>)?\s*\()',
+        'java': r'\bpublic\s+(?:(?:static|final|abstract|synchronized)\s+)*(?:[\w<>?,.\[\]]+\s+)(\w+)\s*(?:\(|[=;])',
+        'csharp': r'\bpublic\s+(?:(?:static|readonly|override|abstract|required|sealed|async)\s+)*(?:[\w<>?,.\[\]]+\s+)(\w+)\s*(?:\(|\{|[=;])',
+        'swift': r'\bpublic\s+(?:(?:static|class|mutating|convenience)\s+)*(?:func|var|let)\s+`?(\w+)',
+        'kotlin': r'(?m)(?:^|[;{}\n])\s*(?:(?:public|override|open|final|suspend)\s+)*(?:fun|val|var)\s+`?(\w+)' ,
+        'scala': r'(?m)(?:^|[;{}\n])\s*(?:(?:override|final|lazy)\s+)*(?:def|val|var)\s+`?(\w+)' ,
+        'zig': r'\bpub\s+(?:fn|const|var)\s+(\w+)|(?m:^\s*)(\w+)\s*:',
+        'go': r'(?m:^\s*)([A-Z]\w*)\s+[^\n{}]+',
+        'php': r'\bpublic\s+(?:static\s+)?function\s+(\w+)\s*\(|\bpublic\s+(?:readonly\s+)?[\w?\\]+\s+\$(\w+)',
+        'dart': r'(?m)(?:^|[;{}\n])\s*(?:(?:static|final|late|const|external|factory)\s+)*[\w<>?,.]+\s+(?:get\s+)?(\w+)\s*(?:\(|=>|[;=])|\bget\s+(\w+)\s*(?:=>|\{)',
+        'cpp': r'(?m)(?:^|(?<=[;{}\n]))[ \t]*[A-Za-z_][\w:<>,? \t]*?[*& \t]+(\w+)\s*(?:\(|[;=])',
+        'c': r'(?m)(?:^|(?<=[;{}\n]))[ \t]*[A-Za-z_][\w \t]*?[* \t]+(\w+)\s*(?:\(|;|\[)',
+        'objc': r'[-+]\s*\([^)]*\)\s*(\w+)|@property[^;\n]*?(\w+)\s*;',
+    }
+    for match in re.finditer(patterns.get(language, patterns['java']), text):
+        if re.search(r'\b(class|struct|record|enum|interface)\s+\w+', match[0]):
+            continue
+        name = next(group for group in match.groups() if group)
+        pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
+        container = owner(pos)
+        if language == 'go' and not container:
+            continue
+        if container is None or name.startswith('_') or language == 'dart' and name == 'Function':
+            continue
+        if language == 'cpp' and container:
+            start = max(s[0] for s in scopes if s[2] == container and s[0] < pos < s[1])
+            access = list(re.finditer(r'\b(public|private|protected)\s*:', text[start:pos]))
+            is_struct = bool(re.search(r'\bstruct\b[^{}]*$', text[max(0,start-100):start]))
+            if (access and access[-1][1] != 'public') or (not access and not is_struct):
+                continue
+        tail = text[match.end():match.end() + 3]
+        kind = 'call' if '(' in match[0] or language in ('swift', 'objc', 'php') and 'func' in match[0] or language in ('kotlin', 'scala', 'zig') and re.search(r'\b(fun|def|fn)\b', match[0]) else 'field'
+        if kind == 'call' and name == container:
+            continue
+        result.add(Declaration(container, name, kind))
+    if language in ('c', 'cpp'):
+        for name in re.findall(r'(?m)^\s*#define\s+([A-Za-z_]\w*)', text):
+            result.add(Declaration('', name, 'export'))
+    if language == 'swift':
+        for match in re.finditer(r'\bcase\s+`?(\w+)`?', text):
+            container = owner(match.start())
+            if container:
+                result.add(Declaration(container, match[1], 'field'))
+    if language == 'typescript':
+        for match in re.finditer(r'\bexport\s*\{([^}]+)\}', text):
+            for binding in match[1].split(','):
+                names = re.findall(r'\b\w+\b', binding)
+                if names:
+                    result.add(Declaration('', names[-1], 'export'))
+        for match in re.finditer(r'\bexport\s+\*\s+as\s+(\w+)', text):
+            result.add(Declaration('', match[1], 'export'))
+    if language == 'go':
+        for match in re.finditer(r'(?m)^func\s+(?:\(\w+\s+\*?(\w+)(?:\[[^\]]+\])?\)\s+)?([A-Z]\w*)\s*(?:\[[^\]]+\])?\s*\(', text):
+            result.add(Declaration(match[1] or '', match[2], 'call'))
+        for match in re.finditer(r'(?m)^const\s+([A-Z]\w*)|^[ \t]*([A-Z]\w*)[ \t]+\w*[ \t]*=', text):
+            if depths[match.start()] == 0:
+                result.add(Declaration('', match[1] or match[2], 'export'))
+    if language in ('typescript', 'zig', 'swift', 'go'):
+        patterns = {'typescript': r'\bexport\s+(?:declare\s+)?(?:class|interface|type|function|const|enum)\s+(\w+)',
+                    'zig': r'\bpub\s+(?:const|fn)\s+(\w+)',
+                    'swift': r'\bpublic\s+(?:typealias|enum|struct|class)\s+(\w+)',
+                    'go': r'\btype\s+([A-Z]\w*)'}
+        for match in re.finditer(patterns[language], text):
+            if owner(match.start()) == '':
+                result.add(Declaration('', match[1], 'export'))
+    return result
+
+
+def other(source, language):
+    result = set()
+    if language == 'r':
+        result.update(Declaration('', name, 'export') for name in re.findall(r'(?m)^export\((\w+)\)', source))
+        for match in re.finditer(r'(?m)^(\w+)\s*(?:<-|=)\s*function\s*\(([^)]*)\)', source):
+            result.add(Declaration('', match[1], 'call'))
+            for name in re.findall(r'(\w+)\s*(?:=|,|$)', match[2]):
+                result.add(Declaration(match[1], name, 'field'))
+    elif language == 'ruby':
+        scopes = []
+        private = set()
+        constants = {}
+        for line in source.splitlines():
+            indent = len(line) - len(line.lstrip())
+            match = re.match(r'\s*(class|module)\s+(\w+)', line)
+            if match:
+                scopes = [s for s in scopes if s[0] < indent]
+                scopes.append((indent, match[2]))
+                result.add(Declaration('', match[2], 'type'))
+            container = scopes[-1][1] if scopes else ''
+            if line.strip() == 'private':
+                private.add(container)
+            match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', line)
+            if match:
+                constants[(container, match[1])] = match[2].split()
+            loop = re.match(r'\s*(\w+)\.each\s+do\s+\|(\w+)\|', line)
+            if loop:
+                variable = loop[2]
+                method_loop = (container, variable, constants.get((container, loop[1]), ()))
+            elif re.match(r'\s*define_method\((\w+)\)', line):
+                dynamic = re.match(r'\s*define_method\((\w+)\)', line)[1]
+                if 'method_loop' in locals() and method_loop[:2] == (container, dynamic):
+                    result.update(Declaration(container, name, 'call') for name in method_loop[2])
+            match = re.match(r'\s*def\s+(?:self\.)?(\w+)\s*(?:\(([^)]*)\))?', line)
+            if match and container not in private and not match[1].startswith('_'):
+                result.add(Declaration(container, match[1], 'call'))
+                for name in re.findall(r'\b(\w+)\s*:', match[2] or ''):
+                    result.add(Declaration(container + '.' + match[1], name, 'field'))
+            if container not in private and re.match(r'\s*attr_reader\b', line):
+                for name in re.findall(r':(\w+)', line):
+                    result.add(Declaration(container, name, 'field'))
+            match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', line)
+            if match:
+                result.add(Declaration(container, match[1], 'field'))
+    elif language == 'ada':
+        text = re.sub(r'--[^\n]*', '', source)
+        text = re.split(r'(?im)^private\s*$', text)[0]
+        for match in re.finditer(r'(?i)\b(?:type|subtype)\s+(\w+)\b', text):
+            result.add(Declaration('', match[1], 'type'))
+        for match in re.finditer(r'(?is)\btype\s+(\w+)\b[^;]*?\bis\s+record\b(.*?)end\s+record', text):
+            for field in re.findall(r'\b(\w+)\s*:', match[2]):
+                result.add(Declaration(match[1], field, 'field'))
+        for name in re.findall(r'(?im)^\s*(\w+)\s*:\s*constant\b', text):
+            result.add(Declaration('', name, 'export'))
+        for name in re.findall(r'(?i)\b(?:function|procedure)\s+(\w+)\s*\(', text):
+            result.add(Declaration('', name, 'call'))
+    elif language == 'cobol':
+        scopes = []
+        for line in source.splitlines():
+            match = re.match(r'\s*(\d\d)\s+([\w-]+)', line)
+            if match:
+                level, name = int(match[1]), match[2]
+                scopes = [s for s in scopes if s[0] < level]
+                result.add(Declaration(scopes[-1][1] if scopes else '', name, 'field'))
+                scopes.append((level, name))
+    return result
+
+
+def declarations(source, language):
+    if language == 'python':
+        return python(source)
+    if language in ('r', 'ruby', 'ada', 'cobol'):
+        return other(source, language)
+    return cstyle(source, language)

@@ -4,16 +4,16 @@
     "request": "specification/request.schema.json",
     "result": "specification/result.schema.json"
   },
-  "helpers": [
-    "plan",
-    "question_file",
-    "question_name",
-    "question_reference",
-    "item",
-    "files",
-    "usage_persistence",
-    "finish_usage_status"
-  ],
+  "helpers": {
+    "plan": "call",
+    "question_file": "builder",
+    "question_name": "builder",
+    "question_reference": "builder",
+    "item": "builder",
+    "files": "builder",
+    "usage_persistence": "call",
+    "finish_usage_status": "call"
+  },
   "categories": {
     "lifecycle": [
       "Engine",
@@ -88,7 +88,8 @@
       "asyncio",
       "dispose",
       "deinit",
-      "constructor"
+      "constructor",
+      "__init__"
     ],
     "representation_members": [
       "value",
@@ -104,6 +105,31 @@
       "json_serialize",
       "debug_info",
       "ptr"
+    ],
+    "lifecycle_fields": [
+      "value",
+      "state",
+      "advice",
+      "is_present",
+      "results",
+      "terminal",
+      "facts",
+      "kind",
+      "retryable",
+      "complete",
+      "signal",
+      "packets",
+      "code",
+      "message",
+      "error",
+      "detail",
+      "engine",
+      "call",
+      "status",
+      "found",
+      "ended",
+      "token",
+      "asyncio"
     ]
   },
   "exceptions": {
@@ -140,8 +166,12 @@
       "language": "python",
       "naming": "snake",
       "declarations": [
-        "libraries/python/thinkthen/*.py",
-        "libraries/python/thinkthen/*.pyi"
+        "libraries/python/thinkthen/__init__.py",
+        "libraries/python/thinkthen/__init__.pyi",
+        "libraries/python/thinkthen/_calls.pyi",
+        "libraries/python/thinkthen/_inputs.py",
+        "libraries/python/thinkthen/_native_results.pyi",
+        "libraries/python/thinkthen/files.py"
       ],
       "option_containers": [
         "Engine.*"
@@ -158,6 +188,112 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "QuestionSource.path",
+        "question_name": "QuestionSource.name",
+        "question_reference": "QuestionSource.reference",
+        "item": "Item",
+        "files": "Files"
+      },
+      "representation_types": [
+        "Absent",
+        "AsyncCalls",
+        "Session",
+        "Call",
+        "UsageStatus"
+      ],
+      "representation_calls": [
+        "read_files"
+      ],
+      "field_adapters": {
+        "QuestionSource": {
+          "contract": "request",
+          "type": "RequestQuestion",
+          "aliases": {
+            "body": "value",
+            "raw": "value",
+            "none": "kind"
+          }
+        },
+        "Image": {
+          "contract": "request",
+          "type": "RequestImage",
+          "aliases": {
+            "data": "bytes"
+          }
+        },
+        "Item": {
+          "contract": "request",
+          "type": "RequestItem",
+          "aliases": {
+            "value": "original",
+            "text": "original",
+            "image_only": "original"
+          }
+        },
+        "Records": {
+          "contract": "request",
+          "type": "RequestInput",
+          "aliases": {
+            "items": "items"
+          }
+        },
+        "Files": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {
+            "jsonl": "framing"
+          }
+        },
+        "FileSelection": {
+          "contract": "request",
+          "type": [
+            "RequestSource",
+            "RequestReader"
+          ],
+          "aliases": {}
+        },
+        "SourceRecord": {
+          "contract": "result",
+          "type": "completePhysicalSource",
+          "aliases": {
+            "record": "file"
+          }
+        },
+        "read_files": {
+          "contract": "request",
+          "type": "RequestReader",
+          "aliases": {}
+        }
+      },
+      "wrapper_members": {
+        "Result": [
+          "function",
+          "scalar",
+          "detailed",
+          "probability",
+          "details",
+          "facts",
+          "to_dict"
+        ],
+        "Session": [
+          "facts",
+          "terminal"
+        ],
+        "CancelToken": [
+          "cancelled"
+        ]
+      },
+      "question_schema_aliases": {
+        "filter": "decide",
+        "rank": "decide"
+      },
+      "function_containers": [
+        "Engine"
       ]
     },
     "typescript": {
@@ -165,7 +301,9 @@
       "language": "typescript",
       "naming": "camel",
       "declarations": [
-        "libraries/typescript/native.d.ts"
+        "libraries/typescript/native.d.ts",
+        "libraries/typescript/results_generated.d.ts",
+        "libraries/typescript/index.d.ts"
       ],
       "option_containers": [
         "RequestOptions",
@@ -186,6 +324,12 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "representation_types": [
+        "Results"
+      ],
+      "function_containers": [
+        "Client"
       ]
     },
     "ruby": {
@@ -214,6 +358,9 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "function_containers": [
+        "Client"
       ]
     },
     "r": {
@@ -239,6 +386,9 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "function_containers": [
+        ""
       ]
     },
     "c": {
@@ -263,6 +413,14 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "usage_persistence": "thinkthen_engine_usage_persistence_v1",
+        "finish_usage_status": "thinkthen_engine_finish_usage_status_v1",
+        "plan": "thinkthen_request_plan_json"
+      },
+      "function_containers": [
+        ""
       ]
     },
     "cpp": {
@@ -291,6 +449,16 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Client"
       ]
     },
     "csharp": {
@@ -320,6 +488,10 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "function_suffix": "Async",
+      "function_containers": [
+        "Engine"
       ]
     },
     "go": {
@@ -348,6 +520,51 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "representation_types": [
+        "Error",
+        "ErrorKind",
+        "SessionError",
+        "PresenceState",
+        "UsagePersistenceState",
+        "OwnedPresence",
+        "JSONValue",
+        "Producer"
+      ],
+      "representation_calls": [
+        "NewClient",
+        "TextQuestion",
+        "DefinedQuestion",
+        "TextItem",
+        "JSONItem",
+        "BytesImage",
+        "String",
+        "Boolean",
+        "Value",
+        "MarshalJSON",
+        "UnmarshalJSON",
+        "Error",
+        "KindUsage",
+        "KindBackend",
+        "KindLocal",
+        "KindDeadline",
+        "KindCancelled",
+        "KindDefect",
+        "Absent",
+        "Present",
+        "Null",
+        "GoString",
+        "JSONValue"
+      ],
+      "function_containers": [
+        "Client"
       ]
     },
     "jvm": {
@@ -376,7 +593,21 @@
         "consumer",
         "examples",
         "Examples"
-      ]
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        "Engine"
+      ],
+      "facades": {
+        "kotlin": "KotlinEngine",
+        "scala": "ScalaEngine"
+      }
     },
     "swift": {
       "root": "libraries/swift",
@@ -404,6 +635,16 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestion.file",
+        "question_name": "InputRequestQuestion.name",
+        "question_reference": "InputRequestQuestion.reference",
+        "item": "InputRequestItem.text",
+        "files": "InputRequestInput.files"
+      },
+      "function_containers": [
+        "Client"
       ]
     },
     "zig": {
@@ -430,6 +671,16 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "RequestQuestionFile",
+        "question_name": "RequestQuestionName",
+        "question_reference": "RequestQuestionReference",
+        "item": "RequestItem",
+        "files": "RequestSource"
+      },
+      "function_containers": [
+        ""
       ]
     },
     "php": {
@@ -440,14 +691,10 @@
         "libraries/php/src/session/*.php"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "InputRequestOptions"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "InputEngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -458,6 +705,18 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestionFile",
+        "question_name": "InputRequestQuestionName",
+        "question_reference": "InputRequestQuestionReference",
+        "item": "InputRequestItem",
+        "files": "InputRequestSource",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus"
+      },
+      "function_containers": [
+        "Client"
       ]
     },
     "dart": {
@@ -468,14 +727,10 @@
         "libraries/dart/lib/**/*.dart"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "InputRequestOptions"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "InputEngineSettings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -488,6 +743,17 @@
         "Examples",
         "test",
         "example"
+      ],
+      "helper_names": {
+        "question_file": "InputRequestQuestionFile",
+        "question_name": "InputRequestQuestionName",
+        "question_reference": "InputRequestQuestionReference",
+        "item": "InputRequestItem",
+        "files": "InputRequestSource"
+      },
+      "entrypoint": "libraries/dart/lib/thinkthen_dart.dart",
+      "function_containers": [
+        "Engine"
       ]
     },
     "ada": {
@@ -512,6 +778,9 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "function_containers": [
+        ""
       ]
     },
     "objc": {
@@ -519,7 +788,9 @@
       "language": "objc",
       "naming": "camel",
       "declarations": [
-        "libraries/objective-c/Sources/Foundation/*.h"
+        "libraries/objective-c/Sources/Foundation/ThinkThenFoundation.h",
+        "libraries/objective-c/Sources/Foundation/TTResult.h",
+        "libraries/objective-c/Sources/Foundation/TTResults.g.h"
       ],
       "option_containers": [
         "RequestOptions",
@@ -540,6 +811,9 @@
         "consumer",
         "examples",
         "Examples"
+      ],
+      "function_containers": [
+        "TTFoundationClient"
       ]
     },
     "cobol": {
@@ -551,12 +825,12 @@
         "libraries/cobol/src/*.h"
       ],
       "option_containers": [
-        "TT-REQUEST-OPTIONS"
+        "tt-n-cobol-RequestOptions"
       ],
       "setting_containers": [
-        "TT-ENGINE-SETTINGS"
+        "tt-n-cobol-EngineSettings"
       ],
-      "function_prefix": "tt-",
+      "function_prefix": "TT_SESSION_",
       "test_folders": [
         "tests",
         "Tests",
@@ -565,7 +839,15 @@
         "consumer",
         "examples",
         "Examples"
-      ]
+      ],
+      "helper_names": {
+        "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
+        "finish_usage_status": "TT_ENGINE_FINISH_USAGE_STATUS"
+      },
+      "function_containers": [
+        ""
+      ],
+      "field_prefix": "v-m-"
     }
   }
 }
