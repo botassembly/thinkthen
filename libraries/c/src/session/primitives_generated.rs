@@ -5,6 +5,19 @@
     reason = "native immutable ABI transport names"
 )]
 #![forbid(unsafe_code)]
+/// C descriptor or borrowed view `thinkthen_error_view_v1`.
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_error_view_v1 {
+    /// C field `code`.
+    pub code: std::ffi::c_int,
+    /// C field `retryable`.
+    pub retryable: std::ffi::c_int,
+    /// C field `message`.
+    pub message: thinkthen_complete_utf8_v1,
+    /// C field `facts`.
+    pub facts: *const crate::session::views_generated::thinkthen_complete_immediate_facts_v1,
+}
 /// C descriptor or borrowed view `thinkthen_complete_utf8_v1`.
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]

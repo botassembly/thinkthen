@@ -29,6 +29,7 @@ fn declared(input: &str) -> Vec<String> {
 mod authored;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
+mod errors;
 mod plan;
 mod session;
 

@@ -1,6 +1,7 @@
 """Select the declarations each native adapter uses, including carrier dependencies."""
 import re
 import json
+from copy import deepcopy
 from pathlib import Path
 
 COMMON = (
@@ -13,9 +14,10 @@ COMMON = (
     'thinkthen_session_try_read', 'thinkthen_session_wait', 'thinkthen_session_next_packet',
 )
 USE = {
-    'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json', 'thinkthen_session_result_view'),
+    'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json', 'thinkthen_session_result_view', 'thinkthen_error_retryable', 'thinkthen_error_view', 'thinkthen_session_error_view'),
     'swift': (),
-    'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_error_retryable',
+    'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_engine_new_typed', 'thinkthen_error_retryable',
+            'thinkthen_error_view', 'thinkthen_session_error_view',
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
             'thinkthen_session_result_view', 'thinkthen_session_new_typed_with_surface',
             'thinkthen_session_try_push_typed', 'thinkthen_session_push_typed', 'thinkthen_session_finish_typed',
@@ -102,3 +104,12 @@ def selected_header(header, language):
     lines.extend('#define ' + name + ' ' + value for name, value in macros.items() if name in wanted)
     lines.extend(text for name, text in definitions.items() if name in wanted)
     return '\n\n'.join(lines) + '\n'
+
+
+def immediate_schema(schema):
+    """Derive typed immediate facts from complete facts, admitting aggregate ID absence."""
+    schema = deepcopy(schema)
+    facts = deepcopy(schema['$defs']['completeFacts'])
+    facts['required'] = [name for name in facts['required'] if name != 'call_id']
+    schema['$defs']['completeImmediateFacts'] = facts
+    return schema

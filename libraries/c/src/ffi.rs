@@ -33,7 +33,7 @@ pub mod session;
 pub mod native_request;
 
 use crate::EngineHandle;
-use crate::failures::{DEFECT, Failure, Held, NO_MESSAGE, USAGE, guard};
+use crate::failures::{DEFECT, Failure, Held, NO_MESSAGE, guard};
 
 /// The engine behind a host's pointer, or `None` for null.
 ///
@@ -87,28 +87,6 @@ unsafe fn text<'a>(text: *const c_char, len: usize) -> Result<&'a str, Failure> 
     std::str::from_utf8(bytes).map_err(|_| Failure::usage("a text is not UTF-8"))
 }
 
-/// The shape every typed `_opts` interface shares: a null engine is the usage
-/// code, the body runs behind the guard, a failure is recorded for the
-/// calling thread, and only success reaches `write`.
-///
-/// # Safety
-///
-/// `engine` is null or a live engine.
-unsafe fn run_typed<T>(
-    engine: *const EngineHandle,
-    ask: impl FnOnce(&Held) -> Result<T, Failure>,
-    write: impl FnOnce(&Held, T) -> i32,
-) -> i32 {
-    // SAFETY: the caller passes null or a live engine.
-    let Some(held) = (unsafe { held(engine) }) else {
-        return USAGE;
-    };
-    guard(Some(held), DEFECT, || match held.settle(ask(held)) {
-        Ok(value) => write(held, value),
-        Err(code) => code,
-    })
-}
-
 /// Build an engine from the environment; null when it cannot be built, and
 /// the error functions then answer with a null engine for the failure.
 /// Build from the command's environment, including address/key/cache and
@@ -130,3 +108,7 @@ unsafe fn settings_json(settings_json: *const c_char) -> Result<thinkthen::Engin
     };
     crate::settings::build(text)
 }
+
+// SAFETY: Last::of owns immutable native backing, CString bytes and a boxed root.
+// It stores only copied carrier records; no caller pointer or thread-affine value survives.
+unsafe impl Send for crate::failures::Last {}
