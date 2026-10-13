@@ -4,7 +4,7 @@ Status: OPEN.
 
 Milestone: 0.2
 
-Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569, 0573, 0574, 0576
+Depends on: 0542, 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558, 0560, 0561, 0562, 0563, 0564, 0565, 0568, 0569, 0573, 0574, 0576, 0577
 
 Reviews: revision fe9bf662f0234e8177eecd2a0f0adea96b36e5d0, accept
 
@@ -119,3 +119,5 @@ PM amendment, 2026-10-12, seventh. 0573 (caller order and one aggregate packet) 
 PM amendment, 2026-10-13. The Rust ratchet may rise from the core checkpoint of 186,955 to the measured combined total of 187,452, which stays below main. The added lines come from required queue changes and their regression tests. Make no assertion or formatting cuts to meet the old checkpoint. Set the final ratchet to the candidate's measured total, and no higher than main.
 
 PM amendment, 2026-10-13. 0576 joins 0.2. Its engine and generator parts follow 0562 and 0574, and its language parts join the 0563 groups.
+
+PM amendment, 2026-10-13. Ian ruled that the DuckDB community listing ships through 0.2, so 0577 joins it. 0577 runs in its own lane beside the waves, and its descriptor pins the candidate commit.
