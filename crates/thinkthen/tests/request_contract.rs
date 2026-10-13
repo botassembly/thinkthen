@@ -607,3 +607,24 @@ fn named_requests_select_function_and_collection_kind() {
 
 #[path = "support/api.rs"]
 mod api;
+
+#[test]
+fn request_calls_require_objects_before_native_execution() {
+    let listener = Listener::answering(response).unwrap();
+    let engine = engine(&listener);
+    let text = r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#;
+    let error = Request::from_json(text)
+        .and_then(Request::admit)
+        .and_then(|request| {
+            engine
+                .execute_request(&request, RequestEnvironment::default())
+                .map(|_| ())
+        })
+        .expect_err("calls require an object");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert_eq!(
+        error.request_decode_cause(),
+        Some(RequestDecodeCause::Malformed)
+    );
+    assert_eq!(listener.count(), 0, "a sequence call sends nothing");
+}

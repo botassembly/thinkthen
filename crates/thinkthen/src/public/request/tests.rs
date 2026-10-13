@@ -81,6 +81,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         .collect();
     let texts = [
         valid.to_owned(),
+        r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#.to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
         definition(serde_json::json!({"choose":"Which?"})),
         definition(serde_json::json!({"choose":"Which?","options":["a","b"]})),

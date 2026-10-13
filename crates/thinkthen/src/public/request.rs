@@ -366,7 +366,17 @@ impl<'de> Deserialize<'de> for RequestCall {
             #[serde(default)]
             options: RequestOptions,
         }
-        let document = Document::deserialize(decoder)?;
+        struct Object;
+        impl<'de> serde::de::Visitor<'de> for Object {
+            type Value = Document;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a request call object")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
+                Document::deserialize(serde::de::value::MapAccessDeserializer::new(map))
+            }
+        }
+        let document = decoder.deserialize_map(Object)?;
         Ok(Self::new(
             document.function,
             RequestArguments {
