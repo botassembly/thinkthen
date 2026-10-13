@@ -3831,6 +3831,10 @@ func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input 
 func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
 	return c.call(ctx, "relate", question, input, options)
 }
+func ownedObject(raw json.RawMessage) bool {
+	value := bytes.TrimSpace(raw)
+	return len(value) > 0 && value[0] == 123
+}
 
 type AnswerCardinalityError struct {
 	Function string
@@ -3853,14 +3857,27 @@ func (v OwnedCall) answerTerminal() error {
 	if v.Terminal == nil {
 		return &AnswerCardinalityError{Call: v}
 	}
+	kind := v.Terminal.Kind()
+	if kind.Err != nil {
+		return kind.Err
+	}
+	if !kind.Present || kind.Null || kind.Value != "terminal" {
+		return &AnswerCardinalityError{Call: v}
+	}
 	failure := v.Terminal.Failure()
 	if failure.Err != nil {
 		return failure.Err
 	}
-	if failure.Present && !failure.Null {
+	if failure.Present {
+		if failure.Null || !ownedObject(failure.Value.raw) {
+			return &AnswerCardinalityError{Call: v}
+		}
 		detail := failure.Value.Error()
 		if detail.Err != nil {
 			return detail.Err
+		}
+		if !detail.Present || detail.Null || !ownedObject(detail.Value.raw) {
+			return &AnswerCardinalityError{Call: v}
 		}
 		return &SessionError{Call: v, Detail: detail.Value}
 	}
@@ -3871,13 +3888,16 @@ func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error
 		return nil, err
 	}
 	values := make([]json.RawMessage, 0)
+	collection := function == "decide" || function == "choose" || function == "tag" || function == "score" || function == "filter" || function == "rank" || function == "annotate" || function == "recognize"
 	for _, packet := range v.Packets {
 		if !ownedLiteral(packet.raw, "function", function) {
 			continue
 		}
 		var value Presence[json.RawMessage]
+		row := false
 		if judgment == "" {
-			if !ownedLiteral(packet.raw, "kind", "aggregate") {
+			row = collection && ownedLiteral(packet.raw, "kind", "row")
+			if !row && !ownedLiteral(packet.raw, "kind", "aggregate") {
 				continue
 			}
 			value = ownedMember[json.RawMessage](packet.raw, "value")
@@ -3895,12 +3915,31 @@ func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error
 			return nil, value.Err
 		}
 		if value.Present {
+			raw := value.Value
 			if value.Null {
-				values = append(values, json.RawMessage("null"))
+				raw = json.RawMessage("null")
+			}
+			if row {
+				raw, err := json.Marshal([]json.RawMessage{raw})
+				if err != nil {
+					return nil, err
+				}
+				values = append(values, raw)
 			} else {
-				values = append(values, value.Value)
+				values = append(values, raw)
 			}
 		}
+	}
+	if judgment == "" && collection {
+		combined := make([]json.RawMessage, 0)
+		for _, value := range values {
+			var items []json.RawMessage
+			if err := json.Unmarshal(value, &items); err != nil {
+				return nil, err
+			}
+			combined = append(combined, items...)
+		}
+		return json.Marshal(combined)
 	}
 	if len(values) != 1 {
 		return nil, &AnswerCardinalityError{Function: function, Count: len(values), Call: v}
