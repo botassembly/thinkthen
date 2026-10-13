@@ -92,9 +92,9 @@ fn safe_message(text: &str, key: &Key) -> Option<String> {
             .chars()
             .any(|character| character.is_control() && !character.is_whitespace())
         || text.contains(['{', '}', '[', ']', '<', '>'])
-        || text.split_whitespace().any(|word| {
-            opaque_token(word) || word.split([':', '=', '.']).any(|part| opaque_token(part))
-        })
+        || text
+            .split_whitespace()
+            .any(|word| opaque_token(word) || word.split([':', '=', '.']).any(opaque_token))
         || key_echo(text, key)
     {
         return None;
