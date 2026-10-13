@@ -62,8 +62,8 @@ pub fn main() !void {
         for (edges.data[0..edges.len]) |edge| {
             const source = edge.*.source.*.data;
             const target = edge.*.target.*.data;
-            const company = source.fields_kind_name.*.name;
-            const product = target.fields_kind_name.*.name;
+            const company = source.related_entity.*.name;
+            const product = target.related_entity.*.name;
             try who_makes.print(
                 allocator,
                 "{s} makes {s}. ",

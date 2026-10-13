@@ -23,7 +23,7 @@ pub fn main() !void {
         "but export crashes the app,\n" ++
         "and I was charged twice.\n";
     const which_labels: tt.inputs.RequestDefinition = .{
-        .tag = .{
+        .Authored_tag = .{
             .tag = .{ .string = question },
             .labels = .{ .array = &labels },
         },

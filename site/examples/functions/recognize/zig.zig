@@ -50,7 +50,7 @@ pub fn main() !void {
         const rows = found.value.data[0..found.value.len];
         for (rows) |row| {
             const recognized = row.*.value.*;
-            const facts = recognized.data.fields_entities.*;
+            const facts = recognized.data.entities.*;
             const entities = facts.entities;
             for (entities.data[0..entities.len]) |one| {
                 try names.print(allocator, "{s} ({s}). ", .{

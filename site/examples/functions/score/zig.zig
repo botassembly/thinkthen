@@ -22,7 +22,7 @@ pub fn main() !void {
     const outage = "Our checkout page is down and " ++
         "customers cannot pay.\n";
     const how_urgent: tt.inputs.RequestDefinition = .{
-        .score = .{
+        .Authored_score = .{
             .score = .{ .string = question },
             .levels = .{ .array = &levels },
         },

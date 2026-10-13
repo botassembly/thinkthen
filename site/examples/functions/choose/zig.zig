@@ -29,7 +29,7 @@ pub fn main() !void {
     } };
     const parcel = "My parcel went to the wrong address.";
     const which_team: tt.inputs.RequestDefinition = .{
-        .choose = .{
+        .Authored_choose = .{
             .choose = .{ .string = question },
             .options = teams,
         },
