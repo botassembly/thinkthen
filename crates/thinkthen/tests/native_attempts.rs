@@ -273,7 +273,12 @@ fn a_global_timeout_during_connection_setup_retries_without_sending_http_bytes()
 
 #[test]
 fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
-    for message in ["You have no credits remaining", "fixture-native-attempts"] {
+    for message in [
+        "You have no credits remaining",
+        "fixture-native-attempts",
+        "Rejected private evidence marker because it is unsupported",
+        "echo(Zml4dHVyZS1uYXRpdmUtYXR0ZW1wdHM=)",
+    ] {
         let body = serde_json::json!({"error":{"type":"request_error","code":"insufficient_quota","message":message}}).to_string();
         let listener = Listener::serving(vec![Canned::status(429, &body)]).unwrap();
         let engine = Engine::builder()
@@ -291,7 +296,11 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
             .unwrap();
         let question = Question::decide("Refund?").unwrap().cut();
         let error = engine
-            .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+            .decide_with(
+                &question,
+                "private evidence marker",
+                CallOptions::new().attempts(true),
+            )
             .unwrap_err();
         assert_eq!(error.kind(), thinkthen::ErrorKind::Backend);
         assert_eq!(error.stopped().cause(), thinkthen::StopCause::Status);
@@ -307,9 +316,10 @@ fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
         );
         assert_eq!(
             error.to_string().contains("provider message:"),
-            message != "fixture-native-attempts"
+            message == "You have no credits remaining"
         );
         assert!(!format!("{error:?}").contains("fixture-native-attempts"));
+        assert!(!format!("{error:?}").contains("private evidence marker"));
     }
 }
 

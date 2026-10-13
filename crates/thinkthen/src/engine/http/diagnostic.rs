@@ -135,7 +135,9 @@ pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
 fn submitted_text(value: &Json, text: &str, literal: &str) -> bool {
     match value {
         Json::String(value) => {
-            value.contains(text) || !literal.is_empty() && value.contains(literal)
+            value.contains(text)
+                || !literal.is_empty() && value.contains(literal)
+                || reflected_literal(value, text)
         }
         Json::Array(values) => values
             .iter()
@@ -147,20 +149,31 @@ fn submitted_text(value: &Json, text: &str, literal: &str) -> bool {
     }
 }
 
+// Short generic input words collide with ordinary provider prose. Longer exact
+// literals, including decoded strings inside framed JSON, must stay private.
+fn reflected_literal(value: &str, text: &str) -> bool {
+    value.chars().count() >= 8 && text.contains(value)
+        || value.char_indices().any(|(offset, character)| {
+            character == '"'
+                && serde_json::Deserializer::from_str(value.get(offset..).unwrap_or_default())
+                    .into_iter::<String>()
+                    .next()
+                    .is_some_and(|value| value.is_ok_and(|value| reflected_literal(&value, text)))
+        })
+}
+
 pub(super) fn key_echo(text: &str, key: &Key) -> bool {
     !key.as_str().is_empty()
         && (text.contains(key.as_str())
-            || text.split_whitespace().any(|word| {
-                encoded_key(word, key)
-                    || word
-                        .split([':', '=', '.'])
-                        .any(|part| encoded_key(part, key))
-            }))
+            || text
+                .split(|ch: char| !ch.is_ascii_alphanumeric() && !"_-/+=%".contains(ch))
+                .any(|word| {
+                    encoded_key(word, key)
+                        || word.split(['/', '=']).any(|part| encoded_key(part, key))
+                }))
 }
 
 fn encoded_key(word: &str, key: &Key) -> bool {
-    let word =
-        word.trim_matches(|ch: char| matches!(ch, '.' | ',' | ':' | ';' | '\'' | '"' | '(' | ')'));
     let bytes = key.as_str().as_bytes();
     if percent_decoded(word)
         .is_some_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
