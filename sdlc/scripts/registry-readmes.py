@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check public package text against its reviewed source without contacting registries."""
+"""Check packed public text against its authoritative source without contacting registries."""
 import argparse
 import email
 import gzip
@@ -24,6 +24,8 @@ def version(root=REPO):
 
 
 def source(family, root=REPO):
+    if family in ('command', 'packagist'):
+        return root / 'README.md'
     if family == 'crate':
         return root / 'crates/thinkthen/README.md'
     if family in ('typescript', 'go', 'ruby'):
@@ -41,11 +43,17 @@ def check_text(data, release):
         'adr': r'\bADR[\s#:-]*\d+\b',
         'ticket': r'\bticket[\s#:-]*\d+\b',
         'internal-path': r'\bsdlc[/\\]',
+        'internal-project': r'\b(?:thinkthen[-_]core|thinkthen[-_]native|thinkthen[-_]conformance)\b',
         'internal-crate': r'\bthinkthen-(?:python|node|ruby|c|postgresql|sqlite|duckdb)\b(?!-\d)',
     }
     for reason, pattern in rules.items():
         if re.search(pattern, text, re.I):
             raise Refusal(reason)
+    names = Path.home() / '.config/thinkthen/private-names.txt'
+    if names.is_file():
+        for name in names.read_text().splitlines():
+            if name.strip() and re.search(r'(?<!\w)' + re.escape(name.strip()) + r'(?!\w)', text, re.I):
+                raise Refusal('private-name')
     # Versioned ThinkThen artifacts, release URLs, install pins and explicit product claims.
     # Other packages' compiler, Rust, DuckDB and language-runtime versions are unrestricted.
     patterns = [
@@ -63,6 +71,8 @@ def check_text(data, release):
 
 def check_readme(family, data, root=REPO):
     check_text(data, version(root))
+    if len(data.decode().splitlines()) >= 40:
+        raise Refusal('readme-line-limit')
     expected = source(family, root).read_bytes()
     if data != expected:
         raise Refusal('readme-source-mismatch: ' + family)
@@ -89,6 +99,8 @@ def description(family, root=REPO):
         path = 'libraries/python/pyproject.toml' if family == 'python' else 'crates/thinkthen/Cargo.toml'
         key = 'project' if family == 'python' else 'package'
         return tomllib.loads((root / path).read_text())[key]['description']
+    if family == 'packagist':
+        return json.loads((root / 'composer.json').read_text())['description']
     if family in ('typescript', 'php'):
         path = 'libraries/typescript/package.json' if family == 'typescript' else 'libraries/php/composer.json'
         return json.loads((root / path).read_text())['description']
@@ -115,8 +127,8 @@ def check_description(family, text, root=REPO):
 def check_package(family, path, root=REPO):
     files = members(path.read_bytes(), path.suffix in ('.whl', '.nupkg', '.zip'))
     if family == 'python':
-        metadata = email.message_from_bytes(unique_suffix(files, 'METADATA'))
-        check_readme(family, metadata.get_payload().encode(), root)
+        metadata = email.message_from_bytes(unique_suffix(files, 'METADATA') if path.suffix == '.whl' else unique_suffix(files, 'PKG-INFO'))
+        check_readme(family, metadata.get_payload(decode=True), root)
         check_description(family, metadata['Summary'], root)
     elif family == 'ruby':
         package = members(files['data.tar.gz'])
@@ -169,13 +181,48 @@ def check_nupkg(data, root):
     check_description('csharp', text, root)
 
 
+PUBLIC_FAMILIES = ('command', 'crate', 'python', 'typescript', 'ruby', 'go', 'cpp',
+                   'c', 'csharp', 'jvm', 'swift', 'zig', 'php', 'dart', 'flutter',
+                   'ada', 'objective-c', 'cobol', 'r', 'sqlite', 'postgresql', 'duckdb', 'packagist')
+
+
+def check_sources(root=REPO):
+    for family in PUBLIC_FAMILIES:
+        check_readme(family, source(family, root).read_bytes(), root)
+        text = description(family, root)
+        if text is not None:
+            check_description(family, text, root)
+
+
+def archive_family(path):
+    name = path.name
+    if name.endswith('.crate'): return 'crate'
+    if name.endswith('.whl'): return 'python'
+    if name.endswith('.gem'): return 'ruby'
+    if name.endswith('.nupkg'): return 'csharp'
+    if name.startswith('thinkthen_'): return 'r'
+    for family in PUBLIC_FAMILIES:
+        if name.startswith('thinkthen-' + family + '-') or (family == 'postgresql' and name.startswith('thinkthen-postgresql16-')):
+            return family
+    if name.endswith('.tgz'): return 'typescript'
+    if re.match(r'thinkthen-\d', name): return 'command'
+    raise Refusal('unknown-package-family')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('family')
-    parser.add_argument('packages', type=Path, nargs='+')
+    parser.add_argument('family', choices=PUBLIC_FAMILIES + ('auto', 'sources'))
+    parser.add_argument('packages', type=Path, nargs='*')
     args = parser.parse_args()
+    if args.family == 'sources':
+        check_sources()
+        print('registry-readmes: checked public sources (drafts; no approval implied)')
+        return
+    if not args.packages:
+        parser.error('package paths are required')
     for package in args.packages:
-        check_package(args.family, package)
+        family = archive_family(package) if args.family == 'auto' else args.family
+        check_package(family, package)
         print('registry-readmes: checked ' + package.name)
 
 

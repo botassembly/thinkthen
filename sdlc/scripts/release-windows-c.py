@@ -17,6 +17,7 @@ TARGET = 'x86_64-pc-windows-msvc'
 MEMBERS = ('include/thinkthen.h', 'bin/thinkthen.dll', 'lib/thinkthen.dll.lib')
 REPO = Path(__file__).resolve().parents[2]
 HEADER = REPO / 'libraries/c/include/thinkthen.h'
+PUBLIC_TEXT = runpy.run_path(str(Path(__file__).with_name('registry-readmes.py')))
 CAPTURE = runpy.run_path(str(Path(__file__).with_name('release-bounded.py')))['capture']
 
 
@@ -166,12 +167,13 @@ def pack(stage, archive):
         raise ValueError('C ZIP header differs from committed header')
     payload(*contents)
     with zipfile.ZipFile(archive, 'w', compression=zipfile.ZIP_DEFLATED) as out:
-        for name, data in zip(MEMBERS, contents):
+        for name, data in zip(MEMBERS + ('README.md',), contents + [PUBLIC_TEXT['source']('c').read_bytes()]):
             member = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
             member.create_system = 3
             member.compress_type = zipfile.ZIP_DEFLATED
             member.external_attr = 0o100644 << 16
             out.writestr(member, data)
+    PUBLIC_TEXT['check_package']('c', archive)
     checksum(archive)
 
 
@@ -183,14 +185,15 @@ def check(archive):
     if sidecar.read_text().strip() != f'{hashlib.sha256(archive.read_bytes()).hexdigest()}  {archive.name}':
         raise ValueError('C ZIP differs from its checksum')
     with zipfile.ZipFile(archive) as source:
-        if source.namelist() != list(MEMBERS):
-            raise ValueError('C ZIP must hold exactly header, DLL and import library')
+        if source.namelist() != list(MEMBERS) + ['README.md']:
+            raise ValueError('C ZIP must hold exactly header, DLL, import library and README')
         if any(info.external_attr >> 16 & 0o170000 != 0o100000 for info in source.infolist()):
             raise ValueError('C ZIP members must be regular files')
         contents = [source.read(name) for name in MEMBERS]
     if contents[0] != HEADER.read_bytes():
         raise ValueError('C ZIP header differs from committed header')
     payload(*contents)
+    PUBLIC_TEXT['check_package']('c', archive)
     return contents
 
 

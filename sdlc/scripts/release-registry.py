@@ -163,6 +163,11 @@ def deterministic_zip(path, members):
             bundle.writestr(info, data)
 
 
+public_spec = importlib.util.spec_from_file_location('public_text', REPO / 'sdlc/scripts/registry-readmes.py')
+public_text = importlib.util.module_from_spec(public_spec)
+public_spec.loader.exec_module(public_text)
+
+
 def pack(platform, out, sha):
     v = version()
     head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO, capture_output=True, text=True).stdout.strip()
@@ -170,11 +175,15 @@ def pack(platform, out, sha):
     require(not out.exists() or (out.is_dir() and not any(out.iterdir())), "registry output must start empty")
     check_composer()
     check_go()
+    for family in ("packagist", "go"):
+        public_text.check_readme(family, public_text.source(family).read_bytes())
+    public_text.check_description("packagist", public_text.description("packagist"))
 
     csharp = archive_files(platform, "csharp", v)
     nupkg_name = f"{NUGET_ID}.{v}.nupkg"
     require(nupkg_name in csharp, f"C# archive lacks {nupkg_name}")
     check_nupkg(csharp[nupkg_name], v)
+    public_text.check_package("csharp", platform / f"thinkthen-csharp-{v}-{TARGET}.tar.gz")
     with zipfile.ZipFile(io.BytesIO(csharp[nupkg_name])) as package:
         members = {name: package.read(name) for name in package.namelist()}
     definition = package_inventory.csharp_inventory()
@@ -194,11 +203,14 @@ def pack(platform, out, sha):
     (out / "nuget").mkdir(parents=True)
     deterministic_zip(out / "nuget" / nupkg_name, sorted(members.items()))
 
+    public_text.check_package("csharp", out / "nuget" / nupkg_name)
+
     jvm = archive_files(platform, "jvm", v)
     definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'], target=TARGET)
     for name in definition['files'] + definition['examples']:
         require(name in jvm, f"JVM archive lacks {name}")
     check_pom(jvm["pom.xml"], v)
+    public_text.check_package("jvm", platform / f"thinkthen-jvm-{v}-{TARGET}.tar.gz")
     base = out / "maven" / GROUP.replace(".", "/") / ARTIFACT / v
     base.mkdir(parents=True)
     stem = f"{ARTIFACT}-{v}"
@@ -220,6 +232,9 @@ def pack(platform, out, sha):
                       [(p.relative_to(REPO / "libraries/jvm").as_posix(), p.read_bytes()) for p in sources])
     # Central accepts a javadoc JAR that holds only a README when no pages can be generated.
     deterministic_zip(base / f"{stem}-javadoc.jar", [("README.md", jvm["README.md"])])
+    with zipfile.ZipFile(base / f"{stem}-javadoc.jar") as pages:
+        public_text.check_readme("jvm", pages.read("README.md"))
+    public_text.check_description("jvm", next(node.text.strip() for node in ET.fromstring(jvm["pom.xml"]).iter() if node.tag.rsplit("}", 1)[-1] == "description"))
     for path in sorted(base.iterdir()):
         data = path.read_bytes()
         path.with_name(path.name + ".md5").write_text(hashlib.md5(data).hexdigest())
@@ -228,12 +243,14 @@ def pack(platform, out, sha):
     dart = archive_files(platform, "dart", v)
     require("pubspec.yaml" in dart, "Dart archive lacks pubspec.yaml")
     check_pubspec(dart["pubspec.yaml"].decode("utf-8"), v)
+    public_text.check_package("dart", platform / f"thinkthen-dart-{v}-{TARGET}.tar.gz")
     pub = out / "pub" / PUB_NAME
     for name, data in dart.items():
         if name in ("THINKTHEN-PACKAGE-INPUTS", "pubspec.lock"):
             continue
         (pub / name).parent.mkdir(parents=True, exist_ok=True)
         (pub / name).write_bytes(data)
+    public_text.check_readme("dart", (pub / "README.md").read_bytes())
     print(f"release-registry: packed {nupkg_name}, {stem} and {PUB_NAME} {v}")
 
 
@@ -435,7 +452,7 @@ def main(argv):
             case _:
                 print(__doc__, file=sys.stderr)
                 return 2
-    except Refusal as refusal:
+    except (Refusal, public_text.Refusal) as refusal:
         print(f"release-registry: {refusal}", file=sys.stderr)
         return 1
     return 0
