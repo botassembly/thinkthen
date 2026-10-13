@@ -16,46 +16,34 @@ package Optional_Values is
    end record;
 end Optional_Values;
 type T_JSON is new JSON_Value;
-function Encode (Value : T_JSON) return String;
 package T_JSON_Options is new Optional_Values (T_JSON);
 subtype T_JSON_Optional is T_JSON_Options.Optional;
 type T_Authored_profile is new Unbounded_String;
-function Encode (Value : T_Authored_profile) return String;
 package T_Authored_profile_Options is new Optional_Values (T_Authored_profile);
 subtype T_Authored_profile_Optional is T_Authored_profile_Options.Optional;
 type T_Literal_string is null record;
-function Encode (Value : T_Literal_string) return String;
 type T_Authored_inputDeclaration_string is record
 T_type : T_Literal_string;
 end record;
-function Encode (Value : T_Authored_inputDeclaration_string) return String;
 type T_Authored_inputProperty_string is record
 T_type : T_Literal_string;
 end record;
-function Encode (Value : T_Authored_inputProperty_string) return String;
 type T_Literal_number is null record;
-function Encode (Value : T_Literal_number) return String;
 type T_Authored_inputProperty_number is record
 T_type : T_Literal_number;
 end record;
-function Encode (Value : T_Authored_inputProperty_number) return String;
 type T_Literal_boolean is null record;
-function Encode (Value : T_Literal_boolean) return String;
 type T_Authored_inputProperty_boolean is record
 T_type : T_Literal_boolean;
 end record;
-function Encode (Value : T_Authored_inputProperty_boolean) return String;
 type T_Authored_inputProperty_array_field_items is record
 T_type : T_Literal_string;
 end record;
-function Encode (Value : T_Authored_inputProperty_array_field_items) return String;
 type T_Literal_array is null record;
-function Encode (Value : T_Literal_array) return String;
 type T_Authored_inputProperty_array is record
 T_items : T_Authored_inputProperty_array_field_items;
 T_type : T_Literal_array;
 end record;
-function Encode (Value : T_Authored_inputProperty_array) return String;
 type T_Authored_inputProperty_Kind is (T_Authored_inputProperty_arm_string,
 T_Authored_inputProperty_arm_number,
 T_Authored_inputProperty_arm_boolean,
@@ -68,29 +56,23 @@ when T_Authored_inputProperty_arm_boolean => V_2 : T_Authored_inputProperty_bool
 when T_Authored_inputProperty_arm_array => V_3 : T_Authored_inputProperty_array;
 end case;
 end record;
-function Encode (Value : T_Authored_inputProperty) return String;
 type T_Authored_inputProperty_Map_Entry is record
 Key : Unbounded_String;
 Value : T_Authored_inputProperty;
 end record;
 package T_Authored_inputProperty_Map_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_inputProperty_Map_Entry);
 subtype T_Authored_inputProperty_Map is T_Authored_inputProperty_Map_Vectors.Vector;
-function Encode (Value : T_Authored_inputProperty_Map) return String;
 type T_Text is new Unbounded_String;
-function Encode (Value : T_Text) return String;
 package T_Text_List_Vectors is new Ada.Containers.Vectors (Positive, T_Text);
 subtype T_Text_List is T_Text_List_Vectors.Vector;
-function Encode (Value : T_Text_List) return String;
 package T_Text_List_Options is new Optional_Values (T_Text_List);
 subtype T_Text_List_Optional is T_Text_List_Options.Optional;
 type T_Literal_object is null record;
-function Encode (Value : T_Literal_object) return String;
 type T_Authored_inputDeclaration_object is record
 T_properties : T_Authored_inputProperty_Map;
 T_required : T_Text_List_Optional;
 T_type : T_Literal_object;
 end record;
-function Encode (Value : T_Authored_inputDeclaration_object) return String;
 type T_Authored_inputDeclaration_Kind is (T_Authored_inputDeclaration_arm_string,
 T_Authored_inputDeclaration_arm_object);
 type T_Authored_inputDeclaration (Kind : T_Authored_inputDeclaration_Kind := T_Authored_inputDeclaration_arm_string) is record
@@ -99,7 +81,6 @@ when T_Authored_inputDeclaration_arm_string => V_0 : T_Authored_inputDeclaration
 when T_Authored_inputDeclaration_arm_object => V_1 : T_Authored_inputDeclaration_object;
 end case;
 end record;
-function Encode (Value : T_Authored_inputDeclaration) return String;
 package T_Authored_inputDeclaration_Options is new Optional_Values (T_Authored_inputDeclaration);
 subtype T_Authored_inputDeclaration_Optional is T_Authored_inputDeclaration_Options.Optional;
 type T_JSON_Map_Entry is record
@@ -108,10 +89,8 @@ Value : T_JSON;
 end record;
 package T_JSON_Map_Vectors is new Ada.Containers.Vectors (Positive, T_JSON_Map_Entry);
 subtype T_JSON_Map is T_JSON_Map_Vectors.Vector;
-function Encode (Value : T_JSON_Map) return String;
 package T_JSON_List_Vectors is new Ada.Containers.Vectors (Positive, T_JSON);
 subtype T_JSON_List is T_JSON_List_Vectors.Vector;
-function Encode (Value : T_JSON_List) return String;
 type T_Authored_questionText_Kind is (T_Authored_questionText_arm_0,
 T_Authored_questionText_arm_1,
 T_Authored_questionText_arm_2);
@@ -122,9 +101,7 @@ when T_Authored_questionText_arm_1 => V_1 : T_JSON_Map;
 when T_Authored_questionText_arm_2 => V_2 : T_JSON_List;
 end case;
 end record;
-function Encode (Value : T_Authored_questionText) return String;
 type T_Null is null record;
-function Encode (Value : T_Null) return String;
 type T_Authored_criterion_Kind is (T_Authored_criterion_arm_0,
 T_Authored_criterion_arm_1,
 T_Authored_criterion_arm_2,
@@ -137,7 +114,6 @@ when T_Authored_criterion_arm_2 => V_2 : T_JSON_List;
 when T_Authored_criterion_arm_3 => V_3 : T_Null;
 end case;
 end record;
-function Encode (Value : T_Authored_criterion) return String;
 package T_Authored_criterion_Options is new Optional_Values (T_Authored_criterion);
 subtype T_Authored_criterion_Optional is T_Authored_criterion_Options.Optional;
 package T_Text_Options is new Optional_Values (T_Text);
@@ -150,11 +126,9 @@ when T_Authored_pointers_arm_0 => V_0 : T_Text;
 when T_Authored_pointers_arm_1 => V_1 : T_Text_List;
 end case;
 end record;
-function Encode (Value : T_Authored_pointers) return String;
 package T_Authored_pointers_Options is new Optional_Values (T_Authored_pointers);
 subtype T_Authored_pointers_Optional is T_Authored_pointers_Options.Optional;
 type T_Number is new Long_Float;
-function Encode (Value : T_Number) return String;
 type T_Authored_threshold_Kind is (T_Authored_threshold_arm_0,
 T_Authored_threshold_arm_1);
 type T_Authored_threshold (Kind : T_Authored_threshold_Kind := T_Authored_threshold_arm_0) is record
@@ -163,11 +137,9 @@ when T_Authored_threshold_arm_0 => V_0 : T_Number;
 when T_Authored_threshold_arm_1 => V_1 : T_Text;
 end case;
 end record;
-function Encode (Value : T_Authored_threshold) return String;
 package T_Authored_threshold_Options is new Optional_Values (T_Authored_threshold);
 subtype T_Authored_threshold_Optional is T_Authored_threshold_Options.Optional;
 type T_Integer is new Interfaces.Integer_64;
-function Encode (Value : T_Integer) return String;
 package T_Integer_Options is new Optional_Values (T_Integer);
 subtype T_Integer_Optional is T_Integer_Options.Optional;
 type T_AnnotateQuestion_decide is record
@@ -181,12 +153,9 @@ T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_AnnotateQuestion_decide) return String;
 type T_Authored_name is new Unbounded_String;
-function Encode (Value : T_Authored_name) return String;
 package T_Authored_name_List_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_name);
 subtype T_Authored_name_List is T_Authored_name_List_Vectors.Vector;
-function Encode (Value : T_Authored_name_List) return String;
 type T_Authored_description_Kind is (T_Authored_description_arm_0,
 T_Authored_description_arm_1,
 T_Authored_description_arm_2,
@@ -199,14 +168,12 @@ when T_Authored_description_arm_2 => V_2 : T_JSON_List;
 when T_Authored_description_arm_3 => V_3 : T_Null;
 end case;
 end record;
-function Encode (Value : T_Authored_description) return String;
 type T_Authored_description_Map_Entry is record
 Key : Unbounded_String;
 Value : T_Authored_description;
 end record;
 package T_Authored_description_Map_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_description_Map_Entry);
 subtype T_Authored_description_Map is T_Authored_description_Map_Vectors.Vector;
-function Encode (Value : T_Authored_description_Map) return String;
 type T_Authored_options_Kind is (T_Authored_options_arm_0,
 T_Authored_options_arm_1);
 type T_Authored_options (Kind : T_Authored_options_Kind := T_Authored_options_arm_0) is record
@@ -215,7 +182,6 @@ when T_Authored_options_arm_0 => V_0 : T_Authored_name_List;
 when T_Authored_options_arm_1 => V_1 : T_Authored_description_Map;
 end case;
 end record;
-function Encode (Value : T_Authored_options) return String;
 package T_Authored_options_Options is new Optional_Values (T_Authored_options);
 subtype T_Authored_options_Optional is T_Authored_options_Options.Optional;
 type T_Authored_cut_Kind is (T_Authored_cut_arm_0,
@@ -226,7 +192,6 @@ when T_Authored_cut_arm_0 => V_0 : T_Number;
 when T_Authored_cut_arm_1 => V_1 : T_Text;
 end case;
 end record;
-function Encode (Value : T_Authored_cut) return String;
 package T_Authored_cut_Options is new Optional_Values (T_Authored_cut);
 subtype T_Authored_cut_Optional is T_Authored_cut_Options.Optional;
 type T_AnnotateQuestion_choose is record
@@ -239,7 +204,6 @@ T_options : T_Authored_options_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_AnnotateQuestion_choose) return String;
 type T_Authored_labels_Kind is (T_Authored_labels_arm_0,
 T_Authored_labels_arm_1);
 type T_Authored_labels (Kind : T_Authored_labels_Kind := T_Authored_labels_arm_0) is record
@@ -248,7 +212,6 @@ when T_Authored_labels_arm_0 => V_0 : T_Authored_name_List;
 when T_Authored_labels_arm_1 => V_1 : T_Authored_description_Map;
 end case;
 end record;
-function Encode (Value : T_Authored_labels) return String;
 package T_Authored_labels_Options is new Optional_Values (T_Authored_labels);
 subtype T_Authored_labels_Optional is T_Authored_labels_Options.Optional;
 type T_AnnotateQuestion_tag is record
@@ -261,14 +224,12 @@ T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_AnnotateQuestion_tag) return String;
 type T_Authored_criterion_Map_Entry is record
 Key : Unbounded_String;
 Value : T_Authored_criterion;
 end record;
 package T_Authored_criterion_Map_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_criterion_Map_Entry);
 subtype T_Authored_criterion_Map is T_Authored_criterion_Map_Vectors.Vector;
-function Encode (Value : T_Authored_criterion_Map) return String;
 type T_Authored_levels_Kind is (T_Authored_levels_arm_0,
 T_Authored_levels_arm_1);
 type T_Authored_levels (Kind : T_Authored_levels_Kind := T_Authored_levels_arm_0) is record
@@ -277,7 +238,6 @@ when T_Authored_levels_arm_0 => V_0 : T_Authored_name_List;
 when T_Authored_levels_arm_1 => V_1 : T_Authored_criterion_Map;
 end case;
 end record;
-function Encode (Value : T_Authored_levels) return String;
 package T_Authored_levels_Options is new Optional_Values (T_Authored_levels);
 subtype T_Authored_levels_Optional is T_Authored_levels_Options.Optional;
 type T_AnnotateQuestion_score is record
@@ -289,7 +249,6 @@ T_on : T_Authored_pointers_Optional;
 T_score : T_Authored_questionText;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_AnnotateQuestion_score) return String;
 type T_AnnotateQuestion_Kind is (T_AnnotateQuestion_arm_decide,
 T_AnnotateQuestion_arm_choose,
 T_AnnotateQuestion_arm_tag,
@@ -302,16 +261,13 @@ when T_AnnotateQuestion_arm_tag => V_2 : T_AnnotateQuestion_tag;
 when T_AnnotateQuestion_arm_score => V_3 : T_AnnotateQuestion_score;
 end case;
 end record;
-function Encode (Value : T_AnnotateQuestion) return String;
 type T_AnnotateQuestion_Map_Entry is record
 Key : Unbounded_String;
 Value : T_AnnotateQuestion;
 end record;
 package T_AnnotateQuestion_Map_Vectors is new Ada.Containers.Vectors (Positive, T_AnnotateQuestion_Map_Entry);
 subtype T_AnnotateQuestion_Map is T_AnnotateQuestion_Map_Vectors.Vector;
-function Encode (Value : T_AnnotateQuestion_Map) return String;
 type T_Literal_1 is null record;
-function Encode (Value : T_Literal_1) return String;
 type T_AnnotateDefinition is record
 T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
@@ -319,9 +275,7 @@ T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
 T_version : T_Literal_1;
 end record;
-function Encode (Value : T_AnnotateDefinition) return String;
 type T_Literal_max is null record;
-function Encode (Value : T_Literal_max) return String;
 type T_Authored_choose_field_batch_Kind is (T_Authored_choose_field_batch_arm_0,
 T_Authored_choose_field_batch_arm_1);
 type T_Authored_choose_field_batch (Kind : T_Authored_choose_field_batch_Kind := T_Authored_choose_field_batch_arm_0) is record
@@ -330,7 +284,6 @@ when T_Authored_choose_field_batch_arm_0 => V_0 : T_Literal_max;
 when T_Authored_choose_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_Authored_choose_field_batch) return String;
 package T_Authored_choose_field_batch_Options is new Optional_Values (T_Authored_choose_field_batch);
 subtype T_Authored_choose_field_batch_Optional is T_Authored_choose_field_batch_Options.Optional;
 package T_Authored_name_Options is new Optional_Values (T_Authored_name);
@@ -348,7 +301,6 @@ T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_choose) return String;
 type T_Authored_decide_field_batch_Kind is (T_Authored_decide_field_batch_arm_0,
 T_Authored_decide_field_batch_arm_1);
 type T_Authored_decide_field_batch (Kind : T_Authored_decide_field_batch_Kind := T_Authored_decide_field_batch_arm_0) is record
@@ -357,7 +309,6 @@ when T_Authored_decide_field_batch_arm_0 => V_0 : T_Literal_max;
 when T_Authored_decide_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_Authored_decide_field_batch) return String;
 package T_Authored_decide_field_batch_Options is new Optional_Values (T_Authored_decide_field_batch);
 subtype T_Authored_decide_field_batch_Optional is T_Authored_decide_field_batch_Options.Optional;
 type T_Authored_decide is record
@@ -374,7 +325,6 @@ T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_decide) return String;
 type T_Authored_find is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_find : T_Authored_questionText;
@@ -385,16 +335,13 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_find) return String;
 type T_RelateFields is record
 T_kind : T_Text;
 T_name : T_Text;
 end record;
-function Encode (Value : T_RelateFields) return String;
 package T_RelateFields_Options is new Optional_Values (T_RelateFields);
 subtype T_RelateFields_Optional is T_RelateFields_Options.Optional;
 type T_Boolean is new Boolean;
-function Encode (Value : T_Boolean) return String;
 package T_Boolean_Options is new Optional_Values (T_Boolean);
 subtype T_Boolean_Optional is T_Boolean_Options.Optional;
 type T_Authored_relation is record
@@ -405,15 +352,12 @@ T_single : T_Boolean_Optional;
 T_source : T_Authored_name_Optional;
 T_target : T_Authored_name_Optional;
 end record;
-function Encode (Value : T_Authored_relation) return String;
 package T_Authored_relation_List_Vectors is new Ada.Containers.Vectors (Positive, T_Authored_relation);
 subtype T_Authored_relation_List is T_Authored_relation_List_Vectors.Vector;
-function Encode (Value : T_Authored_relation_List) return String;
 type T_RelateQuestion is record
 T_fields : T_RelateFields_Optional;
 T_relations : T_Authored_relation_List;
 end record;
-function Encode (Value : T_RelateQuestion) return String;
 type T_Authored_relate is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -425,7 +369,6 @@ T_threshold : T_Authored_cut_Optional;
 T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_relate) return String;
 type T_Authored_score_field_batch_Kind is (T_Authored_score_field_batch_arm_0,
 T_Authored_score_field_batch_arm_1);
 type T_Authored_score_field_batch (Kind : T_Authored_score_field_batch_Kind := T_Authored_score_field_batch_arm_0) is record
@@ -434,7 +377,6 @@ when T_Authored_score_field_batch_arm_0 => V_0 : T_Literal_max;
 when T_Authored_score_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_Authored_score_field_batch) return String;
 package T_Authored_score_field_batch_Options is new Optional_Values (T_Authored_score_field_batch);
 subtype T_Authored_score_field_batch_Optional is T_Authored_score_field_batch_Options.Optional;
 type T_Authored_score is record
@@ -449,7 +391,6 @@ T_profile : T_Authored_profile_Optional;
 T_score : T_Authored_questionText;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_score) return String;
 type T_Authored_tag_field_batch_Kind is (T_Authored_tag_field_batch_arm_0,
 T_Authored_tag_field_batch_arm_1);
 type T_Authored_tag_field_batch (Kind : T_Authored_tag_field_batch_Kind := T_Authored_tag_field_batch_arm_0) is record
@@ -458,7 +399,6 @@ when T_Authored_tag_field_batch_arm_0 => V_0 : T_Literal_max;
 when T_Authored_tag_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_Authored_tag_field_batch) return String;
 package T_Authored_tag_field_batch_Options is new Optional_Values (T_Authored_tag_field_batch);
 subtype T_Authored_tag_field_batch_Optional is T_Authored_tag_field_batch_Options.Optional;
 type T_Authored_tag is record
@@ -474,7 +414,6 @@ T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_Authored_tag) return String;
 type T_ContextSchema_Kind is (T_ContextSchema_arm_0,
 T_ContextSchema_arm_1);
 type T_ContextSchema (Kind : T_ContextSchema_Kind := T_ContextSchema_arm_0) is record
@@ -483,35 +422,27 @@ when T_ContextSchema_arm_0 => V_0 : T_Text;
 when T_ContextSchema_arm_1 => V_1 : T_JSON_Map;
 end case;
 end record;
-function Encode (Value : T_ContextSchema) return String;
 type T_ImageMedia is (T_ImageMedia_image_jpeg,
 T_ImageMedia_image_png);
-function Encode (Value : T_ImageMedia) return String;
 type T_OptionSchema is record
 T_description : T_JSON_Optional;
 T_name : T_Text;
 end record;
-function Encode (Value : T_OptionSchema) return String;
 type T_ReaderMedia is (T_ReaderMedia_text,
 T_ReaderMedia_image);
-function Encode (Value : T_ReaderMedia) return String;
 type T_Unsigned is new Interfaces.Unsigned_64;
-function Encode (Value : T_Unsigned) return String;
 type T_RecognitionExampleEntity is record
 T_end : T_Unsigned;
 T_kind : T_Text;
 T_start : T_Unsigned;
 end record;
-function Encode (Value : T_RecognitionExampleEntity) return String;
 package T_RecognitionExampleEntity_List_Vectors is new Ada.Containers.Vectors (Positive, T_RecognitionExampleEntity);
 subtype T_RecognitionExampleEntity_List is T_RecognitionExampleEntity_List_Vectors.Vector;
-function Encode (Value : T_RecognitionExampleEntity_List) return String;
 type T_RecognitionExampleText is record
 T_entities : T_RecognitionExampleEntity_List;
 T_kinds : T_Text_List_Optional;
 T_text : Thinkthen.Requests.T_Text;
 end record;
-function Encode (Value : T_RecognitionExampleText) return String;
 type T_RecognitionExample_Kind is (T_RecognitionExample_arm_0,
 T_RecognitionExample_arm_1);
 type T_RecognitionExample (Kind : T_RecognitionExample_Kind := T_RecognitionExample_arm_0) is record
@@ -520,22 +451,18 @@ when T_RecognitionExample_arm_0 => V_0 : T_Text;
 when T_RecognitionExample_arm_1 => V_1 : T_RecognitionExampleText;
 end case;
 end record;
-function Encode (Value : T_RecognitionExample) return String;
 type T_RecognitionMode is (T_RecognitionMode_whole,
 T_RecognitionMode_boundary_only);
-function Encode (Value : T_RecognitionMode) return String;
 type T_RecognitionSeedSpan is record
 T_end : T_Unsigned;
 T_kind : T_Text_Optional;
 T_start : T_Unsigned;
 end record;
-function Encode (Value : T_RecognitionSeedSpan) return String;
 type T_RecognitionStageContext is record
 T_boundary : T_Text_Optional;
 T_kind_edge : T_Text_Optional;
 T_relation : T_Text_Optional;
 end record;
-function Encode (Value : T_RecognitionStageContext) return String;
 package T_Authored_questionText_Options is new Optional_Values (T_Authored_questionText);
 subtype T_Authored_questionText_Optional is T_Authored_questionText_Options.Optional;
 package T_Authored_description_Map_Options is new Optional_Values (T_Authored_description_Map);
@@ -557,7 +484,6 @@ T_relations : T_Authored_relation_List_Optional;
 T_snippet_pieces : T_Unsigned_Optional;
 T_stage_context : T_RecognitionStageContext_Optional;
 end record;
-function Encode (Value : T_RecognizeQuestion) return String;
 type T_RecognizeDefinition is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -571,7 +497,6 @@ T_threshold : T_Authored_cut_Optional;
 T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RecognizeDefinition) return String;
 type T_RequestFunction is (T_RequestFunction_decide,
 T_RequestFunction_choose,
 T_RequestFunction_tag,
@@ -582,9 +507,7 @@ T_RequestFunction_find,
 T_RequestFunction_annotate,
 T_RequestFunction_recognize,
 T_RequestFunction_relate);
-function Encode (Value : T_RequestFunction) return String;
 type T_Literal_file is null record;
-function Encode (Value : T_Literal_file) return String;
 package T_ImageMedia_Options is new Optional_Values (T_ImageMedia);
 subtype T_ImageMedia_Optional is T_ImageMedia_Options.Optional;
 type T_RequestImage_file is record
@@ -592,15 +515,12 @@ T_kind : T_Literal_file;
 T_media : T_ImageMedia_Optional;
 T_path : T_Text;
 end record;
-function Encode (Value : T_RequestImage_file) return String;
 type T_Literal_bytes is null record;
-function Encode (Value : T_Literal_bytes) return String;
 type T_RequestImage_bytes is record
 T_bytes : T_Text;
 T_kind : T_Literal_bytes;
 T_media : T_ImageMedia;
 end record;
-function Encode (Value : T_RequestImage_bytes) return String;
 type T_RequestImage_Kind is (T_RequestImage_arm_file,
 T_RequestImage_arm_bytes);
 type T_RequestImage (Kind : T_RequestImage_Kind := T_RequestImage_arm_file) is record
@@ -609,50 +529,40 @@ when T_RequestImage_arm_file => V_0 : T_RequestImage_file;
 when T_RequestImage_arm_bytes => V_1 : T_RequestImage_bytes;
 end case;
 end record;
-function Encode (Value : T_RequestImage) return String;
 package T_RequestImage_List_Vectors is new Ada.Containers.Vectors (Positive, T_RequestImage);
 subtype T_RequestImage_List is T_RequestImage_List_Vectors.Vector;
-function Encode (Value : T_RequestImage_List) return String;
 package T_RequestImage_List_Options is new Optional_Values (T_RequestImage_List);
 subtype T_RequestImage_List_Optional is T_RequestImage_List_Options.Optional;
 type T_Literal_text is null record;
-function Encode (Value : T_Literal_text) return String;
 type T_RequestInput_text is record
 T_images : T_RequestImage_List_Optional;
 T_kind : T_Literal_text;
 T_text : Thinkthen.Requests.T_Text;
 end record;
-function Encode (Value : T_RequestInput_text) return String;
 type T_Literal_json is null record;
-function Encode (Value : T_Literal_json) return String;
 type T_RequestInput_json is record
 T_images : T_RequestImage_List_Optional;
 T_kind : T_Literal_json;
 T_value : T_JSON;
 end record;
-function Encode (Value : T_RequestInput_json) return String;
 package T_ContextSchema_Options is new Optional_Values (T_ContextSchema);
 subtype T_ContextSchema_Optional is T_ContextSchema_Options.Optional;
 package T_RecognitionExample_List_Vectors is new Ada.Containers.Vectors (Positive, T_RecognitionExample);
 subtype T_RecognitionExample_List is T_RecognitionExample_List_Vectors.Vector;
-function Encode (Value : T_RecognitionExample_List) return String;
 package T_RecognitionExample_List_Options is new Optional_Values (T_RecognitionExample_List);
 subtype T_RecognitionExample_List_Optional is T_RecognitionExample_List_Options.Optional;
 package T_OptionSchema_List_Vectors is new Ada.Containers.Vectors (Positive, T_OptionSchema);
 subtype T_OptionSchema_List is T_OptionSchema_List_Vectors.Vector;
-function Encode (Value : T_OptionSchema_List) return String;
 package T_OptionSchema_List_Options is new Optional_Values (T_OptionSchema_List);
 subtype T_OptionSchema_List_Optional is T_OptionSchema_List_Options.Optional;
 type T_RequestOriginal_text is record
 T_kind : T_Literal_text;
 T_text : Thinkthen.Requests.T_Text;
 end record;
-function Encode (Value : T_RequestOriginal_text) return String;
 type T_RequestOriginal_json is record
 T_kind : T_Literal_json;
 T_value : T_JSON;
 end record;
-function Encode (Value : T_RequestOriginal_json) return String;
 type T_RequestOriginal_Kind is (T_RequestOriginal_arm_text,
 T_RequestOriginal_arm_json);
 type T_RequestOriginal (Kind : T_RequestOriginal_Kind := T_RequestOriginal_arm_text) is record
@@ -661,12 +571,10 @@ when T_RequestOriginal_arm_text => V_0 : T_RequestOriginal_text;
 when T_RequestOriginal_arm_json => V_1 : T_RequestOriginal_json;
 end case;
 end record;
-function Encode (Value : T_RequestOriginal) return String;
 package T_RequestOriginal_Options is new Optional_Values (T_RequestOriginal);
 subtype T_RequestOriginal_Optional is T_RequestOriginal_Options.Optional;
 package T_RecognitionSeedSpan_List_Vectors is new Ada.Containers.Vectors (Positive, T_RecognitionSeedSpan);
 subtype T_RecognitionSeedSpan_List is T_RecognitionSeedSpan_List_Vectors.Vector;
-function Encode (Value : T_RecognitionSeedSpan_List) return String;
 package T_RecognitionSeedSpan_List_Options is new Optional_Values (T_RecognitionSeedSpan_List);
 subtype T_RecognitionSeedSpan_List_Optional is T_RecognitionSeedSpan_List_Options.Optional;
 type T_RequestItem is record
@@ -677,39 +585,29 @@ T_options : T_OptionSchema_List_Optional;
 T_original : T_RequestOriginal_Optional;
 T_seed_spans : T_RecognitionSeedSpan_List_Optional;
 end record;
-function Encode (Value : T_RequestItem) return String;
 package T_RequestItem_List_Vectors is new Ada.Containers.Vectors (Positive, T_RequestItem);
 subtype T_RequestItem_List is T_RequestItem_List_Vectors.Vector;
-function Encode (Value : T_RequestItem_List) return String;
 type T_Literal_records is null record;
-function Encode (Value : T_Literal_records) return String;
 type T_RequestInput_records is record
 T_items : T_RequestItem_List;
 T_kind : T_Literal_records;
 end record;
-function Encode (Value : T_RequestInput_records) return String;
 type T_Literal_units is null record;
-function Encode (Value : T_Literal_units) return String;
 type T_RequestInput_units is record
 T_items : T_RequestItem_List;
 T_kind : T_Literal_units;
 end record;
-function Encode (Value : T_RequestInput_units) return String;
 type T_Literal_entities is null record;
-function Encode (Value : T_Literal_entities) return String;
 type T_RequestInput_entities is record
 T_items : T_RequestItem_List;
 T_kind : T_Literal_entities;
 end record;
-function Encode (Value : T_RequestInput_entities) return String;
 type T_Literal_source is null record;
-function Encode (Value : T_Literal_source) return String;
 type T_RequestFraming is (T_RequestFraming_document,
 T_RequestFraming_lines,
 T_RequestFraming_jsonl,
 T_RequestFraming_csv,
 T_RequestFraming_tsv);
-function Encode (Value : T_RequestFraming) return String;
 package T_RequestFraming_Options is new Optional_Values (T_RequestFraming);
 subtype T_RequestFraming_Optional is T_RequestFraming_Options.Optional;
 package T_ReaderMedia_Options is new Optional_Values (T_ReaderMedia);
@@ -717,14 +615,12 @@ subtype T_ReaderMedia_Optional is T_ReaderMedia_Options.Optional;
 type T_SourceUnit is (T_SourceUnit_line,
 T_SourceUnit_window,
 T_SourceUnit_file);
-function Encode (Value : T_SourceUnit) return String;
 package T_SourceUnit_Options is new Optional_Values (T_SourceUnit);
 subtype T_SourceUnit_Optional is T_SourceUnit_Options.Optional;
 type T_RequestReader is record
 T_unit : T_SourceUnit_Optional;
 T_window : T_Unsigned_Optional;
 end record;
-function Encode (Value : T_RequestReader) return String;
 package T_RequestReader_Options is new Optional_Values (T_RequestReader);
 subtype T_RequestReader_Optional is T_RequestReader_Options.Optional;
 type T_RequestSource is record
@@ -733,14 +629,11 @@ T_media : T_ReaderMedia_Optional;
 T_paths : T_Text_List;
 T_reading : T_RequestReader_Optional;
 end record;
-function Encode (Value : T_RequestSource) return String;
 type T_RequestInput_source is record
 T_kind : T_Literal_source;
 T_source : T_RequestSource;
 end record;
-function Encode (Value : T_RequestInput_source) return String;
 type T_Literal_feed is null record;
-function Encode (Value : T_Literal_feed) return String;
 type T_RequestInput_feed is record
 T_framing : T_RequestFraming_Optional;
 T_images : T_RequestImage_List_Optional;
@@ -748,7 +641,6 @@ T_kind : T_Literal_feed;
 T_name : T_Text;
 T_reading : T_RequestReader_Optional;
 end record;
-function Encode (Value : T_RequestInput_feed) return String;
 type T_RequestInput_Kind is (T_RequestInput_arm_text,
 T_RequestInput_arm_json,
 T_RequestInput_arm_records,
@@ -767,7 +659,6 @@ when T_RequestInput_arm_source => V_5 : T_RequestInput_source;
 when T_RequestInput_arm_feed => V_6 : T_RequestInput_feed;
 end case;
 end record;
-function Encode (Value : T_RequestInput) return String;
 type T_RequestBatch_Kind is (T_RequestBatch_arm_0,
 T_RequestBatch_arm_1);
 type T_RequestBatch (Kind : T_RequestBatch_Kind := T_RequestBatch_arm_0) is record
@@ -776,7 +667,6 @@ when T_RequestBatch_arm_0 => V_0 : T_Unsigned;
 when T_RequestBatch_arm_1 => V_1 : T_Text;
 end case;
 end record;
-function Encode (Value : T_RequestBatch) return String;
 package T_RequestBatch_Options is new Optional_Values (T_RequestBatch);
 subtype T_RequestBatch_Optional is T_RequestBatch_Options.Optional;
 type T_RequestThreshold_Kind is (T_RequestThreshold_arm_0,
@@ -787,7 +677,6 @@ when T_RequestThreshold_arm_0 => V_0 : T_Number;
 when T_RequestThreshold_arm_1 => V_1 : T_Text;
 end case;
 end record;
-function Encode (Value : T_RequestThreshold) return String;
 package T_RequestThreshold_Options is new Optional_Values (T_RequestThreshold);
 subtype T_RequestThreshold_Optional is T_RequestThreshold_Options.Optional;
 type T_RequestOptions is record
@@ -814,16 +703,13 @@ T_stage_context : T_RecognitionStageContext_Optional;
 T_threshold : T_RequestThreshold_Optional;
 T_top : T_Unsigned_Optional;
 end record;
-function Encode (Value : T_RequestOptions) return String;
 package T_RequestOptions_Options is new Optional_Values (T_RequestOptions);
 subtype T_RequestOptions_Optional is T_RequestOptions_Options.Optional;
 type T_RequestQuestion_text is record
 T_kind : T_Literal_text;
 T_text : Thinkthen.Requests.T_Text;
 end record;
-function Encode (Value : T_RequestQuestion_text) return String;
 type T_Literal_definition is null record;
-function Encode (Value : T_Literal_definition) return String;
 type T_RequestDefinition_Authored_decide_field_batch_Kind is (T_RequestDefinition_Authored_decide_field_batch_arm_0,
 T_RequestDefinition_Authored_decide_field_batch_arm_1);
 type T_RequestDefinition_Authored_decide_field_batch (Kind : T_RequestDefinition_Authored_decide_field_batch_Kind := T_RequestDefinition_Authored_decide_field_batch_arm_0) is record
@@ -832,7 +718,6 @@ when T_RequestDefinition_Authored_decide_field_batch_arm_0 => V_0 : T_Literal_ma
 when T_RequestDefinition_Authored_decide_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_decide_field_batch) return String;
 package T_RequestDefinition_Authored_decide_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_decide_field_batch);
 subtype T_RequestDefinition_Authored_decide_field_batch_Optional is T_RequestDefinition_Authored_decide_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_decide is record
@@ -849,7 +734,6 @@ T_threshold : T_Authored_threshold_Optional;
 T_true : T_Authored_criterion_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_decide) return String;
 type T_RequestDefinition_Authored_choose_field_batch_Kind is (T_RequestDefinition_Authored_choose_field_batch_arm_0,
 T_RequestDefinition_Authored_choose_field_batch_arm_1);
 type T_RequestDefinition_Authored_choose_field_batch (Kind : T_RequestDefinition_Authored_choose_field_batch_Kind := T_RequestDefinition_Authored_choose_field_batch_arm_0) is record
@@ -858,7 +742,6 @@ when T_RequestDefinition_Authored_choose_field_batch_arm_0 => V_0 : T_Literal_ma
 when T_RequestDefinition_Authored_choose_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_choose_field_batch) return String;
 package T_RequestDefinition_Authored_choose_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_choose_field_batch);
 subtype T_RequestDefinition_Authored_choose_field_batch_Optional is T_RequestDefinition_Authored_choose_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_choose is record
@@ -874,7 +757,6 @@ T_profile : T_Authored_profile_Optional;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_choose) return String;
 type T_RequestDefinition_Authored_tag_field_batch_Kind is (T_RequestDefinition_Authored_tag_field_batch_arm_0,
 T_RequestDefinition_Authored_tag_field_batch_arm_1);
 type T_RequestDefinition_Authored_tag_field_batch (Kind : T_RequestDefinition_Authored_tag_field_batch_Kind := T_RequestDefinition_Authored_tag_field_batch_arm_0) is record
@@ -883,7 +765,6 @@ when T_RequestDefinition_Authored_tag_field_batch_arm_0 => V_0 : T_Literal_max;
 when T_RequestDefinition_Authored_tag_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_tag_field_batch) return String;
 package T_RequestDefinition_Authored_tag_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_tag_field_batch);
 subtype T_RequestDefinition_Authored_tag_field_batch_Optional is T_RequestDefinition_Authored_tag_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_tag is record
@@ -899,7 +780,6 @@ T_tag : T_Authored_questionText;
 T_threshold : T_Authored_cut_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_tag) return String;
 type T_RequestDefinition_Authored_score_field_batch_Kind is (T_RequestDefinition_Authored_score_field_batch_arm_0,
 T_RequestDefinition_Authored_score_field_batch_arm_1);
 type T_RequestDefinition_Authored_score_field_batch (Kind : T_RequestDefinition_Authored_score_field_batch_Kind := T_RequestDefinition_Authored_score_field_batch_arm_0) is record
@@ -908,7 +788,6 @@ when T_RequestDefinition_Authored_score_field_batch_arm_0 => V_0 : T_Literal_max
 when T_RequestDefinition_Authored_score_field_batch_arm_1 => V_1 : T_Integer;
 end case;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_score_field_batch) return String;
 package T_RequestDefinition_Authored_score_field_batch_Options is new Optional_Values (T_RequestDefinition_Authored_score_field_batch);
 subtype T_RequestDefinition_Authored_score_field_batch_Optional is T_RequestDefinition_Authored_score_field_batch_Options.Optional;
 type T_RequestDefinition_Authored_score is record
@@ -923,7 +802,6 @@ T_profile : T_Authored_profile_Optional;
 T_score : T_Authored_questionText;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_score) return String;
 type T_RequestDefinition_Authored_relate is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -935,7 +813,6 @@ T_threshold : T_Authored_cut_Optional;
 T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_relate) return String;
 type T_RequestDefinition_Authored_find is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_find : T_Authored_questionText;
@@ -946,7 +823,6 @@ T_on : T_Authored_pointers_Optional;
 T_profile : T_Authored_profile_Optional;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_Authored_find) return String;
 type T_RequestDefinition_RecognizeDefinition is record
 T_context_schema : T_Authored_inputDeclaration_Optional;
 T_item_schema : T_Authored_inputDeclaration_Optional;
@@ -960,7 +836,6 @@ T_threshold : T_Authored_cut_Optional;
 T_version : T_Literal_1;
 T_wording_version : T_Integer_Optional;
 end record;
-function Encode (Value : T_RequestDefinition_RecognizeDefinition) return String;
 type T_RequestDefinition_AnnotateDefinition is record
 T_batch : T_JSON_Optional;
 T_profile : T_Authored_profile_Optional;
@@ -968,7 +843,6 @@ T_questions : T_AnnotateQuestion_Map;
 T_threshold : T_Authored_threshold_Optional;
 T_version : T_Literal_1;
 end record;
-function Encode (Value : T_RequestDefinition_AnnotateDefinition) return String;
 type T_RequestDefinition_Kind is (T_RequestDefinition_arm_Authored_decide,
 T_RequestDefinition_arm_Authored_choose,
 T_RequestDefinition_arm_Authored_tag,
@@ -989,31 +863,24 @@ when T_RequestDefinition_arm_RecognizeDefinition => V_6 : T_RequestDefinition_Re
 when T_RequestDefinition_arm_AnnotateDefinition => V_7 : T_RequestDefinition_AnnotateDefinition;
 end case;
 end record;
-function Encode (Value : T_RequestDefinition) return String;
 type T_RequestQuestion_definition is record
 T_kind : T_Literal_definition;
 T_value : T_RequestDefinition;
 end record;
-function Encode (Value : T_RequestQuestion_definition) return String;
 type T_RequestQuestion_file is record
 T_kind : T_Literal_file;
 T_path : T_Text;
 end record;
-function Encode (Value : T_RequestQuestion_file) return String;
 type T_Literal_name is null record;
-function Encode (Value : T_Literal_name) return String;
 type T_RequestQuestion_name is record
 T_kind : T_Literal_name;
 T_name : T_Text;
 end record;
-function Encode (Value : T_RequestQuestion_name) return String;
 type T_Literal_reference is null record;
-function Encode (Value : T_Literal_reference) return String;
 type T_RequestQuestion_reference is record
 T_kind : T_Literal_reference;
 T_reference : T_Text;
 end record;
-function Encode (Value : T_RequestQuestion_reference) return String;
 type T_RequestQuestion_Kind is (T_RequestQuestion_arm_text,
 T_RequestQuestion_arm_definition,
 T_RequestQuestion_arm_file,
@@ -1028,56 +895,43 @@ when T_RequestQuestion_arm_name => V_3 : T_RequestQuestion_name;
 when T_RequestQuestion_arm_reference => V_4 : T_RequestQuestion_reference;
 end case;
 end record;
-function Encode (Value : T_RequestQuestion) return String;
 type T_RequestCall is record
 T_function : T_RequestFunction;
 T_input : T_RequestInput;
 T_options : T_RequestOptions_Optional;
 T_question : T_RequestQuestion;
 end record;
-function Encode (Value : T_RequestCall) return String;
 type T_RequestVersion is (T_RequestVersion_thinkthen_request_1);
-function Encode (Value : T_RequestVersion) return String;
 type T_Request is record
 T_call : T_RequestCall;
 T_schema : T_RequestVersion;
 end record;
-function Encode (Value : T_Request) return String;
 type T_Literal_producer is null record;
-function Encode (Value : T_Literal_producer) return String;
 type T_RequestReaderFailure_producer is record
 T_kind : T_Literal_producer;
 end record;
-function Encode (Value : T_RequestReaderFailure_producer) return String;
 type T_Literal_io is null record;
-function Encode (Value : T_Literal_io) return String;
 type T_SessionSourceLocation is record
 T_file : T_Text;
 T_first_line : T_Unsigned_Optional;
 T_last_line : T_Unsigned_Optional;
 end record;
-function Encode (Value : T_SessionSourceLocation) return String;
 package T_SessionSourceLocation_Options is new Optional_Values (T_SessionSourceLocation);
 subtype T_SessionSourceLocation_Optional is T_SessionSourceLocation_Options.Optional;
 type T_RequestReaderFailure_io is record
 T_kind : T_Literal_io;
 T_location : T_SessionSourceLocation_Optional;
 end record;
-function Encode (Value : T_RequestReaderFailure_io) return String;
 type T_Literal_utf8 is null record;
-function Encode (Value : T_Literal_utf8) return String;
 type T_RequestReaderFailure_utf8 is record
 T_kind : T_Literal_utf8;
 T_location : T_SessionSourceLocation_Optional;
 end record;
-function Encode (Value : T_RequestReaderFailure_utf8) return String;
 type T_Literal_invalid_input is null record;
-function Encode (Value : T_Literal_invalid_input) return String;
 type T_RequestReaderFailure_invalid_input is record
 T_kind : T_Literal_invalid_input;
 T_location : T_SessionSourceLocation_Optional;
 end record;
-function Encode (Value : T_RequestReaderFailure_invalid_input) return String;
 type T_RequestReaderFailure_Kind is (T_RequestReaderFailure_arm_producer,
 T_RequestReaderFailure_arm_io,
 T_RequestReaderFailure_arm_utf8,
@@ -1090,10 +944,19 @@ when T_RequestReaderFailure_arm_utf8 => V_2 : T_RequestReaderFailure_utf8;
 when T_RequestReaderFailure_arm_invalid_input => V_3 : T_RequestReaderFailure_invalid_input;
 end case;
 end record;
-function Encode (Value : T_RequestReaderFailure) return String;
 type T_RequestSessionDescriptor is record
 T_item : T_RequestItem;
 T_location : T_SessionSourceLocation_Optional;
 end record;
-function Encode (Value : T_RequestSessionDescriptor) return String;
+function Text_Question (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_File (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_file, V_2 => (T_path => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_Name (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_name, V_3 => (T_name => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Question_Reference (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_reference, V_4 => (T_reference => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
+function Recognize_Question (Value : T_RecognizeQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_RecognizeDefinition, V_6 => (T_recognize => Value, others => <>)), others => <>)));
+function Recognize_Question (Value : T_RequestDefinition_RecognizeDefinition) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_RecognizeDefinition, V_6 => Value), others => <>)));
+function Relate_Question (Value : T_RelateQuestion) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_Authored_relate, V_4 => (T_relate => Value, others => <>)), others => <>)));
+function Relate_Question (Value : T_RequestDefinition_Authored_relate) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_definition, V_1 => (T_value => T_RequestDefinition'(Kind => T_RequestDefinition_arm_Authored_relate, V_4 => Value), others => <>)));
+function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));
+function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_records, V_2 => (T_items => Value, others => <>)));
+function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_source, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));
 end Thinkthen.Requests;
