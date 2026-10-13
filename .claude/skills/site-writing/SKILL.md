@@ -14,7 +14,7 @@ description: Use when writing or editing any page or code example on the ThinkTh
 - Plain sentences: subject, verb, object. No dash glosses, no trailing clauses, no clefts.
 - No status words: planned, drawn, preview, coming soon, or "Plan for 0.1".
 - One name per thing. `site/WRITING.md`, "Pages", holds the name table. `check-words` fails retired words in prose.
-- Every binding is part of the product: no status, date, readiness note, or caveat. Link each to its page, `/languages/<slug>/` for a language and `/install/<slug>/` for a database, even before the page exists. Counts read "10 functions, 1 CLI, 24 bindings".
+- Every binding is part of the product: no status, date, readiness note, or caveat. Link each to its page, `/languages/<slug>/` for a language and `/databases/<slug>/` for a database, even before the page exists. Counts read "10 functions, 1 CLI, 24 bindings".
 - Teach the idea, not the repository's files.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
 - Colour: green yes, amber not sure, red no, grey broken. Values stay in ink. Only marks carry colour. Code panes are the one exception: they carry syntax colour. Output panes stay in ink.
