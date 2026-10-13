@@ -1,7 +1,7 @@
 """Primitive ABI layouts shared by request carriers and result projections.
 
-Only transport shapes belong here. Native JSON copying and backing lifetimes
-remain handwritten; source mode also derives the public C header from these
+Transport shapes and canonical alternative tags belong here. JSON projection
+follows these alternatives; native decoding and backing lifetimes remain handwritten; source mode also derives the public C header from these
 same generated records.
 """
 from dataclasses import dataclass

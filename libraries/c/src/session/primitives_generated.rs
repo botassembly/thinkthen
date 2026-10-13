@@ -109,3 +109,63 @@ pub const THINKTHEN_COMPLETE_JSON_NUMBER_V1: u32 = 3;
 pub const THINKTHEN_COMPLETE_JSON_STRING_V1: u32 = 4;
 pub const THINKTHEN_COMPLETE_JSON_ARRAY_V1: u32 = 5;
 pub const THINKTHEN_COMPLETE_JSON_OBJECT_V1: u32 = 6;
+pub(crate) fn read_json(
+    node: &super::Node,
+    store: &mut super::Storage,
+) -> Result<*const thinkthen_complete_json_v1, thinkthen::ErrorKind> {
+    let (kind, data) = match node.kind() {
+        "null" => (
+            THINKTHEN_COMPLETE_JSON_NULL_V1,
+            thinkthen_complete_json_data_v1 { boolean: 0 },
+        ),
+        "boolean" => (
+            THINKTHEN_COMPLETE_JSON_BOOLEAN_V1,
+            thinkthen_complete_json_data_v1 {
+                boolean: node.boolean()?,
+            },
+        ),
+        "number" => (
+            THINKTHEN_COMPLETE_JSON_NUMBER_V1,
+            thinkthen_complete_json_data_v1 {
+                number: store.text(node.raw_text()),
+            },
+        ),
+        "string" => (
+            THINKTHEN_COMPLETE_JSON_STRING_V1,
+            thinkthen_complete_json_data_v1 {
+                string: store.text(node.text()?),
+            },
+        ),
+        "array" => {
+            let mut copied = Vec::new();
+            for value in node.array()? {
+                copied.push(read_json(value, store)?);
+            }
+            let (data, len) = store.slice(copied);
+            (
+                THINKTHEN_COMPLETE_JSON_ARRAY_V1,
+                thinkthen_complete_json_data_v1 {
+                    array: thinkthen_complete_json_array_v1 { data, len },
+                },
+            )
+        }
+        "object" => {
+            let mut copied = Vec::new();
+            for (name, value) in node.object()? {
+                copied.push(thinkthen_complete_json_entry_v1 {
+                    name: store.text(name),
+                    value: read_json(value, store)?,
+                });
+            }
+            let (data, len) = store.slice(copied);
+            (
+                THINKTHEN_COMPLETE_JSON_OBJECT_V1,
+                thinkthen_complete_json_data_v1 {
+                    object: thinkthen_complete_json_object_v1 { data, len },
+                },
+            )
+        }
+        _ => return Err(thinkthen::ErrorKind::Defect),
+    };
+    Ok(store.hold(thinkthen_complete_json_v1 { kind, data }))
+}

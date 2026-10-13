@@ -23,6 +23,75 @@ pub unsafe extern "C" fn thinkthen_error_view(
     super::guard(held, std::ptr::null(), || failures::view(held))
 }
 
+/// Borrow the immutable canonical value root and nested backing until value_free.
+/// Repeated and concurrent getters preserve identical pointers and prior diagnostics.
+/// NULL owner or output returns EUSAGE without publishing; outputs remain untouched.
+/// # Safety
+/// owner remains live for every borrower; out is aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_value_view(
+    owner: *const crate::session::views::ValueHandle,
+    out: *mut *const crate::session::views::thinkthen_complete_json_v1,
+) -> std::ffi::c_int {
+    failures::session_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage);
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let owner = unsafe { owner.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let value_out = super::request_preview::value_view(owner)?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
+/// Free an independent canonical value owner; NULL is ignored.
+/// # Safety
+/// owner is NULL or unfreed, after every operation and borrowed view finishes.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_value_free(owner: *mut crate::session::views::ValueHandle) {
+    super::guard(None, (), || {
+        if !owner.is_null() {
+            // SAFETY: the owner came from this allocator and all borrowers have finished.
+            drop(unsafe { Box::from_raw(owner) });
+        }
+    })
+}
+
+/// Preview named canonical components through existing Rust admission, without
+/// reading a key/cache, constructing a session or sending. Fixed atomic questions
+/// match the existing Plan serializer; unsupported functions/questions refuse.
+/// Success transfers an independent owned canonical value; free with value_free.
+/// Source bytes and engine may be freed on return. Failure leaves out untouched
+/// and records only the calling thread immediate session diagnostic.
+/// # Safety
+/// engine is live; request is an aligned live record with readable counted UTF-8.
+/// out is nonnull aligned writable pointer storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_request_plan_named_value(
+    engine: *const crate::EngineHandle,
+    request: *const crate::ffi::session::NamedRequestV1,
+    out: *mut *mut crate::session::views::ValueHandle,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        if out.is_null() {
+            return Err(ErrorKind::Usage.into());
+        }
+        // SAFETY: the caller retains this live owner throughout the operation.
+        let engine = unsafe { engine.as_ref() }.ok_or(ErrorKind::Usage)?;
+        // SAFETY: the caller retains counted input trees until the native helper returns.
+        let value_out = unsafe { super::request_preview::named_plan(engine, request) }?;
+        // SAFETY: every slot was validated before the native operation; success publishes once.
+        unsafe {
+            *out = value_out;
+        }
+        Ok(())
+    })
+}
+
 /// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.
 /// Construction sends nothing; failures return NULL and occupy the constructor slot.
 /// # Safety

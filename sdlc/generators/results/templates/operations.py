@@ -23,8 +23,8 @@ def render(operations, statuses=(), projections=()):
         lines.append('use thinkthen::ErrorKind;')
     for name, value, documentation in statuses:
         lines.extend(['/// ' + documentation, 'pub const ' + name + ': u32 = ' + str(value) + ';'])
-    for name, native, variants in projections:
-        lines.extend(['pub(crate) fn ' + name + '(value: ' + native + ') -> u32 {', '    match value {'])
+    for name, native, result, variants in projections:
+        lines.extend(['pub(crate) fn ' + name + '(value: ' + native + ') -> ' + result + ' {', '    match value {'])
         lines.extend('        ' + native + '::' + variant + ' => ' + constant + ',' for variant, constant in variants)
         lines.extend(['    }', '}'])
     for operation in operations:
@@ -102,7 +102,7 @@ def render(operations, statuses=(), projections=()):
             if argument.ownership == 'borrow':
                 lines.extend(['        // SAFETY: the caller retains this live owner throughout the operation.',
                               '        let ' + argument.name + ' = unsafe { ' + argument.name + '.as_ref() }.ok_or(ErrorKind::Usage)?;'])
-        allowed_literals = {'@None', '@Some(interest)', '@false', '@true', '@thinkthen::Engine::usage_persistence', '@thinkthen::Engine::finish_usage_status'}
+        allowed_literals = {'@None', '@Some(interest)', '@false', '@true', '@thinkthen::Engine::usage_persistence', '@thinkthen::Engine::finish_usage_status', '@super::super::request_preview::json_output', '@super::super::request_preview::value_output'}
         if any(value.startswith('@') and value not in allowed_literals for value in operation.inputs):
             raise ValueError('operation inputs must name arguments or registered native selectors')
         inputs = ', '.join(value.removeprefix('@') for value in operation.inputs)

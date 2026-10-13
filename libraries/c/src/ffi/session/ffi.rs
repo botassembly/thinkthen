@@ -256,16 +256,7 @@ unsafe fn named_session(
         start_session(
             engine,
             || named_text(surface)?.parse().map_err(|_| ErrorKind::Usage),
-            || {
-                let request = request.as_ref().ok_or(ErrorKind::Usage)?;
-                Request::named_from_json(
-                    named_text(request.function)?,
-                    named_text(request.question_json)?,
-                    named_text(request.input_json)?,
-                    named_text(request.options_json)?,
-                )
-                .map_err(decode_failure)
-            },
+            || named_request(request),
         )
     }
 }
@@ -274,5 +265,21 @@ unsafe fn cancel_session(session: *mut SessionHandle) {
     // SAFETY: the caller supplies NULL or retains its live owner.
     if let Some(session) = unsafe { session.as_ref() } {
         session.0.cancel();
+    }
+}
+
+pub(super) unsafe fn named_request(
+    request: *const NamedRequestV1,
+) -> Result<Request, failures::Failure> {
+    // SAFETY: each named view inherits the caller's counted lifetime contract.
+    unsafe {
+        let request = request.as_ref().ok_or(ErrorKind::Usage)?;
+        Request::named_from_json(
+            named_text(request.function)?,
+            named_text(request.question_json)?,
+            named_text(request.input_json)?,
+            named_text(request.options_json)?,
+        )
+        .map_err(decode_failure)
     }
 }
