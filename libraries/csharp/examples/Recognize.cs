@@ -4,7 +4,7 @@ using ThinkThen.Inputs;
 using var engine = Engine.Open();
 var question = QuestionBuilders.Recognize(new InputRecognizeQuestion {
     Kinds = new Dictionary<string, InputAuthoredDescription> {
-        ["person"] = new() { Value = new InputAuthoredDescriptionValueAlternative0 { Value = "A person." } }
+        ["person"] = new() { Value = new InputAuthoredDescriptionValueString { Value = "A person." } }
     }
 });
 var answer = (await engine.RecognizeAsync(question, new InputRequestInputText { Text = "John Smith" })).Recognize();

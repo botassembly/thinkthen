@@ -6,7 +6,7 @@ static class SessionChecks
 {
     public static async Task Usage(string mode)
     {
-        var engine = Engine.Open(new InputEngineSettings { Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() }, MaxRetries = 0 });
+        var engine = Engine.Open(new InputEngineSettings { Cache = new InputCacheDocumentDisabledCache { Value = new InputDisabledCache() }, MaxRetries = 0 });
         var initial = engine.UsagePersistence();
         var expected = mode == "disabled" ? UsagePersistenceState.Disabled : UsagePersistenceState.Written;
         if (initial.State != expected || initial.Advice is not null) throw new Exception("initial persistence");
@@ -32,7 +32,7 @@ static class SessionChecks
     public static void ImmediateDiagnostics(Engine engine)
     {
         try {
-            using var refused = engine.StartSession(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = new InputRequestQuestionText { Text = "" }, Input = new InputRequestInputText { Text = "unreachable" } } });
+            using var refused = engine.StartSession(new InputRequest { Schema = new InputRequestVersionThinkthenRequest1(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = new InputRequestQuestionText { Text = "" }, Input = new InputRequestInputText { Text = "unreachable" } } });
             throw new Exception("empty question admitted");
         }
         catch (ThinkThen.Failure error) {
@@ -41,7 +41,7 @@ static class SessionChecks
         Console.WriteLine("INSTALLED_CSHARP_IMMEDIATE_DIAGNOSTICS_PASS");
     }
     static InputRequestQuestionText Question => new() { Text = "Is it?" };
-    static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchAlternative0 { Value = 1 } } } };
+    static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionThinkthenRequest1(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchInteger { Value = 1 } } } };
     static InputRequestSessionDescriptor Item(string text) => new() { Item = new InputRequestItem { Original = new InputRequestOriginalText { Text = text } } };
     static async Task Arrived(string name)
     {
@@ -58,32 +58,32 @@ static class SessionChecks
         using var bytes = new MemoryStream();
         using (var writer = new Utf8JsonWriter(bytes)) question.Value.Write(writer);
         if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("original authored spelling, order or depth changed");
-        return engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = question, Input = new InputRequestInputText { Text = "owned" } } });
+        return engine.Plan(new InputRequest { Schema = new InputRequestVersionThinkthenRequest1(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = question, Input = new InputRequestInputText { Text = "owned" } } });
     }
     public static async Task Run()
     {
         using var engine = Engine.Open(new InputEngineSettings {
-            Cache = new InputCacheDocumentAlternative1 { Value = new InputDisabledCache() },
-            Batch = new InputRequestBatchAlternative0 { Value = 1 }, MaxRetries = 0,
-            MaxRequests = new InputEngineSettingsMaxRequestsAlternative1(),
-            MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
-            MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
+            Cache = new InputCacheDocumentDisabledCache { Value = new InputDisabledCache() },
+            Batch = new InputRequestBatchInteger { Value = 1 }, MaxRetries = 0,
+            MaxRequests = new InputEngineSettingsMaxRequestsNull(),
+            MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalNull(),
+            MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalNull()
         });
         try { _ = engine.DecideAsync(Question, (IAsyncEnumerable<InputRequestSessionDescriptor>)null!); throw new Exception("null caller feed admitted"); }
         catch (ArgumentNullException error) when (error.ParamName == "feed") { }
         var authored = engine.ParseQuestion(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":{\"first\":\"First.\",\"second\":\"Second.\"}}");
-        var choices = ((InputAuthoredOptionsAlternative1)((InputRequestDefinitionAuthoredChoose)authored.Value).Options.Value).Value;
+        var choices = ((InputAuthoredOptionsObject)((InputRequestDefinitionAuthoredChoose)authored.Value).Options.Value).Value;
         if (!choices.Keys.SequenceEqual(new[] { "first", "second" })) throw new Exception("native authored order");
         try { ((IDictionary<string,InputAuthoredDescription>)choices).Clear(); throw new Exception("parsed authored map changed"); }
         catch (NotSupportedException) { }
-        var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionChoose(), Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
+        var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionThinkthenRequest1(), Call = new InputRequestCall { Function = new InputRequestFunctionChoose(), Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
         if (authoredPlan.Requests != 1 || authoredPlan.FirstBodyUtf8.State != PresenceState.Value || !authoredPlan.FirstBodyUtf8.Value.Contains("First.")) throw new Exception("owned authored definition");
         foreach (var (batch, schema) in new[] { ("max", "string"), (@"\u006dax", "string"), ("max", @"\u0073tring"), (@"\u006dax", @"\u0073tring") })
         {
             string original = "{\"item_schema\":{\"type\":\"" + schema + "\"},\"decide\":\"Is it?\",\"batch\":\"" + batch + "\",\"true\":{\"future\":{\"second\":2,\"first\":1}}}";
             var parsed = engine.ParseQuestion(AuthoredQuestionKind.Atomic, original);
             var definition = ((InputRequestDefinitionAuthoredDecide)parsed.Value);
-            if (definition.Batch.Value is not InputRequestDefinitionAuthoredDecideBatchAlternative0 || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
+            if (definition.Batch.Value is not InputRequestDefinitionAuthoredDecideBatchMax || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
             var plan = AuthoredPlan(engine, parsed, original);
             if (plan.Requests != 1 || plan.FirstBodyUtf8.State != PresenceState.Value) throw new Exception("decoded authored constant plan");
         }
@@ -152,7 +152,7 @@ static class SessionChecks
                 if (error.Call.Terminal.Failure.State != PresenceState.Value || error.Call.Terminal.ToJsonString().Contains("host-secret") || error.Failure.Error.Kind.Value != (problem is IOException ? "local" : "usage")) throw new Exception("reader diagnostics leaked");
             }
         }
-        using (var limits = Engine.Open(new InputEngineSettings { MaxRequests = new InputEngineSettingsMaxRequestsAlternative0 { Value = ulong.MaxValue }, MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative0 { Value = ulong.MaxValue }, MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative0 { Value = ulong.MaxValue } })) { }
+        using (var limits = Engine.Open(new InputEngineSettings { MaxRequests = new InputEngineSettingsMaxRequestsInteger { Value = ulong.MaxValue }, MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalInteger { Value = ulong.MaxValue }, MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalInteger { Value = ulong.MaxValue } })) { }
         string deepOriginal = "{\"text\":\"session-owned\",\"nested\":" + deepMeaning + "}";
         using var deepDocument = JsonDocument.Parse(deepOriginal, new JsonDocumentOptions { MaxDepth = int.MaxValue });
         OwnedCall call = await engine.DecideAsync(deepQuestion!, new InputRequestInputJson { Value = deepDocument.RootElement }, new InputRequestOptions { Field = new[] { "/text" } });
@@ -196,7 +196,7 @@ static class SessionChecks
             if (progress != 1 || File.Exists("barrier/release-hold-session-task")) throw new Exception("held cancellation progress");
             File.WriteAllText("barrier/release-hold-session-task", "");
         }
-        using (var session = engine.StartSession(Request(new InputRequestInputFeed { Name = "session", Framing = new InputRequestFramingAlternative1() })))
+        using (var session = engine.StartSession(Request(new InputRequestInputFeed { Name = "session", Framing = new InputRequestFramingLines() })))
         {
             if (!await session.PushAsync(Item("hold-session-drain"))) throw new Exception("first rejected");
             await Arrived("hold-session-drain");

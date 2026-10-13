@@ -1,6 +1,7 @@
 """C# immutable result views. Conversion adds no schema validation or policy."""
 import json
 import re
+from host_answers import alternative_name
 
 
 def name(value):
@@ -380,8 +381,7 @@ def render_inputs(schema, prepare, graph):
         names = definitions.get(key, {}).get('_variant_names')
         if names:
             return names[index]
-        tag = alt.get('const') if key == 'RequestFunction' else next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
-        return key + '_' + (tag if tag else 'Alternative' + str(index))
+        return key + '_' + alternative_name(alt)
     def mark_read(value, path, wrapper=False):
         if isinstance(value, bool):
             return

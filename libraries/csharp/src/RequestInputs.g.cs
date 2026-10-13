@@ -527,16 +527,7 @@ public abstract class InputAuthoredChooseBatch : InputDocument {
     private protected InputAuthoredChooseBatch() {
     }
 }
-public sealed class InputAuthoredChooseBatchAlternative0 : InputAuthoredChooseBatch {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputAuthoredChooseBatchAlternative1 : InputAuthoredChooseBatch {
+public sealed class InputAuthoredChooseBatchInteger : InputAuthoredChooseBatch {
     public required long Value {
         get;
         init;
@@ -549,54 +540,31 @@ public sealed class InputAuthoredChooseBatchAlternative1 : InputAuthoredChooseBa
         } writer.WriteNumberValue(Value);
     }
 }
+public sealed class InputAuthoredChooseBatchMax : InputAuthoredChooseBatch {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
+    }
+}
 public abstract class InputAuthoredCriterion : InputDocument {
     private protected InputAuthoredCriterion() {
     } internal static InputAuthoredCriterion Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCriterionAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredCriterionAlternative1.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredCriterionAlternative2.Read(value);
-        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredCriterionAlternative3.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCriterionString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredCriterionObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredCriterionList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredCriterionNull.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredCriterionAlternative0 : InputAuthoredCriterion {
-    public required string Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredCriterionAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetString()!
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputAuthoredCriterionAlternative1 : InputAuthoredCriterion {
-    public required JsonElement Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredCriterionAlternative1 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } Value.WriteTo(writer);
-    }
-}
-public sealed class InputAuthoredCriterionAlternative2 : InputAuthoredCriterion {
+public sealed class InputAuthoredCriterionList : InputAuthoredCriterion {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredCriterionAlternative2 Read(JsonElement value) => new() {
+    internal new static InputAuthoredCriterionList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -610,8 +578,8 @@ public sealed class InputAuthoredCriterionAlternative2 : InputAuthoredCriterion 
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredCriterionAlternative3 : InputAuthoredCriterion {
-    internal new static InputAuthoredCriterionAlternative3 Read(JsonElement value) => new() {
+public sealed class InputAuthoredCriterionNull : InputAuthoredCriterion {
+    internal new static InputAuthoredCriterionNull Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -622,20 +590,52 @@ public sealed class InputAuthoredCriterionAlternative3 : InputAuthoredCriterion 
         } writer.WriteNullValue();
     }
 }
+public sealed class InputAuthoredCriterionObject : InputAuthoredCriterion {
+    public required JsonElement Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredCriterionObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } Value.WriteTo(writer);
+    }
+}
+public sealed class InputAuthoredCriterionString : InputAuthoredCriterion {
+    public required string Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredCriterionString Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.GetString()!
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, Value);
+    }
+}
 public abstract class InputAuthoredCut : InputDocument {
     private protected InputAuthoredCut() {
     } internal static InputAuthoredCut Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredCutAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCutAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredCutNumber.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredCutString.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredCutAlternative0 : InputAuthoredCut {
+public sealed class InputAuthoredCutNumber : InputAuthoredCut {
     public required double Value {
         get;
         init;
     }
-    internal new static InputAuthoredCutAlternative0 Read(JsonElement value) => new() {
+    internal new static InputAuthoredCutNumber Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetDouble()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -646,12 +646,12 @@ public sealed class InputAuthoredCutAlternative0 : InputAuthoredCut {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredCutAlternative1 : InputAuthoredCut {
+public sealed class InputAuthoredCutString : InputAuthoredCut {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredCutAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredCutString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -769,16 +769,7 @@ public abstract class InputAuthoredDecideBatch : InputDocument {
     private protected InputAuthoredDecideBatch() {
     }
 }
-public sealed class InputAuthoredDecideBatchAlternative0 : InputAuthoredDecideBatch {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputAuthoredDecideBatchAlternative1 : InputAuthoredDecideBatch {
+public sealed class InputAuthoredDecideBatchInteger : InputAuthoredDecideBatch {
     public required long Value {
         get;
         init;
@@ -789,6 +780,15 @@ public sealed class InputAuthoredDecideBatchAlternative1 : InputAuthoredDecideBa
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputAuthoredDecideBatchMax : InputAuthoredDecideBatch {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputAuthoredDescription : InputDocument {
@@ -811,51 +811,19 @@ public sealed class InputAuthoredDescription : InputDocument {
 public abstract class InputAuthoredDescriptionValue : InputDocument {
     private protected InputAuthoredDescriptionValue() {
     } internal static InputAuthoredDescriptionValue Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredDescriptionValueAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredDescriptionValueAlternative1.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredDescriptionValueAlternative2.Read(value);
-        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredDescriptionValueAlternative3.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredDescriptionValueString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredDescriptionValueObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredDescriptionValueList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Null)) return InputAuthoredDescriptionValueNull.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredDescriptionValueAlternative0 : InputAuthoredDescriptionValue {
-    public required string Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredDescriptionValueAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetString()!
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputAuthoredDescriptionValueAlternative1 : InputAuthoredDescriptionValue {
-    public required JsonElement Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredDescriptionValueAlternative1 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } Value.WriteTo(writer);
-    }
-}
-public sealed class InputAuthoredDescriptionValueAlternative2 : InputAuthoredDescriptionValue {
+public sealed class InputAuthoredDescriptionValueList : InputAuthoredDescriptionValue {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredDescriptionValueAlternative2 Read(JsonElement value) => new() {
+    internal new static InputAuthoredDescriptionValueList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -869,8 +837,8 @@ public sealed class InputAuthoredDescriptionValueAlternative2 : InputAuthoredDes
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredDescriptionValueAlternative3 : InputAuthoredDescriptionValue {
-    internal new static InputAuthoredDescriptionValueAlternative3 Read(JsonElement value) => new() {
+public sealed class InputAuthoredDescriptionValueNull : InputAuthoredDescriptionValue {
+    internal new static InputAuthoredDescriptionValueNull Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -879,6 +847,38 @@ public sealed class InputAuthoredDescriptionValueAlternative3 : InputAuthoredDes
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNullValue();
+    }
+}
+public sealed class InputAuthoredDescriptionValueObject : InputAuthoredDescriptionValue {
+    public required JsonElement Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredDescriptionValueObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } Value.WriteTo(writer);
+    }
+}
+public sealed class InputAuthoredDescriptionValueString : InputAuthoredDescriptionValue {
+    public required string Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredDescriptionValueString Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.GetString()!
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, Value);
     }
 }
 public sealed class InputAuthoredFind : InputDocument {
@@ -1115,17 +1115,17 @@ public sealed class InputAuthoredInputPropertyString : InputAuthoredInputPropert
 public abstract class InputAuthoredLabels : InputDocument {
     private protected InputAuthoredLabels() {
     } internal static InputAuthoredLabels Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLabelsAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLabelsAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLabelsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLabelsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredLabelsAlternative0 : InputAuthoredLabels {
+public sealed class InputAuthoredLabelsList : InputAuthoredLabels {
     public required IReadOnlyList<InputAuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLabelsAlternative0 Read(JsonElement value) => new() {
+    internal new static InputAuthoredLabelsList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1140,12 +1140,12 @@ public sealed class InputAuthoredLabelsAlternative0 : InputAuthoredLabels {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredLabelsAlternative1 : InputAuthoredLabels {
+public sealed class InputAuthoredLabelsObject : InputAuthoredLabels {
     public required IReadOnlyDictionary<string, InputAuthoredDescription> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLabelsAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredLabelsObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
         InputAuthoredDescription>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredDescription.Read(entry0.Value)))
     };
@@ -1165,17 +1165,17 @@ public sealed class InputAuthoredLabelsAlternative1 : InputAuthoredLabels {
 public abstract class InputAuthoredLevels : InputDocument {
     private protected InputAuthoredLevels() {
     } internal static InputAuthoredLevels Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLevelsAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLevelsAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredLevelsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredLevelsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredLevelsAlternative0 : InputAuthoredLevels {
+public sealed class InputAuthoredLevelsList : InputAuthoredLevels {
     public required IReadOnlyList<InputAuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLevelsAlternative0 Read(JsonElement value) => new() {
+    internal new static InputAuthoredLevelsList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1190,12 +1190,12 @@ public sealed class InputAuthoredLevelsAlternative0 : InputAuthoredLevels {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredLevelsAlternative1 : InputAuthoredLevels {
+public sealed class InputAuthoredLevelsObject : InputAuthoredLevels {
     public required IReadOnlyDictionary<string, InputAuthoredCriterion> Value {
         get;
         init;
     }
-    internal new static InputAuthoredLevelsAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredLevelsObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
         InputAuthoredCriterion>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredCriterion.Read(entry0.Value)))
     };
@@ -1231,17 +1231,17 @@ public sealed class InputAuthoredName : InputDocument {
 public abstract class InputAuthoredOptions : InputDocument {
     private protected InputAuthoredOptions() {
     } internal static InputAuthoredOptions Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredOptionsAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredOptionsAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredOptionsList.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredOptionsObject.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredOptionsAlternative0 : InputAuthoredOptions {
+public sealed class InputAuthoredOptionsList : InputAuthoredOptions {
     public required IReadOnlyList<InputAuthoredName> Value {
         get;
         init;
     }
-    internal new static InputAuthoredOptionsAlternative0 Read(JsonElement value) => new() {
+    internal new static InputAuthoredOptionsList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => InputAuthoredName.Read(item0)).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1256,12 +1256,12 @@ public sealed class InputAuthoredOptionsAlternative0 : InputAuthoredOptions {
         } writer.WriteEndArray();
     }
 }
-public sealed class InputAuthoredOptionsAlternative1 : InputAuthoredOptions {
+public sealed class InputAuthoredOptionsObject : InputAuthoredOptions {
     public required IReadOnlyDictionary<string, InputAuthoredDescription> Value {
         get;
         init;
     }
-    internal new static InputAuthoredOptionsAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredOptionsObject Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = new System.Collections.ObjectModel.ReadOnlyDictionary<string,
         InputAuthoredDescription>(value.EnumerateObject().ToDictionary(entry0 => entry0.Name, entry0 => InputAuthoredDescription.Read(entry0.Value)))
     };
@@ -1281,33 +1281,17 @@ public sealed class InputAuthoredOptionsAlternative1 : InputAuthoredOptions {
 public abstract class InputAuthoredPointers : InputDocument {
     private protected InputAuthoredPointers() {
     } internal static InputAuthoredPointers Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredPointersAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredPointersAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredPointersString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredPointersList.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredPointersAlternative0 : InputAuthoredPointers {
-    public required string Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredPointersAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetString()!
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputAuthoredPointersAlternative1 : InputAuthoredPointers {
+public sealed class InputAuthoredPointersList : InputAuthoredPointers {
     public required IReadOnlyList<string> Value {
         get;
         init;
     }
-    internal new static InputAuthoredPointersAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredPointersList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.GetString()!).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1319,6 +1303,22 @@ public sealed class InputAuthoredPointersAlternative1 : InputAuthoredPointers {
         foreach (var item in Value) {
             WriteText(writer, item);
         } writer.WriteEndArray();
+    }
+}
+public sealed class InputAuthoredPointersString : InputAuthoredPointers {
+    public required string Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredPointersString Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.GetString()!
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, Value);
     }
 }
 public sealed class InputAuthoredProfile : InputDocument {
@@ -1340,50 +1340,18 @@ public sealed class InputAuthoredProfile : InputDocument {
 public abstract class InputAuthoredQuestionText : InputDocument {
     private protected InputAuthoredQuestionText() {
     } internal static InputAuthoredQuestionText Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredQuestionTextAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredQuestionTextAlternative1.Read(value);
-        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredQuestionTextAlternative2.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredQuestionTextString.Read(value);
+        if ((value.ValueKind == JsonValueKind.Object)) return InputAuthoredQuestionTextObject.Read(value);
+        if ((value.ValueKind == JsonValueKind.Array)) return InputAuthoredQuestionTextList.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredQuestionTextAlternative0 : InputAuthoredQuestionText {
-    public required string Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredQuestionTextAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetString()!
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputAuthoredQuestionTextAlternative1 : InputAuthoredQuestionText {
-    public required JsonElement Value {
-        get;
-        init;
-    }
-    internal new static InputAuthoredQuestionTextAlternative1 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } Value.WriteTo(writer);
-    }
-}
-public sealed class InputAuthoredQuestionTextAlternative2 : InputAuthoredQuestionText {
+public sealed class InputAuthoredQuestionTextList : InputAuthoredQuestionText {
     public required IReadOnlyList<JsonElement> Value {
         get;
         init;
     }
-    internal new static InputAuthoredQuestionTextAlternative2 Read(JsonElement value) => new() {
+    internal new static InputAuthoredQuestionTextList Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = Array.AsReadOnly(value.EnumerateArray().Select(item0 => item0.Clone()).ToArray())
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1395,6 +1363,38 @@ public sealed class InputAuthoredQuestionTextAlternative2 : InputAuthoredQuestio
         foreach (var item in Value) {
             item.WriteTo(writer);
         } writer.WriteEndArray();
+    }
+}
+public sealed class InputAuthoredQuestionTextObject : InputAuthoredQuestionText {
+    public required JsonElement Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredQuestionTextObject Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } Value.WriteTo(writer);
+    }
+}
+public sealed class InputAuthoredQuestionTextString : InputAuthoredQuestionText {
+    public required string Value {
+        get;
+        init;
+    }
+    internal new static InputAuthoredQuestionTextString Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.GetString()!
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, Value);
     }
 }
 public sealed class InputAuthoredRelate : InputDocument {
@@ -1624,16 +1624,7 @@ public abstract class InputAuthoredScoreBatch : InputDocument {
     private protected InputAuthoredScoreBatch() {
     }
 }
-public sealed class InputAuthoredScoreBatchAlternative0 : InputAuthoredScoreBatch {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputAuthoredScoreBatchAlternative1 : InputAuthoredScoreBatch {
+public sealed class InputAuthoredScoreBatchInteger : InputAuthoredScoreBatch {
     public required long Value {
         get;
         init;
@@ -1644,6 +1635,15 @@ public sealed class InputAuthoredScoreBatchAlternative1 : InputAuthoredScoreBatc
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputAuthoredScoreBatchMax : InputAuthoredScoreBatch {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputAuthoredTag : InputDocument {
@@ -1745,16 +1745,7 @@ public abstract class InputAuthoredTagBatch : InputDocument {
     private protected InputAuthoredTagBatch() {
     }
 }
-public sealed class InputAuthoredTagBatchAlternative0 : InputAuthoredTagBatch {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputAuthoredTagBatchAlternative1 : InputAuthoredTagBatch {
+public sealed class InputAuthoredTagBatchInteger : InputAuthoredTagBatch {
     public required long Value {
         get;
         init;
@@ -1767,20 +1758,29 @@ public sealed class InputAuthoredTagBatchAlternative1 : InputAuthoredTagBatch {
         } writer.WriteNumberValue(Value);
     }
 }
+public sealed class InputAuthoredTagBatchMax : InputAuthoredTagBatch {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
+    }
+}
 public abstract class InputAuthoredThreshold : InputDocument {
     private protected InputAuthoredThreshold() {
     } internal static InputAuthoredThreshold Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredThresholdAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredThresholdAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputAuthoredThresholdNumber.Read(value);
+        if ((value.ValueKind == JsonValueKind.String)) return InputAuthoredThresholdString.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputAuthoredThresholdAlternative0 : InputAuthoredThreshold {
+public sealed class InputAuthoredThresholdNumber : InputAuthoredThreshold {
     public required double Value {
         get;
         init;
     }
-    internal new static InputAuthoredThresholdAlternative0 Read(JsonElement value) => new() {
+    internal new static InputAuthoredThresholdNumber Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetDouble()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1791,12 +1791,12 @@ public sealed class InputAuthoredThresholdAlternative0 : InputAuthoredThreshold 
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputAuthoredThresholdAlternative1 : InputAuthoredThreshold {
+public sealed class InputAuthoredThresholdString : InputAuthoredThreshold {
     public required string Value {
         get;
         init;
     }
-    internal new static InputAuthoredThresholdAlternative1 Read(JsonElement value) => new() {
+    internal new static InputAuthoredThresholdString Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetString()!
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -1811,20 +1811,7 @@ public abstract class InputCacheDocument : InputDocument {
     private protected InputCacheDocument() {
     }
 }
-public sealed class InputCacheDocumentAlternative0 : InputCacheDocument {
-    public required string Value {
-        get;
-        init;
-    }
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputCacheDocumentAlternative1 : InputCacheDocument {
+public sealed class InputCacheDocumentDisabledCache : InputCacheDocument {
     public required InputDisabledCache Value {
         get;
         init;
@@ -1838,11 +1825,7 @@ public sealed class InputCacheDocumentAlternative1 : InputCacheDocument {
         else Value.Write(writer);
     }
 }
-public abstract class InputContextSchema : InputDocument {
-    private protected InputContextSchema() {
-    }
-}
-public sealed class InputContextSchemaAlternative0 : InputContextSchema {
+public sealed class InputCacheDocumentString : InputCacheDocument {
     public required string Value {
         get;
         init;
@@ -1855,7 +1838,11 @@ public sealed class InputContextSchemaAlternative0 : InputContextSchema {
         } WriteText(writer, Value);
     }
 }
-public sealed class InputContextSchemaAlternative1 : InputContextSchema {
+public abstract class InputContextSchema : InputDocument {
+    private protected InputContextSchema() {
+    }
+}
+public sealed class InputContextSchemaObject : InputContextSchema {
     public required JsonElement Value {
         get;
         init;
@@ -1866,6 +1853,19 @@ public sealed class InputContextSchemaAlternative1 : InputContextSchema {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } Value.WriteTo(writer);
+    }
+}
+public sealed class InputContextSchemaString : InputContextSchema {
+    public required string Value {
+        get;
+        init;
+    }
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, Value);
     }
 }
 public sealed class InputDisabledCache : InputDocument {
@@ -2029,7 +2029,7 @@ public abstract class InputEngineSettingsMaxEstimatedInputTokensTotal : InputDoc
     private protected InputEngineSettingsMaxEstimatedInputTokensTotal() {
     }
 }
-public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalAlternative0 : InputEngineSettingsMaxEstimatedInputTokensTotal {
+public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalInteger : InputEngineSettingsMaxEstimatedInputTokensTotal {
     public required ulong Value {
         get;
         init;
@@ -2042,7 +2042,7 @@ public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalAlternative0 
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1 : InputEngineSettingsMaxEstimatedInputTokensTotal {
+public sealed class InputEngineSettingsMaxEstimatedInputTokensTotalNull : InputEngineSettingsMaxEstimatedInputTokensTotal {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2055,7 +2055,7 @@ public abstract class InputEngineSettingsMaxRequests : InputDocument {
     private protected InputEngineSettingsMaxRequests() {
     }
 }
-public sealed class InputEngineSettingsMaxRequestsAlternative0 : InputEngineSettingsMaxRequests {
+public sealed class InputEngineSettingsMaxRequestsInteger : InputEngineSettingsMaxRequests {
     public required ulong Value {
         get;
         init;
@@ -2068,7 +2068,7 @@ public sealed class InputEngineSettingsMaxRequestsAlternative0 : InputEngineSett
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxRequestsAlternative1 : InputEngineSettingsMaxRequests {
+public sealed class InputEngineSettingsMaxRequestsNull : InputEngineSettingsMaxRequests {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2081,7 +2081,7 @@ public abstract class InputEngineSettingsMaxRequestsTotal : InputDocument {
     private protected InputEngineSettingsMaxRequestsTotal() {
     }
 }
-public sealed class InputEngineSettingsMaxRequestsTotalAlternative0 : InputEngineSettingsMaxRequestsTotal {
+public sealed class InputEngineSettingsMaxRequestsTotalInteger : InputEngineSettingsMaxRequestsTotal {
     public required ulong Value {
         get;
         init;
@@ -2094,7 +2094,7 @@ public sealed class InputEngineSettingsMaxRequestsTotalAlternative0 : InputEngin
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputEngineSettingsMaxRequestsTotalAlternative1 : InputEngineSettingsMaxRequestsTotal {
+public sealed class InputEngineSettingsMaxRequestsTotalNull : InputEngineSettingsMaxRequestsTotal {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2107,7 +2107,7 @@ public abstract class InputImageMedia : InputDocument {
     private protected InputImageMedia() {
     }
 }
-public sealed class InputImageMediaAlternative0 : InputImageMedia {
+public sealed class InputImageMediaImageJpeg : InputImageMedia {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2116,7 +2116,7 @@ public sealed class InputImageMediaAlternative0 : InputImageMedia {
         } WriteText(writer, "image/jpeg");
     }
 }
-public sealed class InputImageMediaAlternative1 : InputImageMedia {
+public sealed class InputImageMediaImagePng : InputImageMedia {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -2152,22 +2152,22 @@ public abstract class InputReaderMedia : InputDocument {
     private protected InputReaderMedia() {
     }
 }
-public sealed class InputReaderMediaAlternative0 : InputReaderMedia {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "text");
-    }
-}
-public sealed class InputReaderMediaAlternative1 : InputReaderMedia {
+public sealed class InputReaderMediaImage : InputReaderMedia {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } WriteText(writer, "image");
+    }
+}
+public sealed class InputReaderMediaText : InputReaderMedia {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "text");
     }
 }
 public abstract class InputRecognitionExample : InputDocument {
@@ -2238,20 +2238,7 @@ public sealed class InputRecognitionExampleText : InputDocument {
         writer.WriteEndObject();
     }
 }
-public sealed class InputRecognitionExampleAlternative0 : InputRecognitionExample {
-    public required string Value {
-        get;
-        init;
-    }
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, Value);
-    }
-}
-public sealed class InputRecognitionExampleAlternative1 : InputRecognitionExample {
+public sealed class InputRecognitionExampleRecognitionExampleText : InputRecognitionExample {
     public required InputRecognitionExampleText Value {
         get;
         init;
@@ -2265,28 +2252,29 @@ public sealed class InputRecognitionExampleAlternative1 : InputRecognitionExampl
         else Value.Write(writer);
     }
 }
-public abstract class InputRecognitionMode : InputDocument {
-    private protected InputRecognitionMode() {
-    } internal static InputRecognitionMode Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "whole")) return InputRecognitionModeAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "boundary_only")) return InputRecognitionModeAlternative1.Read(value);
-        throw new JsonException("Authored data does not match the native Request schema.");
+public sealed class InputRecognitionExampleString : InputRecognitionExample {
+    public required string Value {
+        get;
+        init;
     }
-}
-public sealed class InputRecognitionModeAlternative0 : InputRecognitionMode {
-    internal new static InputRecognitionModeAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
-        } WriteText(writer, "whole");
+        } WriteText(writer, Value);
     }
 }
-public sealed class InputRecognitionModeAlternative1 : InputRecognitionMode {
-    internal new static InputRecognitionModeAlternative1 Read(JsonElement value) => new() {
+public abstract class InputRecognitionMode : InputDocument {
+    private protected InputRecognitionMode() {
+    } internal static InputRecognitionMode Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "whole")) return InputRecognitionModeWhole.Read(value);
+        if ((value.ValueKind == JsonValueKind.String) && (value.ValueKind == JsonValueKind.String && value.GetString() == "boundary_only")) return InputRecognitionModeBoundaryOnly.Read(value);
+        throw new JsonException("Authored data does not match the native Request schema.");
+    }
+}
+public sealed class InputRecognitionModeBoundaryOnly : InputRecognitionMode {
+    internal new static InputRecognitionModeBoundaryOnly Read(JsonElement value) => new() {
         ParsedDocument = value.Clone()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -2295,6 +2283,18 @@ public sealed class InputRecognitionModeAlternative1 : InputRecognitionMode {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } WriteText(writer, "boundary_only");
+    }
+}
+public sealed class InputRecognitionModeWhole : InputRecognitionMode {
+    internal new static InputRecognitionModeWhole Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "whole");
     }
 }
 public sealed class InputRecognitionSeedSpan : InputDocument {
@@ -2620,7 +2620,7 @@ public abstract class InputRequestBatch : InputDocument {
     private protected InputRequestBatch() {
     }
 }
-public sealed class InputRequestBatchAlternative0 : InputRequestBatch {
+public sealed class InputRequestBatchInteger : InputRequestBatch {
     public required ulong Value {
         get;
         init;
@@ -2633,7 +2633,7 @@ public sealed class InputRequestBatchAlternative0 : InputRequestBatch {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestBatchAlternative1 : InputRequestBatch {
+public sealed class InputRequestBatchString : InputRequestBatch {
     public required string Value {
         get;
         init;
@@ -2871,29 +2871,17 @@ public sealed class InputRequestDefinitionAuthoredChoose : InputRequestDefinitio
 public abstract class InputRequestDefinitionAuthoredChooseBatch : InputDocument {
     private protected InputRequestDefinitionAuthoredChooseBatch() {
     } internal static InputRequestDefinitionAuthoredChooseBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredChooseBatchAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredChooseBatchAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredChooseBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredChooseBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredChooseBatchAlternative0 : InputRequestDefinitionAuthoredChooseBatch {
-    internal new static InputRequestDefinitionAuthoredChooseBatchAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputRequestDefinitionAuthoredChooseBatchAlternative1 : InputRequestDefinitionAuthoredChooseBatch {
+public sealed class InputRequestDefinitionAuthoredChooseBatchInteger : InputRequestDefinitionAuthoredChooseBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredChooseBatchAlternative1 Read(JsonElement value) => new() {
+    internal new static InputRequestDefinitionAuthoredChooseBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -2902,6 +2890,18 @@ public sealed class InputRequestDefinitionAuthoredChooseBatchAlternative1 : Inpu
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputRequestDefinitionAuthoredChooseBatchMax : InputRequestDefinitionAuthoredChooseBatch {
+    internal new static InputRequestDefinitionAuthoredChooseBatchMax Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputRequestDefinitionAuthoredDecide : InputRequestDefinition {
@@ -3024,29 +3024,17 @@ public sealed class InputRequestDefinitionAuthoredDecide : InputRequestDefinitio
 public abstract class InputRequestDefinitionAuthoredDecideBatch : InputDocument {
     private protected InputRequestDefinitionAuthoredDecideBatch() {
     } internal static InputRequestDefinitionAuthoredDecideBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredDecideBatchAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredDecideBatchAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredDecideBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredDecideBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredDecideBatchAlternative0 : InputRequestDefinitionAuthoredDecideBatch {
-    internal new static InputRequestDefinitionAuthoredDecideBatchAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputRequestDefinitionAuthoredDecideBatchAlternative1 : InputRequestDefinitionAuthoredDecideBatch {
+public sealed class InputRequestDefinitionAuthoredDecideBatchInteger : InputRequestDefinitionAuthoredDecideBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredDecideBatchAlternative1 Read(JsonElement value) => new() {
+    internal new static InputRequestDefinitionAuthoredDecideBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -3055,6 +3043,18 @@ public sealed class InputRequestDefinitionAuthoredDecideBatchAlternative1 : Inpu
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputRequestDefinitionAuthoredDecideBatchMax : InputRequestDefinitionAuthoredDecideBatch {
+    internal new static InputRequestDefinitionAuthoredDecideBatchMax Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputRequestDefinitionAuthoredFind : InputRequestDefinition {
@@ -3323,29 +3323,17 @@ public sealed class InputRequestDefinitionAuthoredScore : InputRequestDefinition
 public abstract class InputRequestDefinitionAuthoredScoreBatch : InputDocument {
     private protected InputRequestDefinitionAuthoredScoreBatch() {
     } internal static InputRequestDefinitionAuthoredScoreBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredScoreBatchAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredScoreBatchAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredScoreBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredScoreBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredScoreBatchAlternative0 : InputRequestDefinitionAuthoredScoreBatch {
-    internal new static InputRequestDefinitionAuthoredScoreBatchAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputRequestDefinitionAuthoredScoreBatchAlternative1 : InputRequestDefinitionAuthoredScoreBatch {
+public sealed class InputRequestDefinitionAuthoredScoreBatchInteger : InputRequestDefinitionAuthoredScoreBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredScoreBatchAlternative1 Read(JsonElement value) => new() {
+    internal new static InputRequestDefinitionAuthoredScoreBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -3354,6 +3342,18 @@ public sealed class InputRequestDefinitionAuthoredScoreBatchAlternative1 : Input
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputRequestDefinitionAuthoredScoreBatchMax : InputRequestDefinitionAuthoredScoreBatch {
+    internal new static InputRequestDefinitionAuthoredScoreBatchMax Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputRequestDefinitionAuthoredTag : InputRequestDefinition {
@@ -3467,29 +3467,17 @@ public sealed class InputRequestDefinitionAuthoredTag : InputRequestDefinition {
 public abstract class InputRequestDefinitionAuthoredTagBatch : InputDocument {
     private protected InputRequestDefinitionAuthoredTagBatch() {
     } internal static InputRequestDefinitionAuthoredTagBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredTagBatchAlternative0.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredTagBatchAlternative1.Read(value);
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return InputRequestDefinitionAuthoredTagBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return InputRequestDefinitionAuthoredTagBatchInteger.Read(value);
         throw new JsonException("Authored data does not match the native Request schema.");
     }
 }
-public sealed class InputRequestDefinitionAuthoredTagBatchAlternative0 : InputRequestDefinitionAuthoredTagBatch {
-    internal new static InputRequestDefinitionAuthoredTagBatchAlternative0 Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
-public sealed class InputRequestDefinitionAuthoredTagBatchAlternative1 : InputRequestDefinitionAuthoredTagBatch {
+public sealed class InputRequestDefinitionAuthoredTagBatchInteger : InputRequestDefinitionAuthoredTagBatch {
     public required long Value {
         get;
         init;
     }
-    internal new static InputRequestDefinitionAuthoredTagBatchAlternative1 Read(JsonElement value) => new() {
+    internal new static InputRequestDefinitionAuthoredTagBatchInteger Read(JsonElement value) => new() {
         ParsedDocument = value.Clone(), Value = value.GetInt64()
     };
     public override void Write(Utf8JsonWriter writer) {
@@ -3498,6 +3486,18 @@ public sealed class InputRequestDefinitionAuthoredTagBatchAlternative1 : InputRe
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class InputRequestDefinitionAuthoredTagBatchMax : InputRequestDefinitionAuthoredTagBatch {
+    internal new static InputRequestDefinitionAuthoredTagBatchMax Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
     }
 }
 public sealed class InputRequestDefinitionRecognizeDefinition : InputRequestDefinition {
@@ -3605,34 +3605,7 @@ public abstract class InputRequestFraming : InputDocument {
     private protected InputRequestFraming() {
     }
 }
-public sealed class InputRequestFramingAlternative0 : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "document");
-    }
-}
-public sealed class InputRequestFramingAlternative1 : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "lines");
-    }
-}
-public sealed class InputRequestFramingAlternative2 : InputRequestFraming {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "jsonl");
-    }
-}
-public sealed class InputRequestFramingAlternative3 : InputRequestFraming {
+public sealed class InputRequestFramingCsv : InputRequestFraming {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -3641,7 +3614,34 @@ public sealed class InputRequestFramingAlternative3 : InputRequestFraming {
         } WriteText(writer, "csv");
     }
 }
-public sealed class InputRequestFramingAlternative4 : InputRequestFraming {
+public sealed class InputRequestFramingDocument : InputRequestFraming {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "document");
+    }
+}
+public sealed class InputRequestFramingJsonl : InputRequestFraming {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "jsonl");
+    }
+}
+public sealed class InputRequestFramingLines : InputRequestFraming {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "lines");
+    }
+}
+public sealed class InputRequestFramingTsv : InputRequestFraming {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -4549,7 +4549,7 @@ public abstract class InputRequestThreshold : InputDocument {
     private protected InputRequestThreshold() {
     }
 }
-public sealed class InputRequestThresholdAlternative0 : InputRequestThreshold {
+public sealed class InputRequestThresholdNumber : InputRequestThreshold {
     public required double Value {
         get;
         init;
@@ -4562,7 +4562,7 @@ public sealed class InputRequestThresholdAlternative0 : InputRequestThreshold {
         } writer.WriteNumberValue(Value);
     }
 }
-public sealed class InputRequestThresholdAlternative1 : InputRequestThreshold {
+public sealed class InputRequestThresholdString : InputRequestThreshold {
     public required string Value {
         get;
         init;
@@ -4579,7 +4579,7 @@ public abstract class InputRequestVersion : InputDocument {
     private protected InputRequestVersion() {
     }
 }
-public sealed class InputRequestVersionAlternative0 : InputRequestVersion {
+public sealed class InputRequestVersionThinkthenRequest1 : InputRequestVersion {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -4622,7 +4622,16 @@ public abstract class InputSourceUnit : InputDocument {
     private protected InputSourceUnit() {
     }
 }
-public sealed class InputSourceUnitAlternative0 : InputSourceUnit {
+public sealed class InputSourceUnitFile : InputSourceUnit {
+    public override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "file");
+    }
+}
+public sealed class InputSourceUnitLine : InputSourceUnit {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
@@ -4631,22 +4640,13 @@ public sealed class InputSourceUnitAlternative0 : InputSourceUnit {
         } WriteText(writer, "line");
     }
 }
-public sealed class InputSourceUnitAlternative1 : InputSourceUnit {
+public sealed class InputSourceUnitWindow : InputSourceUnit {
     public override void Write(Utf8JsonWriter writer) {
         if (ParsedDocument is {
         } parsed) {
             writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
             return;
         } WriteText(writer, "window");
-    }
-}
-public sealed class InputSourceUnitAlternative2 : InputSourceUnit {
-    public override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "file");
     }
 }
 public static class QuestionBuilders {
