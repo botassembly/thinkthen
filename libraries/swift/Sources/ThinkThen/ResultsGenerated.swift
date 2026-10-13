@@ -7401,17 +7401,29 @@ private func answerPath(_ json: JSONValue, _ path: [String]) throws -> JSONValue
 }
 extension OwnedCall {
   private func answerJSON(_ function: String, _ judgment: String) throws -> JSONValue {
+    guard terminal.kind == "terminal" else {
+      throw AnswerCardinalityError(function: function, count: 0, call: self)
+    }
+    if case .null = terminal.failure {
+      throw JSONConversionError("Terminal failure must be an object")
+    }
     if case .value(let failure) = terminal.failure {
       throw SessionFailure(failure: failure, call: self)
     }
+    let collection =
+      function == "decide" || function == "choose" || function == "tag" || function == "score"
+      || function == "filter" || function == "rank" || function == "annotate"
+      || function == "recognize"
     var values: [JSONValue] = []
     for packet in packets {
       guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }
       if judgment.isEmpty {
-        guard try answerPath(packet.json, ["kind"]) == .string("aggregate"),
+        let kind = try answerPath(packet.json, ["kind"])
+        let row = collection && kind == .string("row")
+        guard row || kind == .string("aggregate"),
           let value = try answerPath(packet.json, ["value"])
         else { continue }
-        values.append(value)
+        values.append(row ? .array([value]) : value)
       } else {
         guard try answerPath(packet.json, ["kind"]) == .string("observation") else { continue }
         guard try answerPath(packet.json, ["value", "kind"]) == .string("row") else { continue }
@@ -7426,6 +7438,16 @@ extension OwnedCall {
         else { continue }
         values.append(value)
       }
+    }
+    if judgment.isEmpty && collection {
+      var combined: [JSONValue] = []
+      for value in values {
+        guard case .array(let items) = value.kind else {
+          throw JSONConversionError("Expected aggregate collection")
+        }
+        combined.append(contentsOf: items)
+      }
+      return .array(combined)
     }
     guard values.count == 1 else {
       throw AnswerCardinalityError(function: function, count: values.count, call: self)

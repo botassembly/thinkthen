@@ -226,6 +226,17 @@ def render(definitions):
                 else:
                     _, required_decode = conversion(field, definitions, f'RequiredElement({quote(member)})')
                     chunks.append(f'    public {field_type} {prop} => {required_decode};\n')
+            from host_answers import named_object_fields
+            for field in named_object_fields(schema, definitions):
+                value = schema['properties'][field]
+                target = definitions[value['$ref'].split('/')[-1]] if '$ref' in value else value
+                if 'name' in target.get('properties', {}):
+                    expression = name(field) + '.Name'
+                elif 'variants' in target:
+                    arms = ', '.join(name(child) + ' value => value.Name' for child, _ in target['variants'])
+                    expression = name(field) + ' switch { ' + arms + ', _ => throw new JsonException("Unknown named endpoint.") }'
+                else: continue
+                chunks.append('    public string ' + name(field) + 'Name => ' + expression + ';\n')
             chunks.append('}\n\n')
         else:
             # Primitive references use their native C# types at the member edge.
@@ -530,13 +541,24 @@ public abstract class InputDocument {
         lines.append('public override void Write(Utf8JsonWriter writer) { if (ParsedDocument is {} parsed) { writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true); return; } ' + ' '.join(writes) + ' }')
         lines.append('}')
         output.append('\n'.join(lines))
-    return header + '\n\n'.join(output) + '\n'
+    builders = ['public static class QuestionBuilders {']
+    for child in definitions['RequestDefinition']['_variant_names']:
+        source = definitions[child]
+        for field, value in source.get('properties', {}).items():
+            if '$ref' not in value or field not in source.get('required', []): continue
+            key = value['$ref'].split('/')[-1]
+            target = definitions[key]
+            if not target.get('title', '').endswith('Question') or 'properties' not in target: continue
+            builders += ['public static InputRequestQuestionDefinition ' + name(field) + '(' + cname(key) + ' question) {',
+                         'ArgumentNullException.ThrowIfNull(question);',
+                         'return new InputRequestQuestionDefinition { Value = new ' + cname(child) + ' { ' + name(field) + ' = question } };', '}']
+    return header + '\n\n'.join(output) + '\n' + '\n'.join(builders + ['}']) + '\n'
 
 
 def named_calls(functions):
     """Generate public named operations over one shared session construction."""
     lines = ['// Generated from canonical RequestFunction; do not edit.', '#nullable enable',
-             'using ThinkThen.Inputs;', 'namespace ThinkThen;',
+             'using ThinkThen.Inputs;', 'using ThinkThen.Results;', 'namespace ThinkThen;',
              'public sealed partial class Engine {']
     for function in functions:
         title = function.title()
@@ -548,4 +570,79 @@ def named_calls(functions):
                   'ArgumentNullException.ThrowIfNull(feed);',
                   f'return ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, FeedInput, options), feed, cancellation);',
                   '}']
+    return '\n'.join(lines + ['}']) + '\n'
+
+
+def answer_helpers(definitions):
+    """Read native normalized judgments without recomputing authored decisions."""
+    from host_answers import scalar_answers
+    def carriers(key, seen=()):
+        if key == 'completesessionJudgment': return []
+        if key in seen: return None
+        source = definitions[key]
+        for child, _ in source.get('variants', []):
+            result = carriers(child, seen + (key,))
+            if result is not None: return result
+        for field, value in source.get('properties', {}).items():
+            if isinstance(value, dict) and '$ref' in value:
+                result = carriers(value['$ref'].split('/')[-1], seen + (key,))
+                if result is not None: return [(key, field)] + result
+        return None
+    route = carriers('completesessionPacket')
+    if not route: raise ValueError('C# needs a normalized judgment carrier route')
+    lines = ['public sealed class AnswerCardinalityFailure : InvalidOperationException {',
+             'public OwnedCall Call { get; }',
+             'internal AnswerCardinalityFailure(string function, OwnedCall call) : base("Expected exactly one " + function + " judgment.") { Call = call; }', '}',
+             'public static class AnswerAccessors {',
+             'private static void Successful(OwnedCall call) {',
+             'ArgumentNullException.ThrowIfNull(call);',
+             'if (call.Terminal is null || call.Terminal.Kind != "terminal") throw new AnswerCardinalityFailure("terminal", call);',
+             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Null) throw new System.Text.Json.JsonException("Terminal failure must be an object.");',
+             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value, call);', '}']
+    methods = []
+    for function, kind, payload in scalar_answers(definitions):
+        variant = next(child for child, _ in definitions['completesessionJudgment']['variants']
+                       if definitions[child].get('x-request-function') == function)
+        typ, _ = conversion(payload, definitions)
+        if nullable(payload): typ += '?'
+        pattern = 'ThinkThen.Results.' + name(variant) + ' judgment'
+        for key, field in reversed(route):
+            pattern = 'ThinkThen.Results.' + name(key) + ' { ' + name(field) + ': ' + pattern + ' }'
+        value = 'judgment.Value'
+        if nullable(payload): value = 'judgment.Value.State == ThinkThen.Results.PresenceState.Null ? null : judgment.Value.Value'
+        method = name(kind)
+        methods.append((function, method, typ))
+        lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);',
+                  'var values = new List<' + typ + '>();',
+                  'foreach (var packet in call.Packets) if (packet is ' + pattern + ' && ((ThinkThen.Results.' + name(route[0][0]) + ')packet).Function.Value == ' + quote(function) + ') values.Add(' + value + ');',
+                  'if (values.Count != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
+                  'return values[0];', '}']
+    from host_answers import aggregate_answers
+    scalars = {function for function, _, _ in scalar_answers(definitions)}
+    for function, child, payload in aggregate_answers(definitions):
+        if function in scalars: continue
+        typ, _ = conversion(payload, definitions)
+        method = function.title()
+        methods.append((function, method, typ))
+        lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);']
+        if payload.get('type') == 'array':
+            item_type, _ = conversion(payload['items'], definitions)
+            lines += ['var values = new List<' + item_type + '>();',
+                      'foreach (var packet in call.Packets) {',
+                      'if (packet is ThinkThen.Results.' + name(child) + ' aggregate) values.AddRange(aggregate.Value);']
+            for row, _ in definitions['completesessionPacket']['variants']:
+                fields = definitions[row].get('properties', {})
+                if (fields.get('kind', {}).get('const') == 'row' and
+                    fields.get('function', {}).get('const') == function and fields.get('value') == payload['items']):
+                    lines += ['else if (packet is ThinkThen.Results.' + name(row) + ' row) values.Add(row.Value);']
+            lines += ['}', 'return values.AsReadOnly();', '}']
+        else:
+            lines += ['var values = call.Packets.OfType<ThinkThen.Results.' + name(child) + '>().Select(packet => packet.Value).ToArray();',
+                      'if (values.Length != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
+                      'return values[0];', '}']
+    lines += ['}', 'public sealed partial class Engine {']
+    for function, method, typ in methods:
+        lines += ['public async Task<' + typ + '> ' + function.title() + 'ValueAsync(InputRequestQuestion question, InputRequestInput input,',
+                  'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+                  '(await ' + function.title() + 'Async(question, input, options, cancellation).ConfigureAwait(false)).' + method + '();']
     return '\n'.join(lines + ['}']) + '\n'

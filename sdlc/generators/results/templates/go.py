@@ -195,17 +195,20 @@ def answer_helpers(definitions):
     for path, value in guards:
         checks.append('ownedLiteral(ownedAnswerPath(packet.raw, []string{' + ','.join(json.dumps(field) for field in path[:-1]) + '}).Value,' + json.dumps(path[-1]) + ',' + json.dumps(value) + ')')
     path = '[]string{' + ','.join(json.dumps(field) for field in route) + '}'
-    lines = ['type AnswerCardinalityError struct { Function string; Count int; Call OwnedCall }',
+    collections = [function for function, _, payload in aggregate_answers(definitions) if payload.get('type') == 'array']
+    collection_test = ' || '.join('function==' + json.dumps(function) for function in collections)
+    lines = ['func ownedObject(raw json.RawMessage) bool { value:=bytes.TrimSpace(raw); return len(value)>0 && value[0]==123 }',
+             'type AnswerCardinalityError struct { Function string; Count int; Call OwnedCall }',
              'func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }',
              'func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] { result:=Presence[json.RawMessage]{Present:true,Value:raw}; for _,field:=range path { result=ownedMember[json.RawMessage](result.Value,field); if result.Err!=nil || !result.Present || result.Null { return result } }; return result }',
-             'func (v OwnedCall) answerTerminal() error { if v.Terminal==nil { return &AnswerCardinalityError{Call:v} }; failure:=v.Terminal.Failure(); if failure.Err!=nil { return failure.Err }; if failure.Present && !failure.Null { detail:=failure.Value.Error(); if detail.Err!=nil { return detail.Err }; return &SessionError{Call:v,Detail:detail.Value} }; return nil }',
+             'func (v OwnedCall) answerTerminal() error { if v.Terminal==nil { return &AnswerCardinalityError{Call:v} }; kind:=v.Terminal.Kind(); if kind.Err!=nil { return kind.Err }; if !kind.Present || kind.Null || kind.Value!="terminal" { return &AnswerCardinalityError{Call:v} }; failure:=v.Terminal.Failure(); if failure.Err!=nil { return failure.Err }; if failure.Present { if failure.Null || !ownedObject(failure.Value.raw) { return &AnswerCardinalityError{Call:v} }; detail:=failure.Value.Error(); if detail.Err!=nil { return detail.Err }; if !detail.Present || detail.Null || !ownedObject(detail.Value.raw) { return &AnswerCardinalityError{Call:v} }; return &SessionError{Call:v,Detail:detail.Value} }; return nil }',
              'func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage,error) {',
-             'if err:=v.answerTerminal();err!=nil { return nil,err }; values:=make([]json.RawMessage,0)',
-             'for _,packet:=range v.Packets { if !ownedLiteral(packet.raw,"function",function) { continue }; var value Presence[json.RawMessage]',
-             'if judgment=="" { if !ownedLiteral(packet.raw,"kind","aggregate") { continue }; value=ownedMember[json.RawMessage](packet.raw,"value") } else {',
+             'if err:=v.answerTerminal();err!=nil { return nil,err }; values:=make([]json.RawMessage,0); collection:=' + collection_test,
+             'for _,packet:=range v.Packets { if !ownedLiteral(packet.raw,"function",function) { continue }; var value Presence[json.RawMessage]; row:=false',
+             'if judgment=="" { row=collection && ownedLiteral(packet.raw,"kind","row"); if !row && !ownedLiteral(packet.raw,"kind","aggregate") { continue }; value=ownedMember[json.RawMessage](packet.raw,"value") } else {',
              'if !(' + ' && '.join(checks) + ') { continue }; carrier:=ownedAnswerPath(packet.raw,' + path + '); if !ownedLiteral(carrier.Value,"kind",judgment) { continue }; value=ownedMember[json.RawMessage](carrier.Value,"value")',
-             '}; if value.Err!=nil { return nil,value.Err }; if value.Present { if value.Null { values=append(values,json.RawMessage("null")) } else { values=append(values,value.Value) } }',
-             '}; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
+             '}; if value.Err!=nil { return nil,value.Err }; if value.Present { raw:=value.Value; if value.Null { raw=json.RawMessage("null") }; if row { raw,err:=json.Marshal([]json.RawMessage{raw}); if err!=nil { return nil,err }; values=append(values,raw) } else { values=append(values,raw) } }',
+             '}; if judgment=="" && collection { combined:=make([]json.RawMessage,0); for _,value:=range values { var items []json.RawMessage; if err:=json.Unmarshal(value,&items);err!=nil { return nil,err }; combined=append(combined,items...) }; return json.Marshal(combined) }; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
     answers = {function: (typ(payload), '') for function, _, payload in aggregate_answers(definitions)}
     for function, kind, payload in scalar_answers(definitions):
         source = dict(payload)
