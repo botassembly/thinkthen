@@ -39,7 +39,7 @@ struct FindBind : FunctionData {
 	}
 };
 
-unique_ptr<FunctionData> BindFind(ClientContext &context, ScalarFunction &, vector<unique_ptr<Expression>> &) {
+unique_ptr<FunctionData> BindFind(ClientContext &context, const string &, vector<unique_ptr<Expression>> &) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	return make_uniq<FindBind>(context.shared_from_this());
 }
@@ -118,7 +118,7 @@ Value Decode(const ThinkThenReply &reply, const vector<string> &units) {
 }
 
 void Find(DataChunk &args, ExpressionState &state, Vector &result) {
-	auto &bound = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<FindBind>();
+	auto &bound = ThinkThenBindData(state.expr.Cast<BoundFunctionExpression>()).Cast<FindBind>();
 	auto context = bound.context.lock();
 	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -166,8 +166,8 @@ void RegisterFind(ExtensionLoader &loader) {
 	const auto result = FindType();
 	ScalarFunction function("thinkthen_native_find", {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
 	                                                 LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                        result, Find, BindFind);
-	function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	                        result, Find, ThinkThenBindScalar<BindFind>);
+	ThinkThenSpecialNulls(function);
 	function.SetStability(FunctionStability::VOLATILE);
 	RegisterDescribedScalar(loader, function, purpose);
 	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_find(question, units, settings := NULL, legacy_deadline := NULL) AS "

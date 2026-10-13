@@ -1,0 +1,73 @@
+# Required NULLs bypass partner admission, while omitted settings still execute.
+statement ok
+SET extension_directory = '${BUILD_DIR}/thinkthen-test-${TEST_UUID}/extensions';
+
+require thinkthen
+
+query I
+SELECT (thinkthen_plan('asks for a refund', '{"7":"Refund me please."}')).records;
+----
+1
+
+query IIIIIIIIII
+SELECT thinkthen_decide(NULL, 'ignored', 4) IS NULL,
+       thinkthen_choose(NULL, 'ignored', ['first', 'second'], 4) IS NULL,
+       thinkthen_score(NULL, 'ignored', ['low', 'high'], 4) IS NULL,
+       thinkthen_tag(NULL, 'ignored', ['label'], 4) IS NULL,
+       thinkthen_find(NULL, ['first', 'second'], 4) IS NULL,
+       thinkthen_annotate(NULL, 'ignored', 4) IS NULL,
+       thinkthen_details(NULL, 'ignored', 4) IS NULL,
+       thinkthen_try_details(NULL, 'ignored', 4) IS NULL,
+       thinkthen_recognize(NULL, '@missing-question.json', 4) IS NULL,
+       thinkthen_relations(NULL, '@missing-question.json', 4) IS NULL;
+----
+1	1	1	1	1	1	1	1	1	1
+
+query IIIIIIIIII
+SELECT thinkthen_decide_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_choose_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_tag_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_score_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_filter_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_rank_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_find_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_annotate_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_recognize_complete(NULL, 'not JSON') IS NULL,
+       thinkthen_relate_complete(NULL, 'not JSON') IS NULL;
+----
+1	1	1	1	1	1	1	1	1	1
+
+query I
+SELECT count(*) FROM thinkthen_read_files(NULL::VARCHAR);
+----
+0
+
+query I
+SELECT count(*) FROM thinkthen_relate(NULL, '@missing-question.json');
+----
+0
+
+query I
+SELECT count(*) FROM thinkthen_usage() WHERE metric = 'requests_sent' AND value = 0;
+----
+1
+
+statement error
+SELECT thinkthen_decide('', 'ignored');
+----
+thinkthen usage:
+
+statement error
+SELECT thinkthen_choose('', 'ignored', ['first', 'second']);
+----
+thinkthen usage:
+
+statement error
+SELECT thinkthen_score('', 'ignored', ['low', 'high']);
+----
+thinkthen usage:
+
+statement error
+SELECT thinkthen_tag('', 'ignored', ['label']);
+----
+thinkthen usage:
