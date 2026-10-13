@@ -107,6 +107,6 @@ fn set(definitions: &serde_json::Map<String, Value>) -> Value {
         "version":{"const":1},"threshold":reference("threshold"),"profile":reference("profile"),
         "batch":{},
         "questions":{"type":"object","minProperties":1,
-            "additionalProperties":{"anyOf":members}}
+            "additionalProperties":{"title":"AnnotateQuestion","anyOf":members}}
     }})
 }

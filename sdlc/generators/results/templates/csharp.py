@@ -313,10 +313,15 @@ def render_union(kind, variants, definitions):
     return ''.join(chunks)
 
 
-def render_inputs(schema):
+def render_inputs(schema, prepare, graph):
     """Generate writable values from the native Request graph, including authored unions."""
-    definitions = dict(schema['$defs'])
-    definitions['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
+    schema = {**schema, '$defs': dict(schema['$defs'])}
+    schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
+    definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
+    for key, source in list(definitions.items()):
+        if 'variants' in source:
+            names = [child for child, _ in source['variants']]
+            definitions[key] = {'oneOf': [definitions[child] for child in names], '_variant_names': names}
     nodes = {}
     def cname(key):
         return 'Input' + name(key)
@@ -361,7 +366,10 @@ def render_inputs(schema):
                 'double': 'writer.WriteNumberValue(' + expr + ');'}.get(typ, expr + '.WriteTo(writer);')
     reading = set()
     def child_key(key, index, alt):
-        tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
+        names = definitions.get(key, {}).get('_variant_names')
+        if names:
+            return names[index]
+        tag = alt.get('const') if key == 'RequestFunction' else next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
         return key + '_' + (tag if tag else 'Alternative' + str(index))
     def mark_read(value, path, wrapper=False):
         if isinstance(value, bool):
@@ -472,8 +480,7 @@ public abstract class InputDocument {
                 declaration += 'throw new JsonException("Authored data does not match the native Request schema."); }'
             output.append(declaration + ' }')
             for index, alt in enumerate(alternatives):
-                tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
-                child = key + '_' + (tag if tag else 'Alternative' + str(index))
+                child = child_key(key, index, alt)
                 nodes[child] = {**alt, '_base': typ}
             continue
         base = value.get('_base', 'InputDocument')
@@ -524,3 +531,18 @@ public abstract class InputDocument {
         lines.append('}')
         output.append('\n'.join(lines))
     return header + '\n\n'.join(output) + '\n'
+
+
+def named_calls(functions):
+    """Generate public named operations over one shared session construction."""
+    lines = ['// Generated from canonical RequestFunction; do not edit.', '#nullable enable',
+             'using ThinkThen.Inputs;', 'namespace ThinkThen;',
+             'public sealed partial class Engine {']
+    for function in functions:
+        title = function.title()
+        for input_type, input_value, feed in [('InputRequestInput', 'input', 'null'),
+                                              ('IAsyncEnumerable<InputRequestSessionDescriptor>', 'FeedInput', 'input')]:
+            lines += [f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, {input_type} input,',
+                      'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+                      f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, {input_value}, options), {feed}, cancellation);']
+    return '\n'.join(lines + ['}']) + '\n'

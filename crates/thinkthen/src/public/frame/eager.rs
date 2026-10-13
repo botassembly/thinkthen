@@ -4,7 +4,7 @@ use super::{PolarsCallOptions, PolarsEngine, PolarsExprOptions, complete, inputs
 use crate::public::{
     Annotated, Call, CallOptions, DecisionQuestion, Details, Edge, Engine, Error, Judgment,
     PlanEstimate, Probabilities, Question, QuestionKind, QuestionSet, Recognize, Recognized,
-    Relate, RequestCall,
+    Relate,
 };
 use polars::prelude::{
     BooleanChunkedBuilder, ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries,
@@ -133,8 +133,8 @@ impl PolarsEngine for Engine {
             PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
         let mut values = Answers::new("value", kind, rows)?;
         let named = match kind {
-            QuestionKind::Decide => RequestCall::Decide,
-            QuestionKind::Choose => RequestCall::Choose,
+            QuestionKind::Decide => crate::RequestFunction::Decide,
+            QuestionKind::Choose => crate::RequestFunction::Choose,
             _ => return Err(Error::defect("a probability column lost its question kind")),
         };
         request::execute(self, question, texts, named, options)?.try_map(|value| {
@@ -188,7 +188,7 @@ impl PolarsEngine for Engine {
             self,
             question.question(),
             texts,
-            RequestCall::Decide,
+            crate::RequestFunction::Decide,
             options,
         )?;
         call.try_map(|value| {
@@ -268,7 +268,7 @@ impl PolarsEngine for Engine {
             self,
             questions.clone().into(),
             held.as_materialized_series(),
-            RequestCall::Annotate,
+            crate::RequestFunction::Annotate,
             options,
         )?;
         call.try_map(|value| {
@@ -357,9 +357,9 @@ fn single(
     options: CallOptions<'_>,
 ) -> Result<Call<Series>, Error> {
     let named = match wanted {
-        QuestionKind::Choose => RequestCall::Choose,
-        QuestionKind::Score => RequestCall::Score,
-        QuestionKind::Tag => RequestCall::Tag,
+        QuestionKind::Choose => crate::RequestFunction::Choose,
+        QuestionKind::Score => crate::RequestFunction::Score,
+        QuestionKind::Tag => crate::RequestFunction::Tag,
         _ => return Err(Error::defect("the atomic column has no named request")),
     };
     request::execute(engine, question, texts, named, options)?.try_map(|value| {

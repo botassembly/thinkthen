@@ -35,7 +35,7 @@ static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
         if (!terminal) return;
         if (terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) {
             const thinkthen_complete_error_v1 *error = terminal->failure.value->error;
-            check(error->kind->kind == THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1, "retained typed reader failure");
+            check(error->kind->kind == (getenv("SESSION_NEXT") ? THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1 : THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1), "retained typed native failure");
             check(error->message.data && error->message.len, "retained typed safe message");
         } else {
             check(terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "success has absent failure");
@@ -44,10 +44,14 @@ static void packet_view(const thinkthen_complete_session_packet_v1 *view) {
         }
     } else if (view->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
         const thinkthen_complete_atomic_decide_value_v1 *row = view->data.decide_row->value;
-        check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "typed physical source present");
-        check(same_text(row->source.value->file, "owned.txt"), "retained nested filename");
-        check(row->source.value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->first_line.value == 1, "retained first line");
-        check(row->source.value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->last_line.value == 1, "retained last line");
+        if (getenv("SESSION_NEXT")) check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_MISSING_V1, "inline row has no invented physical source");
+        else {
+            check(row->source.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "typed physical source present");
+            if (!row->source.value) return;
+            check(same_text(row->source.value->file, "owned.txt"), "retained nested filename");
+            check(row->source.value->first_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->first_line.value == 1, "retained first line");
+            check(row->source.value->last_line.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 && row->source.value->last_line.value == 1, "retained last line");
+        }
         check(row->meta->observations.len && row->meta->question_sources.len, "typed nested observations and origins");
         if (getenv("SESSION_PARTIAL")) {
             check(row->meta->usage.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1, "partial usage present");
@@ -113,18 +117,15 @@ static thinkthen_session_result *drain(thinkthen_session *session) {
     for (;;) {
         uint32_t status = 99;
         thinkthen_session_result *out = (thinkthen_session_result *)(uintptr_t)7;
-        check(thinkthen_session_try_read(session, &status, &out) == THINKTHEN_OK, "read succeeds");
+        check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &status, &out) == THINKTHEN_OK, "blocking read succeeds");
         if (status == THINKTHEN_SESSION_RESULT_V1) {
             check(out != NULL, "result transfers an owner");
             packet_json(out);
             if (kept) thinkthen_session_result_free(out);
             else kept = out;
         } else {
-            check(out == NULL, "pending and end clear result output");
-            if (status == THINKTHEN_SESSION_END_V1) return kept;
-            check(status == THINKTHEN_SESSION_PENDING_V1, "pending status");
-            uint32_t ready;
-            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) == THINKTHEN_OK, "native wait succeeds");
+            check(status == THINKTHEN_SESSION_END_V1 && out == NULL, "end clears result output");
+            return kept;
         }
     }
 }
@@ -218,14 +219,21 @@ struct native_waiter {
     uint32_t ready;
     int code;
     int preserved;
+    thinkthen_session_result *packet;
 };
 static THREAD_RESULT wait_native(void *argument) {
     struct native_waiter *waiter = argument;
     uint32_t sentinel = 99;
     waiter->preserved = thinkthen_session_wait(waiter->session, 99, 0, &sentinel) == THINKTHEN_EUSAGE && sentinel == 99;
     const char *before = thinkthen_session_error_message();
-    waiter->code = thinkthen_session_wait(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, 5000, &waiter->ready);
-    waiter->preserved = waiter->preserved && before == thinkthen_session_error_message();
+    if (getenv("SESSION_NEXT")) {
+        waiter->packet = (thinkthen_session_result *)(uintptr_t)7;
+        waiter->code = thinkthen_session_next_packet(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, &waiter->ready, &waiter->packet);
+        waiter->preserved = waiter->preserved && waiter->ready == 99 && waiter->packet == (thinkthen_session_result *)(uintptr_t)7;
+    } else {
+        waiter->code = thinkthen_session_wait(waiter->session, THINKTHEN_SESSION_WAIT_RESULT_V1, 5000, &waiter->ready);
+        waiter->preserved = waiter->preserved && before == thinkthen_session_error_message();
+    }
     return THREAD_DONE;
 }
 int main(void) {
@@ -245,13 +253,33 @@ int main(void) {
             thinkthen_session_result_free(packet);
             if (status != THINKTHEN_SESSION_RESULT_V1) break;
         }
-        struct native_waiter waiter = {session, 99, 99, 0};
+        struct native_waiter waiter = {session, 99, 99, 0, NULL};
         THREAD_TYPE thread;
         if (fixture_start(&thread, wait_native, &waiter) != 0) return 1;
         thinkthen_session_cancel(session);
         puts("cancelled"); fflush(stdout);
         check(fixture_join(thread) == 0, "join native waiter before freeing handle");
-        check(waiter.code == THINKTHEN_OK && waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1, "cancel wakes held native wait");
+        if (getenv("SESSION_NEXT")) {
+            check(waiter.code == THINKTHEN_ECANCELLED, "cancel wakes blocked packet read");
+            puts("woken"); fflush(stdout);
+            (void)getchar();
+            thinkthen_session_result *packet = (thinkthen_session_result *)(uintptr_t)7;
+            uint32_t state = 99, ready = 99;
+            check(thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 5000, &ready) == THINKTHEN_OK && ready == THINKTHEN_SESSION_READY_RESULT_V1, "hold an unread post-cancel packet");
+            uint32_t invalid[] = {THINKTHEN_SESSION_WAIT_INPUT_V1, 99};
+            for (size_t i = 0; i < sizeof invalid / sizeof invalid[0]; ++i) {
+                check(thinkthen_session_next_packet(session, invalid[i], &state, &packet) == THINKTHEN_EUSAGE, "packet read refuses invalid interest");
+                check(state == 99 && packet == (thinkthen_session_result *)(uintptr_t)7, "invalid interest preserves both outputs and queued packet");
+            }
+            thinkthen_session_cancel(session);
+            check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_RESULT_V1, &state, &packet) == THINKTHEN_OK && state == THINKTHEN_SESSION_RESULT_V1 && packet, "queued packet wins over cancellation");
+            packet_json(packet); thinkthen_session_result_free(packet);
+            do {
+                check(thinkthen_session_next_packet(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, &state, &packet) == THINKTHEN_OK, "drain after prompt cancel");
+                if (packet) { packet_json(packet); thinkthen_session_result_free(packet); }
+            } while (state == THINKTHEN_SESSION_RESULT_V1);
+            check(state == THINKTHEN_SESSION_END_V1, "cancel settles and drains terminal");
+        } else check(waiter.code == THINKTHEN_OK && waiter.ready == THINKTHEN_SESSION_READY_CANCELLED_V1, "cancel wakes held native wait");
         check(waiter.preserved, "wait keeps its own calling-thread diagnostics");
         thinkthen_session_free(session);
         puts("freed"); fflush(stdout);

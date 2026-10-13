@@ -1,5 +1,6 @@
 //! Boundary proposals use ordinary question answers and mode-specific aggregate values.
 use super::*;
+use thinkthen::RequestFunction;
 use thinkthen::{
     RecognitionMode, RecognitionValue, Recognize, RecordInput, Request, RequestArguments,
     RequestCall, RequestEnvironment, RequestInput, RequestOptions, RequestOutcome, RequestQuestion,
@@ -95,20 +96,23 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
             exchanges[at]["request"].as_str().unwrap()
         );
     }
-    let request = Request::new(RequestCall::Recognize(RequestArguments {
-        question: RequestQuestion::Definition {
-            value: Recognize::from_json(declaration).unwrap().into(),
+    let request = Request::new(RequestCall::new(
+        RequestFunction::Recognize,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: Recognize::from_json(declaration).unwrap().into(),
+            },
+            input: RequestInput::Text {
+                text: text.to_owned(),
+                images: Vec::new(),
+            },
+            options: RequestOptions {
+                mode: Some(RecognitionMode::BoundaryOnly),
+                context: Some("First context".to_owned()),
+                ..RequestOptions::default()
+            },
         },
-        input: RequestInput::Text {
-            text: text.to_owned(),
-            images: Vec::new(),
-        },
-        options: RequestOptions {
-            mode: Some(RecognitionMode::BoundaryOnly),
-            context: Some("First context".to_owned()),
-            ..RequestOptions::default()
-        },
-    }));
+    ));
     let admitted = Request::from_json(&serde_json::to_string(&request).unwrap())
         .unwrap()
         .admit()
@@ -358,20 +362,23 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
     let root = folder();
     let saved = root.join("saved.json");
     let request = |options| {
-        Request::new(RequestCall::Recognize(RequestArguments {
-            question: RequestQuestion::File {
-                path: saved.clone(),
-            },
-            input: RequestInput::Source {
-                source: RequestSource {
-                    framing: None,
-                    paths: vec![root.join("missing-evidence")],
-                    reading: thinkthen::ReaderOptions::default(),
-                    media: thinkthen::ReaderMedia::Text,
+        Request::new(RequestCall::new(
+            RequestFunction::Recognize,
+            RequestArguments {
+                question: RequestQuestion::File {
+                    path: saved.clone(),
                 },
+                input: RequestInput::Source {
+                    source: RequestSource {
+                        framing: None,
+                        paths: vec![root.join("missing-evidence")],
+                        reading: thinkthen::ReaderOptions::default(),
+                        media: thinkthen::ReaderMedia::Text,
+                    },
+                },
+                options,
             },
-            options,
-        }))
+        ))
     };
     for declaration in [
         r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[]}}"#,
@@ -392,18 +399,21 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
     }
     assert_eq!(listener.count(), 0);
     std::fs::write(&saved,r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[],"stage_context":{"kind_edge":"","relation":""}},"relation_threshold":0.5}"#).unwrap();
-    let request = Request::new(RequestCall::Recognize(RequestArguments {
-        question: RequestQuestion::File { path: saved },
-        input: RequestInput::Text {
-            text: "lowercase".into(),
-            images: Vec::new(),
+    let request = Request::new(RequestCall::new(
+        RequestFunction::Recognize,
+        RequestArguments {
+            question: RequestQuestion::File { path: saved },
+            input: RequestInput::Text {
+                text: "lowercase".into(),
+                images: Vec::new(),
+            },
+            options: RequestOptions {
+                mode: Some(RecognitionMode::Whole),
+                relation_threshold: Some(RequestThreshold::Cut(0.6)),
+                ..RequestOptions::default()
+            },
         },
-        options: RequestOptions {
-            mode: Some(RecognitionMode::Whole),
-            relation_threshold: Some(RequestThreshold::Cut(0.6)),
-            ..RequestOptions::default()
-        },
-    }))
+    ))
     .admit()
     .unwrap();
     let RequestOutcome::Complete(call) = engine

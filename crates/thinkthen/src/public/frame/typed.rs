@@ -4,7 +4,7 @@ use crate::public::{
     Call, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
     CompleteFound, CompleteRank, CompleteRecognized, CompleteRecord, CompleteRelated,
     CompleteScore, CompleteSetRank, CompleteTags, DecisionQuestion, DetailQuestion, Engine, Error,
-    InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate, RequestCall,
+    InputEvidence, Question, QuestionSet, RankSet, Recognize, RecordInput, Relate,
 };
 use polars::prelude::Series;
 
@@ -76,7 +76,7 @@ impl Engine {
             question.question().clone().into(),
             records,
             options,
-            RequestCall::Decide,
+            crate::RequestFunction::Decide,
             |value| value.decisions("a decide column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -104,7 +104,7 @@ impl Engine {
             question.question().clone().into(),
             records,
             options,
-            RequestCall::Choose,
+            crate::RequestFunction::Choose,
             |value| value.choices("a choose column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -132,7 +132,7 @@ impl Engine {
             question.question().clone().into(),
             records,
             options,
-            RequestCall::Tag,
+            crate::RequestFunction::Tag,
             |value| value.tags("a tag column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -160,7 +160,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Score,
+            crate::RequestFunction::Score,
             |value| value.scores("a score column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -188,7 +188,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Filter,
+            crate::RequestFunction::Filter,
             |value| value.filtered("a filter column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -216,7 +216,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Rank,
+            crate::RequestFunction::Rank,
             |value| value.ranked("a rank column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -244,7 +244,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Rank,
+            crate::RequestFunction::Rank,
             |value| value.setranked("a rank_set column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -272,7 +272,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Annotate,
+            crate::RequestFunction::Annotate,
             |value| value.annotations("a annotate column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -300,7 +300,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Recognize,
+            crate::RequestFunction::Recognize,
             |value| value.recognized("a recognize column returned another result kind"),
         )?;
         Ok((call, positions))
@@ -328,7 +328,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Relate,
+            crate::RequestFunction::Relate,
             |value, originals| {
                 let row = value.related("a relate column returned another result kind")?;
                 if row.original().len() != originals.len() || row.ordinal() != 0 {
@@ -366,7 +366,7 @@ impl Engine {
             question.clone().into(),
             records,
             options,
-            RequestCall::Find,
+            crate::RequestFunction::Find,
             |value, mut originals| {
                 let found = value.found("a find column returned another result kind")?;
                 if found
