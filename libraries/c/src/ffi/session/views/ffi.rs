@@ -6,7 +6,7 @@
     reason = "fixture borrows only live owner-backed C views"
 )]
 use super::*;
-#[path = "tests.rs"]
+#[path = "tests/ffi.rs"]
 mod extension_values;
 use crate::complete_session_views as generated;
 
