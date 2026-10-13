@@ -28,4 +28,6 @@ Milestone: 0.2
   - Routine `test` and `lint` pass.
 - Defers: nothing.
 
+PM amendment, 2026-10-12. The coordinator's recommendation stands. Keep the current score contract from ADR 0007: score returns the probability-weighted position from 0 to the number of levels minus one. State that numbering in the score help, the annotate help and the result schema, and show that a question's own 1 to 5 wording does not change it. Keep the quoted wire form from ADR 0111 and Ian's 2026-09-29 ruling, so annotate still repeats the record inside each question. Drop the single-copy change and its smaller `--plan` proof. Still make `annotate --context` work or remove it from the help, and still fix `status` on a fresh cache. Reproduce each reported CLI defect with an outside-in test before fixing it. 0574's score accessor returns this number.
+
 ## Progress
