@@ -7,6 +7,8 @@ string(REGEX REPLACE "^version = \"([^\"]+)\"$" "\\1" THINKTHEN_EXTENSION_VERSIO
 set(THINKTHEN_LINK_FLAGS)
 if(NOT COMMAND duckdb_extension_statically_link)
   list(APPEND THINKTHEN_LINK_FLAGS DONT_LINK)
+  # Retained SQL macros call JSON functions; the older default build omits them.
+  duckdb_extension_load(json)
 endif()
 
 duckdb_extension_load(thinkthen
