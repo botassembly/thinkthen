@@ -503,11 +503,79 @@
       ],
       "lifecycle_owners": [
         "Client",
-        "Call"
+        "Call",
+        "AnswerCall"
       ],
       "representation_owners": [
-        "Encoder"
-      ]
+        "Json",
+        "Node",
+        ""
+      ],
+      "lifecycle_members": {
+        "Call": [
+          "poll",
+          "collect",
+          "input_closed"
+        ],
+        "AnswerCall": [
+          "answer"
+        ]
+      },
+      "representation_types": [
+        "Call",
+        "AnswerCall",
+        "Poll",
+        "PollState",
+        "PresenceState",
+        "Json",
+        "Node"
+      ],
+      "representation_members": {
+        "Json": [
+          "at",
+          "begin",
+          "contains",
+          "dump",
+          "end",
+          "get",
+          "is_array",
+          "is_boolean",
+          "is_null",
+          "is_number",
+          "is_object",
+          "is_string",
+          "object",
+          "parse"
+        ],
+        "Node": [
+          "document"
+        ],
+        "": [
+          "encode",
+          "decode"
+        ]
+      },
+      "wrapper_members": {
+        "Json": [
+          "Array",
+          "Object"
+        ],
+        "Poll": [
+          "packet"
+        ],
+        "PollState": [
+          "pending",
+          "result",
+          "end"
+        ],
+        "PresenceState": [
+          "absent",
+          "null"
+        ],
+        "SessionFailure": [
+          "failure"
+        ]
+      }
     },
     "csharp": {
       "root": "libraries/csharp",

@@ -54,6 +54,17 @@ class PublicSurface(unittest.TestCase):
             self.assertIn('unlisted public call/export: Other.extraPublicExport', errors)
             self.assertEqual(set(errors) - set(baseline), {
                 'unlisted public type/export: .Other', 'unlisted public call/export: Other.extraPublicExport'})
+            # Native category adapters accept only their documented members.
+            for filename, owner in [('json.hpp', 'Json'), ('result_value.hpp', 'Node')]:
+                path = client.with_name(filename)
+                path.write_text(path.read_text().replace('class ' + owner + ' {',
+                    'class ' + owner + ' { public: void extraPublicExport(); private:', 1))
+            extra = original.replace('class Call {', 'class Call { public: void extraPublicExport(); private:', 1)
+            extra = extra.replace('class AnswerCall : public Call {',
+                                  'class AnswerCall : public Call { public: void extraPublicExport(); private:', 1)
+            errors = invoke(extra)
+            for owner in ['Json', 'Node', 'Call', 'AnswerCall']:
+                self.assertIn('unlisted public call/export: ' + owner + '.extraPublicExport', errors)
 
     def test_scoped_options_helpers_settings_generated_members_and_extra_exports(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-') as folder:
