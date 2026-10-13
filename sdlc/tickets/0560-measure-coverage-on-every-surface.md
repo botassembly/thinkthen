@@ -31,6 +31,8 @@ A committed release-suite script measures how much of the Rust core and the C li
   - A planted dead function shows as unreached, and a planted unit-only function shows as reached only by unit tests.
 - Defers: deleting or moving tests. The outside-in test cleanup ticket owns that and uses this baseline.
 
+PM amendment, 2026-10-12. Accept the 2026-10-12 installed pair at da1e3bb17 as the 0.2 baseline. Do not make coverage reproducible. The two runs differ by at most six lines in any collection, from real scheduling paths, and line numbers shift with every deletion anyway, so later comparisons use counts. The candidate passes the floor when each collection's reached count is at least the lower of the two baseline counts, minus the lines the waves deleted. Objective-C joins at the candidate on macOS. Proceed with the waves now, test deletion included. A developer deletes a test after naming the outside test that covers its claim, as the outside-in skill says. Commit only the Markdown summary of a coverage run. Keep the raw per-line JSON as build output outside Git, and remove the two installed-pair JSON files from the branch. Run no further full coverage measurement before the candidate.
+
 ## Progress
 
 - 2026-10-12 started
