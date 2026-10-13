@@ -1148,6 +1148,7 @@ public sealed class RelationMemberAnswerId : RelationMember
     public Answer Answer => global::ThinkThen.Results.Answer.Read(RequiredElement("answer"));
     public string AnswerId => RequiredElement("answer_id").GetString()!;
     public double Probability => RequiredElement("probability").GetDouble();
+    public string SourceName => Source.Name;
 }
 public sealed class RelationMemberFailureId : RelationMember
 {
@@ -1167,6 +1168,7 @@ public sealed class RelationMemberFailureId : RelationMember
     public Presence<Usage> Usage => Optional<Usage>("usage", member => new Usage(member));
     public Failure Failure => new Failure(RequiredElement("failure"));
     public string FailureId => RequiredElement("failure_id").GetString()!;
+    public string SourceName => Source.Name;
 }
 public readonly record struct RelationMethod(string Value)
 {
@@ -1652,6 +1654,14 @@ public sealed class RelatedEntityEdge : ResultObject
     public string Relation => RequiredElement("relation").GetString()!;
     public RelationEndpoint Source => global::ThinkThen.Results.RelationEndpoint.Read(RequiredElement("source"));
     public RelationEndpoint Target => global::ThinkThen.Results.RelationEndpoint.Read(RequiredElement("target"));
+    public string SourceName => Source switch {
+        RelationEndpointRelatedEntity value => value.Name, RelationEndpointSource value => value.Name,
+        _ => throw new JsonException("Unknown named endpoint.")
+    };
+    public string TargetName => Target switch {
+        RelationEndpointRelatedEntity value => value.Name, RelationEndpointSource value => value.Name,
+        _ => throw new JsonException("Unknown named endpoint.")
+    };
 }
 public sealed class RelationRule : ResultObject
 {
@@ -2197,6 +2207,8 @@ public sealed class SessionRelationEdge : ResultObject
     public string Relation => RequiredElement("relation").GetString()!;
     public EntityDocument Source => new EntityDocument(RequiredElement("source"));
     public EntityDocument Target => new EntityDocument(RequiredElement("target"));
+    public string SourceName => Source.Name;
+    public string TargetName => Target.Name;
 }
 public sealed class SourceRelationEndpoint : ResultObject
 {

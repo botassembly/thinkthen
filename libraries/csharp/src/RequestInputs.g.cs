@@ -4649,3 +4649,21 @@ public sealed class InputSourceUnitAlternative2 : InputSourceUnit {
         } WriteText(writer, "file");
     }
 }
+public static class QuestionBuilders {
+    public static InputRequestQuestionDefinition Relate(InputRelateQuestion question) {
+        ArgumentNullException.ThrowIfNull(question);
+        return new InputRequestQuestionDefinition {
+            Value = new InputRequestDefinitionAuthoredRelate {
+                Relate = question
+            }
+        };
+    }
+    public static InputRequestQuestionDefinition Recognize(InputRecognizeQuestion question) {
+        ArgumentNullException.ThrowIfNull(question);
+        return new InputRequestQuestionDefinition {
+            Value = new InputRequestDefinitionRecognizeDefinition {
+                Recognize = question
+            }
+        };
+    }
+}

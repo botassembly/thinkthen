@@ -1,6 +1,7 @@
 // Generated from canonical RequestFunction; do not edit.
 #nullable enable
 using ThinkThen.Inputs;
+using ThinkThen.Results;
 namespace ThinkThen;
 public sealed partial class Engine {
     public Task<OwnedCall> DecideAsync(InputRequestQuestion question, InputRequestInput input,
@@ -105,6 +106,8 @@ public sealed class AnswerCardinalityFailure : InvalidOperationException {
 public static class AnswerAccessors {
     private static void Successful(OwnedCall call) {
         ArgumentNullException.ThrowIfNull(call);
+        if (call.Terminal is null || call.Terminal.Kind != "terminal") throw new AnswerCardinalityFailure("terminal",
+        call);
         if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value,
         call);
     }
@@ -160,6 +163,52 @@ public static class AnswerAccessors {
         if (values.Count != 1) throw new AnswerCardinalityFailure("tag", call);
         return values[0];
     }
+    public static IReadOnlyList<AtomicBoolean> Filter(this OwnedCall call) {
+        Successful(call);
+        var values = new List<AtomicBoolean>();
+        foreach (var packet in call.Packets) {
+            if (packet is ThinkThen.Results.SessionPacketFilterAggregate aggregate) values.AddRange(aggregate.Value);
+            else if (packet is ThinkThen.Results.SessionPacketFilterRow row) values.Add(row.Value);
+        }
+        return values.AsReadOnly();
+    }
+    public static IReadOnlyList<AtomicNonZeroUsize> Rank(this OwnedCall call) {
+        Successful(call);
+        var values = new List<AtomicNonZeroUsize>();
+        foreach (var packet in call.Packets) {
+            if (packet is ThinkThen.Results.SessionPacketRankAggregate aggregate) values.AddRange(aggregate.Value);
+        }
+        return values.AsReadOnly();
+    }
+    public static Find Find(this OwnedCall call) {
+        Successful(call);
+        var values = call.Packets.OfType<ThinkThen.Results.SessionPacketFindAggregate>().Select(packet => packet.Value).ToArray();
+        if (values.Length != 1) throw new AnswerCardinalityFailure("find", call);
+        return values[0];
+    }
+    public static IReadOnlyList<Annotation> Annotate(this OwnedCall call) {
+        Successful(call);
+        var values = new List<Annotation>();
+        foreach (var packet in call.Packets) {
+            if (packet is ThinkThen.Results.SessionPacketAnnotateAggregate aggregate) values.AddRange(aggregate.Value);
+            else if (packet is ThinkThen.Results.SessionPacketAnnotateRow row) values.Add(row.Value);
+        }
+        return values.AsReadOnly();
+    }
+    public static IReadOnlyList<Recognition> Recognize(this OwnedCall call) {
+        Successful(call);
+        var values = new List<Recognition>();
+        foreach (var packet in call.Packets) {
+            if (packet is ThinkThen.Results.SessionPacketRecognizeAggregate aggregate) values.AddRange(aggregate.Value);
+        }
+        return values.AsReadOnly();
+    }
+    public static Relation Relate(this OwnedCall call) {
+        Successful(call);
+        var values = call.Packets.OfType<ThinkThen.Results.SessionPacketRelateAggregate>().Select(packet => packet.Value).ToArray();
+        if (values.Length != 1) throw new AnswerCardinalityFailure("relate", call);
+        return values[0];
+    }
 }
 public sealed partial class Engine {
     public async Task<bool?> DecideValueAsync(InputRequestQuestion question, InputRequestInput input,
@@ -174,4 +223,26 @@ public sealed partial class Engine {
     public async Task<IReadOnlyList<string>> TagValueAsync(InputRequestQuestion question, InputRequestInput input,
     InputRequestOptions? options = null, CancellationToken cancellation = default) =>
     (await TagAsync(question, input, options, cancellation).ConfigureAwait(false)).Tags();
+    public async Task<IReadOnlyList<AtomicBoolean>> FilterValueAsync(InputRequestQuestion question,
+    InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await FilterAsync(question, input, options, cancellation).ConfigureAwait(false)).Filter();
+    public async Task<IReadOnlyList<AtomicNonZeroUsize>> RankValueAsync(InputRequestQuestion question,
+    InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await RankAsync(question, input, options, cancellation).ConfigureAwait(false)).Rank();
+    public async Task<Find> FindValueAsync(InputRequestQuestion question, InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await FindAsync(question, input, options, cancellation).ConfigureAwait(false)).Find();
+    public async Task<IReadOnlyList<Annotation>> AnnotateValueAsync(InputRequestQuestion question,
+    InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await AnnotateAsync(question, input, options, cancellation).ConfigureAwait(false)).Annotate();
+    public async Task<IReadOnlyList<Recognition>> RecognizeValueAsync(InputRequestQuestion question,
+    InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await RecognizeAsync(question, input, options, cancellation).ConfigureAwait(false)).Recognize();
+    public async Task<Relation> RelateValueAsync(InputRequestQuestion question, InputRequestInput input,
+    InputRequestOptions? options = null, CancellationToken cancellation = default) =>
+    (await RelateAsync(question, input, options, cancellation).ConfigureAwait(false)).Relate();
 }
