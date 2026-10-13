@@ -694,7 +694,8 @@ def main():
         definitions = prepare(graph(json.loads(args.schema.read_text()), ruby.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
-                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions)}
+                   output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions),
+                   output_path(ROOT, 'ruby', 'results_generated.rbs'): ruby.rbs(definitions)}
         for output, result in outputs.items():
             result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:

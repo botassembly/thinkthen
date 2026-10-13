@@ -36,6 +36,7 @@ OUTPUTS = (
     *group('zig', 'inputs', 'libraries/zig/src/', 'request_generated.zig', 'calls_generated.zig'),
     *group('ruby', 'results', 'libraries/ruby/lib/thinkthen/', 'results_generated.rb'),
     *group('ruby', 'results', 'libraries/ruby/src/ffi/', 'results_generated.rs'),
+    *group('ruby', 'results', 'libraries/ruby/sig/thinkthen/', 'results_generated.rbs'),
     *group('typescript', 'results', 'libraries/typescript/', 'results_generated.js', 'results_generated.d.ts'),
     *group('go', 'results', 'libraries/go/', 'owned_results_generated.go'),
     *group('php', 'results', 'libraries/php/src/session/', 'results_generated.php', 'ffi_generated.h', 'constants_generated.php', 'inputs_generated.php'),

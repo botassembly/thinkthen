@@ -70,6 +70,7 @@ libraries/python/thinkthen/_native_results.pyi linguist-generated
 libraries/r/thinkthen/R/inputs-generated.R linguist-generated
 libraries/r/thinkthen/src/rust/src/results_generated.rs linguist-generated
 libraries/ruby/lib/thinkthen/results_generated.rb linguist-generated
+libraries/ruby/sig/thinkthen/results_generated.rbs linguist-generated
 libraries/ruby/src/ffi/results_generated.rs linguist-generated
 libraries/swift/Sources/CThinkThen/bridge.c linguist-generated
 libraries/swift/Sources/ThinkThen/ABIGenerated.swift linguist-generated
