@@ -414,7 +414,7 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	RegisterMacro(loader, "CREATE MACRO thinkthen_native_options(settings, context, model, batch, deadline_ms, "
 	                      "allow_none, true_reading, false_reading) AS CASE WHEN " + encoded + " = '{}' THEN settings ELSE "
 	                      "concat(substr(trim(coalesce(settings, '{}')), 1, length(trim(coalesce(settings, '{}'))) - 1), "
-	                      "CASE WHEN trim(coalesce(settings, '{}')) = '{}' THEN '' ELSE ',' END, "
+	                      "CASE WHEN regexp_full_match(coalesce(settings, '{}'), '[[:space:]]*[{][[:space:]]*[}][[:space:]]*') THEN '' ELSE ',' END, "
 	                      "substr(" + encoded + ", 2)) END", "Encode named SQL controls for native admission.");
 	const string purpose = "Judge whether text answers a yes-or-no question.";
 	ScalarFunction native("thinkthen_native_decide",
