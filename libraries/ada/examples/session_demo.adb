@@ -1,17 +1,17 @@
 with Ada.Text_IO;
-with Thinkthen.Requests;
+with Thinkthen.Inputs;
 with Thinkthen.Sessions;
 with Thinkthen.Sessions.Calls;
 with Thinkthen.Answers;
 procedure Session_Demo is
-   use Thinkthen.Requests;
+   use Thinkthen.Inputs;
    use Thinkthen.Sessions;
    use Thinkthen.Answers;
    Owner : Session;
    Completed : Completion;
 begin
    Thinkthen.Sessions.Calls.Decide (Owner, Text_Question ("Does this ask for a refund?"),
-     Items_Input ([Text_Item ("Please return my payment.")]));
+     Records_Input ([Text_Item ("Please return my payment.")]));
    Finish (Owner);
    declare
       Answer : constant Decision := Decide_Answer (Owner, Completed);
