@@ -1,5 +1,6 @@
 """Polars column presentation over owned canonical results."""
 from dataclasses import dataclass
+import json
 from ._calls import Result
 from ._pandas_calls import PandasResult
 
@@ -12,11 +13,13 @@ def answer_column(name, rows, function, detailed):
     if function == 'decide' and not detailed and any(value is not None and not isinstance(value, bool) for value in rows):
         dtype = None
     try:
-        return pl.Series(name, rows, dtype=dtype)
-    except (TypeError, pl.exceptions.PolarsError):
+        column = pl.Series(name, rows, dtype=dtype)
+        if dtype is not None or json.dumps(column.to_list(), sort_keys=True) == json.dumps(rows, sort_keys=True):
+            return column
+    except (TypeError, OverflowError, pl.exceptions.PolarsError):
         if dtype is not None:
             raise
-        return pl.Series(name, rows, dtype=pl.Object)
+    return pl.Series(name, rows, dtype=pl.Object)
 
 
 def probability_column(result, name):

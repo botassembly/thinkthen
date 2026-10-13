@@ -13,6 +13,9 @@ CORPUS = REPO / "conformance/cases.json"
     ({'true': {'action': 'refund'}, 'false': {'action': 'retain'}},
      [{'action': 'refund'}, {'action': 'retain'}], 'Struct'),
     ({'true': ['refund'], 'false': ['retain', 'review']}, [['refund'], ['retain', 'review']], 'List'),
+    ({'true': {'a': 1}, 'false': {'b': 2}}, [{'a': 1}, {'b': 2}], 'Object'),
+    ({'true': [1], 'false': [True]}, [[1], [True]], 'Object'),
+    ({'true': [1.0], 'false': [9007199254740993]}, [[1.0], [9007199254740993]], 'Object'),
     ({'true': 'refund'}, ['refund', False], 'Object'),
     ({'false': 'retain'}, [True, 'retain'], 'Object'),
     ({'true': {'action': 'refund'}, 'false': 'retain'}, [{'action': 'refund'}, 'retain'], 'Object'),
@@ -44,9 +47,9 @@ def test_polars_question_files_preserve_authored_readings(backend, tmp_path, rea
         question = tt.QuestionSource(path={str(question)!r})
         with tt.Engine(cache=False, batch=1, base_url=address, record={str(recording)!r}) as engine:
             result = engine.decide(question, source)
-            assert [row.value for row in result.results] == {expected!r}
+            assert json.dumps([row.value for row in result.results], sort_keys=True) == json.dumps({expected!r}, sort_keys=True)
             values = result.value
-            assert values.to_list() == [{expected[0]!r}, None, {expected[1]!r}]
+            assert json.dumps(values.to_list(), sort_keys=True) == json.dumps([{expected[0]!r}, None, {expected[1]!r}], sort_keys=True)
             assert values.dtype.base_type() == getattr(pl, {dtype!r})
             assert result.positions == (0, 2)
             assert result.facts.records == 2 and result.facts.requests_sent == 2
@@ -54,7 +57,7 @@ def test_polars_question_files_preserve_authored_readings(backend, tmp_path, rea
             assert source.to_list() == ['refund now', None, 'good morning']
         with tt.Engine(cache=False, batch=1, base_url=address, replay={str(recording)!r}) as engine:
             replayed = engine.decide(question, source)
-            assert replayed.value.to_list() == values.to_list()
+            assert json.dumps(replayed.value.to_list(), sort_keys=True) == json.dumps(values.to_list(), sort_keys=True)
             assert replayed.facts.requests_sent == 0 and replayed.facts.records == 2
         assert server.calls == 2
         server.shutdown(); server.server_close()
