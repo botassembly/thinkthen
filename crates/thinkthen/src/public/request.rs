@@ -76,6 +76,11 @@ impl std::fmt::Debug for Request {
     }
 }
 impl Request {
+    /// Construct a filter call with typed question, input and controls.
+    #[must_use]
+    pub fn filter(arguments: RequestArguments) -> Self {
+        Self::for_function(RequestFunction::Filter, arguments)
+    }
     /// Construct the current request from typed arguments.
     #[must_use]
     pub fn new(mut call: RequestCall) -> Self {
