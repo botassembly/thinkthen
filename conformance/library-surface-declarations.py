@@ -403,7 +403,53 @@ def other(source, language):
     return result
 
 
+def php(source):
+    """Explicit internal namespaces hide implementation declarations only."""
+    text = masked(source)
+    pairs, depths = braces(text)
+    namespaces = list(re.finditer(r'\bnamespace\s*(?P<name>[\w\\]+)?\s*(?P<edge>[;{])', text))
+    erased = list(source)
+    def erase(start, end):
+        erased[start:end] = ['\n' if char == '\n' else ' ' for char in source[start:end]]
+    for index, declaration in enumerate(namespaces):
+        opening = declaration.end() - 1
+        bracketed = declaration['edge'] == '{'
+        end = pairs.get(opening, len(source) - 1) + 1 if bracketed else namespaces[index + 1].start() if index + 1 < len(namespaces) else len(source)
+        if 'Internal' in (declaration['name'] or '').split('\\'):
+            erase(declaration.start(), end)
+        elif bracketed:
+            erase(declaration.start(), declaration.end())
+            erase(end - 1, end)
+    visible = ''.join(erased)
+    result = cstyle(visible, 'php')
+    text = masked(visible)
+    pairs, depths = braces(text)
+    for declaration in re.finditer(r'\b(?:class|trait)\s+(\w+)([^{};]*)\{', text):
+        owner = declaration[1]
+        start = declaration.end() - 1
+        if start not in pairs: continue
+        end = pairs[start]
+        base = re.search(r'\bextends\s+([\w\\]+)', declaration[2])
+        if base: result.add(Declaration(owner, base[1].split('\\')[-1], 'inherited'))
+        for trait in re.finditer(r'\buse\s+([\w\\,\s]+)\s*;', text[start + 1:end]):
+            if depths[start + 1 + trait.start()] != depths[start] + 1: continue
+            for name in trait[1].split(','):
+                result.add(Declaration(owner, name.strip().split('\\')[-1], 'inherited'))
+        for constructor in re.finditer(r'\bpublic\s+function\s+__construct\s*\(', text[start + 1:end]):
+            opening = start + 1 + constructor.end() - 1
+            closing, depth = opening + 1, 1
+            while closing < end and depth:
+                depth += (text[closing] == '(') - (text[closing] == ')')
+                closing += 1
+            signature = text[opening + 1:closing - 1]
+            for promoted in re.finditer(r'\bpublic\s+(?:readonly\s+)?[\w?\\|]+\s+\$(\w+)', signature):
+                result.add(Declaration(owner, promoted[1], 'field'))
+    return result
+
+
 def declarations(source, language):
+    if language == 'php':
+        return php(source)
     if language == 'python':
         return python(source)
     if language in ('r', 'ruby', 'ada', 'cobol'):

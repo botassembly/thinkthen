@@ -4,6 +4,51 @@
 01 tt-n-complete-utf8-v1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-complete-json-array-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-json-entry-v1 based.
+ 02 v-name.
+ 03 v-name-data usage pointer.
+ 03 v-name-len usage binary-double unsigned.
+ 02 v-value usage pointer.
+01 tt-n-complete-json-object-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-json-v1 based.
+ 02 v-kind usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-data.
+ 03 v-data-union-storage pic x(16).
+ 03 v-data-boolean redefines v-data-union-storage usage binary-long unsigned.
+ 03 v-data-number redefines v-data-union-storage.
+ 04 v-data-number-data usage pointer.
+ 04 v-data-number-len usage binary-double unsigned.
+ 03 v-data-string redefines v-data-union-storage.
+ 04 v-data-string-data usage pointer.
+ 04 v-data-string-len usage binary-double unsigned.
+ 03 v-data-array redefines v-data-union-storage.
+ 04 v-data-array-data usage pointer.
+ 04 v-data-array-len usage binary-double unsigned.
+ 03 v-data-object redefines v-data-union-storage.
+ 04 v-data-object-data usage pointer.
+ 04 v-data-object-len usage binary-double unsigned.
+01 tt-n-complete-attempt-outcome-v1 based.
+ 02 v-kind usage binary-long unsigned.
+01 tt-n-complete-utf8-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-complete-sdk-request-id-v1 based.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-complete-u64-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage binary-double unsigned.
 01 tt-n-complete-extension-v1 based.
  02 v-name.
  03 v-name-data usage pointer.
@@ -11,9 +56,126 @@
  02 v-json.
  03 v-json-data usage pointer.
  03 v-json-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-complete-extensions-v1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-complete-attempt-v1 based.
+ 02 v-ordinal usage binary-double unsigned.
+ 02 v-outcome usage pointer.
+ 02 v-request-id.
+ 03 v-request-id-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-request-id-value.
+ 04 v-request-id-value-data usage pointer.
+ 04 v-request-id-value-len usage binary-double unsigned.
+ 02 v-request-sha256.
+ 03 v-request-sha256-data usage pointer.
+ 03 v-request-sha256-len usage binary-double unsigned.
+ 02 v-sdk-request-id usage pointer.
+ 02 v-server-ms.
+ 03 v-server-ms-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-server-ms-value usage binary-double unsigned.
+ 02 v-status.
+ 03 v-status-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-status-value usage binary-double unsigned.
+ 02 v-wall-ms usage binary-double unsigned.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-attempt-list-v1 based.
+ 02 v-data usage pointer.
+ 02 v-len usage binary-double unsigned.
+01 tt-n-complete-attempt-list-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-complete-call-id-v1 based.
+ 02 v-value.
+ 03 v-value-data usage pointer.
+ 03 v-value-len usage binary-double unsigned.
+01 tt-n-complete-call-id-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-u32-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 v-value usage binary-long unsigned.
+01 tt-n-complete-persistence-observation-v1 based.
+ 02 v-advice.
+ 03 v-advice-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-advice-value.
+ 04 v-advice-value-data usage pointer.
+ 04 v-advice-value-len usage binary-double unsigned.
+ 02 v-observed-at.
+ 03 v-observed-at-data usage pointer.
+ 03 v-observed-at-len usage binary-double unsigned.
+ 02 v-state usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
+01 tt-n-complete-persistence-observation-presence-v1 based.
+ 02 v-presence usage binary-long unsigned.
+ 02 filler pic x(4).
+ 02 v-value usage pointer.
+01 tt-n-complete-immediate-facts-v1 based.
+ 02 v-attempts.
+ 03 v-attempts-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-attempts-value.
+ 04 v-attempts-value-data usage pointer.
+ 04 v-attempts-value-len usage binary-double unsigned.
+ 02 v-cache-answers usage binary-double unsigned.
+ 02 v-call-id.
+ 03 v-call-id-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-call-id-value usage pointer.
+ 02 v-estimated-cost-usd.
+ 03 v-estimated-cost-usd-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-estimated-cost-usd-value.
+ 04 v-estimated-cost-usd-value-data usage pointer.
+ 04 v-estimated-cost-usd-value-len usage binary-double unsigned.
+ 02 v-held-model-mismatch.
+ 03 v-held-model-mismatch-presence usage binary-long unsigned.
+ 03 v-held-model-mismatch-value usage binary-long unsigned.
+ 02 v-input-tokens.
+ 03 v-input-tokens-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-input-tokens-value usage binary-double unsigned.
+ 02 v-largest-request-bytes usage binary-double unsigned.
+ 02 v-largest-request-estimated-input-tokens.
+ 03 v-largest-request-estimated-input-tokens-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-largest-request-estimated-input-tokens-value usage binary-double unsigned.
+ 02 v-model.
+ 03 v-model-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-model-value.
+ 04 v-model-value-data usage pointer.
+ 04 v-model-value-len usage binary-double unsigned.
+ 02 v-output-tokens.
+ 03 v-output-tokens-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-output-tokens-value usage binary-double unsigned.
+ 02 v-records usage binary-double unsigned.
+ 02 v-requests-sent usage binary-double unsigned.
+ 02 v-seconds usage float-long.
+ 02 v-token-estimate-method.
+ 03 v-token-estimate-method-data usage pointer.
+ 03 v-token-estimate-method-len usage binary-double unsigned.
+ 02 v-usage-persistence.
+ 03 v-usage-persistence-presence usage binary-long unsigned.
+ 03 filler pic x(4).
+ 03 v-usage-persistence-value usage pointer.
+ 02 v-extensions.
+ 03 v-extensions-data usage pointer.
+ 03 v-extensions-len usage binary-double unsigned.
 01 tt-n-complete-answer-yes-no-v1 based.
  02 v-kind.
  03 v-kind-data usage pointer.
@@ -112,89 +274,10 @@
  02 v-value.
  03 v-value-data usage pointer.
  03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-u64-presence-v1 based.
- 02 v-presence usage binary-long unsigned.
- 02 filler pic x(4).
- 02 v-value usage binary-double unsigned.
-01 tt-n-complete-json-array-v1 based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
-01 tt-n-complete-json-entry-v1 based.
- 02 v-name.
- 03 v-name-data usage pointer.
- 03 v-name-len usage binary-double unsigned.
- 02 v-value usage pointer.
-01 tt-n-complete-json-object-v1 based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
-01 tt-n-complete-json-v1 based.
- 02 v-kind usage binary-long unsigned.
- 02 filler pic x(4).
- 02 v-data.
- 03 v-data-union-storage pic x(16).
- 03 v-data-boolean redefines v-data-union-storage usage binary-long unsigned.
- 03 v-data-number redefines v-data-union-storage.
- 04 v-data-number-data usage pointer.
- 04 v-data-number-len usage binary-double unsigned.
- 03 v-data-string redefines v-data-union-storage.
- 04 v-data-string-data usage pointer.
- 04 v-data-string-len usage binary-double unsigned.
- 03 v-data-array redefines v-data-union-storage.
- 04 v-data-array-data usage pointer.
- 04 v-data-array-len usage binary-double unsigned.
- 03 v-data-object redefines v-data-union-storage.
- 04 v-data-object-data usage pointer.
- 04 v-data-object-len usage binary-double unsigned.
 01 tt-n-complete-json-presence-v1 based.
  02 v-presence usage binary-long unsigned.
  02 filler pic x(4).
  02 v-value usage pointer.
-01 tt-n-complete-utf8-presence-v1 based.
- 02 v-presence usage binary-long unsigned.
- 02 filler pic x(4).
- 02 v-value.
- 03 v-value-data usage pointer.
- 03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-attempt-outcome-v1 based.
- 02 v-kind usage binary-long unsigned.
-01 tt-n-complete-sdk-request-id-v1 based.
- 02 v-value.
- 03 v-value-data usage pointer.
- 03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-attempt-v1 based.
- 02 v-ordinal usage binary-double unsigned.
- 02 v-outcome usage pointer.
- 02 v-request-id.
- 03 v-request-id-presence usage binary-long unsigned.
- 03 filler pic x(4).
- 03 v-request-id-value.
- 04 v-request-id-value-data usage pointer.
- 04 v-request-id-value-len usage binary-double unsigned.
- 02 v-request-sha256.
- 03 v-request-sha256-data usage pointer.
- 03 v-request-sha256-len usage binary-double unsigned.
- 02 v-sdk-request-id usage pointer.
- 02 v-server-ms.
- 03 v-server-ms-presence usage binary-long unsigned.
- 03 filler pic x(4).
- 03 v-server-ms-value usage binary-double unsigned.
- 02 v-status.
- 03 v-status-presence usage binary-long unsigned.
- 03 filler pic x(4).
- 03 v-status-value usage binary-double unsigned.
- 02 v-wall-ms usage binary-double unsigned.
- 02 v-extensions.
- 03 v-extensions-data usage pointer.
- 03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-attempt-list-v1 based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
-01 tt-n-complete-attempt-list-presence-v1 based.
- 02 v-presence usage binary-long unsigned.
- 02 filler pic x(4).
- 02 v-value.
- 03 v-value-data usage pointer.
- 03 v-value-len usage binary-double unsigned.
 01 tt-n-complete-batch-setting-v1 based.
  02 v-kind usage binary-long unsigned.
  02 filler pic x(4).
@@ -1795,9 +1878,6 @@
  02 v-presence usage binary-long unsigned.
  02 filler pic x(4).
  02 v-value usage pointer.
-01 tt-n-complete-u32-presence-v1 based.
- 02 v-presence usage binary-long unsigned.
- 02 v-value usage binary-long unsigned.
 01 tt-n-complete-relation-rule-v1 based.
  02 v-either usage binary-long unsigned.
  02 filler pic x(4).
@@ -2835,28 +2915,6 @@
  02 v-extensions.
  03 v-extensions-data usage pointer.
  03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-call-id-v1 based.
- 02 v-value.
- 03 v-value-data usage pointer.
- 03 v-value-len usage binary-double unsigned.
-01 tt-n-complete-persistence-observation-v1 based.
- 02 v-advice.
- 03 v-advice-presence usage binary-long unsigned.
- 03 filler pic x(4).
- 03 v-advice-value.
- 04 v-advice-value-data usage pointer.
- 04 v-advice-value-len usage binary-double unsigned.
- 02 v-observed-at.
- 03 v-observed-at-data usage pointer.
- 03 v-observed-at-len usage binary-double unsigned.
- 02 v-state usage pointer.
- 02 v-extensions.
- 03 v-extensions-data usage pointer.
- 03 v-extensions-len usage binary-double unsigned.
-01 tt-n-complete-persistence-observation-presence-v1 based.
- 02 v-presence usage binary-long unsigned.
- 02 filler pic x(4).
- 02 v-value usage pointer.
 01 tt-n-complete-facts-v1 based.
  02 v-attempts.
  03 v-attempts-presence usage binary-long unsigned.
@@ -3610,8 +3668,7 @@
  02 v-kind usage binary-double unsigned.
  02 v-value usage pointer.
 01 tt-n-cobol-AnnotateDefinitionBatch based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-AnnotateDefinitionQuestions based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
@@ -3791,8 +3848,7 @@
 01 tt-n-cobol-ImageMediaArm2 based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-OptionSchemaDescription based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-OptionSchemaName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3870,8 +3926,7 @@
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DefinitionAnnotateDefinitionBatch based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-DefinitionAnnotateDefinitionQuestions based.
  02 v-keys usage pointer.
  02 v-values usage pointer.
@@ -3988,8 +4043,7 @@
 01 tt-n-cobol-RequestInputJsonKind based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RequestInputJsonValue based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-RequestInputRecordsItems based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4068,8 +4122,7 @@
 01 tt-n-cobol-RequestOriginalJsonKind based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RequestOriginalJsonValue based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-RequestOriginalTextKind based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-RequestOriginalTextText based.
@@ -4133,21 +4186,17 @@
 01 tt-n-cobol-ChooseBatchArm2 based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-CriterionArm2Entry based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-CriterionArm3Item based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-DecideBatchArm1 based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DecideBatchArm2 based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-DescriptionArm2Entry based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-DescriptionArm3Item based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-InputDeclarationObjectRequiredItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4157,11 +4206,9 @@
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-QuestionTextArm2Entry based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-QuestionTextArm3Item based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-ScoreBatchArm1 based.
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-ScoreBatchArm2 based.
@@ -4171,8 +4218,7 @@
 01 tt-n-cobol-TagBatchArm2 based.
  02 v-value usage binary-double signed.
 01 tt-n-cobol-ContextSchemaArm2Entry based.
- 02 v-data usage pointer.
- 02 v-len usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-RecognitionExampleTextKindsItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4488,91 +4534,6 @@
 78 tt-n-property-number-v1-k value 2.
 78 tt-n-property-string-list-v1-k value 4.
 78 tt-n-property-string-v1-k value 1.
-78 tt-n-request-annotate-question-arm-1-v1-k value 1.
-78 tt-n-request-annotate-question-arm-2-v1-k value 2.
-78 tt-n-request-annotate-question-arm-3-v1-k value 3.
-78 tt-n-request-annotate-question-arm-4-v1-k value 4.
-78 tt-n-request-batch-arm-1-v1-k value 1.
-78 tt-n-request-batch-arm-2-v1-k value 2.
-78 tt-n-request-call-threshold-arm-1-v1-k value 1.
-78 tt-n-request-call-threshold-arm-2-v1-k value 2.
-78 tt-n-request-context-schema-arm-1-v1-k value 1.
-78 tt-n-request-context-schema-arm-2-v1-k value 2.
-78 tt-n-request-criterion-arm-1-v1-k value 1.
-78 tt-n-request-criterion-arm-2-v1-k value 2.
-78 tt-n-request-criterion-arm-3-v1-k value 3.
-78 tt-n-request-criterion-arm-4-v1-k value 4.
-78 tt-n-request-cut-arm-1-v1-k value 1.
-78 tt-n-request-cut-arm-2-v1-k value 2.
-78 tt-n-request-definition-arm-1-v1-k value 1.
-78 tt-n-request-definition-arm-2-v1-k value 2.
-78 tt-n-request-definition-arm-3-v1-k value 3.
-78 tt-n-request-definition-arm-4-v1-k value 4.
-78 tt-n-request-definition-arm-5-v1-k value 5.
-78 tt-n-request-definition-arm-6-v1-k value 6.
-78 tt-n-request-definition-arm-7-v1-k value 7.
-78 tt-n-request-definition-arm-8-v1-k value 8.
-78 tt-n-request-definition-authored-score-batch-arm-1-v1-k value 1.
-78 tt-n-request-definition-authored-score-batch-arm-2-v1-k value 2.
-78 tt-n-request-description-arm-1-v1-k value 1.
-78 tt-n-request-description-arm-2-v1-k value 2.
-78 tt-n-request-description-arm-3-v1-k value 3.
-78 tt-n-request-description-arm-4-v1-k value 4.
-78 tt-n-request-framing-arm-1-v1-k value 1.
-78 tt-n-request-framing-arm-2-v1-k value 2.
-78 tt-n-request-framing-arm-3-v1-k value 3.
-78 tt-n-request-framing-arm-4-v1-k value 4.
-78 tt-n-request-framing-arm-5-v1-k value 5.
-78 tt-n-request-image-arm-1-v1-k value 1.
-78 tt-n-request-image-arm-2-v1-k value 2.
-78 tt-n-request-image-media-arm-1-v1-k value 1.
-78 tt-n-request-image-media-arm-2-v1-k value 2.
-78 tt-n-request-input-arm-1-v1-k value 1.
-78 tt-n-request-input-arm-2-v1-k value 2.
-78 tt-n-request-input-arm-3-v1-k value 3.
-78 tt-n-request-input-arm-4-v1-k value 4.
-78 tt-n-request-input-arm-5-v1-k value 5.
-78 tt-n-request-input-arm-6-v1-k value 6.
-78 tt-n-request-input-arm-7-v1-k value 7.
-78 tt-n-request-input-declaration-arm-1-v1-k value 1.
-78 tt-n-request-input-declaration-arm-2-v1-k value 2.
-78 tt-n-request-input-property-arm-1-v1-k value 1.
-78 tt-n-request-input-property-arm-2-v1-k value 2.
-78 tt-n-request-input-property-arm-3-v1-k value 3.
-78 tt-n-request-input-property-arm-4-v1-k value 4.
-78 tt-n-request-labels-arm-1-v1-k value 1.
-78 tt-n-request-labels-arm-2-v1-k value 2.
-78 tt-n-request-levels-arm-1-v1-k value 1.
-78 tt-n-request-levels-arm-2-v1-k value 2.
-78 tt-n-request-options-arm-1-v1-k value 1.
-78 tt-n-request-options-arm-2-v1-k value 2.
-78 tt-n-request-original-arm-1-v1-k value 1.
-78 tt-n-request-original-arm-2-v1-k value 2.
-78 tt-n-request-pointers-arm-1-v1-k value 1.
-78 tt-n-request-pointers-arm-2-v1-k value 2.
-78 tt-n-request-question-selector-arm-1-v1-k value 1.
-78 tt-n-request-question-selector-arm-2-v1-k value 2.
-78 tt-n-request-question-selector-arm-3-v1-k value 3.
-78 tt-n-request-question-selector-arm-4-v1-k value 4.
-78 tt-n-request-question-selector-arm-5-v1-k value 5.
-78 tt-n-request-question-text-arm-1-v1-k value 1.
-78 tt-n-request-question-text-arm-2-v1-k value 2.
-78 tt-n-request-question-text-arm-3-v1-k value 3.
-78 tt-n-request-reader-failure-arm-1-v1-k value 1.
-78 tt-n-request-reader-failure-arm-2-v1-k value 2.
-78 tt-n-request-reader-failure-arm-3-v1-k value 3.
-78 tt-n-request-reader-failure-arm-4-v1-k value 4.
-78 tt-n-request-reader-media-arm-1-v1-k value 1.
-78 tt-n-request-reader-media-arm-2-v1-k value 2.
-78 tt-n-request-recognition-example-arm-1-v1-k value 1.
-78 tt-n-request-recognition-example-arm-2-v1-k value 2.
-78 tt-n-request-recognition-mode-arm-1-v1-k value 1.
-78 tt-n-request-recognition-mode-arm-2-v1-k value 2.
-78 tt-n-request-source-unit-arm-1-v1-k value 1.
-78 tt-n-request-source-unit-arm-2-v1-k value 2.
-78 tt-n-request-source-unit-arm-3-v1-k value 3.
-78 tt-n-request-threshold-arm-1-v1-k value 1.
-78 tt-n-request-threshold-arm-2-v1-k value 2.
 78 tt-n-session-accepted-v1-k value 0.
 78 tt-n-session-closed-v1-k value 2.
 78 tt-n-session-end-v1-k value 2.

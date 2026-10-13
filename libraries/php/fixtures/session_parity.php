@@ -15,7 +15,8 @@ function consume(stdClass $fixture, Client $client): array
     };
     elseif (($fixture->question_form ?? null) === 'file') $question = Client::questionFile('fixture-question.json');
     elseif (isset($fixture->raw)) {
-        $question = Client::questionJson($fixture->raw);
+        file_put_contents('raw-question.json', $fixture->raw);
+        $question = Client::questionFile('raw-question.json');
     }
     $none = $verb === 'find' && ($question->none ?? false);
     if ($verb === 'find' && $question instanceof stdClass) unset($question->none);
@@ -77,8 +78,8 @@ try {
     $payload = consume($fixture, $client);
 } catch (CallFailure $error) {
     $kind = match (get_class($error)) {
-        ThinkThen\UsageFailure::class => ThinkThen\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Session\THINKTHEN_EDEADLINE,
-        ThinkThen\LocalFailure::class => ThinkThen\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Session\THINKTHEN_EDEFECT,
+        ThinkThen\UsageFailure::class => ThinkThen\Internal\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Internal\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Internal\Session\THINKTHEN_EDEADLINE,
+        ThinkThen\LocalFailure::class => ThinkThen\Internal\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Internal\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Internal\Session\THINKTHEN_EDEFECT,
     };
     $payload = ['admission' => ['code' => $kind, 'message' => $error->getMessage()]];
 } finally { $client?->close(); }

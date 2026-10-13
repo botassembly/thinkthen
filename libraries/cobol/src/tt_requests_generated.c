@@ -1116,9 +1116,7 @@ static void *convert_RequestInput_json_member_value_RequestInput_json_value(aren
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestInput_records_member_items_RequestItem_list(arena *a,const void *input) {
@@ -1961,9 +1959,7 @@ static void *convert_ContextSchema_arm_2_entry_JsonValue(arena *a,const void *in
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestImage_file_RequestImage_file(arena *a,const void *input) {
@@ -1998,9 +1994,7 @@ static void *convert_OptionSchema_member_description_JsonValue(arena *a,const vo
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_OptionSchema_member_name_Text(arena *a,const void *input) {
@@ -2038,9 +2032,7 @@ const void *input) {
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_ReaderMedia_arm_1_Literal_text(arena *a,const void *input) {
@@ -2657,9 +2649,7 @@ static void *convert_RequestDefinition_AnnotateDefinition_member_batch_JsonValue
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_RequestDefinition_AnnotateDefinition_member_questions_AnnotateQuestion_map(arena *a,
@@ -3416,9 +3406,7 @@ static void *convert_Authored_questionText_arm_2_entry_JsonValue(arena *a,const 
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_questionText_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3429,9 +3417,7 @@ static void *convert_Authored_questionText_arm_3_item_JsonValue(arena *a,const v
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_criterion_arm_2_entry_JsonValue(arena *a,const void *input) {
@@ -3442,9 +3428,7 @@ static void *convert_Authored_criterion_arm_2_entry_JsonValue(arena *a,const voi
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_criterion_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3455,9 +3439,7 @@ static void *convert_Authored_criterion_arm_3_item_JsonValue(arena *a,const void
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_pointers_arm_2_item_Text(arena *a,const void *input) {
@@ -3898,9 +3880,7 @@ static void *convert_Authored_description_arm_2_entry_JsonValue(arena *a,const v
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_description_arm_3_item_JsonValue(arena *a,const void *input) {
@@ -3911,9 +3891,7 @@ static void *convert_Authored_description_arm_3_item_JsonValue(arena *a,const vo
         a->code=THINKTHEN_COBOL_REPRESENTATION;
         return out;
     }
-    out->text=(thinkthen_complete_utf8_v1){
-        p->data,p->len
-    };
+    out->value=p->value;
     return out;
 }
 static void *convert_Authored_inputProperty_array_member_items_Authored_inputProperty_array_items(arena *a,
@@ -4002,6 +3980,23 @@ int TT_SESSION_RECOGNIZE(const void *engine,const thinkthen_cobol_RequestCall *i
 int TT_SESSION_RELATE(const void *engine,const thinkthen_cobol_RequestCall *input,void **out) {
     return start(engine,input,out,"relate",6);
 }
+int TT_PLAN(const void *engine,const char *function,uint64_t length,
+const thinkthen_cobol_RequestCall *input,char **out,uint64_t *written) {
+    arena a={
+        0
+    };
+    const thinkthen_request_arguments_v1 *arguments=convert_RequestCall_RequestArguments(&a,
+    input);
+    int code=a.code ? a.code : thinkthen_request_plan_typed_json(engine,
+    (thinkthen_complete_utf8_v1){
+        function,length
+    },arguments,
+    (thinkthen_complete_utf8_v1){
+        "cobol",5
+    },out,written);
+    release(&a);
+    return code;
+}
 int TT_SESSION_NEXT(thinkthen_session *session,uint32_t *status,thinkthen_session_result **out) {
     return thinkthen_session_next_packet(session,THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,status,
     out);
@@ -4026,4 +4021,145 @@ char *advice,uint64_t *written) {
 int TT_ENGINE_FINISH_USAGE_STATUS(const thinkthen_engine *engine,thinkthen_complete_usage_persistence_v1 *state,
 char *advice,uint64_t *written) {
     return usage_status(engine,state,advice,written,1);
+}
+int TT_QUESTION_TEXT(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionText *arm,
+thinkthen_cobol_RequestQuestionTextText *scalar,const char *data,uint64_t length) {
+    if(!selector || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestQuestionTextText){
+        data,length
+    };
+    *arm=(thinkthen_cobol_RequestQuestionText){
+        .m_text=scalar
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=1,.value=arm
+    };
+    return 0;
+}
+int TT_QUESTION_FILE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionFile *arm,
+thinkthen_cobol_RequestQuestionFilePath *scalar,const char *data,uint64_t length) {
+    if(!selector || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestQuestionFilePath){
+        data,length
+    };
+    *arm=(thinkthen_cobol_RequestQuestionFile){
+        .m_path=scalar
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=3,.value=arm
+    };
+    return 0;
+}
+int TT_QUESTION_NAME(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionName *arm,
+thinkthen_cobol_RequestQuestionNameName *scalar,const char *data,uint64_t length) {
+    if(!selector || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestQuestionNameName){
+        data,length
+    };
+    *arm=(thinkthen_cobol_RequestQuestionName){
+        .m_name=scalar
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=4,.value=arm
+    };
+    return 0;
+}
+int TT_QUESTION_REFERENCE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionReference *arm,
+thinkthen_cobol_RequestQuestionReferenceReference *scalar,const char *data,uint64_t length) {
+    if(!selector || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestQuestionReferenceReference){
+        data,length
+    };
+    *arm=(thinkthen_cobol_RequestQuestionReference){
+        .m_reference=scalar
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=5,.value=arm
+    };
+    return 0;
+}
+int TT_QUESTION_RELATE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRelate *value) {
+    if(!selector || !arm || !definition || !value) return THINKTHEN_COBOL_REPRESENTATION;
+    *definition=(thinkthen_cobol_RequestDefinition){
+        .kind=5,.value=value
+    };
+    *arm=(thinkthen_cobol_RequestQuestionDefinition){
+        .m_value=definition
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=2,.value=arm
+    };
+    return 0;
+}
+int TT_QUESTION_RECOGNIZE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRecognizeDefinition *value) {
+    if(!selector || !arm || !definition || !value) return THINKTHEN_COBOL_REPRESENTATION;
+    *definition=(thinkthen_cobol_RequestDefinition){
+        .kind=7,.value=value
+    };
+    *arm=(thinkthen_cobol_RequestQuestionDefinition){
+        .m_value=definition
+    };
+    *selector=(thinkthen_cobol_RequestQuestion){
+        .kind=2,.value=arm
+    };
+    return 0;
+}
+int TT_TEXT_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalText *arm,thinkthen_cobol_RequestOriginalTextText *scalar,const char *data,
+uint64_t length) {
+    if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestOriginalTextText){
+        data,length
+    };
+    *arm=(thinkthen_cobol_RequestOriginalText){
+        .m_text=scalar
+    };
+    *original=(thinkthen_cobol_RequestOriginal){
+        .kind=1,.value=arm
+    };
+    *item=(thinkthen_cobol_RequestItem){
+        .m_original=original
+    };
+    return 0;
+}
+int TT_JSON_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalJson *arm,thinkthen_cobol_RequestOriginalJsonValue *scalar,const struct thinkthen_complete_json_v1 *value) {
+    if(!item || !original || !arm || !scalar) return THINKTHEN_COBOL_REPRESENTATION;
+    *scalar=(thinkthen_cobol_RequestOriginalJsonValue){
+        .value=value
+    };
+    *arm=(thinkthen_cobol_RequestOriginalJson){
+        .m_value=scalar
+    };
+    *original=(thinkthen_cobol_RequestOriginal){
+        .kind=2,.value=arm
+    };
+    *item=(thinkthen_cobol_RequestItem){
+        .m_original=original
+    };
+    return 0;
+}
+int TT_FILE_INPUT(thinkthen_cobol_RequestInput *selector,thinkthen_cobol_RequestInputSource *arm,
+thinkthen_cobol_RequestSource *source,thinkthen_cobol_RequestSourcePaths *paths,thinkthen_cobol_RequestSourcePathsItem *path,
+const void **slots,const char *data,uint64_t length) {
+    if(!selector || !arm || !source || !paths || !path || !slots) return THINKTHEN_COBOL_REPRESENTATION;
+    *path=(thinkthen_cobol_RequestSourcePathsItem){
+        data,length
+    };
+    slots[0]=path;
+    *paths=(thinkthen_cobol_RequestSourcePaths){
+        .data=slots,.len=1
+    };
+    *source=(thinkthen_cobol_RequestSource){
+        .m_paths=paths
+    };
+    *arm=(thinkthen_cobol_RequestInputSource){
+        .m_source=source
+    };
+    *selector=(thinkthen_cobol_RequestInput){
+        .kind=6,.value=arm
+    };
+    return 0;
 }

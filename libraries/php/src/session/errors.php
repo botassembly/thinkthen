@@ -4,22 +4,21 @@ namespace ThinkThen;
 
 class CallFailure extends \RuntimeException
 {
-    public function __construct(string $message, public readonly ?\ThinkThen\Results\Node $failure = null,
-        public readonly array $results = [], public readonly ?\ThinkThen\Results\Node $terminal = null,
+    public const KIND = ErrorKind::Defect;
+    public readonly ErrorKind $kind;
+    public readonly bool $retryable;
+    public function __construct(string $message, public readonly ?\ThinkThen\Results\CallError $failure = null,
+        public readonly array $results = [], public readonly ?\ThinkThen\Results\SessionPacketTerminal $terminal = null,
         public readonly array $packets = [],
-        ?\Throwable $previous = null)
+        ?\Throwable $previous = null, bool $retryable = false,
+        private readonly ?\ThinkThen\Results\FailureFacts $immediateFacts = null)
     {
+        $this->kind = static::KIND;
+        $this->retryable = $failure?->error?->retryable ?? $retryable;
         parent::__construct($message, 0, $previous);
     }
-    public function facts(): ?\ThinkThen\Results\Node { return $this->failure?->facts; }
+    public function facts(): \ThinkThen\Results\Facts|\ThinkThen\Results\FailureFacts|null { return $this->failure?->facts ?? $this->immediateFacts; }
 }
-final class UsageFailure extends CallFailure {}
-final class BackendFailure extends CallFailure {}
-final class DeadlineFailure extends CallFailure {}
-final class LocalFailure extends CallFailure {}
-final class CancelledFailure extends CallFailure {}
-final class DefectFailure extends CallFailure {}
-
 final class Cancellation
 {
     public bool $cancelled = false;

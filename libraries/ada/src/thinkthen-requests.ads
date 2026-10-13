@@ -2,9 +2,11 @@
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
+with Thinkthen.Values;
 package Thinkthen.Requests is
--- Arbitrary JSON content only; native admission owns its syntax and meaning.
-type JSON_Value is new Unbounded_String;
+-- Arbitrary values use owned native trees; Rust owns their admission.
+subtype JSON_Value is Thinkthen.Values.Value;
+use type Thinkthen.Values.Value;
 generic
    type Element is private;
 package Optional_Values is
@@ -15,7 +17,7 @@ package Optional_Values is
       end case;
    end record;
 end Optional_Values;
-type T_JSON is new JSON_Value;
+subtype T_JSON is JSON_Value;
 package T_JSON_Options is new Optional_Values (T_JSON);
 subtype T_JSON_Optional is T_JSON_Options.Optional;
 type T_Authored_profile is new Unbounded_String;
@@ -948,6 +950,10 @@ type T_RequestSessionDescriptor is record
 T_item : T_RequestItem;
 T_location : T_SessionSourceLocation_Optional;
 end record;
+subtype Question is T_RequestQuestion;
+subtype Input is T_RequestInput;
+subtype Item is T_RequestItem;
+subtype Items is T_RequestItem_List;
 function Text_Question (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
 function Question_File (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_file, V_2 => (T_path => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));
 function Question_Name (Value : String) return T_RequestQuestion is (T_RequestQuestion'(Kind => T_RequestQuestion_arm_name, V_3 => (T_name => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>)));

@@ -73,6 +73,8 @@ def copybook(facts):
         lines.append('01 ' + identifier(name) + ' based.')
         lines.extend(members(record, 2))
     for key, value in facts['constants'].items():
+        if key.startswith('THINKTHEN_REQUEST_'):
+            continue
         lines.append('78 ' + identifier(key.lower()) + '-k value ' + str(value) + '.')
     return '\n'.join(lines) + '\n'
 
@@ -85,6 +87,9 @@ def native_name(key):
 def requests(definitions):
     """Keep native COBOL storage and delegate canonical type conversion."""
     nodes = {key: (value["oneOf"][0] if isinstance(value, dict) and len(value.get("oneOf", [])) == 1 and "const" in value["oneOf"][0] else value) for key, value in definitions.items()}
+    from templates.native_request import render as native_render
+    metadata = {}
+    native_render(definitions, metadata)
     layouts = {}
     pending = list(nodes)
     while pending:
@@ -127,8 +132,12 @@ def requests(definitions):
         elif source.get('type') in ('integer', 'number', 'boolean'):
             native = 'double' if source['type'] == 'number' else 'uint64_t' if source['type'] == 'boolean' or source.get('format', '').startswith('u') else 'int64_t'
             fields = [(native, 'value')]
-        else:
+        elif source.get('type') == 'string':
             fields = [('const char *', 'data'), ('uint64_t', 'len')]
+        else:
+            if tuple(metadata['fields']['JsonValue']) != (('value', '*const thinkthen_complete_json_v1'),):
+                raise ValueError('unsupported canonical arbitrary-value carrier')
+            fields = [('const struct thinkthen_complete_json_v1 *', 'value')]
         layouts[key] = fields
     header = ['/* Generated from the canonical Request graph; do not edit. */', '#ifndef TT_COBOL_REQUESTS_GENERATED_H', '#define TT_COBOL_REQUESTS_GENERATED_H', '#include <stdint.h>', '#define THINKTHEN_COBOL_REPRESENTATION 1001', '#define THINKTHEN_COBOL_OVERFLOW 1002', '#define THINKTHEN_COBOL_TEXT_CAPACITY 8192', 'typedef struct thinkthen_cobol_text {const char *data; uint64_t len;} thinkthen_cobol_text;']
     for key, source in nodes.items():
@@ -144,9 +153,11 @@ def requests(definitions):
     from templates.csharp import enum_values
     for function in enum_values(definitions['RequestFunction']):
         header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_RequestCall *,void **);')
-    header += ['int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
-    from templates.cobol_native import render
-    code = render(definitions, nodes)
+    header += ['int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,char **,uint64_t *);', 'int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
+    from templates.cobol_native import render, builders
+    builder_header, builder_source = builders(definitions)
+    header[-1:-1] = builder_header
+    code = render(definitions, nodes) + builder_source + '\n'
     names = {key: native_name(key) for key in nodes}
     if len(set(names.values())) != len(names):
         raise ValueError('colliding semantic COBOL native names')

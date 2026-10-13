@@ -748,8 +748,7 @@ typedef struct thinkthen_cobol_SourceUnit {
     const void * value;
 } thinkthen_cobol_SourceUnit;
 typedef struct thinkthen_cobol_AnnotateDefinitionBatch {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_AnnotateDefinitionBatch;
 typedef struct thinkthen_cobol_AnnotateDefinitionQuestions {
     const thinkthen_cobol_text * keys;
@@ -995,8 +994,7 @@ typedef struct thinkthen_cobol_ImageMediaArm2 {
     uint64_t reserved;
 } thinkthen_cobol_ImageMediaArm2;
 typedef struct thinkthen_cobol_OptionSchemaDescription {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_OptionSchemaDescription;
 typedef struct thinkthen_cobol_OptionSchemaName {
     const char * data;
@@ -1104,8 +1102,7 @@ typedef struct thinkthen_cobol_RequestBatchArm2 {
     uint64_t len;
 } thinkthen_cobol_RequestBatchArm2;
 typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionBatch {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_DefinitionAnnotateDefinitionBatch;
 typedef struct thinkthen_cobol_DefinitionAnnotateDefinitionQuestions {
     const thinkthen_cobol_text * keys;
@@ -1271,8 +1268,7 @@ typedef struct thinkthen_cobol_RequestInputJsonKind {
     uint64_t reserved;
 } thinkthen_cobol_RequestInputJsonKind;
 typedef struct thinkthen_cobol_RequestInputJsonValue {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_RequestInputJsonValue;
 typedef struct thinkthen_cobol_RequestInputRecordsItems {
     const void *const * data;
@@ -1382,8 +1378,7 @@ typedef struct thinkthen_cobol_RequestOriginalJsonKind {
     uint64_t reserved;
 } thinkthen_cobol_RequestOriginalJsonKind;
 typedef struct thinkthen_cobol_RequestOriginalJsonValue {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_RequestOriginalJsonValue;
 typedef struct thinkthen_cobol_RequestOriginalTextKind {
     uint64_t reserved;
@@ -1475,12 +1470,10 @@ typedef struct thinkthen_cobol_ChooseBatchArm2 {
     int64_t value;
 } thinkthen_cobol_ChooseBatchArm2;
 typedef struct thinkthen_cobol_CriterionArm2Entry {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_CriterionArm2Entry;
 typedef struct thinkthen_cobol_CriterionArm3Item {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_CriterionArm3Item;
 typedef struct thinkthen_cobol_DecideBatchArm1 {
     uint64_t reserved;
@@ -1489,12 +1482,10 @@ typedef struct thinkthen_cobol_DecideBatchArm2 {
     int64_t value;
 } thinkthen_cobol_DecideBatchArm2;
 typedef struct thinkthen_cobol_DescriptionArm2Entry {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_DescriptionArm2Entry;
 typedef struct thinkthen_cobol_DescriptionArm3Item {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_DescriptionArm3Item;
 typedef struct thinkthen_cobol_InputDeclarationObjectRequiredItem {
     const char * data;
@@ -1508,12 +1499,10 @@ typedef struct thinkthen_cobol_PointersArm2Item {
     uint64_t len;
 } thinkthen_cobol_PointersArm2Item;
 typedef struct thinkthen_cobol_QuestionTextArm2Entry {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_QuestionTextArm2Entry;
 typedef struct thinkthen_cobol_QuestionTextArm3Item {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_QuestionTextArm3Item;
 typedef struct thinkthen_cobol_ScoreBatchArm1 {
     uint64_t reserved;
@@ -1528,8 +1517,7 @@ typedef struct thinkthen_cobol_TagBatchArm2 {
     int64_t value;
 } thinkthen_cobol_TagBatchArm2;
 typedef struct thinkthen_cobol_ContextSchemaArm2Entry {
-    const char * data;
-    uint64_t len;
+    const struct thinkthen_complete_json_v1 * value;
 } thinkthen_cobol_ContextSchemaArm2Entry;
 typedef struct thinkthen_cobol_RecognitionExampleTextKindsItem {
     const char * data;
@@ -1577,6 +1565,28 @@ int TT_SESSION_FIND(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_ANNOTATE(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_RECOGNIZE(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_RELATE(const void *,const thinkthen_cobol_RequestCall *,void **);
+int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,char **,
+uint64_t *);
 int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);
 int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);
+int TT_QUESTION_TEXT(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionText *arm,
+thinkthen_cobol_RequestQuestionTextText *scalar,const char *data,uint64_t length);
+int TT_QUESTION_FILE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionFile *arm,
+thinkthen_cobol_RequestQuestionFilePath *scalar,const char *data,uint64_t length);
+int TT_QUESTION_NAME(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionName *arm,
+thinkthen_cobol_RequestQuestionNameName *scalar,const char *data,uint64_t length);
+int TT_QUESTION_REFERENCE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionReference *arm,
+thinkthen_cobol_RequestQuestionReferenceReference *scalar,const char *data,uint64_t length);
+int TT_QUESTION_RELATE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRelate *value);
+int TT_QUESTION_RECOGNIZE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRecognizeDefinition *value);
+int TT_TEXT_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalText *arm,thinkthen_cobol_RequestOriginalTextText *scalar,const char *data,
+uint64_t length);
+int TT_JSON_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalJson *arm,thinkthen_cobol_RequestOriginalJsonValue *scalar,const struct thinkthen_complete_json_v1 *value);
+int TT_FILE_INPUT(thinkthen_cobol_RequestInput *selector,thinkthen_cobol_RequestInputSource *arm,
+thinkthen_cobol_RequestSource *source,thinkthen_cobol_RequestSourcePaths *paths,thinkthen_cobol_RequestSourcePathsItem *path,
+const void **slots,const char *data,uint64_t length);
 #endif

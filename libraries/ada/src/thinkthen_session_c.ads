@@ -170,6 +170,8 @@ package Thinkthen_Session_C is
    K_THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_4_V1 : constant := 4;
    K_THINKTHEN_REQUEST_BATCH_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_BATCH_ARM_2_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_1_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_CACHE_DOCUMENT_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_CALL_THRESHOLD_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_CONTEXT_SCHEMA_ARM_1_V1 : constant := 1;
@@ -194,6 +196,10 @@ package Thinkthen_Session_C is
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_3_V1 : constant := 3;
    K_THINKTHEN_REQUEST_DESCRIPTION_ARM_4_V1 : constant := 4;
+   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_1_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_ESTIMATED_INPUT_TOKENS_TOTAL_ARM_2_V1 : constant := 2;
+   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_1_V1 : constant := 1;
+   K_THINKTHEN_REQUEST_ENGINE_SETTINGS_MAX_REQUESTS_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_FRAMING_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_FRAMING_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_FRAMING_ARM_3_V1 : constant := 3;
@@ -277,6 +283,252 @@ package Thinkthen_Session_C is
       len : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_request_text_v1 is record
+      text : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_unsigned_v1 is record
+      value : aliased Interfaces.Unsigned_64;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_batch_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_unsigned_v1;
+         when others =>
+            arm_2 : access constant thinkthen_request_text_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_batch_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_batch_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_disabled_cache_v1 is record
+      reserved : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_cache_document_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_text_v1;
+         when others =>
+            arm_2 : access constant thinkthen_request_disabled_cache_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_cache_document_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_cache_document_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_null_v1 is record
+      reserved : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_unsigned_v1;
+         when others =>
+            arm_2 : access constant thinkthen_request_null_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_engine_settings_max_estimated_input_tokens_total_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_engine_settings_max_requests_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_unsigned_v1;
+         when others =>
+            arm_2 : access constant thinkthen_request_null_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_engine_settings_max_requests_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_engine_settings_max_requests_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_v1;
+   type thinkthen_complete_json_array_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_entry_v1 is record
+      name : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_object_v1 is record
+      data : access constant thinkthen_complete_json_entry_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            boolean : aliased Interfaces.Unsigned_32;
+         when 1 =>
+            number : aliased thinkthen_complete_utf8_v1;
+         when 2 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when 3 =>
+            c_array : aliased thinkthen_complete_json_array_v1;
+         when others =>
+            object : aliased thinkthen_complete_json_object_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_json_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_json_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_json_value_v1 is record
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_boolean_v1 is record
+      value : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_engine_settings_v1 is record
+      m_backend : access constant thinkthen_request_text_v1;
+      m_base_url : access constant thinkthen_request_text_v1;
+      m_batch : access constant thinkthen_request_batch_v1;
+      m_cache : access constant thinkthen_request_cache_document_v1;
+      m_max_estimated_input_tokens_total : access constant thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+      m_max_request_bytes : access constant thinkthen_request_unsigned_v1;
+      m_max_requests : access constant thinkthen_request_engine_settings_max_requests_v1;
+      m_max_requests_total : access constant thinkthen_request_engine_settings_max_estimated_input_tokens_total_v1;
+      m_max_retries : access constant thinkthen_request_unsigned_v1;
+      m_model : access constant thinkthen_request_text_v1;
+      m_profile : access constant thinkthen_request_text_v1;
+      m_proxy : access constant thinkthen_request_json_value_v1;
+      m_record : access constant thinkthen_request_text_v1;
+      m_refresh_cache : access constant thinkthen_request_boolean_v1;
+      m_replay : access constant thinkthen_request_text_v1;
+      m_throttle : access constant thinkthen_request_unsigned_v1;
+      m_timeout : access constant thinkthen_request_unsigned_v1;
+      m_usd_per_million_input : access constant thinkthen_request_text_v1;
+      m_usd_per_million_output : access constant thinkthen_request_text_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_attempt_outcome_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_utf8_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_sdk_request_id_v1 is record
+      value : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_u64_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : aliased Interfaces.Unsigned_64;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_extension_v1 is record
+      name : aliased thinkthen_complete_utf8_v1;
+      json : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_extensions_v1 is record
+      data : access constant thinkthen_complete_extension_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_attempt_v1 is record
+      ordinal : aliased Interfaces.Unsigned_64;
+      outcome : access constant thinkthen_complete_attempt_outcome_v1;
+      request_id : aliased thinkthen_complete_utf8_presence_v1;
+      request_sha256 : aliased thinkthen_complete_utf8_v1;
+      sdk_request_id : access constant thinkthen_complete_sdk_request_id_v1;
+      server_ms : aliased thinkthen_complete_u64_presence_v1;
+      status : aliased thinkthen_complete_u64_presence_v1;
+      wall_ms : aliased Interfaces.Unsigned_64;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_attempt_list_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_attempt_list_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : aliased thinkthen_complete_attempt_list_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_call_id_v1 is record
+      value : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_call_id_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_call_id_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_u32_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_persistence_observation_v1 is record
+      advice : aliased thinkthen_complete_utf8_presence_v1;
+      observed_at : aliased thinkthen_complete_utf8_v1;
+      state : access constant thinkthen_complete_usage_persistence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_persistence_observation_presence_v1 is record
+      presence : aliased Interfaces.Unsigned_32;
+      value : access constant thinkthen_complete_persistence_observation_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_immediate_facts_v1 is record
+      attempts : aliased thinkthen_complete_attempt_list_presence_v1;
+      cache_answers : aliased Interfaces.Unsigned_64;
+      call_id : aliased thinkthen_complete_call_id_presence_v1;
+      estimated_cost_usd : aliased thinkthen_complete_utf8_presence_v1;
+      held_model_mismatch : aliased thinkthen_complete_u32_presence_v1;
+      input_tokens : aliased thinkthen_complete_u64_presence_v1;
+      largest_request_bytes : aliased Interfaces.Unsigned_64;
+      largest_request_estimated_input_tokens : aliased thinkthen_complete_u64_presence_v1;
+      model : aliased thinkthen_complete_utf8_presence_v1;
+      output_tokens : aliased thinkthen_complete_u64_presence_v1;
+      records : aliased Interfaces.Unsigned_64;
+      requests_sent : aliased Interfaces.Unsigned_64;
+      seconds : aliased double;
+      token_estimate_method : aliased thinkthen_complete_utf8_v1;
+      usage_persistence : aliased thinkthen_complete_persistence_observation_presence_v1;
+      extensions : aliased thinkthen_complete_extensions_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_error_view_v1 is record
+      code : aliased int;
+      retryable : aliased int;
+      message : aliased thinkthen_complete_utf8_v1;
+      facts : access constant thinkthen_complete_immediate_facts_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_string_v1 is record
       data : Interfaces.C.Strings.chars_ptr;
       len : aliased Interfaces.C.size_t;
@@ -343,10 +595,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_request_image_media_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_text_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_request_image_file_v1 is record
       m_media : access constant thinkthen_request_image_media_v1;
       m_path : access constant thinkthen_request_text_v1;
@@ -383,16 +631,12 @@ package Thinkthen_Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_input_json_value_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_input_json_v1 is record
       m_images : access constant thinkthen_request_image_list_v1;
       m_value : access constant thinkthen_request_input_json_value_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_json_value_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_json_value_map_entry_v1 is record
@@ -418,10 +662,6 @@ package Thinkthen_Session_C is
    type thinkthen_request_context_schema_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_context_schema_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_unsigned_v1 is record
-      value : aliased Interfaces.Unsigned_64;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_recognition_example_entity_v1 is record
@@ -481,7 +721,7 @@ package Thinkthen_Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_original_json_value_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_original_json_v1 is record
@@ -681,25 +921,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_request_input_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_boolean_v1 is record
-      value : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_batch_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            arm_1 : access constant thinkthen_request_unsigned_v1;
-         when others =>
-            arm_2 : access constant thinkthen_request_text_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_request_batch_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_batch_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_request_integer_v1 is record
       value : aliased Interfaces.Integer_64;
    end record
@@ -893,10 +1114,6 @@ package Thinkthen_Session_C is
    type thinkthen_request_question_text_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_question_text_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_null_v1 is record
-      reserved : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_criterion_data_v1 (discr : unsigned := 0) is record
@@ -1388,16 +1605,6 @@ package Thinkthen_Session_C is
       m_location : access constant thinkthen_request_session_source_location_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_extension_v1 is record
-      name : aliased thinkthen_complete_utf8_v1;
-      json : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_extensions_v1 is record
-      data : access constant thinkthen_complete_extension_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_answer_yes_no_v1 is record
       kind : aliased thinkthen_complete_utf8_v1;
       probability : aliased double;
@@ -1486,86 +1693,9 @@ package Thinkthen_Session_C is
       value : aliased thinkthen_complete_image_list_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_u64_presence_v1 is record
-      presence : aliased Interfaces.Unsigned_32;
-      value : aliased Interfaces.Unsigned_64;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_v1;
-   type thinkthen_complete_json_array_v1 is record
-      data : System.Address;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_entry_v1 is record
-      name : aliased thinkthen_complete_utf8_v1;
-      value : access constant thinkthen_complete_json_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_object_v1 is record
-      data : access constant thinkthen_complete_json_entry_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            boolean : aliased Interfaces.Unsigned_32;
-         when 1 =>
-            number : aliased thinkthen_complete_utf8_v1;
-         when 2 =>
-            string : aliased thinkthen_complete_utf8_v1;
-         when 3 =>
-            c_array : aliased thinkthen_complete_json_array_v1;
-         when others =>
-            object : aliased thinkthen_complete_json_object_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_complete_json_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_complete_json_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_json_presence_v1 is record
       presence : aliased Interfaces.Unsigned_32;
       value : access constant thinkthen_complete_json_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_utf8_presence_v1 is record
-      presence : aliased Interfaces.Unsigned_32;
-      value : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_attempt_outcome_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_sdk_request_id_v1 is record
-      value : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_attempt_v1 is record
-      ordinal : aliased Interfaces.Unsigned_64;
-      outcome : access constant thinkthen_complete_attempt_outcome_v1;
-      request_id : aliased thinkthen_complete_utf8_presence_v1;
-      request_sha256 : aliased thinkthen_complete_utf8_v1;
-      sdk_request_id : access constant thinkthen_complete_sdk_request_id_v1;
-      server_ms : aliased thinkthen_complete_u64_presence_v1;
-      status : aliased thinkthen_complete_u64_presence_v1;
-      wall_ms : aliased Interfaces.Unsigned_64;
-      extensions : aliased thinkthen_complete_extensions_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_attempt_list_v1 is record
-      data : System.Address;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_attempt_list_presence_v1 is record
-      presence : aliased Interfaces.Unsigned_32;
-      value : aliased thinkthen_complete_attempt_list_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_batch_setting_data_v1 (discr : unsigned := 0) is record
@@ -2611,11 +2741,6 @@ package Thinkthen_Session_C is
       value : access constant thinkthen_complete_recognition_mode_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_u32_presence_v1 is record
-      presence : aliased Interfaces.Unsigned_32;
-      value : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_relation_rule_v1 is record
       either : aliased Interfaces.Unsigned_32;
       name : aliased thinkthen_complete_utf8_v1;
@@ -3321,22 +3446,6 @@ package Thinkthen_Session_C is
       extensions : aliased thinkthen_complete_extensions_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_call_id_v1 is record
-      value : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_persistence_observation_v1 is record
-      advice : aliased thinkthen_complete_utf8_presence_v1;
-      observed_at : aliased thinkthen_complete_utf8_v1;
-      state : access constant thinkthen_complete_usage_persistence_v1;
-      extensions : aliased thinkthen_complete_extensions_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_persistence_observation_presence_v1 is record
-      presence : aliased Interfaces.Unsigned_32;
-      value : access constant thinkthen_complete_persistence_observation_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_facts_v1 is record
       attempts : aliased thinkthen_complete_attempt_list_presence_v1;
       cache_answers : aliased Interfaces.Unsigned_64;
@@ -3546,6 +3655,10 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_engine_new";
+   function thinkthen_engine_new_typed (settings : access constant thinkthen_request_engine_settings_v1) return access thinkthen_engine
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_engine_new_typed";
    function thinkthen_engine_new_with (settings_json : Interfaces.C.Strings.chars_ptr) return access thinkthen_engine
    with Import => True,
         Convention => C,
@@ -3569,6 +3682,10 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_error_retryable";
+   function thinkthen_error_view (engine : access constant thinkthen_engine) return access constant thinkthen_error_view_v1
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_error_view";
    procedure thinkthen_free_string (text : Interfaces.C.Strings.chars_ptr)
    with Import => True,
         Convention => C,
@@ -3607,6 +3724,10 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_session_error_message";
+   function thinkthen_session_error_view return access constant thinkthen_error_view_v1
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_session_error_view";
    function thinkthen_session_finish
      (session : access thinkthen_session;
       failure_json : Interfaces.C.Strings.chars_ptr;

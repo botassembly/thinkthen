@@ -10,6 +10,16 @@ abstract class Document implements \JsonSerializable
     public function __debugInfo(): array { return ['type' => static::class]; }
 }
 
+namespace ThinkThen\Internal;
+
+function descriptor(mixed $value): array
+    {
+        $fields = $value instanceof \ThinkThen\Item ? $value->fields : [];
+        $original = !($value instanceof \ThinkThen\Item) || $value->original;
+        if ($value instanceof \ThinkThen\Item) $value = $value->value;
+        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
+    }
+
 /** Keep one validated JSON value unchanged for the native definition parser. */
 final readonly class RawJson
 {

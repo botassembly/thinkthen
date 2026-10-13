@@ -4,6 +4,7 @@ with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;
 with System.Address_To_Access_Conversions;
 with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Values;
 package body Thinkthen.Requests.Native is
 use Interfaces.C;
 use type Interfaces.Unsigned_32;
@@ -50,6 +51,11 @@ begin
    for I in Value'Range loop Bytes (size_t (I - Value'First + 1)) := To_C (Value (I)); end loop;
    return (data => Pointer (Address), len => size_t (Value'Length));
 end UTF8;
+type A_thinkthen_complete_json_entry_v1 is access all thinkthen_complete_json_entry_v1;
+function P_thinkthen_complete_json_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_complete_json_entry_v1);
+type A_thinkthen_complete_json_v1 is access all thinkthen_complete_json_v1;
+function P_thinkthen_complete_json_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_complete_json_v1);
+function Store_thinkthen_complete_json_v1 is new Store (thinkthen_complete_json_v1);
 type A_thinkthen_request_annotate_question_choose_v1 is access all thinkthen_request_annotate_question_choose_v1;
 function P_thinkthen_request_annotate_question_choose_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_annotate_question_choose_v1);
 function Store_thinkthen_request_annotate_question_choose_v1 is new Store (thinkthen_request_annotate_question_choose_v1);
@@ -58,7 +64,6 @@ function P_thinkthen_request_annotate_question_decide_v1 is new Ada.Unchecked_Co
 function Store_thinkthen_request_annotate_question_decide_v1 is new Store (thinkthen_request_annotate_question_decide_v1);
 type A_thinkthen_request_annotate_question_map_entry_v1 is access all thinkthen_request_annotate_question_map_entry_v1;
 function P_thinkthen_request_annotate_question_map_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_annotate_question_map_entry_v1);
-function Store_thinkthen_request_annotate_question_map_entry_v1 is new Store (thinkthen_request_annotate_question_map_entry_v1);
 type A_thinkthen_request_annotate_question_map_v1 is access all thinkthen_request_annotate_question_map_v1;
 function P_thinkthen_request_annotate_question_map_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_annotate_question_map_v1);
 function Store_thinkthen_request_annotate_question_map_v1 is new Store (thinkthen_request_annotate_question_map_v1);
@@ -71,8 +76,6 @@ function Store_thinkthen_request_annotate_question_tag_v1 is new Store (thinkthe
 type A_thinkthen_request_annotate_question_v1 is access all thinkthen_request_annotate_question_v1;
 function P_thinkthen_request_annotate_question_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_annotate_question_v1);
 function Store_thinkthen_request_annotate_question_v1 is new Store (thinkthen_request_annotate_question_v1);
-type A_thinkthen_request_arguments_v1 is access all thinkthen_request_arguments_v1;
-function P_thinkthen_request_arguments_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_arguments_v1);
 function Store_thinkthen_request_arguments_v1 is new Store (thinkthen_request_arguments_v1);
 type A_thinkthen_request_batch_v1 is access all thinkthen_request_batch_v1;
 function P_thinkthen_request_batch_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_batch_v1);
@@ -91,7 +94,6 @@ function P_thinkthen_request_context_schema_v1 is new Ada.Unchecked_Conversion (
 function Store_thinkthen_request_context_schema_v1 is new Store (thinkthen_request_context_schema_v1);
 type A_thinkthen_request_criterion_map_entry_v1 is access all thinkthen_request_criterion_map_entry_v1;
 function P_thinkthen_request_criterion_map_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_criterion_map_entry_v1);
-function Store_thinkthen_request_criterion_map_entry_v1 is new Store (thinkthen_request_criterion_map_entry_v1);
 type A_thinkthen_request_criterion_map_v1 is access all thinkthen_request_criterion_map_v1;
 function P_thinkthen_request_criterion_map_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_criterion_map_v1);
 function Store_thinkthen_request_criterion_map_v1 is new Store (thinkthen_request_criterion_map_v1);
@@ -133,7 +135,6 @@ function P_thinkthen_request_definition_v1 is new Ada.Unchecked_Conversion (Syst
 function Store_thinkthen_request_definition_v1 is new Store (thinkthen_request_definition_v1);
 type A_thinkthen_request_description_map_entry_v1 is access all thinkthen_request_description_map_entry_v1;
 function P_thinkthen_request_description_map_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_description_map_entry_v1);
-function Store_thinkthen_request_description_map_entry_v1 is new Store (thinkthen_request_description_map_entry_v1);
 type A_thinkthen_request_description_map_v1 is access all thinkthen_request_description_map_v1;
 function P_thinkthen_request_description_map_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_description_map_v1);
 function Store_thinkthen_request_description_map_v1 is new Store (thinkthen_request_description_map_v1);
@@ -155,8 +156,6 @@ function Store_thinkthen_request_image_list_v1 is new Store (thinkthen_request_i
 type A_thinkthen_request_image_media_v1 is access all thinkthen_request_image_media_v1;
 function P_thinkthen_request_image_media_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_image_media_v1);
 function Store_thinkthen_request_image_media_v1 is new Store (thinkthen_request_image_media_v1);
-type A_thinkthen_request_image_v1 is access all thinkthen_request_image_v1;
-function P_thinkthen_request_image_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_image_v1);
 function Store_thinkthen_request_image_v1 is new Store (thinkthen_request_image_v1);
 type A_thinkthen_request_input_declaration_object_v1 is access all thinkthen_request_input_declaration_object_v1;
 function P_thinkthen_request_input_declaration_object_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_input_declaration_object_v1);
@@ -190,7 +189,6 @@ function P_thinkthen_request_input_property_boolean_v1 is new Ada.Unchecked_Conv
 function Store_thinkthen_request_input_property_boolean_v1 is new Store (thinkthen_request_input_property_boolean_v1);
 type A_thinkthen_request_input_property_map_entry_v1 is access all thinkthen_request_input_property_map_entry_v1;
 function P_thinkthen_request_input_property_map_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_input_property_map_entry_v1);
-function Store_thinkthen_request_input_property_map_entry_v1 is new Store (thinkthen_request_input_property_map_entry_v1);
 type A_thinkthen_request_input_property_map_v1 is access all thinkthen_request_input_property_map_v1;
 function P_thinkthen_request_input_property_map_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_input_property_map_v1);
 function Store_thinkthen_request_input_property_map_v1 is new Store (thinkthen_request_input_property_map_v1);
@@ -232,7 +230,6 @@ function P_thinkthen_request_json_value_list_v1 is new Ada.Unchecked_Conversion 
 function Store_thinkthen_request_json_value_list_v1 is new Store (thinkthen_request_json_value_list_v1);
 type A_thinkthen_request_json_value_map_entry_v1 is access all thinkthen_request_json_value_map_entry_v1;
 function P_thinkthen_request_json_value_map_entry_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_json_value_map_entry_v1);
-function Store_thinkthen_request_json_value_map_entry_v1 is new Store (thinkthen_request_json_value_map_entry_v1);
 type A_thinkthen_request_json_value_map_v1 is access all thinkthen_request_json_value_map_v1;
 function P_thinkthen_request_json_value_map_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_json_value_map_v1);
 function Store_thinkthen_request_json_value_map_v1 is new Store (thinkthen_request_json_value_map_v1);
@@ -305,8 +302,6 @@ function Store_thinkthen_request_number_v1 is new Store (thinkthen_request_numbe
 type A_thinkthen_request_option_schema_list_v1 is access all thinkthen_request_option_schema_list_v1;
 function P_thinkthen_request_option_schema_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_list_v1);
 function Store_thinkthen_request_option_schema_list_v1 is new Store (thinkthen_request_option_schema_list_v1);
-type A_thinkthen_request_option_schema_v1 is access all thinkthen_request_option_schema_v1;
-function P_thinkthen_request_option_schema_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_option_schema_v1);
 function Store_thinkthen_request_option_schema_v1 is new Store (thinkthen_request_option_schema_v1);
 type A_thinkthen_request_options_v1 is access all thinkthen_request_options_v1;
 function P_thinkthen_request_options_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_options_v1);
@@ -362,8 +357,6 @@ function Store_thinkthen_request_reader_failure_producer_v1 is new Store (thinkt
 type A_thinkthen_request_reader_failure_utf_8_v1 is access all thinkthen_request_reader_failure_utf_8_v1;
 function P_thinkthen_request_reader_failure_utf_8_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_reader_failure_utf_8_v1);
 function Store_thinkthen_request_reader_failure_utf_8_v1 is new Store (thinkthen_request_reader_failure_utf_8_v1);
-type A_thinkthen_request_reader_failure_v1 is access all thinkthen_request_reader_failure_v1;
-function P_thinkthen_request_reader_failure_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_reader_failure_v1);
 function Store_thinkthen_request_reader_failure_v1 is new Store (thinkthen_request_reader_failure_v1);
 type A_thinkthen_request_reader_media_v1 is access all thinkthen_request_reader_media_v1;
 function P_thinkthen_request_reader_media_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_reader_media_v1);
@@ -374,8 +367,6 @@ function Store_thinkthen_request_reader_v1 is new Store (thinkthen_request_reade
 type A_thinkthen_request_recognition_example_entity_list_v1 is access all thinkthen_request_recognition_example_entity_list_v1;
 function P_thinkthen_request_recognition_example_entity_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_example_entity_list_v1);
 function Store_thinkthen_request_recognition_example_entity_list_v1 is new Store (thinkthen_request_recognition_example_entity_list_v1);
-type A_thinkthen_request_recognition_example_entity_v1 is access all thinkthen_request_recognition_example_entity_v1;
-function P_thinkthen_request_recognition_example_entity_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_example_entity_v1);
 function Store_thinkthen_request_recognition_example_entity_v1 is new Store (thinkthen_request_recognition_example_entity_v1);
 type A_thinkthen_request_recognition_example_list_v1 is access all thinkthen_request_recognition_example_list_v1;
 function P_thinkthen_request_recognition_example_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_example_list_v1);
@@ -383,8 +374,6 @@ function Store_thinkthen_request_recognition_example_list_v1 is new Store (think
 type A_thinkthen_request_recognition_example_text_v1 is access all thinkthen_request_recognition_example_text_v1;
 function P_thinkthen_request_recognition_example_text_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_example_text_v1);
 function Store_thinkthen_request_recognition_example_text_v1 is new Store (thinkthen_request_recognition_example_text_v1);
-type A_thinkthen_request_recognition_example_v1 is access all thinkthen_request_recognition_example_v1;
-function P_thinkthen_request_recognition_example_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_example_v1);
 function Store_thinkthen_request_recognition_example_v1 is new Store (thinkthen_request_recognition_example_v1);
 type A_thinkthen_request_recognition_mode_v1 is access all thinkthen_request_recognition_mode_v1;
 function P_thinkthen_request_recognition_mode_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_mode_v1);
@@ -392,8 +381,6 @@ function Store_thinkthen_request_recognition_mode_v1 is new Store (thinkthen_req
 type A_thinkthen_request_recognition_seed_span_list_v1 is access all thinkthen_request_recognition_seed_span_list_v1;
 function P_thinkthen_request_recognition_seed_span_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_seed_span_list_v1);
 function Store_thinkthen_request_recognition_seed_span_list_v1 is new Store (thinkthen_request_recognition_seed_span_list_v1);
-type A_thinkthen_request_recognition_seed_span_v1 is access all thinkthen_request_recognition_seed_span_v1;
-function P_thinkthen_request_recognition_seed_span_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_seed_span_v1);
 function Store_thinkthen_request_recognition_seed_span_v1 is new Store (thinkthen_request_recognition_seed_span_v1);
 type A_thinkthen_request_recognition_stage_context_v1 is access all thinkthen_request_recognition_stage_context_v1;
 function P_thinkthen_request_recognition_stage_context_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_recognition_stage_context_v1);
@@ -410,11 +397,7 @@ function Store_thinkthen_request_relate_question_v1 is new Store (thinkthen_requ
 type A_thinkthen_request_relation_list_v1 is access all thinkthen_request_relation_list_v1;
 function P_thinkthen_request_relation_list_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_relation_list_v1);
 function Store_thinkthen_request_relation_list_v1 is new Store (thinkthen_request_relation_list_v1);
-type A_thinkthen_request_relation_v1 is access all thinkthen_request_relation_v1;
-function P_thinkthen_request_relation_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_relation_v1);
 function Store_thinkthen_request_relation_v1 is new Store (thinkthen_request_relation_v1);
-type A_thinkthen_request_session_descriptor_v1 is access all thinkthen_request_session_descriptor_v1;
-function P_thinkthen_request_session_descriptor_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_session_descriptor_v1);
 function Store_thinkthen_request_session_descriptor_v1 is new Store (thinkthen_request_session_descriptor_v1);
 type A_thinkthen_request_session_source_location_v1 is access all thinkthen_request_session_source_location_v1;
 function P_thinkthen_request_session_source_location_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_session_source_location_v1);
@@ -437,6 +420,54 @@ function Store_thinkthen_request_threshold_v1 is new Store (thinkthen_request_th
 type A_thinkthen_request_unsigned_v1 is access all thinkthen_request_unsigned_v1;
 function P_thinkthen_request_unsigned_v1 is new Ada.Unchecked_Conversion (System.Address, A_thinkthen_request_unsigned_v1);
 function Store_thinkthen_request_unsigned_v1 is new Store (thinkthen_request_unsigned_v1);
+function Convert_Json_Value (Value : Thinkthen.Values.Value; Storage : in out Arena) return System.Address;
+function Convert_Json_Value (Value : Thinkthen.Values.Value; Storage : in out Arena) return System.Address is
+   Result : thinkthen_complete_json_v1;
+begin
+   case Thinkthen.Values.Kind (Value) is
+      when Thinkthen.Values.Null_Value =>
+         Result.kind := K_THINKTHEN_COMPLETE_JSON_NULL_V1;
+         Result.data := (discr => 0, boolean => 0);
+      when Thinkthen.Values.Boolean_Value =>
+         Result.kind := K_THINKTHEN_COMPLETE_JSON_BOOLEAN_V1;
+         Result.data := (discr => 0, boolean => (if Thinkthen.Values.As_Boolean (Value) then 1 else 0));
+      when Thinkthen.Values.Number_Value =>
+         Result.kind := K_THINKTHEN_COMPLETE_JSON_NUMBER_V1;
+         Result.data := (discr => 1, number => UTF8 (Thinkthen.Values.As_Number (Value), Storage));
+      when Thinkthen.Values.String_Value =>
+         Result.kind := K_THINKTHEN_COMPLETE_JSON_STRING_V1;
+         Result.data := (discr => 2, string => UTF8 (Thinkthen.Values.As_String (Value), Storage));
+      when Thinkthen.Values.Array_Value =>
+         declare
+            Length : constant size_t := size_t (Thinkthen.Values.Length (Value));
+            Address : constant System.Address := Allocate (Storage, Length * (System.Address'Size / 8));
+            type Items_Type is array (size_t range <>) of System.Address with Convention => C;
+            Items : Items_Type (1 .. Length) with Import, Address => Address;
+         begin
+            for I in 1 .. Length loop
+               Items (I) := Convert_Json_Value (Thinkthen.Values.Element (Value, Positive (I)), Storage);
+            end loop;
+            Result.kind := K_THINKTHEN_COMPLETE_JSON_ARRAY_V1;
+            Result.data := (discr => 3, c_array => (data => Address, len => Length));
+         end;
+      when Thinkthen.Values.Object_Value =>
+         declare
+            Length : constant size_t := size_t (Thinkthen.Values.Length (Value));
+            Address : constant System.Address := Allocate (Storage, Length * (thinkthen_complete_json_entry_v1'Size / 8));
+            type Items_Type is array (size_t range <>) of thinkthen_complete_json_entry_v1 with Convention => C;
+            Items : Items_Type (1 .. Length) with Import, Address => Address;
+         begin
+            for I in 1 .. Length loop
+               Items (I) := (name => UTF8 (Thinkthen.Values.Field_Name (Value, Positive (I)), Storage),
+                 value => P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Element (Value, Positive (I)), Storage)));
+            end loop;
+            Result.kind := K_THINKTHEN_COMPLETE_JSON_OBJECT_V1;
+            Result.data := (discr => 4, object => (data => P_thinkthen_complete_json_entry_v1 (Address), len => Length));
+         end;
+   end case;
+   return Store_thinkthen_complete_json_v1 (Result, Storage);
+end Convert_Json_Value;
+
 function Convert_RequestCall_RequestArguments (Value : T_RequestCall; Storage : in out Arena) return System.Address;
 function Convert_RequestSessionDescriptor_RequestSessionDescriptor (Value : T_RequestSessionDescriptor; Storage : in out Arena) return System.Address;
 function Convert_RequestReaderFailure_RequestReaderFailure (Value : T_RequestReaderFailure; Storage : in out Arena) return System.Address;
@@ -1225,7 +1256,7 @@ end Convert_RequestInput_json_field_images_RequestImage_list;
 function Convert_RequestInput_json_field_value_RequestInput_json_value (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_input_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_input_json_value_v1 (Result, Storage);
 end Convert_RequestInput_json_field_value_RequestInput_json_value;
 function Convert_RequestInput_records_field_items_RequestItem_list (Value : T_RequestItem_List; Storage : in out Arena) return System.Address is
@@ -1707,7 +1738,7 @@ end Convert_RequestDefinition_AnnotateDefinition_RequestDefinition_AnnotateDefin
 function Convert_ContextSchema_value_1_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_ContextSchema_value_1_element_JsonValue;
 function Convert_RequestImage_file_RequestImage_file (Value : T_RequestImage_file; Storage : in out Arena) return System.Address is
@@ -1727,7 +1758,7 @@ end Convert_RequestImage_bytes_RequestImage_bytes;
 function Convert_OptionSchema_field_description_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_OptionSchema_field_description_JsonValue;
 function Convert_OptionSchema_field_name_Text (Value : T_Text; Storage : in out Arena) return System.Address is
@@ -1745,7 +1776,7 @@ end Convert_RequestOriginal_text_field_text_Text;
 function Convert_RequestOriginal_json_field_value_RequestOriginal_json_value (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_original_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_original_json_value_v1 (Result, Storage);
 end Convert_RequestOriginal_json_field_value_RequestOriginal_json_value;
 function Convert_RequestSource_field_paths_element_Text (Value : T_Text; Storage : in out Arena) return System.Address is
@@ -2088,7 +2119,7 @@ end Convert_RequestDefinition_RecognizeDefinition_field_wording_version_Integer;
 function Convert_RequestDefinition_AnnotateDefinition_field_batch_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_RequestDefinition_AnnotateDefinition_field_batch_JsonValue;
 function Convert_RequestDefinition_AnnotateDefinition_field_questions_AnnotateQuestion_map (Value : T_AnnotateQuestion_Map; Storage : in out Arena) return System.Address is
@@ -2569,25 +2600,25 @@ end Convert_Authored_inputDeclaration_object_field_required_Text_list;
 function Convert_Authored_questionText_value_1_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_questionText_value_1_element_JsonValue;
 function Convert_Authored_questionText_value_2_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_questionText_value_2_element_JsonValue;
 function Convert_Authored_criterion_value_1_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_criterion_value_1_element_JsonValue;
 function Convert_Authored_criterion_value_2_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_criterion_value_2_element_JsonValue;
 function Convert_Authored_pointers_value_1_element_Text (Value : T_Text; Storage : in out Arena) return System.Address is
@@ -2850,13 +2881,13 @@ end Convert_Authored_inputProperty_array_Authored_inputProperty_array;
 function Convert_Authored_description_value_1_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_description_value_1_element_JsonValue;
 function Convert_Authored_description_value_2_element_JsonValue (Value : T_JSON; Storage : in out Arena) return System.Address is
 Result : thinkthen_request_json_value_v1;
 begin
-Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);
+Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));
 return Store_thinkthen_request_json_value_v1 (Result, Storage);
 end Convert_Authored_description_value_2_element_JsonValue;
 function Convert_Authored_inputProperty_array_field_items_Authored_inputProperty_array_items (Value : T_Authored_inputProperty_array_field_items; Storage : in out Arena) return System.Address is

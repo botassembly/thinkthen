@@ -2,13 +2,14 @@
 from templates.native_request import render as native_render, name
 from templates.ada import identifier
 from templates.csharp import enum_values
+from templates.ada_native_values import WRITE as VALUE_WRITE
 
 
 def render(definitions, names, schemas):
     metadata = {}
     native_render(definitions, metadata)
     pending = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor'), ('RequestReaderFailure', 'RequestReaderFailure')]
-    done, bodies, pointers = set(), [], set()
+    done, bodies, pointers = set(), [], {'thinkthen_complete_json_v1', 'thinkthen_complete_json_entry_v1'}
     def call(host, native):
         if (host, native) not in done and (host, native) not in pending:
             pending.append((host, native))
@@ -89,7 +90,11 @@ def render(definitions, names, schemas):
             native_type = 'double' if kind == 'number' else 'Interfaces.Unsigned_32' if kind == 'boolean' else 'Interfaces.Unsigned_64' if source.get('format','').startswith('u') else 'Interfaces.Integer_64'
             expression = f'{native_type} (Value)' if kind != 'boolean' else '(if Value then 1 else 0)'
             body = ['Result.value := ' + expression + ';']
+        elif tuple(metadata['fields'][native]) == (('value', '*const thinkthen_complete_json_v1'),):
+            body = ['Result.value := P_thinkthen_complete_json_v1 (Convert_Json_Value (Thinkthen.Values.Value (Value), Storage));']
         else:
+            if tuple(metadata['fields'][native]) != (('text', 'thinkthen_complete_utf8_v1'),):
+                raise ValueError('unsupported Ada native scalar fields: ' + native)
             body = ['Result.text := UTF8 (To_String (Unbounded_String (Value)), Storage);']
         if not body:
             locals.append('pragma Unreferenced (Value);')
@@ -103,7 +108,11 @@ def render(definitions, names, schemas):
     for host, native in [('RequestCall','RequestArguments'), ('RequestSessionDescriptor','RequestSessionDescriptor'), ('RequestReaderFailure','RequestReaderFailure')]:
         entrypoints.append(f'function Convert (Value : {names[host]}; Storage : in out Arena) return System.Address is (Convert_{host}_{native} (Value, Storage));')
     spec = SPEC.replace('-- ENTRIES', '\n'.join(f'function Convert (Value : {names[host]}; Storage : in out Arena) return System.Address;' for host in ('RequestCall','RequestSessionDescriptor','RequestReaderFailure'))) + '\nend Thinkthen.Requests.Native;\n'
-    body = BODY + '\n'.join(declarations + [signature + ';' for signature, _ in bodies] + [body for _, body in bodies] + entrypoints) + '\nend Thinkthen.Requests.Native;\n'
+    contents = '\n'.join([VALUE_WRITE] + [signature + ';' for signature, _ in bodies] + [body for _, body in bodies] + entrypoints)
+    declarations = [line for line in declarations if not line.startswith('function ') or line.split()[1] in contents]
+    retained = '\n'.join(declarations)
+    declarations = [line for line in declarations if not line.startswith('type A_') or retained.count(line.split()[1]) > 1]
+    body = BODY + '\n'.join(declarations) + '\n' + contents + '\nend Thinkthen.Requests.Native;\n'
     return spec, body
 
 
@@ -134,6 +143,7 @@ with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;
 with System.Address_To_Access_Conversions;
 with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Values;
 package body Thinkthen.Requests.Native is
 use Interfaces.C;
 use type Interfaces.Unsigned_32;
@@ -185,9 +195,6 @@ end UTF8;
 
 def plan(function_schema, header):
     import re
-    cases = []
-    for symbol in re.findall(r'^#define (THINKTHEN_E[A-Z]+) ', header, re.M):
-        cases.append('when K_' + symbol + ' => raise ' + symbol.removeprefix('THINKTHEN_E').title() + '_Error with Message;')
     function_names = ', '.join('when ' + identifier('RequestFunction_' + function) + ' => "' + function + '"' for function in enum_values(function_schema))
     return ['function Plan (Client : Engine; Request : T_RequestCall) return String is',
             'use Thinkthen_Session_C; use Interfaces.C; use Interfaces.C.Strings;',
@@ -201,8 +208,7 @@ def plan(function_schema, header):
             'begin', 'Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");',
             "Code := thinkthen_request_plan_typed_json (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address, Length'Access);",
             'Free (Function_Bytes); Free (Surface);',
-            'if Code /= 0 then declare Message : constant String := Value (thinkthen_session_error_message); begin case Code is',
-            *cases, 'when others => raise Native_Error with Message; end case; end; end if;',
+            'Thinkthen_Kinds.Check (Code);',
             'declare Result : constant String := Text ((data => Output, len => Length)); begin thinkthen_free_string (Output); Output := Null_Ptr; return Result; end;',
             'exception when others => Free (Function_Bytes); Free (Surface); thinkthen_free_string (Output); raise;',
             'end Plan;']

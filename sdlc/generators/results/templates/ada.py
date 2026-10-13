@@ -137,7 +137,7 @@ def render(definitions, names=None, schemas=None):
             specs.append(f'type {name} is null record;')
         else:
             # Only schema-declared arbitrary JSON is transported verbatim.
-            specs.append(f'type {name} is new JSON_Value;')
+            specs.append(f'subtype {name} is JSON_Value;')
 
         return name
     for key, value in definitions.items():
@@ -146,9 +146,11 @@ def render(definitions, names=None, schemas=None):
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
+with Thinkthen.Values;
 package Thinkthen.Requests is
--- Arbitrary JSON content only; native admission owns its syntax and meaning.
-type JSON_Value is new Unbounded_String;
+-- Arbitrary values use owned native trees; Rust owns their admission.
+subtype JSON_Value is Thinkthen.Values.Value;
+use type Thinkthen.Values.Value;
 generic
    type Element is private;
 package Optional_Values is
@@ -167,7 +169,10 @@ end Optional_Values;
 
 def request_helpers(definitions, names):
     """Construction-only helpers preserve the schema's typed alternatives."""
-    output = []
+    output = ['subtype Question is ' + names['RequestQuestion'] + ';',
+              'subtype Input is ' + names['RequestInput'] + ';',
+              'subtype Item is ' + names['RequestItem'] + ';',
+              'subtype Items is T_RequestItem_List;']
     questions = definitions['RequestQuestion']['variants']
     def selector(kind, field, parameter, expression):
         index, branch = next((i, key) for i, (key, _) in enumerate(questions) if key.endswith('_' + kind))
@@ -227,7 +232,7 @@ def generate(root, graph, prepare, env, check):
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
                   'with Thinkthen.Requests; use Thinkthen.Requests;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen.Requests.Native;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
     version = identifier('RequestVersion_' + enum_values(schema['$defs']['RequestVersion'])[0])
     for function in enum_values(schema['$defs']['RequestFunction']):
         declaration = f'procedure {function.title()} (Owner : in out Session; Request : T_RequestCall)'
@@ -235,6 +240,12 @@ def generate(root, graph, prepare, env, check):
         calls_spec += [declaration + ';', shared + ';']
         for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
             calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', Request, "' + function + '");\nend ' + function.title() + ';')
+    for function in enum_values(schema['$defs']['RequestFunction']):
+        declaration = f'procedure {function.title()} (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False))'
+        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
+        calls_spec += [declaration + ';', shared + ';']
+        for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
+            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', (T_question => Question, T_input => Input, T_options => Options, others => <>), "' + function + '");\nend ' + function.title() + ';')
     calls_spec.append('function Plan (Client : Engine; Request : T_RequestCall) return String;')
     from templates.ada_native import plan
     calls_body.extend(plan(schema['$defs']['RequestFunction'], (root / 'libraries/c/include/thinkthen.h').read_text()))
@@ -245,6 +256,13 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-requests.ads': spec,
                'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
+    from templates.ada_answers import outputs as answer_outputs
+    results = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+    outputs.update(answer_outputs(prepare(graph(results, ('completesessionPacket',)))))
+    from templates.ada_values import outputs as value_outputs
+    outputs.update(value_outputs())
+    from templates.ada_usage import outputs as usage_outputs
+    outputs.update(usage_outputs((root / 'libraries/c/include/thinkthen.h').read_text()))
     for name, content in outputs.items():
         path = output_path(root, 'ada', name)
         if check:
