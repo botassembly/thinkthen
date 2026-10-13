@@ -285,44 +285,12 @@ package Thinkthen_Session_C is
    thinkthen_question_loader_role_v1_THINKTHEN_LOAD_RANK_V1 : constant thinkthen_question_loader_role_v1 := 6;
    thinkthen_question_loader_role_v1_THINKTHEN_LOAD_RANK_SET_V1 : constant thinkthen_question_loader_role_v1 := 7;
    thinkthen_question_loader_role_v1_THINKTHEN_LOAD_FIND_V1 : constant thinkthen_question_loader_role_v1 := 8;
-   type thinkthen_batch is null record;
    type thinkthen_engine is null record;
    type thinkthen_image is null record;
    type thinkthen_question is null record;
-   type thinkthen_result is null record;
    type thinkthen_session is null record;
    type thinkthen_session_result is null record;
    type thinkthen_source is null record;
-   type thinkthen_string_v1 is record
-      data : Interfaces.C.Strings.chars_ptr;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_content_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_content_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_content_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_size_v1 is record
-      present : aliased int;
-      value : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_controls_v1 is record
-      deadline_ms : aliased Interfaces.Integer_64;
-      cancel : access thinkthen_cancel_token;
-      context : aliased thinkthen_optional_content_v1;
-      batch : aliased thinkthen_optional_size_v1;
-      batch_max : aliased int;
-      attempts : aliased int;
-      surface : aliased thinkthen_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_answer is record
       outcome : aliased int;
       probability : aliased double;
@@ -333,6 +301,11 @@ package Thinkthen_Session_C is
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_utf8_v1 is record
+      data : Interfaces.C.Strings.chars_ptr;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_string_v1 is record
       data : Interfaces.C.Strings.chars_ptr;
       len : aliased Interfaces.C.size_t;
    end record
@@ -384,6 +357,16 @@ package Thinkthen_Session_C is
       context_schema : aliased thinkthen_input_declaration_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_content_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_string_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_optional_content_v1 is record
+      present : aliased int;
+      value : aliased thinkthen_content_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_optional_double_v1 is record
       present : aliased int;
       value : aliased double;
@@ -404,6 +387,11 @@ package Thinkthen_Session_C is
       kind : aliased Interfaces.Unsigned_32;
       low : aliased double;
       high : aliased double;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_optional_size_v1 is record
+      present : aliased int;
+      value : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_member_spec_v1 is record
@@ -454,774 +442,6 @@ package Thinkthen_Session_C is
    type thinkthen_recognition_task_v1 is record
       instructions : aliased thinkthen_optional_string_v1;
       entity_definition : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_view_v1;
-   type thinkthen_question_member_v1 is record
-      name : aliased thinkthen_string_v1;
-      question : access constant thinkthen_question_view_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_members_v1 is record
-      data : access constant thinkthen_question_member_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_view_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      text : aliased thinkthen_content_v1;
-      yes : aliased thinkthen_optional_content_v1;
-      no : aliased thinkthen_optional_content_v1;
-      choices : aliased thinkthen_choices_v1;
-      threshold : aliased thinkthen_rule_v1;
-      relation_threshold : aliased thinkthen_rule_v1;
-      model : aliased thinkthen_optional_string_v1;
-      profile : aliased thinkthen_optional_string_v1;
-      batch : aliased thinkthen_optional_size_v1;
-      batch_max : aliased int;
-      none : aliased int;
-      on : aliased thinkthen_strings_v1;
-      members : aliased thinkthen_question_members_v1;
-      kinds : aliased thinkthen_choices_v1;
-      relations : aliased thinkthen_relations_v1;
-      name_pointer : aliased thinkthen_optional_string_v1;
-      kind_pointer : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_question_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_question_view_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_probability_v1 is record
-      name : aliased thinkthen_string_v1;
-      probability : aliased double;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_probabilities_v1 is record
-      data : access constant thinkthen_probability_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_named_answer_v1 is record
-      pick : aliased thinkthen_string_v1;
-      probabilities : aliased thinkthen_probabilities_v1;
-      confidence : aliased thinkthen_optional_double_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_score_answer_v1 is record
-      level : aliased thinkthen_string_v1;
-      probabilities : aliased thinkthen_probabilities_v1;
-      confidence : aliased thinkthen_optional_double_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_answer_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            probability : aliased double;
-         when 1 =>
-            choice : aliased thinkthen_named_answer_v1;
-         when 2 =>
-            tag : aliased thinkthen_probabilities_v1;
-         when 3 =>
-            score : aliased thinkthen_score_answer_v1;
-         when others =>
-            find : aliased thinkthen_named_answer_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_answer_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_answer_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_answer_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_answer_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_rule_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_rule_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_location_v1 is record
-      file : aliased thinkthen_optional_string_v1;
-      first_line : aliased thinkthen_optional_size_v1;
-      last_line : aliased thinkthen_optional_size_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_location_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_usage_v1 is record
-      input_tokens : aliased Interfaces.Unsigned_64;
-      output_tokens : aliased Interfaces.Unsigned_64;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_usage_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_usage_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_profile_warning_v1 is record
-      tuned_for : aliased thinkthen_string_v1;
-      running : aliased thinkthen_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_profile_warning_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_profile_warning_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_batch_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      records : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_batch_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_batch_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_batch_warning_v1 is record
-      tuned_for : aliased thinkthen_batch_v1;
-      running : aliased thinkthen_batch_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_batch_warning_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_batch_warning_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_u16_v1 is record
-      present : aliased int;
-      value : aliased Interfaces.Unsigned_16;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_attempt_v1 is record
-      ordinal : aliased Interfaces.Unsigned_64;
-      request_sha256 : aliased thinkthen_string_v1;
-      wall_ms : aliased Interfaces.Unsigned_64;
-      outcome : aliased Interfaces.Unsigned_32;
-      sdk_request_id : aliased thinkthen_string_v1;
-      status : aliased thinkthen_optional_u16_v1;
-      server_ms : aliased thinkthen_optional_u64_v1;
-      request_id : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_attempts_v1 is record
-      data : access constant thinkthen_attempt_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_attempts_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_attempts_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_discriminator_v1 is record
-      present : aliased int;
-      value : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_source_v1 is record
-      origin : aliased Interfaces.Unsigned_32;
-      answered_by : aliased thinkthen_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_sources_v1 is record
-      data : access constant thinkthen_question_source_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_observation_identity_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            observation_id : aliased thinkthen_string_v1;
-         when others =>
-            failure_id : aliased thinkthen_string_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_observation_identity_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_observation_identity_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_observation_identities_v1 is record
-      data : access constant thinkthen_observation_identity_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_meta_v1 is record
-      tool : aliased thinkthen_string_v1;
-      question_sha256 : aliased thinkthen_optional_string_v1;
-      questions_sha256 : aliased thinkthen_optional_string_v1;
-      url : aliased thinkthen_string_v1;
-      model : aliased thinkthen_string_v1;
-      usage : aliased thinkthen_optional_usage_v1;
-      requests_sent : aliased Interfaces.Unsigned_64;
-      cached : aliased int;
-      requests : aliased thinkthen_strings_v1;
-      failed_questions : aliased Interfaces.C.size_t;
-      profile_warning : aliased thinkthen_optional_profile_warning_v1;
-      batch_setting : aliased thinkthen_optional_batch_v1;
-      batch_warning : aliased thinkthen_optional_batch_warning_v1;
-      context_sha256 : aliased thinkthen_optional_string_v1;
-      attempts : aliased thinkthen_optional_attempts_v1;
-      origin : aliased thinkthen_optional_discriminator_v1;
-      question_sources : aliased thinkthen_question_sources_v1;
-      observations : aliased thinkthen_observation_identities_v1;
-      answered_by : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_image_views_v1 is record
-      data : access constant thinkthen_image_view_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_image_views_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_image_views_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_row_v1 is record
-      answer_id : aliased thinkthen_string_v1;
-      input : aliased thinkthen_optional_content_v1;
-      question : aliased thinkthen_optional_question_v1;
-      answer : aliased thinkthen_optional_answer_v1;
-      threshold : aliased thinkthen_optional_rule_v1;
-      position : aliased thinkthen_optional_location_v1;
-      input_file : aliased thinkthen_optional_string_v1;
-      meta : aliased thinkthen_meta_v1;
-      images : aliased thinkthen_optional_image_views_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_decide_value_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            boolean : aliased int;
-         when others =>
-            authored : aliased thinkthen_content_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_decide_value_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_decide_value_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_member_value_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            decide : aliased thinkthen_decide_value_v1;
-         when 1 =>
-            choose : aliased thinkthen_optional_string_v1;
-         when 2 =>
-            tag : aliased thinkthen_strings_v1;
-         when others =>
-            score : aliased double;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_member_value_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_member_value_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_member_success_v1 is record
-      answer_id : aliased thinkthen_string_v1;
-      value : aliased thinkthen_member_value_v1;
-      answer : aliased thinkthen_answer_v1;
-      threshold : aliased thinkthen_rule_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_member_failure_v1 is record
-      failure_id : aliased thinkthen_string_v1;
-      cause : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_member_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            success : aliased thinkthen_member_success_v1;
-         when others =>
-            failure : aliased thinkthen_member_failure_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_member_v1 is record
-      name : aliased thinkthen_string_v1;
-      request : aliased thinkthen_string_v1;
-      question : aliased thinkthen_question_view_v1;
-      state : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_member_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_members_v1 is record
-      data : access constant thinkthen_member_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_annotate_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      answers : aliased thinkthen_members_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_choose_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_decide_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_decide_value_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_reported_usage_v1 is record
-      present : aliased int;
-      input_tokens : aliased thinkthen_optional_u64_v1;
-      output_tokens : aliased thinkthen_optional_u64_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_detail_v1 is record
-      origin : aliased Interfaces.Unsigned_32;
-      answered_by : aliased thinkthen_string_v1;
-      batch_size : aliased thinkthen_optional_size_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_details_v1 is record
-      data : access constant thinkthen_source_detail_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_input_view_v1 is record
-      original : aliased thinkthen_optional_content_v1;
-      position : aliased thinkthen_optional_location_v1;
-      images : aliased thinkthen_optional_image_views_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_input_views_v1 is record
-      data : access constant thinkthen_input_view_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_details_v1 is record
-      question : aliased thinkthen_optional_question_v1;
-      threshold : aliased thinkthen_optional_rule_v1;
-      raw_pick : aliased thinkthen_optional_string_v1;
-      usage : aliased thinkthen_reported_usage_v1;
-      question_sources : aliased thinkthen_source_details_v1;
-      observations : aliased thinkthen_observation_identities_v1;
-      inputs : aliased thinkthen_input_views_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_filter_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_find_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_optional_content_v1;
-      index : aliased thinkthen_optional_size_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_observed_probabilities_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            yes : aliased double;
-         when others =>
-            named : aliased thinkthen_probabilities_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_observed_probabilities_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_observed_probabilities_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_observation_success_v1 is record
-      answer_id : aliased thinkthen_string_v1;
-      observation_id : aliased thinkthen_string_v1;
-      value : aliased thinkthen_member_value_v1;
-      probabilities : aliased thinkthen_observed_probabilities_v1;
-      confidence : aliased thinkthen_optional_double_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_question_observation_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            success : aliased thinkthen_observation_success_v1;
-         when others =>
-            failure : aliased thinkthen_member_failure_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_question_observation_v1 is record
-      index : aliased Interfaces.C.size_t;
-      member : aliased thinkthen_optional_string_v1;
-      stage : aliased thinkthen_optional_discriminator_v1;
-      position : aliased Interfaces.C.size_t;
-      question_sha256 : aliased thinkthen_string_v1;
-      model : aliased thinkthen_string_v1;
-      url : aliased thinkthen_string_v1;
-      requests : aliased thinkthen_strings_v1;
-      requests_sent : aliased Interfaces.Unsigned_64;
-      cached : aliased int;
-      failed_questions : aliased Interfaces.C.size_t;
-      usage : aliased thinkthen_optional_usage_v1;
-      question_sources : aliased thinkthen_question_sources_v1;
-      state : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_question_observation_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_tag_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_strings_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_score_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased double;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_rank_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_optional_size_v1;
-      question_name : aliased thinkthen_optional_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_entity_v1 is record
-      text : aliased thinkthen_string_v1;
-      start : aliased Interfaces.C.size_t;
-      c_end : aliased Interfaces.C.size_t;
-      length : aliased Interfaces.C.size_t;
-      kind : aliased thinkthen_string_v1;
-      strength : aliased double;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_entities_v1 is record
-      data : access constant thinkthen_entity_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_entity_edge_v1 is record
-      relation : aliased thinkthen_string_v1;
-      source : aliased thinkthen_entity_v1;
-      target : aliased thinkthen_entity_v1;
-      probability : aliased double;
-      either : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_entity_edges_v1 is record
-      data : access constant thinkthen_entity_edge_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_entity_edges_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_entity_edges_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_recognize_value_v1 is record
-      entities : aliased thinkthen_entities_v1;
-      relations : aliased thinkthen_optional_entity_edges_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_piece_v1 is record
-      start : aliased Interfaces.C.size_t;
-      c_end : aliased Interfaces.C.size_t;
-      tags : aliased thinkthen_probabilities_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_pieces_v1 is record
-      data : access constant thinkthen_piece_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_probabilities_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_probabilities_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_name_v1 is record
-      start : aliased Interfaces.C.size_t;
-      c_end : aliased Interfaces.C.size_t;
-      kinds : aliased thinkthen_optional_probabilities_v1;
-      edges : aliased thinkthen_optional_probabilities_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_names_v1 is record
-      data : access constant thinkthen_name_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_place_v1 is record
-      start : aliased Interfaces.C.size_t;
-      c_end : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_pair_v1 is record
-      relation : aliased thinkthen_string_v1;
-      source : aliased thinkthen_place_v1;
-      target : aliased thinkthen_place_v1;
-      probability : aliased double;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_pairs_v1 is record
-      data : access constant thinkthen_pair_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_recognize_answer_v1 is record
-      pieces : aliased thinkthen_pieces_v1;
-      names : aliased thinkthen_names_v1;
-      pairs : aliased thinkthen_pairs_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_recognize_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_recognize_value_v1;
-      answer : aliased thinkthen_recognize_answer_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_endpoint_v1 is record
-      name : aliased thinkthen_string_v1;
-      kind : aliased thinkthen_string_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_edge_v1 is record
-      relation : aliased thinkthen_string_v1;
-      source : aliased thinkthen_endpoint_v1;
-      target : aliased thinkthen_endpoint_v1;
-      probability : aliased double;
-      either : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_edges_v1 is record
-      data : access constant thinkthen_edge_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_endpoint_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_endpoint_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_relation_success_v1 is record
-      answer_id : aliased thinkthen_string_v1;
-      probability : aliased double;
-      accepted : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_relation_answer_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            success : aliased thinkthen_relation_success_v1;
-         when others =>
-            failure : aliased thinkthen_member_failure_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_relation_answer_v1 is record
-      relation : aliased thinkthen_string_v1;
-      reads : aliased thinkthen_string_v1;
-      method : aliased Interfaces.Unsigned_32;
-      direction : aliased Interfaces.Unsigned_32;
-      source : aliased thinkthen_endpoint_v1;
-      target : aliased thinkthen_optional_endpoint_v1;
-      request : aliased thinkthen_string_v1;
-      state : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_relation_answer_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_relation_answers_v1 is record
-      data : access constant thinkthen_relation_answer_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_relate_view_v1 is record
-      common : aliased thinkthen_row_v1;
-      value : aliased thinkthen_edges_v1;
-      questions : aliased thinkthen_relation_answers_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_row_observation_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            decide : aliased thinkthen_decide_view_v1;
-         when 1 =>
-            choose : aliased thinkthen_choose_view_v1;
-         when 2 =>
-            tag : aliased thinkthen_tag_view_v1;
-         when 3 =>
-            score : aliased thinkthen_score_view_v1;
-         when 4 =>
-            filter : aliased thinkthen_filter_view_v1;
-         when 5 =>
-            rank : aliased thinkthen_rank_view_v1;
-         when 6 =>
-            find : aliased thinkthen_find_view_v1;
-         when 7 =>
-            annotate : aliased thinkthen_annotate_view_v1;
-         when 8 =>
-            recognize : aliased thinkthen_recognize_view_v1;
-         when others =>
-            relate : aliased thinkthen_relate_view_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_row_observation_v1 is record
-      index : aliased Interfaces.C.size_t;
-      c_function : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_row_observation_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_observation_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            question : aliased thinkthen_question_observation_v1;
-         when others =>
-            row : aliased thinkthen_row_observation_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_observation_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_observation_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_entity_v1 is record
-      entity : aliased thinkthen_entity_v1;
-      position : aliased thinkthen_optional_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_entities_v1 is record
-      data : access constant thinkthen_source_entity_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_entity_edge_v1 is record
-      relation : aliased thinkthen_string_v1;
-      source : aliased thinkthen_source_entity_v1;
-      target : aliased thinkthen_source_entity_v1;
-      probability : aliased double;
-      either : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_entity_edges_v1 is record
-      data : access constant thinkthen_source_entity_edge_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_source_entity_edges_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_source_entity_edges_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_recognition_v1 is record
-      present : aliased int;
-      entities : aliased thinkthen_source_entities_v1;
-      relations : aliased thinkthen_optional_source_entity_edges_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_endpoint_v1 is record
-      ordinal : aliased Interfaces.C.size_t;
-      endpoint : aliased thinkthen_endpoint_v1;
-      c_record : aliased thinkthen_content_v1;
-      position : aliased thinkthen_optional_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_edge_v1 is record
-      relation : aliased thinkthen_string_v1;
-      source : aliased thinkthen_source_endpoint_v1;
-      target : aliased thinkthen_source_endpoint_v1;
-      probability : aliased double;
-      either : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_edges_v1 is record
-      data : access constant thinkthen_source_edge_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_source_relations_v1 is record
-      present : aliased int;
-      edges : aliased thinkthen_source_edges_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_meta_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_meta_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_facts_v1 is record
-      call_id : aliased thinkthen_string_v1;
-      cache_answers : aliased Interfaces.Unsigned_64;
-      estimated_cost_usd : aliased thinkthen_optional_string_v1;
-      input_tokens : aliased thinkthen_optional_u64_v1;
-      model : aliased thinkthen_optional_string_v1;
-      output_tokens : aliased thinkthen_optional_u64_v1;
-      records : aliased Interfaces.Unsigned_64;
-      requests_sent : aliased Interfaces.Unsigned_64;
-      seconds : aliased double;
-      command_ms : aliased thinkthen_optional_u64_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_facts_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_facts_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_stopped_v1 is record
-      c_at : aliased thinkthen_optional_size_v1;
-      cause : aliased Interfaces.Unsigned_32;
-      status : aliased thinkthen_optional_u16_v1;
-      retryable : aliased int;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_stopped_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_stopped_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_error_v1 is record
-      code : aliased int;
-      message : aliased thinkthen_string_v1;
-      retryable : aliased int;
-      stopped : aliased thinkthen_optional_stopped_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_optional_error_v1 is record
-      present : aliased int;
-      value : aliased thinkthen_error_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_summary_v1 is record
-      state : aliased Interfaces.Unsigned_32;
-      schema : aliased thinkthen_string_v1;
-      answer_id : aliased thinkthen_optional_string_v1;
-      c_function : aliased thinkthen_optional_discriminator_v1;
-      count : aliased Interfaces.C.size_t;
-      observation_count : aliased Interfaces.C.size_t;
-      meta : aliased thinkthen_optional_meta_v1;
-      facts : aliased thinkthen_optional_facts_v1;
-      attempts : aliased thinkthen_optional_attempts_v1;
-      error : aliased thinkthen_optional_error_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_named_request_v1 is record
@@ -4727,36 +3947,6 @@ package Thinkthen_Session_C is
       images : aliased thinkthen_images_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   function thinkthen_annotate_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_annotate_batch_start";
-   function thinkthen_annotate_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_annotate_complete";
-   function thinkthen_batch_facts (owner : access constant thinkthen_batch; c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_batch_facts";
-   procedure thinkthen_batch_free (owner : access thinkthen_batch)
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_batch_free";
-   function thinkthen_batch_next (owner : access thinkthen_batch; c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_batch_next";
    function thinkthen_call (engine : access constant thinkthen_engine; request_json : Interfaces.C.Strings.chars_ptr) return Interfaces.C.Strings.chars_ptr
    with Import => True,
         Convention => C,
@@ -4781,24 +3971,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_cancel_token_new";
-   function thinkthen_choose_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_choose_batch_start";
-   function thinkthen_choose_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_choose_complete";
    function thinkthen_decide
      (engine : access constant thinkthen_engine;
       question_json : Interfaces.C.Strings.chars_ptr;
@@ -4808,24 +3980,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_decide";
-   function thinkthen_decide_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_batch_start";
-   function thinkthen_decide_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_decide_complete";
    function thinkthen_decide_many
      (engine : access constant thinkthen_engine;
       question_json : Interfaces.C.Strings.chars_ptr;
@@ -4939,10 +4093,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_error_code";
-   function thinkthen_error_complete (engine : access constant thinkthen_engine; c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_error_complete";
    function thinkthen_error_facts_json (engine : access constant thinkthen_engine) return Interfaces.C.Strings.chars_ptr
    with Import => True,
         Convention => C,
@@ -4955,33 +4105,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_error_retryable";
-   function thinkthen_filter_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_filter_batch_start";
-   function thinkthen_filter_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_filter_complete";
-   function thinkthen_find_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_find_complete";
    procedure thinkthen_free_string (text : Interfaces.C.Strings.chars_ptr)
    with Import => True,
         Convention => C,
@@ -5087,15 +4210,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_question_recognition_task_v1";
-   function thinkthen_rank_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_rank_complete";
    function thinkthen_recognize
      (engine : access constant thinkthen_engine;
       spec_json : Interfaces.C.Strings.chars_ptr;
@@ -5106,15 +4220,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_recognize";
-   function thinkthen_recognize_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_recognize_complete";
    function thinkthen_recognize_opts
      (engine : access constant thinkthen_engine;
       spec_json : Interfaces.C.Strings.chars_ptr;
@@ -5164,15 +4269,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_relate";
-   function thinkthen_relate_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_relate_complete";
    function thinkthen_relate_opts
      (engine : access constant thinkthen_engine;
       spec_json : Interfaces.C.Strings.chars_ptr;
@@ -5223,196 +4319,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_request_plan_json";
-   function thinkthen_result_annotate
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_annotate_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_annotate";
-   function thinkthen_result_choose
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_choose_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_choose";
-   function thinkthen_result_decide
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_decide_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_decide";
-   function thinkthen_result_details
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_details_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_details";
-   function thinkthen_result_filter
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_filter_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_filter";
-   function thinkthen_result_find
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_find_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_find";
-   procedure thinkthen_result_free (owner : access thinkthen_result)
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_free";
-   function thinkthen_result_member_author
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      member : Interfaces.C.size_t;
-      c_out : access thinkthen_question_author_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_member_author";
-   function thinkthen_result_observation
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_observation_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_observation";
-   function thinkthen_result_observation_author
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_question_author_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_observation_author";
-   function thinkthen_result_observation_details
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_details_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_observation_details";
-   function thinkthen_result_question_author
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_question_author_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_question_author";
-   function thinkthen_result_rank
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_rank_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_rank";
-   function thinkthen_result_rank_member
-     (owner : access constant thinkthen_result;
-      row : Interfaces.C.size_t;
-      member : Interfaces.C.size_t;
-      c_out : access thinkthen_rank_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_rank_member";
-   function thinkthen_result_rank_member_count
-     (owner : access constant thinkthen_result;
-      row : Interfaces.C.size_t;
-      c_out : access Interfaces.C.size_t) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_rank_member_count";
-   function thinkthen_result_rank_member_details
-     (owner : access constant thinkthen_result;
-      row : Interfaces.C.size_t;
-      member : Interfaces.C.size_t;
-      c_out : access thinkthen_details_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_rank_member_details";
-   function thinkthen_result_recognition_task_v1
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_recognition_task_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_recognition_task_v1";
-   function thinkthen_result_recognize
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_recognize_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_recognize";
-   function thinkthen_result_relate
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_relate_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_relate";
-   function thinkthen_result_row
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_row_observation_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_row";
-   function thinkthen_result_score
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_score_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_score";
-   function thinkthen_result_source_recognition
-     (owner : access constant thinkthen_result;
-      row : Interfaces.C.size_t;
-      c_out : access thinkthen_source_recognition_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_source_recognition";
-   function thinkthen_result_source_relations
-     (owner : access constant thinkthen_result;
-      row : Interfaces.C.size_t;
-      c_out : access thinkthen_source_relations_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_source_relations";
-   function thinkthen_result_summary (owner : access constant thinkthen_result; c_out : access thinkthen_summary_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_summary";
-   function thinkthen_result_tag
-     (owner : access constant thinkthen_result;
-      c_at : Interfaces.C.size_t;
-      c_out : access thinkthen_tag_view_v1) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_result_tag";
-   function thinkthen_score_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_score_batch_start";
-   function thinkthen_score_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_score_complete";
    procedure thinkthen_session_cancel (session : access thinkthen_session)
    with Import => True,
         Convention => C,
@@ -5530,24 +4436,6 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_source_records";
-   function thinkthen_tag_batch_start
-     (e : access constant thinkthen_engine;
-      q : access constant thinkthen_question;
-      s : access constant thinkthen_source;
-      c : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_tag_batch_start";
-   function thinkthen_tag_complete
-     (engine : access constant thinkthen_engine;
-      question : access constant thinkthen_question;
-      source : access constant thinkthen_source;
-      controls : access constant thinkthen_controls_v1;
-      c_out : System.Address) return int
-   with Import => True,
-        Convention => C,
-        External_Name => "thinkthen_tag_complete";
 end Thinkthen_Session_C;
 pragma Style_Checks (On);
 pragma Warnings (On, "-gnatwu");

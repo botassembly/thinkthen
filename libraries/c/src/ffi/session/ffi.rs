@@ -576,3 +576,7 @@ unsafe fn usage_status(
         Ok(())
     })
 }
+
+#[cfg(test)]
+#[path = "tests/ffi.rs"]
+mod tests;

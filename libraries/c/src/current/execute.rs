@@ -214,7 +214,7 @@ fn atomic<'a>(
     if selection.0 == 5 && !matches!(loaded, LoadedQuestion::Question(_)) {
         return Err(Failure::usage("filter keeps a record at a cut, not a band"));
     }
-    let request = crate::complete::request::prepare(
+    let request = super::request::prepare(
         selection.0,
         selection.1,
         RequestInput::Feed {
