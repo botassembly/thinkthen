@@ -269,3 +269,45 @@ fn a_global_timeout_during_connection_setup_retries_without_sending_http_bytes()
     assert_eq!(error.facts().unwrap().attempts().unwrap().len(), 2);
     assert_eq!(error.to_string(), "the backend timed out");
 }
+
+#[test]
+fn decisions_quota_keeps_the_native_status_without_claiming_a_rate_retry() {
+    for message in ["You have no credits remaining", "fixture-native-attempts"] {
+        let body = serde_json::json!({"error":{"type":"request_error","code":"insufficient_quota","message":message}}).to_string();
+        let listener = Listener::serving(vec![Canned::status(429, &body)]).unwrap();
+        let engine = Engine::builder()
+            .backend("openai")
+            .unwrap()
+            .base_url(listener.base())
+            .unwrap()
+            .model("fixed")
+            .unwrap()
+            .api_key("fixture-native-attempts")
+            .unwrap()
+            .max_retries(3)
+            .no_cache()
+            .build()
+            .unwrap();
+        let question = Question::decide("Refund?").unwrap().cut();
+        let error = engine
+            .decide_with(&question, "Refund me.", CallOptions::new().attempts(true))
+            .unwrap_err();
+        assert_eq!(error.kind(), thinkthen::ErrorKind::Backend);
+        assert_eq!(error.stopped().cause(), thinkthen::StopCause::Status);
+        assert_eq!(error.stopped().status(), Some(429));
+        assert!(!error.stopped().retryable());
+        assert!(!error.retryable());
+        assert_eq!(error.facts().unwrap().requests_sent(), 1);
+        assert_eq!(listener.count(), 1);
+        assert!(
+            error
+                .to_string()
+                .starts_with("the backend openai-decisions account is out of credit")
+        );
+        assert_eq!(
+            error.to_string().contains("provider message:"),
+            message != "fixture-native-attempts"
+        );
+        assert!(!format!("{error:?}").contains("fixture-native-attempts"));
+    }
+}

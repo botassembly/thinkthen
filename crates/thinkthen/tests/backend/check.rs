@@ -325,7 +325,7 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
                 + &requests
                 + "rich-probes {\"records\":4,\"requests\":4,\"estimated_bytes\":1568,\"largest_request_bytes\":716,\"largest_request_estimated_input_tokens\":651,\"token_estimate_method\":\"encoded-body-bytes-908-v1\",\"estimated_input_tokens\":{\"lower\":809,\"upper\":1424},\"upper_bound\":false}\n";
             let stdout = text(&output.stdout);
-            assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and billed 5131, about 22% above the estimate\n"), "{stdout}");
+            assert!(stdout.contains("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and the provider reported 5131, about 22% above the estimate\n"), "{stdout}");
             assert!(stdout.starts_with(&printed), "{stdout}");
             let plans = stdout
                 .lines()

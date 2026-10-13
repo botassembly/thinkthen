@@ -8,7 +8,7 @@
 //! model a request carries when nothing else names one, and the path the
 //! endpoint sits under. Nothing outside this module names any of the four.
 
-pub(crate) const PLAN_ESTIMATE_NOTE: &str = "token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and billed 5131, about 22% above the estimate";
+pub(crate) const PLAN_ESTIMATE_NOTE: &str = "token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check estimated about 4200 input tokens and the provider reported 5131, about 22% above the estimate";
 
 pub(crate) mod backends;
 pub(crate) mod images;
