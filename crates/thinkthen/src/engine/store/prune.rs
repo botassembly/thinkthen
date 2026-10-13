@@ -146,10 +146,11 @@ pub(crate) fn unused(folder: &Path, used: &HashSet<String>) -> Result<Vec<String
     }
     super::convert::refuse_old_files(folder)?;
     let (sqlite, jsonl) = (folder.join(SQLITE), folder.join(JSONL));
-    let keys: Vec<String> = match (exists(&sqlite)?, exists(&jsonl)?) {
-        (true, true) => return Err(Error::StoreAmbiguous),
-        (false, true) => fixture::read(&jsonl)?.answers.into_keys().collect(),
-        (true, false) => {
+    let fixture = exists(&jsonl)?.then(|| fixture::read(&jsonl)).transpose()?;
+    let keys: Vec<String> = match (exists(&sqlite)?, fixture) {
+        (true, Some(_)) => return Err(Error::StoreAmbiguous),
+        (false, Some(fixture)) => fixture.answers.into_keys().collect(),
+        (true, None) => {
             let connection = open(folder, false)?.ok_or(Error::RecordingStorage)?;
             let mut statement = connection
                 .prepare("SELECT lower(hex(key)) FROM answers ORDER BY key")
@@ -157,7 +158,7 @@ pub(crate) fn unused(folder: &Path, used: &HashSet<String>) -> Result<Vec<String
             let rows = statement.query_map([], |row| row.get(0)).map_err(storage)?;
             rows.collect::<rusqlite::Result<_>>().map_err(storage)?
         }
-        (false, false) => Vec::new(),
+        (false, None) => Vec::new(),
     };
     let mut unused: Vec<String> = keys.into_iter().filter(|key| !used.contains(key)).collect();
     unused.sort();
@@ -250,6 +251,10 @@ fn open(folder: &Path, writable: bool) -> Result<Option<Connection>, Error> {
         return Err(Error::RecordingStorage);
     }
     super::convert::refuse_old_files(folder)?;
+    let jsonl = folder.join(JSONL);
+    if exists(&jsonl)? {
+        fixture::read(&jsonl)?;
+    }
     let path = folder.join(SQLITE);
     if !exists(&path)? {
         return Ok(None);

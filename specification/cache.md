@@ -66,7 +66,7 @@ This is a local failure (CLI exit 5). Write none of that reply's answers and nev
 
 ## Current store validation
 
-Only version 2 question-store files are admitted. Old SQLite stores, unversioned or version 1 fixture rows, and digest-named recording files refuse locally before any send. The refusal names the file and says to delete it. Readers never migrate or rewrite old files.
+Only version 2 question-store files are admitted. Old SQLite stores, unversioned or version 1 fixture rows, and digest-named recording files refuse locally before any send. The refusal names the file and says to delete it. Readers never migrate or rewrite old files. `cache prune`, its preview, `cache unused` and `status` apply the same fixture admission before operating on a folder, including when a current SQLite store sits beside an old fixture. Prune and status inspect current fixture rows for admission but operate and count only SQLite answers; a current fixture alone remains untouched and counts as zero. `cache unused` lists current fixture keys and refuses a folder holding both current store files.
 
 Validate every state digest, typed model, state, question, answer, reported usage, admitted adapter and complete question identity before lookup or sending. Missing fields, damaged entries and conflicting saved histories refuse locally. Identical validated duplicate snapshots can share an entry. Differing answers, observation identities or preserved histories must not be chosen silently.
 
