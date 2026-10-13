@@ -6,6 +6,8 @@ Milestone: 0.2
 
 Reviews: revision 5d81001, reject
 
+Reviews: revision 782454e, reject
+
 ## Outcome
 
 When a live backend fails, ThinkThen stops or retries correctly and tells the user why in the provider's own words. A quota error stops at once and says the account is out of credit. `backends check` names the provider it actually calls. A connection that never opened gets one retry.
