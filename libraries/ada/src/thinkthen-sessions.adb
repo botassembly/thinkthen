@@ -6,6 +6,7 @@ package body Thinkthen.Sessions is
    use Interfaces.C.Strings;
    use Interfaces;
    use Thinkthen_Session_C;
+   Default_Client : Engine;
    type View_Access is access constant thinkthen_complete_session_packet_v1;
    procedure Check (Code : int) is
    begin
@@ -25,9 +26,8 @@ package body Thinkthen.Sessions is
       end;
    end Check;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
-      Client : Engine;
    begin
-      Start (Client, Owner, Request);
+      Start (Default_Client, Owner, Request);
    end Start;
    procedure Start (Client : Engine; Owner : in out Session; Request : Thinkthen.Requests.T_Request) is
       JSON : constant String := Thinkthen.Requests.Encode (Request);
@@ -59,7 +59,7 @@ package body Thinkthen.Sessions is
       Native_Status : aliased Unsigned_32;
       Code : int;
    begin
-      Code := thinkthen_session_try_push (Owner.Handle, Bytes, size_t (JSON'Length), Native_Status'Access);
+      Code := thinkthen_session_push (Owner.Handle, Bytes, size_t (JSON'Length), Native_Status'Access);
       Free (Bytes);
       Check (Code);
       Status := Push_Status'Val (Native_Status);
@@ -110,6 +110,16 @@ package body Thinkthen.Sessions is
       Check (thinkthen_session_wait (Owner.Handle, Interest, Timeout_Ms, Native_Ready'Access));
       Ready := Native_Ready;
    end Wait;
+   procedure Next_Packet (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status;
+                          Interest : Unsigned_32 := K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1) is
+      Native_Status : aliased Unsigned_32;
+      New_Handle : aliased Packet_Access := null;
+   begin
+      Check (thinkthen_session_next_packet (Owner.Handle, Interest, Native_Status'Access, New_Handle'Address));
+      Close (Value);
+      Value.Handle := New_Handle;
+      Status := Read_Status'Val (Native_Status);
+   end Next_Packet;
    procedure Try_Read (Owner : in out Session'Class; Value : in out Packet; Status : out Read_Status) is
       Native_Status : aliased Unsigned_32;
       New_Handle : aliased Packet_Access := null;
