@@ -1,19 +1,24 @@
 //! Keep error codes and bounded prose, never raw bodies or header dumps.
 
-use super::Key;
+use super::{Exchange, Key};
 use crate::core::{Json, adapters::ApiType};
 use crate::engine::error::{Error, ProviderDiagnostic};
 use base64::{Engine as _, engine::general_purpose};
 
 const MAX_MESSAGE_CHARS: usize = 320;
+const BASE64_ENCODINGS: [general_purpose::GeneralPurpose; 4] = [
+    general_purpose::STANDARD,
+    general_purpose::STANDARD_NO_PAD,
+    general_purpose::URL_SAFE,
+    general_purpose::URL_SAFE_NO_PAD,
+];
 
 pub(super) fn decorate(
     error: Error,
     body: Option<&[u8]>,
-    key: &Key,
+    exchange: &Exchange<'_>,
     api: ApiType,
     plain: bool,
-    request: &[u8],
 ) -> Error {
     let parsed = body
         .and_then(|bytes| std::str::from_utf8(bytes).ok())
@@ -38,6 +43,8 @@ pub(super) fn decorate(
                     )
                 })
             });
+    let ollama = matches!(error, Error::Status(400) | Error::TokenLimit)
+        && super::send::ollama_address(exchange.url);
     let message = parsed
         .as_ref()
         .and_then(|body| {
@@ -57,9 +64,9 @@ pub(super) fn decorate(
                 .flatten()
                 .and_then(|bytes| std::str::from_utf8(bytes).ok())
         })
-        .filter(|text| !request_echo(text, request))
-        .and_then(|text| safe_message(text, key));
-    if !quota && message.is_none() {
+        .filter(|text| !request_echo(text, exchange.body))
+        .and_then(|text| safe_message(text, exchange.key));
+    if !quota && !ollama && message.is_none() {
         return error;
     }
     Error::Provider {
@@ -67,6 +74,7 @@ pub(super) fn decorate(
         diagnostic: ProviderDiagnostic {
             backend: api.provider_name(),
             quota,
+            ollama,
             message,
         },
     }
@@ -163,7 +171,17 @@ fn reflected_literal(value: &str, text: &str) -> bool {
 
 pub(super) fn key_echo(text: &str, key: &Key) -> bool {
     !key.as_str().is_empty()
+        && key.as_str().len() <= text.len()
         && (text.contains(key.as_str())
+            || BASE64_ENCODINGS
+                .iter()
+                .any(|decoder| text.contains(&decoder.encode(key.as_str())))
+            || text.to_ascii_lowercase().contains(
+                &key.as_str()
+                    .bytes()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>(),
+            )
             || text
                 .split(|ch: char| !ch.is_ascii_alphanumeric() && !"_-/+=%".contains(ch))
                 .any(|word| {
@@ -179,26 +197,13 @@ fn encoded_key(word: &str, key: &Key) -> bool {
     {
         return true;
     }
-    for decoder in [
-        general_purpose::STANDARD,
-        general_purpose::STANDARD_NO_PAD,
-        general_purpose::URL_SAFE,
-        general_purpose::URL_SAFE_NO_PAD,
-    ] {
-        if word.contains(&decoder.encode(bytes))
-            || decoder
-                .decode(word)
-                .is_ok_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+    for decoder in BASE64_ENCODINGS {
+        if decoder
+            .decode(word)
+            .is_ok_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
         {
             return true;
         }
-    }
-    let representation = bytes
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>();
-    if word.to_ascii_lowercase().contains(&representation) {
-        return true;
     }
     let hex = word
         .as_bytes()

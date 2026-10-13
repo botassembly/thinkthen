@@ -263,18 +263,40 @@ fn refused(
     } else {
         Error::Status(status)
     };
-    let failure = super::diagnostic::decorate(
-        failure,
-        body.as_deref(),
-        exchange.key,
-        api,
-        plain,
-        exchange.body,
-    );
+    let failure = super::diagnostic::decorate(failure, body.as_deref(), exchange, api, plain);
     Box::new(Attempt {
         failure,
         asked,
         info,
         unopened: false,
     })
+}
+
+/// Classify the posting address solely for optional refusal advice.
+pub(super) fn ollama_address(url: &str) -> bool {
+    url.parse::<ureq::http::Uri>().is_ok_and(|uri| {
+        uri.port_u16() == Some(11434)
+            || uri
+                .host()
+                .is_some_and(|host| host.eq_ignore_ascii_case("ollama"))
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ollama_address_matches_only_the_host_or_port() {
+        for (url, expected) in [
+            ("http://127.0.0.1:11434/v1/systemone", true),
+            ("http://[::1]:11434/v1/systemone", true),
+            ("https://OLLAMA:443/v1/systemone", true),
+            ("https://ollama/v1/systemone", true),
+            ("http://127.0.0.1:11435/v1/ollama", false),
+            ("https://ollama.example.org/v1", false),
+            ("https://notollama/v1", false),
+            ("https://example.org/ollama:11434", false),
+        ] {
+            assert_eq!(super::ollama_address(url), expected, "{url}");
+        }
+    }
 }

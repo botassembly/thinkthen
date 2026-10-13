@@ -5,7 +5,8 @@ use crate::harness::{Canned, Listener};
 use crate::support::decide;
 
 const EVIDENCE: &str = "private evidence marker";
-const REFUSED: &str = "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size\n";
+const REFUSED: &str =
+    "thinkthen: the backend answered with status 400: the backend refused the request\n";
 const NAMED: &str = r#"{"detail":{"error_type":"max_tokens_exceeded"}}"#;
 const RETRIED_OUT: &str =
     "the backend failed after the allowed attempts; try again later or change --max-retries\n";
@@ -34,7 +35,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
         (
             400,
             r#"{"detail":"max_tokens_exceeded"}"#,
-            "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size; provider message: max_tokens_exceeded\n",
+            "thinkthen: the backend answered with status 400: the backend refused the request; provider message: max_tokens_exceeded\n",
         ),
         (400, long.as_str(), REFUSED),
         (
@@ -138,11 +139,12 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         .unwrap();
         let said = crate::harness::said(&output);
         assert_eq!(output.status.code(), Some(4));
+        assert!(output.stdout.is_empty());
         assert_eq!(listener.requests().len(), 1);
         if message == "The selected model is unavailable" {
             assert_eq!(
                 said,
-                "thinkthen: the backend answered with status 400: the backend refused the request; check --model and the request size; provider message: The selected model is unavailable\n"
+                "thinkthen: the backend answered with status 400: the backend refused the request; provider message: The selected model is unavailable\n"
             );
         } else {
             assert_eq!(said, REFUSED);
@@ -295,5 +297,35 @@ fn readable_rate_limit_prose_does_not_turn_a_real_limit_into_a_quota_stop() {
     assert_eq!(
         facts["stopped"],
         serde_json::json!({"at":1,"cause":"status","status":429,"retryable":true})
+    );
+}
+
+#[test]
+fn an_ollama_shaped_address_suggests_the_named_backend_without_changing_the_request() {
+    let socket = std::net::TcpListener::bind("[::1]:11434").expect("owned Ollama-shaped port");
+    let message = "Description objects are unsupported; use text descriptions.";
+    let body = serde_json::json!({"error":{"message":message}}).to_string();
+    let listener = Listener::serving_on(socket, vec![Canned::status(400, &body)]).unwrap();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "0"],
+        Some("sk-test-value"),
+        EVIDENCE,
+    )
+    .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let request: serde_json::Value = serde_json::from_slice(&requests[0].body).unwrap();
+    assert!(
+        request["questions"].is_object(),
+        "plain URL retains its request shape"
+    );
+    assert_eq!(
+        crate::harness::said(&output),
+        format!(
+            "thinkthen: the backend answered with status 400: the backend refused the request; this address looks like Ollama; try --backend ollama; provider message: {message}\n"
+        )
     );
 }

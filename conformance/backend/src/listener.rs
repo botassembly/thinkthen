@@ -180,7 +180,11 @@ pub struct Listener {
 impl Listener {
     /// Serve these responses in order, one per connection, on a free loopback port.
     pub fn serving(responses: Vec<Canned>) -> io::Result<Self> {
-        let listener = TcpListener::bind("127.0.0.1:0")?;
+        Self::serving_on(TcpListener::bind("127.0.0.1:0")?, responses)
+    }
+
+    /// Serve scripted responses on an already bound, owned listener.
+    pub fn serving_on(listener: TcpListener, responses: Vec<Canned>) -> io::Result<Self> {
         let origin = format!("http://{}", listener.local_addr()?);
         let base = format!("{origin}/v1");
         let url = format!("{base}/{ENDPOINT_PATH}");
