@@ -10,6 +10,14 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
         session.request("tools/list", json!({}))["error"]["code"],
         -32000
     );
+    assert_eq!(
+        session.request(
+            "tools/call",
+            json!({"name":"decide","arguments":{"question":"Q?","evidence":"x"}}),
+        )["error"]["code"],
+        -32000
+    );
+    assert_eq!(backend.count(), 0);
     let initialized = session.request(
         "initialize",
         json!({
@@ -26,6 +34,14 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
         session.request("tools/list", json!({}))["error"]["code"],
         -32000
     );
+    assert_eq!(
+        session.request(
+            "tools/call",
+            json!({"name":"decide","arguments":{"question":"Q?","evidence":"x"}}),
+        )["error"]["code"],
+        -32000
+    );
+    assert_eq!(backend.count(), 0);
     session.send(json!({"jsonrpc":"2.0","method":"notifications/initialized"}));
     let catalog = session.request("tools/list", json!({}));
     let contract: Value =
@@ -38,6 +54,7 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
             .collect::<Vec<_>>(),
         *contract["parity"]["functions"].as_array().unwrap()
     );
+    let output_schema: Value = serde_json::from_str(thinkthen::complete_call_schema()).unwrap();
     for tool in tools {
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
         assert!(
@@ -45,7 +62,7 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
                 .get("api_key")
                 .is_none()
         );
-        assert!(tool["outputSchema"]["$defs"].get("completeFacts").is_some());
+        assert_eq!(tool["outputSchema"], output_schema);
     }
     assert_eq!(
         session.request("initialize", json!({}))["error"]["code"],
