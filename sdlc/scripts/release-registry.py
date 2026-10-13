@@ -196,7 +196,7 @@ def pack(platform, out, sha):
 
     jvm = archive_files(platform, "jvm", v)
     definition = package_inventory.jvm_inventory(pom=jvm['pom.xml'], target=TARGET)
-    for name in definition['files']:
+    for name in definition['files'] + definition['examples']:
         require(name in jvm, f"JVM archive lacks {name}")
     check_pom(jvm["pom.xml"], v)
     base = out / "maven" / GROUP.replace(".", "/") / ARTIFACT / v
