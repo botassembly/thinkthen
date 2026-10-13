@@ -414,13 +414,14 @@ def main():
     parser.add_argument('--inputs', action='store_true')
     parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
+    parser.add_argument('--operations', action='store_true')
     args = parser.parse_args()
     if args.all:
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
                        [sys.executable, str(Path(__file__).resolve()), '--target', target])
-            if mode in ('inputs', 'bridge'):
+            if mode in ('inputs', 'bridge', 'operations'):
                 command.append('--' + mode)
             if args.check:
                 command.append('--check')
@@ -429,6 +430,25 @@ def main():
                 CARGO_NET_OFFLINE='true'))
             if completed.returncode:
                 return completed.returncode
+        return 0
+    if args.operations:
+        if args.target != 'c' or args.inputs or args.bridge:
+            parser.error('operation transport is a separate C producer')
+        from operations import OPERATIONS, STATUSES, PROJECTIONS
+        path = Path(__file__).parent / 'templates/operations.py'
+        spec = importlib.util.spec_from_file_location('operation_target', path)
+        emitter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(emitter)
+        from registry import paths
+        for module, output in zip(('engine', 'session', 'typed'), paths('c', 'operations')):
+            result = emitter.render([operation for operation in OPERATIONS if operation.module == module], STATUSES if module == 'session' else (), PROJECTIONS if module == 'session' else ())
+            output = ROOT / output
+            result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            if args.check and (not output.exists() or output.read_text() != result):
+                print('generated native operations differ', file=sys.stderr)
+                return 1
+            if not args.check:
+                output.write_text(result)
         return 0
     if args.target == 'swift':
         sys.path.insert(0, str(Path(__file__).parent / 'templates'))
