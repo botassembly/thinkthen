@@ -195,9 +195,9 @@ def cstyle(source, language):
         'objc': r'[-+]\s*\([^)]*\)\s*(\w+)|@property[^;\n]*?(\w+)\s*;',
     }
     for match in re.finditer(patterns.get(language, patterns['java']), text):
-        if re.search(r'\b(class|struct|record|enum|interface)\s+\w+', match[0]):
-            continue
         name = next(group for group in match.groups() if group)
+        if re.search(r'\b(class|struct|record|enum|interface)\s+' + re.escape(name) + r'\b', match[0]):
+            continue
         pos = next(match.start(i) for i, group in enumerate(match.groups(), 1) if group)
         container = owner(pos)
         if language == 'cpp' and (parentheses[pos] or name == 'operator'):

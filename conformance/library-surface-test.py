@@ -111,8 +111,9 @@ class PublicSurface(unittest.TestCase):
             write('libraries/typescript/results_generated.d.ts', generated)
             declarations = ('export interface Controls { readonly context?: string; readonly [key:string]: unknown; }\n'
                             'export interface Settings { readonly backend?: string; }\n'
-                            'export class Client { decide(): void; }\n')
-            declarations += ''.join('export function ' + name + '(): void;\n' for name in ['plan', 'questionFile', 'questionName', 'questionReference', 'item', 'files', 'usagePersistence', 'finishUsageStatus'])
+                            'export class Client { decide(): void; static questionFile(): void; static questionName(): void;\n'
+                            'static questionReference(): void; static item(): void; static files(): void; }\n')
+            declarations += ''.join('export function ' + name + '(): void;\n' for name in ['plan', 'usagePersistence', 'finishUsageStatus'])
             def invoke(source=declarations, graph=generated):
                 write('libraries/typescript/native.d.ts', source)
                 write('libraries/typescript/results_generated.d.ts', graph)
@@ -373,7 +374,7 @@ class PublicSurface(unittest.TestCase):
             'go': 'type RequestOptions struct {\nContext string\nhidden string\n}\nfunc ExtraPublicExport() {}',
             'swift': 'public struct RequestOptions {\npublic var context: String\nprivate var hidden: String\npublic func extraPublicExport() {}\n}',
             'cpp': 'class RequestOptions { public: std::string context; void extraPublicExport(); private: std::string hidden; };',
-            'c': 'typedef struct RequestOptions { const char *context; } RequestOptions; void extraPublicExport(void);',
+            'c': 'typedef struct RequestOptions { const struct Text *context; } RequestOptions; struct Result *extraPublicExport(void);',
             'zig': 'pub const RequestOptions = struct {\ncontext: []const u8,\npub fn extraPublicExport() void {}\n};',
             'php': 'class RequestOptions { public string $context; private string $hidden; public function extraPublicExport() {} }',
             'dart': 'class RequestOptions {\nString get context => value;\nString _hidden;\nvoid extraPublicExport() {}\n}',
