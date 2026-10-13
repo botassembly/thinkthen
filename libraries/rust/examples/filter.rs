@@ -43,7 +43,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let mut out = std::io::stdout().lock();
     for row in kept {
-        writeln!(out, "{}", row?.original())?;
+        let row = row?;
+        if row.result().value() {
+            writeln!(out, "{}", row.original())?;
+        }
     }
     Ok(())
 }
