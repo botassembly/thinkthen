@@ -18,7 +18,7 @@ class CampaignEnvironment(unittest.TestCase):
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
             for name in ('test-full-cases', 'surfaces', 'smoke', 'heavy-lock',
-                         'allow-list', 'full-compiler', 'scratch.sh', 'verdict.sh'):
+                         'build-admission.py', 'allow-list', 'full-compiler', 'scratch.sh', 'verdict.sh'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             (scripts / 'installed.sh').write_text('backend_start() { port=12345; }\n')
             for name in ('release-pack', 'release-smoke'):
@@ -63,7 +63,10 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'cargo': f'/usr/bin/python3 "{probe}" compiler\n',
                 'rustc': 'echo "host: x86_64-unknown-linux-gnu"\n',
                 'jq': 'case "$*" in *expect.success*) echo true ;; *) echo fixture ;; esac\n',
-                'python3': f'''case "$*" in
+                'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ]; then
+    exec /usr/bin/python3 "$@"
+fi
+case "$*" in
 *--tool-environment*) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
 *--validate*) exit 0 ;;
 *) exec /usr/bin/python3 "{probe}" parity ;;
