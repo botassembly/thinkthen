@@ -66,11 +66,15 @@ with (Path({str(root)!r})/'probes.jsonl').open('a') as stream:
                 'python3': f'''if [ "$1" = "{scripts / 'build-admission.py'}" ]; then
     exec /usr/bin/python3 "$@"
 fi
-case "$*" in
-*--tool-environment*) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
-*--validate*) exit 0 ;;
-*) exec /usr/bin/python3 "{probe}" parity ;;
-esac
+if [ "$#" -eq 2 ] && [ "$1" = conformance/parity.py ]; then
+    case "$2" in
+    --tool-environment) echo THINKTHEN_TOOLCHAINS={tools}; exit 0 ;;
+    --validate) exit 0 ;;
+    12345) exec /usr/bin/python3 "{probe}" parity ;;
+    esac
+fi
+printf 'unsupported Python invocation: %s\\n' "$*" >&2
+exit 2
 ''',
             }
             for name, body in commands.items():
@@ -107,6 +111,18 @@ esac
             rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
             self.assertEqual(rows, [{'stage': 'routine',
                                      'settings': {'RUSTC_WRAPPER': '/ambient/rustc-wrapper'}}])
+            with (scripts / 'test-full-cases').open('a') as stream:
+                stream.write('\npython3 conformance/not-a-real-helper.py\n')
+            (root / 'probes.jsonl').write_text('')
+            result = subprocess.run(['sh', str(scripts / 'test-full-cases'), '--run'], cwd=root,
+                                    env=env, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            self.assertEqual(result.returncode, 2, result.stdout.decode())
+            self.assertIn(b'unsupported Python invocation: conformance/not-a-real-helper.py',
+                          result.stdout)
+            rows = [json.loads(line) for line in (root / 'probes.jsonl').read_text().splitlines()]
+            self.assertTrue({'compiler', 'smoke', 'full', 'parity'} <= {row['stage'] for row in rows})
+            for row in rows:
+                self.assertEqual(row['settings'], expected, row['stage'])
 
     def test_duckdb_build_boundary_keeps_full_and_smoke_compiler_inputs_stable(self):
         with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-env-') as folder:
