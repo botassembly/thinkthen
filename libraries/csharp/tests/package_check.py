@@ -114,7 +114,7 @@ def abi_check(header, package):
     # Validate every installed SDK import against its generated C declaration.
     required_imports = set(actual['functions'])
     assert required_imports <= native['functions'].keys(), 'owned SDK imports absent from C header'
-    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1'}
+    carriers = {'thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1'}
     assert set(actual['records']) == carriers, 'unused native layouts retained'
     constant_names = {name for name in native['constants'] if name.startswith(('THINKTHEN_LOAD_', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')) or name.startswith('THINKTHEN_E') and not name.endswith('_V1')}
     expected = abi.represented_abi(native, carriers, required_imports, constant_names)
