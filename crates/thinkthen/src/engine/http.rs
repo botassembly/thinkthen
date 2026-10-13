@@ -18,7 +18,6 @@ use crate::engine::{Permit, Width, Widths, backoff};
 
 mod diagnostic;
 mod observation;
-mod opening;
 mod retry;
 mod send;
 use observation::{ResponseInfo, observed_result};
@@ -178,8 +177,8 @@ impl Client {
             api: Default::default(),
             agent: Agent::with_parts(
                 config.build(),
-                opening::OpeningConnector::default(),
-                opening::OpeningResolver::default(),
+                send::OpeningConnector::default(),
+                send::OpeningResolver::default(),
             ),
             timeout,
             width: crate::engine::limits::client_width(widths),

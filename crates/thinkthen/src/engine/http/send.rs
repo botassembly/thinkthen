@@ -58,7 +58,7 @@ fn send(
         key => request.header("authorization", &format!("Bearer {key}")),
     };
     let mut response = request.send(exchange.body).map_err(|error| {
-        let opening = super::opening::unopened(&error);
+        let opening = unopened(&error);
         let kind =
             opening.unwrap_or_else(|| transport(&error, exchange.url.starts_with("https://")));
         let mut attempt = Attempt::from(Error::Transport(kind));
@@ -193,5 +193,65 @@ pub(super) fn io_transport(error: &io::Error) -> TransportKind {
         | io::ErrorKind::BrokenPipe => TransportKind::PrematureClose,
         io::ErrorKind::TimedOut => TransportKind::Timeout,
         _ => TransportKind::Other,
+    }
+}
+
+// Opening phase markers delegate to the default connector and resolver.
+use ureq::unversioned::resolver::{DefaultResolver, ResolvedSocketAddrs, Resolver};
+use ureq::unversioned::transport::{
+    ConnectionDetails, Connector, DefaultConnector, NextTimeout, Transport,
+};
+
+#[derive(Debug, thiserror::Error)]
+#[error("connection opening failed")]
+struct OpeningFailure(TransportKind);
+
+pub(super) fn unopened(error: &ureq::Error) -> Option<TransportKind> {
+    match error {
+        ureq::Error::Other(error) => error
+            .downcast_ref::<OpeningFailure>()
+            .map(|failure| failure.0),
+        _ => None,
+    }
+}
+
+fn marked(error: ureq::Error) -> ureq::Error {
+    let eligible = matches!(
+        &error,
+        ureq::Error::Timeout(_) | ureq::Error::HostNotFound | ureq::Error::ConnectionFailed
+    ) || matches!(&error, ureq::Error::Io(error) if error.kind() == std::io::ErrorKind::ConnectionRefused);
+    if eligible {
+        ureq::Error::Other(Box::new(OpeningFailure(transport(&error, false))))
+    } else {
+        error
+    }
+}
+
+#[derive(Debug, Default)]
+pub(super) struct OpeningConnector(DefaultConnector);
+
+impl Connector for OpeningConnector {
+    type Out = Box<dyn Transport>;
+
+    fn connect(
+        &self,
+        details: &ConnectionDetails,
+        chained: Option<()>,
+    ) -> Result<Option<Self::Out>, ureq::Error> {
+        self.0.connect(details, chained).map_err(marked)
+    }
+}
+
+#[derive(Debug, Default)]
+pub(super) struct OpeningResolver(DefaultResolver);
+
+impl Resolver for OpeningResolver {
+    fn resolve(
+        &self,
+        uri: &ureq::http::Uri,
+        config: &ureq::config::Config,
+        timeout: NextTimeout,
+    ) -> Result<ResolvedSocketAddrs, ureq::Error> {
+        self.0.resolve(uri, config, timeout).map_err(marked)
     }
 }

@@ -104,7 +104,7 @@ pub(crate) fn run(
             .map_err(|_| Failure::Defect("a plan is too large"))?;
         lines.push(format!("rich-probes {}", json_line(&counts)?));
         lines.extend(function_plans);
-        lines.push("token-estimate measured byte rates; actual billed input can exceed the upper estimate; the observed Jev check exceeded it by about 22%".to_owned());
+        lines.push(engine.backend().api_type().plan_estimate_note().to_owned());
         lines.push(format!(
             "prepared-requests upper-bound {} before retries and refusal splits",
             probes.len() + function_requests
