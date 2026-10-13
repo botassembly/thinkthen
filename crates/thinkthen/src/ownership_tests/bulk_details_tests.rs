@@ -172,31 +172,34 @@ fn fallible_input_keeps_packed_detail_and_grouped_annotation_request_bytes() {
         std::num::NonZeroUsize::new(2).expect("two"),
     ));
     for annotation in [false, true] {
-        if annotation {
-            assert_eq!(
-                engine
-                    .annotate_with(&set, records, options)
-                    .collect::<Result<Vec<_>, _>>()
-                    .expect("old annotation")
-                    .len(),
-                4
-            );
+        let original_len = if annotation {
+            engine
+                .annotate_with(&set, records, options)
+                .collect::<Result<Vec<_>, _>>()
+                .expect("old annotation")
+                .len()
         } else {
-            assert_eq!(
-                engine
-                    .try_details_input_many_with(&asked, records.map(Ok), options)
-                    .collect::<Result<Vec<_>, _>>()
-                    .expect("old detail")
-                    .len(),
-                4
-            );
-        }
+            engine
+                .try_details_input_many_with(&asked, records.map(Ok), options)
+                .collect::<Result<Vec<_>, _>>()
+                .expect("old detail")
+                .len()
+        };
+        assert_eq!(original_len, 4);
         let mut original = std::mem::take(&mut *captured.lock().expect("capture"));
         assert_eq!(original.len(), 2);
         if annotation {
+            let rows = crate::api::rows(
+                &engine,
+                thinkthen::RequestFunction::Annotate,
+                set.clone().into(),
+                crate::api::plain_records(records),
+                options,
+            )
+            .expect("annotation rows");
             assert_eq!(
-                engine
-                    .try_annotate_with(&set, records.map(Ok), options)
+                crate::api::annotation_rows(rows)
+                    .expect("annotations")
                     .collect::<Result<Vec<_>, _>>()
                     .expect("fallible annotation")
                     .len(),
