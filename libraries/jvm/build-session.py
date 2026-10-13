@@ -82,6 +82,7 @@ def main():
     actual = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm', '--out', str(out)], env=env))
     (jars / 'product-inventory.json').write_text(json.dumps(actual,indent=2) + '\n')
     maven_package(jars, inventory, classifier)
+    shutil.copytree(ROOT / 'libraries/jvm/examples', out / 'examples')
     print('Stable JVM session JARs, selected native classifier and local Maven coordinates built')
 
 

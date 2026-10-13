@@ -131,6 +131,9 @@ public final class SessionConsumer {
             check(held.cancel(false),"future did not cancel");
             check(held.isCancelled() && System.nanoTime() - started < TimeUnit.SECONDS.toNanos(2),"cancellation waited for provider");
             check(!Files.exists(Path.of("barrier/release-hold-jvm-java")),"provider was released early");
+            var multiple = done(engine.decide(question, records("multiple-first", "multiple-second"), options()));
+            try { multiple.decide(); throw new AssertionError("multiple judgments answered as one"); }
+            catch (Results.CallAnswers.CardinalityFailure expected) { check(expected.call() == multiple, "cardinality refusal retains actual multirow call"); }
             var sampleAnswers = examples.JavaExamples.run(engine);
             check(sampleAnswers.size() == 10, "ten shipped Java examples");
             var relation = (Results.Relation)sampleAnswers.get(9);
