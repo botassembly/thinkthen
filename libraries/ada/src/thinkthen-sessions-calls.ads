@@ -21,4 +21,5 @@ procedure Recognize (Owner : in out Session; Request : T_RequestCall);
 procedure Recognize (Client : Engine; Owner : in out Session; Request : T_RequestCall);
 procedure Relate (Owner : in out Session; Request : T_RequestCall);
 procedure Relate (Client : Engine; Owner : in out Session; Request : T_RequestCall);
+function Plan (Client : Engine; Request : T_RequestCall) return String;
 end Thinkthen.Sessions.Calls;
