@@ -24,9 +24,8 @@ class SizeReport(unittest.TestCase):
                 target = root / path
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(text)
-            libraries = {name: {'root': 'libraries/' + name, 'test_folders': ['tests']}
-                         for name in ['python', 'jvm', 'dart']}
-            libraries['dart']['test_folders'].extend(['test', 'example'])
+            contract = json.loads((SCRIPT.parents[2] / 'conformance/library-surface.json').read_text())
+            libraries = {name: contract['libraries'][name] for name in ['python', 'jvm', 'dart']}
             manifest = {'libraries': libraries, 'exceptions': {'python': {'paths': ['libraries/python/adapter.py']}}}
             write('conformance/library-surface.json', json.dumps(manifest))
             write('sdlc/generators/results/registry.py', "from types import SimpleNamespace\nOUTPUTS = (SimpleNamespace(target='python', path='libraries/python/generated.py'), SimpleNamespace(target='python', path='sdlc/generators/side/inputs.json'))\ndef generated_paths():\n    return {output.path for output in OUTPUTS}\n")
@@ -40,11 +39,11 @@ class SizeReport(unittest.TestCase):
             write('libraries/jvm/session/Test.kt', 'kotlin\n')
             write('libraries/jvm/session/Test.scala', 'scala\n')
             write('libraries/dart/main.dart', 'dart\n' * 2)
-            write('libraries/dart/tests/native.mjs', 'test\n' * 3)
-            write('libraries/dart/tests/native.d.mts', 'declaration\n' * 2)
+            write('libraries/dart/checks/native.mjs', 'test\n' * 3)
+            write('libraries/dart/checks/native.d.mts', 'declaration\n' * 2)
             write('libraries/dart/src/tests.rs', 'rust test\n')
             write('libraries/dart/flutter/example/lib/main.dart', 'sample\n' * 3)
-            write('libraries/dart/test/check.dart', 'test\n' * 2)
+            write('libraries/dart/checks/check.dart', 'test\n' * 2)
             write('libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc', 'generated\n' * 4)
             write('libraries/jvm/tests/helper.py', 'python test\n' * 2)
             run('git', 'init', '-q')

@@ -16,6 +16,31 @@ C, Zig, Ada and COBOL use fixed layouts generated from Rust. Other C-interface l
 
 [0517](../sdlc/tickets/0517-prebuilt-native-libraries-in-every-package.md) designs how each package carries its prebuilt native library for supported platforms. Each migration ticket builds its own package under that design. Installation and the first call require no manual library path. Follow the language package's normal install command; package inventories come from the shared generated definition. Public installation text continues to describe the published release until 0.2 ships.
 
+## Existing test folders
+
+Keep each library's current test folder. The surface manifest classifies source in that folder and its examples as test code. The size report and handwritten production checks share that classification. Generated files remain generated regardless of their folder.
+
+| Library | Main test folder | Examples folder |
+| --- | --- | --- |
+| Python | `tests` | `examples` |
+| TypeScript | `tests` | `examples` |
+| Ruby | `tests` | `examples` |
+| R | `tests` | `examples` |
+| C | `tests` | `examples` |
+| C++ | `fixtures` | `examples` |
+| C# | `tests` | `examples` |
+| Go | `fixtures` | `examples` |
+| JVM | `tests` | `examples` |
+| Swift | `Tests` | `Examples` |
+| Zig | `Tests` | `examples` |
+| PHP | `fixtures` | `examples` |
+| Dart and Flutter | `checks` | `example` |
+| Ada | `checks` | `examples` |
+| Objective-C | `checks` | `examples` |
+| COBOL | `checks` | `examples` |
+
+Folder names also classify nested example projects. A listed examples folder need not exist when the library has no example yet. Do not rename folders to match another language.
+
 ## Caller acceptance and code ownership
 
 The [native package design](../sdlc/decisions/2026-10-09-native-package-design.md) fixes platform pairs, runtime floors, native layout and automatic loading. The PM approved its pub build-time asset route in [the pub ruling](../sdlc/decisions/2026-10-09-pub-build-time-native-asset.md).
