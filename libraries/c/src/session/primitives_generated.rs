@@ -22,6 +22,8 @@ pub struct thinkthen_complete_extension_v1 {
     pub name: thinkthen_complete_utf8_v1,
     /// C field `json`.
     pub json: thinkthen_complete_utf8_v1,
+    /// C field `value`.
+    pub value: *const thinkthen_complete_json_v1,
 }
 /// C descriptor or borrowed view `thinkthen_complete_extensions_v1`.
 #[repr(C)]
