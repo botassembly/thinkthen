@@ -74,3 +74,63 @@ pub(super) fn draw() -> u64 {
 #[cfg(test)]
 #[path = "retry_tests.rs"]
 mod tests;
+
+/// Separate connection recovery from the unchanged status retry allowance.
+pub(super) struct Attempts {
+    statuses: u32,
+    connection_retried: bool,
+    pub(super) wait: Duration,
+    pub(super) last_status: Option<u16>,
+}
+
+impl Attempts {
+    pub(super) const fn new(wait: Duration) -> Self {
+        Self {
+            statuses: 0,
+            connection_retried: false,
+            wait,
+            last_status: None,
+        }
+    }
+
+    pub(super) const fn again(&self) -> bool {
+        self.statuses > 0 || self.connection_retried
+    }
+
+    pub(super) fn failed(
+        &mut self,
+        attempt: super::Attempt,
+        exchange: &super::Exchange<'_>,
+        timeout: Duration,
+        cancel: &crate::engine::Cancel,
+        budget: Option<Duration>,
+    ) -> Result<(), Error> {
+        if matches!(
+            attempt.failure,
+            Error::Transport(crate::engine::error::TransportKind::Timeout)
+        ) && budget.is_some_and(|budget| budget <= timeout)
+            && let Some(passed) = cancel.passed()
+        {
+            return Err(passed);
+        }
+        if attempt.unopened && !self.connection_retried {
+            self.connection_retried = true;
+            return cancel
+                .wait(exchange.retry_wait.min(longest(timeout)))
+                .map_or(Ok(()), Err);
+        }
+        if self.statuses >= exchange.max_retries
+            || !attempt.failure.retryable()
+            || too_long(attempt.asked, timeout)
+        {
+            return Err(attempt.failure);
+        }
+        self.last_status = match attempt.failure.base() {
+            Error::Status(status) => Some(*status),
+            _ => None,
+        };
+        self.statuses += 1;
+        self.wait = self.wait.saturating_mul(2);
+        Ok(())
+    }
+}

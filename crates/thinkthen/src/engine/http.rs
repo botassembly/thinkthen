@@ -11,7 +11,7 @@ use ureq::Agent;
 use ureq::tls::{PemItem, RootCerts};
 
 use crate::core::Withheld;
-use crate::engine::error::{Error, TransportKind};
+use crate::engine::error::Error;
 use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
@@ -23,7 +23,7 @@ mod send;
 use observation::{ResponseInfo, observed_result};
 #[cfg(test)]
 use retry::honored;
-use retry::{bounded_wait, draw, floor, longest, too_long};
+use retry::{bounded_wait, draw, floor, longest};
 use send::timed;
 #[cfg(test)]
 use send::{io_transport, transport};
@@ -277,11 +277,7 @@ impl Client {
         let invocation = cancel.invocation()?;
         let sdk_request_id = crate::engine::invocation::request_id()?;
         let gates = &crate::engine::limits::of(std::process::id(), cancel)?.gates;
-        let mut wait = exchange.retry_wait;
-        let mut retries = 0;
-        let mut status_retries = 0;
-        let mut connection_retried = false;
-        let mut last_status = None;
+        let mut retries = retry::Attempts::new(exchange.retry_wait);
         loop {
             let now = Instant::now();
             let cap = now + longest(self.timeout);
@@ -289,16 +285,16 @@ impl Client {
             // another in-flight reply could have closed the gate meanwhile.
             let permit = self.acquire_open(gates, exchange.url, cap, cancel)?;
             cancel.stop_or_remaining()?;
-            before_attempt(retries > 0);
+            before_attempt(retries.again());
             let prepared = usage.prepare_attempt()?;
             // Bookkeeping and the test hook may wait. The final check reads no
             // host callback while the usage lock is held.
             let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            let reservation = cancel.reserve_send(last_status, exchange.body.len())?;
+            let reservation = cancel.reserve_send(retries.last_status, exchange.body.len())?;
             after_reservation();
             cancel.remaining_without_check()?;
-            prepared.mark(retries > 0)?;
+            prepared.mark(retries.again())?;
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
@@ -331,7 +327,7 @@ impl Client {
                 permit.release_closing(
                     gates,
                     exchange.url,
-                    bounded_wait(attempt.asked, wait, self.timeout, draw()),
+                    bounded_wait(attempt.asked, retries.wait, self.timeout, draw()),
                     floor(attempt.asked, &attempt.failure),
                 );
             } else {
@@ -346,33 +342,7 @@ impl Client {
                 }
                 Err(attempt) => attempt,
             };
-            if matches!(attempt.failure, Error::Transport(TransportKind::Timeout))
-                && budget.is_some_and(|budget| budget <= self.timeout)
-                && let Some(passed) = cancel.passed()
-            {
-                return Err(passed);
-            }
-            if attempt.unopened && !connection_retried {
-                connection_retried = true;
-                retries += 1;
-                if let Some(error) = cancel.wait(wait) {
-                    return Err(error);
-                }
-                continue;
-            }
-            if status_retries >= exchange.max_retries
-                || !is_retried(&attempt.failure)
-                || too_long(attempt.asked, self.timeout)
-            {
-                return Err(attempt.failure);
-            }
-            last_status = match attempt.failure.base() {
-                Error::Status(status) => Some(*status),
-                _ => None,
-            };
-            status_retries += 1;
-            wait = wait.saturating_mul(2);
-            retries += 1;
+            retries.failed(*attempt, exchange, self.timeout, cancel, budget)?;
         }
     }
 }
