@@ -91,7 +91,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         "else":{"properties":{"origin":{"type":"string"}}}
     }]);
     let find = definitions
-        .get_mut("completeReadableQuestion2")
+        .get_mut("completefindQuestionDocument")
         .expect("find reading");
     find["properties"]["verb"] = json!({"const":"find"});
     find["required"]
@@ -107,7 +107,7 @@ pub(super) fn finish(definitions: &mut Map<String, Value>) {
         .expect("required")
         .push(json!("kind"));
     let relate = definitions
-        .get_mut("completeReadableQuestion4")
+        .get_mut("completerelateQuestionDocument")
         .expect("relate reading");
     relate["properties"]["verb"] = json!({"const":"relate"});
     let attempt = definitions
