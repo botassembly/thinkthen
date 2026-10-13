@@ -35,7 +35,10 @@ namespace tt::inputs {
     class AuthoredScore;
     class AuthoredTag;
     class AuthoredThreshold;
+    class CacheDocument;
     class ContextSchema;
+    class DisabledCache;
+    class EngineSettings;
     class ImageMedia;
     class OptionSchema;
     class ReaderMedia;
@@ -524,6 +527,14 @@ namespace tt::inputs {
         }
         explicit AuthoredThreshold(const std::variant<double, std::string>& value);
     };
+    class CacheDocument : public Node {
+        CacheDocument(const Json& value, int):Node(value) {
+        }
+        public: static CacheDocument from_document(const Json& value) {
+            return CacheDocument(value,0);
+        }
+        explicit CacheDocument(const std::variant<std::string, DisabledCache>& value);
+    };
     class ContextSchema : public Node {
         ContextSchema(const Json& value, int):Node(value) {
         }
@@ -531,6 +542,43 @@ namespace tt::inputs {
             return ContextSchema(value,0);
         }
         explicit ContextSchema(const std::variant<std::string, Json>& value);
+    };
+    class DisabledCache : public Node {
+        DisabledCache(const Json& value, int):Node(value) {
+        }
+        public: static DisabledCache from_document(const Json& value) {
+            return DisabledCache(value,0);
+        }
+        explicit DisabledCache(const bool& value);
+    };
+    class EngineSettings : public Node {
+        EngineSettings(const Json& value, int):Node(value) {
+        }
+        public: static EngineSettings from_document(const Json& value) {
+            return EngineSettings(value,0);
+        }
+        EngineSettings():Node(Json(Json::Object{
+        })) {
+        }
+        EngineSettings& set_backend(const std::string& value);
+        EngineSettings& set_base_url(const std::string& value);
+        EngineSettings& set_batch(const RequestBatch& value);
+        EngineSettings& set_cache(const CacheDocument& value);
+        EngineSettings& set_max_estimated_input_tokens_total(const std::variant<uint64_t, std::nullptr_t>& value);
+        EngineSettings& set_max_request_bytes(const uint64_t& value);
+        EngineSettings& set_max_requests(const std::variant<uint64_t, std::nullptr_t>& value);
+        EngineSettings& set_max_requests_total(const std::variant<uint64_t, std::nullptr_t>& value);
+        EngineSettings& set_max_retries(const uint64_t& value);
+        EngineSettings& set_model(const std::string& value);
+        EngineSettings& set_profile(const std::string& value);
+        EngineSettings& set_proxy(const Json& value);
+        EngineSettings& set_record(const std::string& value);
+        EngineSettings& set_refresh_cache(const bool& value);
+        EngineSettings& set_replay(const std::string& value);
+        EngineSettings& set_throttle(const uint8_t& value);
+        EngineSettings& set_timeout(const uint64_t& value);
+        EngineSettings& set_usd_per_million_input(const std::string& value);
+        EngineSettings& set_usd_per_million_output(const std::string& value);
     };
     class ImageMedia : public Node {
         ImageMedia(const Json& value, int):Node(value) {
@@ -1791,7 +1839,88 @@ namespace tt::inputs {
     }
     inline AuthoredThreshold::AuthoredThreshold(const std::variant<double, std::string>& value):Node(results::encode(value)) {
     }
+    inline CacheDocument::CacheDocument(const std::variant<std::string, DisabledCache>& value):Node(results::encode(value)) {
+    }
     inline ContextSchema::ContextSchema(const std::variant<std::string, Json>& value):Node(results::encode(value)) {
+    }
+    inline DisabledCache::DisabledCache(const bool& value):Node(results::encode(value)) {
+    }
+    inline EngineSettings& EngineSettings::set_backend(const std::string& value) {
+        set_member("backend",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_base_url(const std::string& value) {
+        set_member("base_url",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_batch(const RequestBatch& value) {
+        set_member("batch",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_cache(const CacheDocument& value) {
+        set_member("cache",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_max_estimated_input_tokens_total(const std::variant<uint64_t,
+    std::nullptr_t>& value) {
+        set_member("max_estimated_input_tokens_total",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_max_request_bytes(const uint64_t& value) {
+        set_member("max_request_bytes",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_max_requests(const std::variant<uint64_t, std::nullptr_t>& value) {
+        set_member("max_requests",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_max_requests_total(const std::variant<uint64_t, std::nullptr_t>& value) {
+        set_member("max_requests_total",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_max_retries(const uint64_t& value) {
+        set_member("max_retries",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_model(const std::string& value) {
+        set_member("model",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_profile(const std::string& value) {
+        set_member("profile",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_proxy(const Json& value) {
+        set_member("proxy",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_record(const std::string& value) {
+        set_member("record",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_refresh_cache(const bool& value) {
+        set_member("refresh_cache",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_replay(const std::string& value) {
+        set_member("replay",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_throttle(const uint8_t& value) {
+        set_member("throttle",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_timeout(const uint64_t& value) {
+        set_member("timeout",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_usd_per_million_input(const std::string& value) {
+        set_member("usd_per_million_input",results::encode(value));
+        return *this;
+    }
+    inline EngineSettings& EngineSettings::set_usd_per_million_output(const std::string& value) {
+        set_member("usd_per_million_output",results::encode(value));
+        return *this;
     }
     inline ImageMedia::ImageMedia(const std::string& value):Node(results::encode(value)) {
     }
@@ -2574,5 +2703,21 @@ namespace tt::inputs {
         return *this;
     }
     inline SourceUnit::SourceUnit(const std::string& value):Node(results::encode(value)) {
+    }
+    inline RequestQuestion question_file(const std::string& path) {
+        return RequestQuestionFile().set_path(path);
+    }
+    inline RequestQuestion question_name(const std::string& name) {
+        return RequestQuestionName().set_name(name);
+    }
+    inline RequestQuestion question_reference(const std::string& reference) {
+        return RequestQuestionReference().set_reference(reference);
+    }
+    inline RequestItem item(const RequestOriginal& original) {
+        return RequestItem().set_original(original);
+    }
+    inline RequestInput files(const std::vector<std::string>& paths, const RequestReader& reading={
+    }) {
+        return RequestInputSource().set_source(RequestSource().set_paths(paths).set_reading(reading));
     }
 }

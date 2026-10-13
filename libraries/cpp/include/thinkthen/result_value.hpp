@@ -33,6 +33,9 @@ template<class T> struct Encoder {
         else return Json(value);
     }
 };
+template<class T> struct Encoder<std::optional<T>> {
+    static Json write(const std::optional<T>& value) { return value ? encode(*value) : Json(nullptr); }
+};
 template<class T> struct Encoder<std::vector<T>> {
     static Json write(const std::vector<T>& value) { Json::Array array; for(const auto& item:value) array.push_back(encode(item)); return Json(std::move(array)); }
 };

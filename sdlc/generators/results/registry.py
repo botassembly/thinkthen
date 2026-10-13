@@ -16,6 +16,11 @@ def group(target, mode, base, *names):
 
 OUTPUTS = (
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/session/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/native_request/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/session/', 'primitives_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/carriers/', 'layouts_generated.rs'),
     *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
     *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),
@@ -32,7 +37,7 @@ OUTPUTS = (
     *group('go', 'results', 'libraries/go/', 'owned_results_generated.go'),
     *group('php', 'results', 'libraries/php/src/session/', 'results_generated.php', 'graph_generated.json', 'ffi_generated.h', 'constants_generated.php', 'inputs_generated.php'),
     *group('cpp', 'results', 'libraries/cpp/include/thinkthen/', 'results_generated.hpp'),
-    *group('cpp', 'inputs', 'libraries/cpp/include/thinkthen/', 'inputs_generated.hpp'),
+    *group('cpp', 'inputs', 'libraries/cpp/include/thinkthen/', 'inputs_generated.hpp', 'calls_generated.hpp'),
     *group('dart', 'results', 'libraries/dart/lib/src/session/', 'results_generated.dart'),
     *group('dart', 'inputs', 'libraries/dart/lib/src/session/', 'inputs_generated.dart'),
     *group('dart', 'bridge', 'libraries/dart/lib/src/session/', 'abi_generated.dart'),

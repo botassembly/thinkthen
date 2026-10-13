@@ -91,11 +91,7 @@ int main(int argc,char** argv) {
             if(v.contains("feed_items")) for(const auto& item:v.at("feed_items")) {
                 if(call.input_closed()) break;
                 auto next=RequestSessionDescriptor().set_item(RequestItem::from_document(item));
-                while(!call.try_push(next) && !call.input_closed()) {
-                    auto packet=call.poll();
-                    if(packet.packet) packets.push_back(packet.packet->document());
-                    else call.wait(true);
-                }
+                if(!call.push(next)) break;
             }
             call.finish();
             if(v.at("held_cancel").get<bool>()) { if(std::cin.get()!='!') return 3; call.cancel(); std::cout<<"cancel-fired\n"<<std::flush; }

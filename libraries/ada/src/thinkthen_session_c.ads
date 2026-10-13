@@ -164,8 +164,6 @@ package Thinkthen_Session_C is
    K_THINKTHEN_EDEFECT : constant := 6;
    K_THINKTHEN_ELOCAL : constant := 4;
    K_THINKTHEN_EUSAGE : constant := 1;
-   K_THINKTHEN_EVENT_QUESTION_V1 : constant := 1;
-   K_THINKTHEN_EVENT_ROW_V1 : constant := 2;
    K_THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_1_V1 : constant := 1;
    K_THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_2_V1 : constant := 2;
    K_THINKTHEN_REQUEST_ANNOTATE_QUESTION_ARM_3_V1 : constant := 3;

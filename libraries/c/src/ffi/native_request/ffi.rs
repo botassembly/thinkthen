@@ -4,10 +4,13 @@
     reason = "the caller owns the aligned counted carrier tree"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
+#[path = "operations_generated.rs"]
+mod operations;
 use crate::EngineHandle;
 use crate::failures::{self, Failure};
 use crate::session::SessionHandle;
 use crate::session::views::thinkthen_complete_utf8_v1;
+pub use operations::*;
 use serde::Serialize;
 use serde::ser::{SerializeMap, SerializeSeq};
 use serde_json::value::RawValue;
@@ -148,31 +151,66 @@ unsafe fn surface(value: thinkthen_complete_utf8_v1) -> Result<Surface, ErrorKin
         .map_err(|_| ErrorKind::Usage)
 }
 
-/// Construct a named request from counted typed argument records through Rust.
-/// The carrier tree copies strings, arrays, maps and explicit null alternatives;
-/// no pointer survives return. Rust alone admits questions, controls and evidence.
-/// COBOL retains its 8192-byte capacity per scalar, including image/base64 text;
-/// overflow returns THINKTHEN_COBOL_OVERFLOW before constructing a session.
-/// All output, error-slot and engine lifetime rules match the named constructor.
+unsafe fn push_typed(
+    session: &SessionHandle,
+    descriptor: *const carriers::thinkthen_request_session_descriptor_v1,
+    blocking: bool,
+) -> Result<u32, Failure> {
+    let decode = || {
+        let mut context = Context::new(session.1);
+        // SAFETY: native admission invokes conversion only with intake room;
+        // the caller retains the descriptor throughout this operation.
+        let json = unsafe {
+            carriers::read_thinkthen_request_session_descriptor_v1(descriptor, &mut context)
+        }?
+        .json()?;
+        thinkthen::RequestSessionDescriptor::from_json(&json).map_err(Failure::from)
+    };
+    let state = if blocking {
+        session.0.push_with(decode)?
+    } else {
+        session.0.try_push_with(decode)?
+    };
+    Ok(super::session::push_status(state))
+}
+
+/// Finish input with a counted typed failure; NULL means EOF.
+/// Rust preserves the safe diagnostic after the completed prefix and final facts.
 /// # Safety
-/// engine is live and out is writable, nonnull. function and surface are counted
-/// UTF-8 views. arguments and its entire finite carrier tree remain aligned and
-/// readable throughout the call. Each pointer/length covers its declared element
-/// type and fits Rust slices. Required pointers are nonnull; optional NULL means
-/// missing. A tagged null arm means explicit null. Inputs may be freed on return.
+/// session is live. A nonnull failure satisfies the finite aligned carrier-tree
+/// obligations of the typed constructor. No foreign pointer survives return.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_new_typed_with_surface(
-    engine: *const EngineHandle,
+pub unsafe extern "C" fn thinkthen_session_finish_typed(
+    session: *const SessionHandle,
+    failure: *const carriers::thinkthen_request_reader_failure_v1,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        // SAFETY: the caller retains the live session and optional failure tree.
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let failure = if failure.is_null() {
+            None
+        } else {
+            let mut context = Context::new(session.1);
+            let json = unsafe {
+                carriers::read_thinkthen_request_reader_failure_v1(failure, &mut context)
+            }?
+            .json()?;
+            Some(RequestReaderFailure::from_json(&json).map_err(Failure::from)?)
+        };
+        session.0.finish(failure).map_err(Failure::from)
+    })
+}
+
+unsafe fn typed_session(
+    engine: &EngineHandle,
     function: thinkthen_complete_utf8_v1,
     arguments: *const carriers::thinkthen_request_arguments_v1,
     surface_name: thinkthen_complete_utf8_v1,
-    out: *mut *mut SessionHandle,
-) -> std::ffi::c_int {
+) -> Result<*mut SessionHandle, failures::Failure> {
     // SAFETY: the caller retains its engine, carrier tree and writable output.
     unsafe {
         super::session::start_session(
             engine,
-            out,
             || surface(surface_name),
             || {
                 let mut context = Context::new(surface(surface_name)?);
@@ -202,120 +240,4 @@ pub unsafe extern "C" fn thinkthen_session_new_typed_with_surface(
             },
         )
     }
-}
-
-/// Push a counted typed feed descriptor. Rust owns framing and admission.
-/// No input pointer survives return; status is published only on success.
-/// # Safety
-/// session is live, status is writable and nonnull, and descriptor satisfies
-/// the finite aligned carrier-tree obligations of the typed constructor.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_try_push_typed(
-    session: *const SessionHandle,
-    descriptor: *const carriers::thinkthen_request_session_descriptor_v1,
-    status: *mut u32,
-) -> std::ffi::c_int {
-    failures::session_native_call(|| {
-        if status.is_null() {
-            return Err(ErrorKind::Usage.into());
-        }
-        // SAFETY: the caller retains the live session and finite descriptor tree.
-        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
-        let state = session.0.try_push_with(|| {
-            let mut context = Context::new(session.1);
-            // SAFETY: conversion runs only with intake room, while the caller
-            // retains its finite descriptor tree throughout this operation.
-            let json = unsafe {
-                carriers::read_thinkthen_request_session_descriptor_v1(descriptor, &mut context)
-            }?
-            .json()?;
-            thinkthen::RequestSessionDescriptor::from_json(&json).map_err(Failure::from)
-        })?;
-        let state = match state {
-            thinkthen::RequestSessionPushStatus::Accepted => {
-                super::session::THINKTHEN_SESSION_ACCEPTED_V1
-            }
-            thinkthen::RequestSessionPushStatus::Full => super::session::THINKTHEN_SESSION_FULL_V1,
-            thinkthen::RequestSessionPushStatus::Closed => {
-                super::session::THINKTHEN_SESSION_CLOSED_V1
-            }
-        };
-        // SAFETY: the validated caller slot is writable; conversion has succeeded.
-        unsafe {
-            *status = state;
-        }
-        Ok(())
-    })
-}
-
-/// Wait for input room and transfer a typed descriptor without consuming output.
-/// Closed intake retains nothing and never inspects the descriptor tree.
-/// No input pointer survives return; status is published only on success.
-/// # Safety
-/// session is live, status is writable and nonnull, and descriptor satisfies
-/// the finite aligned carrier-tree obligations of the typed constructor.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_push_typed(
-    session: *const SessionHandle,
-    descriptor: *const carriers::thinkthen_request_session_descriptor_v1,
-    status: *mut u32,
-) -> std::ffi::c_int {
-    failures::session_native_call(|| {
-        if status.is_null() {
-            return Err(ErrorKind::Usage.into());
-        }
-        // SAFETY: the caller retains the live session and finite descriptor tree.
-        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
-        let state = session.0.push_with(|| {
-            let mut context = Context::new(session.1);
-            // SAFETY: conversion runs only with intake room, while the caller
-            // retains its finite descriptor tree throughout this operation.
-            let json = unsafe {
-                carriers::read_thinkthen_request_session_descriptor_v1(descriptor, &mut context)
-            }?
-            .json()?;
-            thinkthen::RequestSessionDescriptor::from_json(&json).map_err(Failure::from)
-        })?;
-        let state = match state {
-            thinkthen::RequestSessionPushStatus::Accepted => {
-                super::session::THINKTHEN_SESSION_ACCEPTED_V1
-            }
-            thinkthen::RequestSessionPushStatus::Full => super::session::THINKTHEN_SESSION_FULL_V1,
-            thinkthen::RequestSessionPushStatus::Closed => {
-                super::session::THINKTHEN_SESSION_CLOSED_V1
-            }
-        };
-        // SAFETY: the validated caller slot is writable; conversion has succeeded.
-        unsafe {
-            *status = state;
-        }
-        Ok(())
-    })
-}
-
-/// Finish input with a counted typed failure; NULL means EOF.
-/// Rust preserves the safe diagnostic after the completed prefix and final facts.
-/// # Safety
-/// session is live. A nonnull failure satisfies the finite aligned carrier-tree
-/// obligations of the typed constructor. No foreign pointer survives return.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_session_finish_typed(
-    session: *const SessionHandle,
-    failure: *const carriers::thinkthen_request_reader_failure_v1,
-) -> std::ffi::c_int {
-    failures::session_native_call(|| {
-        // SAFETY: the caller retains the live session and optional failure tree.
-        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
-        let failure = if failure.is_null() {
-            None
-        } else {
-            let mut context = Context::new(session.1);
-            let json = unsafe {
-                carriers::read_thinkthen_request_reader_failure_v1(failure, &mut context)
-            }?
-            .json()?;
-            Some(RequestReaderFailure::from_json(&json).map_err(Failure::from)?)
-        };
-        session.0.finish(failure).map_err(Failure::from)
-    })
 }

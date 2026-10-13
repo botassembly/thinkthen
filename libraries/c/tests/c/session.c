@@ -445,6 +445,10 @@ int main(void) {
     check(thinkthen_session_finish(session, NULL, 0) == THINKTHEN_EUSAGE, "changed finish refuses");
     check(thinkthen_session_try_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed intake avoids descriptor decoding");
     check(thinkthen_session_try_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "closed typed intake avoids descriptor conversion");
+    check(thinkthen_session_push(session, "malformed", 9, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids JSON decoding");
+    check(thinkthen_session_push_typed(session, NULL, &status) == THINKTHEN_OK && status == THINKTHEN_SESSION_CLOSED_V1, "blocking closed intake avoids typed conversion");
+    check(thinkthen_session_push(session, "malformed", 9, NULL) == THINKTHEN_EUSAGE, "blocking JSON push requires status before admission");
+    check(thinkthen_session_push_typed(session, NULL, NULL) == THINKTHEN_EUSAGE, "blocking typed push requires status before conversion");
     thinkthen_engine_free(engine);
     const char *untouched = (const char *)(uintptr_t)7;
     size_t untouched_len = 99;
