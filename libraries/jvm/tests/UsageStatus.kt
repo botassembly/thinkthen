@@ -21,7 +21,7 @@ fun main(args: Array<String>) = runBlocking {
     check(status.state == if (args[0] == "written") UsagePersistence.State.Written else UsagePersistence.State.Failed)
     check(engine.usagePersistence() == status)
     engine.close()
-    check(call.packets().filterIsInstance<thinkthen.Results.SessionPacketDecideRow>().any { it.value().value().value().value() == true })
+    check(call.packets().filterIsInstance<thinkthen.Results.SessionPacketDecideRow>().any { it.value().value().json() == true })
     check(call.terminal().facts().value().requestsSent().intValueExact() == 1)
     check(if (args[0] == "written") status.advice == null else status.advice == "check the usage folder permissions and free space")
     check(runCatching { engine.usagePersistence() }.exceptionOrNull()?.message == "Engine is closed")

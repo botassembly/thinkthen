@@ -9,15 +9,6 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 fun main() = runBlocking {
-    val missing = Results.AnnotationValueDecision(mapOf("kind" to "decision"))
-    check(missing.value().state() == Presence.State.MISSING)
-    try { missing.value().value(); error("required nullable member was missing") } catch (_: IllegalStateException) { }
-    val nil = Results.AnnotationValueDecision(mapOf("kind" to "decision", "value" to null, "future" to false))
-    check(nil.value().state() == Presence.State.NULL && nil.value().state() == Presence.State.NULL)
-    check(thinkthen.Values.`object`(nil.json())["future"] == false)
-    check(Results.AnnotationValueDecision(mapOf("kind" to "decision", "value" to false)).value().value() == false)
-    val optional = Results.SessionPacketTerminal(mapOf("kind" to "terminal", "facts" to null))
-    check(optional.facts().state() == Presence.State.NULL && optional.facts().state() == Presence.State.NULL)
     lateinit var retained: OwnedCall
     lateinit var failure: SessionFailure
     KotlinEngine(Inputs.EngineSettings().cache(Inputs.CacheDocument(false)).maxRetries(0)).use { engine ->
@@ -36,6 +27,7 @@ fun main() = runBlocking {
         retained = independent
         try { engine.decide(question, input("status-401")); error("provider failure succeeded") }
         catch (error: SessionFailure) { failure = error }
+        runKotlinExamples(engine)
     }
     check(retained.terminal().facts().value().requestsSent().intValueExact() == 1)
     check(failure.call().terminal().facts().value().requestsSent().intValueExact() == 1)

@@ -10,18 +10,6 @@ import java.nio.file.{Files, Path}
 
 object SessionScala {
   def main(args: Array[String]): Unit = {
-    val missing = new Results.AnnotationValueDecision(Map("kind" -> "decision").asJava)
-    assert(missing.value().state() == Presence.State.MISSING)
-    try { missing.value().value(); throw new AssertionError("required nullable member was missing") } catch { case _: IllegalStateException => () }
-    val nil = new Results.AnnotationValueDecision(Map("kind" -> "decision", "value" -> null, "future" -> false).asJava)
-    assert(nil.value().state() == Presence.State.NULL && nil.value().state() == Presence.State.NULL)
-    assert(thinkthen.Values.`object`(nil.json()).get("future") == false)
-    assert(new Results.AnnotationValueDecision(Map("kind" -> "decision", "value" -> false).asJava).value().value() == false)
-    val optional = new Results.SessionPacketTerminal(Map("kind" -> "terminal", "facts" -> null).asJava)
-    assert(optional.facts().state() == Presence.State.NULL && optional.facts().state() == Presence.State.NULL)
-    assert(new Results.AtomicBoolean(Map.empty[String, Any].asJava).input().state() == Presence.State.MISSING)
-    assert(new Results.AtomicBoolean(Map("input" -> null).asJava).input().state() == Presence.State.NULL)
-    assert(new Results.AtomicBoolean(Map("input" -> false).asJava).input().value() == false)
     val engine = new ScalaEngine(new Inputs.EngineSettings().cache(new Inputs.CacheDocument(false)).maxRetries(0))
     var retainedCall: OwnedCall = null
     var failure: SessionFailure = null
@@ -53,7 +41,7 @@ object SessionScala {
       val nested = Await.result(engine.decide(authored, records, new Inputs.RequestOptions().field(List("/body").asJava).details(true)).result, 10.seconds)
       val row = nested.packets().asScala.collectFirst { case value: Results.SessionPacketDecideRow => value }.get
       val reading = row.value().value().json().asInstanceOf[java.util.Map[String, Any]]
-      assert(reading.get("ok") == false && reading.get("number") == new java.math.new java.math.BigDecimal("7.5"))
+      assert(reading.get("ok") == false && reading.get("number") == new java.math.BigDecimal("7.5"))
       assert(reading.get("values").asInstanceOf[java.util.List[Any]].get(1) == null)
       val retained = row.value().input().value().asInstanceOf[java.util.Map[String, Any]]
       assert(retained.get("metadata").asInstanceOf[java.util.List[Any]].get(0).asInstanceOf[java.util.Map[String, Any]].containsKey("present"))
@@ -63,6 +51,7 @@ object SessionScala {
       retainedCall = independent
       try { Await.result(engine.decide(question, input("status-401")).result, 10.seconds); throw new AssertionError("provider failure succeeded") }
       catch { case error: SessionFailure => failure = error }
+      ScalaExamples.run(engine)
     } finally engine.close()
     assert(retainedCall.terminal().facts().value().requestsSent().intValueExact() == 1)
     assert(failure.call().terminal().facts().value().requestsSent().intValueExact() == 1)

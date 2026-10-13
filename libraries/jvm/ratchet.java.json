@@ -1,8 +1,8 @@
 {
   "directory": [
-    "session",
-    "tests"
+    "."
   ],
   "extension": ".java",
-  "max": 4164
+  "scope": "handwritten-production",
+  "max": 681
 }

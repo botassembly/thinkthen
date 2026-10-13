@@ -21,7 +21,8 @@ public final class SessionConsumer {
     }
     static void refuse(CompletableFuture<Engine.OwnedCall> call) {
         try { call.join(); throw new AssertionError("invalid typed input admitted"); }
-        catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
+        catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure");
+                var failure = (NativeFailure)error.getCause(); check(!failure.retryable() && failure.facts() == null, "native admission retryability and facts"); }
     }
     static void arrived(String name) throws Exception {
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
@@ -50,6 +51,7 @@ public final class SessionConsumer {
         }
     }
     public static void main(String[] ignored) throws Exception {
+        if (ignored.length == 0) { thinkthen.JsonTest.main(new String[0]); PublicResultsCases.run(); }
         if (ignored.length == 1 && ignored[0].equals("smoke")) {
             try (var engine = new Engine()) {
                 var call = done(engine.decide(question(System.getenv("THINKTHEN_TEST_SMOKE_QUESTION")),
@@ -72,11 +74,17 @@ public final class SessionConsumer {
             var decide = done(engine.decide(new Inputs.RequestQuestionFile().path("saved.json"),source,options()));
             var row = (Results.SessionPacketDecideRow)decide.packets().stream().filter(Results.SessionPacketDecideRow.class::isInstance).findFirst().orElseThrow();
             check(Boolean.TRUE.equals(row.value().value().value()),"typed decide reading");
+            check(Boolean.TRUE.equals(decide.decide()), "normalized decide answer");
+            try { new Engine.OwnedCall(List.of(), decide.terminal()).decide(); throw new AssertionError("empty call answered"); }
+            catch (Results.CallAnswers.CardinalityFailure expected) { check(expected.call().packets().isEmpty(), "cardinality refusal retains call"); }
             var choose = done(engine.choose(authored(new Inputs.RequestDefinitionAuthoredChoose().choose(wording("Which?")).options(new Inputs.AuthoredOptions(List.of("first","second")))),records("session-choose"),options()));
+            check(choose.choose() != null, "normalized choose answer");
             check(choose.packets().stream().anyMatch(Results.SessionPacketChooseRow.class::isInstance),"choose row");
             var tag = done(engine.tag(authored(new Inputs.RequestDefinitionAuthoredTag().tag(wording("Which?")).labels(new Inputs.AuthoredLabels(List.of("first","second")))),records("session-tag"),options()));
+            check(!tag.tag().isEmpty(), "normalized tag answer");
             check(tag.packets().stream().anyMatch(Results.SessionPacketTagRow.class::isInstance),"tag row");
             var score = done(engine.score(authored(new Inputs.RequestDefinitionAuthoredScore().score(wording("Which?")).levels(new Inputs.AuthoredLevels(List.of("Low.","High.")))),records("session-score"),options()));
+            check(score.score() != null, "normalized score answer");
             check(score.packets().stream().anyMatch(Results.SessionPacketScoreRow.class::isInstance),"score row");
             check(done(engine.filter(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?")).threshold(new Inputs.AuthoredThreshold(0.5))),records("session-filter"),options())).packets().stream().anyMatch(Results.SessionPacketFilterRow.class::isInstance),"filter row");
             check(done(engine.rank(authored(new Inputs.RequestDefinitionAuthoredDecide().decide(wording("Is it?"))),records("session-rank"),options())).packets().stream().anyMatch(Results.SessionPacketRankAggregate.class::isInstance),"rank aggregate");
@@ -107,7 +115,8 @@ public final class SessionConsumer {
             refuse(engine.decide(question,new Inputs.RequestInputText().images(List.of(new Inputs.RequestImageFile().path("absent-image.png"))),options()));
 
             try { engine.decide(question(""),records("malformed"),options()).join(); throw new AssertionError("malformed admitted"); }
-            catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure"); }
+            catch (CompletionException error) { check(error.getCause() instanceof NativeFailure,"native admission failure");
+                var failure = (NativeFailure)error.getCause(); check(!failure.retryable() && failure.facts() == null, "native admission retryability and facts"); }
             try { engine.decide(question,records("\ud800"),options()).join(); throw new AssertionError("invalid Unicode admitted"); }
             catch (CompletionException error) { check(error.getCause() instanceof IllegalArgumentException,"Unicode representation failure"); }
             try { engine.decide(question,records("status-401"),options()).join(); throw new AssertionError("provider failure succeeded"); }
@@ -115,11 +124,17 @@ public final class SessionConsumer {
             waitScheduler(engine, question);
             var held = engine.decide(question,records("hold-jvm-java"),options());
             arrived("hold-jvm-java");
-            check(done(engine.decide(question,records("session-independent"),options())).terminal().facts().value().requestsSent().intValueExact() == 1,"unrelated session blocked");
+            var feedRequest = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(new Inputs.RequestInputFeed().name("input")).options(options()));
+            var descriptor = new Inputs.RequestSessionDescriptor().item(new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("session-independent")));
+            check(done(engine.execute(feedRequest, List.of(descriptor))).terminal().facts().value().requestsSent().intValueExact() == 1,"unrelated feed session blocked");
             long started = System.nanoTime();
             check(held.cancel(false),"future did not cancel");
             check(held.isCancelled() && System.nanoTime() - started < TimeUnit.SECONDS.toNanos(2),"cancellation waited for provider");
             check(!Files.exists(Path.of("barrier/release-hold-jvm-java")),"provider was released early");
+            var sampleAnswers = examples.JavaExamples.run(engine);
+            check(sampleAnswers.size() == 10, "ten shipped Java examples");
+            var relation = (Results.Relation)sampleAnswers.get(9);
+            check(relation.value().getFirst().sourceName().equals("First") && relation.value().getFirst().targetName().equals("Second"), "direct relation endpoint names");
             retained = decide;
             try (var session = engine.startSession(new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(new Inputs.RequestInputFeed().name("input"))))) {
                 session.finish(new Inputs.RequestReaderFailureIo());

@@ -3,5 +3,6 @@
     "."
   ],
   "extension": ".py",
-  "max": 734
+  "scope": "handwritten-production",
+  "max": 82
 }
