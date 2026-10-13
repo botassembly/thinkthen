@@ -5926,7 +5926,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "decide"
         },
         {
           "properties": {
@@ -5946,7 +5947,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "choose"
         },
         {
           "properties": {
@@ -5964,7 +5966,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "score"
         },
         {
           "properties": {
@@ -5984,7 +5987,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "tag"
         }
       ]
     },

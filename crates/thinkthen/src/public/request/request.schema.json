@@ -394,7 +394,8 @@
           "minProperties": 2,
           "propertyNames": {
             "$ref": "#/$defs/Authored_name"
-          }
+          },
+          "x-preserve-order": true
         }
       ]
     },
@@ -453,9 +454,11 @@
           "$ref": "#/$defs/Authored_profile"
         },
         "relate": {
+          "title": "RelateQuestion",
           "type": "object",
           "properties": {
             "fields": {
+              "title": "RelateFields",
               "type": "object",
               "properties": {
                 "kind": {
@@ -1021,6 +1024,7 @@
           "$ref": "#/$defs/Authored_find"
         },
         {
+          "title": "RecognizeDefinition",
           "type": "object",
           "properties": {
             "context_schema": {
@@ -1043,6 +1047,7 @@
               "$ref": "#/$defs/Authored_profile"
             },
             "recognize": {
+              "title": "RecognizeQuestion",
               "type": "object",
               "properties": {
                 "entity_definition": {
@@ -1055,7 +1060,8 @@
                   "type": "object",
                   "additionalProperties": {
                     "$ref": "#/$defs/Authored_description"
-                  }
+                  },
+                  "x-preserve-order": true
                 },
                 "mode": {
                   "$ref": "#/$defs/RecognitionMode"
@@ -1101,6 +1107,7 @@
           ]
         },
         {
+          "title": "AnnotateDefinition",
           "type": "object",
           "properties": {
             "batch": {},
@@ -1262,7 +1269,8 @@
                   }
                 ]
               },
-              "minProperties": 1
+              "minProperties": 1,
+              "x-preserve-order": true
             },
             "threshold": {
               "$ref": "#/$defs/Authored_threshold"
