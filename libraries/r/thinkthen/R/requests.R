@@ -57,16 +57,6 @@ tt_files <- function(paths, unit = "line", window = NULL, media = "text") {
     result
   })
 }
-tt_decide <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("decide", question, input, options, deadline_ms, completion)
-tt_choose <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("choose", question, input, options, deadline_ms, completion)
-tt_tag <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("tag", question, input, options, deadline_ms, completion)
-tt_score <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("score", question, input, options, deadline_ms, completion)
-tt_filter <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("filter", question, input, options, deadline_ms, completion)
-tt_rank <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("rank", question, input, options, deadline_ms, completion)
-tt_find <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("find", question, input, options, deadline_ms, completion)
-tt_annotate <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("annotate", question, input, options, deadline_ms, completion)
-tt_recognize <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("recognize", question, input, options, deadline_ms, completion)
-tt_relate <- function(question, input, options = list(), deadline_ms = NULL, completion = NULL) .tt_named_call("relate", question, input, options, deadline_ms, completion)
 
 tt_plan <- function(question, input, function_name = "decide", options = list()) {
   request <- .tt_request(function_name, question, input, options)

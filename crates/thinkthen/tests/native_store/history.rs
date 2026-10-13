@@ -114,18 +114,33 @@ fn differing_reported_models_never_reuse_online_and_ambiguous_history_refuses_of
 }
 
 #[test]
-fn conflicting_url_normalization_rolls_back_the_whole_original_store_without_sends() {
+fn conflicting_canonical_url_identities_refuse_without_mutation_or_sends() {
     let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
     let place = folder();
     let url = format!("{}/systemone", listener.base());
-    legacy(&place, &url, "fixed");
+    let seed = build(&listener).record(&place).unwrap().build().unwrap();
+    seed.details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+        .unwrap();
+    drop(seed);
     let uppercase = url.replacen("http://", "HTTP://", 1);
-    let key = Sha256::digest(format!(
-        "systemone\n{uppercase}\n\"fixed\"\n{STATE}\n{QUESTION}"
-    ));
+    let key = framed(
+        "thinkthen.question-key/2",
+        &[
+            "systemone",
+            &uppercase,
+            "\"fixed\"",
+            "\"fixed\"",
+            STATE,
+            QUESTION,
+        ],
+    );
+    let bytes: Vec<u8> = (0..key.len())
+        .step_by(2)
+        .map(|at| u8::from_str_radix(&key[at..at + 2], 16).unwrap())
+        .collect();
     let database = place.join("thinkthen.sqlite");
     let db = Connection::open(&database).unwrap();
-    db.execute("INSERT INTO answers SELECT 2,?1,?2,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin FROM answers WHERE id=1",(key.as_slice(),uppercase)).unwrap();
+    db.execute("INSERT INTO answers SELECT 2,?1,?2,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin,key_version,adapter,observation_id,batch_size FROM answers WHERE id=1",(&bytes,uppercase)).unwrap();
     drop(db);
     let original = std::fs::read(&database).unwrap();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
@@ -133,13 +148,13 @@ fn conflicting_url_normalization_rolls_back_the_whole_original_store_without_sen
         .details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
-    assert_eq!(listener.count(), 0);
+    assert_eq!(listener.count(), 1);
     assert_eq!(std::fs::read(&database).unwrap(), original);
     let db = Connection::open(&database).unwrap();
     assert_eq!(
         db.query_row("PRAGMA user_version", [], |row| row.get::<_, u32>(0))
             .unwrap(),
-        1
+        2
     );
     assert_eq!(
         db.query_row("SELECT count(*) FROM answers", [], |row| row
@@ -158,22 +173,28 @@ fn coalesced_occurrences_share_one_observation_and_equal_refresh_creates_a_new_o
     let place = folder();
     let question = Question::decide("Refund?").unwrap().cut();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
-    let rows = engine
-        .details_many_with(
-            &question,
-            ["Refund me.", "Refund me."],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["Refund me.", "Refund me."]),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
-        rows[0].value().observations(),
-        rows[1].value().observations()
+        rows[0].result().identity().observations(),
+        rows[1].result().identity().observations()
     );
-    assert_eq!(rows[0].value().question_sources()[0].batch_size(), Some(1));
-    assert_eq!(rows[1].value().question_sources()[0].batch_size(), Some(1));
+    assert_eq!(
+        rows[0].result().identity().question_sources()[0].batch_size(),
+        Some(1)
+    );
+    assert_eq!(
+        rows[1].result().identity().question_sources()[0].batch_size(),
+        Some(1)
+    );
     let refresh = build(&listener)
         .cache_at(&place)
         .unwrap()
@@ -184,9 +205,12 @@ fn coalesced_occurrences_share_one_observation_and_equal_refresh_creates_a_new_o
     assert_eq!(listener.count(), 2);
     assert_ne!(
         renewed.value().observations(),
-        rows[0].value().observations()
+        rows[0].result().identity().observations()
     );
-    assert_eq!(renewed.value().requests(), rows[0].value().requests());
+    assert_eq!(
+        renewed.value().requests(),
+        rows[0].result().meta().requests()
+    );
     let retained = engine.details(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 2);
     assert_eq!(

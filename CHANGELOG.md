@@ -8,7 +8,7 @@ Version 0.2 is implemented on main and remains unreleased. Public installation s
 
 ### Functions, files and saved questions
 
-Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, generated complete results, errors and cache/record/replay behavior. Each language now has one typed call family. Superseded host APIs and handwritten complete readers have been removed. The [upgrade guide](libraries/UPGRADING-0.2.md) maps old calls to their replacements; native C retains its frozen 0.1 compatibility exports. Routine installed checks establish local behavior separately from candidate qualification.
+Every SDK exposes the same ten functions: `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `find`, `annotate`, `recognize` and `relate`. CLI, typed C, language SDKs, SQL and dataframe adapters use the native engine's admitted inputs, generated complete results, errors and cache/record/replay behavior. Each language now has one typed call family. Superseded host APIs and handwritten complete readers have been removed. Superseded native C exports have been removed. Routine installed checks establish local behavior separately from candidate qualification.
 
 File readers retain physical source locations separately from selected evidence and original records. Folder descendants sort by relative path; explicit operands and duplicates keep their order. Paths never become model evidence or cache identity. PostgreSQL retains its client-reader/keyed-table workaround and privileged bounded question-file loader.
 

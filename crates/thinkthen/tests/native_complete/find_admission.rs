@@ -1,5 +1,6 @@
 //! Find keeps the complete-set boundary while bounding caller-side source admission.
 use super::*;
+use thinkthen::RequestFunction;
 use thinkthen::{CancelToken, RecordInput};
 #[test]
 fn cancelled_find_stops_before_pulling_a_suffix_in_complete_and_released_calls() {
@@ -182,6 +183,7 @@ fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
     let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
     let engine = engine(&listener);
     let ask = thinkthen::Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#).unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     for complete in [false, true] {
         let entities = (0..256)
             .map(|at| thinkthen::Entity::new(&format!("person {at}"), "person").unwrap())
@@ -189,9 +191,23 @@ fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
                 panic!("relate read beyond its first excess entity")
             }));
         let error = if complete {
-            engine
-                .relate_complete_with(&ask, entities, CallOptions::new())
-                .map(|_| ())
+            crate::api::relation(
+                &engine,
+                &ask,
+                entities.map(|entity| {
+                    Ok(reading
+                        .compose(
+                            thinkthen::RawRecord::json(
+                                &serde_json::json!({"name":entity.name(),"kind":entity.kind()})
+                                    .to_string(),
+                            )
+                            .unwrap(),
+                        )
+                        .unwrap())
+                }),
+                CallOptions::new(),
+            )
+            .map(|_| ())
         } else {
             engine
                 .relate_with(&ask, entities, CallOptions::new())
@@ -275,18 +291,21 @@ fn canonical_find_applies_the_engine_record_cap_before_reading_the_tail() {
         .unwrap()
         .build()
         .unwrap();
-    let request = Request::new(RequestCall::Find(RequestArguments {
-        question: RequestQuestion::Definition {
-            value: Question::find("Which?").unwrap().into(),
+    let request = Request::new(RequestCall::new(
+        RequestFunction::Find,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: Question::find("Which?").unwrap().into(),
+            },
+            input: RequestInput::Feed {
+                name: "bounded".into(),
+                framing: RequestFraming::Document,
+                reading: thinkthen::ReaderOptions::default(),
+                images: vec![],
+            },
+            options: RequestOptions::default(),
         },
-        input: RequestInput::Feed {
-            name: "bounded".into(),
-            framing: RequestFraming::Document,
-            reading: thinkthen::ReaderOptions::default(),
-            images: vec![],
-        },
-        options: RequestOptions::default(),
-    }))
+    ))
     .admit()
     .unwrap();
     let rows = (0..2)

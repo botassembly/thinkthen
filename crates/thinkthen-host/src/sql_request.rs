@@ -4,7 +4,7 @@ use serde_json::{Value, json};
 use std::sync::Mutex;
 use thinkthen::{
     AdmittedRequest, CallOptions, Engine, Error, LoadedQuestion, RecordObservation, Request,
-    RequestArguments, RequestCall, RequestDefinition, RequestEnvironment, RequestFeed,
+    RequestArguments,  RequestDefinition, RequestEnvironment, RequestFeed,
     RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue, Surface,
 };
 
@@ -103,24 +103,24 @@ pub fn request(prepared: &Prepared, options: RequestOptions) -> Result<Request, 
         },
         options,
     };
-    let call = match prepared {
-        Prepared::Atomic(LoadedQuestion::Banded(_)) => RequestCall::Decide(args),
+    let function = match prepared {
+        Prepared::Atomic(LoadedQuestion::Banded(_)) => thinkthen::RequestFunction::Decide,
         Prepared::Atomic(LoadedQuestion::Question(q)) => match q.kind() {
-            thinkthen::QuestionKind::Decide => RequestCall::Decide(args),
-            thinkthen::QuestionKind::Choose => RequestCall::Choose(args),
-            thinkthen::QuestionKind::Tag => RequestCall::Tag(args),
-            thinkthen::QuestionKind::Score => RequestCall::Score(args),
+            thinkthen::QuestionKind::Decide => thinkthen::RequestFunction::Decide,
+            thinkthen::QuestionKind::Choose => thinkthen::RequestFunction::Choose,
+            thinkthen::QuestionKind::Tag => thinkthen::RequestFunction::Tag,
+            thinkthen::QuestionKind::Score => thinkthen::RequestFunction::Score,
             _ => return Err(defect()),
         },
-        Prepared::Dynamic(_) => RequestCall::Choose(args),
-        Prepared::Filter(_) => RequestCall::Filter(args),
-        Prepared::Rank(_) | Prepared::RankSet(_) => RequestCall::Rank(args),
-        Prepared::Find(_, _) => RequestCall::Find(args),
-        Prepared::Annotate(_) => RequestCall::Annotate(args),
-        Prepared::Recognize(_, _) => RequestCall::Recognize(args),
-        Prepared::Relate(_) => RequestCall::Relate(args),
+        Prepared::Dynamic(_) => thinkthen::RequestFunction::Choose,
+        Prepared::Filter(_) => thinkthen::RequestFunction::Filter,
+        Prepared::Rank(_) | Prepared::RankSet(_) => thinkthen::RequestFunction::Rank,
+        Prepared::Find(_, _) => thinkthen::RequestFunction::Find,
+        Prepared::Annotate(_) => thinkthen::RequestFunction::Annotate,
+        Prepared::Recognize(_, _) => thinkthen::RequestFunction::Recognize,
+        Prepared::Relate(_) => thinkthen::RequestFunction::Relate,
     };
-    Ok(Request::new(call))
+    Ok(Request::for_function(function, args))
 }
 fn render(outcome: RequestOutcome) -> Result<Value, Error> {
     match outcome {

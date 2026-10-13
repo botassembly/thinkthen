@@ -184,6 +184,7 @@ pub(crate) enum Failure {
     },
     StoreAmbiguous,
     StoreHotJournal,
+    StoreVersion(String),
     Entry(String, String),
     RecordingStorage,
     RecordingForbidden,
@@ -284,6 +285,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::QuestionMiss { .. }
         | Failure::StoreAmbiguous
         | Failure::StoreHotJournal
+        | Failure::StoreVersion(_)
         | Failure::Entry(_, _)
         | Failure::RecordingStorage
         | Failure::RecordingForbidden

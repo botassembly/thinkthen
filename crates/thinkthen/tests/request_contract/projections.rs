@@ -1,6 +1,7 @@
 //! Native result projections retain SQL observations without changing ordinary Requests.
 use super::*;
 use std::cell::Cell;
+use thinkthen::RequestFunction;
 
 #[allow(
     clippy::unwrap_used,
@@ -49,7 +50,7 @@ fn native_filter_projection_retains_both_judgments_and_terminal_prefix() {
             .cut_at(threshold)
             .unwrap();
         for eager in [true, false] {
-            let admitted = Request::new(RequestCall::Filter(args(q.clone().into(), feed_input())))
+            let admitted = Request::filter(args(q.clone().into(), feed_input()))
                 .admit()
                 .unwrap();
             let records = vec![
@@ -83,12 +84,12 @@ fn native_filter_projection_retains_both_judgments_and_terminal_prefix() {
             assert_eq!(rows[0].result().value(), threshold == 0.5);
             assert_eq!(listener.count(), before + 1);
         }
-        let admitted = Request::new(RequestCall::Filter(args(
+        let admitted = Request::filter(args(
             q.into(),
             RequestInput::Records {
                 items: vec![item("Alpha.")],
             },
-        )))
+        ))
         .admit()
         .unwrap();
         let rows = filters(
@@ -119,9 +120,9 @@ fn all_filter_results_refuses_incompatible_feed_without_advancing() {
             },
         );
         let request = Request::new(if case == 0 {
-            RequestCall::Decide(args)
+            RequestCall::new(RequestFunction::Decide, args)
         } else {
-            RequestCall::Filter(args)
+            RequestCall::new(RequestFunction::Filter, args)
         })
         .admit()
         .unwrap();
@@ -182,12 +183,10 @@ fn annotation_declarations_use_each_members_selected_evidence() {
                     .map_original(|record| record.question_input())
             })
             .collect::<Vec<_>>();
-        let admitted = Request::new(RequestCall::Annotate(args(
-            set.clone().into(),
-            feed_input(),
-        )))
-        .admit()
-        .unwrap();
+        let admitted = Request::named("annotate", args(set.clone().into(), feed_input()))
+            .unwrap()
+            .admit()
+            .unwrap();
         let before = listener.count();
         let outcome = engine.execute_request(
             &admitted,
@@ -206,13 +205,17 @@ fn annotation_declarations_use_each_members_selected_evidence() {
             assert_eq!(listener.count(), before + 1);
         }
     }
-    let admitted = Request::new(RequestCall::Annotate(args(
-        set.into(),
-        RequestInput::Json {
-            value: RawRecord::json(r#"{"body":"Alpha."}"#).unwrap(),
-            images: vec![],
-        },
-    )))
+    let admitted = Request::named(
+        "annotate",
+        args(
+            set.into(),
+            RequestInput::Json {
+                value: RawRecord::json(r#"{"body":"Alpha."}"#).unwrap(),
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     assert!(matches!(
@@ -323,13 +326,17 @@ fn release_only_record_descriptor_limit_matches_request_admission() {
     let text = "x".repeat(16 * 1024 * 1024 + 1);
     let descriptor = serde_json::to_string(&json!({"text": text})).unwrap();
     let converted = RequestItem::from_record_descriptor(&descriptor).unwrap_err();
-    let canonical = Request::new(RequestCall::Decide(args(
-        Question::decide("Fits?").unwrap().cut().into(),
-        RequestInput::Text {
-            text,
-            images: vec![],
-        },
-    )))
+    let canonical = Request::named(
+        "decide",
+        args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Text {
+                text,
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
     .admit()
     .unwrap_err();
     assert_eq!(converted.kind(), ErrorKind::Usage);
@@ -476,7 +483,7 @@ fn located_find_keeps_duplicate_occurrences_and_separates_the_none_candidate() {
         );
         arguments.options.none = true;
         let session = engine(&listener)
-            .request_session(Request::new(RequestCall::Find(arguments)))
+            .request_session(Request::named("find", arguments).unwrap())
             .unwrap();
         let documents = crate::api::session_drain(&session)
             .into_iter()
@@ -544,7 +551,7 @@ fn empty_find_refuses_before_sending_or_inventing_a_none_answer() {
         RequestInput::Units { items: vec![] },
     );
     arguments.options.none = true;
-    let request = Request::new(RequestCall::Find(arguments)).admit().unwrap();
+    let request = Request::named("find", arguments).unwrap().admit().unwrap();
     let error = engine(&listener)
         .execute_request(&request, RequestEnvironment::default())
         .unwrap_err();
@@ -565,7 +572,7 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
     let path = folder.join("entities.jsonl");
     std::fs::write(&path, "Ada\n\n").unwrap();
     let listener = Listener::answering(response).unwrap();
-    let session = engine(&listener).request_session(Request::new(RequestCall::Relate(args(
+    let session = engine(&listener).request_session(Request::named("relate", args(
         Relate::from_records_json(r#"{"version":1,"relate":{"relations":[{"name":"follows","source":"*","target":"*","reads":"follows"}]}}"#).unwrap().into(),
         RequestInput::Source { source: RequestSource {
             framing: None,
@@ -573,7 +580,7 @@ fn located_relation_session_retains_duplicate_sources_without_question_observati
             reading: ReaderOptions { unit: SourceUnit::Line, window: None },
             media: ReaderMedia::Text,
         } },
-    )))).unwrap();
+    )).unwrap()).unwrap();
     let documents = crate::api::session_drain(&session)
         .into_iter()
         .map(|packet| serde_json::from_str::<Value>(&packet.to_json().unwrap()).unwrap())

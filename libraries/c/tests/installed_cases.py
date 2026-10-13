@@ -1,4 +1,4 @@
-"""Run canonical cases through the installed complete C packet graph."""
+"""Run canonical cases through the installed C session packet graph."""
 import json
 from pathlib import Path
 import subprocess
@@ -9,13 +9,22 @@ from children import child_env, read_process_line
 import session_cases as shared_cases
 from session_views import render
 
-def run(native, scratch):
+def run(native, scratch, *, header=None, library=None):
+    if bool(header) != bool(library):
+        raise ValueError('installed C cases require both header and library')
+    header = Path(header).resolve(strict=True) if header else native / 'include/thinkthen.h'
+    library = Path(library).resolve(strict=True) if library else native / 'lib/libthinkthen.a'
+    if not header.is_file() or not library.is_file():
+        raise ValueError('installed C cases header or library is missing')
     scratch = Path(scratch)
     (scratch / 'session_views.c').write_text(render())
     binary = scratch / 'session-cases'
-    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', str(native / 'include'),
+    if sys.platform == 'linux' and '.so' in library.name:
+        (scratch / 'libthinkthen.so.0').symlink_to(library)
+    subprocess.run(['cc', '-std=c11', '-Wall', '-Wextra', '-Werror', '-I', str(header.parent),
                     '-I', str(scratch), str(ROOT / 'libraries/c/tests/c/session_cases.c'),
-                    str(native / 'lib/libthinkthen.a'), '-lgcc_s', '-lutil', '-lrt', '-lpthread', '-lm', '-ldl',
+                    str(library), '-lgcc_s', '-lutil', '-lrt', '-lpthread', '-lm', '-ldl',
+                    '-Wl,-rpath,' + str(scratch), '-Wl,-rpath,' + str(library.parent),
                     '-o', str(binary)], env=child_env(home=scratch / 'home'), check=True)
     def checked(output):
         if output.returncode == 0 and not output.stderr:

@@ -73,7 +73,8 @@ def tar_files(data, label):
 
 def archive_members(data, expected, label):
     files, _, dirs = tar_files(data, label)
-    require(dirs <= {"", "."}, f"{label} directory inventory differs")
+    allowed_dirs = {"", "."} | {str(parent) for name in expected for parent in Path(name).parents}
+    require(dirs <= allowed_dirs, f"{label} directory inventory differs")
     require(set(files) == expected, f"{label} inventory differs")
     return files
 
@@ -138,9 +139,8 @@ def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
-    if kind == "session":
-        embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
-        require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
+    embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
+    require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
     expected = set(inventory['members'][kind])
     allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
     require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')
@@ -212,7 +212,7 @@ def check(args):
                     not (args.output / (name + ".sha256")).is_symlink(),
                     f"output already exists: {name}")
         source_paths = {"csharp": ("LICENSE", "README.md"),
-                        "jvm": tuple(name for name in definition["files"] if name not in kinds.values() and name != "product-inventory.json")}
+                        "jvm": tuple(name for name in definition["files"] if name not in kinds.values() and name != "product-inventory.json") + tuple(definition["examples"])}
         inventory_bytes = regular(args.jars / "product-inventory.json")
         inventory = json.loads(inventory_bytes)
         for kind, name in inner.items():
@@ -232,6 +232,7 @@ def check(args):
                 folder = Path(temporary) / family
                 folder.mkdir()
                 for name in source_paths[family]:
+                    (folder / name).parent.mkdir(parents=True, exist_ok=True)
                     (folder / name).write_bytes(source[f"libraries/{family}/{name}"])
                 (folder / "THINKTHEN-PACKAGE-INPUTS").write_bytes(manifest)
                 if family == 'jvm':
@@ -250,7 +251,7 @@ def check(args):
         require(regular(args.output / (name + ".sha256")) == f"{digest(data)}  {name}\n".encode(),
                 f"{family} outer sidecar differs")
         names = {"THINKTHEN-PACKAGE-INPUTS", "LICENSE", "README.md"}
-        names |= {nupkg} if family == "csharp" else set(definition["files"])
+        names |= {nupkg} if family == "csharp" else set(definition["files"]) | set(definition["examples"])
         files = archive_members(data, names, family)
         require(files["THINKTHEN-PACKAGE-INPUTS"] == manifest, f"{family} C identity differs")
         for member in ("README.md", "LICENSE"):
@@ -259,6 +260,8 @@ def check(args):
             pinned(files[nupkg], managed["nupkg"], "nupkg")
             check_nupkg(files[nupkg], args.version, source, args.target, native)
         else:
+            for example in definition["examples"]:
+                require(files[example] == source[f"libraries/jvm/{example}"], f"JVM example differs from source: {example}")
             require(files["pom.xml"] == source["libraries/jvm/pom.xml"], "JVM POM differs from source")
             require(tuple(xml_field(files["pom.xml"], key) for key in ("groupId", "artifactId", "version")) ==
                     ("io.github.botassembly", "thinkthen-jvm", args.version), "JVM POM identity differs")

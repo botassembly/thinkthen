@@ -32,31 +32,6 @@ fn conflicting_sources_questions_credentials_and_unknown_arguments_send_nothing(
 }
 
 #[test]
-fn seven_text_only_tools_refuse_images_before_open_or_send() {
-    let backend = Backend::start().expect("loopback");
-    for tool in [
-        "tag",
-        "filter",
-        "rank",
-        "find",
-        "annotate",
-        "recognize",
-        "relate",
-    ] {
-        for arguments in [
-            json!({"question":{},"images":["does-not-exist.png"]}),
-            json!({"question":{},"inputs":[{"text":"x","images":["does-not-exist.png"]}]}),
-            json!({"question":{},"source":{"paths":["does-not-exist"],"unit":"file","media":"image"}}),
-        ] {
-            let error = admit(tool, arguments).unwrap_err();
-
-            assert_eq!(error.kind(), crate::ErrorKind::Usage);
-        }
-    }
-    assert_eq!(backend.count(), 0);
-}
-
-#[test]
 fn native_controls_validate_deadline_batch_and_admission_without_sends() {
     let backend = Backend::start().expect("loopback");
     for options in [
@@ -154,11 +129,17 @@ fn source_framing_discovery_uses_native_values_and_invalid_controls_send_nothing
         "../../../../../specification/request.schema.json"
     ))
     .unwrap();
-    let list = super::super::tools::list(&json!({"type":"object"}));
+    let framing: Vec<_> = canonical["$defs"]["RequestFraming"]["oneOf"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|choice| choice["const"].clone())
+        .collect();
+    let list = super::super::tools::list();
     for tool in list["tools"].as_array().unwrap() {
         assert_eq!(
             tool["inputSchema"]["properties"]["source"]["properties"]["framing"],
-            canonical["$defs"]["RequestSource"]["properties"]["framing"]
+            json!({"enum":framing})
         );
         assert!(
             tool["inputSchema"]["properties"]["inputs"]["items"]["properties"]["source"]

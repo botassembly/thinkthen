@@ -88,7 +88,12 @@ fn explicit_record_forbids_every_good_answer_of_a_nonstorable_partial_packed_rep
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
     ));
-    let mut batch = engine.decide_many_with(&question, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     let errors = batch.by_ref().collect::<Vec<_>>();
     assert_eq!(errors.len(), 1); // The released batch stops at its first terminal failure.
     for row in errors {
@@ -125,7 +130,12 @@ fn native_refresh_marks_status_retries_and_split_children_without_changing_reque
     let options = CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).unwrap(),
     ));
-    let mut batch = engine.decide_many_with(&question, ["alpha", "beta"], options);
+    let mut batch = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options,
+    );
     assert_eq!(
         batch.by_ref().collect::<Result<Vec<_>, _>>().unwrap().len(),
         2
@@ -170,14 +180,23 @@ fn partial_nonstorable_refresh_evicts_accepted_answers_and_preserves_failed_ques
         ))
     };
     assert_eq!(
-        engine
-            .decide_many_with(&question, ["alpha", "beta"], options())
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap()
-            .len(),
+        crate::api::pull_decisions(
+            &engine,
+            &question,
+            crate::api::plain_records(["alpha", "beta"]),
+            options()
+        )
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap()
+        .len(),
         2
     );
-    let mut rows = refresh.decide_many_with(&question, ["alpha", "beta"], options());
+    let mut rows = crate::api::pull_decisions(
+        &refresh,
+        &question,
+        crate::api::plain_records(["alpha", "beta"]),
+        options(),
+    );
     assert!(rows.next().unwrap().is_ok());
     assert_eq!(rows.next().unwrap().unwrap_err().kind(), ErrorKind::Backend);
     assert!(rows.next().is_none());

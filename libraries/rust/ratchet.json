@@ -1,10 +1,8 @@
 {
   "directory": [
     "src",
-    "examples",
-    "tests",
-    "consumer/src"
+    "examples"
   ],
   "extension": ".rs",
-  "max": 763
+  "max": 392
 }

@@ -31,6 +31,7 @@ export R_LIBS=$libs
 Rscript --vanilla -e 'stopifnot(getRversion() >= "4.2", packageVersion("jsonlite") >= "2.0.0")' ||
   not_run "R or jsonlite prerequisites are missing"
 python3 "$root/sdlc/generators/results/generate.py" --target r --check
+python3 "$root/sdlc/generators/results/generate.py" --target r --inputs --check
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   artifact=$THINKTHEN_ARTIFACT
   [ -f "$artifact" ] && [ ! -L "$artifact" ] || { echo 'r: artifact is missing or linked' >&2; exit 1; }
@@ -80,7 +81,7 @@ sys.path.insert(0,str(root/'conformance/children'))
 from native_fixture import run
 sys.exit(bool(run('r',['Rscript','--vanilla',str(root/'libraries/r/tests/native_case.R')],root,{'R_LIBS':sys.argv[2]})))
 PY
-for file in tests/requests.R tests/complete_input_admission.R tests/engine.R tests/facts.R \
+for file in tests/ordinary_interrupt.R tests/example_replay.R tests/requests.R tests/complete_input_admission.R tests/engine.R tests/facts.R \
   tests/verbs.R tests/files.R tests/recognize.R tests/text.R tests/threshold_strings.R tests/plan_identity.R \
   tests/portable_batch_identity.R tests/profile.R tests/fork.R tests/hook.R tests/startup.R \
   tests/settings_cases.R; do
@@ -90,6 +91,7 @@ for name in liquid ollama openrouter perplexity typesafe; do
   TT_NAMED_BACKEND=$name TT_TEST_MARKERS='{"captured":"fake-named-r-captured","later":"fake-named-r-later"}' \
     bash tests/with-backend.sh "$backend" tests/named_backends.R
 done
+python3 tests/failed_receipt.py
 python3 tests/request_surface.py
 python3 tests/record_feeds.py
 # These existing ten producer cases add feed framing, not a second full parity run.

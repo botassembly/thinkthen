@@ -136,15 +136,30 @@ fn materialized_convenience_rank_find_recognize_and_entities_validate_before_any
         ErrorKind::Usage
     );
     let relate = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]},"item_schema":{"type":"string"}}"#).unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     for complete in [false, true] {
         let entities = [
             Entity::new("Ada", "person").unwrap(),
             Entity::new("Bea", "person").unwrap(),
         ];
         let error = if complete {
-            engine
-                .relate_complete_with(&relate, entities, CallOptions::new())
-                .unwrap_err()
+            crate::api::relation(
+                &engine,
+                &relate,
+                entities.map(|entity| {
+                    Ok(reading
+                        .compose(
+                            thinkthen::RawRecord::json(
+                                &serde_json::json!({"name":entity.name(),"kind":entity.kind()})
+                                    .to_string(),
+                            )
+                            .unwrap(),
+                        )
+                        .unwrap())
+                }),
+                CallOptions::new(),
+            )
+            .unwrap_err()
         } else {
             engine
                 .relate_with(&relate, entities, CallOptions::new())

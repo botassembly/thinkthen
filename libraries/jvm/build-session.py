@@ -62,11 +62,11 @@ def main():
         classes.mkdir(parents=True, exist_ok=True)
         if kind == 'session':
             sources = sorted((ROOT / 'libraries/jvm/session/thinkthen').glob('*.java'))
-            command = [str(jdk / 'bin/javac'), '-J-Xmx1g', '--release', str(JDK_FLOOR), '-d', str(classes), *map(str,sources)]
+            command = [str(jdk / 'bin/javac'), '-J-Xmx1g', '-Xlint:all', '-Werror', '--release', str(JDK_FLOOR), '-d', str(classes), *map(str,sources)]
         elif kind == 'kotlin':
-            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-jvm-target', str(JDK_FLOOR), '-classpath', str(jars / inventory['jars']['session']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), *map(str, sorted((ROOT / 'libraries/jvm/session/kotlin').glob('*.kt'))), '-d', str(classes)]
+            command = [str(kotlin / 'bin/kotlinc'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-Werror', '-jvm-target', str(JDK_FLOOR), '-classpath', str(jars / inventory['jars']['session']) + os.pathsep + str(kotlin / 'lib/kotlinx-coroutines-core-jvm.jar'), *map(str, sorted((ROOT / 'libraries/jvm/session/kotlin').glob('*.kt'))), '-d', str(classes)]
         else:
-            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-classpath', str(jars / inventory['jars']['session']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
+            command = [str(scala / 'bin/scalac'), '-J-Xmx1g', '-J-XX:ActiveProcessorCount=2', '-Werror', '-classpath', str(jars / inventory['jars']['session']), '-d', str(classes), *map(str, sorted((ROOT / 'libraries/jvm/session/scala').glob('*.scala')))]
         subprocess.run(command, check=True, env=env)
         if kind != "session":
             shutil.copytree(out / "classes" / "session", classes, dirs_exist_ok=True)
@@ -77,11 +77,13 @@ def main():
     classifier, selected = next((name,asset) for name,asset in inventory['native'].items() if asset['target'] == args.target)
     with zipfile.ZipFile(jars / ('thinkthen-' + classifier + '.jar'), 'w', zipfile.ZIP_DEFLATED) as jar:
         for resource in selected['files']: jar.write(args.native, resource)
-    for name in ('pom.xml','LICENSE','README.md'):
+    for name in ('pom.xml','LICENSE'):
         shutil.copyfile(ROOT / 'libraries/jvm' / name,jars / name)
+    shutil.copyfile(ROOT / 'libraries/jvm/README-PUBLIC.md', jars / 'README.md')
     actual = json.loads(subprocess.check_output([sys.executable, str(ROOT / 'sdlc/scripts/package-inventory.py'), 'jvm', '--out', str(out)], env=env))
     (jars / 'product-inventory.json').write_text(json.dumps(actual,indent=2) + '\n')
     maven_package(jars, inventory, classifier)
+    shutil.copytree(ROOT / 'libraries/jvm/examples', out / 'examples')
     print('Stable JVM session JARs, selected native classifier and local Maven coordinates built')
 
 

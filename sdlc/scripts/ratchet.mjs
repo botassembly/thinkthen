@@ -8,7 +8,7 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 // The repo is this file's own home (sdlc/scripts/), never the working
@@ -26,7 +26,7 @@ if (!existsSync(CONFIG)) {
   if (NAMED) console.error(`ratchet: ${NAMED} does not exist.`);
   process.exit(NAMED ? 1 : 0);
 }
-const { directory, extension, max } = JSON.parse(readFileSync(CONFIG, "utf8"));
+const { directory, extension, max, scope } = JSON.parse(readFileSync(CONFIG, "utf8"));
 
 // Non-blank lines only (botassembly ticket 0032): counting every line makes
 // deleting blank lines currency for adding code.
@@ -57,7 +57,25 @@ function unignored(paths) {
 // `directory` names one folder or a list of them (thinkthen ticket 0092 adds
 // the conformance backend beside the crate).
 const folders = [directory].flat();
-const counted = unignored(folders.flatMap((folder) => files(resolve(BASE, folder))));
+let counted = unignored(folders.flatMap((folder) => files(resolve(BASE, folder))));
+if (scope === "handwritten-production") {
+  const classify = spawnSync("python3", ["-c", `
+import json, sys
+from pathlib import Path
+sys.path.insert(0, "sdlc/generators/results")
+from sources import production
+manifest = json.loads(Path("conformance/library-surface.json").read_text())
+print(json.dumps([path for path in json.load(sys.stdin) if production(path, manifest)]))
+`], { cwd: REPO, input: JSON.stringify(counted.map((path) => relative(REPO, path))), encoding: "utf8" });
+  if (classify.status !== 0) {
+    console.error(classify.stderr);
+    process.exit(1);
+  }
+  counted = JSON.parse(classify.stdout).map((path) => resolve(REPO, path));
+} else if (scope !== undefined) {
+  console.error(`ratchet: unknown source scope ${scope}`);
+  process.exit(1);
+}
 const total = counted.reduce((sum, p) => sum + nonBlank(readFileSync(p, "utf8")), 0);
 const named = folders.join(" + ");
 if (total !== max) {

@@ -129,7 +129,7 @@ fn assert_definition_admission_refusals(backend: &Backend) {
 
 #[test]
 fn session_owns_inputs_engine_and_transferred_packets() {
-    for surface in ["c", "go", "php"] {
+    for (surface, typed) in [("c", false), ("go", false), ("php", false), ("c", true)] {
         let backend = conformance_backend::Listener::answering(|_| conformance_backend::Canned::ok(
         r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":0}}"#
     )).expect("owned loopback");
@@ -137,13 +137,15 @@ fn session_owns_inputs_engine_and_transferred_packets() {
             &compile(&crate_dir().join("tests/c/session.c")),
             backend.base(),
             b"",
-            &if surface == "c" {
-                vec![("SESSION_PARTIAL", Path::new("1"))]
-            } else {
-                vec![
-                    ("SESSION_PARTIAL", Path::new("1")),
-                    ("SESSION_SURFACE", Path::new(surface)),
-                ]
+            &{
+                let mut values = vec![("SESSION_PARTIAL", Path::new("1"))];
+                if surface != "c" {
+                    values.push(("SESSION_SURFACE", Path::new(surface)));
+                }
+                if typed {
+                    values.push(("SESSION_TYPED", Path::new("1")));
+                }
+                values
             },
         );
         super::successful(&output);
@@ -193,49 +195,96 @@ fn session_owns_inputs_engine_and_transferred_packets() {
 }
 
 #[test]
-fn session_cancel_and_free_return_before_the_held_provider_is_released() {
-    let gate = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
-    let worker_gate = gate.clone();
-    let (arrived, arrival) = std::sync::mpsc::channel();
-    let (answered, answer) = std::sync::mpsc::channel();
-    let backend = conformance_backend::Listener::answering(move |body| {
-        arrived.send(()).expect("arrival signal");
-        super::sources::all_no_answers(body)
+fn session_wait_and_packet_read_cancel_promptly_and_drain_terminal_facts() {
+    for blocking in [false, true] {
+        let gate = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+        let worker_gate = gate.clone();
+        let (arrived, arrival) = std::sync::mpsc::channel();
+        let (answered, answer) = std::sync::mpsc::channel();
+        let backend = conformance_backend::Listener::answering(move |_| {
+            arrived.send(()).expect("arrival signal");
+            conformance_backend::Canned::ok(
+                r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+            )
             .after_release(worker_gate.clone())
             .notifying(answered.clone())
-    })
-    .expect("owned held listener");
-    let base = backend.base().to_owned();
-    let mut child = start_with(
-        &compile(&crate_dir().join("tests/c/session.c")),
-        &base,
-        &[("SESSION_HELD", Path::new("1"))],
-    );
-    let mut input = child.stdin.take().expect("input");
-    let mut output = BufReader::new(child.stdout.take().expect("output"));
-    arrival
-        .recv_timeout(Duration::from_secs(60))
-        .expect("provider holds the accepted request");
-    input.write_all(b"c").expect("cancel signal");
-    for expected in ["cancelled\n", "freed\n"] {
-        let mut line = String::new();
-        output.read_line(&mut line).expect("operation return");
-        assert_eq!(
-            line, expected,
-            "operation must return while the provider stays held"
+        })
+        .expect("owned held listener");
+        let base = backend.base().to_owned();
+        let mut child = start_with(
+            &compile(&crate_dir().join("tests/c/session.c")),
+            &base,
+            &if blocking {
+                vec![
+                    ("SESSION_HELD", Path::new("1")),
+                    ("SESSION_NEXT", Path::new("1")),
+                ]
+            } else {
+                vec![("SESSION_HELD", Path::new("1"))]
+            },
         );
+        let mut input = child.stdin.take().expect("input");
+        let mut output = BufReader::new(child.stdout.take().expect("output"));
+        arrival
+            .recv_timeout(Duration::from_secs(60))
+            .expect("provider holds the accepted request");
+        input.write_all(b"c").expect("cancel signal");
+        for expected in ["cancelled\n", if blocking { "woken\n" } else { "freed\n" }] {
+            let mut line = String::new();
+            output.read_line(&mut line).expect("operation return");
+            assert_eq!(
+                line, expected,
+                "operation must return while the provider stays held"
+            );
+        }
+        gate.wait();
+        answer
+            .recv_timeout(Duration::from_secs(60))
+            .expect("released listener delivered its response");
+        if blocking {
+            input.write_all(b"r").expect("settlement signal");
+            let Some(terminal) = cancelled_terminal(&mut output) else {
+                let result = finished(child);
+                panic!(
+                    "cancelled drain stopped: {:?} {}",
+                    result.status,
+                    text(&result.stderr)
+                );
+            };
+            assert_eq!(terminal["failure"]["error"]["kind"], "cancelled");
+            assert_eq!(terminal["facts"]["requests_sent"], 1);
+        }
+        input.write_all(b"r").expect("exit signal");
+        drop(input);
+        let result = finished(child);
+        assert_eq!(
+            (result.status.code(), text(&result.stderr)),
+            (Some(0), String::new())
+        );
+        assert_eq!(backend.count(), 1);
+        drop(backend); // Retire and join all fixture listener workers.
     }
-    gate.wait();
-    answer
-        .recv_timeout(Duration::from_secs(60))
-        .expect("released listener delivered its response");
-    input.write_all(b"r").expect("exit signal");
-    drop(input);
-    let result = finished(child);
-    assert_eq!(
-        (result.status.code(), text(&result.stderr)),
-        (Some(0), String::new())
-    );
-    assert_eq!(backend.count(), 1);
-    drop(backend); // Retire and join all fixture listener workers.
+}
+
+fn cancelled_terminal(
+    output: &mut BufReader<std::process::ChildStdout>,
+) -> Option<serde_json::Value> {
+    let mut terminal = None;
+    loop {
+        let mut line = String::new();
+        if output
+            .read_line(&mut line)
+            .expect("drain after cancellation")
+            == 0
+        {
+            return None;
+        }
+        if line == "freed\n" {
+            return terminal;
+        }
+        let packet: serde_json::Value = serde_json::from_str(&line).expect("complete packet");
+        if packet["kind"] == "terminal" {
+            terminal = Some(packet);
+        }
+    }
 }

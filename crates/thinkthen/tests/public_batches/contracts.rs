@@ -3,30 +3,33 @@
 use super::*;
 
 #[test]
-fn typed_bulk_verbs_share_one_request_and_keep_input_order() {
+fn request_verbs_share_one_request_and_keep_input_order() {
     let _serial = serial();
     let backend = Backend::start().expect("backend");
     let engine = engine(&format!("{}/generic/v1", backend.origin()));
     let records = ["alpha", "beta"];
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
 
-    let choose = Question::choose::<BulkLabel>("Which label?")
-        .and_then(|builder| builder.option(BulkLabel::First, None))
-        .and_then(|builder| builder.option(BulkLabel::Second, None))
-        .and_then(thinkthen::ChooseBuilder::build)
+    let choose = Question::from_json(r#"{"choose":"Which label?","options":["first","second"]}"#)
         .expect("choose");
-    let rows = engine
-        .choose_many_with(&choose, records, CallOptions::new().batch(setting))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("choices");
+    let rows = crate::api::pull_choices(
+        &engine,
+        &choose,
+        crate::api::plain_records(records),
+        CallOptions::new().batch(setting),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("choices");
     assert_eq!(
-        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        rows.iter().map(|row| *row.original()).collect::<Vec<_>>(),
         records
     );
-    assert!(
-        rows.iter()
-            .all(|row| *row.value() == Some(BulkLabel::First))
-    );
+    assert!(rows.iter().all(|row| {
+        row.result()
+            .value()
+            .map(|label| BulkLabel::from_label(label).expect("declared label"))
+            == Some(BulkLabel::First)
+    }));
     assert_eq!(backend.count(), 1);
 
     let score = Question::score("How high?")
@@ -34,37 +37,46 @@ fn typed_bulk_verbs_share_one_request_and_keep_input_order() {
         .and_then(|builder| builder.level("high", None))
         .and_then(thinkthen::ScoreBuilder::build)
         .expect("score");
-    let rows = engine
-        .score_many_with(&score, records, CallOptions::new().batch(setting))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("scores");
+    let rows = crate::api::pull_scores(
+        &engine,
+        &score,
+        crate::api::plain_records(records),
+        CallOptions::new().batch(setting),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("scores");
     assert_eq!(
-        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        rows.iter().map(|row| *row.original()).collect::<Vec<_>>(),
         records
     );
     assert!(
         rows.iter()
-            .all(|row| (*row.value() - 0.1).abs() < 0.000_001)
+            .all(|row| (row.result().value() - 0.1).abs() < 0.000_001)
     );
     assert_eq!(backend.count(), 2);
 
-    let tag = Question::tag::<BulkLabel>("Which labels?")
-        .and_then(|builder| builder.label(BulkLabel::First, None))
-        .and_then(|builder| builder.label(BulkLabel::Second, None))
-        .and_then(thinkthen::TagBuilder::cut)
-        .expect("tag");
-    let rows = engine
-        .tag_many_with(&tag, records, CallOptions::new().batch(setting))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("tags");
+    let tag =
+        Question::from_json(r#"{"tag":"Which labels?","labels":["first","second"]}"#).expect("tag");
+    let rows = crate::api::pull_tags(
+        &engine,
+        &tag,
+        crate::api::plain_records(records),
+        CallOptions::new().batch(setting),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("tags");
     assert_eq!(
-        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        rows.iter().map(|row| *row.original()).collect::<Vec<_>>(),
         records
     );
-    assert!(
-        rows.iter()
-            .all(|row| row.value() == &vec![BulkLabel::First, BulkLabel::Second])
-    );
+    assert!(rows.iter().all(|row| {
+        row.result()
+            .value()
+            .iter()
+            .map(|label| BulkLabel::from_label(label).expect("declared label"))
+            .collect::<Vec<_>>()
+            == vec![BulkLabel::First, BulkLabel::Second]
+    }));
     assert_eq!(backend.count(), 3);
 }
 
@@ -114,23 +126,32 @@ fn typed_choice_keeps_null_distinct_from_a_failed_later_row() {
     let listener =
         Listener::serving(vec![Canned::ok(null), Canned::ok(failed)]).expect("scripted listener");
     let engine = engine(listener.base());
-    let choose = Question::choose::<BulkLabel>("Which label?")
-        .and_then(|builder| builder.option(BulkLabel::First, None))
-        .and_then(|builder| builder.option(BulkLabel::Second, None))
-        .and_then(thinkthen::ChooseBuilder::build)
+    let choose = Question::from_json(r#"{"choose":"Which label?","options":["first","second"]}"#)
         .expect("choose");
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
-    let rows = engine
-        .choose_many_with(
-            &choose,
-            ["alpha", "beta"],
-            CallOptions::new().batch(setting),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .expect("a tie is a null choice");
+    let rows = crate::api::pull_choices(
+        &engine,
+        &choose,
+        crate::api::plain_records(["alpha", "beta"]),
+        CallOptions::new().batch(setting),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("a tie is a null choice");
     assert_eq!(rows.len(), 2);
-    assert_eq!(*rows[0].value(), Some(BulkLabel::First));
-    assert_eq!(*rows[1].value(), None);
+    assert_eq!(
+        rows[0]
+            .result()
+            .value()
+            .map(|label| BulkLabel::from_label(label).expect("declared label")),
+        Some(BulkLabel::First)
+    );
+    assert_eq!(
+        rows[1]
+            .result()
+            .value()
+            .map(|label| BulkLabel::from_label(label).expect("declared label")),
+        None
+    );
 
     let seen = Mutex::new(Vec::new());
     let observe = |event: RecordObservation<'_>| match event {
@@ -141,17 +162,20 @@ fn typed_choice_keeps_null_distinct_from_a_failed_later_row() {
         }
         RecordObservation::Row { .. } => {}
     };
-    let mut rows = engine.choose_many_with(
+    let mut rows = crate::api::pull_choices(
+        &engine,
         &choose,
-        ["gamma", "delta"],
+        crate::api::plain_records(["gamma", "delta"]),
         CallOptions::new().batch(setting).observe(&observe),
     );
     assert_eq!(
         rows.next()
             .expect("first row")
             .expect("first choice")
-            .value(),
-        &Some(BulkLabel::First)
+            .result()
+            .value()
+            .map(|label| BulkLabel::from_label(label).expect("declared label")),
+        Some(BulkLabel::First)
     );
     let error = rows
         .next()
@@ -238,13 +262,18 @@ fn batch_observer_keeps_filtered_row_and_even_request_shares() {
     };
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
     let asked = question();
-    let mut batch = engine.filter_with(
+    let mut batch = crate::api::pull_filters(
+        &engine,
         &asked,
-        ["alpha", "beta"],
+        crate::api::plain_records(["alpha", "beta"]),
         CallOptions::new().batch(setting).observe(&observe),
     );
     let kept = batch
         .by_ref()
+        .filter_map(|row| match row {
+            Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+            Err(error) => Some(Err(error)),
+        })
         .collect::<Result<Vec<_>, _>>()
         .expect("filtered");
     assert_eq!(kept, ["beta"]);

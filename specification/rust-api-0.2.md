@@ -6,17 +6,45 @@ The public API inventory applies these reviewed declaration changes after the hi
 
 - [0550](../sdlc/tickets/0550-binding-defects-from-adversarial-review.md) adds `RequestReaderFailure::Producer`, `RequestDecodeCause` and `Error::request_decode_cause` for typed producer and admission failures. Its usage-counter change retires `Engine::finish_usage` and retains `finish_usage_status`.
 - [0551](../sdlc/tickets/0551-one-named-request-constructor.md) adds the shared `Request` constructors, `RequestFunction` parsing and definition/input selection, and component JSON decoders. Its approved corrective constructor `Request::named_from_json` appears in [the input contract](types.md). The sixth [0558 amendment](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) keeps these component decoders through one private helper.
-- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply` and the five `legacy_details` methods to `compatibility_details`. It preserves frozen scalar details through `to_unbatched_scalar_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
+- [0552](../sdlc/tickets/0552-c-library-runs-the-shared-request.md) renames `DoorReply` to `CallReply`. Complete decision, choice, tag and score carriers retain scalar result/1 JSON through `to_scalar_json` and single-text output without scheduler batch metadata through `to_unbatched_scalar_json`. Accepted revision `842ef95437345568f4fb3b344d8ba947612693fe` adds `SourceBudgetExceeded` and `Error::source_budget_exceeded` to project the retained C refusal sentences from typed native causes. Accepted revision `0333414aa3ac33dc1d617f24344a05dad91b1186` retains those projections.
 - [0553](../sdlc/tickets/0553-python-r-host-request-residue.md) moves question construction, label rules and nullable columns behind Rust request APIs. Its accepted revision `aae01270d365676386c2b195dccbd51bb584d291` includes `RequestQuestion::inline`, `RequestQuestion::labels`, `RequestColumn`, `RequestColumnValues` and `RequestColumnView` with their declared methods and fields.
 - [0554](../sdlc/tickets/0554-engine-methods-build-requests.md) admits native calls through `Request`. Accepted revision `018d71671b851391aa92a5fd29057a61d46fad81` includes `RequestRows`, `Engine::execute_request_rows`, and the original-preserving `CompleteRecord::map_original` and `CompleteFound::map_original` projections. [The record contract](records.md) documents that native row path. These are the existing six row variants referenced by 0558; this delta adds no rank, rank-set, find or relate row variant.
 - [0556](../sdlc/tickets/0556-blocking-session-read.md) adds `RequestSession::wait`, `RequestSessionWaitInterest` and `RequestSessionReady` to replace binding polls with native readiness waits.
 - [0558 and its six amendments](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) retire the unpublished complete, fallible-record and image wrappers below. The third and fourth amendments permit private production primitives with unchanged ownership tests. The fifth amendment retires `decide_many_complete_with` after its unchanged ownership test moves to existing `RequestRows::Decisions(batch).into_call()`.
 
-The delta leaves every documented method shipped in 0.1.2 in the historical contract, including the twelve methods that 0558 explicitly keeps. It also retains the approved `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` exceptions. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; this declaration repair changes no product code, tests or ceiling.
+[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires all twelve shipped bulk wrappers. Their behavioral tests use the existing Request row carriers. Exact packed Details and original-serialization assertions use the private primitive called by the Polars frame path, under the accepted private-production exception. The delta retires `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` after their last external production callers retired. Released rank, find and annotation methods retain their production primitives; fallible input and complete relation tests use existing Request carriers. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; the declarations below retain the approved source ceiling.
 
 ### Retired public declarations
 
 ```text
+fn BandedQuestion::with_wording_version(self, WordingVersion) -> Result<BandedQuestion, Error>
+fn ChooseBuilder::with_wording_version(self, WordingVersion) -> Result<ChooseBuilder<C>, Error>
+fn ChooseQuestion::with_wording_version(self, WordingVersion) -> Result<ChooseQuestion<C>, Error>
+fn DecideBuilder::with_wording_version(self, WordingVersion) -> Result<DecideBuilder, Error>
+fn LabelBuilder::with_wording_version(self, WordingVersion) -> Result<LabelBuilder, Error>
+fn Question::with_wording_version(self, WordingVersion) -> Result<Question, Error>
+fn Recognize::with_wording_version(self, WordingVersion) -> Result<Recognize, Error>
+fn RecordChooseQuestion::with_wording_version(self, WordingVersion) -> Result<RecordChooseQuestion, Error>
+fn Relate::with_wording_version(self, WordingVersion) -> Result<Relate, Error>
+fn ScoreBuilder::with_wording_version(self, WordingVersion) -> Result<ScoreBuilder, Error>
+fn TagBuilder::with_wording_version(self, WordingVersion) -> Result<TagBuilder<C>, Error>
+fn TagQuestion::with_wording_version(self, WordingVersion) -> Result<TagQuestion<C>, Error>
+fn Engine::relate_complete_with<I>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRelated>, Error> where I: IntoIterator<Item = Entity>
+fn Engine::try_annotate_with<'a, I, T>(&'a self, &'a QuestionSet, I, CallOptions<'a>) -> Batch<'a, AnnotatedRecord<T>> where I: IntoIterator<Item = Result<T, Error>> + 'a, T: Evidence + 'a
+fn Engine::try_find_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Found<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Engine::try_rank_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Vec<Ranked<T>>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
+fn Engine::decide_many<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, &'a Q, I) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::decide_many_with<'a, I, Q: DecisionQuestion + ?Sized>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Answer>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::details_many<'a, I, Q: DetailQuestion + ?Sized>(&'a self, &'a Q, I) -> Batch<'a, Row<I::Item, Details>> where I: IntoIterator + 'a, I::Item: Evidence + Serialize
+fn Engine::details_many_with<'a, I, Q: DetailQuestion + ?Sized>(&'a self, &'a Q, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Details>> where I: IntoIterator + 'a, I::Item: Evidence + Serialize
+fn Engine::filter<'a, I>(&'a self, &'a Question, I) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::filter_with<'a, I>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, I::Item> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::choose_many<'a, I, C: Choice>(&'a self, &'a ChooseQuestion<C>, I) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::choose_many_with<'a, I, C: Choice>(&'a self, &'a ChooseQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::score_many<'a, I>(&'a self, &'a Question, I) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::score_many_with<'a, I>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::tag_many<'a, I, C: Choice>(&'a self, &'a TagQuestion<C>, I) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::tag_many_with<'a, I, C: Choice>(&'a self, &'a TagQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
 fn CompleteChoice::legacy_details(&self) -> Result<Details, Error>
 fn CompleteDecision::legacy_details(&self) -> Result<Details, Error>
 fn CompleteRecord::legacy_details(&self) -> Result<Details, Error>
@@ -134,16 +162,11 @@ enum RequestSessionReady
 enum RequestSessionWaitInterest
 enum SourceBudgetExceeded
 fn CallReply::new(String, Facts, Option<Vec<AttemptObservation>>) -> Result<CallReply, Error>
-fn CompleteChoice::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteChoice::to_unbatched_scalar_json(&self) -> Result<String, Error>
-fn CompleteDecision::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteDecision::to_unbatched_scalar_json(&self) -> Result<String, Error>
 fn CompleteFound::map_original<U>(self, impl FnMut(T) -> U) -> CompleteFound<U>
-fn CompleteRecord::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteRecord::map_original<U>(self, impl FnOnce(T) -> U) -> CompleteRecord<U, R>
-fn CompleteScore::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteScore::to_unbatched_scalar_json(&self) -> Result<String, Error>
-fn CompleteTags::compatibility_details(&self) -> Result<Details, Error>
 fn CompleteTags::to_unbatched_scalar_json(&self) -> Result<String, Error>
 fn Engine::execute_request_rows<'a, I, T>(&self, &AdmittedRequest, I, CallOptions<'a>) -> Result<RequestRows<'a, T>, Error> where I: IntoIterator<Item = Result<RecordInput<T>, Error>> + 'a, T: InputEvidence + 'a
 fn Error::request_decode_cause(&self) -> Option<RequestDecodeCause>

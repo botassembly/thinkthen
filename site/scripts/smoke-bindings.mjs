@@ -11,7 +11,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { buildLines } from '../src/data/build-lines.mjs';
 import { BACKEND_ROUTES } from '../src/data/catalog.mjs';
-import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -66,7 +66,7 @@ function cDoor() {
   if (!fs.existsSync(out)) {
     fs.mkdirSync(root, { recursive: true });
     const partial = fs.mkdtempSync(path.join(root, 'partial-'));
-    const done = run('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, partial], { cwd: repo });
+    const done = compile('sh', ['-c', '. sdlc/scripts/scratch.sh && . sdlc/scripts/installed.sh && native_install "$1" "$2"', 'sh', repo, partial], { cwd: repo });
     if (done.status !== 0) {
       fs.rmSync(partial, { recursive: true, force: true });
       throw new Error(`native_install failed\n${done.stdout}${done.stderr}`);
@@ -87,7 +87,7 @@ function jvmJars() {
   const out = path.join(tmp, 'jvm');
   fs.mkdirSync(out);
   const native = path.join(cDoor(), 'lib', 'libthinkthen.so');
-  const done = run('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, ...JVM_HOMES(), THINKTHEN_JVM_OUT: out, THINKTHEN_JVM_NATIVE: native } });
+  const done = compile('sh', [path.join(repo, 'libraries/jvm/build.sh')], { env: { ...process.env, ...JVM_HOMES(), THINKTHEN_JVM_OUT: out, THINKTHEN_JVM_NATIVE: native } });
   if (done.status !== 0) throw new Error(`the JVM build failed\n${done.stdout}${done.stderr}`);
   jars = path.join(out, 'jars');
   return jars;
@@ -110,7 +110,7 @@ function csharpFeed() {
   fs.cpSync(path.join(repo, 'sdlc/generators/results/csharp'), path.join(root, 'sdlc/generators/results/csharp'), { recursive: true });
   const out = path.join(tmp, 'csharp-feed');
   const native = [`-p:ThinkThenNativeAsset=${path.join(cDoor(), 'lib/libthinkthen.so')}`, '-p:ThinkThenNativeRid=linux-x64', '-p:ThinkThenNativeName=libthinkthen.so'];
-  const done = run('dotnet', ['pack', 'ThinkThen.csproj', ...native, '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
+  const done = compile('dotnet', ['pack', 'ThinkThen.csproj', ...native, '-c', 'Release', '-o', out, '-v', 'quiet'], { cwd: source, env: { ...process.env, ...DOTNET_ENV } });
   if (done.status !== 0) throw new Error(`dotnet pack failed\n${done.stdout}${done.stderr}`);
   feed = out;
   return feed;
@@ -270,10 +270,14 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
         const lines = buildLines(slug, name, true);
         if (!lines) throw new Error(`src/data/build-lines.mjs has no lines for ${slug}`);
         for (const line of lines.lines) {
-          const done = run('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          const done = (/^(cc|c\+\+|clang|gnatmake|cobc|go build|swift build|zig build|javac|kotlinc|scalac|dotnet build)(?:\s|$)/.test(line.join(' ')) ? compile : run)('sh', ['-c', line.join(' ')], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
         }
-        dirs.set(rel, { dir, run: lines.run.join(' ') });
+        if (slug === 'rust') {
+          const built = compile('cargo', ['build', '--quiet', '--locked', '--offline', '--bins'], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          if (built.status !== 0) throw new Error(`${rel} did not build\n${built.stdout}${built.stderr}`);
+        }
+        dirs.set(rel, { dir, run: slug === 'rust' ? path.join(runEnv.CARGO_TARGET_DIR, 'debug', name.replace(/\.[^.]+$/, '')) : lines.run.join(' ') });
         return dirs.get(rel);
       };
       return {
@@ -333,7 +337,7 @@ const CARGO_ENV = {
 // A Rust build that writes only under target/<name>, as the R build does.
 function cargoBuild(dir, name, env = {}) {
   const target = path.join(repo, 'target', name);
-  const done = run('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, dir), env: { ...process.env, ...env, CARGO_TARGET_DIR: target } });
+  const done = compile('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, dir), env: { ...process.env, ...env, CARGO_TARGET_DIR: target } });
   if (done.status !== 0) throw new Error(`cargo build failed in ${dir}\n${done.stdout}${done.stderr}`);
   return path.join(target, 'release');
 }
@@ -423,7 +427,7 @@ const BINDINGS = {
       for (const tool of ['uv', 'maturin', 'cargo']) if (!has(tool)) return { missing: tool };
       const out = path.join(tmp, 'python');
       const step = (cmd, args, opts) => {
-        const done = run(cmd, args, opts);
+        const done = (cmd === 'maturin' ? compile : run)(cmd, args, opts);
         if (done.status !== 0) throw new Error(`${cmd} ${args.join(' ')} failed\n${done.stdout}${done.stderr}`);
       };
       step('maturin', ['build', '--quiet', '--locked', '--offline', '-o', path.join(out, 'wheel')], { cwd: path.join(repo, 'libraries/python'), env: { ...process.env, PYO3_PYTHON: python } });
@@ -452,7 +456,7 @@ const BINDINGS = {
       const libs = [lib, path.join(os.homedir(), '.cache/thinkthen-toolchains/r-library'), ...user].filter((l) => l && fs.existsSync(l)).join(':');
       const ready = run('Rscript', ['-e', 'if (!requireNamespace("dplyr", quietly = TRUE)) quit(status = 1)'], { env: { ...process.env, R_LIBS: libs } });
       if (ready.status !== 0) return { missing: 'R package dplyr' };
-      const done = run('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
+      const done = compile('R', ['CMD', 'INSTALL', '-l', lib, 'thinkthen'], { cwd: path.join(repo, 'libraries/r'), env: { ...process.env, R_LIBS: libs, CARGO_TARGET_DIR: path.join(repo, 'target/r') } });
       if (done.status !== 0) throw new Error(`R CMD INSTALL failed\n${done.stdout}${done.stderr}`);
       const dplyr = run('Rscript', ['-e', 'cat(format(packageVersion("dplyr")))'], { env: { ...process.env, R_LIBS: libs } }).stdout.trim();
       return {

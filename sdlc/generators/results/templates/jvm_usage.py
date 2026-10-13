@@ -1,5 +1,8 @@
 """Generate owned JVM status types and carrier measurements from the C compiler."""
 import importlib.util
+import json
+import re
+from jvm_host import named_calls, facade_calls
 
 
 def outputs(root):
@@ -59,6 +62,57 @@ def outputs(root):
     prototype = native['functions']['thinkthen_session_wait']
     carriers = ', '.join(layouts_by_type[typ] for typ in prototype['arguments'])
     waits += ['static int waitReady(MemorySegment session, int interest, int timeout, MemorySegment ready) {',
-              'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}', '}']
-    return {'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+              'return (int)NativeSession.call("thinkthen_session_wait", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, session, interest, timeout, ready);', '}']
+    for prefix in ('THINKTHEN_SESSION_RESULT_', 'THINKTHEN_SESSION_PENDING_', 'THINKTHEN_SESSION_END_'):
+        for name, value in native['constants'].items():
+            if name == prefix + 'V1':
+                waits += ['static final int READ_' + name.removeprefix('THINKTHEN_SESSION_').removesuffix('_V1') + ' = ' + str(value) + ';']
+    for method, function, arguments in [
+        ('nextPacket', 'thinkthen_session_next_packet', 'MemorySegment session, int interest, MemorySegment status, MemorySegment result'),
+        ('push', 'thinkthen_session_push', 'MemorySegment session, MemorySegment descriptor, long length, MemorySegment status')]:
+        parameters = native['functions'][function]['arguments']
+        layouts_by_type.update({'thinkthen_session *': 'ValueLayout.ADDRESS', 'const char *': 'ValueLayout.ADDRESS',
+                                'size_t': 'ValueLayout.JAVA_LONG', 'thinkthen_session_result **': 'ValueLayout.ADDRESS'})
+        carriers = ', '.join(layouts_by_type[typ] for typ in parameters)
+        values = ', '.join(argument.rsplit(' ', 1)[-1] for argument in arguments.split(', '))
+        waits += ['static int ' + method + '(' + arguments + ') {',
+                  'return (int)NativeSession.call("' + function + '", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, ' + values + ');', '}']
+    waits += ['}']
+    kinds = [(key.removeprefix('THINKTHEN_E').title(), value)
+             for key, value in native['constants'].items() if re.fullmatch(r'THINKTHEN_E[A-Z]+', key)]
+    errors = ['// Generated from compiler-derived C error constants. Do not edit.',
+              'package thinkthen;', 'public enum ErrorKind {',
+              ', '.join(name.upper() + '(' + str(value) + ')' for name, value in kinds) + ';',
+              'private final int code; ErrorKind(int code) { this.code = code; }',
+              'public int code() { return code; }',
+              'public static ErrorKind read(int code) { for (ErrorKind kind : values()) if (kind.code == code) return kind;',
+              'throw new IllegalStateException("Unknown native error kind"); }', '}']
+    signature = native['functions']['thinkthen_session_new_named_with_surface']
+    if signature['return'] != 'int' or signature['arguments'] != [
+            'const thinkthen_engine *', 'const thinkthen_named_request_v1 *',
+            'thinkthen_complete_utf8_v1', 'thinkthen_session **']:
+        raise ValueError('JVM named constructor signature changed')
+    request_schema = json.loads((root / 'specification/request.schema.json').read_text())
+    named = native['records']['thinkthen_named_request_v1']
+    named_lines = ['// Generated from compiler-derived C carriers. Do not edit.',
+                   'package thinkthen;', 'import java.lang.foreign.*;',
+                   'final class NativeNamed {', 'private NativeNamed() {}',
+                   f'static final MemoryLayout REQUEST = MemoryLayout.sequenceLayout({named["size"]}, ValueLayout.JAVA_BYTE).withByteAlignment({named["alignment"]});',
+                   'static void text(Arena arena, MemorySegment view, String text) {',
+                   'var data = arena.allocateFrom(ValueLayout.JAVA_BYTE, NativeSession.utf8(text));',
+                   f'view.set(ValueLayout.ADDRESS, {advice["fields"]["data"]["offset"]}, data);',
+                   f'view.set(NativeSession.SIZE, {advice["fields"]["len"]["offset"]}, data.byteSize());', '}',
+                   'static MemorySegment create(MemorySegment engine, Engine.Surface surface, Inputs.RequestFunction function, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {',
+                   'try (Arena arena = Arena.ofConfined()) {', 'var request = arena.allocate(REQUEST);']
+    for field in named['fields']:
+        value = {'function': '(String)function.json()', 'question_json': 'Json.write(question.json())',
+                 'input_json': 'Json.write(input.json())', 'options_json': 'options == null ? "{}" : Json.write(options.json())'}[field]
+        named_lines += [f'text(arena, request.asSlice({named["fields"][field]["offset"]}, {advice["size"]}), {value});']
+    named_lines += [f'var token = arena.allocate(NativeUsageLayouts.ADVICE);',
+                    'text(arena, token, surface.name().toLowerCase(java.util.Locale.ROOT));',
+                    'var output = arena.allocate(ValueLayout.ADDRESS);',
+                    'NativeSession.check((int)NativeSession.call("thinkthen_session_new_named_with_surface", ValueLayout.JAVA_INT,',
+                    'new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, MemoryLayout.structLayout(ValueLayout.ADDRESS, NativeSession.SIZE), ValueLayout.ADDRESS}, engine, request, token, output));',
+                    'return output.get(ValueLayout.ADDRESS, 0);', '}', '}', '}']
+    return {'kotlin/KotlinNamedCalls.kt': facade_calls(request_schema['$defs'], 'kotlin'), 'scala/ScalaNamedCalls.scala': facade_calls(request_schema['$defs'], 'scala'), 'thinkthen/ErrorKind.java': errors, 'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}

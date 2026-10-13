@@ -1,5 +1,6 @@
 //! Canonical decoding and native header behavior at the request boundary.
 use super::*;
+use crate::RequestFunction;
 
 #[test]
 fn committed_request_schema_is_derived_from_deserialization_types() {
@@ -80,6 +81,7 @@ fn generated_deserialization_schema_agrees_with_canonical_control_shapes() {
         .collect();
     let texts = [
         valid.to_owned(),
+        r#"{"schema":"thinkthen.request/1","call":["decide",{"kind":"text","text":"Fits?"},{"kind":"text","text":"Alpha."},{}]}"#.to_owned(),
         definition(serde_json::json!({"decide":"Fits?","true":null,"false":{"label":"no"}})),
         definition(serde_json::json!({"choose":"Which?"})),
         definition(serde_json::json!({"choose":"Which?","options":["a","b"]})),
@@ -217,17 +219,20 @@ fn recognition_mode_resolves_before_source_reads_and_refuses_skipped_controls() 
 #[test]
 fn recognition_authored_controls_survive_native_wire_round_trips_without_adding_defaults() {
     let request = |ask: crate::Recognize, mode| {
-        Request::new(RequestCall::Recognize(RequestArguments {
-            question: RequestQuestion::Definition { value: ask.into() },
-            input: RequestInput::Text {
-                text: "Ada".into(),
-                images: Vec::new(),
+        Request::for_function(
+            RequestFunction::Recognize,
+            RequestArguments {
+                question: RequestQuestion::Definition { value: ask.into() },
+                input: RequestInput::Text {
+                    text: "Ada".into(),
+                    images: Vec::new(),
+                },
+                options: RequestOptions {
+                    mode: Some(mode),
+                    ..RequestOptions::default()
+                },
             },
-            options: RequestOptions {
-                mode: Some(mode),
-                ..RequestOptions::default()
-            },
-        }))
+        )
     };
     let implicit = request(
         crate::Recognize::builder().build().unwrap(),
@@ -328,13 +333,16 @@ fn snippet_width_is_unsigned_strict_and_recognition_only() {
 
 #[test]
 fn native_rank_admission_does_not_promote_the_decide_default_to_a_cutoff() {
-    let request = Request::new(RequestCall::Rank(RequestArguments {
-        question: RequestQuestion::Definition {
-            value: crate::Question::decide("Best?").unwrap().cut().into(),
+    let request = Request::for_function(
+        RequestFunction::Rank,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: crate::Question::decide("Best?").unwrap().cut().into(),
+            },
+            input: RequestInput::Records { items: Vec::new() },
+            options: RequestOptions::default(),
         },
-        input: RequestInput::Records { items: Vec::new() },
-        options: RequestOptions::default(),
-    }));
+    );
     assert!(request.call.arguments().options.threshold.is_none());
     let admitted = request.admit().unwrap();
     let RequestDefinition::Rank(question) = admitted.resolve_question().unwrap() else {

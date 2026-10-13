@@ -10,16 +10,16 @@ void requireData(bool value, String message) {
 Future<void> dataCases(
     Engine engine, String endpoint, int Function() sends) async {
   final scratch = Directory.systemTemp.createTempSync('thinkthen-caller-');
-  final question = InputRequestQuestionText(text: 'Does it apply?');
+  final question = QuestionText(text: 'Does it apply?');
   try {
     final file = File('${scratch.path}/evidence.txt')
       ..writeAsStringSync('first\nsecond\n');
     final located = await engine.decide(
         question,
-        InputRequestInputSource(
-            source: InputRequestSource(
+        InputSource(
+            source: Source(
                 paths: [file.path],
-                reading: Presence.present(InputRequestReader(
+                reading: Presence.present(Reader(
                     unit: const Presence.present('line'))))));
     requireData(located.packets.whereType<SessionPacketDecideRow>().length == 2,
         'native file reader retains both lines');
@@ -27,17 +27,17 @@ Future<void> dataCases(
     try {
       await engine.decide(
           question,
-          InputRequestInputSource(
-              source: InputRequestSource(paths: ['${scratch.path}/missing'])));
+          InputSource(
+              source: Source(paths: ['${scratch.path}/missing'])));
       throw StateError('missing file accepted');
-    } on SessionFailure catch (error) {
-      requireData(
-          !error.call.terminal.facts.isPresent &&
-              error.failure.error.kind == 'local',
-          'file failure before start keeps facts absent');
-    } on NativeFailure catch (error) {
-      requireData(error.kind == NativeErrorKind.local,
-          'prestart file failure is local');
+    } on CallFailure catch (error) {
+      if (error.call != null) {
+        requireData(!error.call!.terminal.facts.isPresent && error.failure!.error.kind == 'local',
+            'file failure before start keeps facts absent');
+      } else {
+        requireData(error.kind == ErrorKind.local && error.facts == null,
+            'prestart file failure is local and keeps facts absent');
+      }
     }
     requireData(sends() == beforeMissing, 'missing file sends nothing');
     final image = imageBytes(Uint8List.fromList([0, 1, 2]), media: 'image/png');
@@ -46,11 +46,11 @@ Future<void> dataCases(
       try {
         await method(
             question,
-            InputRequestInputText(
+            InputText(
                 text: 'caption', images: Presence.present([image])));
         throw StateError('unadmitted image accepted');
-      } on NativeFailure catch (error) {
-        requireData(error.kind == NativeErrorKind.usage,
+      } on CallFailure catch (error) {
+        requireData(error.kind == ErrorKind.usage,
             'image admission stays native');
       }
     }
@@ -59,21 +59,21 @@ Future<void> dataCases(
     final admittedFile = File('${scratch.path}/image.png')
       ..writeAsBytesSync(admittedBytes);
     final admitted = Engine.open(
-        settings: InputEngineSettings(
+        settings: EngineSettings(
             backend: const Presence.present('liquid'),
             model: const Presence.present('d1'),
             baseUrl: Presence.present(endpoint),
             cache: const Presence.present(
-                InputCacheDocument.alternative1(false))));
+                CacheDocument.boolean(false))));
     try {
       final beforeAdmitted = sends();
       final result = await admitted.decide(
           question,
-          InputRequestInputText(
+          InputText(
               text: 'image-caption',
               images: Presence.present([
                 imageBytes(admittedBytes, media: 'image/png'),
-                InputRequestImageFile(path: admittedFile.path)
+                ImageFile(path: admittedFile.path)
               ])));
       requireData(
           result.packets.whereType<SessionPacketDecideRow>().single.value.answer
@@ -84,13 +84,13 @@ Future<void> dataCases(
       admitted.close();
     }
     final recording = '${scratch.path}/recording';
-    InputEngineSettings settings({bool replay = false}) => InputEngineSettings(
+    EngineSettings settings({bool replay = false}) => EngineSettings(
         backend: const Presence.present('typesafe'),
         baseUrl: Presence.present(endpoint),
-        cache: const Presence.present(InputCacheDocument.alternative1(false)),
+        cache: const Presence.present(CacheDocument.boolean(false)),
         record: replay ? const Presence.absent() : Presence.present(recording),
         replay: replay ? Presence.present(recording) : const Presence.absent());
-    final input = InputRequestInputText(text: 'recording-evidence');
+    final input = InputText(text: 'recording-evidence');
     final recorder = Engine.open(settings: settings());
     try {
       await recorder.decide(question, input);
@@ -105,10 +105,10 @@ Future<void> dataCases(
           replay.terminal.facts.isPresent, 'replay retains final facts');
       try {
         await replayer.decide(
-            question, InputRequestInputText(text: 'cache-miss'));
+            question, InputText(text: 'cache-miss'));
         throw StateError('replay miss accepted');
-      } on SessionFailure catch (error) {
-        requireData(error.call.terminal.facts.isPresent,
+      } on CallFailure catch (error) {
+        requireData(error.call!.terminal.facts.isPresent,
             'replay miss retains failure facts');
       }
     } finally {
@@ -116,17 +116,17 @@ Future<void> dataCases(
     }
     requireData(sends() == beforeReplay, 'replay and replay miss send nothing');
     final cached = Engine.open(
-        settings: InputEngineSettings(
+        settings: EngineSettings(
             backend: const Presence.present('typesafe'),
             baseUrl: Presence.present(endpoint),
             cache: Presence.present(
-                InputCacheDocument.alternative0('${scratch.path}/cache'))));
+                CacheDocument.text('${scratch.path}/cache'))));
     try {
       await cached.decide(
-          question, InputRequestInputText(text: 'cached-evidence'));
+          question, InputText(text: 'cached-evidence'));
       final beforeHit = sends();
       await cached.decide(
-          question, InputRequestInputText(text: 'cached-evidence'));
+          question, InputText(text: 'cached-evidence'));
       requireData(sends() == beforeHit, 'cache hit sends nothing');
     } finally {
       cached.close();

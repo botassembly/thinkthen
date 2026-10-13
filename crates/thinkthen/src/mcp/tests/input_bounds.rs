@@ -78,26 +78,30 @@ fn release_only_native_image_sources_retain_their_default_byte_ceiling() {
 fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_unchanged() {
     use crate::transport::TransportAttachmentLimit;
     let request = || {
-        crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
-            question: crate::RequestQuestion::Text { text: "q".into() },
-            input: crate::RequestInput::Records {
-                items: vec![crate::RequestItem {
-                    original: None,
-                    context: None,
-                    options: None,
-                    seed_spans: None,
-                    examples: None,
-                    images: vec![
-                        crate::RequestImage::Bytes {
-                            media: crate::ImageMedia::Png,
-                            bytes: vec![0; 6]
-                        };
-                        2
-                    ],
-                }],
+        crate::Request::named(
+            "decide",
+            crate::RequestArguments {
+                question: crate::RequestQuestion::Text { text: "q".into() },
+                input: crate::RequestInput::Records {
+                    items: vec![crate::RequestItem {
+                        original: None,
+                        context: None,
+                        options: None,
+                        seed_spans: None,
+                        examples: None,
+                        images: vec![
+                            crate::RequestImage::Bytes {
+                                media: crate::ImageMedia::Png,
+                                bytes: vec![0; 6]
+                            };
+                            2
+                        ],
+                    }],
+                },
+                options: crate::RequestOptions::default(),
             },
-            options: crate::RequestOptions::default(),
-        }))
+        )
+        .unwrap()
     };
     assert_eq!(
         request()
@@ -117,13 +121,7 @@ fn transport_inline_preflight_precedes_validation_and_native_defaults_stay_uncha
 #[test]
 fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
     use crate::transport::{TransportAttachmentLimit, TransportDescriptor};
-    use conformance_backend::{Canned, Listener};
-    let listener = Listener::answering(|_| {
-        Canned::ok(include_str!(
-            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
-        ))
-    })
-    .unwrap();
+    let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");
@@ -134,16 +132,20 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
     let evidence = folder.join("evidence.txt");
     std::fs::write(&evidence, "caption").unwrap();
     for (limit, missing) in [(bytes.len() * 2, false), (bytes.len() * 2 - 1, true)] {
-        let request = crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
-            question: crate::RequestQuestion::Text { text: "q".into() },
-            input: crate::RequestInput::Feed {
-                name: "owned".into(),
-                framing: crate::RequestFraming::Document,
-                reading: crate::ReaderOptions::default(),
-                images: Vec::new(),
+        let request = crate::Request::named(
+            "decide",
+            crate::RequestArguments {
+                question: crate::RequestQuestion::Text { text: "q".into() },
+                input: crate::RequestInput::Feed {
+                    name: "owned".into(),
+                    framing: crate::RequestFraming::Document,
+                    reading: crate::ReaderOptions::default(),
+                    images: Vec::new(),
+                },
+                options: crate::RequestOptions::default(),
             },
-            options: crate::RequestOptions::default(),
-        }))
+        )
+        .unwrap()
         .admit_for_transport(TransportAttachmentLimit::new(limit).unwrap())
         .unwrap();
         let descriptor = TransportDescriptor {
@@ -206,6 +208,15 @@ fn unresolved_descriptors_charge_mixed_images_once_before_opening_evidence() {
     std::fs::remove_dir_all(folder).unwrap();
 }
 
+fn image_listener() -> conformance_backend::Listener {
+    conformance_backend::Listener::answering(|_| {
+        conformance_backend::Canned::ok(include_str!(
+            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
+        ))
+    })
+    .unwrap()
+}
+
 fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
     crate::Engine::builder()
         .backend("liquid")
@@ -225,39 +236,37 @@ fn image_engine(listener: &conformance_backend::Listener) -> crate::Engine {
 #[test]
 fn transport_image_sources_retain_the_sent_prefix_on_budget_exhaustion() {
     use crate::transport::TransportAttachmentLimit;
-    use conformance_backend::{Canned, Listener};
-    let listener = Listener::answering(|_| {
-        Canned::ok(include_str!(
-            "../../../../../specification/fixtures/images/liquid-decide-reply.json"
-        ))
-    })
-    .unwrap();
+    let listener = image_listener();
     let engine = image_engine(&listener);
     let fixture = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../specification/fixtures/images/red.png");
     let limit = std::fs::metadata(&fixture).unwrap().len() as usize;
-    let request = crate::Request::new(crate::RequestCall::Decide(crate::RequestArguments {
-        question: crate::RequestQuestion::Text { text: "q".into() },
-        input: crate::RequestInput::Source {
-            source: crate::RequestSource {
-                framing: None,
-                paths: vec![
-                    fixture.clone(),
-                    fixture.clone(),
-                    fixture.parent().unwrap().join("truncated.png"),
-                ],
-                reading: crate::ReaderOptions {
-                    unit: crate::SourceUnit::File,
-                    window: None,
+    let request = crate::Request::named(
+        "decide",
+        crate::RequestArguments {
+            question: crate::RequestQuestion::Text { text: "q".into() },
+            input: crate::RequestInput::Source {
+                source: crate::RequestSource {
+                    framing: None,
+                    paths: vec![
+                        fixture.clone(),
+                        fixture.clone(),
+                        fixture.parent().unwrap().join("truncated.png"),
+                    ],
+                    reading: crate::ReaderOptions {
+                        unit: crate::SourceUnit::File,
+                        window: None,
+                    },
+                    media: crate::ReaderMedia::Image,
                 },
-                media: crate::ReaderMedia::Image,
+            },
+            options: crate::RequestOptions {
+                batch: Some(crate::RequestBatch::Count(1)),
+                ..crate::RequestOptions::default()
             },
         },
-        options: crate::RequestOptions {
-            batch: Some(crate::RequestBatch::Count(1)),
-            ..crate::RequestOptions::default()
-        },
-    }))
+    )
+    .unwrap()
     .admit_for_transport(TransportAttachmentLimit::new(limit).unwrap())
     .unwrap();
     let crate::RequestOutcome::Failed { completed, error } = engine

@@ -1,3 +1,6 @@
+from native import selected_header
+from registry import output_path
+from templates.csharp import enum_values
 """Generate Ada transport records from the shared graph and C layouts from its header."""
 import json
 import re
@@ -10,20 +13,36 @@ def identifier(value):
     return 'T_' + re.sub(r'[^a-zA-Z0-9]+', '_', value).strip('_')
 
 
-def render(definitions):
-    specs, bodies, done = [], [], set()
+def render(definitions, names=None, schemas=None):
+    specs, done = [], set()
+    optionals = {}
+    scalar_names = {}
+    aliases = {}
+    containers = {}
+    def optional(typ):
+        if typ not in optionals:
+            package = typ + '_Options'
+            name = typ + '_Optional'
+            specs.append(f'package {package} is new Optional_Values ({typ});\nsubtype {name} is {package}.Optional;')
+            optionals[typ] = name
+        return optionals[typ]
     def emit(key, schema):
-        name = identifier(key)
+        name = aliases.get(key, identifier(key))
         if key in done:
             return name
         done.add(key)
         if not isinstance(schema, dict):
             schema = {}
+        if schemas is not None:
+            schemas[key] = schema
         if '$ref' in schema:
             original = schema['$ref'].removeprefix('#/$defs/')
             base = emit(original, definitions[original])
-            specs.append(f'subtype {name} is {base};')
-            return name
+            aliases[key] = base
+            return base
+        values = enum_values(schema)
+        if values:
+            return scalar(key, name, {'type': 'string', 'enum': values})
         kinds = schema.get('type')
         alternatives = schema.get('anyOf', schema.get('oneOf'))
         if isinstance(kinds, list):
@@ -31,47 +50,67 @@ def render(definitions):
         variants = schema.get('variants')
         if variants or alternatives and len(alternatives) > 1:
             members = [(n, {'$ref': '#/$defs/' + n}) for n, _ in variants] if variants else [(str(i), v) for i, v in enumerate(alternatives)]
-            arms = [(identifier(key + '_arm_' + tag), emit(key + '_value_' + tag, value)) for tag, value in members]
-            specs.append(f'type {name}_Kind is (' + ', '.join(tag for tag, _ in arms) + ');')
+            arms = [(identifier(key + '_arm_' + tag.removeprefix(key + '_')), emit(key + '_value_' + tag.removeprefix(key + '_'), value)) for tag, value in members]
+            specs.append(f'type {name}_Kind is (' + ',\n'.join(tag for tag, _ in arms) + ');')
             specs.append(f'type {name} (Kind : {name}_Kind := {arms[0][0]}) is record\ncase Kind is\n' + '\n'.join(f'when {tag} => V_{i} : {typ};' for i, (tag, typ) in enumerate(arms)) + '\nend case;\nend record;')
-            body = f'case Value.Kind is\n' + '\n'.join(f'when {tag} => return Encode (Value.V_{i});' for i, (tag, _) in enumerate(arms)) + '\nend case;'
         elif alternatives:
-            return scalar(key, name, alternatives[0])
+            base = emit(key + '_value', alternatives[0])
+            aliases[key] = base
+            return base
         elif 'properties' in schema:
-            fields, entries = [], []
+            fields = []
             for member, value in schema['properties'].items():
                 field = identifier(member)
                 typ = emit(key + '_field_' + member, value)
                 required = member in schema.get('required', [])
                 if not required:
-                    opt = name + '_Optional_' + field
-                    specs.append(f'type {opt} (Present : Boolean := False) is record\ncase Present is\nwhen True => Value : {typ};\nwhen False => null;\nend case;\nend record;')
+                    opt = optional(typ)
                     fields.append(f'{field} : {opt};')
-                    entries.append(f'if Value.{field}.Present then Add (Result, {ada_string(member)}, Encode (Value.{field}.Value)); end if;')
                 else:
-                    fields.append(f'{field} : {typ};')
-                    entries.append(f'Add (Result, {ada_string(member)}, Encode (Value.{field}));')
+                    qualified = 'Thinkthen.Requests.' + typ if field.lower() == typ.lower() else typ
+                    fields.append(f'{field} : {qualified};')
             specs.append(f'type {name} is ' + ('record\n' + '\n'.join(fields) + '\nend record;' if fields else 'null record;'))
-            body = 'Result : Unbounded_String := To_Unbounded_String ("{");\nbegin\n' + '\n'.join(entries) + '\nAppend (Result, "}");\nreturn To_String (Result);'
-        elif kinds == 'array' or kinds == 'object' and isinstance(schema.get('additionalProperties'), dict):
+        elif kinds == 'array' or kinds == 'object':
             mapping = kinds == 'object'
-            typ = emit(key + '_element', schema['additionalProperties'] if mapping else schema.get('items', {}))
+            typ = emit(key + '_element', (schema.get('additionalProperties') if isinstance(schema.get('additionalProperties'), dict) else {}) if mapping else schema.get('items', {}))
+            if key not in definitions:
+                identity = (mapping, typ)
+                if identity in containers:
+                    aliases[key] = containers[identity]
+                    return containers[identity]
+                name = typ + ('_Map' if mapping else '_List')
+                aliases[key] = name
+                containers[identity] = name
             if mapping:
                 entry = name + '_Entry'
                 specs.append(f'type {entry} is record\nKey : Unbounded_String;\nValue : {typ};\nend record;')
                 typ = entry
             specs.append(f'package {name}_Vectors is new Ada.Containers.Vectors (Positive, {typ});\nsubtype {name} is {name}_Vectors.Vector;')
-            start, end = ('{', '}') if mapping else ('[', ']')
-            item = 'Quote (To_String (Item.Key)) & ":" & Encode (Item.Value)' if mapping else 'Encode (Item)'
-            body = f'Result : Unbounded_String := To_Unbounded_String ("{start}");\nbegin\nfor Item of Value loop\nif Length (Result) > 1 then Append (Result, ","); end if;\nAppend (Result, {item});\nend loop;\nAppend (Result, "{end}");\nreturn To_String (Result);'
         else:
             return scalar(key, name, schema)
-        specs.append(f'function Encode (Value : {name}) return String;')
-        if not body.startswith('Result :'):
-            body = 'begin\n' + body
-        bodies.append(f'function Encode (Value : {name}) return String is\n{body}\nend Encode;')
+
         return name
     def scalar(key, name, schema):
+        if key not in definitions:
+            identity = json.dumps(schema, sort_keys=True)
+            if identity in scalar_names:
+                aliases[key] = scalar_names[identity]
+                return scalar_names[identity]
+            kind = schema.get('type')
+            if 'const' in schema:
+                semantic = 'Literal_' + str(schema['const'])
+            else:
+                semantic = {'string':'Text', 'boolean':'Boolean', 'integer':('Unsigned' if schema.get('format', '').startswith('uint') else 'Integer'), 'number':'Number', 'null':'Null'}.get(kind, 'JSON')
+            candidate = identifier(semantic)
+            # Different value constraints share transport scalars; native Rust checks them.
+            transport = ('literal', json.dumps(schema['const'])) if 'const' in schema else ('value', semantic)
+            if transport in scalar_names:
+                aliases[key] = scalar_names[transport]
+                return scalar_names[transport]
+            name = candidate
+            scalar_names[identity] = name
+            scalar_names[transport] = name
+            aliases[key] = name
         kind = schema.get('type')
         const = schema.get('const', ...)
         alternatives = schema.get('oneOf', [])
@@ -79,31 +118,27 @@ def render(definitions):
             schema = alternatives[0]
             const = schema.get('const', ...)
             kind = schema.get('type')
-        if const is not ...:
+        values = schema.get('enum')
+        if values and all(isinstance(value, str) for value in values):
+            literals = [identifier(key + '_' + value) for value in values]
+            specs.append(f'type {name} is (' + ',\n'.join(literals) + ');')
+        elif const is not ...:
             specs.append(f'type {name} is null record;')
-            expression = ada_string(json.dumps(const, ensure_ascii=True))
         elif kind == 'string':
             specs.append(f'type {name} is new Unbounded_String;')
-            expression = 'Quote (To_String (Unbounded_String (Value)))'
         elif kind == 'boolean':
             specs.append(f'type {name} is new Boolean;')
-            expression = '(if Value then "true" else "false")'
         elif kind == 'integer':
             base = 'Interfaces.Unsigned_64' if schema.get('format') in ('uint', 'uint64', 'uint32') else 'Interfaces.Integer_64'
             specs.append(f'type {name} is new {base};')
-            expression = f'Ada.Strings.Fixed.Trim ({name}\'Image (Value), Ada.Strings.Both)'
         elif kind == 'number':
             specs.append(f'type {name} is new Long_Float;')
-            expression = f'Ada.Strings.Fixed.Trim ({name}\'Image (Value), Ada.Strings.Both)'
         elif kind == 'null':
             specs.append(f'type {name} is null record;')
-            expression = '"null"'
         else:
             # Only schema-declared arbitrary JSON is transported verbatim.
-            specs.append(f'type {name} is new JSON_Value;')
-            expression = 'To_String (Unbounded_String (Value))'
-        specs.append(f'function Encode (Value : {name}) return String;')
-        bodies.append(f'function Encode (Value : {name}) return String is\nbegin\nreturn {expression};\nend Encode;')
+            specs.append(f'subtype {name} is JSON_Value;')
+
         return name
     for key, value in definitions.items():
         emit(key, value)
@@ -111,36 +146,54 @@ def render(definitions):
 with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
+with Thinkthen.Values;
 package Thinkthen.Requests is
--- Arbitrary JSON content only; native admission owns its syntax and meaning.
-type JSON_Value is new Unbounded_String;
+-- Arbitrary values use owned native trees; Rust owns their admission.
+subtype JSON_Value is Thinkthen.Values.Value;
+use type Thinkthen.Values.Value;
+generic
+   type Element is private;
+package Optional_Values is
+   type Optional (Present : Boolean := False) is record
+      case Present is
+         when True => Value : Element;
+         when False => null;
+      end case;
+   end record;
+end Optional_Values;
 ''' + '\n'.join(specs) + '\nend Thinkthen.Requests;\n'
-    body = '''-- Generated transport only. Native admission owns all semantic rules.
-with Ada.Strings.Fixed;
-package body Thinkthen.Requests is
-function Quote (Value : String) return String is
-Result : Unbounded_String := To_Unbounded_String ("""");
-Hex : constant String := "0123456789abcdef";
-begin
-for C of Value loop
-case C is
-when '"' => Append (Result, "\\""");
-when '\\' => Append (Result, "\\\\");
-when Character'Val (0) .. Character'Val (31) =>
-Append (Result, "\\u00" & Hex (Character'Pos (C) / 16 + 1) & Hex (Character'Pos (C) mod 16 + 1));
-when others => Append (Result, C);
-end case;
-end loop;
-Append (Result, '"');
-return To_String (Result);
-end Quote;
-procedure Add (Result : in out Unbounded_String; Key, Value : String) is
-begin
-if Length (Result) > 1 then Append (Result, ","); end if;
-Append (Result, Quote (Key) & ":" & Value);
-end Add;
-''' + '\n'.join(bodies) + '\nend Thinkthen.Requests;\n'
-    return spec, body
+    if names is not None:
+        names.update({key: aliases.get(key, identifier(key)) for key in done})
+    return spec, ''
+
+
+def request_helpers(definitions, names):
+    """Construction-only helpers preserve the schema's typed alternatives."""
+    output = ['subtype Question is ' + names['RequestQuestion'] + ';',
+              'subtype Input is ' + names['RequestInput'] + ';',
+              'subtype Item is ' + names['RequestItem'] + ';',
+              'subtype Items is T_RequestItem_List;']
+    questions = definitions['RequestQuestion']['variants']
+    def selector(kind, field, parameter, expression):
+        index, branch = next((i, key) for i, (key, _) in enumerate(questions) if key.endswith('_' + kind))
+        aggregate = f"{names['RequestQuestion']}'(Kind => {identifier('RequestQuestion_arm_' + kind)}, V_{index} => ({identifier(field)} => {expression}, others => <>))"
+        return f'function {parameter} return {names["RequestQuestion"]} is ({aggregate});'
+    for kind, field, public in [('text','text','Text_Question'), ('file','path','Question_File'), ('name','name','Question_Name'), ('reference','reference','Question_Reference')]:
+        output.append(selector(kind, field, public + ' (Value : String)', 'T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value))'))
+    for function in ('recognize','relate'):
+        index, branch = next((i, key) for i, (key, _) in enumerate(definitions['RequestDefinition']['variants']) if function in definitions[key].get('properties', {}))
+        field = definitions[branch]['properties'][function]
+        typ = names[field['$ref'].removeprefix('#/$defs/')]
+        definition = f"{names['RequestDefinition']}'(Kind => {identifier('RequestDefinition_arm_' + branch.removeprefix('RequestDefinition_'))}, V_{index} => ({identifier(function)} => Value, others => <>))"
+        output.append(selector('definition','value',function.title() + '_Question (Value : ' + typ + ')',definition))
+        definition = f"{names['RequestDefinition']}'(Kind => {identifier('RequestDefinition_arm_' + branch.removeprefix('RequestDefinition_'))}, V_{index} => Value)"
+        output.append(selector('definition','value',function.title() + '_Question (Value : ' + names[branch] + ')',definition))
+    output += [
+        "function Text_Item (Value : String) return T_RequestItem is (T_RequestItem'(T_original => (Present => True, Value => (Kind => T_RequestOriginal_arm_text, V_0 => (T_text => T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Value)), others => <>))), others => <>));",
+        "function Items_Input (Value : T_RequestItem_List) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_records, V_2 => (T_items => Value, others => <>)));",
+        "function File_Input (Path : String) return T_RequestInput is (T_RequestInput'(Kind => T_RequestInput_arm_source, V_5 => (T_source => (T_paths => T_Text_List'[T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Path))], others => <>), others => <>)));",
+    ]
+    return '\n'.join(output)
 
 
 def ada_string(value):
@@ -151,7 +204,7 @@ def header(root, env):
     with tempfile.TemporaryDirectory(prefix='thinkthen-ada-header-') as temporary:
         work = Path(temporary)
         # Use a relative canonical basename so no checkout path reaches output.
-        (work / 'thinkthen.h').write_bytes((root / 'libraries/c/include/thinkthen.h').read_bytes())
+        (work / 'thinkthen.h').write_text(selected_header((root / 'libraries/c/include/thinkthen.h').read_text(), 'ada'))
         subprocess.run(['gcc', '-c', '-fdump-ada-spec', 'thinkthen.h'], cwd=work,
                        env=env, check=True, capture_output=True)
         source = (work / 'thinkthen_h.ads').read_text()
@@ -170,27 +223,59 @@ def header(root, env):
 def generate(root, graph, prepare, env, check):
     schema = json.loads((root / 'specification/request.schema.json').read_text())
     schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-    spec, body = render(prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure'))))
+    definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
+    names, schemas = {}, {}
+    spec, _ = render(definitions, names, schemas)
+    spec = spec.replace('end Thinkthen.Requests;', request_helpers(definitions, names) + '\nend Thinkthen.Requests;')
+    from templates.ada_native import render as native_render
+    native_spec, native_body = native_render(definitions, names, schemas)
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
-                  'with Thinkthen.Requests; use Thinkthen.Requests;',
+                  'with Thinkthen.Requests; use Thinkthen.Requests;', 'with Thinkthen.Inputs;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['package body Thinkthen.Sessions.Calls is']
-    for i, arm in enumerate(schema['$defs']['RequestCall']['oneOf']):
-        function = arm['properties']['function']['const']
-        typename = identifier('RequestCall_' + function)
-        declaration = f'procedure {function.title()} (Owner : in out Session; Request : {typename})'
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Thinkthen.Inputs.Calls;', 'with Thinkthen.Native_Values;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
+    version = identifier('RequestVersion_' + enum_values(schema['$defs']['RequestVersion'])[0])
+    for function in enum_values(schema['$defs']['RequestFunction']):
+        declaration = f'procedure {function.title()} (Owner : in out Session; Request : T_RequestCall)'
         shared = declaration.replace('(Owner', '(Client : Engine; Owner')
         calls_spec += [declaration + ';', shared + ';']
-        calls_body.append(declaration + ' is\nbegin\nStart (Owner, (T_schema => (null record), T_call => (Kind => ' + identifier('RequestCall_arm_RequestCall_' + function) + f', V_{i} => Request)));\nend {function.title()};')
-        calls_body.append(shared + ' is\nbegin\nStart (Client, Owner, (T_schema => (null record), T_call => (Kind => ' + identifier('RequestCall_arm_RequestCall_' + function) + f', V_{i} => Request)));\nend {function.title()};')
+        for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
+            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', Request, "' + function + '");\nend ' + function.title() + ';')
+    for function in enum_values(schema['$defs']['RequestFunction']):
+        declaration = f'procedure {function.title()} (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False))'
+        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
+        calls_spec += [declaration + ';', shared + ';']
+        for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
+            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', (T_question => Question, T_input => Input, T_options => Options, others => <>), "' + function + '");\nend ' + function.title() + ';')
+    for function in enum_values(schema['$defs']['RequestFunction']):
+        declaration = f'procedure {function.title()} (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options)'
+        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
+        calls_spec += [declaration+';',shared+';']
+        for signature,owner in ((declaration,'Owner'),(shared,'Client, Owner')):
+            calls_body.append(signature+' is\nbegin\nThinkthen.Inputs.Calls.'+function.title()+' ('+owner+', Question, Input, Options);\nend '+function.title()+';')
+    calls_spec.insert(1, 'with Thinkthen.Values;')
+    calls_spec.append('function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value;')
+    from templates.ada_native import plan
+    calls_body.extend(plan(schema['$defs']['RequestFunction'], (root / 'libraries/c/include/thinkthen.h').read_text()))
     calls_spec.append('end Thinkthen.Sessions.Calls;')
     calls_body.append('end Thinkthen.Sessions.Calls;')
     outputs = {'thinkthen-sessions-calls.ads': '\n'.join(calls_spec) + '\n',
                'thinkthen-sessions-calls.adb': '\n'.join(calls_body) + '\n',
-               'thinkthen-requests.ads': spec, 'thinkthen-requests.adb': body,
+               'thinkthen-requests.ads': spec,
+               'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
+    from templates.ada_inputs import outputs as input_outputs
+    outputs.update(input_outputs(definitions, names, schemas))
+    from templates.ada_value_readers import outputs as value_reader_outputs
+    outputs.update(value_reader_outputs())
+    from templates.ada_answers import outputs as answer_outputs
+    results = json.loads((root / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+    outputs.update(answer_outputs(prepare(graph(results, ('completesessionPacket',)))))
+    from templates.ada_values import outputs as value_outputs
+    outputs.update(value_outputs())
+    from templates.ada_usage import outputs as usage_outputs
+    outputs.update(usage_outputs((root / 'libraries/c/include/thinkthen.h').read_text()))
     for name, content in outputs.items():
-        path = root / 'libraries/ada/src' / name
+        path = output_path(root, 'ada', name)
         if check:
             if not path.exists() or path.read_text() != content:
                 raise SystemExit(f'generated Ada declaration differs: {path}')

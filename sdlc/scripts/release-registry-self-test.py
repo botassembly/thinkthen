@@ -34,6 +34,10 @@ TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "c
         "libraries/dart/lib/thinkthen_dart.dart")
 
 
+TREE += ('sdlc/scripts/registry-readmes.py', 'README.md', 'libraries/go/README.md',
+         'libraries/csharp/README-PUBLIC.md', 'libraries/jvm/README-PUBLIC.md', 'libraries/dart/README-PUBLIC.md')
+
+
 def version():
     return next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
                 if line.startswith('version = "'))
@@ -60,11 +64,12 @@ def archive(folder, family, files, target=TARGET):
 def nupkg(identity, v):
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w") as package:
-        package.writestr("Botassembly.ThinkThen.nuspec", f'<?xml version="1.0"?><package xmlns="http://schemas.microsoft.com/'
-                         f'packaging/2013/05/nuspec.xsd"><metadata><id>{identity}</id><version>{v}</version>'
-                         f'</metadata></package>')
+        manifest = ET.parse(REPO / 'libraries/csharp/Botassembly.ThinkThen.nuspec').getroot()
+        manifest.find('{*}metadata/{*}id').text = identity
+        manifest.find('{*}metadata/{*}version').text = v
+        package.writestr("Botassembly.ThinkThen.nuspec", ET.tostring(manifest))
         package.writestr("lib/net8.0/ThinkThen.dll", b"dll")
-        package.writestr("README.md", b"readme")
+        package.writestr("README.md", (REPO / "libraries/csharp/README-PUBLIC.md").read_bytes())
         package.writestr("LICENSE", b"MIT\n")
         package.writestr("[Content_Types].xml", '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="dll" ContentType="application/octet"/><Default Extension="so" ContentType="application/octet"/></Types>')
         package.writestr("runtimes/linux-x64/native/libthinkthen.so", b"native-" + TARGET.encode())
@@ -83,23 +88,25 @@ def tree(root, plant):
     for path in TREE:
         (root / path).parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(REPO / path, root / path)
+    shutil.copytree(REPO / "libraries/jvm/examples", root / "libraries/jvm/examples")
     (root / "sdlc/scripts").mkdir(parents=True, exist_ok=True)
     shutil.copyfile(REPO / "sdlc/scripts/release-registry.py", root / "sdlc/scripts/release-registry.py")
     v = version()
     platform = root / "platform"
     platform.mkdir()
     files = {
-        "csharp": {f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", v)},
+        "csharp": {f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", v), "README.md": (root / "libraries/csharp/README-PUBLIC.md").read_bytes()},
         "jvm": {"pom.xml": (root / "libraries/jvm/pom.xml").read_bytes(),
-                "README.md": (root / "libraries/jvm/README.md").read_bytes(),
+                "README.md": (root / "libraries/jvm/README-PUBLIC.md").read_bytes(),
                 "LICENSE": b"MIT\n", "product-inventory.json": b"{}\n",
                 **{f"thinkthen-{kind}.jar": jar(kind) for kind in ("session", "kotlin", "scala")}},
         "dart": {"pubspec.yaml": (root / "libraries/dart/pubspec.yaml").read_bytes(), "pubspec.lock": b"lock",
-                 "README.md": b"readme", "lib/thinkthen_dart.dart": b"library;"},
+                 "README.md": (root / "libraries/dart/README-PUBLIC.md").read_bytes(), "lib/thinkthen_dart.dart": b"library;"},
     }
     spec = importlib.util.spec_from_file_location('inventory', REPO / 'sdlc/scripts/package-inventory.py')
     inventory = importlib.util.module_from_spec(spec); spec.loader.exec_module(inventory)
     definition = inventory.jvm_inventory()
+    files['jvm'].update({name: (REPO / 'libraries/jvm' / name).read_bytes() for name in definition['examples']})
     for classifier, asset in definition['native'].items():
         library = asset['files'][0].rsplit('/', 1)[-1]
         native = ('native-' + asset['target']).encode()
@@ -118,7 +125,7 @@ def tree(root, plant):
         (platform / name).write_text("0" * 64 + (platform / name).read_text()[64:])
     git = ["git", "-c", "user.name=t", "-c", "user.email=t@invalid", "-c", "commit.gpgsign=false"]
     subprocess.run(["git", "init", "-q", str(root)], check=True)
-    subprocess.run([*git, "-C", str(root), "add", "-A", "--", *TREE, "sdlc"], check=True)
+    subprocess.run([*git, "-C", str(root), "add", "-A", "--", *TREE, "libraries/jvm/examples", "sdlc"], check=True)
     subprocess.run([*git, "-C", str(root), "commit", "-qm", "fixture"], check=True)
     return subprocess.check_output(["git", "-C", str(root), "rev-parse", "HEAD"], text=True).strip()
 
@@ -328,7 +335,7 @@ def apple_package_cases():
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(REPO / name, destination)
         for name in ('crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
-                     'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh'):
+                     'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / name, destination)
@@ -393,6 +400,8 @@ def main():
          "nupkg identity differs"),
         ("nupkg-version", lambda r, f: f["csharp"].update({f"Botassembly.ThinkThen.{v}.nupkg": nupkg("Botassembly.ThinkThen", "9.9.9")}),
          "nupkg identity differs"),
+        ("missing-jvm-example", lambda r, f: f["jvm"].pop(next(name for name in f["jvm"] if name.startswith("examples/"))),
+         "JVM archive lacks " + next(path.relative_to(REPO / 'libraries/jvm').as_posix() for path in sorted((REPO / 'libraries/jvm/examples').rglob('*')) if path.is_file())),
         ("pom-group", lambda r, f: f["jvm"].update({"pom.xml": f["jvm"]["pom.xml"].replace(b"io.github.botassembly", b"io.github.other")}),
          "POM identity differs"),
         ("pom-scm", lambda r, f: f["jvm"].update({"pom.xml": f["jvm"]["pom.xml"].replace(b"<scm>", b"<x>").replace(b"</scm>", b"</x>")}),

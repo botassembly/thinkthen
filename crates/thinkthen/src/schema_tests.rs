@@ -11,7 +11,6 @@ use schemars::transform::RecursiveTransform;
 use serde_json::{Map, Value, json};
 
 use crate::cli::annotate::error_row::Row;
-use crate::cli::recognize::Detailed;
 use crate::cli::relate::result::Details;
 use crate::core::{
     AnnotateResult, DecisionResult, FindResult, NamedValues, RecordValue, RelationEdge,
@@ -76,12 +75,15 @@ fn generated(reference: &str) -> String {
     let mut generator = SchemaSettings::draft2020_12()
         .for_serialize()
         .with_transform(RecursiveTransform(|schema: &mut Schema| {
-            schema.remove("title");
             schema.remove("description");
         }))
         .into_generator();
     // The bare value each verb prints at the C interface, from the type it prints.
     let edges = generator.subschema_for::<Vec<RelationEdge<RelationEntity>>>();
+    let mut score = generator.subschema_for::<f64>().to_value();
+    score["description"] = json!(
+        "Probability-weighted position from 0 to the number of levels minus one. A question that says 1 to 5 still returns a position from 0 to 4 for five levels."
+    );
     let named = [
         (
             "decide",
@@ -92,7 +94,7 @@ fn generated(reference: &str) -> String {
             generator.subschema_for::<Option<String>>().to_value(),
         ),
         ("tag", generator.subschema_for::<Vec<String>>().to_value()),
-        ("score", generator.subschema_for::<f64>().to_value()),
+        ("score", score),
         (
             "filter",
             generator.subschema_for::<Vec<String>>().to_value(),
@@ -116,12 +118,7 @@ fn generated(reference: &str) -> String {
         ("details", any_of(&["decisionDetails", "findDetails"])),
         (
             "detailed",
-            any_of(&[
-                "details",
-                "annotateDetails",
-                "recognizeDetails",
-                "relateDetails",
-            ]),
+            any_of(&["details", "annotateDetails", "relateDetails"]),
         ),
     ];
     register(&mut generator);
@@ -150,8 +147,8 @@ fn generated(reference: &str) -> String {
     let root = json!({
         "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$id": if reference == "completeCall" { "urn:thinkthen:complete-call" } else { "urn:thinkthen:result" },
-        "title": "thinkthen native results and compatibility structures",
-        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a C interface value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope."),
+        "title": "thinkthen native results",
+        "description": format!("Generated from the Rust types that serialize each result; do not edit. Rewrite with: {REWRITE}. Validate a scalar result against its verb's definition; scalar definitions describe result/1 and complete definitions describe result/2 and its call envelope."),
         "$ref": format!("#/$defs/{reference}"),
         "$defs": definitions,
     });
@@ -165,7 +162,6 @@ fn register(generator: &mut schemars::SchemaGenerator) {
         generator.subschema_for::<DecisionResult>(),
         generator.subschema_for::<FindResult>(),
         generator.subschema_for::<AnnotateResult>(),
-        generator.subschema_for::<Detailed<'_>>(),
         generator.subschema_for::<Details<'_>>(),
         generator.subschema_for::<RecordValue<Bare>>(),
         generator.subschema_for::<Row<'_>>(),

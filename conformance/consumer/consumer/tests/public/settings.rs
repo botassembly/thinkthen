@@ -364,19 +364,19 @@ fn every_shared_setting_reaches_the_public_engine() {
                 related(&engine, case, step, id);
             } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
-                let answers: Vec<_> = engine
-                    .decide_many_with(
-                        &question,
-                        records.iter().map(|v| v.as_str().expect("text")),
-                        thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
-                            std::num::NonZeroUsize::MIN,
-                        )),
-                    )
-                    .collect();
+                let answers: Vec<_> = crate::api::pull_decisions(
+                    &engine,
+                    &question,
+                    crate::api::plain_records(records.iter().map(|v| v.as_str().expect("text"))),
+                    thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
+                        std::num::NonZeroUsize::MIN,
+                    )),
+                )
+                .collect();
                 assert_eq!(answers.len(), records.len(), "{id}");
                 for answer in &answers[..2] {
                     assert_eq!(
-                        *answer.as_ref().expect("sent row").value(),
+                        answer.as_ref().expect("sent row").result().value(),
                         Answer::Yes,
                         "{id}"
                     );

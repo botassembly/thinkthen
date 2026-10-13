@@ -6,7 +6,7 @@
 
 # thinkthen
 
-ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It works whether the model runs on your own servers, at TypeSafe or at another provider. ThinkThen makes these models simple to call from any language or database. Ask a typed question from a shell script or from your own program, and get back `true`, `false`, a label, or a number. A failed call never looks like an answer.
+ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back `true`, `false`, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.
 
 ```sh
 thinkthen decide 'Does the customer ask for money back?' < message.txt
@@ -38,7 +38,7 @@ The [specification](https://github.com/botassembly/thinkthen/blob/main/specifica
 ## Why not call the model yourself?
 
 - Your code can branch on the answer. `decide` exits 0 for yes, 1 for no and 3 for not sure, and a failure never looks like no. See [How answers work](https://thinkthen.dev/functions/answers/).
-- You pay once. 306 song titles went out in one request: [11,468 input tokens instead of 88,933](sdlc/planning/adr/0055-decide-filter-and-rank-batches-send-each-record-once.md) one at a time. Each question keeps its own saved answer, however records group. See [Pay once](https://thinkthen.dev/start/pay-once/).
+- You pay once. 306 song titles went out in one request: [11,468 input tokens instead of 88,933](https://thinkthen.dev/start/pay-once/) one at a time. Each question keeps its own saved answer, however records group. See [Pay once](https://thinkthen.dev/start/pay-once/).
 - Tests replay saved answers with no key and no network. See [Replay in tests](https://thinkthen.dev/start/replay/).
 - You tune for free. Change the threshold on saved answers with zero new calls, and let `runs audit` pick it from your own labels. See [Tune for free](https://thinkthen.dev/start/tune/).
 - `--plan` prints the first request and counts every request and its expected tokens. It sends nothing. See [See before you send](https://thinkthen.dev/start/plan/).

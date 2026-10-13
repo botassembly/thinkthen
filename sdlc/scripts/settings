@@ -51,13 +51,14 @@ ENGINE_CELLS = {
     "Retries": ("max_retries",), "Recording": ("record", "replay"),
 }
 ENGINE_SOURCES = {
-    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine/settings.rs",
-    "TypeScript": "libraries/typescript/src/node.rs", "Ruby": "libraries/ruby/src/lib.rs",
+    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine.rs",
+    "TypeScript": "libraries/typescript/src/request_node.rs", "Ruby": "libraries/ruby/src/ffi/request.rs",
     "R": "libraries/r/thinkthen/src/rust/src/lib.rs", "C": "libraries/c/src/settings.rs",
     "DuckDB": "databases/duckdb/bridge/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call/settings.rs",
     "SQLite": "databases/sqlite/src/settings.rs",
 }
 SHARED_SETTINGS = "crates/thinkthen/src/public/settings/json.rs"
+SETTINGS_DELEGATION = re.compile(r"\bEngineBuilder\s*::\s*from_settings_json\s*\(")
 
 
 def prose(text):
@@ -170,7 +171,7 @@ def both_ways(page, have, want, missing, stale):
 
 
 def engine_cells(page, rows, sources=None):
-    """A builder setter and its library or SQL cell must appear together."""
+    """An admitted builder setter and its library or SQL cell must appear together."""
     by_name = {row[0]: row for row in rows}
     def read(path):
         return sources[path] if sources is not None and path in sources else (REPO / path).read_text(encoding="utf-8")
@@ -182,7 +183,7 @@ def engine_cells(page, rows, sources=None):
             continue
         for surface, path in ENGINE_SOURCES.items():
             source = read(path)
-            if surface == "C" and "EngineBuilder::from_settings_json(text)" in source:
+            if SETTINGS_DELEGATION.search(source):
                 shared = read(SHARED_SETTINGS)
                 if "pub fn from_settings_json(" in shared and "document.apply(" in shared:
                     source = shared
@@ -311,21 +312,33 @@ def self_test(flags, names, keys):
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
     rows = table(prose(text))[1]
+    delegated = [surface for surface, path in ENGINE_SOURCES.items()
+                 if SETTINGS_DELEGATION.search((REPO / path).read_text(encoding="utf-8"))]
+    timeout_errors = [f"settings.md: {surface} Timeout source has no setter: timeout" for surface in delegated]
+    shared_errors = [f"settings.md: {surface} {name} source has no setter: {setter}"
+                     for name, setters in ENGINE_CELLS.items() for surface in delegated for setter in setters]
     source_cases = [
-        ("Python", ENGINE_SOURCES["Python"], ".timeout(", ".missing_timeout("),
-        ("C", SHARED_SETTINGS, "builder.timeout(", "builder.missing_timeout("),
-        ("C", ENGINE_SOURCES["C"], "EngineBuilder::from_settings_json(text)", "EngineBuilder::missing_settings(text)"),
+        ("shared timeout", SHARED_SETTINGS, "builder.timeout(", "builder.missing_timeout(", timeout_errors),
+        ("shared admission", SHARED_SETTINGS, "pub fn from_settings_json(", "pub fn missing_settings(", shared_errors),
+        ("shared application", SHARED_SETTINGS, "document.apply(", "document.missing_apply(", shared_errors),
+        ("R timeout", ENGINE_SOURCES["R"], "builder.timeout(", "builder.missing_timeout(",
+         ["settings.md: R Timeout source has no setter: timeout"]),
     ]
-    for surface, path, old, new in source_cases:
+    for surface in delegated:
+        expected = [f"settings.md: {surface} {name} source has no setter: {setter}"
+                    for name, setters in ENGINE_CELLS.items() for setter in setters]
+        source_cases.append((surface + " delegation", ENGINE_SOURCES[surface],
+                             "::from_settings_json(", "::missing_settings(", expected))
+    for name, path, old, new, expected in source_cases:
         source = (REPO / path).read_text(encoding="utf-8")
+        if old not in source:
+            bad += 1
+            print(f"settings self-test: {name}: source plant has no target", file=sys.stderr)
+            continue
         actual = engine_cells("settings.md", rows, {path: source.replace(old, new)})
-        expected = ([f"settings.md: C {name} source has no setter: {setter}"
-                     for name, setters in ENGINE_CELLS.items() for setter in setters]
-                    if path == ENGINE_SOURCES["C"] else
-                    [f"settings.md: {surface} Timeout source has no setter: timeout"])
         if actual != expected:
             bad += 1
-            print(f"settings self-test: {surface} source setter: expected {expected}, got {actual}", file=sys.stderr)
+            print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
     total = len(planted) + len(source_cases) + 1
     print(f"settings self-test: {total - bad}/{total} cases hold")
     return bad

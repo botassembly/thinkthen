@@ -76,6 +76,11 @@ impl std::fmt::Debug for Request {
     }
 }
 impl Request {
+    /// Construct a filter call with typed question, input and controls.
+    #[must_use]
+    pub fn filter(arguments: RequestArguments) -> Self {
+        Self::for_function(RequestFunction::Filter, arguments)
+    }
     /// Construct the current request from typed arguments.
     #[must_use]
     pub fn new(mut call: RequestCall) -> Self {
@@ -121,18 +126,7 @@ impl Request {
                 _ => RequestInput::Records { items },
             };
         }
-        let call = match function {
-            RequestFunction::Decide => RequestCall::Decide(arguments),
-            RequestFunction::Choose => RequestCall::Choose(arguments),
-            RequestFunction::Tag => RequestCall::Tag(arguments),
-            RequestFunction::Score => RequestCall::Score(arguments),
-            RequestFunction::Filter => RequestCall::Filter(arguments),
-            RequestFunction::Rank => RequestCall::Rank(arguments),
-            RequestFunction::Find => RequestCall::Find(arguments),
-            RequestFunction::Annotate => RequestCall::Annotate(arguments),
-            RequestFunction::Recognize => RequestCall::Recognize(arguments),
-            RequestFunction::Relate => RequestCall::Relate(arguments),
-        };
+        let call = RequestCall::new(function, arguments);
         Self::new(call)
     }
     /// Construct a call from the kind of a prepared question definition.
@@ -331,78 +325,71 @@ impl RequestFunction {
     }
 }
 
-/// The closed function tag selects one native invocation.
-#[derive(Clone, Deserialize, Serialize)]
+/// One closed function tag with the same argument object for every function.
+#[derive(Clone, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema))]
-#[serde(tag = "function", rename_all = "lowercase", deny_unknown_fields)]
-pub enum RequestCall {
-    /// A yes/no judgment.
-    Decide(RequestArguments),
-    /// One ordered option.
-    Choose(RequestArguments),
-    /// Every applicable label.
-    Tag(RequestArguments),
-    /// A placement on ordered levels.
-    Score(RequestArguments),
-    /// Keep passing records.
-    Filter(RequestArguments),
-    /// Order records.
-    Rank(RequestArguments),
-    /// Select a text unit.
-    Find(RequestArguments),
-    /// Ask a named question set.
-    Annotate(RequestArguments),
-    /// Identify named entities.
-    Recognize(RequestArguments),
-    /// Judge entity relations.
-    Relate(RequestArguments),
+#[serde(deny_unknown_fields)]
+pub struct RequestCall {
+    /// The requested judging function.
+    pub function: RequestFunction,
+    /// The shared typed question, input and caller controls.
+    #[serde(flatten)]
+    pub arguments: RequestArguments,
 }
 impl RequestCall {
-    /// The function selected by the variant.
+    /// Construct one typed invocation.
+    #[must_use]
+    pub const fn new(function: RequestFunction, arguments: RequestArguments) -> Self {
+        Self {
+            function,
+            arguments,
+        }
+    }
+    /// The function selected by the call.
     #[must_use]
     pub const fn function(&self) -> RequestFunction {
-        match self {
-            Self::Decide(_) => RequestFunction::Decide,
-            Self::Choose(_) => RequestFunction::Choose,
-            Self::Tag(_) => RequestFunction::Tag,
-            Self::Score(_) => RequestFunction::Score,
-            Self::Filter(_) => RequestFunction::Filter,
-            Self::Rank(_) => RequestFunction::Rank,
-            Self::Find(_) => RequestFunction::Find,
-            Self::Annotate(_) => RequestFunction::Annotate,
-            Self::Recognize(_) => RequestFunction::Recognize,
-            Self::Relate(_) => RequestFunction::Relate,
-        }
+        self.function
     }
     pub(crate) fn arguments_mut(&mut self) -> &mut RequestArguments {
-        match self {
-            Self::Decide(a)
-            | Self::Choose(a)
-            | Self::Tag(a)
-            | Self::Score(a)
-            | Self::Filter(a)
-            | Self::Rank(a)
-            | Self::Find(a)
-            | Self::Annotate(a)
-            | Self::Recognize(a)
-            | Self::Relate(a) => a,
-        }
+        &mut self.arguments
     }
-    /// Borrow the typed arguments regardless of the function.
+    /// Borrow the shared typed arguments.
     #[must_use]
     pub const fn arguments(&self) -> &RequestArguments {
-        match self {
-            Self::Decide(a)
-            | Self::Choose(a)
-            | Self::Tag(a)
-            | Self::Score(a)
-            | Self::Filter(a)
-            | Self::Rank(a)
-            | Self::Find(a)
-            | Self::Annotate(a)
-            | Self::Recognize(a)
-            | Self::Relate(a) => a,
+        &self.arguments
+    }
+}
+impl<'de> Deserialize<'de> for RequestCall {
+    fn deserialize<D: serde::Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {
+        // A flat closed decoder refuses unknown fields; flatten cannot enforce it.
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Document {
+            function: RequestFunction,
+            question: RequestQuestion,
+            input: RequestInput,
+            #[serde(default)]
+            options: RequestOptions,
         }
+        struct Object;
+        impl<'de> serde::de::Visitor<'de> for Object {
+            type Value = Document;
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("a request call object")
+            }
+            fn visit_map<A: serde::de::MapAccess<'de>>(self, map: A) -> Result<Document, A::Error> {
+                Document::deserialize(serde::de::value::MapAccessDeserializer::new(map))
+            }
+        }
+        let document = decoder.deserialize_map(Object)?;
+        Ok(Self::new(
+            document.function,
+            RequestArguments {
+                question: document.question,
+                input: document.input,
+                options: document.options,
+            },
+        ))
     }
 }
 

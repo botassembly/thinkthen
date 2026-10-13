@@ -16,7 +16,6 @@ use std::time::Duration;
 /// Implement only with the settled complete native execution path. The object
 /// owns one resolved Engine and its default cache; no subprocess or host helper.
 pub(super) trait Executor: Send + Sync + 'static {
-    fn output_schema(&self) -> Value;
     fn execute(
         &self,
         invocation: Invocation,
@@ -134,7 +133,7 @@ fn supervise<W: Write + Send + 'static, D: Executor>(
                 output.fault(Some(&id), fault)?;
             }
         } else {
-            let outcome = immediate(&message, executor, &mut state.phase);
+            let outcome = immediate(&message, &mut state.phase);
             match outcome {
                 Ok(value) => output.result(id, value)?,
                 Err(fault) => output.fault(Some(id), fault)?,
@@ -221,11 +220,7 @@ fn start_call<W: Write + Send + 'static, D: Executor>(
     Ok(())
 }
 
-fn immediate<D: Executor>(
-    message: &Message,
-    executor: &Arc<D>,
-    phase: &mut Phase,
-) -> Result<Value, Fault> {
+fn immediate(message: &Message, phase: &mut Phase) -> Result<Value, Fault> {
     match message.method.as_str() {
         "initialize" if matches!(phase, Phase::New) => {
             let params: protocol::Initialize = protocol::params(message)?;
@@ -248,7 +243,7 @@ fn immediate<D: Executor>(
         }
         "tools/list" if matches!(phase, Phase::Ready) => {
             protocol::empty_params(message)?;
-            Ok(tools::list(&executor.output_schema()))
+            Ok(tools::list())
         }
         "tools/list" => Err(Fault::STATE),
         _ => Err(Fault::METHOD),

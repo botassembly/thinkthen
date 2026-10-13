@@ -41,7 +41,9 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-cobol-generated-abi-') as tem
             cobol.extend([f'call static "field_offset" using by reference {group} {field} of {group} returning measured',f'display "{name} {member} offset " measured',f'display "{name} {member} width " length of {field} of {group}'])
         cobol.append('free ' + group); counted += 1
     for name,value in facts['constants'].items():
-        label = template.identifier(name.lower() + '_constant')
+        if name.startswith('THINKTHEN_REQUEST_'):
+            continue
+        label = template.identifier(name.lower()) + '-k'
         if re.search(r'78 ' + re.escape(label) + ' value ',copybook):
             c.append(f'printf("{name} value %lld\\n",(long long){name});')
             cobol.append(f'display "{name} value " {label}')

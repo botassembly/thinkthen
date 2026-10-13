@@ -56,3 +56,25 @@ def create(folder, version):
         archive = folder / f'thinkthen-c-{version}-{C.TARGET}.zip'
         C.pack(stage, archive)
     return archive
+
+
+def python_package(path):
+    import tomllib
+    import zipfile
+    definition = tomllib.loads((C.REPO / 'libraries/python/pyproject.toml').read_text())['project']
+    metadata = ('Metadata-Version: 2.1\nName: thinkthen\nVersion: ' + definition['version'] +
+                '\nSummary: ' + definition['description'] + '\nDescription-Content-Type: text/markdown\n\n')
+    metadata += (C.REPO / 'libraries/python/README-PUBLIC.md').read_text()
+    with zipfile.ZipFile(path, 'w') as package:
+        package.writestr('thinkthen-' + definition['version'] + '.dist-info/METADATA', metadata)
+
+
+def npm_package(path):
+    import tarfile
+    import io
+    with tarfile.open(path, 'w:gz') as package:
+        for name in ('package.json', 'README.md'):
+            data = (C.REPO / 'libraries/typescript' / name).read_bytes()
+            info = tarfile.TarInfo('package/' + name)
+            info.size = len(data)
+            package.addfile(info, io.BytesIO(data))

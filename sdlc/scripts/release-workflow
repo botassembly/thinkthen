@@ -413,6 +413,7 @@ verify-family)
 	for file in "$2"/*/$3; do
 		[ -f "$file" ] || continue
 		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		case ${file##*/} in thinkthen-first-run*) ;; *) python3 sdlc/scripts/registry-readmes.py auto "$file" ;; esac
 		count=$((count + 1))
 	done
 	[ "$count" = "$4" ] || fail "wanted $4 files matching $3, got $count"
@@ -686,6 +687,7 @@ npm-assemble)
 	for file in "$input"/*/thinkthen-"$version".tgz; do
 		[ -f "$file" ] || continue
 		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		python3 sdlc/scripts/registry-readmes.py typescript "$file"
 		entry=$(tar -tzf "$file" | sed -n '/^package\/thinkthen-.*\.node$/p')
 		[ "$(printf '%s\n' "$entry" | wc -l | tr -d ' ')" = 1 ] || fail "wanted one addon in $file"
 		tar -xOf "$file" "$entry" >"$work/${entry##*/}"
@@ -693,6 +695,7 @@ npm-assemble)
 	done
 	python3 sdlc/scripts/package-inventory.py npm --check "$work" >/dev/null
 	(cd "$work" && npm pack --silent --offline --pack-destination "$output" >/dev/null)
+	python3 sdlc/scripts/registry-readmes.py typescript "$output/thinkthen-$version.tgz"
 	(cd "$output" && sha256 "thinkthen-$version.tgz" >"thinkthen-$version.tgz.sha256")
 	;;
 smoke-bundle)
@@ -807,6 +810,11 @@ draft)
 	[ "$#" = 5 ] || fail 'draft MODE NAME SHA DIR'
 	mode=$2 name=$3 sha=$4; files=$5
 	[ "$sha" = "$(git rev-parse HEAD)" ] || fail 'draft checkout differs from resolve SHA'
+	python3 sdlc/scripts/registry-readmes.py sources
+	for package in "$files"/*; do
+		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
+		python3 sdlc/scripts/registry-readmes.py auto "$package"
+	done
 	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
 	if [ "$mode" = rehearse ]; then
 		# GitHub names a missing tag in a draft but should create its ref only
@@ -902,6 +910,7 @@ tap)
 publish)
 	[ "$#" = 3 ] || fail 'publish NAME SHA'
 	[ "$(git rev-parse HEAD)" = "$3" ] || fail 'publish checkout differs from resolve SHA'
+	python3 sdlc/scripts/registry-readmes.py sources
 	# The Go module lives in libraries/go, so proxy.golang.org reads only a tag with that prefix.
 	go_tag=libraries/go/v$version
 	go_status=$(gh api --include "repos/$GITHUB_REPOSITORY/git/ref/tags/$go_tag" 2>&1 |

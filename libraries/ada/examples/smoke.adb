@@ -10,22 +10,18 @@ procedure Smoke is
    Owner : Session;
    Answer : Packet;
    Read : Read_Status;
-   Request : T_RequestCall_decide;
+   Request : T_RequestCall;
 begin
-   Request.T_question.V_0.T_text := T_RequestQuestion_text_field_text
+   Request.T_question.V_0.T_text := T_Text
      (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_QUESTION")));
-   Request.T_input.V_0.T_text := T_RequestInput_text_field_text
+   Request.T_input.V_0.T_text := T_Text
      (Ada.Strings.Unbounded.To_Unbounded_String (Value ("THINKTHEN_TEST_SMOKE_TEXT")));
    Thinkthen.Sessions.Calls.Decide (Owner, Request);
    Finish (Owner);
    loop
-      Try_Read (Owner, Answer, Read);
+      Next_Packet (Owner, Answer, Read);
       case Read is
-         when Pending => declare
-               Ready : Interfaces.Unsigned_32;
-            begin
-               Wait (Owner, K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, Ready);
-            end;
+         when Pending => raise Program_Error with "blocking read returned pending";
          when Finished => exit;
          when Result =>
             if Status (Answer) /= Success then raise Program_Error with "smoke judgment failed"; end if;

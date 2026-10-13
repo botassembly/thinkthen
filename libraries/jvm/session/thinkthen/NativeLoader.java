@@ -8,6 +8,7 @@ import java.util.*;
 /** Load only the packaged, inventory-selected asset into a private directory. */
 final class NativeLoader {
     private NativeLoader() {}
+    @SuppressWarnings("restricted") // Native-owned pointers satisfy the C ABI lifetime contract.
     static SymbolLookup load() {
         String os = System.getProperty("os.name").toLowerCase(Locale.ROOT);
         String platform = os.contains("linux") ? "linux" : os.contains("mac") ? "osx" : os.contains("windows") ? "win" : "unsupported";

@@ -254,13 +254,15 @@ fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
         .unwrap();
         let recognized =
             crate::api::recognize(&engine, recognition.question(), "", CallOptions::new()).unwrap();
-        let related = engine
-            .relate_complete_with(&relation, [], CallOptions::new())
-            .unwrap();
-        assert_eq!(
-            crate::api::found(&found).unwrap().question().profile(),
-            profile
-        );
+        let related = crate::api::relation(
+            &engine,
+            &relation,
+            crate::api::plain_records(std::iter::empty::<thinkthen::RecordEvidence>()),
+            CallOptions::new(),
+        )
+        .unwrap();
+        let found = crate::api::found(&found).unwrap();
+        assert_eq!(found.question().profile(), profile);
         assert_eq!(
             crate::api::recognition(&recognized)
                 .unwrap()
@@ -268,12 +270,10 @@ fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
                 .profile(),
             profile
         );
-        assert_eq!(related.value().question().profile(), profile);
+        let related = crate::api::related(&related).unwrap().result();
+        assert_eq!(related.question().profile(), profile);
         for (function, bytes) in [
-            (
-                "find",
-                crate::api::found(&found).unwrap().to_json().unwrap(),
-            ),
+            ("find", found.to_json().unwrap()),
             (
                 "recognize",
                 crate::api::recognition(&recognized)
@@ -281,7 +281,7 @@ fn saved_profiled_questions_emit_one_profile_and_preserve_native_readings() {
                     .to_json()
                     .unwrap(),
             ),
-            ("relate", related.value().to_json().unwrap()),
+            ("relate", related.to_json().unwrap()),
         ] {
             let parsed = thinkthen::RawRecord::json(&bytes)
                 .unwrap_or_else(|error| panic!("{function}: {error}"));

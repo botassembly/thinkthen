@@ -3,5 +3,6 @@
     "thinkthen/src/rust"
   ],
   "extension": ".rs",
-  "max": 3693
+  "max": 1643,
+  "scope": "handwritten-production"
 }

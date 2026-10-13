@@ -51,9 +51,15 @@ fn a_token_fired_before_a_batch_ends_ends_it_cancelled() {
     let engine = engine(listener.base());
     let (token, asked) = (CancelToken::new(), question());
     let options = CallOptions::new().cancel(&token);
-    let mut rows = engine.decide_many_with(&asked, ["Refund me."], options);
+    let mut rows = crate::api::pull_decisions(
+        &engine,
+        &asked,
+        crate::api::plain_records(["Refund me."]),
+        options,
+    );
     assert_eq!(
-        rows.next().map(|row| row.map(|row| *row.value()).ok()),
+        rows.next()
+            .map(|row| row.map(|row| row.result().value()).ok()),
         Some(Some(Answer::Yes))
     );
     token.cancel();

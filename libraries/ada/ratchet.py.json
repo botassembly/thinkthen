@@ -1,9 +1,8 @@
 {
   "directory": [
-    "src",
-    "examples",
-    "checks"
+    "."
   ],
   "extension": ".py",
-  "max": 554
+  "max": 0,
+  "scope": "handwritten-production"
 }

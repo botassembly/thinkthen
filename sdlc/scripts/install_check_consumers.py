@@ -43,6 +43,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     "c": '''#include <stdio.h>
 #include <stdlib.h>
 #include <thinkthen.h>
+#include <string.h>
 static char *read_file(const char *path) {
     FILE *f = fopen(path, "rb");
     if (!f || fseek(f, 0, SEEK_END)) return NULL;
@@ -59,10 +60,39 @@ int main(int argc, char **argv) {
     if (!settings || !request) return 1;
     thinkthen_engine *engine = thinkthen_engine_new_with(settings);
     if (!engine) return 1;
-    char *call = thinkthen_call(engine, request);
-    if (!call) { thinkthen_engine_free(engine); return 1; }
-    puts(call); thinkthen_free_string(call); thinkthen_engine_free(engine);
-    free(settings); free(request); return 0;
+    thinkthen_session *session = NULL;
+    int code = thinkthen_session_new(engine, request, strlen(request), &session);
+    thinkthen_engine_free(engine); free(settings); free(request);
+    if (code != THINKTHEN_OK) return 1;
+    int answer = -1, failed = 0; unsigned long long requests = 0;
+    for (;;) {
+        uint32_t status; thinkthen_session_result *owner = NULL;
+        if (thinkthen_session_try_read(session, &status, &owner) != THINKTHEN_OK) { failed = 1; break; }
+        if (status == THINKTHEN_SESSION_END_V1) break;
+        if (status == THINKTHEN_SESSION_PENDING_V1) {
+            uint32_t ready;
+            if (thinkthen_session_wait(session, THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready) != THINKTHEN_OK) { failed = 1; break; }
+            continue;
+        }
+        const thinkthen_complete_session_packet_v1 *packet = NULL;
+        if (thinkthen_session_result_view(owner, &packet) != THINKTHEN_OK) {
+            thinkthen_session_result_free(owner); failed = 1; break;
+        }
+        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1)
+            answer = packet->data.decide_row->value->value.value->value->kind == THINKTHEN_COMPLETE_JSON_BOOLEAN_V1
+                ? (int)packet->data.decide_row->value->value.value->value->data.boolean : -1;
+        if (packet->kind == THINKTHEN_COMPLETE_SESSION_PACKET_TERMINAL_V1) {
+            const thinkthen_complete_session_packet_terminal_v1 *terminal = packet->data.terminal;
+            failed = terminal->failure.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1;
+            if (terminal->facts.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1)
+                requests = (unsigned long long)terminal->facts.value->requests_sent;
+        }
+        thinkthen_session_result_free(owner);
+    }
+    thinkthen_session_free(session);
+    if (failed || answer < 0) return 1;
+    printf("{\\\"value\\\":%s,\\\"requests_sent\\\":%llu}\\n", answer ? "true" : "false", requests);
+    return 0;
 }
 ''',
     "csharp": '''using System;

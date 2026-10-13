@@ -56,7 +56,6 @@ PLACES = [
     ("libraries/typescript/package-lock.json", r'(?m)"": \{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
     ("libraries/ruby/lib/thinkthen/version.rb", r'VERSION = "([^"]+)"', WHOLE),
     ("libraries/r/thinkthen/DESCRIPTION", r"(?m)^Version: (\S+)$", WHOLE),
-    ("libraries/c/src/lib.rs", r"(?m)^/// thinkthen\.h .* version (\d+\.\d+\.\d+)\.$", WHOLE),
     ("libraries/c/src/ffi/values.rs", r"(?m)^/// Version (\d+\.\d+\.\d+), the version", WHOLE),
     *[("libraries/c/src/ffi/values.rs", rf"(?m)^pub const THINKTHEN_VERSION_{n}: i32 = (\d+);$", PART[i])
       for i, n in enumerate(["MAJOR", "MINOR", "PATCH"])],
@@ -313,6 +312,14 @@ def self_test():
          (1, [f"versions: libraries/r/thinkthen/DESCRIPTION reads 9.9.9, and {CRATE} reads {version}"])),
         ("ruby", lambda r: edit(r, "libraries/ruby/lib/thinkthen/version.rb", f'"{version}"', '"9.9.9"'), [],
          (1, [f"versions: libraries/ruby/lib/thinkthen/version.rb reads 9.9.9, and {CRATE} reads {version}"])),
+        ("c-version", lambda r: edit(r, "libraries/c/src/ffi/values.rs", f"Version {version},", "Version 9.9.9,"), [],
+         (1, [f"versions: libraries/c/src/ffi/values.rs reads 9.9.9, and {CRATE} reads {version}"])),
+        ("c-abi", lambda r: edit(r, "libraries/c/src/ffi/values.rs", f"THINKTHEN_VERSION_PATCH: i32 = {patch};",
+                                 f"THINKTHEN_VERSION_PATCH: i32 = {int(patch) + 1};"), [],
+         (1, [f"versions: libraries/c/src/ffi/values.rs reads {int(patch) + 1}, and {CRATE} reads {patch}"])),
+        ("c-header", lambda r: edit(r, "libraries/c/include/thinkthen.h", f"#define THINKTHEN_VERSION_PATCH {patch}\n",
+                                    f"#define THINKTHEN_VERSION_PATCH {int(patch) + 1}\n"), [],
+         (1, [f"versions: libraries/c/include/thinkthen.h reads {int(patch) + 1}, and {CRATE} reads {patch}"])),
         ("csharp", lambda r: edit(r, "libraries/csharp/Botassembly.ThinkThen.nuspec", f"<version>{version}</version>",
                                   "<version>9.9.9</version>"), [],
          (1, [f"versions: libraries/csharp/Botassembly.ThinkThen.nuspec reads 9.9.9, and {CRATE} reads {version}"])),
@@ -358,6 +365,9 @@ def self_test():
          ["--set", "9.8.7"], (1, ["versions: C header generation failed; nothing was written"])),
         ("lost-set", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), ["--set", "9.8.7"],
          (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read; nothing was written"])),
+        ("c-version-lost-set", lambda r: edit(r, "libraries/c/src/ffi/values.rs", "/// Version", "/// Release"),
+         ["--set", "9.8.7"],
+         (1, ["versions: libraries/c/src/ffi/values.rs has no version line the check can read; nothing was written"])),
         ("missing-set", lambda r: (r / "libraries/swift/Package.swift").unlink(), ["--set", "9.8.7"],
          (1, ["versions: missing or unreadable required metadata libraries/swift/Package.swift; nothing was written"])),
         ("swift-name-set", lambda r: edit(r, "libraries/swift/Package.swift", 'name: "ThinkThen",',
@@ -385,6 +395,14 @@ def self_test():
             before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
             got = run(root, argv)
             if name == "set" and got == expected:
+                if (root / "libraries/c/src/lib.rs").read_bytes() != before[root / "libraries/c/src/lib.rs"]:
+                    got = (got, "--set changed the C module root instead of its version owner")
+                values = (root / "libraries/c/src/ffi/values.rs").read_text(encoding="utf-8")
+                if "/// Version 9.8.7, the version" not in values or any(
+                    f"pub const THINKTHEN_VERSION_{name}: i32 = {part};" not in values
+                    for name, part in zip(("MAJOR", "MINOR", "PATCH"), (9, 8, 7))
+                ):
+                    got = (got, "--set did not update the C version owner")
                 zig = (root / "libraries/zig/build.zig").read_text(encoding="utf-8")
                 if "const expected = [_]u32{ 9, 8, 7 };" not in zig or zig.count("package ABI 9.8.7") != 2:
                     got = (got, "--set did not update Zig's numeric ABI and both diagnostics")

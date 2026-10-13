@@ -32,7 +32,7 @@ static class SessionChecks
     public static void ImmediateDiagnostics(Engine engine)
     {
         try {
-            using var refused = engine.StartSession(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = new InputRequestQuestionText { Text = "" }, Input = new InputRequestInputText { Text = "unreachable" } } });
+            using var refused = engine.StartSession(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = new InputRequestQuestionText { Text = "" }, Input = new InputRequestInputText { Text = "unreachable" } } });
             throw new Exception("empty question admitted");
         }
         catch (ThinkThen.Failure error) {
@@ -41,7 +41,7 @@ static class SessionChecks
         Console.WriteLine("INSTALLED_CSHARP_IMMEDIATE_DIAGNOSTICS_PASS");
     }
     static InputRequestQuestionText Question => new() { Text = "Is it?" };
-    static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchAlternative0 { Value = 1 } } } };
+    static InputRequest Request(InputRequestInput input) => new() { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = Question, Input = input, Options = new InputRequestOptions { Batch = new InputRequestBatchAlternative0 { Value = 1 } } } };
     static InputRequestSessionDescriptor Item(string text) => new() { Item = new InputRequestItem { Original = new InputRequestOriginalText { Text = text } } };
     static async Task Arrived(string name)
     {
@@ -58,7 +58,7 @@ static class SessionChecks
         using var bytes = new MemoryStream();
         using (var writer = new Utf8JsonWriter(bytes)) question.Value.Write(writer);
         if (System.Text.Encoding.UTF8.GetString(bytes.ToArray()) != original) throw new Exception("original authored spelling, order or depth changed");
-        return engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallDecide { Question = question, Input = new InputRequestInputText { Text = "owned" } } });
+        return engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionDecide(), Question = question, Input = new InputRequestInputText { Text = "owned" } } });
     }
     public static async Task Run()
     {
@@ -69,19 +69,21 @@ static class SessionChecks
             MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
             MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
         });
+        try { _ = engine.DecideAsync(Question, (IAsyncEnumerable<InputRequestSessionDescriptor>)null!); throw new Exception("null caller feed admitted"); }
+        catch (ArgumentNullException error) when (error.ParamName == "feed") { }
         var authored = engine.ParseQuestion(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":{\"first\":\"First.\",\"second\":\"Second.\"}}");
-        var choices = ((InputAuthoredOptionsAlternative1)((InputRequestDefinitionAlternative1)authored.Value).Value.Options.Value).Value;
+        var choices = ((InputAuthoredOptionsAlternative1)((InputRequestDefinitionAuthoredChoose)authored.Value).Options.Value).Value;
         if (!choices.Keys.SequenceEqual(new[] { "first", "second" })) throw new Exception("native authored order");
         try { ((IDictionary<string,InputAuthoredDescription>)choices).Clear(); throw new Exception("parsed authored map changed"); }
         catch (NotSupportedException) { }
-        var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCallChoose { Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
+        var authoredPlan = engine.Plan(new InputRequest { Schema = new InputRequestVersionAlternative0(), Call = new InputRequestCall { Function = new InputRequestFunctionChoose(), Question = authored, Input = new InputRequestInputText { Text = "owned" } } });
         if (authoredPlan.Requests != 1 || authoredPlan.FirstBodyUtf8.State != PresenceState.Value || !authoredPlan.FirstBodyUtf8.Value.Contains("First.")) throw new Exception("owned authored definition");
         foreach (var (batch, schema) in new[] { ("max", "string"), (@"\u006dax", "string"), ("max", @"\u0073tring"), (@"\u006dax", @"\u0073tring") })
         {
             string original = "{\"item_schema\":{\"type\":\"" + schema + "\"},\"decide\":\"Is it?\",\"batch\":\"" + batch + "\",\"true\":{\"future\":{\"second\":2,\"first\":1}}}";
             var parsed = engine.ParseQuestion(AuthoredQuestionKind.Atomic, original);
-            var definition = ((InputRequestDefinitionAlternative0)parsed.Value).Value;
-            if (definition.Batch.Value is not InputAuthoredDecideBatchAlternative0 || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
+            var definition = ((InputRequestDefinitionAuthoredDecide)parsed.Value);
+            if (definition.Batch.Value is not InputRequestDefinitionAuthoredDecideBatchAlternative0 || definition.ItemSchema.Value is not InputAuthoredInputDeclarationString) throw new Exception("decoded authored constant types");
             var plan = AuthoredPlan(engine, parsed, original);
             if (plan.Requests != 1 || plan.FirstBodyUtf8.State != PresenceState.Value) throw new Exception("decoded authored constant plan");
         }
@@ -154,6 +156,7 @@ static class SessionChecks
         string deepOriginal = "{\"text\":\"session-owned\",\"nested\":" + deepMeaning + "}";
         using var deepDocument = JsonDocument.Parse(deepOriginal, new JsonDocumentOptions { MaxDepth = int.MaxValue });
         OwnedCall call = await engine.DecideAsync(deepQuestion!, new InputRequestInputJson { Value = deepDocument.RootElement }, new InputRequestOptions { Field = new[] { "/text" } });
+        if (call.Decision() != true) throw new Exception("normalized decision lost behind authored meaning");
         var deepRow = call.Packets.OfType<SessionPacketDecideRow>().Single();
         if (deepRow.Value.Value.GetRawText() != deepMeaning || deepRow.Value.Input.Value.GetRawText() != deepOriginal || deepRow.ToPlain()["value"]!["input"]!["nested"]!.ToJsonString() != deepMeaning) throw new Exception("deep meaning or original result changed");
         if (!call.Packets.Any(p => p is SessionPacketDecideRow) || call.Terminal.Facts.State != PresenceState.Value || call.Terminal.Failure.State != PresenceState.Missing) throw new Exception("owned row or terminal");
@@ -203,8 +206,11 @@ static class SessionChecks
             {
                 string text = "queued-after-hold-" + i;
                 Task<bool> push = session.PushAsync(Item(text));
-                if (!push.IsCompleted) { full = push; break; }
-                if (!await push) throw new Exception("intake closed before Full");
+                try
+                {
+                    if (!await push.WaitAsync(TimeSpan.FromSeconds(1))) throw new Exception("intake closed before Full");
+                }
+                catch (TimeoutException) { full = push; break; }
                 admitted.Add(text);
             }
             if (full is null) throw new Exception("queue did not reach Full");

@@ -1,23 +1,342 @@
 // Generated from the shared Rust graph. Do not edit.
-import 'values.dart';
+part of thinkthen_session;
 
-final class InputAuthoredChoose extends NativeObject {
-  InputAuthoredChoose._(super.json);
-  factory InputAuthoredChoose.read(Object? value) =>
-      InputAuthoredChoose._(readObject(value));
-  InputAuthoredChoose(
+final class AnnotateDefinition extends _NativeValue {
+  AnnotateDefinition._(super.fields);
+  factory AnnotateDefinition.read(Object? value) =>
+      AnnotateDefinition._(_readObject(value));
+  AnnotateDefinition(
       {Presence<Object?> batch = const Presence.absent(),
-      required InputAuthoredQuestionText choose,
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<String> profile = const Presence.absent(),
+      required Map<String, AnnotationSpec> questions,
+      Presence<DecisionThreshold> threshold = const Presence.absent()})
+      : super({
+          if (batch.isPresent) "batch": batch.value,
+          if (profile.isPresent) "profile": profile.value,
+          "questions": questions,
+          if (threshold.isPresent) "threshold": threshold.value,
+          "version": 1
+        });
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Map<String, AnnotationSpec> get questions =>
+      (_fields["questions"] as Map<String, Object?>)
+          .map((k, v) => MapEntry(k, AnnotationSpec.read(v)));
+  Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
+      : const Presence.absent();
+  BigInt get version => _readInteger(_fields["version"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["batch", "profile", "questions", "threshold", "version"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+sealed class AnnotationSpec extends _NativeValue {
+  AnnotationSpec(super.fields);
+  factory AnnotationSpec.read(Object? value) {
+    final map = _readObject(value);
+    if (map.containsKey("decide") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag")) return AnnotateQuestionDecide.read(map);
+    if (map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag")) return AnnotateQuestionChoose.read(map);
+    if (map.containsKey("tag") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("score")) return AnnotateQuestionTag.read(map);
+    if (map.containsKey("score") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("tag")) return AnnotateQuestionScore.read(map);
+    throw FormatException("Unknown AnnotationSpec alternative");
+  }
+}
+
+final class AnnotateQuestionChoose extends AnnotationSpec {
+  AnnotateQuestionChoose._(super.fields);
+  factory AnnotateQuestionChoose.read(Object? value) =>
+      AnnotateQuestionChoose._(_readObject(value));
+  AnnotateQuestionChoose(
+      {required Wording choose,
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<ChoiceOptions> options = const Presence.absent(),
+      Presence<Cut> threshold = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          "choose": choose,
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (options.isPresent) "options": options.value,
+          if (threshold.isPresent) "threshold": threshold.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Wording get choose => Wording.read(_fields["choose"]);
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<ChoiceOptions> get options => _fields.containsKey("options")
+      ? Presence.present(ChoiceOptions.read(_fields["options"]))
+      : const Presence.absent();
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "choose",
+            "context_schema",
+            "item_schema",
+            "name",
+            "on",
+            "options",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class AnnotateQuestionDecide extends AnnotationSpec {
+  AnnotateQuestionDecide._(super.fields);
+  factory AnnotateQuestionDecide.read(Object? value) =>
+      AnnotateQuestionDecide._(_readObject(value));
+  AnnotateQuestionDecide(
+      {Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
+      required Wording decide,
+      Presence<Reading> falseValue = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<DecisionThreshold> threshold = const Presence.absent(),
+      Presence<Reading> trueValue = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          "decide": decide,
+          if (falseValue.isPresent) "false": falseValue.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (threshold.isPresent) "threshold": threshold.value,
+          if (trueValue.isPresent) "true": trueValue.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Wording get decide => Wording.read(_fields["decide"]);
+  Presence<Reading> get falseValue => _fields.containsKey("false")
+      ? Presence.present(Reading.read(_fields["false"]))
+      : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
+      : const Presence.absent();
+  Presence<Reading> get trueValue => _fields.containsKey("true")
+      ? Presence.present(Reading.read(_fields["true"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "decide",
+            "false",
+            "item_schema",
+            "name",
+            "on",
+            "threshold",
+            "true",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class AnnotateQuestionScore extends AnnotationSpec {
+  AnnotateQuestionScore._(super.fields);
+  factory AnnotateQuestionScore.read(Object? value) =>
+      AnnotateQuestionScore._(_readObject(value));
+  AnnotateQuestionScore(
+      {Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Levels> levels = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      required Wording score,
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (levels.isPresent) "levels": levels.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          "score": score,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<Levels> get levels => _fields.containsKey("levels")
+      ? Presence.present(Levels.read(_fields["levels"]))
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Wording get score => Wording.read(_fields["score"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "levels",
+            "name",
+            "on",
+            "score",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class AnnotateQuestionTag extends AnnotationSpec {
+  AnnotateQuestionTag._(super.fields);
+  factory AnnotateQuestionTag.read(Object? value) =>
+      AnnotateQuestionTag._(_readObject(value));
+  AnnotateQuestionTag(
+      {Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Labels> labels = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      required Wording tag,
+      Presence<Cut> threshold = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (labels.isPresent) "labels": labels.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          "tag": tag,
+          if (threshold.isPresent) "threshold": threshold.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<Labels> get labels => _fields.containsKey("labels")
+      ? Presence.present(Labels.read(_fields["labels"]))
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Wording get tag => Wording.read(_fields["tag"]);
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "labels",
+            "name",
+            "on",
+            "tag",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class Choose extends _NativeValue {
+  Choose._(super.fields);
+  factory Choose.read(Object? value) => Choose._(_readObject(value));
+  Choose(
+      {Presence<Object?> batch = const Presence.absent(),
+      required Wording choose,
+      Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<InputAuthoredOptions> options = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<ChoiceOptions> options = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -32,91 +351,103 @@ final class InputAuthoredChoose extends NativeObject {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  InputAuthoredQuestionText get choose =>
-      InputAuthoredQuestionText.read(json["choose"]);
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Wording get choose => Wording.read(_fields["choose"]);
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredOptions> get options => json.containsKey("options")
-      ? Presence.present(InputAuthoredOptions.read(json["options"]))
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<ChoiceOptions> get options => _fields.containsKey("options")
+      ? Presence.present(ChoiceOptions.read(_fields["options"]))
       : const Presence.absent();
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "choose",
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "options",
+            "profile",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredCriterion {
+final class Reading implements _EncodedValue {
   final Object? value;
-  const InputAuthoredCriterion._(this.value);
-  factory InputAuthoredCriterion.read(Object? value) =>
-      value is InputAuthoredCriterion ? value : InputAuthoredCriterion._(value);
-  Object? toJson() => value;
-  const InputAuthoredCriterion.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputAuthoredCriterion.alternative1(Map<String, Object?> this.value);
-  Map<String, Object?> get asAlternative1 =>
+  const Reading._(this.value);
+  factory Reading.read(Object? value) =>
+      value is Reading ? value : Reading._(value);
+  Object? _toValue() => value;
+  const Reading.text(String this.value);
+  String get asText => value as String;
+  const Reading.fields(Map<String, Object?> this.value);
+  Map<String, Object?> get asFields =>
       (value as Map<String, Object?>).map((k, v) => MapEntry(k, v));
-  const InputAuthoredCriterion.alternative2(List<Object?> this.value);
-  List<Object?> get asAlternative2 =>
+  const Reading.list(List<Object?> this.value);
+  List<Object?> get asList =>
       (value as List).map((v) => v).toList(growable: false);
-  const InputAuthoredCriterion.nullValue() : value = null;
+  const Reading.nullValue() : value = null;
 }
 
-final class InputAuthoredCut {
+final class Cut implements _EncodedValue {
   final Object? value;
-  const InputAuthoredCut._(this.value);
-  factory InputAuthoredCut.read(Object? value) =>
-      value is InputAuthoredCut ? value : InputAuthoredCut._(value);
-  Object? toJson() => value;
-  const InputAuthoredCut.alternative0(num this.value);
-  num get asAlternative0 => value as num;
-  const InputAuthoredCut.alternative1(String this.value);
-  String get asAlternative1 => value as String;
+  const Cut._(this.value);
+  factory Cut.read(Object? value) => value is Cut ? value : Cut._(value);
+  Object? _toValue() => value;
+  const Cut.number(num this.value);
+  num get asNumber => value as num;
+  const Cut.text(String this.value);
+  String get asText => value as String;
 }
 
-final class InputAuthoredDecide extends NativeObject {
-  InputAuthoredDecide._(super.json);
-  factory InputAuthoredDecide.read(Object? value) =>
-      InputAuthoredDecide._(readObject(value));
-  InputAuthoredDecide(
+final class Decide extends _NativeValue {
+  Decide._(super.fields);
+  factory Decide.read(Object? value) => Decide._(_readObject(value));
+  Decide(
       {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      required InputAuthoredQuestionText decide,
-      Presence<InputAuthoredCriterion> falseValue = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
+      required Wording decide,
+      Presence<Reading> falseValue = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      Presence<InputAuthoredThreshold> threshold = const Presence.absent(),
-      Presence<InputAuthoredCriterion> trueValue = const Presence.absent(),
+      Presence<DecisionThreshold> threshold = const Presence.absent(),
+      Presence<Reading> trueValue = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -132,61 +463,75 @@ final class InputAuthoredDecide extends NativeObject {
           if (trueValue.isPresent) "true": trueValue.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  InputAuthoredQuestionText get decide =>
-      InputAuthoredQuestionText.read(json["decide"]);
-  Presence<InputAuthoredCriterion> get falseValue => json.containsKey("false")
-      ? Presence.present(InputAuthoredCriterion.read(json["false"]))
+  Wording get decide => Wording.read(_fields["decide"]);
+  Presence<Reading> get falseValue => _fields.containsKey("false")
+      ? Presence.present(Reading.read(_fields["false"]))
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  Presence<InputAuthoredThreshold> get threshold =>
-      json.containsKey("threshold")
-          ? Presence.present(InputAuthoredThreshold.read(json["threshold"]))
-          : const Presence.absent();
-  Presence<InputAuthoredCriterion> get trueValue => json.containsKey("true")
-      ? Presence.present(InputAuthoredCriterion.read(json["true"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
       : const Presence.absent();
+  Presence<Reading> get trueValue => _fields.containsKey("true")
+      ? Presence.present(Reading.read(_fields["true"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "decide",
+            "false",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "threshold",
+            "true",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredFind extends NativeObject {
-  InputAuthoredFind._(super.json);
-  factory InputAuthoredFind.read(Object? value) =>
-      InputAuthoredFind._(readObject(value));
-  InputAuthoredFind(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
+final class FindQuestionDefinition extends _NativeValue {
+  FindQuestionDefinition._(super.fields);
+  factory FindQuestionDefinition.read(Object? value) =>
+      FindQuestionDefinition._(_readObject(value));
+  FindQuestionDefinition(
+      {Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      required InputAuthoredQuestionText find,
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
+      required Wording find,
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
@@ -199,222 +544,242 @@ final class InputAuthoredFind extends NativeObject {
           if (profile.isPresent) "profile": profile.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  InputAuthoredQuestionText get find =>
-      InputAuthoredQuestionText.read(json["find"]);
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Wording get find => Wording.read(_fields["find"]);
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "find",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class InputAuthoredInputDeclaration extends NativeObject {
-  InputAuthoredInputDeclaration(super.json);
-  factory InputAuthoredInputDeclaration.read(Object? value) {
-    final map = readObject(value);
-    if (map["type"] == "string")
-      return InputAuthoredInputDeclarationString.read(map);
-    if (map["type"] == "object")
-      return InputAuthoredInputDeclarationObject.read(map);
-    throw FormatException("Unknown InputAuthoredInputDeclaration alternative");
+sealed class QuestionInputDeclaration extends _NativeValue {
+  QuestionInputDeclaration(super.fields);
+  factory QuestionInputDeclaration.read(Object? value) {
+    final map = _readObject(value);
+    if (map["type"] == "string") return InputDeclarationString.read(map);
+    if (map["type"] == "object") return InputDeclarationObject.read(map);
+    throw FormatException("Unknown QuestionInputDeclaration alternative");
   }
 }
 
-final class InputAuthoredInputDeclarationObject
-    extends InputAuthoredInputDeclaration {
-  InputAuthoredInputDeclarationObject._(super.json);
-  factory InputAuthoredInputDeclarationObject.read(Object? value) =>
-      InputAuthoredInputDeclarationObject._(readObject(value));
-  InputAuthoredInputDeclarationObject(
-      {required Map<String, InputAuthoredInputProperty> properties,
+final class InputDeclarationObject extends QuestionInputDeclaration {
+  InputDeclarationObject._(super.fields);
+  factory InputDeclarationObject.read(Object? value) =>
+      InputDeclarationObject._(_readObject(value));
+  InputDeclarationObject(
+      {required Map<String, InputProperty> properties,
       Presence<List<String>> required = const Presence.absent()})
       : super({
           "properties": properties,
           if (required.isPresent) "required": required.value,
           "type": "object"
         });
-  Map<String, InputAuthoredInputProperty> get properties =>
-      (json["properties"] as Map<String, Object?>)
-          .map((k, v) => MapEntry(k, InputAuthoredInputProperty.read(v)));
-  Presence<List<String>> get required => json.containsKey("required")
-      ? Presence.present((json["required"] as List)
+  Map<String, InputProperty> get properties =>
+      (_fields["properties"] as Map<String, Object?>)
+          .map((k, v) => MapEntry(k, InputProperty.read(v)));
+  Presence<List<String>> get required => _fields.containsKey("required")
+      ? Presence.present((_fields["required"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  String get type => json["type"] as String;
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["properties", "required", "type"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredInputDeclarationString
-    extends InputAuthoredInputDeclaration {
-  InputAuthoredInputDeclarationString._(super.json);
-  factory InputAuthoredInputDeclarationString.read(Object? value) =>
-      InputAuthoredInputDeclarationString._(readObject(value));
-  InputAuthoredInputDeclarationString() : super({"type": "string"});
-  String get type => json["type"] as String;
+final class InputDeclarationString extends QuestionInputDeclaration {
+  InputDeclarationString._(super.fields);
+  factory InputDeclarationString.read(Object? value) =>
+      InputDeclarationString._(_readObject(value));
+  InputDeclarationString() : super({"type": "string"});
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class InputAuthoredInputProperty extends NativeObject {
-  InputAuthoredInputProperty(super.json);
-  factory InputAuthoredInputProperty.read(Object? value) {
-    final map = readObject(value);
-    if (map["type"] == "string")
-      return InputAuthoredInputPropertyString.read(map);
-    if (map["type"] == "number")
-      return InputAuthoredInputPropertyNumber.read(map);
-    if (map["type"] == "boolean")
-      return InputAuthoredInputPropertyBoolean.read(map);
-    if (map["type"] == "array")
-      return InputAuthoredInputPropertyArray.read(map);
-    throw FormatException("Unknown InputAuthoredInputProperty alternative");
+sealed class InputProperty extends _NativeValue {
+  InputProperty(super.fields);
+  factory InputProperty.read(Object? value) {
+    final map = _readObject(value);
+    if (map["type"] == "string") return InputPropertyString.read(map);
+    if (map["type"] == "number") return InputPropertyNumber.read(map);
+    if (map["type"] == "boolean") return InputPropertyBoolean.read(map);
+    if (map["type"] == "array") return InputPropertyArray.read(map);
+    throw FormatException("Unknown InputProperty alternative");
   }
 }
 
-final class InputAuthoredInputPropertyArray extends InputAuthoredInputProperty {
-  InputAuthoredInputPropertyArray._(super.json);
-  factory InputAuthoredInputPropertyArray.read(Object? value) =>
-      InputAuthoredInputPropertyArray._(readObject(value));
-  InputAuthoredInputPropertyArray({required Object? items})
+final class InputPropertyArray extends InputProperty {
+  InputPropertyArray._(super.fields);
+  factory InputPropertyArray.read(Object? value) =>
+      InputPropertyArray._(_readObject(value));
+  InputPropertyArray({required Object? items})
       : super({"items": items, "type": "array"});
-  Object? get items => json["items"];
-  String get type => json["type"] as String;
+  Object? get items => _fields["items"];
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["items", "type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputAuthoredInputPropertyBoolean
-    extends InputAuthoredInputProperty {
-  InputAuthoredInputPropertyBoolean._(super.json);
-  factory InputAuthoredInputPropertyBoolean.read(Object? value) =>
-      InputAuthoredInputPropertyBoolean._(readObject(value));
-  InputAuthoredInputPropertyBoolean() : super({"type": "boolean"});
-  String get type => json["type"] as String;
+final class InputPropertyBoolean extends InputProperty {
+  InputPropertyBoolean._(super.fields);
+  factory InputPropertyBoolean.read(Object? value) =>
+      InputPropertyBoolean._(_readObject(value));
+  InputPropertyBoolean() : super({"type": "boolean"});
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputAuthoredInputPropertyNumber
-    extends InputAuthoredInputProperty {
-  InputAuthoredInputPropertyNumber._(super.json);
-  factory InputAuthoredInputPropertyNumber.read(Object? value) =>
-      InputAuthoredInputPropertyNumber._(readObject(value));
-  InputAuthoredInputPropertyNumber() : super({"type": "number"});
-  String get type => json["type"] as String;
+final class InputPropertyNumber extends InputProperty {
+  InputPropertyNumber._(super.fields);
+  factory InputPropertyNumber.read(Object? value) =>
+      InputPropertyNumber._(_readObject(value));
+  InputPropertyNumber() : super({"type": "number"});
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputAuthoredInputPropertyString
-    extends InputAuthoredInputProperty {
-  InputAuthoredInputPropertyString._(super.json);
-  factory InputAuthoredInputPropertyString.read(Object? value) =>
-      InputAuthoredInputPropertyString._(readObject(value));
-  InputAuthoredInputPropertyString() : super({"type": "string"});
-  String get type => json["type"] as String;
+final class InputPropertyString extends InputProperty {
+  InputPropertyString._(super.fields);
+  factory InputPropertyString.read(Object? value) =>
+      InputPropertyString._(_readObject(value));
+  InputPropertyString() : super({"type": "string"});
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputAuthoredLabels {
+final class Labels implements _EncodedValue {
   final Object? value;
-  const InputAuthoredLabels._(this.value);
-  factory InputAuthoredLabels.read(Object? value) =>
-      value is InputAuthoredLabels ? value : InputAuthoredLabels._(value);
-  Object? toJson() => value;
-  const InputAuthoredLabels.alternative0(List<String> this.value);
-  List<String> get asAlternative0 =>
+  const Labels._(this.value);
+  factory Labels.read(Object? value) =>
+      value is Labels ? value : Labels._(value);
+  Object? _toValue() => value;
+  const Labels.list(List<String> this.value);
+  List<String> get asList =>
       (value as List).map((v) => v as String).toList(growable: false);
-  const InputAuthoredLabels.alternative1(Map<String, Object?> this.value);
-  Map<String, Object?> get asAlternative1 =>
+  const Labels.fields(Map<String, Object?> this.value);
+  Map<String, Object?> get asFields =>
       (value as Map<String, Object?>).map((k, v) => MapEntry(k, v));
 }
 
-final class InputAuthoredLevels {
+final class Levels implements _EncodedValue {
   final Object? value;
-  const InputAuthoredLevels._(this.value);
-  factory InputAuthoredLevels.read(Object? value) =>
-      value is InputAuthoredLevels ? value : InputAuthoredLevels._(value);
-  Object? toJson() => value;
-  const InputAuthoredLevels.alternative0(List<String> this.value);
-  List<String> get asAlternative0 =>
+  const Levels._(this.value);
+  factory Levels.read(Object? value) =>
+      value is Levels ? value : Levels._(value);
+  Object? _toValue() => value;
+  const Levels.list(List<String> this.value);
+  List<String> get asList =>
       (value as List).map((v) => v as String).toList(growable: false);
-  const InputAuthoredLevels.alternative1(
-      Map<String, InputAuthoredCriterion> this.value);
-  Map<String, InputAuthoredCriterion> get asAlternative1 =>
-      (value as Map<String, Object?>)
-          .map((k, v) => MapEntry(k, InputAuthoredCriterion.read(v)));
+  const Levels.fields(Map<String, Reading> this.value);
+  Map<String, Reading> get asFields => (value as Map<String, Object?>)
+      .map((k, v) => MapEntry(k, Reading.read(v)));
 }
 
-final class InputAuthoredOptions {
+final class ChoiceOptions implements _EncodedValue {
   final Object? value;
-  const InputAuthoredOptions._(this.value);
-  factory InputAuthoredOptions.read(Object? value) =>
-      value is InputAuthoredOptions ? value : InputAuthoredOptions._(value);
-  Object? toJson() => value;
-  const InputAuthoredOptions.alternative0(List<String> this.value);
-  List<String> get asAlternative0 =>
+  const ChoiceOptions._(this.value);
+  factory ChoiceOptions.read(Object? value) =>
+      value is ChoiceOptions ? value : ChoiceOptions._(value);
+  Object? _toValue() => value;
+  const ChoiceOptions.list(List<String> this.value);
+  List<String> get asList =>
       (value as List).map((v) => v as String).toList(growable: false);
-  const InputAuthoredOptions.alternative1(Map<String, Object?> this.value);
-  Map<String, Object?> get asAlternative1 =>
+  const ChoiceOptions.fields(Map<String, Object?> this.value);
+  Map<String, Object?> get asFields =>
       (value as Map<String, Object?>).map((k, v) => MapEntry(k, v));
 }
 
-final class InputAuthoredPointers {
+final class Pointers implements _EncodedValue {
   final Object? value;
-  const InputAuthoredPointers._(this.value);
-  factory InputAuthoredPointers.read(Object? value) =>
-      value is InputAuthoredPointers ? value : InputAuthoredPointers._(value);
-  Object? toJson() => value;
-  const InputAuthoredPointers.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputAuthoredPointers.alternative1(List<String> this.value);
-  List<String> get asAlternative1 =>
+  const Pointers._(this.value);
+  factory Pointers.read(Object? value) =>
+      value is Pointers ? value : Pointers._(value);
+  Object? _toValue() => value;
+  const Pointers.text(String this.value);
+  String get asText => value as String;
+  const Pointers.list(List<String> this.value);
+  List<String> get asList =>
       (value as List).map((v) => v as String).toList(growable: false);
 }
 
-final class InputAuthoredQuestionText {
+final class Wording implements _EncodedValue {
   final Object? value;
-  const InputAuthoredQuestionText._(this.value);
-  factory InputAuthoredQuestionText.read(Object? value) =>
-      value is InputAuthoredQuestionText
-          ? value
-          : InputAuthoredQuestionText._(value);
-  Object? toJson() => value;
-  const InputAuthoredQuestionText.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputAuthoredQuestionText.alternative1(Map<String, Object?> this.value);
-  Map<String, Object?> get asAlternative1 =>
+  const Wording._(this.value);
+  factory Wording.read(Object? value) =>
+      value is Wording ? value : Wording._(value);
+  Object? _toValue() => value;
+  const Wording.text(String this.value);
+  String get asText => value as String;
+  const Wording.fields(Map<String, Object?> this.value);
+  Map<String, Object?> get asFields =>
       (value as Map<String, Object?>).map((k, v) => MapEntry(k, v));
-  const InputAuthoredQuestionText.alternative2(List<Object?> this.value);
-  List<Object?> get asAlternative2 =>
+  const Wording.list(List<Object?> this.value);
+  List<Object?> get asList =>
       (value as List).map((v) => v).toList(growable: false);
 }
 
-final class InputAuthoredRelate extends NativeObject {
-  InputAuthoredRelate._(super.json);
-  factory InputAuthoredRelate.read(Object? value) =>
-      InputAuthoredRelate._(readObject(value));
-  InputAuthoredRelate(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
+final class Relate extends _NativeValue {
+  Relate._(super.fields);
+  factory Relate.read(Object? value) => Relate._(_readObject(value));
+  Relate(
+      {Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required Object? relate,
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      required RelationSpec relate,
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (contextSchema.isPresent) "context_schema": contextSchema.value,
@@ -427,40 +792,54 @@ final class InputAuthoredRelate extends NativeObject {
           "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Object? get relate => json["relate"];
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  BigInt get version => readInteger(json["version"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  RelationSpec get relate => RelationSpec.read(_fields["relate"]);
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
+  BigInt get version => _readInteger(_fields["version"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "profile",
+            "relate",
+            "threshold",
+            "version",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredRelation extends NativeObject {
-  InputAuthoredRelation._(super.json);
-  factory InputAuthoredRelation.read(Object? value) =>
-      InputAuthoredRelation._(readObject(value));
-  InputAuthoredRelation(
+final class RelationDefinition extends _NativeValue {
+  RelationDefinition._(super.fields);
+  factory RelationDefinition.read(Object? value) =>
+      RelationDefinition._(_readObject(value));
+  RelationDefinition(
       {Presence<bool> either = const Presence.absent(),
       required String name,
       Presence<String> reads = const Presence.absent(),
@@ -475,40 +854,44 @@ final class InputAuthoredRelation extends NativeObject {
           if (source.isPresent) "source": source.value,
           if (target.isPresent) "target": target.value
         });
-  Presence<bool> get either => json.containsKey("either")
-      ? Presence.present(json["either"] as bool)
+  Presence<bool> get either => _fields.containsKey("either")
+      ? Presence.present(_fields["either"] as bool)
       : const Presence.absent();
-  String get name => json["name"] as String;
-  Presence<String> get reads => json.containsKey("reads")
-      ? Presence.present(json["reads"] as String)
+  String get name => _fields["name"] as String;
+  Presence<String> get reads => _fields.containsKey("reads")
+      ? Presence.present(_fields["reads"] as String)
       : const Presence.absent();
-  Presence<bool> get single => json.containsKey("single")
-      ? Presence.present(json["single"] as bool)
+  Presence<bool> get single => _fields.containsKey("single")
+      ? Presence.present(_fields["single"] as bool)
       : const Presence.absent();
-  Presence<String> get source => json.containsKey("source")
-      ? Presence.present(json["source"] as String)
+  Presence<String> get source => _fields.containsKey("source")
+      ? Presence.present(_fields["source"] as String)
       : const Presence.absent();
-  Presence<String> get target => json.containsKey("target")
-      ? Presence.present(json["target"] as String)
+  Presence<String> get target => _fields.containsKey("target")
+      ? Presence.present(_fields["target"] as String)
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "name", "reads", "single", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredScore extends NativeObject {
-  InputAuthoredScore._(super.json);
-  factory InputAuthoredScore.read(Object? value) =>
-      InputAuthoredScore._(readObject(value));
-  InputAuthoredScore(
+final class Score extends _NativeValue {
+  Score._(super.fields);
+  factory Score.read(Object? value) => Score._(_readObject(value));
+  Score(
       {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLevels> levels = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Levels> levels = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required InputAuthoredQuestionText score,
+      required Wording score,
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -522,58 +905,70 @@ final class InputAuthoredScore extends NativeObject {
           "score": score,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLevels> get levels => json.containsKey("levels")
-      ? Presence.present(InputAuthoredLevels.read(json["levels"]))
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<Levels> get levels => _fields.containsKey("levels")
+      ? Presence.present(Levels.read(_fields["levels"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  InputAuthoredQuestionText get score =>
-      InputAuthoredQuestionText.read(json["score"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
+  Wording get score => Wording.read(_fields["score"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "levels",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "score",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredTag extends NativeObject {
-  InputAuthoredTag._(super.json);
-  factory InputAuthoredTag.read(Object? value) =>
-      InputAuthoredTag._(readObject(value));
-  InputAuthoredTag(
+final class Tag extends _NativeValue {
+  Tag._(super.fields);
+  factory Tag.read(Object? value) => Tag._(_readObject(value));
+  Tag(
       {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLabels> labels = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Labels> labels = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required InputAuthoredQuestionText tag,
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      required Wording tag,
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -588,90 +983,105 @@ final class InputAuthoredTag extends NativeObject {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLabels> get labels => json.containsKey("labels")
-      ? Presence.present(InputAuthoredLabels.read(json["labels"]))
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<Labels> get labels => _fields.containsKey("labels")
+      ? Presence.present(Labels.read(_fields["labels"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  InputAuthoredQuestionText get tag =>
-      InputAuthoredQuestionText.read(json["tag"]);
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Wording get tag => Wording.read(_fields["tag"]);
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "labels",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "tag",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputAuthoredThreshold {
+final class DecisionThreshold implements _EncodedValue {
   final Object? value;
-  const InputAuthoredThreshold._(this.value);
-  factory InputAuthoredThreshold.read(Object? value) =>
-      value is InputAuthoredThreshold ? value : InputAuthoredThreshold._(value);
-  Object? toJson() => value;
-  const InputAuthoredThreshold.alternative0(num this.value);
-  num get asAlternative0 => value as num;
-  const InputAuthoredThreshold.alternative1(String this.value);
-  String get asAlternative1 => value as String;
+  const DecisionThreshold._(this.value);
+  factory DecisionThreshold.read(Object? value) =>
+      value is DecisionThreshold ? value : DecisionThreshold._(value);
+  Object? _toValue() => value;
+  const DecisionThreshold.number(num this.value);
+  num get asNumber => value as num;
+  const DecisionThreshold.text(String this.value);
+  String get asText => value as String;
 }
 
-final class InputCacheDocument {
+final class CacheDocument implements _EncodedValue {
   final Object? value;
-  const InputCacheDocument._(this.value);
-  factory InputCacheDocument.read(Object? value) =>
-      value is InputCacheDocument ? value : InputCacheDocument._(value);
-  Object? toJson() => value;
-  const InputCacheDocument.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputCacheDocument.alternative1(bool this.value);
-  bool get asAlternative1 => value as bool;
+  const CacheDocument._(this.value);
+  factory CacheDocument.read(Object? value) =>
+      value is CacheDocument ? value : CacheDocument._(value);
+  Object? _toValue() => value;
+  const CacheDocument.text(String this.value);
+  String get asText => value as String;
+  const CacheDocument.boolean(bool this.value);
+  bool get asBoolean => value as bool;
 }
 
-final class InputContextSchema {
+final class ContextSchema implements _EncodedValue {
   final Object? value;
-  const InputContextSchema._(this.value);
-  factory InputContextSchema.read(Object? value) =>
-      value is InputContextSchema ? value : InputContextSchema._(value);
-  Object? toJson() => value;
-  const InputContextSchema.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputContextSchema.alternative1(Map<String, Object?> this.value);
-  Map<String, Object?> get asAlternative1 =>
+  const ContextSchema._(this.value);
+  factory ContextSchema.read(Object? value) =>
+      value is ContextSchema ? value : ContextSchema._(value);
+  Object? _toValue() => value;
+  const ContextSchema.text(String this.value);
+  String get asText => value as String;
+  const ContextSchema.fields(Map<String, Object?> this.value);
+  Map<String, Object?> get asFields =>
       (value as Map<String, Object?>).map((k, v) => MapEntry(k, v));
 }
 
-final class InputEngineSettings extends NativeObject {
-  InputEngineSettings._(super.json);
-  factory InputEngineSettings.read(Object? value) =>
-      InputEngineSettings._(readObject(value));
-  InputEngineSettings(
+final class EngineSettings extends _NativeValue {
+  EngineSettings._(super.fields);
+  factory EngineSettings.read(Object? value) =>
+      EngineSettings._(_readObject(value));
+  EngineSettings(
       {Presence<String> backend = const Presence.absent(),
       Presence<String> baseUrl = const Presence.absent(),
-      Presence<InputRequestBatch> batch = const Presence.absent(),
-      Presence<InputCacheDocument> cache = const Presence.absent(),
+      Presence<BatchOptions> batch = const Presence.absent(),
+      Presence<CacheDocument> cache = const Presence.absent(),
       Presence<BigInt?> maxEstimatedInputTokensTotal = const Presence.absent(),
       Presence<BigInt> maxRequestBytes = const Presence.absent(),
       Presence<BigInt?> maxRequests = const Presence.absent(),
@@ -714,126 +1124,158 @@ final class InputEngineSettings extends NativeObject {
           if (usdPerMillionOutput.isPresent)
             "usd_per_million_output": usdPerMillionOutput.value
         });
-  Presence<String> get backend => json.containsKey("backend")
-      ? Presence.present(json["backend"] as String)
+  Presence<String> get backend => _fields.containsKey("backend")
+      ? Presence.present(_fields["backend"] as String)
       : const Presence.absent();
-  Presence<String> get baseUrl => json.containsKey("base_url")
-      ? Presence.present(json["base_url"] as String)
+  Presence<String> get baseUrl => _fields.containsKey("base_url")
+      ? Presence.present(_fields["base_url"] as String)
       : const Presence.absent();
-  Presence<InputRequestBatch> get batch => json.containsKey("batch")
-      ? Presence.present(InputRequestBatch.read(json["batch"]))
+  Presence<BatchOptions> get batch => _fields.containsKey("batch")
+      ? Presence.present(BatchOptions.read(_fields["batch"]))
       : const Presence.absent();
-  Presence<InputCacheDocument> get cache => json.containsKey("cache")
-      ? Presence.present(InputCacheDocument.read(json["cache"]))
+  Presence<CacheDocument> get cache => _fields.containsKey("cache")
+      ? Presence.present(CacheDocument.read(_fields["cache"]))
       : const Presence.absent();
   Presence<BigInt?> get maxEstimatedInputTokensTotal =>
-      json.containsKey("max_estimated_input_tokens_total")
-          ? Presence.present(json["max_estimated_input_tokens_total"] == null
+      _fields.containsKey("max_estimated_input_tokens_total")
+          ? Presence.present(_fields["max_estimated_input_tokens_total"] == null
               ? null
-              : readInteger(json["max_estimated_input_tokens_total"]))
+              : _readInteger(_fields["max_estimated_input_tokens_total"]))
           : const Presence.absent();
-  Presence<BigInt> get maxRequestBytes => json.containsKey("max_request_bytes")
-      ? Presence.present(readInteger(json["max_request_bytes"]))
-      : const Presence.absent();
-  Presence<BigInt?> get maxRequests => json.containsKey("max_requests")
-      ? Presence.present(json["max_requests"] == null
+  Presence<BigInt> get maxRequestBytes =>
+      _fields.containsKey("max_request_bytes")
+          ? Presence.present(_readInteger(_fields["max_request_bytes"]))
+          : const Presence.absent();
+  Presence<BigInt?> get maxRequests => _fields.containsKey("max_requests")
+      ? Presence.present(_fields["max_requests"] == null
           ? null
-          : readInteger(json["max_requests"]))
+          : _readInteger(_fields["max_requests"]))
       : const Presence.absent();
   Presence<BigInt?> get maxRequestsTotal =>
-      json.containsKey("max_requests_total")
-          ? Presence.present(json["max_requests_total"] == null
+      _fields.containsKey("max_requests_total")
+          ? Presence.present(_fields["max_requests_total"] == null
               ? null
-              : readInteger(json["max_requests_total"]))
+              : _readInteger(_fields["max_requests_total"]))
           : const Presence.absent();
-  Presence<BigInt> get maxRetries => json.containsKey("max_retries")
-      ? Presence.present(readInteger(json["max_retries"]))
+  Presence<BigInt> get maxRetries => _fields.containsKey("max_retries")
+      ? Presence.present(_readInteger(_fields["max_retries"]))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<Object?> get proxy => json.containsKey("proxy")
-      ? Presence.present(json["proxy"])
+  Presence<Object?> get proxy => _fields.containsKey("proxy")
+      ? Presence.present(_fields["proxy"])
       : const Presence.absent();
-  Presence<String> get record => json.containsKey("record")
-      ? Presence.present(json["record"] as String)
+  Presence<String> get record => _fields.containsKey("record")
+      ? Presence.present(_fields["record"] as String)
       : const Presence.absent();
-  Presence<bool> get refreshCache => json.containsKey("refresh_cache")
-      ? Presence.present(json["refresh_cache"] as bool)
+  Presence<bool> get refreshCache => _fields.containsKey("refresh_cache")
+      ? Presence.present(_fields["refresh_cache"] as bool)
       : const Presence.absent();
-  Presence<String> get replay => json.containsKey("replay")
-      ? Presence.present(json["replay"] as String)
+  Presence<String> get replay => _fields.containsKey("replay")
+      ? Presence.present(_fields["replay"] as String)
       : const Presence.absent();
-  Presence<BigInt> get throttle => json.containsKey("throttle")
-      ? Presence.present(readInteger(json["throttle"]))
+  Presence<BigInt> get throttle => _fields.containsKey("throttle")
+      ? Presence.present(_readInteger(_fields["throttle"]))
       : const Presence.absent();
-  Presence<BigInt> get timeout => json.containsKey("timeout")
-      ? Presence.present(readInteger(json["timeout"]))
+  Presence<BigInt> get timeout => _fields.containsKey("timeout")
+      ? Presence.present(_readInteger(_fields["timeout"]))
       : const Presence.absent();
   Presence<String> get usdPerMillionInput =>
-      json.containsKey("usd_per_million_input")
-          ? Presence.present(json["usd_per_million_input"] as String)
+      _fields.containsKey("usd_per_million_input")
+          ? Presence.present(_fields["usd_per_million_input"] as String)
           : const Presence.absent();
   Presence<String> get usdPerMillionOutput =>
-      json.containsKey("usd_per_million_output")
-          ? Presence.present(json["usd_per_million_output"] as String)
+      _fields.containsKey("usd_per_million_output")
+          ? Presence.present(_fields["usd_per_million_output"] as String)
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "backend",
+            "base_url",
+            "batch",
+            "cache",
+            "max_estimated_input_tokens_total",
+            "max_request_bytes",
+            "max_requests",
+            "max_requests_total",
+            "max_retries",
+            "model",
+            "profile",
+            "proxy",
+            "record",
+            "refresh_cache",
+            "replay",
+            "throttle",
+            "timeout",
+            "usd_per_million_input",
+            "usd_per_million_output"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputOptionSchema extends NativeObject {
-  InputOptionSchema._(super.json);
-  factory InputOptionSchema.read(Object? value) =>
-      InputOptionSchema._(readObject(value));
-  InputOptionSchema(
+final class OptionSchema extends _NativeValue {
+  OptionSchema._(super.fields);
+  factory OptionSchema.read(Object? value) =>
+      OptionSchema._(_readObject(value));
+  OptionSchema(
       {Presence<Object?> description = const Presence.absent(),
       required String name})
       : super({
           if (description.isPresent) "description": description.value,
           "name": name
         });
-  Presence<Object?> get description => json.containsKey("description")
-      ? Presence.present(json["description"])
+  Presence<Object?> get description => _fields.containsKey("description")
+      ? Presence.present(_fields["description"])
       : const Presence.absent();
-  String get name => json["name"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["description", "name"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRecognitionExample {
+final class RecognitionExample implements _EncodedValue {
   final Object? value;
-  const InputRecognitionExample._(this.value);
-  factory InputRecognitionExample.read(Object? value) =>
-      value is InputRecognitionExample
-          ? value
-          : InputRecognitionExample._(value);
-  Object? toJson() => value;
-  const InputRecognitionExample.alternative0(String this.value);
-  String get asAlternative0 => value as String;
-  const InputRecognitionExample.alternative1(
-      InputRecognitionExampleText this.value);
-  InputRecognitionExampleText get asAlternative1 =>
-      InputRecognitionExampleText.read(value);
+  const RecognitionExample._(this.value);
+  factory RecognitionExample.read(Object? value) =>
+      value is RecognitionExample ? value : RecognitionExample._(value);
+  Object? _toValue() => value;
+  const RecognitionExample.text(String this.value);
+  String get asText => value as String;
+  const RecognitionExample.fields(RecognitionExampleText this.value);
+  RecognitionExampleText get asFields => RecognitionExampleText.read(value);
 }
 
-final class InputRecognitionExampleEntity extends NativeObject {
-  InputRecognitionExampleEntity._(super.json);
-  factory InputRecognitionExampleEntity.read(Object? value) =>
-      InputRecognitionExampleEntity._(readObject(value));
-  InputRecognitionExampleEntity(
+final class RecognitionExampleEntity extends _NativeValue {
+  RecognitionExampleEntity._(super.fields);
+  factory RecognitionExampleEntity.read(Object? value) =>
+      RecognitionExampleEntity._(_readObject(value));
+  RecognitionExampleEntity(
       {required BigInt end, required String kind, required BigInt start})
       : super({"end": end, "kind": kind, "start": start});
-  BigInt get end => readInteger(json["end"]);
-  String get kind => json["kind"] as String;
-  BigInt get start => readInteger(json["start"]);
+  BigInt get end => _readInteger(_fields["end"]);
+  String get kind => _fields["kind"] as String;
+  BigInt get start => _readInteger(_fields["start"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["end", "kind", "start"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRecognitionExampleText extends NativeObject {
-  InputRecognitionExampleText._(super.json);
-  factory InputRecognitionExampleText.read(Object? value) =>
-      InputRecognitionExampleText._(readObject(value));
-  InputRecognitionExampleText(
-      {required List<InputRecognitionExampleEntity> entities,
+final class RecognitionExampleText extends _NativeValue {
+  RecognitionExampleText._(super.fields);
+  factory RecognitionExampleText.read(Object? value) =>
+      RecognitionExampleText._(_readObject(value));
+  RecognitionExampleText(
+      {required List<RecognitionExampleEntity> entities,
       Presence<List<String>> kinds = const Presence.absent(),
       required String text})
       : super({
@@ -841,22 +1283,27 @@ final class InputRecognitionExampleText extends NativeObject {
           if (kinds.isPresent) "kinds": kinds.value,
           "text": text
         });
-  List<InputRecognitionExampleEntity> get entities => (json["entities"] as List)
-      .map((v) => InputRecognitionExampleEntity.read(v))
+  List<RecognitionExampleEntity> get entities => (_fields["entities"] as List)
+      .map((v) => RecognitionExampleEntity.read(v))
       .toList(growable: false);
-  Presence<List<String>> get kinds => json.containsKey("kinds")
-      ? Presence.present((json["kinds"] as List)
+  Presence<List<String>> get kinds => _fields.containsKey("kinds")
+      ? Presence.present((_fields["kinds"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  String get text => json["text"] as String;
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["entities", "kinds", "text"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRecognitionSeedSpan extends NativeObject {
-  InputRecognitionSeedSpan._(super.json);
-  factory InputRecognitionSeedSpan.read(Object? value) =>
-      InputRecognitionSeedSpan._(readObject(value));
-  InputRecognitionSeedSpan(
+final class RecognitionSeedSpan extends _NativeValue {
+  RecognitionSeedSpan._(super.fields);
+  factory RecognitionSeedSpan.read(Object? value) =>
+      RecognitionSeedSpan._(_readObject(value));
+  RecognitionSeedSpan(
       {required BigInt end,
       Presence<String> kind = const Presence.absent(),
       required BigInt start})
@@ -865,18 +1312,23 @@ final class InputRecognitionSeedSpan extends NativeObject {
           if (kind.isPresent) "kind": kind.value,
           "start": start
         });
-  BigInt get end => readInteger(json["end"]);
-  Presence<String> get kind => json.containsKey("kind")
-      ? Presence.present(json["kind"] as String)
+  BigInt get end => _readInteger(_fields["end"]);
+  Presence<String> get kind => _fields.containsKey("kind")
+      ? Presence.present(_fields["kind"] as String)
       : const Presence.absent();
-  BigInt get start => readInteger(json["start"]);
+  BigInt get start => _readInteger(_fields["start"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["end", "kind", "start"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRecognitionStageContext extends NativeObject {
-  InputRecognitionStageContext._(super.json);
-  factory InputRecognitionStageContext.read(Object? value) =>
-      InputRecognitionStageContext._(readObject(value));
-  InputRecognitionStageContext(
+final class RecognitionContext extends _NativeValue {
+  RecognitionContext._(super.fields);
+  factory RecognitionContext.read(Object? value) =>
+      RecognitionContext._(_readObject(value));
+  RecognitionContext(
       {Presence<String> boundary = const Presence.absent(),
       Presence<String> kindEdge = const Presence.absent(),
       Presence<String> relation = const Presence.absent()})
@@ -885,640 +1337,37 @@ final class InputRecognitionStageContext extends NativeObject {
           if (kindEdge.isPresent) "kind_edge": kindEdge.value,
           if (relation.isPresent) "relation": relation.value
         });
-  Presence<String> get boundary => json.containsKey("boundary")
-      ? Presence.present(json["boundary"] as String)
+  Presence<String> get boundary => _fields.containsKey("boundary")
+      ? Presence.present(_fields["boundary"] as String)
       : const Presence.absent();
-  Presence<String> get kindEdge => json.containsKey("kind_edge")
-      ? Presence.present(json["kind_edge"] as String)
+  Presence<String> get kindEdge => _fields.containsKey("kind_edge")
+      ? Presence.present(_fields["kind_edge"] as String)
       : const Presence.absent();
-  Presence<String> get relation => json.containsKey("relation")
-      ? Presence.present(json["relation"] as String)
+  Presence<String> get relation => _fields.containsKey("relation")
+      ? Presence.present(_fields["relation"] as String)
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["boundary", "kind_edge", "relation"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestBatch {
-  final Object? value;
-  const InputRequestBatch._(this.value);
-  factory InputRequestBatch.read(Object? value) =>
-      value is InputRequestBatch ? value : InputRequestBatch._(value);
-  Object? toJson() => value;
-  const InputRequestBatch.alternative0(BigInt this.value);
-  BigInt get asAlternative0 => readInteger(value);
-  const InputRequestBatch.alternative1(String this.value);
-  String get asAlternative1 => value as String;
-}
-
-sealed class InputRequestDefinition extends NativeObject {
-  InputRequestDefinition(super.json);
-  factory InputRequestDefinition.read(Object? value) {
-    final map = readObject(value);
-    if (map.containsKey("decide") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version"))
-      return InputRequestDefinitionFieldsDecide.read(map);
-    if (map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version"))
-      return InputRequestDefinitionFieldsChoose.read(map);
-    if (map.containsKey("tag") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("version"))
-      return InputRequestDefinitionFieldsTag.read(map);
-    if (map.containsKey("score") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version"))
-      return InputRequestDefinitionFieldsScore.read(map);
-    if (map.containsKey("relate") &&
-        map.containsKey("version") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionFieldsRelateVersion.read(map);
-    if (map.containsKey("find") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag") &&
-        !map.containsKey("version"))
-      return InputRequestDefinitionFieldsFind.read(map);
-    if (map.containsKey("recognize") &&
-        map.containsKey("version") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("questions") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionFieldsRecognizeVersion.read(map);
-    if (map.containsKey("questions") &&
-        map.containsKey("version") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("find") &&
-        !map.containsKey("recognize") &&
-        !map.containsKey("relate") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionFieldsQuestionsVersion.read(map);
-    throw FormatException("Unknown InputRequestDefinition alternative");
-  }
-}
-
-sealed class InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties
-    extends NativeObject {
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties(
-      super.json);
-  factory InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties.read(
-      Object? value) {
-    final map = readObject(value);
-    if (map.containsKey("decide") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide
-          .read(map);
-    if (map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("score") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose
-          .read(map);
-    if (map.containsKey("tag") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("score"))
-      return InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag
-          .read(map);
-    if (map.containsKey("score") &&
-        !map.containsKey("choose") &&
-        !map.containsKey("decide") &&
-        !map.containsKey("tag"))
-      return InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore
-          .read(map);
-    throw FormatException(
-        "Unknown InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties alternative");
-  }
-}
-
-final class InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose
-    extends InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties {
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose._(
-      super.json);
-  factory InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose.read(
-          Object? value) =>
-      InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose
-          ._(readObject(value));
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsChoose(
-      {required InputAuthoredQuestionText choose,
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+final class RecognizeDefinition extends _NativeValue {
+  RecognizeDefinition._(super.fields);
+  factory RecognizeDefinition.read(Object? value) =>
+      RecognizeDefinition._(_readObject(value));
+  RecognizeDefinition(
+      {Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<InputAuthoredOptions> options = const Presence.absent(),
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          "choose": choose,
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          if (options.isPresent) "options": options.value,
-          if (threshold.isPresent) "threshold": threshold.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  InputAuthoredQuestionText get choose =>
-      InputAuthoredQuestionText.read(json["choose"]);
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<InputAuthoredOptions> get options => json.containsKey("options")
-      ? Presence.present(InputAuthoredOptions.read(json["options"]))
-      : const Presence.absent();
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide
-    extends InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties {
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide._(
-      super.json);
-  factory InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide.read(
-          Object? value) =>
-      InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide
-          ._(readObject(value));
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsDecide(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      required InputAuthoredQuestionText decide,
-      Presence<InputAuthoredCriterion> falseValue = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<InputAuthoredThreshold> threshold = const Presence.absent(),
-      Presence<InputAuthoredCriterion> trueValue = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          "decide": decide,
-          if (falseValue.isPresent) "false": falseValue.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          if (threshold.isPresent) "threshold": threshold.value,
-          if (trueValue.isPresent) "true": trueValue.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  InputAuthoredQuestionText get decide =>
-      InputAuthoredQuestionText.read(json["decide"]);
-  Presence<InputAuthoredCriterion> get falseValue => json.containsKey("false")
-      ? Presence.present(InputAuthoredCriterion.read(json["false"]))
-      : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<InputAuthoredThreshold> get threshold =>
-      json.containsKey("threshold")
-          ? Presence.present(InputAuthoredThreshold.read(json["threshold"]))
-          : const Presence.absent();
-  Presence<InputAuthoredCriterion> get trueValue => json.containsKey("true")
-      ? Presence.present(InputAuthoredCriterion.read(json["true"]))
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore
-    extends InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties {
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore._(
-      super.json);
-  factory InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore.read(
-          Object? value) =>
-      InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore
-          ._(readObject(value));
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsScore(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLevels> levels = const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      required InputAuthoredQuestionText score,
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (levels.isPresent) "levels": levels.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          "score": score,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLevels> get levels => json.containsKey("levels")
-      ? Presence.present(InputAuthoredLevels.read(json["levels"]))
-      : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  InputAuthoredQuestionText get score =>
-      InputAuthoredQuestionText.read(json["score"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag
-    extends InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties {
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag._(
-      super.json);
-  factory InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag.read(
-          Object? value) =>
-      InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag
-          ._(readObject(value));
-  InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalPropertiesFieldsTag(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLabels> labels = const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      required InputAuthoredQuestionText tag,
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (labels.isPresent) "labels": labels.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          "tag": tag,
-          if (threshold.isPresent) "threshold": threshold.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLabels> get labels => json.containsKey("labels")
-      ? Presence.present(InputAuthoredLabels.read(json["labels"]))
-      : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  InputAuthoredQuestionText get tag =>
-      InputAuthoredQuestionText.read(json["tag"]);
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionFieldsChoose extends InputRequestDefinition {
-  InputRequestDefinitionFieldsChoose._(super.json);
-  factory InputRequestDefinitionFieldsChoose.read(Object? value) =>
-      InputRequestDefinitionFieldsChoose._(readObject(value));
-  InputRequestDefinitionFieldsChoose(
-      {Presence<Object?> batch = const Presence.absent(),
-      required InputAuthoredQuestionText choose,
-      Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<InputAuthoredOptions> options = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (batch.isPresent) "batch": batch.value,
-          "choose": choose,
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (model.isPresent) "model": model.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          if (options.isPresent) "options": options.value,
-          if (profile.isPresent) "profile": profile.value,
-          if (threshold.isPresent) "threshold": threshold.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
-      : const Presence.absent();
-  InputAuthoredQuestionText get choose =>
-      InputAuthoredQuestionText.read(json["choose"]);
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<InputAuthoredOptions> get options => json.containsKey("options")
-      ? Presence.present(InputAuthoredOptions.read(json["options"]))
-      : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionFieldsDecide extends InputRequestDefinition {
-  InputRequestDefinitionFieldsDecide._(super.json);
-  factory InputRequestDefinitionFieldsDecide.read(Object? value) =>
-      InputRequestDefinitionFieldsDecide._(readObject(value));
-  InputRequestDefinitionFieldsDecide(
-      {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      required InputAuthoredQuestionText decide,
-      Presence<InputAuthoredCriterion> falseValue = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<String> model = const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<String> profile = const Presence.absent(),
-      Presence<InputAuthoredThreshold> threshold = const Presence.absent(),
-      Presence<InputAuthoredCriterion> trueValue = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (batch.isPresent) "batch": batch.value,
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          "decide": decide,
-          if (falseValue.isPresent) "false": falseValue.value,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (model.isPresent) "model": model.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          if (profile.isPresent) "profile": profile.value,
-          if (threshold.isPresent) "threshold": threshold.value,
-          if (trueValue.isPresent) "true": trueValue.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
-      : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  InputAuthoredQuestionText get decide =>
-      InputAuthoredQuestionText.read(json["decide"]);
-  Presence<InputAuthoredCriterion> get falseValue => json.containsKey("false")
-      ? Presence.present(InputAuthoredCriterion.read(json["false"]))
-      : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredThreshold> get threshold =>
-      json.containsKey("threshold")
-          ? Presence.present(InputAuthoredThreshold.read(json["threshold"]))
-          : const Presence.absent();
-  Presence<InputAuthoredCriterion> get trueValue => json.containsKey("true")
-      ? Presence.present(InputAuthoredCriterion.read(json["true"]))
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionFieldsFind extends InputRequestDefinition {
-  InputRequestDefinitionFieldsFind._(super.json);
-  factory InputRequestDefinitionFieldsFind.read(Object? value) =>
-      InputRequestDefinitionFieldsFind._(readObject(value));
-  InputRequestDefinitionFieldsFind(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      required InputAuthoredQuestionText find,
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<String> model = const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<String> profile = const Presence.absent(),
-      Presence<BigInt> wordingVersion = const Presence.absent()})
-      : super({
-          if (contextSchema.isPresent) "context_schema": contextSchema.value,
-          "find": find,
-          if (itemSchema.isPresent) "item_schema": itemSchema.value,
-          if (model.isPresent) "model": model.value,
-          if (name.isPresent) "name": name.value,
-          if (on.isPresent) "on": on.value,
-          if (profile.isPresent) "profile": profile.value,
-          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
-        });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
-          : const Presence.absent();
-  InputAuthoredQuestionText get find =>
-      InputAuthoredQuestionText.read(json["find"]);
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
-      : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
-      : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
-      : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
-}
-
-final class InputRequestDefinitionFieldsQuestionsVersion
-    extends InputRequestDefinition {
-  InputRequestDefinitionFieldsQuestionsVersion._(super.json);
-  factory InputRequestDefinitionFieldsQuestionsVersion.read(Object? value) =>
-      InputRequestDefinitionFieldsQuestionsVersion._(readObject(value));
-  InputRequestDefinitionFieldsQuestionsVersion(
-      {Presence<Object?> batch = const Presence.absent(),
-      Presence<String> profile = const Presence.absent(),
-      required Map<String,
-              InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties>
-          questions,
-      Presence<InputAuthoredThreshold> threshold = const Presence.absent()})
-      : super({
-          if (batch.isPresent) "batch": batch.value,
-          if (profile.isPresent) "profile": profile.value,
-          "questions": questions,
-          if (threshold.isPresent) "threshold": threshold.value,
-          "version": 1
-        });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
-      : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
-      : const Presence.absent();
-  Map<String,
-          InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties>
-      get questions =>
-          (json["questions"] as Map<String, Object?>).map((k, v) => MapEntry(
-              k,
-              InputRequestDefinitionAnyOf7PropertiesQuestionsAdditionalProperties
-                  .read(v)));
-  Presence<InputAuthoredThreshold> get threshold =>
-      json.containsKey("threshold")
-          ? Presence.present(InputAuthoredThreshold.read(json["threshold"]))
-          : const Presence.absent();
-  BigInt get version => readInteger(json["version"]);
-}
-
-final class InputRequestDefinitionFieldsRecognizeVersion
-    extends InputRequestDefinition {
-  InputRequestDefinitionFieldsRecognizeVersion._(super.json);
-  factory InputRequestDefinitionFieldsRecognizeVersion.read(Object? value) =>
-      InputRequestDefinitionFieldsRecognizeVersion._(readObject(value));
-  InputRequestDefinitionFieldsRecognizeVersion(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<String> model = const Presence.absent(),
-      Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
-      Presence<String> profile = const Presence.absent(),
-      required Object? recognize,
-      Presence<InputAuthoredCut> relationThreshold = const Presence.absent(),
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      required RecognitionSpec recognize,
+      Presence<Cut> relationThreshold = const Presence.absent(),
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (contextSchema.isPresent) "context_schema": contextSchema.value,
@@ -1534,57 +1383,539 @@ final class InputRequestDefinitionFieldsRecognizeVersion
           "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  RecognitionSpec get recognize => RecognitionSpec.read(_fields["recognize"]);
+  Presence<Cut> get relationThreshold =>
+      _fields.containsKey("relation_threshold")
+          ? Presence.present(Cut.read(_fields["relation_threshold"]))
           : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  BigInt get version => _readInteger(_fields["version"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
-      : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
-      : const Presence.absent();
-  Object? get recognize => json["recognize"];
-  Presence<InputAuthoredCut> get relationThreshold =>
-      json.containsKey("relation_threshold")
-          ? Presence.present(InputAuthoredCut.read(json["relation_threshold"]))
-          : const Presence.absent();
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
-      : const Presence.absent();
-  BigInt get version => readInteger(json["version"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
-      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "recognize",
+            "relation_threshold",
+            "threshold",
+            "version",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestDefinitionFieldsRelateVersion
-    extends InputRequestDefinition {
-  InputRequestDefinitionFieldsRelateVersion._(super.json);
-  factory InputRequestDefinitionFieldsRelateVersion.read(Object? value) =>
-      InputRequestDefinitionFieldsRelateVersion._(readObject(value));
-  InputRequestDefinitionFieldsRelateVersion(
-      {Presence<InputAuthoredInputDeclaration> contextSchema =
+final class RecognitionSpec extends _NativeValue {
+  RecognitionSpec._(super.fields);
+  factory RecognitionSpec.read(Object? value) =>
+      RecognitionSpec._(_readObject(value));
+  RecognitionSpec(
+      {Presence<Wording> entityDefinition = const Presence.absent(),
+      Presence<Wording> instructions = const Presence.absent(),
+      Presence<Map<String, Object?>> kinds = const Presence.absent(),
+      Presence<String> mode = const Presence.absent(),
+      Presence<List<RelationDefinition>> relations = const Presence.absent(),
+      Presence<BigInt> snippetPieces = const Presence.absent(),
+      Presence<RecognitionContext> stageContext = const Presence.absent()})
+      : super({
+          if (entityDefinition.isPresent)
+            "entity_definition": entityDefinition.value,
+          if (instructions.isPresent) "instructions": instructions.value,
+          if (kinds.isPresent) "kinds": kinds.value,
+          if (mode.isPresent) "mode": mode.value,
+          if (relations.isPresent) "relations": relations.value,
+          if (snippetPieces.isPresent) "snippet_pieces": snippetPieces.value,
+          if (stageContext.isPresent) "stage_context": stageContext.value
+        });
+  Presence<Wording> get entityDefinition =>
+      _fields.containsKey("entity_definition")
+          ? Presence.present(Wording.read(_fields["entity_definition"]))
+          : const Presence.absent();
+  Presence<Wording> get instructions => _fields.containsKey("instructions")
+      ? Presence.present(Wording.read(_fields["instructions"]))
+      : const Presence.absent();
+  Presence<Map<String, Object?>> get kinds => _fields.containsKey("kinds")
+      ? Presence.present((_fields["kinds"] as Map<String, Object?>)
+          .map((k, v) => MapEntry(k, v)))
+      : const Presence.absent();
+  Presence<String> get mode => _fields.containsKey("mode")
+      ? Presence.present(_fields["mode"] as String)
+      : const Presence.absent();
+  Presence<List<RelationDefinition>> get relations =>
+      _fields.containsKey("relations")
+          ? Presence.present((_fields["relations"] as List)
+              .map((v) => RelationDefinition.read(v))
+              .toList(growable: false))
+          : const Presence.absent();
+  Presence<BigInt> get snippetPieces => _fields.containsKey("snippet_pieces")
+      ? Presence.present(_readInteger(_fields["snippet_pieces"]))
+      : const Presence.absent();
+  Presence<RecognitionContext> get stageContext =>
+      _fields.containsKey("stage_context")
+          ? Presence.present(RecognitionContext.read(_fields["stage_context"]))
+          : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "entity_definition",
+            "instructions",
+            "kinds",
+            "mode",
+            "relations",
+            "snippet_pieces",
+            "stage_context"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class EntityFields extends _NativeValue {
+  EntityFields._(super.fields);
+  factory EntityFields.read(Object? value) =>
+      EntityFields._(_readObject(value));
+  EntityFields({required String kind, required String name})
+      : super({"kind": kind, "name": name});
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
+}
+
+final class RelationSpec extends _NativeValue {
+  RelationSpec._(super.fields);
+  factory RelationSpec.read(Object? value) =>
+      RelationSpec._(_readObject(value));
+  RelationSpec(
+      {Presence<EntityFields> fields = const Presence.absent(),
+      required List<RelationDefinition> relations})
+      : super({
+          if (fields.isPresent) "fields": fields.value,
+          "relations": relations
+        });
+  Presence<EntityFields> get fields => _fields.containsKey("fields")
+      ? Presence.present(EntityFields.read(_fields["fields"]))
+      : const Presence.absent();
+  List<RelationDefinition> get relations => (_fields["relations"] as List)
+      .map((v) => RelationDefinition.read(v))
+      .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["fields", "relations"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class BatchOptions implements _EncodedValue {
+  final Object? value;
+  const BatchOptions._(this.value);
+  factory BatchOptions.read(Object? value) =>
+      value is BatchOptions ? value : BatchOptions._(value);
+  Object? _toValue() => value;
+  const BatchOptions.integer(BigInt this.value);
+  BigInt get asInteger => _readInteger(value);
+  const BatchOptions.text(String this.value);
+  String get asText => value as String;
+}
+
+sealed class Definition extends _NativeValue {
+  Definition(super.fields);
+  factory Definition.read(Object? value) {
+    final map = _readObject(value);
+    if (map.containsKey("decide") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag") &&
+        !map.containsKey("version")) return DecideQuestion.read(map);
+    if (map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag") &&
+        !map.containsKey("version")) return ChooseQuestion.read(map);
+    if (map.containsKey("tag") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("version")) return TagQuestion.read(map);
+    if (map.containsKey("score") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("tag") &&
+        !map.containsKey("version")) return ScoreQuestion.read(map);
+    if (map.containsKey("relate") &&
+        map.containsKey("version") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag")) return RelateQuestion.read(map);
+    if (map.containsKey("find") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag") &&
+        !map.containsKey("version")) return FindQuestion.read(map);
+    if (map.containsKey("recognize") &&
+        map.containsKey("version") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("questions") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag")) return RecognizeQuestion.read(map);
+    if (map.containsKey("questions") &&
+        map.containsKey("version") &&
+        !map.containsKey("choose") &&
+        !map.containsKey("decide") &&
+        !map.containsKey("find") &&
+        !map.containsKey("recognize") &&
+        !map.containsKey("relate") &&
+        !map.containsKey("score") &&
+        !map.containsKey("tag")) return AnnotateQuestion.read(map);
+    throw FormatException("Unknown Definition alternative");
+  }
+}
+
+final class AnnotateQuestion extends Definition {
+  AnnotateQuestion._(super.fields);
+  factory AnnotateQuestion.read(Object? value) =>
+      AnnotateQuestion._(_readObject(value));
+  AnnotateQuestion(
+      {Presence<Object?> batch = const Presence.absent(),
+      Presence<String> profile = const Presence.absent(),
+      required Map<String, AnnotationSpec> questions,
+      Presence<DecisionThreshold> threshold = const Presence.absent()})
+      : super({
+          if (batch.isPresent) "batch": batch.value,
+          if (profile.isPresent) "profile": profile.value,
+          "questions": questions,
+          if (threshold.isPresent) "threshold": threshold.value,
+          "version": 1
+        });
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Map<String, AnnotationSpec> get questions =>
+      (_fields["questions"] as Map<String, Object?>)
+          .map((k, v) => MapEntry(k, AnnotationSpec.read(v)));
+  Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
+      : const Presence.absent();
+  BigInt get version => _readInteger(_fields["version"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["batch", "profile", "questions", "threshold", "version"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class ChooseQuestion extends Definition {
+  ChooseQuestion._(super.fields);
+  factory ChooseQuestion.read(Object? value) =>
+      ChooseQuestion._(_readObject(value));
+  ChooseQuestion(
+      {Presence<Object?> batch = const Presence.absent(),
+      required Wording choose,
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> model = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<ChoiceOptions> options = const Presence.absent(),
+      Presence<String> profile = const Presence.absent(),
+      Presence<Cut> threshold = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (batch.isPresent) "batch": batch.value,
+          "choose": choose,
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (model.isPresent) "model": model.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (options.isPresent) "options": options.value,
+          if (profile.isPresent) "profile": profile.value,
+          if (threshold.isPresent) "threshold": threshold.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
+      : const Presence.absent();
+  Wording get choose => Wording.read(_fields["choose"]);
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<ChoiceOptions> get options => _fields.containsKey("options")
+      ? Presence.present(ChoiceOptions.read(_fields["options"]))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "choose",
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "options",
+            "profile",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class DecideQuestion extends Definition {
+  DecideQuestion._(super.fields);
+  factory DecideQuestion.read(Object? value) =>
+      DecideQuestion._(_readObject(value));
+  DecideQuestion(
+      {Presence<Object?> batch = const Presence.absent(),
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
+      required Wording decide,
+      Presence<Reading> falseValue = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> model = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<String> profile = const Presence.absent(),
+      Presence<DecisionThreshold> threshold = const Presence.absent(),
+      Presence<Reading> trueValue = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (batch.isPresent) "batch": batch.value,
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          "decide": decide,
+          if (falseValue.isPresent) "false": falseValue.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (model.isPresent) "model": model.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (profile.isPresent) "profile": profile.value,
+          if (threshold.isPresent) "threshold": threshold.value,
+          if (trueValue.isPresent) "true": trueValue.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
+      : const Presence.absent();
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Wording get decide => Wording.read(_fields["decide"]);
+  Presence<Reading> get falseValue => _fields.containsKey("false")
+      ? Presence.present(Reading.read(_fields["false"]))
+      : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<DecisionThreshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(DecisionThreshold.read(_fields["threshold"]))
+      : const Presence.absent();
+  Presence<Reading> get trueValue => _fields.containsKey("true")
+      ? Presence.present(Reading.read(_fields["true"]))
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "decide",
+            "false",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "threshold",
+            "true",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class FindQuestion extends Definition {
+  FindQuestion._(super.fields);
+  factory FindQuestion.read(Object? value) =>
+      FindQuestion._(_readObject(value));
+  FindQuestion(
+      {Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      required Wording find,
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> model = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<String> profile = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          "find": find,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (model.isPresent) "model": model.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (profile.isPresent) "profile": profile.value,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Wording get find => Wording.read(_fields["find"]);
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "find",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class RelateQuestion extends Definition {
+  RelateQuestion._(super.fields);
+  factory RelateQuestion.read(Object? value) =>
+      RelateQuestion._(_readObject(value));
+  RelateQuestion(
+      {Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required Object? relate,
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      required RelationSpec relate,
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (contextSchema.isPresent) "context_schema": contextSchema.value,
@@ -1597,51 +1928,64 @@ final class InputRequestDefinitionFieldsRelateVersion
           "version": 1,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Object? get relate => json["relate"];
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  BigInt get version => readInteger(json["version"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  RelationSpec get relate => RelationSpec.read(_fields["relate"]);
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
+  BigInt get version => _readInteger(_fields["version"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "profile",
+            "relate",
+            "threshold",
+            "version",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestDefinitionFieldsScore extends InputRequestDefinition {
-  InputRequestDefinitionFieldsScore._(super.json);
-  factory InputRequestDefinitionFieldsScore.read(Object? value) =>
-      InputRequestDefinitionFieldsScore._(readObject(value));
-  InputRequestDefinitionFieldsScore(
+final class ScoreQuestion extends Definition {
+  ScoreQuestion._(super.fields);
+  factory ScoreQuestion.read(Object? value) =>
+      ScoreQuestion._(_readObject(value));
+  ScoreQuestion(
       {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLevels> levels = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Levels> levels = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required InputAuthoredQuestionText score,
+      required Wording score,
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -1655,58 +1999,70 @@ final class InputRequestDefinitionFieldsScore extends InputRequestDefinition {
           "score": score,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLevels> get levels => json.containsKey("levels")
-      ? Presence.present(InputAuthoredLevels.read(json["levels"]))
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<Levels> get levels => _fields.containsKey("levels")
+      ? Presence.present(Levels.read(_fields["levels"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  InputAuthoredQuestionText get score =>
-      InputAuthoredQuestionText.read(json["score"]);
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
+  Wording get score => Wording.read(_fields["score"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "levels",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "score",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestDefinitionFieldsTag extends InputRequestDefinition {
-  InputRequestDefinitionFieldsTag._(super.json);
-  factory InputRequestDefinitionFieldsTag.read(Object? value) =>
-      InputRequestDefinitionFieldsTag._(readObject(value));
-  InputRequestDefinitionFieldsTag(
+final class TagQuestion extends Definition {
+  TagQuestion._(super.fields);
+  factory TagQuestion.read(Object? value) => TagQuestion._(_readObject(value));
+  TagQuestion(
       {Presence<Object?> batch = const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> contextSchema =
+      Presence<QuestionInputDeclaration> contextSchema =
           const Presence.absent(),
-      Presence<InputAuthoredInputDeclaration> itemSchema =
-          const Presence.absent(),
-      Presence<InputAuthoredLabels> labels = const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<Labels> labels = const Presence.absent(),
       Presence<String> model = const Presence.absent(),
       Presence<String> name = const Presence.absent(),
-      Presence<InputAuthoredPointers> on = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
       Presence<String> profile = const Presence.absent(),
-      required InputAuthoredQuestionText tag,
-      Presence<InputAuthoredCut> threshold = const Presence.absent(),
+      required Wording tag,
+      Presence<Cut> threshold = const Presence.absent(),
       Presence<BigInt> wordingVersion = const Presence.absent()})
       : super({
           if (batch.isPresent) "batch": batch.value,
@@ -1721,119 +2077,227 @@ final class InputRequestDefinitionFieldsTag extends InputRequestDefinition {
           if (threshold.isPresent) "threshold": threshold.value,
           if (wordingVersion.isPresent) "wording_version": wordingVersion.value
         });
-  Presence<Object?> get batch => json.containsKey("batch")
-      ? Presence.present(json["batch"])
+  Presence<Object?> get batch => _fields.containsKey("batch")
+      ? Presence.present(_fields["batch"])
       : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
           ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["context_schema"]))
+              QuestionInputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputAuthoredInputDeclaration> get itemSchema =>
-      json.containsKey("item_schema")
-          ? Presence.present(
-              InputAuthoredInputDeclaration.read(json["item_schema"]))
-          : const Presence.absent();
-  Presence<InputAuthoredLabels> get labels => json.containsKey("labels")
-      ? Presence.present(InputAuthoredLabels.read(json["labels"]))
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<Labels> get labels => _fields.containsKey("labels")
+      ? Presence.present(Labels.read(_fields["labels"]))
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<InputAuthoredPointers> get on => json.containsKey("on")
-      ? Presence.present(InputAuthoredPointers.read(json["on"]))
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
       : const Presence.absent();
-  InputAuthoredQuestionText get tag =>
-      InputAuthoredQuestionText.read(json["tag"]);
-  Presence<InputAuthoredCut> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputAuthoredCut.read(json["threshold"]))
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Wording get tag => Wording.read(_fields["tag"]);
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
       : const Presence.absent();
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "labels",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "tag",
+            "threshold",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class InputRequestImage extends NativeObject {
-  InputRequestImage(super.json);
-  factory InputRequestImage.read(Object? value) {
-    final map = readObject(value);
-    if (map["kind"] == "file") return InputRequestImageFile.read(map);
-    if (map["kind"] == "bytes") return InputRequestImageBytes.read(map);
-    throw FormatException("Unknown InputRequestImage alternative");
+final class RecognizeQuestion extends Definition {
+  RecognizeQuestion._(super.fields);
+  factory RecognizeQuestion.read(Object? value) =>
+      RecognizeQuestion._(_readObject(value));
+  RecognizeQuestion(
+      {Presence<QuestionInputDeclaration> contextSchema =
+          const Presence.absent(),
+      Presence<QuestionInputDeclaration> itemSchema = const Presence.absent(),
+      Presence<String> model = const Presence.absent(),
+      Presence<String> name = const Presence.absent(),
+      Presence<Pointers> on = const Presence.absent(),
+      Presence<String> profile = const Presence.absent(),
+      required RecognitionSpec recognize,
+      Presence<Cut> relationThreshold = const Presence.absent(),
+      Presence<Cut> threshold = const Presence.absent(),
+      Presence<BigInt> wordingVersion = const Presence.absent()})
+      : super({
+          if (contextSchema.isPresent) "context_schema": contextSchema.value,
+          if (itemSchema.isPresent) "item_schema": itemSchema.value,
+          if (model.isPresent) "model": model.value,
+          if (name.isPresent) "name": name.value,
+          if (on.isPresent) "on": on.value,
+          if (profile.isPresent) "profile": profile.value,
+          "recognize": recognize,
+          if (relationThreshold.isPresent)
+            "relation_threshold": relationThreshold.value,
+          if (threshold.isPresent) "threshold": threshold.value,
+          "version": 1,
+          if (wordingVersion.isPresent) "wording_version": wordingVersion.value
+        });
+  Presence<QuestionInputDeclaration> get contextSchema =>
+      _fields.containsKey("context_schema")
+          ? Presence.present(
+              QuestionInputDeclaration.read(_fields["context_schema"]))
+          : const Presence.absent();
+  Presence<QuestionInputDeclaration> get itemSchema => _fields
+          .containsKey("item_schema")
+      ? Presence.present(QuestionInputDeclaration.read(_fields["item_schema"]))
+      : const Presence.absent();
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
+      : const Presence.absent();
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
+      : const Presence.absent();
+  Presence<Pointers> get on => _fields.containsKey("on")
+      ? Presence.present(Pointers.read(_fields["on"]))
+      : const Presence.absent();
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
+      : const Presence.absent();
+  RecognitionSpec get recognize => RecognitionSpec.read(_fields["recognize"]);
+  Presence<Cut> get relationThreshold =>
+      _fields.containsKey("relation_threshold")
+          ? Presence.present(Cut.read(_fields["relation_threshold"]))
+          : const Presence.absent();
+  Presence<Cut> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Cut.read(_fields["threshold"]))
+      : const Presence.absent();
+  BigInt get version => _readInteger(_fields["version"]);
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context_schema",
+            "item_schema",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "recognize",
+            "relation_threshold",
+            "threshold",
+            "version",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+sealed class ImageAttachment extends _NativeValue {
+  ImageAttachment(super.fields);
+  factory ImageAttachment.read(Object? value) {
+    final map = _readObject(value);
+    if (map["kind"] == "file") return ImageFile.read(map);
+    if (map["kind"] == "bytes") return ImageBytes.read(map);
+    throw FormatException("Unknown ImageAttachment alternative");
   }
 }
 
-final class InputRequestImageBytes extends InputRequestImage {
-  InputRequestImageBytes._(super.json);
-  factory InputRequestImageBytes.read(Object? value) =>
-      InputRequestImageBytes._(readObject(value));
-  InputRequestImageBytes({required String bytes, required String media})
+final class ImageBytes extends ImageAttachment {
+  ImageBytes._(super.fields);
+  factory ImageBytes.read(Object? value) => ImageBytes._(_readObject(value));
+  ImageBytes({required String bytes, required String media})
       : super({"bytes": bytes, "kind": "bytes", "media": media});
-  String get bytes => json["bytes"] as String;
-  String get kind => json["kind"] as String;
-  String get media => json["media"] as String;
+  String get bytes => _fields["bytes"] as String;
+  String get kind => _fields["kind"] as String;
+  String get media => _fields["media"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["bytes", "kind", "media"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestImageFile extends InputRequestImage {
-  InputRequestImageFile._(super.json);
-  factory InputRequestImageFile.read(Object? value) =>
-      InputRequestImageFile._(readObject(value));
-  InputRequestImageFile(
+final class ImageFile extends ImageAttachment {
+  ImageFile._(super.fields);
+  factory ImageFile.read(Object? value) => ImageFile._(_readObject(value));
+  ImageFile(
       {Presence<String> media = const Presence.absent(), required String path})
       : super({
           "kind": "file",
           if (media.isPresent) "media": media.value,
           "path": path
         });
-  String get kind => json["kind"] as String;
-  Presence<String> get media => json.containsKey("media")
-      ? Presence.present(json["media"] as String)
+  String get kind => _fields["kind"] as String;
+  Presence<String> get media => _fields.containsKey("media")
+      ? Presence.present(_fields["media"] as String)
       : const Presence.absent();
-  String get path => json["path"] as String;
+  String get path => _fields["path"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "media", "path"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class InputRequestInput extends NativeObject {
-  InputRequestInput(super.json);
-  factory InputRequestInput.read(Object? value) {
-    final map = readObject(value);
-    if (map["kind"] == "text") return InputRequestInputText.read(map);
-    if (map["kind"] == "json") return InputRequestInputJson.read(map);
-    if (map["kind"] == "records") return InputRequestInputRecords.read(map);
-    if (map["kind"] == "units") return InputRequestInputUnits.read(map);
-    if (map["kind"] == "entities") return InputRequestInputEntities.read(map);
-    if (map["kind"] == "source") return InputRequestInputSource.read(map);
-    if (map["kind"] == "feed") return InputRequestInputFeed.read(map);
-    throw FormatException("Unknown InputRequestInput alternative");
+sealed class Input extends _NativeValue {
+  Input(super.fields);
+  factory Input.read(Object? value) {
+    final map = _readObject(value);
+    if (map["kind"] == "text") return InputText.read(map);
+    if (map["kind"] == "json") return InputJson.read(map);
+    if (map["kind"] == "records") return InputRecords.read(map);
+    if (map["kind"] == "units") return InputUnits.read(map);
+    if (map["kind"] == "entities") return InputEntities.read(map);
+    if (map["kind"] == "source") return InputSource.read(map);
+    if (map["kind"] == "feed") return InputFeed.read(map);
+    throw FormatException("Unknown Input alternative");
   }
 }
 
-final class InputRequestInputEntities extends InputRequestInput {
-  InputRequestInputEntities._(super.json);
-  factory InputRequestInputEntities.read(Object? value) =>
-      InputRequestInputEntities._(readObject(value));
-  InputRequestInputEntities({required List<InputRequestItem> items})
+final class InputEntities extends Input {
+  InputEntities._(super.fields);
+  factory InputEntities.read(Object? value) =>
+      InputEntities._(_readObject(value));
+  InputEntities({required List<Item> items})
       : super({"items": items, "kind": "entities"});
-  List<InputRequestItem> get items => (json["items"] as List)
-      .map((v) => InputRequestItem.read(v))
+  List<Item> get items => (_fields["items"] as List)
+      .map((v) => Item.read(v))
       .toList(growable: false);
-  String get kind => json["kind"] as String;
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["items", "kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestInputFeed extends InputRequestInput {
-  InputRequestInputFeed._(super.json);
-  factory InputRequestInputFeed.read(Object? value) =>
-      InputRequestInputFeed._(readObject(value));
-  InputRequestInputFeed(
+final class InputFeed extends Input {
+  InputFeed._(super.fields);
+  factory InputFeed.read(Object? value) => InputFeed._(_readObject(value));
+  InputFeed(
       {Presence<String> framing = const Presence.absent(),
-      Presence<List<InputRequestImage>> images = const Presence.absent(),
+      Presence<List<ImageAttachment>> images = const Presence.absent(),
       required String name,
-      Presence<InputRequestReader> reading = const Presence.absent()})
+      Presence<Reader> reading = const Presence.absent()})
       : super({
           if (framing.isPresent) "framing": framing.value,
           if (images.isPresent) "images": images.value,
@@ -1841,110 +2305,131 @@ final class InputRequestInputFeed extends InputRequestInput {
           "name": name,
           if (reading.isPresent) "reading": reading.value
         });
-  Presence<String> get framing => json.containsKey("framing")
-      ? Presence.present(json["framing"] as String)
+  Presence<String> get framing => _fields.containsKey("framing")
+      ? Presence.present(_fields["framing"] as String)
       : const Presence.absent();
-  Presence<List<InputRequestImage>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
-          .map((v) => InputRequestImage.read(v))
+  Presence<List<ImageAttachment>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
+          .map((v) => ImageAttachment.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
-  Presence<InputRequestReader> get reading => json.containsKey("reading")
-      ? Presence.present(InputRequestReader.read(json["reading"]))
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Presence<Reader> get reading => _fields.containsKey("reading")
+      ? Presence.present(Reader.read(_fields["reading"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["framing", "images", "kind", "name", "reading"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestInputJson extends InputRequestInput {
-  InputRequestInputJson._(super.json);
-  factory InputRequestInputJson.read(Object? value) =>
-      InputRequestInputJson._(readObject(value));
-  InputRequestInputJson(
-      {Presence<List<InputRequestImage>> images = const Presence.absent(),
+final class InputJson extends Input {
+  InputJson._(super.fields);
+  factory InputJson.read(Object? value) => InputJson._(_readObject(value));
+  InputJson(
+      {Presence<List<ImageAttachment>> images = const Presence.absent(),
       required Object? value})
       : super({
           if (images.isPresent) "images": images.value,
           "kind": "json",
           "value": value
         });
-  Presence<List<InputRequestImage>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
-          .map((v) => InputRequestImage.read(v))
+  Presence<List<ImageAttachment>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
+          .map((v) => ImageAttachment.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  Object? get value => json["value"];
+  String get kind => _fields["kind"] as String;
+  Object? get value => _fields["value"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["images", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestInputRecords extends InputRequestInput {
-  InputRequestInputRecords._(super.json);
-  factory InputRequestInputRecords.read(Object? value) =>
-      InputRequestInputRecords._(readObject(value));
-  InputRequestInputRecords({required List<InputRequestItem> items})
+final class InputRecords extends Input {
+  InputRecords._(super.fields);
+  factory InputRecords.read(Object? value) =>
+      InputRecords._(_readObject(value));
+  InputRecords({required List<Item> items})
       : super({"items": items, "kind": "records"});
-  List<InputRequestItem> get items => (json["items"] as List)
-      .map((v) => InputRequestItem.read(v))
+  List<Item> get items => (_fields["items"] as List)
+      .map((v) => Item.read(v))
       .toList(growable: false);
-  String get kind => json["kind"] as String;
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["items", "kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestInputSource extends InputRequestInput {
-  InputRequestInputSource._(super.json);
-  factory InputRequestInputSource.read(Object? value) =>
-      InputRequestInputSource._(readObject(value));
-  InputRequestInputSource({required InputRequestSource source})
+final class InputSource extends Input {
+  InputSource._(super.fields);
+  factory InputSource.read(Object? value) => InputSource._(_readObject(value));
+  InputSource({required Source source})
       : super({"kind": "source", "source": source});
-  String get kind => json["kind"] as String;
-  InputRequestSource get source => InputRequestSource.read(json["source"]);
+  String get kind => _fields["kind"] as String;
+  Source get source => Source.read(_fields["source"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "source"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestInputText extends InputRequestInput {
-  InputRequestInputText._(super.json);
-  factory InputRequestInputText.read(Object? value) =>
-      InputRequestInputText._(readObject(value));
-  InputRequestInputText(
-      {Presence<List<InputRequestImage>> images = const Presence.absent(),
+final class InputText extends Input {
+  InputText._(super.fields);
+  factory InputText.read(Object? value) => InputText._(_readObject(value));
+  InputText(
+      {Presence<List<ImageAttachment>> images = const Presence.absent(),
       required String text})
       : super({
           if (images.isPresent) "images": images.value,
           "kind": "text",
           "text": text
         });
-  Presence<List<InputRequestImage>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
-          .map((v) => InputRequestImage.read(v))
+  Presence<List<ImageAttachment>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
+          .map((v) => ImageAttachment.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get text => json["text"] as String;
+  String get kind => _fields["kind"] as String;
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["images", "kind", "text"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestInputUnits extends InputRequestInput {
-  InputRequestInputUnits._(super.json);
-  factory InputRequestInputUnits.read(Object? value) =>
-      InputRequestInputUnits._(readObject(value));
-  InputRequestInputUnits({required List<InputRequestItem> items})
+final class InputUnits extends Input {
+  InputUnits._(super.fields);
+  factory InputUnits.read(Object? value) => InputUnits._(_readObject(value));
+  InputUnits({required List<Item> items})
       : super({"items": items, "kind": "units"});
-  List<InputRequestItem> get items => (json["items"] as List)
-      .map((v) => InputRequestItem.read(v))
+  List<Item> get items => (_fields["items"] as List)
+      .map((v) => Item.read(v))
       .toList(growable: false);
-  String get kind => json["kind"] as String;
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["items", "kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestItem extends NativeObject {
-  InputRequestItem._(super.json);
-  factory InputRequestItem.read(Object? value) =>
-      InputRequestItem._(readObject(value));
-  InputRequestItem(
-      {Presence<InputContextSchema> context = const Presence.absent(),
-      Presence<List<InputRecognitionExample>> examples =
-          const Presence.absent(),
-      Presence<List<InputRequestImage>> images = const Presence.absent(),
-      Presence<List<InputOptionSchema>> options = const Presence.absent(),
-      Presence<InputRequestOriginal> original = const Presence.absent(),
-      Presence<List<InputRecognitionSeedSpan>> seedSpans =
-          const Presence.absent()})
+final class Item extends _NativeValue {
+  Item._(super.fields);
+  factory Item.read(Object? value) => Item._(_readObject(value));
+  Item(
+      {Presence<ContextSchema> context = const Presence.absent(),
+      Presence<List<RecognitionExample>> examples = const Presence.absent(),
+      Presence<List<ImageAttachment>> images = const Presence.absent(),
+      Presence<List<OptionSchema>> options = const Presence.absent(),
+      Presence<Original> original = const Presence.absent(),
+      Presence<List<RecognitionSeedSpan>> seedSpans = const Presence.absent()})
       : super({
           if (context.isPresent) "context": context.value,
           if (examples.isPresent) "examples": examples.value,
@@ -1953,49 +2438,59 @@ final class InputRequestItem extends NativeObject {
           if (original.isPresent) "original": original.value,
           if (seedSpans.isPresent) "seed_spans": seedSpans.value
         });
-  Presence<InputContextSchema> get context => json.containsKey("context")
-      ? Presence.present(InputContextSchema.read(json["context"]))
+  Presence<ContextSchema> get context => _fields.containsKey("context")
+      ? Presence.present(ContextSchema.read(_fields["context"]))
       : const Presence.absent();
-  Presence<List<InputRecognitionExample>> get examples =>
-      json.containsKey("examples")
-          ? Presence.present((json["examples"] as List)
-              .map((v) => InputRecognitionExample.read(v))
-              .toList(growable: false))
-          : const Presence.absent();
-  Presence<List<InputRequestImage>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
-          .map((v) => InputRequestImage.read(v))
+  Presence<List<RecognitionExample>> get examples => _fields
+          .containsKey("examples")
+      ? Presence.present((_fields["examples"] as List)
+          .map((v) => RecognitionExample.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<List<InputOptionSchema>> get options => json.containsKey("options")
-      ? Presence.present((json["options"] as List)
-          .map((v) => InputOptionSchema.read(v))
+  Presence<List<ImageAttachment>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
+          .map((v) => ImageAttachment.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<InputRequestOriginal> get original => json.containsKey("original")
-      ? Presence.present(InputRequestOriginal.read(json["original"]))
+  Presence<List<OptionSchema>> get options => _fields.containsKey("options")
+      ? Presence.present((_fields["options"] as List)
+          .map((v) => OptionSchema.read(v))
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<List<InputRecognitionSeedSpan>> get seedSpans =>
-      json.containsKey("seed_spans")
-          ? Presence.present((json["seed_spans"] as List)
-              .map((v) => InputRecognitionSeedSpan.read(v))
+  Presence<Original> get original => _fields.containsKey("original")
+      ? Presence.present(Original.read(_fields["original"]))
+      : const Presence.absent();
+  Presence<List<RecognitionSeedSpan>> get seedSpans =>
+      _fields.containsKey("seed_spans")
+          ? Presence.present((_fields["seed_spans"] as List)
+              .map((v) => RecognitionSeedSpan.read(v))
               .toList(growable: false))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "context",
+            "examples",
+            "images",
+            "options",
+            "original",
+            "seed_spans"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestOptions extends NativeObject {
-  InputRequestOptions._(super.json);
-  factory InputRequestOptions.read(Object? value) =>
-      InputRequestOptions._(readObject(value));
-  InputRequestOptions(
+final class Options extends _NativeValue {
+  Options._(super.fields);
+  factory Options.read(Object? value) => Options._(_readObject(value));
+  Options(
       {Presence<bool> attempts = const Presence.absent(),
-      Presence<InputRequestBatch> batch = const Presence.absent(),
+      Presence<BatchOptions> batch = const Presence.absent(),
       Presence<String> context = const Presence.absent(),
       Presence<String> contextField = const Presence.absent(),
       Presence<BigInt> deadlineMs = const Presence.absent(),
       Presence<bool> details = const Presence.absent(),
-      Presence<List<InputRecognitionExample>> examples =
-          const Presence.absent(),
+      Presence<List<RecognitionExample>> examples = const Presence.absent(),
       Presence<String> examplesField = const Presence.absent(),
       Presence<List<String>> field = const Presence.absent(),
       Presence<bool> filesOnly = const Presence.absent(),
@@ -2004,15 +2499,12 @@ final class InputRequestOptions extends NativeObject {
       Presence<String> model = const Presence.absent(),
       Presence<bool> none = const Presence.absent(),
       Presence<String> optionsField = const Presence.absent(),
-      Presence<InputRequestThreshold> relationThreshold =
-          const Presence.absent(),
-      Presence<List<InputRecognitionSeedSpan>> seedSpans =
-          const Presence.absent(),
+      Presence<Threshold> relationThreshold = const Presence.absent(),
+      Presence<List<RecognitionSeedSpan>> seedSpans = const Presence.absent(),
       Presence<String> seedSpansField = const Presence.absent(),
       Presence<BigInt> snippetPieces = const Presence.absent(),
-      Presence<InputRecognitionStageContext> stageContext =
-          const Presence.absent(),
-      Presence<InputRequestThreshold> threshold = const Presence.absent(),
+      Presence<RecognitionContext> stageContext = const Presence.absent(),
+      Presence<Threshold> threshold = const Presence.absent(),
       Presence<BigInt> top = const Presence.absent()})
       : super({
           if (attempts.isPresent) "attempts": attempts.value,
@@ -2041,335 +2533,407 @@ final class InputRequestOptions extends NativeObject {
           if (threshold.isPresent) "threshold": threshold.value,
           if (top.isPresent) "top": top.value
         });
-  Presence<bool> get attempts => json.containsKey("attempts")
-      ? Presence.present(json["attempts"] as bool)
+  Presence<bool> get attempts => _fields.containsKey("attempts")
+      ? Presence.present(_fields["attempts"] as bool)
       : const Presence.absent();
-  Presence<InputRequestBatch> get batch => json.containsKey("batch")
-      ? Presence.present(InputRequestBatch.read(json["batch"]))
+  Presence<BatchOptions> get batch => _fields.containsKey("batch")
+      ? Presence.present(BatchOptions.read(_fields["batch"]))
       : const Presence.absent();
-  Presence<String> get context => json.containsKey("context")
-      ? Presence.present(json["context"] as String)
+  Presence<String> get context => _fields.containsKey("context")
+      ? Presence.present(_fields["context"] as String)
       : const Presence.absent();
-  Presence<String> get contextField => json.containsKey("context_field")
-      ? Presence.present(json["context_field"] as String)
+  Presence<String> get contextField => _fields.containsKey("context_field")
+      ? Presence.present(_fields["context_field"] as String)
       : const Presence.absent();
-  Presence<BigInt> get deadlineMs => json.containsKey("deadline_ms")
-      ? Presence.present(readInteger(json["deadline_ms"]))
+  Presence<BigInt> get deadlineMs => _fields.containsKey("deadline_ms")
+      ? Presence.present(_readInteger(_fields["deadline_ms"]))
       : const Presence.absent();
-  Presence<bool> get details => json.containsKey("details")
-      ? Presence.present(json["details"] as bool)
+  Presence<bool> get details => _fields.containsKey("details")
+      ? Presence.present(_fields["details"] as bool)
       : const Presence.absent();
-  Presence<List<InputRecognitionExample>> get examples =>
-      json.containsKey("examples")
-          ? Presence.present((json["examples"] as List)
-              .map((v) => InputRecognitionExample.read(v))
-              .toList(growable: false))
-          : const Presence.absent();
-  Presence<String> get examplesField => json.containsKey("examples_field")
-      ? Presence.present(json["examples_field"] as String)
+  Presence<List<RecognitionExample>> get examples => _fields
+          .containsKey("examples")
+      ? Presence.present((_fields["examples"] as List)
+          .map((v) => RecognitionExample.read(v))
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<List<String>> get field => json.containsKey("field")
-      ? Presence.present((json["field"] as List)
+  Presence<String> get examplesField => _fields.containsKey("examples_field")
+      ? Presence.present(_fields["examples_field"] as String)
+      : const Presence.absent();
+  Presence<List<String>> get field => _fields.containsKey("field")
+      ? Presence.present((_fields["field"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  Presence<bool> get filesOnly => json.containsKey("files_only")
-      ? Presence.present(json["files_only"] as bool)
+  Presence<bool> get filesOnly => _fields.containsKey("files_only")
+      ? Presence.present(_fields["files_only"] as bool)
       : const Presence.absent();
   Presence<BigInt> get maxRequestsTotal =>
-      json.containsKey("max_requests_total")
-          ? Presence.present(readInteger(json["max_requests_total"]))
+      _fields.containsKey("max_requests_total")
+          ? Presence.present(_readInteger(_fields["max_requests_total"]))
           : const Presence.absent();
-  Presence<String> get mode => json.containsKey("mode")
-      ? Presence.present(json["mode"] as String)
+  Presence<String> get mode => _fields.containsKey("mode")
+      ? Presence.present(_fields["mode"] as String)
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<bool> get none => json.containsKey("none")
-      ? Presence.present(json["none"] as bool)
+  Presence<bool> get none => _fields.containsKey("none")
+      ? Presence.present(_fields["none"] as bool)
       : const Presence.absent();
-  Presence<String> get optionsField => json.containsKey("options_field")
-      ? Presence.present(json["options_field"] as String)
+  Presence<String> get optionsField => _fields.containsKey("options_field")
+      ? Presence.present(_fields["options_field"] as String)
       : const Presence.absent();
-  Presence<InputRequestThreshold> get relationThreshold => json
-          .containsKey("relation_threshold")
-      ? Presence.present(InputRequestThreshold.read(json["relation_threshold"]))
-      : const Presence.absent();
-  Presence<List<InputRecognitionSeedSpan>> get seedSpans =>
-      json.containsKey("seed_spans")
-          ? Presence.present((json["seed_spans"] as List)
-              .map((v) => InputRecognitionSeedSpan.read(v))
+  Presence<Threshold> get relationThreshold =>
+      _fields.containsKey("relation_threshold")
+          ? Presence.present(Threshold.read(_fields["relation_threshold"]))
+          : const Presence.absent();
+  Presence<List<RecognitionSeedSpan>> get seedSpans =>
+      _fields.containsKey("seed_spans")
+          ? Presence.present((_fields["seed_spans"] as List)
+              .map((v) => RecognitionSeedSpan.read(v))
               .toList(growable: false))
           : const Presence.absent();
-  Presence<String> get seedSpansField => json.containsKey("seed_spans_field")
-      ? Presence.present(json["seed_spans_field"] as String)
+  Presence<String> get seedSpansField => _fields.containsKey("seed_spans_field")
+      ? Presence.present(_fields["seed_spans_field"] as String)
       : const Presence.absent();
-  Presence<BigInt> get snippetPieces => json.containsKey("snippet_pieces")
-      ? Presence.present(readInteger(json["snippet_pieces"]))
+  Presence<BigInt> get snippetPieces => _fields.containsKey("snippet_pieces")
+      ? Presence.present(_readInteger(_fields["snippet_pieces"]))
       : const Presence.absent();
-  Presence<InputRecognitionStageContext> get stageContext =>
-      json.containsKey("stage_context")
-          ? Presence.present(
-              InputRecognitionStageContext.read(json["stage_context"]))
+  Presence<RecognitionContext> get stageContext =>
+      _fields.containsKey("stage_context")
+          ? Presence.present(RecognitionContext.read(_fields["stage_context"]))
           : const Presence.absent();
-  Presence<InputRequestThreshold> get threshold => json.containsKey("threshold")
-      ? Presence.present(InputRequestThreshold.read(json["threshold"]))
+  Presence<Threshold> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(Threshold.read(_fields["threshold"]))
       : const Presence.absent();
-  Presence<BigInt> get top => json.containsKey("top")
-      ? Presence.present(readInteger(json["top"]))
+  Presence<BigInt> get top => _fields.containsKey("top")
+      ? Presence.present(_readInteger(_fields["top"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "attempts",
+            "batch",
+            "context",
+            "context_field",
+            "deadline_ms",
+            "details",
+            "examples",
+            "examples_field",
+            "field",
+            "files_only",
+            "max_requests_total",
+            "mode",
+            "model",
+            "none",
+            "options_field",
+            "relation_threshold",
+            "seed_spans",
+            "seed_spans_field",
+            "snippet_pieces",
+            "stage_context",
+            "threshold",
+            "top"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class InputRequestOriginal extends NativeObject {
-  InputRequestOriginal(super.json);
-  factory InputRequestOriginal.read(Object? value) {
-    final map = readObject(value);
-    if (map["kind"] == "text") return InputRequestOriginalText.read(map);
-    if (map["kind"] == "json") return InputRequestOriginalJson.read(map);
-    throw FormatException("Unknown InputRequestOriginal alternative");
+sealed class Original extends _NativeValue {
+  Original(super.fields);
+  factory Original.read(Object? value) {
+    final map = _readObject(value);
+    if (map["kind"] == "text") return OriginalText.read(map);
+    if (map["kind"] == "json") return OriginalJson.read(map);
+    throw FormatException("Unknown Original alternative");
   }
 }
 
-final class InputRequestOriginalJson extends InputRequestOriginal {
-  InputRequestOriginalJson._(super.json);
-  factory InputRequestOriginalJson.read(Object? value) =>
-      InputRequestOriginalJson._(readObject(value));
-  InputRequestOriginalJson({required Object? value})
+final class OriginalJson extends Original {
+  OriginalJson._(super.fields);
+  factory OriginalJson.read(Object? value) =>
+      OriginalJson._(_readObject(value));
+  OriginalJson({required Object? value})
       : super({"kind": "json", "value": value});
-  String get kind => json["kind"] as String;
-  Object? get value => json["value"];
+  String get kind => _fields["kind"] as String;
+  Object? get value => _fields["value"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestOriginalText extends InputRequestOriginal {
-  InputRequestOriginalText._(super.json);
-  factory InputRequestOriginalText.read(Object? value) =>
-      InputRequestOriginalText._(readObject(value));
-  InputRequestOriginalText({required String text})
-      : super({"kind": "text", "text": text});
-  String get kind => json["kind"] as String;
-  String get text => json["text"] as String;
+final class OriginalText extends Original {
+  OriginalText._(super.fields);
+  factory OriginalText.read(Object? value) =>
+      OriginalText._(_readObject(value));
+  OriginalText({required String text}) : super({"kind": "text", "text": text});
+  String get kind => _fields["kind"] as String;
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "text"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class InputRequestQuestion extends NativeObject {
-  InputRequestQuestion(super.json);
-  factory InputRequestQuestion.read(Object? value) {
-    final map = readObject(value);
-    if (map["kind"] == "text") return InputRequestQuestionText.read(map);
-    if (map["kind"] == "definition")
-      return InputRequestQuestionDefinition.read(map);
-    if (map["kind"] == "file") return InputRequestQuestionFile.read(map);
-    if (map["kind"] == "name") return InputRequestQuestionName.read(map);
-    if (map["kind"] == "reference")
-      return InputRequestQuestionReference.read(map);
-    throw FormatException("Unknown InputRequestQuestion alternative");
+sealed class Question extends _NativeValue {
+  Question(super.fields);
+  factory Question.read(Object? value) {
+    final map = _readObject(value);
+    if (map["kind"] == "text") return QuestionText.read(map);
+    if (map["kind"] == "definition") return DefinedQuestion.read(map);
+    if (map["kind"] == "file") return QuestionFile.read(map);
+    if (map["kind"] == "name") return QuestionName.read(map);
+    if (map["kind"] == "reference") return QuestionReference.read(map);
+    throw FormatException("Unknown Question alternative");
   }
 }
 
-final class InputRequestQuestionDefinition extends InputRequestQuestion {
-  InputRequestQuestionDefinition._(super.json);
-  factory InputRequestQuestionDefinition.read(Object? value) =>
-      InputRequestQuestionDefinition._(readObject(value));
-  InputRequestQuestionDefinition({required InputRequestDefinition value})
+final class DefinedQuestion extends Question {
+  DefinedQuestion._(super.fields);
+  factory DefinedQuestion.read(Object? value) =>
+      DefinedQuestion._(_readObject(value));
+  DefinedQuestion({required Definition value})
       : super({"kind": "definition", "value": value});
-  String get kind => json["kind"] as String;
-  InputRequestDefinition get value =>
-      InputRequestDefinition.read(json["value"]);
+  String get kind => _fields["kind"] as String;
+  Definition get value => Definition.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestQuestionFile extends InputRequestQuestion {
-  InputRequestQuestionFile._(super.json);
-  factory InputRequestQuestionFile.read(Object? value) =>
-      InputRequestQuestionFile._(readObject(value));
-  InputRequestQuestionFile({required String path})
-      : super({"kind": "file", "path": path});
-  String get kind => json["kind"] as String;
-  String get path => json["path"] as String;
+final class QuestionFile extends Question {
+  QuestionFile._(super.fields);
+  factory QuestionFile.read(Object? value) =>
+      QuestionFile._(_readObject(value));
+  QuestionFile({required String path}) : super({"kind": "file", "path": path});
+  String get kind => _fields["kind"] as String;
+  String get path => _fields["path"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "path"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestQuestionName extends InputRequestQuestion {
-  InputRequestQuestionName._(super.json);
-  factory InputRequestQuestionName.read(Object? value) =>
-      InputRequestQuestionName._(readObject(value));
-  InputRequestQuestionName({required String name})
-      : super({"kind": "name", "name": name});
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+final class QuestionName extends Question {
+  QuestionName._(super.fields);
+  factory QuestionName.read(Object? value) =>
+      QuestionName._(_readObject(value));
+  QuestionName({required String name}) : super({"kind": "name", "name": name});
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestQuestionReference extends InputRequestQuestion {
-  InputRequestQuestionReference._(super.json);
-  factory InputRequestQuestionReference.read(Object? value) =>
-      InputRequestQuestionReference._(readObject(value));
-  InputRequestQuestionReference({required String reference})
+final class QuestionReference extends Question {
+  QuestionReference._(super.fields);
+  factory QuestionReference.read(Object? value) =>
+      QuestionReference._(_readObject(value));
+  QuestionReference({required String reference})
       : super({"kind": "reference", "reference": reference});
-  String get kind => json["kind"] as String;
-  String get reference => json["reference"] as String;
+  String get kind => _fields["kind"] as String;
+  String get reference => _fields["reference"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "reference"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestQuestionText extends InputRequestQuestion {
-  InputRequestQuestionText._(super.json);
-  factory InputRequestQuestionText.read(Object? value) =>
-      InputRequestQuestionText._(readObject(value));
-  InputRequestQuestionText({required String text})
-      : super({"kind": "text", "text": text});
-  String get kind => json["kind"] as String;
-  String get text => json["text"] as String;
+final class QuestionText extends Question {
+  QuestionText._(super.fields);
+  factory QuestionText.read(Object? value) =>
+      QuestionText._(_readObject(value));
+  QuestionText({required String text}) : super({"kind": "text", "text": text});
+  String get kind => _fields["kind"] as String;
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "text"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestReader extends NativeObject {
-  InputRequestReader._(super.json);
-  factory InputRequestReader.read(Object? value) =>
-      InputRequestReader._(readObject(value));
-  InputRequestReader(
+final class Reader extends _NativeValue {
+  Reader._(super.fields);
+  factory Reader.read(Object? value) => Reader._(_readObject(value));
+  Reader(
       {Presence<String> unit = const Presence.absent(),
       Presence<BigInt> window = const Presence.absent()})
       : super({
           if (unit.isPresent) "unit": unit.value,
           if (window.isPresent) "window": window.value
         });
-  Presence<String> get unit => json.containsKey("unit")
-      ? Presence.present(json["unit"] as String)
+  Presence<String> get unit => _fields.containsKey("unit")
+      ? Presence.present(_fields["unit"] as String)
       : const Presence.absent();
-  Presence<BigInt> get window => json.containsKey("window")
-      ? Presence.present(readInteger(json["window"]))
+  Presence<BigInt> get window => _fields.containsKey("window")
+      ? Presence.present(_readInteger(_fields["window"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["unit", "window"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class InputRequestReaderFailure extends NativeObject {
-  InputRequestReaderFailure(super.json);
-  factory InputRequestReaderFailure.read(Object? value) {
-    final map = readObject(value);
-    if (map["kind"] == "producer")
-      return InputRequestReaderFailureProducer.read(map);
-    if (map["kind"] == "io") return InputRequestReaderFailureIo.read(map);
-    if (map["kind"] == "utf8") return InputRequestReaderFailureUtf8.read(map);
+sealed class ReaderFailure extends _NativeValue {
+  ReaderFailure(super.fields);
+  factory ReaderFailure.read(Object? value) {
+    final map = _readObject(value);
+    if (map["kind"] == "producer") return ReaderFailureProducer.read(map);
+    if (map["kind"] == "io") return ReaderFailureIo.read(map);
+    if (map["kind"] == "utf8") return ReaderFailureUtf8.read(map);
     if (map["kind"] == "invalid_input")
-      return InputRequestReaderFailureInvalidInput.read(map);
-    throw FormatException("Unknown InputRequestReaderFailure alternative");
+      return ReaderFailureInvalidInput.read(map);
+    throw FormatException("Unknown ReaderFailure alternative");
   }
 }
 
-final class InputRequestReaderFailureInvalidInput
-    extends InputRequestReaderFailure {
-  InputRequestReaderFailureInvalidInput._(super.json);
-  factory InputRequestReaderFailureInvalidInput.read(Object? value) =>
-      InputRequestReaderFailureInvalidInput._(readObject(value));
-  InputRequestReaderFailureInvalidInput(
-      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+final class ReaderFailureInvalidInput extends ReaderFailure {
+  ReaderFailureInvalidInput._(super.fields);
+  factory ReaderFailureInvalidInput.read(Object? value) =>
+      ReaderFailureInvalidInput._(_readObject(value));
+  ReaderFailureInvalidInput(
+      {Presence<SessionSourceLocation> location = const Presence.absent()})
       : super({
           "kind": "invalid_input",
           if (location.isPresent) "location": location.value
         });
-  String get kind => json["kind"] as String;
-  Presence<InputSessionSourceLocation> get location =>
-      json.containsKey("location")
-          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+  String get kind => _fields["kind"] as String;
+  Presence<SessionSourceLocation> get location =>
+      _fields.containsKey("location")
+          ? Presence.present(SessionSourceLocation.read(_fields["location"]))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "location"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestReaderFailureIo extends InputRequestReaderFailure {
-  InputRequestReaderFailureIo._(super.json);
-  factory InputRequestReaderFailureIo.read(Object? value) =>
-      InputRequestReaderFailureIo._(readObject(value));
-  InputRequestReaderFailureIo(
-      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+final class ReaderFailureIo extends ReaderFailure {
+  ReaderFailureIo._(super.fields);
+  factory ReaderFailureIo.read(Object? value) =>
+      ReaderFailureIo._(_readObject(value));
+  ReaderFailureIo(
+      {Presence<SessionSourceLocation> location = const Presence.absent()})
       : super(
             {"kind": "io", if (location.isPresent) "location": location.value});
-  String get kind => json["kind"] as String;
-  Presence<InputSessionSourceLocation> get location =>
-      json.containsKey("location")
-          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+  String get kind => _fields["kind"] as String;
+  Presence<SessionSourceLocation> get location =>
+      _fields.containsKey("location")
+          ? Presence.present(SessionSourceLocation.read(_fields["location"]))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "location"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestReaderFailureProducer
-    extends InputRequestReaderFailure {
-  InputRequestReaderFailureProducer._(super.json);
-  factory InputRequestReaderFailureProducer.read(Object? value) =>
-      InputRequestReaderFailureProducer._(readObject(value));
-  InputRequestReaderFailureProducer() : super({"kind": "producer"});
-  String get kind => json["kind"] as String;
+final class ReaderFailureProducer extends ReaderFailure {
+  ReaderFailureProducer._(super.fields);
+  factory ReaderFailureProducer.read(Object? value) =>
+      ReaderFailureProducer._(_readObject(value));
+  ReaderFailureProducer() : super({"kind": "producer"});
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestReaderFailureUtf8 extends InputRequestReaderFailure {
-  InputRequestReaderFailureUtf8._(super.json);
-  factory InputRequestReaderFailureUtf8.read(Object? value) =>
-      InputRequestReaderFailureUtf8._(readObject(value));
-  InputRequestReaderFailureUtf8(
-      {Presence<InputSessionSourceLocation> location = const Presence.absent()})
+final class ReaderFailureUtf8 extends ReaderFailure {
+  ReaderFailureUtf8._(super.fields);
+  factory ReaderFailureUtf8.read(Object? value) =>
+      ReaderFailureUtf8._(_readObject(value));
+  ReaderFailureUtf8(
+      {Presence<SessionSourceLocation> location = const Presence.absent()})
       : super({
           "kind": "utf8",
           if (location.isPresent) "location": location.value
         });
-  String get kind => json["kind"] as String;
-  Presence<InputSessionSourceLocation> get location =>
-      json.containsKey("location")
-          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+  String get kind => _fields["kind"] as String;
+  Presence<SessionSourceLocation> get location =>
+      _fields.containsKey("location")
+          ? Presence.present(SessionSourceLocation.read(_fields["location"]))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "location"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestSessionDescriptor extends NativeObject {
-  InputRequestSessionDescriptor._(super.json);
-  factory InputRequestSessionDescriptor.read(Object? value) =>
-      InputRequestSessionDescriptor._(readObject(value));
-  InputRequestSessionDescriptor(
-      {required InputRequestItem item,
-      Presence<InputSessionSourceLocation> location = const Presence.absent()})
+final class FeedItem extends _NativeValue {
+  FeedItem._(super.fields);
+  factory FeedItem.read(Object? value) => FeedItem._(_readObject(value));
+  FeedItem(
+      {required Item item,
+      Presence<SessionSourceLocation> location = const Presence.absent()})
       : super(
             {"item": item, if (location.isPresent) "location": location.value});
-  InputRequestItem get item => InputRequestItem.read(json["item"]);
-  Presence<InputSessionSourceLocation> get location =>
-      json.containsKey("location")
-          ? Presence.present(InputSessionSourceLocation.read(json["location"]))
+  Item get item => Item.read(_fields["item"]);
+  Presence<SessionSourceLocation> get location =>
+      _fields.containsKey("location")
+          ? Presence.present(SessionSourceLocation.read(_fields["location"]))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["item", "location"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class InputRequestSource extends NativeObject {
-  InputRequestSource._(super.json);
-  factory InputRequestSource.read(Object? value) =>
-      InputRequestSource._(readObject(value));
-  InputRequestSource(
+final class Source extends _NativeValue {
+  Source._(super.fields);
+  factory Source.read(Object? value) => Source._(_readObject(value));
+  Source(
       {Presence<String> framing = const Presence.absent(),
       Presence<String> media = const Presence.absent(),
       required List<String> paths,
-      Presence<InputRequestReader> reading = const Presence.absent()})
+      Presence<Reader> reading = const Presence.absent()})
       : super({
           if (framing.isPresent) "framing": framing.value,
           if (media.isPresent) "media": media.value,
           "paths": paths,
           if (reading.isPresent) "reading": reading.value
         });
-  Presence<String> get framing => json.containsKey("framing")
-      ? Presence.present(json["framing"] as String)
+  Presence<String> get framing => _fields.containsKey("framing")
+      ? Presence.present(_fields["framing"] as String)
       : const Presence.absent();
-  Presence<String> get media => json.containsKey("media")
-      ? Presence.present(json["media"] as String)
+  Presence<String> get media => _fields.containsKey("media")
+      ? Presence.present(_fields["media"] as String)
       : const Presence.absent();
-  List<String> get paths =>
-      (json["paths"] as List).map((v) => v as String).toList(growable: false);
-  Presence<InputRequestReader> get reading => json.containsKey("reading")
-      ? Presence.present(InputRequestReader.read(json["reading"]))
+  List<String> get paths => (_fields["paths"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Presence<Reader> get reading => _fields.containsKey("reading")
+      ? Presence.present(Reader.read(_fields["reading"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["framing", "media", "paths", "reading"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class InputRequestThreshold {
+final class Threshold implements _EncodedValue {
   final Object? value;
-  const InputRequestThreshold._(this.value);
-  factory InputRequestThreshold.read(Object? value) =>
-      value is InputRequestThreshold ? value : InputRequestThreshold._(value);
-  Object? toJson() => value;
-  const InputRequestThreshold.alternative0(num this.value);
-  num get asAlternative0 => value as num;
-  const InputRequestThreshold.alternative1(String this.value);
-  String get asAlternative1 => value as String;
+  const Threshold._(this.value);
+  factory Threshold.read(Object? value) =>
+      value is Threshold ? value : Threshold._(value);
+  Object? _toValue() => value;
+  const Threshold.number(num this.value);
+  num get asNumber => value as num;
+  const Threshold.text(String this.value);
+  String get asText => value as String;
 }
 
-final class InputSessionSourceLocation extends NativeObject {
-  InputSessionSourceLocation._(super.json);
-  factory InputSessionSourceLocation.read(Object? value) =>
-      InputSessionSourceLocation._(readObject(value));
-  InputSessionSourceLocation(
+final class SessionSourceLocation extends _NativeValue {
+  SessionSourceLocation._(super.fields);
+  factory SessionSourceLocation.read(Object? value) =>
+      SessionSourceLocation._(_readObject(value));
+  SessionSourceLocation(
       {required String file,
       Presence<BigInt> firstLine = const Presence.absent(),
       Presence<BigInt> lastLine = const Presence.absent()})
@@ -2378,13 +2942,18 @@ final class InputSessionSourceLocation extends NativeObject {
           if (firstLine.isPresent) "first_line": firstLine.value,
           if (lastLine.isPresent) "last_line": lastLine.value
         });
-  String get file => json["file"] as String;
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  String get file => _fields["file"] as String;
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["file", "first_line", "last_line"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 const requestVersion = "thinkthen.request/1";

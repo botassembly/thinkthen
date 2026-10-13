@@ -10,63 +10,6 @@ use conformance_backend::{Canned, Listener};
 use serde_json::{Value, json};
 
 #[test]
-fn record_projection_with_model_override_sends_only_selected_fields_and_native_mcp_headers() {
-    let listener = Listener::answering(|_| {
-        Canned::ok(r#"{"model":"selected","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
-    })
-    .unwrap();
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .unwrap()
-        .api_key("sk-mcp-loopback-only")
-        .unwrap()
-        .no_cache()
-        .max_retries(0)
-        .build()
-        .unwrap();
-    let executor = NativeExecutor {
-        engine,
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
-    };
-    let original = json!({"body":"Please refund.","ready":false,"private":"unsent"});
-    let params: CallParams = serde_json::from_value(json!({"name":"decide","arguments":{
-        "question":{"decide":"Refund?","model":"old"}, "records":[original],
-        "options":{"field":["/body","/ready"],"model":"selected","batch":1,"attempts":true}
-    }}))
-    .unwrap();
-    let reply = executor
-        .execute(Invocation::admit(params).unwrap(), &CancelToken::new())
-        .unwrap();
-    let value = serde_json::to_value(tool_result(reply.object, reply.failed)).unwrap();
-    let call = &value["structuredContent"];
-    assert_eq!(call["value"][0]["input"], original);
-    assert_eq!(call["value"][0]["value"], true);
-    assert_eq!(call["facts"]["requests_sent"], 1);
-    let requests = listener.requests();
-    assert_eq!(requests.len(), 1);
-    assert_eq!(
-        requests[0].header("User-Agent"),
-        Some(concat!("thinkthen/", env!("CARGO_PKG_VERSION"), " (mcp)"))
-    );
-    assert_eq!(
-        requests[0].header("X-ThinkThen-Call-Id"),
-        call["facts"]["call_id"].as_str()
-    );
-    assert!(requests[0].header("X-ThinkThen-Request-Id").is_some());
-    let body: Value = serde_json::from_slice(&requests[0].body).unwrap();
-    assert_eq!(body["model"], "selected");
-    assert!(!String::from_utf8_lossy(&requests[0].body).contains("unsent"));
-    assert_eq!(
-        body["state"],
-        "Each question quotes the text it asks about."
-    );
-    let instructions = body["questions"]["q1"]["instructions"].as_str().unwrap();
-    assert!(instructions.contains("Please refund."));
-    assert!(instructions.contains("false"));
-    assert!(instructions.contains("ready"));
-}
-
-#[test]
 #[ignore = "large-input boundary runs in the release suite"]
 fn release_only_source_rank_charges_original_utf8_bytes_before_projection_and_never_reads_the_tail()
 {
@@ -122,7 +65,6 @@ fn recognition_context_selectors_refuse_missing_null_and_nontext_before_dispatch
             .no_cache()
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     for invalid in [
         json!({"body":"Bob."}),
@@ -165,7 +107,6 @@ fn rank_forwards_the_inclusive_cutoff_before_top_and_refuses_nonprobability_rout
             .no_cache()
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let params: CallParams = serde_json::from_value(json!({"name":"rank","arguments":{
         "question":"Best?", "records":["below","first","last"],
@@ -235,7 +176,6 @@ fn recognition_call_controls_and_item_overrides_change_the_actual_stage_and_resu
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let mut question: Value =
         serde_json::from_str(fixture["question_json"].as_str().unwrap()).unwrap();
@@ -285,7 +225,6 @@ fn recognition_item_controls_refuse_null_and_invalid_edges_without_sends() {
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     for controls in [
         json!({"examples":null}),
@@ -332,7 +271,6 @@ fn framed_table_sources_execute_logical_rows_and_keep_original_positions() {
             .max_retries(0)
             .build()
             .unwrap(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     };
     let folder = std::env::temp_dir().join(format!("thinkthen-mcp-framing-{}", std::process::id()));
     std::fs::create_dir(&folder).unwrap();

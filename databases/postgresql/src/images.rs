@@ -99,7 +99,7 @@ fn judged(
     text: Option<&str>,
     raw: Option<RawJson>,
     requested: Option<thinkthen::For>,
-) -> thinkthen::Details {
+) -> crate::request::JudgmentRow {
     let (settings, controls) = forms::controls(raw.as_ref(), Named::default());
     let verb = requested.unwrap_or_else(|| forms::plan_verb(question, &settings));
     if !matches!(
@@ -111,7 +111,7 @@ fn judged(
     let question = forms::question(Some(question), None, verb, &settings);
     let input = input(images, text).or_raise();
     call::run(controls, move |engine, options| {
-        crate::request::details(engine, &question, vec![input], options, false)
+        crate::request::details(engine, &question, vec![input], options)
             .map(|rows| rows.into_iter().next())
     })
     .unwrap_or_else(|| call::raise(call::defect("image details returned no record")))
@@ -134,8 +134,8 @@ fn thinkthen_decide_images(
             settings,
             Some(thinkthen::For::Decide),
         );
-        match held.value() {
-            Judgment::Decision(value) => crate::answer_value(*value),
+        match held.value {
+            Judgment::Decision(value) => crate::answer_value(value),
             _ => call::raise(call::defect("image decide held another judgment")),
         }
     })
@@ -159,8 +159,8 @@ fn thinkthen_choose_images(
             settings,
             Some(thinkthen::For::Choose),
         );
-        match held.value() {
-            Judgment::Choice(value) => value.clone(),
+        match held.value {
+            Judgment::Choice(value) => value,
             _ => call::raise(call::defect("image choose held another judgment")),
         }
     })
@@ -184,8 +184,8 @@ fn thinkthen_score_images(
             settings,
             Some(thinkthen::For::Score),
         );
-        match held.value() {
-            Judgment::Score(value) => Some(*value),
+        match held.value {
+            Judgment::Score(value) => Some(value),
             _ => call::raise(call::defect("image score held another judgment")),
         }
     })
@@ -203,7 +203,7 @@ fn thinkthen_details_images(
 ) -> Option<pgrx::datum::JsonB> {
     call::guarded(|| {
         let held = judged(question?, images?, text, settings, None);
-        Some(crate::jsonb(&held.to_json()))
+        Some(crate::jsonb(&held.json))
     })
 }
 }

@@ -7,7 +7,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::thread;
 
-use crate::support::{encoded_decide, plant_recording, stored};
+use crate::support::stored;
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -15,7 +15,6 @@ const ANSWER: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
 );
-type FolderFiles = Vec<(std::ffi::OsString, Vec<u8>)>;
 
 pub(crate) use crate::harness::folder;
 
@@ -48,16 +47,6 @@ fn decide_model(
         &environment,
         EVIDENCE.as_bytes(),
     )
-}
-
-fn files(folder: &Path) -> io::Result<FolderFiles> {
-    let mut found = fs::read_dir(folder)?
-        .filter_map(Result::ok)
-        .filter(|entry| entry.file_type().is_ok_and(|kind| kind.is_file()))
-        .map(|entry| Ok((entry.file_name(), fs::read(entry.path())?)))
-        .collect::<io::Result<Vec<_>>>()?;
-    found.sort_by(|left, right| left.0.cmp(&right.0));
-    Ok(found)
 }
 
 #[cfg(unix)]
@@ -377,50 +366,6 @@ fn normalized_address_spellings_share_one_key_and_models_do_not() {
     let answers = stored(&cache).expect("the store");
     assert_eq!(answers.len(), 2, "the two spellings replace one answer");
     assert!(answers.iter().all(|answer| answer["url"] == listener.url()));
-}
-
-#[test]
-fn an_old_entry_is_ignored_until_convert_and_a_replay_writes_nothing() {
-    let recording = folder("legacy-replay");
-    let base = "http://127.0.0.1:1/v1";
-    let url = format!("{base}/systemone");
-    let request = encoded_decide(EVIDENCE, "local-1", QUESTION);
-    let name = plant_recording(&recording, &url, &request, ANSWER).expect("legacy entry");
-    let before = files(&recording).expect("old folder");
-
-    let missed = decide(base, &recording, "--replay", false).expect("miss runs");
-    assert_eq!(missed.status.code(), Some(5));
-    let message = crate::harness::said(&missed);
-    assert!(message.starts_with(
-        "thinkthen: the decide request for one document: the replay folder holds no answer for question `"
-    ));
-    assert_eq!(files(&recording).expect("old folder"), before);
-
-    let converted = spawn(
-        &["cache", "convert", &recording.to_string_lossy()],
-        &[],
-        b"",
-    )
-    .expect("convert runs");
-    assert_eq!(converted.status.code(), Some(0));
-    let replayed = decide(base, &recording, "--replay", false).expect("replay runs");
-    assert_eq!(replayed.status.code(), Some(0));
-    assert!(recording.join(&name).is_file(), "the old entry stays");
-}
-
-#[test]
-fn a_cache_over_an_old_folder_resends_and_keeps_its_old_entry() {
-    let recording = folder("legacy-write");
-    let request = encoded_decide(EVIDENCE, "local-1", QUESTION);
-    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let name = plant_recording(&recording, listener.url(), &request, ANSWER).expect("legacy entry");
-    let old = fs::read(recording.join(&name)).expect("old entry");
-
-    let answered = decide(listener.base(), &recording, "--cache", true).expect("cache runs");
-    assert_eq!(answered.status.code(), Some(0));
-    assert_eq!(listener.requests().len(), 1, "an old cache is not read");
-    assert_eq!(stored(&recording).expect("the store").len(), 1);
-    assert_eq!(fs::read(recording.join(&name)).expect("old entry"), old);
 }
 
 #[test]

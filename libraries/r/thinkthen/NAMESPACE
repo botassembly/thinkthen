@@ -44,3 +44,7 @@ S3method(print,thinkthen_reader_failure)
 
 export(tt_usage_persistence)
 export(tt_finish_usage_status)
+
+export(tt_options)
+export(tt_recognize_question)
+export(tt_relate_question)

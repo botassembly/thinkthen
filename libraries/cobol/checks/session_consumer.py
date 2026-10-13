@@ -31,9 +31,10 @@ if not engine:
     raise SystemExit(0)
 value = json.loads(Path(sys.argv[1]).read_text())
 records = Records(Path(os.environ['TT_SESSION_PACKAGE']))
+records.builder_bridge = bridge
 verb = value['verb']
 request = {'function':verb, 'question':value['question'], 'input':value['input'], 'options':value['options']}
-address = ct.c_void_p(records.construct('RequestCall_' + verb, definitions['RequestCall_' + verb], request))
+address = ct.c_void_p(records.construct('RequestCall', definitions['RequestCall'], request))
 session = ct.c_void_p()
 start = getattr(bridge, 'COBOL_' + verb.upper())
 start.argtypes = [ct.POINTER(ct.c_void_p)] * 3

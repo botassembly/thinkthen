@@ -9,7 +9,7 @@ git submodule update --init --recursive
 make configure_ci
 ```
 
-`configure_ci` installs Rust 1.95.0, its pinned components and the selected target, then fetches locked bridge dependencies. Community Linux CI runs this preparation inside its build container. macOS CI selects `OSX_BUILD_ARCH`; preparation installs that target for the pinned Rust toolchain.
+`configure_ci` installs Rust 1.95.0, its pinned components and the selected target, then fetches locked bridge dependencies. Community Linux CI runs this preparation inside its build container. With `LINUX_CI_IN_DOCKER=1`, Cargo and Rust homes default to `build/community-rust` in the mounted checkout, so the separate release container retains the prepared inputs. Explicit caller homes still take precedence. macOS CI selects `OSX_BUILD_ARCH`; preparation installs that target for the pinned Rust toolchain.
 
 Build and test after preparation:
 
@@ -17,6 +17,10 @@ Build and test after preparation:
 make release
 make test
 ```
+
+The root `vcpkg.json` follows DuckDB’s extension template. Community CI enables `VCPKG_BUILD` and supplies its pinned vcpkg toolchain; the manifest retains the template’s OpenSSL dependency and CI tool overlays. A build without that toolchain does not reproduce community CI.
+
+The older build also includes DuckDB's bundled JSON extension, which the retained SQL macros require. DuckDB 2.0 includes JSON in its default configuration. The test target requires ThinkThen to load and adapts required-extension flags to DuckDB's selected test runner; the newer runner fails on requirement-based skips and uses two workers.
 
 The bridge builds offline with its release profile, bundled SQLite and position-independent objects. Cargo checks source changes on each build. Rust's reported native libraries follow the archive in the link command. Linux hides archive symbols; macOS hides the Rust archive and retains DuckDB's initialization export. DuckDB appends the footer after linking.
 
