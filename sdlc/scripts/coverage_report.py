@@ -108,7 +108,7 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     for name, observations in limitations.items():
         rows.append(f'{name}: {len(observations["finite_fsize"])} finite file-size observations; {len(observations["no_normal_exit"])} processes without normal-exit observations. Causes can overlap.')
     rows += ['', '`rust-integration` measures public Rust API and CLI subprocess tests together. `cli-source` runs the existing `cli::` source-unit harness; `source-unit` runs the remaining root source units; `c-source-unit` runs only the C workspace library source-unit harness. Unit-only comparisons use the union of these source-unit collections against Rust integration and all installed collections, never treating direct CLI internals as outside coverage. Each raw collection stays separate. Integration targets come from Cargo metadata with their default feature requirements. No ignored release/stress tests run.', '',
-             'The JSON measurement contains the per-file counts, exact denominator and per-collection reached line-number sets, and missing-profile observations. Build output is temporary and is not durable evidence.', '']
+             'Raw per-file counts, denominator and reached line-number sets, and missing-profile observations stay in the owned build output at `totals.json`. Only this Markdown summary is saved under `sdlc/records/coverage`.', '']
     for label, key in [('Most lines observed only in source-unit profiles', unit_key),
                        ('Most lines with no observed hits; missing child paths are unmeasured', zero_key)]:
         rows += [f'## {label}', '', '| File | Lines |', '| --- | ---: |']
@@ -139,5 +139,4 @@ def report(root, run, revision, production, collections, elapsed, *, missing=(),
     summary = root / 'sdlc/records/coverage' / f'{datetime.date.today()}-{revision[:9]}-{suffix}.md'
     summary.parent.mkdir(parents=True, exist_ok=True)
     summary.write_text('\n'.join(rows))
-    summary.with_suffix('.json').write_text(json.dumps(payload, indent=2, sort_keys=True) + '\n')
     print(summary)

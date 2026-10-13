@@ -43,8 +43,9 @@ class RetainedLineEvidence(unittest.TestCase):
                     'installed-c': f'SF:{source}\nDA:4,1\n'}
                 DRIVER['report'](root, run, f'lines-{index}', production, collections, 0)
                 payload = json.loads((run / 'totals.json').read_text())
-                record = next((root / 'sdlc/records/coverage').glob(f'*-lines-{index}-installed.json'))
-                self.assertEqual(payload, json.loads(record.read_text()))
+                records = root / 'sdlc/records/coverage'
+                self.assertEqual(list(records.glob('*.json')), [])
+                self.assertTrue(next(records.glob(f'*-lines-{index}-installed.md')).is_file())
                 self.assertEqual(payload['line_sets'], {
                     prefix + 'probe.rs': {'mapped_nonblank': [1, 3, 4, 5],
                                          'rust-integration': [outside], 'source-unit': [unit], 'installed-c': [4]},
@@ -447,13 +448,14 @@ class InstalledEvidenceRetention(unittest.TestCase):
                             sys, 'argv', ['coverage'] + (['--release'] if release else [])):
                         self.assertEqual(DRIVER['entry'](), code)
                     result = json.loads((root / 'totals.json').read_text())
-                    summary = next((root / 'sdlc/records/coverage').glob('*.json'))
-                    result = json.loads(summary.read_text())
+                    records = root / 'sdlc/records/coverage'
+                    self.assertEqual(list(records.glob('*.json')), [])
+                    summary = next(records.glob('*.md'))
                     self.assertEqual(result['unmeasured_collections'], ['installed-objective-c'])
                     self.assertEqual(result['unmeasured_reasons'],
                                      {'installed-objective-c': 'Objective-C requires macOS'})
                     self.assertIn('installed-objective-c: Objective-C requires macOS',
-                                  summary.with_suffix('.md').read_text())
+                                  summary.read_text())
                     self.assertEqual(result['totals']['mapped_nonblank'], 1)
                     self.assertEqual(result['totals']['installed-c'], 1)
                     self.assertNotIn('installed-objective-c', result['totals'])

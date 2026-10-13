@@ -8,7 +8,7 @@ Depends on: 0549, 0550, 0551, 0552, 0553, 0554, 0555, 0556, 0558
 
 Reviews: revision 41499bf, accept
 
-Reviews: revision 8b96113, accept
+Reviews: revision 8b96113, reporting repair accepted; coverage baseline accepted by PM amendment; ticket remains open until candidate.
 
 ## Outcome
 
