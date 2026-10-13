@@ -182,12 +182,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "QuestionSource.path",
@@ -334,12 +329,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "representation_types": [
         "Results"
@@ -378,12 +368,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         "Client"
@@ -413,12 +398,7 @@
       "function_prefix": "tt_",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         ""
@@ -444,12 +424,7 @@
       "function_prefix": "thinkthen_",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "usage_persistence": "thinkthen_engine_usage_persistence_v1",
@@ -483,13 +458,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -598,12 +568,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_suffix": "Async",
       "function_containers": [
@@ -663,13 +628,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -762,12 +722,7 @@
       "function_prefix": "",
       "test_folders": [
         "tests",
-        "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -902,12 +857,7 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
         "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
         "Examples"
       ],
       "helper_names": {
@@ -955,13 +905,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
         "Tests",
-        "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "RequestQuestionFile",
@@ -1002,13 +947,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
-        "checks",
         "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "question_file": "Client.questionFile",
@@ -1089,14 +1029,7 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples",
-        "test",
         "example"
       ],
       "helper_names": {
@@ -1133,13 +1066,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         ""
@@ -1179,13 +1107,8 @@
       ],
       "function_prefix": "",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "function_containers": [
         "TTFoundationClient"
@@ -1217,13 +1140,8 @@
       ],
       "function_prefix": "TT_SESSION_",
       "test_folders": [
-        "tests",
-        "Tests",
         "checks",
-        "fixtures",
-        "consumer",
-        "examples",
-        "Examples"
+        "examples"
       ],
       "helper_names": {
         "usage_persistence": "TT_ENGINE_USAGE_PERSISTENCE",
