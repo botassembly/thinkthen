@@ -28,3 +28,5 @@ Each package registry page that ships with 0.2 shows a short README written for 
 - Defers: nothing.
 
 ## Progress
+
+PM amendment, 2026-10-13. Review of the drafts at 53f10e414 before they go to marketing. Revise every public README this way. Capitalize the language name in each title, as in "ThinkThen for Python". Delete "Failed calls remain separate from answers." Say in one sentence why a developer would use ThinkThen over calling a model directly: answers code can branch on, each question paid once through the cache, and offline replay for tests. Name Jev, SystemOne, OpenAI and local models as backends, per Ian's 2026-10-13 search ruling. Replace "Configure a model backend" with the one line that sets the key, such as `export THINKTHEN_API_KEY=...`. Show one typed answer read in each example, never `results[0]`. Keep each page under 40 lines.
