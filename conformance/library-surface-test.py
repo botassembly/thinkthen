@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import os
+import shutil
 from pathlib import Path
 import subprocess
 import tempfile
@@ -81,6 +82,37 @@ class PublicSurface(unittest.TestCase):
             self.assertTrue(any('missing generated declaration:' in error and '.payload' in error for error in errors))
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: string;\n surprise: string;'))
             self.assertTrue(any('unlisted generated declaration:' in error and '.surprise' in error for error in errors))
+
+    def test_java_record_components_are_checked_at_the_cli(self):
+        manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+        with tempfile.TemporaryDirectory(prefix='library-surface-records-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            paths = [ROOT / 'libraries/c/include/thinkthen.h']
+            for pattern in manifest['libraries']['jvm']['declarations']:
+                paths.extend(ROOT.glob(pattern))
+            for path in paths:
+                target = root / path.relative_to(ROOT)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, target)
+            records = root / 'libraries/jvm/session/thinkthen/Results.java'
+            original = records.read_text()
+            def invoke(source):
+                records.write_text(source)
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                      str(ROOT / 'conformance/library-surface.json'), '--library', 'jvm', '--json'],
+                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                return json.loads(run.stdout)['libraries']['jvm']
+            baseline = invoke(original)
+            missing = invoke(original.replace('record BatchInteger(BigInteger value)',
+                                              'record BatchInteger(BigInteger renamed)'))
+            self.assertIn('missing generated declaration: Results.java:BatchInteger.value', missing)
+            self.assertIn('unlisted generated declaration: Results.java:BatchInteger.renamed', missing)
+            extra = invoke(original.replace('record BatchInteger(BigInteger value)',
+                                            'record BatchInteger(BigInteger value, java.util.Map<String, java.util.List<Results.BatchInteger>>[] surprise)'))
+            self.assertIn('unlisted generated declaration: Results.java:BatchInteger.surprise', extra)
+            self.assertNotIn('missing generated declaration: Results.java:BatchInteger.value', baseline)
 
     def test_native_declarations_exclude_comments_and_private_fields(self):
         spec = importlib.util.spec_from_file_location('surface_cli', CHECK)

@@ -96,6 +96,27 @@ def cstyle(source, language):
             if alias:
                 name = alias[1]
         scopes.append((start, end, name))
+        if language == 'java' and match[0].startswith('record'):
+            header = text[match.end():start]
+            opening = header.find('(')
+            if opening >= 0:
+                components, component_start, nesting = [], opening + 1, 0
+                for pos in range(opening + 1, len(header)):
+                    char = header[pos]
+                    if char in '(<[':
+                        nesting += 1
+                    elif char == ')' and nesting == 0:
+                        components.append(header[component_start:pos])
+                        break
+                    elif char in ')>]':
+                        nesting -= 1
+                    elif char == ',' and nesting == 0:
+                        components.append(header[component_start:pos])
+                        component_start = pos + 1
+                for component in components:
+                    accessor = re.search(r'(\w+)\s*$', component)
+                    if accessor:
+                        result.add(Declaration(name, accessor[1], 'call'))
         if not match[0].startswith('extension'):
             result.add(Declaration('', name, 'type'))
     if language == 'go':
