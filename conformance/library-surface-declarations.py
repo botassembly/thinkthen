@@ -225,6 +225,31 @@ def cstyle(source, language):
         for match in re.finditer(patterns[language], text):
             if owner(match.start()) == '':
                 result.add(Declaration('', match[1], 'export'))
+    if language == 'typescript':
+        bindings = {}
+        for match in re.finditer(r'\bexport\s+(?:(?:declare|default|abstract)\s+)*(?:class|interface|type|function|const|enum)\s+(\w+)', text):
+            if depths[match.start()] == 0:
+                bindings.setdefault(match[1], set()).add(match[1])
+        for match in re.finditer(r'\bexport\s+\*\s+as\s+(\w+)', text):
+            bindings.setdefault(match[1], set()).add(match[1])
+        for match in re.finditer(r'\bexport\s+(?:type\s+)?\{([^}]+)\}', text):
+            if depths[match.start()] != 0:
+                continue
+            for binding in match[1].split(','):
+                local = re.fullmatch(r'\s*(?:type\s+)?(\w+)(?:\s+as\s+(\w+))?\s*', binding)
+                if local:
+                    bindings.setdefault(local[1], set()).add(local[2] or local[1])
+        for match in re.finditer(r'\b(?:declare\s+)?function\s+(\w+)\s*\(', text):
+            if depths[match.start()] == 0:
+                result.add(Declaration('', match[1], 'call'))
+        public = set()
+        for item in result:
+            local = item.owner or item.name
+            for name in bindings.get(local, ()):
+                public.add(Declaration(name if item.owner else '', item.name if item.owner else name, item.kind))
+            if not item.owner and item.kind == 'export' and item.name in {n for names in bindings.values() for n in names}:
+                public.add(item)
+        result = public
     return result
 
 
