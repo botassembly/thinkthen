@@ -39,6 +39,10 @@ int thinkthen_session_next_packet(struct thinkthen_session *session,
 uint32_t interest,
 uint32_t *status,
 struct thinkthen_session_result **out);
+int thinkthen_session_push(struct thinkthen_session *session,
+const char *descriptor_json,
+size_t descriptor_len,
+uint32_t *status);
 void thinkthen_session_result_free(struct thinkthen_session_result *result);
 int thinkthen_session_result_json(const struct thinkthen_session_result *result,
 const char **out,

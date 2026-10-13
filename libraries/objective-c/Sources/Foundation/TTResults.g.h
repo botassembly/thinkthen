@@ -1195,6 +1195,38 @@ FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError **error
 @interface TTRequestObject : NSObject
 @property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;
 @end
+typedef NSString *TTInputImageMedia NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputImageMedia const TTInputImageMediaImageJpeg;
+FOUNDATION_EXPORT TTInputImageMedia const TTInputImageMediaImagePng;
+typedef NSString *TTInputReaderMedia NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputReaderMedia const TTInputReaderMediaText;
+FOUNDATION_EXPORT TTInputReaderMedia const TTInputReaderMediaImage;
+typedef NSString *TTInputRecognitionMode NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputRecognitionMode const TTInputRecognitionModeWhole;
+FOUNDATION_EXPORT TTInputRecognitionMode const TTInputRecognitionModeBoundaryOnly;
+typedef NSString *TTInputRequestFraming NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputRequestFraming const TTInputRequestFramingDocument;
+FOUNDATION_EXPORT TTInputRequestFraming const TTInputRequestFramingLines;
+FOUNDATION_EXPORT TTInputRequestFraming const TTInputRequestFramingJsonl;
+FOUNDATION_EXPORT TTInputRequestFraming const TTInputRequestFramingCsv;
+FOUNDATION_EXPORT TTInputRequestFraming const TTInputRequestFramingTsv;
+typedef NSString *TTInputRequestFunction NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionDecide;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionChoose;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionTag;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionScore;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionFilter;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionRank;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionFind;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionAnnotate;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionRecognize;
+FOUNDATION_EXPORT TTInputRequestFunction const TTInputRequestFunctionRelate;
+typedef NSString *TTInputRequestVersion NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputRequestVersion const TTInputRequestVersionThinkthenRequest1;
+typedef NSString *TTInputSourceUnit NS_TYPED_ENUM;
+FOUNDATION_EXPORT TTInputSourceUnit const TTInputSourceUnitLine;
+FOUNDATION_EXPORT TTInputSourceUnit const TTInputSourceUnitWindow;
+FOUNDATION_EXPORT TTInputSourceUnit const TTInputSourceUnitFile;
 @class TTInputAnnotateDefinition, TTInputAnnotateQuestionChoose, TTInputAnnotateQuestionDecide,
 TTInputAnnotateQuestionScore, TTInputAnnotateQuestionTag, TTInputAuthoredChoose, TTInputAuthoredDecide,
 TTInputAuthoredFind, TTInputAuthoredInputDeclarationObject, TTInputAuthoredInputDeclarationString,
@@ -1215,62 +1247,62 @@ TTInputRequestReaderFailureIo, TTInputRequestReaderFailureProducer, TTInputReque
 TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocation;
 @interface TTInputAnnotateDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTOrderedMap *questions;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTOrderedMap * questions;
 @property(nonatomic, strong, nullable) id threshold;
 @end
 @interface TTInputAnnotateQuestionChoose : TTRequestObject
 @property(nonatomic, strong, nullable) id choose;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id options;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAnnotateQuestionDecide : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id decide;
 @property(nonatomic, strong, nullable) id falseValue;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAnnotateQuestionScore : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id levels;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAnnotateQuestionTag : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id labels;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id tag;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredChoose : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id choose;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id options;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredDecide : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1278,32 +1310,32 @@ TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocat
 @property(nonatomic, strong, nullable) id decide;
 @property(nonatomic, strong, nullable) id falseValue;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredFind : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id find;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredInputDeclarationObject : TTRequestObject
-@property(nonatomic, strong, nullable) NSDictionary *properties;
-@property(nonatomic, strong, nullable) NSArray *required;
+@property(nonatomic, strong, nullable) NSDictionary * properties;
+@property(nonatomic, strong, nullable) NSArray * required;
 @end
 @interface TTInputAuthoredInputDeclarationString : TTRequestObject
 @end
 @interface TTInputAuthoredInputPropertyArray : TTRequestObject
-@property(nonatomic, strong, nullable) NSDictionary *items;
+@property(nonatomic, strong, nullable) NSDictionary * items;
 @end
 @interface TTInputAuthoredInputPropertyBoolean : TTRequestObject
 @end
@@ -1314,134 +1346,134 @@ TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocat
 @interface TTInputAuthoredRelate : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTInputRelateQuestion *relate;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTInputRelateQuestion * relate;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredRelation : TTRequestObject
-@property(nonatomic, strong, nullable) NSNumber *either;
-@property(nonatomic, strong, nullable) NSString *name;
-@property(nonatomic, strong, nullable) NSString *reads;
-@property(nonatomic, strong, nullable) NSNumber *single;
-@property(nonatomic, strong, nullable) NSString *source;
-@property(nonatomic, strong, nullable) NSString *target;
+@property(nonatomic, strong, nullable) NSNumber * either;
+@property(nonatomic, strong, nullable) NSString * name;
+@property(nonatomic, strong, nullable) NSString * reads;
+@property(nonatomic, strong, nullable) NSNumber * single;
+@property(nonatomic, strong, nullable) NSString * source;
+@property(nonatomic, strong, nullable) NSString * target;
 @end
 @interface TTInputAuthoredScore : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id levels;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputAuthoredTag : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id labels;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id tag;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputEngineSettings : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *backend;
-@property(nonatomic, strong, nullable) NSString *baseUrl;
+@property(nonatomic, strong, nullable) NSString * backend;
+@property(nonatomic, strong, nullable) NSString * baseUrl;
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id cache;
 @property(nonatomic, strong, nullable) id maxEstimatedInputTokensTotal;
-@property(nonatomic, strong, nullable) NSNumber *maxRequestBytes;
+@property(nonatomic, strong, nullable) NSNumber * maxRequestBytes;
 @property(nonatomic, strong, nullable) id maxRequests;
 @property(nonatomic, strong, nullable) id maxRequestsTotal;
-@property(nonatomic, strong, nullable) NSNumber *maxRetries;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSNumber * maxRetries;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id proxy;
-@property(nonatomic, strong, nullable) NSString *record;
-@property(nonatomic, strong, nullable) NSNumber *refreshCache;
-@property(nonatomic, strong, nullable) NSString *replay;
-@property(nonatomic, strong, nullable) NSNumber *throttle;
-@property(nonatomic, strong, nullable) NSNumber *timeout;
-@property(nonatomic, strong, nullable) NSString *usdPerMillionInput;
-@property(nonatomic, strong, nullable) NSString *usdPerMillionOutput;
+@property(nonatomic, strong, nullable) NSString * record;
+@property(nonatomic, strong, nullable) NSNumber * refreshCache;
+@property(nonatomic, strong, nullable) NSString * replay;
+@property(nonatomic, strong, nullable) NSNumber * throttle;
+@property(nonatomic, strong, nullable) NSNumber * timeout;
+@property(nonatomic, strong, nullable) NSString * usdPerMillionInput;
+@property(nonatomic, strong, nullable) NSString * usdPerMillionOutput;
 @end
 @interface TTInputOptionSchema : TTRequestObject
 @property(nonatomic, strong, nullable) id descriptionValue;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @end
 @interface TTInputRecognitionExampleEntity : TTRequestObject
-@property(nonatomic, strong, nullable) NSNumber *end;
-@property(nonatomic, strong, nullable) NSString *kind;
-@property(nonatomic, strong, nullable) NSNumber *start;
+@property(nonatomic, strong, nullable) NSNumber * end;
+@property(nonatomic, strong, nullable) NSString * kind;
+@property(nonatomic, strong, nullable) NSNumber * start;
 @end
 @interface TTInputRecognitionExampleText : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *entities;
-@property(nonatomic, strong, nullable) NSArray *kinds;
-@property(nonatomic, strong, nullable) NSString *text;
+@property(nonatomic, strong, nullable) NSArray * entities;
+@property(nonatomic, strong, nullable) NSArray * kinds;
+@property(nonatomic, strong, nullable) NSString * text;
 @end
 @interface TTInputRecognitionSeedSpan : TTRequestObject
-@property(nonatomic, strong, nullable) NSNumber *end;
-@property(nonatomic, strong, nullable) NSString *kind;
-@property(nonatomic, strong, nullable) NSNumber *start;
+@property(nonatomic, strong, nullable) NSNumber * end;
+@property(nonatomic, strong, nullable) NSString * kind;
+@property(nonatomic, strong, nullable) NSNumber * start;
 @end
 @interface TTInputRecognitionStageContext : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *boundary;
-@property(nonatomic, strong, nullable) NSString *kindEdge;
-@property(nonatomic, strong, nullable) NSString *relation;
+@property(nonatomic, strong, nullable) NSString * boundary;
+@property(nonatomic, strong, nullable) NSString * kindEdge;
+@property(nonatomic, strong, nullable) NSString * relation;
 @end
 @interface TTInputRecognizeDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTInputRecognizeQuestion *recognize;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTInputRecognizeQuestion * recognize;
 @property(nonatomic, strong, nullable) id relationThreshold;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRecognizeQuestion : TTRequestObject
 @property(nonatomic, strong, nullable) id entityDefinition;
 @property(nonatomic, strong, nullable) id instructions;
-@property(nonatomic, strong, nullable) TTOrderedMap *kinds;
-@property(nonatomic, strong, nullable) id mode;
-@property(nonatomic, strong, nullable) NSArray *relations;
-@property(nonatomic, strong, nullable) NSNumber *snippetPieces;
-@property(nonatomic, strong, nullable) TTInputRecognitionStageContext *stageContext;
+@property(nonatomic, strong, nullable) TTOrderedMap * kinds;
+@property(nonatomic, strong, nullable) TTInputRecognitionMode mode;
+@property(nonatomic, strong, nullable) NSArray * relations;
+@property(nonatomic, strong, nullable) NSNumber * snippetPieces;
+@property(nonatomic, strong, nullable) TTInputRecognitionStageContext * stageContext;
 @end
 @interface TTInputRelateFields : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *kind;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * kind;
+@property(nonatomic, strong, nullable) NSString * name;
 @end
 @interface TTInputRelateQuestion : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputRelateFields *fields;
-@property(nonatomic, strong, nullable) NSArray *relations;
+@property(nonatomic, strong, nullable) TTInputRelateFields * fields;
+@property(nonatomic, strong, nullable) NSArray * relations;
 @end
 @interface TTInputRequest : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputRequestCall *call;
-@property(nonatomic, strong, nullable) id schema;
+@property(nonatomic, strong, nullable) TTInputRequestCall * call;
+@property(nonatomic, strong, nullable) TTInputRequestVersion schema;
 @end
 @interface TTInputRequestCall : TTRequestObject
-@property(nonatomic, strong, nullable) id function;
+@property(nonatomic, strong, nullable) TTInputRequestFunction function;
 @property(nonatomic, strong, nullable) id input;
-@property(nonatomic, strong, nullable) TTInputRequestOptions *options;
+@property(nonatomic, strong, nullable) TTInputRequestOptions * options;
 @property(nonatomic, strong, nullable) id question;
 @end
 @interface TTInputRequestDefinitionAnnotateDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTOrderedMap *questions;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTOrderedMap * questions;
 @property(nonatomic, strong, nullable) id threshold;
 @end
 @interface TTInputRequestDefinitionAuthoredChoose : TTRequestObject
@@ -1449,13 +1481,13 @@ TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocat
 @property(nonatomic, strong, nullable) id choose;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
 @property(nonatomic, strong, nullable) id options;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionAuthoredDecide : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
@@ -1463,187 +1495,187 @@ TTInputRequestSessionDescriptor, TTInputRequestSource, TTInputSessionSourceLocat
 @property(nonatomic, strong, nullable) id decide;
 @property(nonatomic, strong, nullable) id falseValue;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id threshold;
 @property(nonatomic, strong, nullable) id trueValue;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionAuthoredFind : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id find;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionAuthoredRelate : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTInputRelateQuestion *relate;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTInputRelateQuestion * relate;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionAuthoredScore : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id levels;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id score;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionAuthoredTag : TTRequestObject
 @property(nonatomic, strong, nullable) id batch;
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
 @property(nonatomic, strong, nullable) id labels;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
+@property(nonatomic, strong, nullable) NSString * profile;
 @property(nonatomic, strong, nullable) id tag;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestDefinitionRecognizeDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id contextSchema;
 @property(nonatomic, strong, nullable) id itemSchema;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSString * name;
 @property(nonatomic, strong, nullable) id on;
-@property(nonatomic, strong, nullable) NSString *profile;
-@property(nonatomic, strong, nullable) TTInputRecognizeQuestion *recognize;
+@property(nonatomic, strong, nullable) NSString * profile;
+@property(nonatomic, strong, nullable) TTInputRecognizeQuestion * recognize;
 @property(nonatomic, strong, nullable) id relationThreshold;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *wordingVersion;
+@property(nonatomic, strong, nullable) NSNumber * wordingVersion;
 @end
 @interface TTInputRequestImageBytes : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *bytes;
-@property(nonatomic, strong, nullable) id media;
+@property(nonatomic, strong, nullable) NSString * bytes;
+@property(nonatomic, strong, nullable) TTInputImageMedia media;
 @end
 @interface TTInputRequestImageFile : TTRequestObject
-@property(nonatomic, strong, nullable) id media;
-@property(nonatomic, strong, nullable) NSString *path;
+@property(nonatomic, strong, nullable) TTInputImageMedia media;
+@property(nonatomic, strong, nullable) NSString * path;
 @end
 @interface TTInputRequestInputEntities : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *items;
+@property(nonatomic, strong, nullable) NSArray * items;
 @end
 @interface TTInputRequestInputFeed : TTRequestObject
-@property(nonatomic, strong, nullable) id framing;
-@property(nonatomic, strong, nullable) NSArray *images;
-@property(nonatomic, strong, nullable) NSString *name;
-@property(nonatomic, strong, nullable) TTInputRequestReader *reading;
+@property(nonatomic, strong, nullable) TTInputRequestFraming framing;
+@property(nonatomic, strong, nullable) NSArray * images;
+@property(nonatomic, strong, nullable) NSString * name;
+@property(nonatomic, strong, nullable) TTInputRequestReader * reading;
 @end
 @interface TTInputRequestInputJson : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *images;
+@property(nonatomic, strong, nullable) NSArray * images;
 @property(nonatomic, strong, nullable) id value;
 @end
 @interface TTInputRequestInputRecords : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *items;
+@property(nonatomic, strong, nullable) NSArray * items;
 @end
 @interface TTInputRequestInputSource : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputRequestSource *source;
+@property(nonatomic, strong, nullable) TTInputRequestSource * source;
 @end
 @interface TTInputRequestInputText : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *images;
-@property(nonatomic, strong, nullable) NSString *text;
+@property(nonatomic, strong, nullable) NSArray * images;
+@property(nonatomic, strong, nullable) NSString * text;
 @end
 @interface TTInputRequestInputUnits : TTRequestObject
-@property(nonatomic, strong, nullable) NSArray *items;
+@property(nonatomic, strong, nullable) NSArray * items;
 @end
 @interface TTInputRequestItem : TTRequestObject
 @property(nonatomic, strong, nullable) id context;
-@property(nonatomic, strong, nullable) NSArray *examples;
-@property(nonatomic, strong, nullable) NSArray *images;
-@property(nonatomic, strong, nullable) NSArray *options;
+@property(nonatomic, strong, nullable) NSArray * examples;
+@property(nonatomic, strong, nullable) NSArray * images;
+@property(nonatomic, strong, nullable) NSArray * options;
 @property(nonatomic, strong, nullable) id original;
-@property(nonatomic, strong, nullable) NSArray *seedSpans;
+@property(nonatomic, strong, nullable) NSArray * seedSpans;
 @end
 @interface TTInputRequestOptions : TTRequestObject
-@property(nonatomic, strong, nullable) NSNumber *attempts;
+@property(nonatomic, strong, nullable) NSNumber * attempts;
 @property(nonatomic, strong, nullable) id batch;
-@property(nonatomic, strong, nullable) NSString *context;
-@property(nonatomic, strong, nullable) NSString *contextField;
-@property(nonatomic, strong, nullable) NSNumber *deadlineMs;
-@property(nonatomic, strong, nullable) NSNumber *details;
-@property(nonatomic, strong, nullable) NSArray *examples;
-@property(nonatomic, strong, nullable) NSString *examplesField;
-@property(nonatomic, strong, nullable) NSArray *field;
-@property(nonatomic, strong, nullable) NSNumber *filesOnly;
-@property(nonatomic, strong, nullable) NSNumber *maxRequestsTotal;
-@property(nonatomic, strong, nullable) id mode;
-@property(nonatomic, strong, nullable) NSString *model;
-@property(nonatomic, strong, nullable) NSNumber *none;
-@property(nonatomic, strong, nullable) NSString *optionsField;
+@property(nonatomic, strong, nullable) NSString * context;
+@property(nonatomic, strong, nullable) NSString * contextField;
+@property(nonatomic, strong, nullable) NSNumber * deadlineMs;
+@property(nonatomic, strong, nullable) NSNumber * details;
+@property(nonatomic, strong, nullable) NSArray * examples;
+@property(nonatomic, strong, nullable) NSString * examplesField;
+@property(nonatomic, strong, nullable) NSArray * field;
+@property(nonatomic, strong, nullable) NSNumber * filesOnly;
+@property(nonatomic, strong, nullable) NSNumber * maxRequestsTotal;
+@property(nonatomic, strong, nullable) TTInputRecognitionMode mode;
+@property(nonatomic, strong, nullable) NSString * model;
+@property(nonatomic, strong, nullable) NSNumber * none;
+@property(nonatomic, strong, nullable) NSString * optionsField;
 @property(nonatomic, strong, nullable) id relationThreshold;
-@property(nonatomic, strong, nullable) NSArray *seedSpans;
-@property(nonatomic, strong, nullable) NSString *seedSpansField;
-@property(nonatomic, strong, nullable) NSNumber *snippetPieces;
-@property(nonatomic, strong, nullable) TTInputRecognitionStageContext *stageContext;
+@property(nonatomic, strong, nullable) NSArray * seedSpans;
+@property(nonatomic, strong, nullable) NSString * seedSpansField;
+@property(nonatomic, strong, nullable) NSNumber * snippetPieces;
+@property(nonatomic, strong, nullable) TTInputRecognitionStageContext * stageContext;
 @property(nonatomic, strong, nullable) id threshold;
-@property(nonatomic, strong, nullable) NSNumber *top;
+@property(nonatomic, strong, nullable) NSNumber * top;
 @end
 @interface TTInputRequestOriginalJson : TTRequestObject
 @property(nonatomic, strong, nullable) id value;
 @end
 @interface TTInputRequestOriginalText : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *text;
+@property(nonatomic, strong, nullable) NSString * text;
 @end
 @interface TTInputRequestQuestionDefinition : TTRequestObject
 @property(nonatomic, strong, nullable) id value;
 @end
 @interface TTInputRequestQuestionFile : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *path;
+@property(nonatomic, strong, nullable) NSString * path;
 @end
 @interface TTInputRequestQuestionName : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *name;
+@property(nonatomic, strong, nullable) NSString * name;
 @end
 @interface TTInputRequestQuestionReference : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *reference;
+@property(nonatomic, strong, nullable) NSString * reference;
 @end
 @interface TTInputRequestQuestionText : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *text;
+@property(nonatomic, strong, nullable) NSString * text;
 @end
 @interface TTInputRequestReader : TTRequestObject
-@property(nonatomic, strong, nullable) id unit;
-@property(nonatomic, strong, nullable) NSNumber *window;
+@property(nonatomic, strong, nullable) TTInputSourceUnit unit;
+@property(nonatomic, strong, nullable) NSNumber * window;
 @end
 @interface TTInputRequestReaderFailureInvalidInput : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation * location;
 @end
 @interface TTInputRequestReaderFailureIo : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation * location;
 @end
 @interface TTInputRequestReaderFailureProducer : TTRequestObject
 @end
 @interface TTInputRequestReaderFailureUtf8 : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation * location;
 @end
 @interface TTInputRequestSessionDescriptor : TTRequestObject
-@property(nonatomic, strong, nullable) TTInputRequestItem *item;
-@property(nonatomic, strong, nullable) TTInputSessionSourceLocation *location;
+@property(nonatomic, strong, nullable) TTInputRequestItem * item;
+@property(nonatomic, strong, nullable) TTInputSessionSourceLocation * location;
 @end
 @interface TTInputRequestSource : TTRequestObject
-@property(nonatomic, strong, nullable) id framing;
-@property(nonatomic, strong, nullable) id media;
-@property(nonatomic, strong, nullable) NSArray *paths;
-@property(nonatomic, strong, nullable) TTInputRequestReader *reading;
+@property(nonatomic, strong, nullable) TTInputRequestFraming framing;
+@property(nonatomic, strong, nullable) TTInputReaderMedia media;
+@property(nonatomic, strong, nullable) NSArray * paths;
+@property(nonatomic, strong, nullable) TTInputRequestReader * reading;
 @end
 @interface TTInputSessionSourceLocation : TTRequestObject
-@property(nonatomic, strong, nullable) NSString *file;
-@property(nonatomic, strong, nullable) NSNumber *firstLine;
-@property(nonatomic, strong, nullable) NSNumber *lastLine;
+@property(nonatomic, strong, nullable) NSString * file;
+@property(nonatomic, strong, nullable) NSNumber * firstLine;
+@property(nonatomic, strong, nullable) NSNumber * lastLine;
 @end
 #define TT_GENERATED_NAMED_DECLARATIONS \
 - (nullable TTTask *)decide:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error;

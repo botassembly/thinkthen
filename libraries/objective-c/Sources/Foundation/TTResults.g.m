@@ -4606,6 +4606,31 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     return self;
 }
 @end
+TTInputImageMedia const TTInputImageMediaImageJpeg = @"image/jpeg";
+TTInputImageMedia const TTInputImageMediaImagePng = @"image/png";
+TTInputReaderMedia const TTInputReaderMediaText = @"text";
+TTInputReaderMedia const TTInputReaderMediaImage = @"image";
+TTInputRecognitionMode const TTInputRecognitionModeWhole = @"whole";
+TTInputRecognitionMode const TTInputRecognitionModeBoundaryOnly = @"boundary_only";
+TTInputRequestFraming const TTInputRequestFramingDocument = @"document";
+TTInputRequestFraming const TTInputRequestFramingLines = @"lines";
+TTInputRequestFraming const TTInputRequestFramingJsonl = @"jsonl";
+TTInputRequestFraming const TTInputRequestFramingCsv = @"csv";
+TTInputRequestFraming const TTInputRequestFramingTsv = @"tsv";
+TTInputRequestFunction const TTInputRequestFunctionDecide = @"decide";
+TTInputRequestFunction const TTInputRequestFunctionChoose = @"choose";
+TTInputRequestFunction const TTInputRequestFunctionTag = @"tag";
+TTInputRequestFunction const TTInputRequestFunctionScore = @"score";
+TTInputRequestFunction const TTInputRequestFunctionFilter = @"filter";
+TTInputRequestFunction const TTInputRequestFunctionRank = @"rank";
+TTInputRequestFunction const TTInputRequestFunctionFind = @"find";
+TTInputRequestFunction const TTInputRequestFunctionAnnotate = @"annotate";
+TTInputRequestFunction const TTInputRequestFunctionRecognize = @"recognize";
+TTInputRequestFunction const TTInputRequestFunctionRelate = @"relate";
+TTInputRequestVersion const TTInputRequestVersionThinkthenRequest1 = @"thinkthen.request/1";
+TTInputSourceUnit const TTInputSourceUnitLine = @"line";
+TTInputSourceUnit const TTInputSourceUnitWindow = @"window";
+TTInputSourceUnit const TTInputSourceUnitFile = @"file";
 @implementation TTInputAnnotateDefinition
 - (id)batch {
     return self.requestFields[@"batch"];
@@ -5759,10 +5784,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     if (value) self.requestFields[@"kinds"] = value;
     else [self.requestFields removeObjectForKey:@"kinds"];
 }
-- (id)mode {
+- (TTInputRecognitionMode)mode {
     return self.requestFields[@"mode"];
 }
-- (void)setMode:(id)value {
+- (void)setMode:(TTInputRecognitionMode)value {
     if (value) self.requestFields[@"mode"] = value;
     else [self.requestFields removeObjectForKey:@"mode"];
 }
@@ -5828,19 +5853,19 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     if (value) self.requestFields[@"call"] = value;
     else [self.requestFields removeObjectForKey:@"call"];
 }
-- (id)schema {
+- (TTInputRequestVersion)schema {
     return self.requestFields[@"schema"];
 }
-- (void)setSchema:(id)value {
+- (void)setSchema:(TTInputRequestVersion)value {
     if (value) self.requestFields[@"schema"] = value;
     else [self.requestFields removeObjectForKey:@"schema"];
 }
 @end
 @implementation TTInputRequestCall
-- (id)function {
+- (TTInputRequestFunction)function {
     return self.requestFields[@"function"];
 }
-- (void)setFunction:(id)value {
+- (void)setFunction:(TTInputRequestFunction)value {
     if (value) self.requestFields[@"function"] = value;
     else [self.requestFields removeObjectForKey:@"function"];
 }
@@ -6423,10 +6448,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     if (value) self.requestFields[@"bytes"] = value;
     else [self.requestFields removeObjectForKey:@"bytes"];
 }
-- (id)media {
+- (TTInputImageMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(id)value {
+- (void)setMedia:(TTInputImageMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }
@@ -6437,10 +6462,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
 }
 @end
 @implementation TTInputRequestImageFile
-- (id)media {
+- (TTInputImageMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(id)value {
+- (void)setMedia:(TTInputImageMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }
@@ -6472,10 +6497,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
 }
 @end
 @implementation TTInputRequestInputFeed
-- (id)framing {
+- (TTInputRequestFraming)framing {
     return self.requestFields[@"framing"];
 }
-- (void)setFraming:(id)value {
+- (void)setFraming:(TTInputRequestFraming)value {
     if (value) self.requestFields[@"framing"] = value;
     else [self.requestFields removeObjectForKey:@"framing"];
 }
@@ -6712,10 +6737,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
     if (value) self.requestFields[@"max_requests_total"] = value;
     else [self.requestFields removeObjectForKey:@"max_requests_total"];
 }
-- (id)mode {
+- (TTInputRecognitionMode)mode {
     return self.requestFields[@"mode"];
 }
-- (void)setMode:(id)value {
+- (void)setMode:(TTInputRecognitionMode)value {
     if (value) self.requestFields[@"mode"] = value;
     else [self.requestFields removeObjectForKey:@"mode"];
 }
@@ -6889,10 +6914,10 @@ NSData *TTRequestJSONData(id value, NSError **error) {
 }
 @end
 @implementation TTInputRequestReader
-- (id)unit {
+- (TTInputSourceUnit)unit {
     return self.requestFields[@"unit"];
 }
-- (void)setUnit:(id)value {
+- (void)setUnit:(TTInputSourceUnit)value {
     if (value) self.requestFields[@"unit"] = value;
     else [self.requestFields removeObjectForKey:@"unit"];
 }
@@ -6970,17 +6995,17 @@ NSData *TTRequestJSONData(id value, NSError **error) {
 }
 @end
 @implementation TTInputRequestSource
-- (id)framing {
+- (TTInputRequestFraming)framing {
     return self.requestFields[@"framing"];
 }
-- (void)setFraming:(id)value {
+- (void)setFraming:(TTInputRequestFraming)value {
     if (value) self.requestFields[@"framing"] = value;
     else [self.requestFields removeObjectForKey:@"framing"];
 }
-- (id)media {
+- (TTInputReaderMedia)media {
     return self.requestFields[@"media"];
 }
-- (void)setMedia:(id)value {
+- (void)setMedia:(TTInputReaderMedia)value {
     if (value) self.requestFields[@"media"] = value;
     else [self.requestFields removeObjectForKey:@"media"];
 }

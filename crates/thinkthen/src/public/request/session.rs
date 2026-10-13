@@ -280,6 +280,23 @@ impl RequestSession {
             RequestSessionPush::Closed(_) => RequestSessionPushStatus::Closed,
         })
     }
+    /// Wait for input room and transfer one descriptor without consuming output.
+    /// Convert at most once, outside the queue lock, only after intake has room.
+    /// Closure or cancellation wakes the producer and retains nothing.
+    /// # Errors
+    /// Refuses non-feed sessions and propagates conversion failures on this caller.
+    pub fn push_with<E: From<Error>>(
+        &self,
+        convert: impl FnOnce() -> Result<RequestSessionDescriptor, E>,
+    ) -> Result<RequestSessionPushStatus, E> {
+        if !self.feed {
+            return Err(Error::usage("this session has no caller-supplied feed").into());
+        }
+        if !self.queue.input_room() {
+            return Ok(RequestSessionPushStatus::Closed);
+        }
+        Ok(self.queue.push_wait(convert()?))
+    }
     /// Read one packet without waiting for native work.
     #[must_use]
     pub fn try_read(&self) -> RequestSessionRead {

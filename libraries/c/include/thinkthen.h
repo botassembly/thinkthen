@@ -2170,6 +2170,11 @@ typedef struct thinkthen_request_arguments_v1 {
   const struct thinkthen_request_question_selector_v1 *m_question;
 } thinkthen_request_arguments_v1;
 
+typedef struct thinkthen_request_session_descriptor_v1 {
+  const struct thinkthen_request_item_v1 *m_item;
+  const struct thinkthen_request_session_source_location_v1 *m_location;
+} thinkthen_request_session_descriptor_v1;
+
 typedef struct thinkthen_complete_extension_v1 {
   struct thinkthen_complete_utf8_v1 name;
   struct thinkthen_complete_utf8_v1 json;
@@ -4150,11 +4155,6 @@ typedef struct thinkthen_complete_session_packet_v1 {
   union thinkthen_complete_session_packet_data_v1 data;
 } thinkthen_complete_session_packet_v1;
 
-typedef struct thinkthen_request_session_descriptor_v1 {
-  const struct thinkthen_request_item_v1 *m_item;
-  const struct thinkthen_request_session_source_location_v1 *m_location;
-} thinkthen_request_session_descriptor_v1;
-
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -4475,6 +4475,32 @@ int thinkthen_session_next_packet(struct thinkthen_session *session,
                                   uint32_t interest,
                                   uint32_t *status,
                                   struct thinkthen_session_result **out);
+
+/*
+ Wait for input room and transfer one descriptor without consuming output.
+ Pending output cannot wake this producer. Closure or cancellation returns
+ CLOSED without decoding the payload. Failures preserve status and publish
+ only the calling thread diagnostic. No input bytes survive return.
+ # Safety
+ session stays live throughout the wait. descriptor_json has descriptor_len
+ readable bytes (NULL requires zero); status is nonnull writable storage.
+ */
+int thinkthen_session_push(struct thinkthen_session *session,
+                           const char *descriptor_json,
+                           size_t descriptor_len,
+                           uint32_t *status);
+
+/*
+ Wait for input room and transfer a typed descriptor without consuming output.
+ Closed intake retains nothing and never inspects the descriptor tree.
+ No input pointer survives return; status is published only on success.
+ # Safety
+ session is live, status is writable and nonnull, and descriptor satisfies
+ the finite aligned carrier-tree obligations of the typed constructor.
+ */
+int thinkthen_session_push_typed(const struct thinkthen_session *session,
+                                 const struct thinkthen_request_session_descriptor_v1 *descriptor,
+                                 uint32_t *status);
 
 /*
  Release an independent packet owner. NULL is ignored.

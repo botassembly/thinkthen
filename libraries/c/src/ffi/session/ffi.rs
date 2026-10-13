@@ -446,6 +446,43 @@ pub unsafe extern "C" fn thinkthen_session_try_push(
     })
 }
 
+/// Wait for input room and transfer one descriptor without consuming output.
+/// Pending output cannot wake this producer. Closure or cancellation returns
+/// CLOSED without decoding the payload. Failures preserve status and publish
+/// only the calling thread diagnostic. No input bytes survive return.
+/// # Safety
+/// session stays live throughout the wait. descriptor_json has descriptor_len
+/// readable bytes (NULL requires zero); status is nonnull writable storage.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_session_push(
+    session: *mut SessionHandle,
+    descriptor_json: *const c_char,
+    descriptor_len: usize,
+    status: *mut u32,
+) -> std::ffi::c_int {
+    failures::session_native_call(|| {
+        required(status)?;
+        // SAFETY: the caller keeps its owner live and supplies readable bytes.
+        let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
+        let state = match session.0.push_with::<failures::Failure>(|| {
+            // SAFETY: the caller retains its counted payload until transfer returns.
+            let text = unsafe { super::text(descriptor_json, descriptor_len) }
+                .map_err(|_| ErrorKind::Usage)?;
+            thinkthen::RequestSessionDescriptor::from_json(text).map_err(failures::Failure::from)
+        })?
+        {
+            RequestSessionPushStatus::Accepted => THINKTHEN_SESSION_ACCEPTED_V1,
+            RequestSessionPushStatus::Full => THINKTHEN_SESSION_FULL_V1,
+            RequestSessionPushStatus::Closed => THINKTHEN_SESSION_CLOSED_V1,
+        };
+        // SAFETY: required checked nonnull and the caller promises writable storage.
+        unsafe {
+            *status = state;
+        }
+        Ok(())
+    })
+}
+
 /// Fix input EOF or a canonical closed reader failure. NULL with zero means EOF;
 /// other inputs decode kind io, utf8, invalid_input or producer and optional location.
 /// No input bytes survive return. A changed finish refuses without changing intake.
