@@ -1,25 +1,26 @@
 ---
-// Goal: get a newcomer from the install line to a first answer in two
-// minutes, even with no key, and list what ThinkThen gains them.
+// Goal: get a newcomer from the install line to a first answer, even with
+// no API key, and list what ThinkThen gains them.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, FUNCTIONS, KEY_VARIABLE, START_SEE } from '../../data/catalog.mjs';
+import { SURFACES, FUNCTIONS, KEY_VARIABLE, START_SEE, FIRST_RUN_SAMPLE } from '../../data/catalog.mjs';
+import overhead from '../../data/overhead.json';
 import { captioned, run } from '../../data/samples.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
 const [noKey] = captioned('start', START_SEE.start);
 const decide = FUNCTIONS.find((f) => f.name === 'decide');
 const refund = { ...run('functions/decide', '0-refund'), see: decide.see['0-refund'] };
-const sample = 'curl -fsSL https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz | tar -xz';
+const callMs = Math.round(overhead.head.live.median);
 
 const HOW = [
   ['/start/pay-once/', 'Pay once', 'Many records share one request, and each question keeps its own saved answer.'],
-  ['/start/replay/', 'Replay in tests', 'A test replays saved answers with no key and no network.'],
-  ['/start/tune/', 'Tune for free', 'Move the cut on saved answers, and let audit pick it from your labels.'],
-  ['/start/plan/', 'See before you send', '--plan shows the requests and the expected tokens, and sends nothing.'],
-  ['/start/your-data/', 'Your data stays yours', 'Send one field, keep the key secret, and stop and resume at will.'],
-  ['/start/speed/', 'Speed', 'One engine adds about 2 ms to a call in every language.'],
+  ['/start/replay/', 'Replay in tests', 'A test replays saved answers with no API key and no network.'],
+  ['/start/tune/', 'Tune for free', 'Change the threshold on saved answers with zero new calls, and let audit pick it from your labels.'],
+  ['/start/plan/', 'See before you send', '--plan prints the first request and counts every request and its expected tokens. It sends nothing.'],
+  ['/start/your-data/', 'Your data stays yours', 'Send one field, keep the API key secret, and stop and resume at will.'],
+  ['/start/speed/', 'Speed', `In a library, ThinkThen's own work takes about 2 ms of a ${callMs} ms call.`],
 ];
 const REFERENCE = [
   ['/start/files/', 'Files and folders', 'Read files and folders and keep each answer\'s file and line.'],
@@ -27,23 +28,23 @@ const REFERENCE = [
   ['/start/configuration/', 'Configuration', 'Every environment variable, and where each file lives.'],
 ];
 ---
-<Base title="Start" description="Install ThinkThen, try it with no key, and get a first answer in two minutes.">
+<Base title="Start" description="Install ThinkThen, try it with no API key, and get a first answer.">
   <h1>Start</h1>
-  <p class="lede">Install the command, replay a saved answer with no key, then ask your own question.</p>
+  <p class="lede">Install the command, replay a saved answer with no API key, then ask your own question.</p>
 
   <h2 id="install">1. Install it</h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
-  <p>On Windows, the <a href="/languages/bash/#windows">Bash page</a> gives the install script. Each <a href="/languages/">language</a> and database page gives its own install line.</p>
+  <p>On Windows, the <a href="/languages/bash/#windows">Bash page</a> gives the install script. The <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a> and <a href="/languages/">other language</a> and database pages give their own install lines.</p>
 
-  <h2 id="no-key">2. Try it with no key</h2>
+  <h2 id="no-key">2. Try it with no API key</h2>
   <p>Download the release's sample. It holds one bug report and a recording of the model's answer to it.</p>
-  <InstallLine line={sample} caption="The sample" />
-  <p>Run <code>cd thinkthen-first-run</code>. <code>--replay</code> then answers from the recording alone, with no key and no network.</p>
+  <InstallLine line={FIRST_RUN_SAMPLE} caption="The sample" />
+  <p>Run <code>cd thinkthen-first-run</code>. <code>--replay</code> then answers from the recording alone, with no API key and no network.</p>
   <Terminal run={noKey} caption={noKey.see} />
 
   <h2 id="key">3. Ask your own question</h2>
-  <p>Set <code>{KEY_VARIABLE}</code> in the environment to your TypeSafe key. By default ThinkThen sends your question and text to TypeSafe. <a href="/install/backends/">Backends</a> shows how to point the same call at another provider or a model on your own machine.</p>
+  <p>Set <code>{KEY_VARIABLE}</code> in the environment to your TypeSafe API key. By default ThinkThen sends your question and text to TypeSafe. <a href="/install/backends/">Backends</a> shows how to point the same call at another provider or a model on your own machine.</p>
   <Terminal run={refund} caption={refund.see} />
   <p>The <a href="/start/tutorial/">tutorial</a> goes on from here to a stream of messages.</p>
 

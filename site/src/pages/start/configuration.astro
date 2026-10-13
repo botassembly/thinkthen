@@ -1,11 +1,11 @@
 ---
-// Goal: say which value wins, every environment variable ThinkThen reads, and where its configuration file, cache and usage totals live on Linux and macOS, and what status prints.
+// Goal: say which value wins, every environment variable ThinkThen reads, where its configuration file, answer cache and usage totals live, how the answer cache saves and prunes answers, and what status prints.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import Code from '../../components/Code.astro';
-import { CONFIGURATION_SEE } from '../../data/catalog.mjs';
+import { CONFIGURATION_SEE, CACHING_SEE } from '../../data/catalog.mjs';
 import { STATUS_SEE } from '../../data/reference.mjs';
-import { captioned, files } from '../../data/samples.mjs';
+import { captioned, files, run } from '../../data/samples.mjs';
 import { parseSettings, inlineHtml, setting } from '../../lib/settings-table.mjs';
 import { backends } from '../../lib/backends-table.mjs';
 import { pathHtml } from '../../lib/path.mjs';
@@ -18,6 +18,10 @@ const [config] = files(dir);
 const [statusRun] = captioned('reference/status', STATUS_SEE);
 const card = (name) => setting(name).href;
 const PRUNE = setting('Prune target');
+const prune = PRUNE;
+const unused = { ...run('start/caching', '3-unused'), see: CACHING_SEE['3-unused'] };
+const [used] = files('start/caching');
+const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md${anchor}`;
 
 // A backend's key variables come as a list, read in order. Every other
 // name is one variable, or several that ThinkThen reads alike.
@@ -86,12 +90,32 @@ const ENV = [
     <li><code>cache</code> turns the answer cache on or off. <code>{PRUNE.surface('Configuration file')}</code> sets the size <a href={PRUNE.href}><code>cache prune</code></a> trims to.</li>
     <li><code>usd_per_million_input</code> and <code>usd_per_million_output</code> together price the reported tokens. The price is your own estimate, never a bill.</li>
   </ul>
-  <p>Any other field is refused. The file never holds a key. <code>key_env</code> in a <code>backends</code> entry names the variable that holds one.</p>
-  <p>Whoever can write the file decides where the key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A group-write bit alone draws no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
+  <p>Any other field is refused. The file never holds an API key. <code>key_env</code> in a <code>backends</code> entry names the variable that holds one.</p>
+  <p>Whoever can write the file decides where the API key and the evidence go. On Linux and macOS ThinkThen warns when another user owns the file, or when every user may write it. A group-write bit alone draws no warning. A file that draws the warning and holds <code>backends</code> is refused with exit 5. Keep the file writable by its owner alone.</p>
 
   <h2 id="usage-totals">The usage totals</h2>
   <p>The usage folder holds one file for each UTC month. It counts requests sent, retries, input tokens, output tokens and answers from the answer cache. An answer from a replay or record folder never counts as a cache answer. It holds no request, no reply, no address, no model, no price and no key. Clearing the cache never resets it, and <code>--no-cache</code> never turns it off. It counts what this machine saw, and the backend's bill is the real cost.</p>
   <p>Windows keeps the usage totals in <code>%LOCALAPPDATA%\thinkthen\usage</code>. Its folder and recognized files must be owned by your user and grant access only to your user and Windows SYSTEM. ThinkThen creates missing objects privately and refuses unsafe existing objects before sending. A later count update failure keeps the judgment and prints a warning. These checks cover usage counts. The named answer-folder permission check remains Unix-only.</p>
+
+  <h2 id="the-answer-cache">The answer cache</h2>
+  <p>The answer cache is on by default. <a href="#locations">Where the files live</a> says where it lives and how <code>THINKTHEN_CACHE</code> moves it. Only a good answer with storage permission is saved.</p>
+  <p>Each saved answer sits under a question key. The question key covers the question as sent, with the text it quotes. So <code>hello\n</code> and <code>hello\r\n</code> make two question keys, and a cosmetic change to the text misses. <a href="/start/pay-once/#the-key">Pay once</a> lists what else the question key covers.</p>
+  <p>A reply with <code>Cache-Control: no-store</code>, or malformed or over-bound cache instructions, cannot be saved. Cache mode returns an otherwise valid answer without saving it. A repeat then sends again and may charge again. Explicit <code>--record</code> fails after sending with exit 5 when the reply forbids storage. The failed recording may still incur a charge. The <a href={spec('cache', '#response-cache-control')}>storage contract</a> gives the rules.</p>
+
+  <h2 id="unused">Find answers no test reads</h2>
+  <p>A folder can keep answers its tests no longer ask. <code>thinkthen cache unused</code> compares the folder with a list of the question keys your tests used. Here the list holds the keys of the four reviews.</p>
+  <Code code={used.text} file={used.name} caption="One question key a line." copy={false} />
+  <Terminal run={unused} caption={unused.see} />
+  <p><code>decide --details</code> prints the keys of each record in <code>meta.requests</code>. <code>filter --details</code> leaves out the records it drops. Its keys make an incomplete list. An incomplete list reports answers as unused that a test still reads. The <a href={spec('recording', '#pruning-a-cache')}>recording specification</a> gives the rules.</p>
+
+  <h2 id="pruning">Pruning</h2>
+  <ul>
+    <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>thinkthen cache prune DIR</code>.</li>
+    <li><code>DIR</code> is always explicit. The prune trims the folder to <a href={prune.href}>{prune.default}</a>, or to <code>--max-size BYTES</code> for one run. <code>cache prune --dry-run</code> lists the answers a prune would remove.</li>
+    <li><code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select answers to remove first. Either one alone is enough to select an answer.</li>
+    <li><code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code>, or a model no reply in the folder names, and removes nothing. An empty folder accepts any model name.</li>
+    <li>A saved question holds the evidence. ThinkThen creates <code>thinkthen.sqlite</code> with mode 0600. Only its owner can read it.</li>
+  </ul>
 
   <h2 id="status">See it all</h2>
   <p><code>thinkthen status</code> prints the resolved configuration path, backend, address, model and key variable, and where each value came from. It also prints whether a key is set, the cache path and size, the usage path, and the usage this month and in all. It opens no connection. <code>status --json</code> prints the same facts as one <code>thinkthen.status/2</code> object. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md#the-options">recording specification</a> lists its fields.</p>

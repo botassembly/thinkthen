@@ -10,4 +10,4 @@ thinkthen filter "$question" \
   --field /comment \
   --plan |
 head -1 |
-jq '.request.questions'
+jq '.request'

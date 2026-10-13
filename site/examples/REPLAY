@@ -266,9 +266,7 @@ install/polars/first-call.py
 install/postgresql/first-call.sql
 install/python/backends.py
 install/python/first-call.py
-install/python/functional/judge.py
 install/python/functional/stream.py
-install/python/functional/tally.py
 install/ruby/backends.rb
 install/ruby/first-call.rb
 install/rust/backends.rs

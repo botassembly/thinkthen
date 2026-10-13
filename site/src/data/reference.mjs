@@ -152,11 +152,10 @@ export const QUESTION_SETS_SEE = {
 };
 
 // Captions for the replay and plan pages, keyed by script name. Its examples sit
-// in examples/reference/answer-cache/, because check-samples skips any folder
+// in examples/start/answer-cache/, because check-samples skips any folder
 // named recording.
 export const RECORDING_SEE = {
   '1-plan': 'The plan ends with a summary line: one record, one request, and the size of what it would send.',
-  '2-dry-run': 'The old flag is refused at exit 2, and the message names the new one.',
   '3-miss': 'The folder holds one answer, and this question is not it. The run exits 5 and names the missing key.',
   '4-facts': 'The answer came from a replay folder. The facts line counts one record, no request sent and no cache answer. Seconds change on every run. jq drops them.',
 };

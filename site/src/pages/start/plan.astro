@@ -1,6 +1,6 @@
 ---
-// Goal: show that --plan prints the exact request, where it goes and what
-// it would cost before anything is sent, and needs no key.
+// Goal: show that --plan prints the first request and counts every
+// request and its expected tokens before anything is sent, with no API key.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { PLAN_BODY_SEE } from '../../data/catalog.mjs';
@@ -9,28 +9,22 @@ import { run } from '../../data/samples.mjs';
 import { setting } from '../../lib/settings-table.mjs';
 
 const body = { ...run('install/backends', '1-plan'), see: PLAN_BODY_SEE };
-const summary = { ...run('reference/answer-cache', '1-plan'), see: RECORDING_SEE['1-plan'] };
-const dryRun = { ...run('reference/answer-cache', '2-dry-run'), see: RECORDING_SEE['2-dry-run'] };
+const summary = { ...run('start/answer-cache', '1-plan'), see: RECORDING_SEE['1-plan'] };
 const admission = setting('Estimated input admission total');
 const spec = 'https://github.com/botassembly/thinkthen/blob/main/specification/channels.md#--plan';
 ---
-<Base title="See before you send" description="--plan prints the exact request, where it goes and what it would cost, and sends nothing. It needs no key.">
+<Base title="See before you send" description="--plan prints the first request and counts every request and its expected tokens. It sends nothing and needs no API key.">
   <h1>See before you send</h1>
-  <p class="lede">Add <code>--plan</code> to any call. ThinkThen reads the whole input, prints what it would send and what it would cost, and stops. It sends nothing and needs no key.</p>
+  <p class="lede">Add <code>--plan</code> to any call. It prints the first request and counts every request and its expected tokens. It sends nothing and needs no API key.</p>
 
   <h2 id="the-request">The exact request</h2>
-  <p>The first line holds the address, the model, the name of the key variable and the body the backend would receive. The body holds your text, so it shows exactly what leaves your machine.</p>
+  <p>The first line holds the address, the model, the name of the API key variable and the body the backend would receive. The body holds your text. It shows exactly what leaves your machine.</p>
   <Terminal run={body} caption={body.see} />
 
   <h2 id="the-cost">The cost</h2>
   <p>The last line counts the whole input: the records, the most requests the run can start, the bytes, and a low and a high estimate of the input tokens.</p>
   <Terminal run={summary} caption={summary.see} />
   <p>To cap a run, set the <a href={admission.href}>estimated input admission total</a>. ThinkThen then refuses any send that would take the estimated input tokens past it. The <a href={spec}>plan specification</a> gives every field.</p>
-
-  <h2 id="dry-run">The old flag</h2>
-  <p>The old flag <code>--dry-run</code> is refused.</p>
-  <Terminal run={dryRun} caption={dryRun.see} />
-  <p><code>cache prune --dry-run</code> is a separate flag, and the <a href="/start/replay/#pruning">replay page</a> covers it.</p>
 
   <p class="pagelinks"><a href="/start/pay-once/">Pay once</a> · <a href="/start/your-data/">Your data stays yours</a> · <a href="/install/backends/">Backends</a></p>
 </Base>

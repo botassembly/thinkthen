@@ -1,6 +1,6 @@
 ---
 // Goal: show that you can grade saved answers against your own labels and
-// move a question's cut with zero new calls, and that a high probability
+// change a question's threshold with zero new calls, and that a high probability
 // is not proof.
 import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
@@ -12,21 +12,21 @@ const [suggest, diff] = captioned('start/tune', START_SEE.tune);
 const key = files('start/tune').find((f) => f.name === 'shown-key.jsonl');
 const proof = 'https://github.com/botassembly/thinkthen/blob/main/specification/result.md#what-a-high-probability-does-not-mean';
 ---
-<Base title="Tune for free" description="Grade saved answers against your own labels and move a question's cut with zero new calls.">
+<Base title="Tune for free" description="Grade saved answers against your own labels and change a question's threshold with zero new calls.">
   <h1>Tune for free</h1>
-  <p class="lede">Save one run's answers. Then grade them against your own labels and read them at any cut. No request goes out, so tuning costs nothing.</p>
+  <p class="lede">Save one run's answers. Then grade them against your own labels and read them at any threshold. No request goes out. Tuning costs nothing.</p>
 
-  <h2 id="audit">Let audit pick the cut</h2>
-  <p>A saved run asked "Is this song on the album Abbey Road?" of ten Beatles songs at the cut 0.5. The key holds the right answer for each song.</p>
+  <h2 id="audit">Let audit pick the threshold</h2>
+  <p>A saved run asked "Is this song on the album Abbey Road?" of ten Beatles songs at the threshold 0.5. The answer key holds the right answer for each song.</p>
   <Code code={key.text} file={key.name} caption="One right answer a song." copy={false} />
-  <p><code>runs audit</code> grades the saved answers against the key. It tunes a cut on one part of the songs and checks it on the rest, over many splits, and names the cut that wins most often.</p>
+  <p><code>runs audit</code> grades the saved answers against the answer key. It tunes a threshold on one part of the songs and checks it on the rest, over many splits, and names the threshold that wins most often.</p>
   <Terminal run={suggest} caption={suggest.see} />
-  <p><code>runs audit --write</code> saves that cut into the question file the run came from.</p>
+  <p><code>runs audit --write</code> saves that threshold into the question file the run came from.</p>
 
-  <h2 id="new-cut">Read the run at the new cut</h2>
-  <p><code>runs diff</code> reads the same saved answers at two cuts and shows each answer that changed.</p>
+  <h2 id="new-threshold">Read the run at the new threshold</h2>
+  <p><code>runs diff</code> reads the same saved answers at two thresholds and shows each answer that changed.</p>
   <Terminal run={diff} caption={diff.see} />
-  <p>Ten songs make a small sample. A cut tuned on ten songs fits those ten. Grade it on records you held back before you rely on it.</p>
+  <p>Ten songs make a small sample. A threshold tuned on ten songs fits those ten. Grade it on records you held back before you rely on it.</p>
 
   <h2 id="not-proof">A high probability is not proof</h2>
   <p>The model judges only the text it was shown. A probability of 0.98 says nothing about facts the text left out. In one measurement the model approved every case at 0.98 while human reviewers refused 23% of them. The <a href={proof}>result specification</a> records it. The only test of a question is a measurement against your own labelled cases.</p>

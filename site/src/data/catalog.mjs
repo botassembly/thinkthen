@@ -885,6 +885,9 @@ export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
 };
 
+// The release's no-key sample. /start/ shows this download line.
+export const FIRST_RUN_SAMPLE = 'curl -fsSL https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz | tar -xz';
+
 // Captions for the Start pages' own examples, keyed by page and script name.
 export const START_SEE = {
   start: {
@@ -892,10 +895,10 @@ export const START_SEE = {
   },
   'pay-once': {
     '1-one-request': 'The plan packs all three messages into the first request. It sends nothing.',
-    '2-one-each': '--batch 1 puts one message in each request. The same three messages cost more input tokens.',
+    '2-one-each': '--batch 1 puts one message in each request. The plan estimates more input tokens.',
   },
   tune: {
-    '1-suggest': 'audit tunes a cut on part of the ten labelled songs and checks it on the rest, 20 times over. 0.78 is the steady cut. Nothing is sent.',
+    '1-suggest': 'audit tunes a threshold on part of the ten labelled songs and checks it on the rest, 20 times over. 0.78 is the steady threshold. Nothing is sent.',
     '2-diff': 'The same saved run, read at 0.5 and then at 0.78. Three songs turn from yes to no, and the right answers go from 5 to 8. No request is sent.',
   },
   'your-data': {

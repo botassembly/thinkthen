@@ -1,5 +1,5 @@
 ---
-// Goal: show that you choose what leaves your machine, that your key never
+// Goal: show that you choose what leaves your machine, that your API key never
 // shows anywhere, that ThinkThen never acts on what it reads, and that a
 // stopped run keeps what it finished.
 import Base from '../../layouts/Base.astro';
@@ -10,20 +10,20 @@ import { captioned } from '../../data/samples.mjs';
 const [field] = captioned('start/your-data', START_SEE['your-data']);
 const spec = (name, anchor = '') => `https://github.com/botassembly/thinkthen/blob/main/specification/${name}.md${anchor}`;
 ---
-<Base title="Your data stays yours" description="Send one field of each record, keep your key out of every output, and keep what a stopped run finished. ThinkThen never acts on what it reads.">
+<Base title="Your data stays yours" description="Send one field of each record, keep your API key out of every output, and keep what a stopped run finished. ThinkThen never acts on what it reads.">
   <h1>Your data stays yours</h1>
-  <p class="lede">You choose what leaves your machine. Your key goes only to the address you named. ThinkThen answers, and your code acts.</p>
+  <p class="lede">You choose what leaves your machine. Your API key goes only to the address you named. ThinkThen answers, and your code acts.</p>
 
   <h2 id="field">Send one field</h2>
   <p><code>--field</code> takes a pointer to one field of each record. ThinkThen sends that field and keeps the rest of the record on your machine. The output still carries the whole record.</p>
   <Terminal run={field} caption={field.see} />
   <p>The <a href={spec('records', '#order-and-requests')}>records specification</a> gives the pointer rules. A question set picks a field for each question with <code>on</code>; <a href="/learn/question-sets/#on">Question sets</a> shows it.</p>
 
-  <h2 id="key">Your key stays secret</h2>
-  <p>ThinkThen reads the key from one environment variable and sends it only to the address you named. The key never shows in a plan, a result, a recording, a log line or an error. A plan names the variable and never its value; <a href="/start/plan/#the-request">See before you send</a> shows one. An address that holds the key is refused before anything is sent. The <a href={spec('backends', '#the-key')}>backends specification</a> gives every rule.</p>
+  <h2 id="key">Your API key stays secret</h2>
+  <p>ThinkThen reads the API key from one environment variable and sends it only to the address you named. The API key never shows in a plan, a result, a recording, a log line or an error. A plan names the variable and never its value; <a href="/start/plan/#the-request">See before you send</a> shows one. An address that holds the API key is refused before anything is sent. The <a href={spec('backends', '#the-key')}>backends specification</a> gives every rule.</p>
 
   <h2 id="never-acts">It never acts</h2>
-  <p>ThinkThen never runs a command, and it never writes a file you did not name. It reads your input as data and never as an instruction. The model reads only the question, the choices and the text. The <a href={spec('channels', '#what-the-tool-never-does')}>channels specification</a> lists every rule, and <a href="/refusals/">What it will not do</a> lists every line it will not cross.</p>
+  <p>ThinkThen never runs a command. It writes only files you name, its answer cache and its usage counts. It reads your input as data and never as an instruction. The model reads only the question, the choices and the text. The <a href={spec('channels', '#what-the-tool-never-does')}>channels specification</a> lists every rule, and <a href="/refusals/">What it will not do</a> lists every line it will not cross.</p>
 
   <h2 id="stop-and-resume">Stop and resume</h2>
   <p>Press Ctrl-C at any time. ThinkThen starts no new work, lets each sent request finish, and prints the answers it finished. A failed answer is never saved. So run the same command again under a cache, and it asks only the questions that failed or never ran. The <a href={spec('recording', '#the-options')}>recording specification</a> gives the rule.</p>

@@ -1,5 +1,5 @@
 ---
-// Goal: show that one engine runs every binding for about 2 ms of a call,
+// Goal: show that in a library ThinkThen's own work takes about 2 ms of a call,
 // that the model's reply takes nearly all of the time, and that packing
 // records cuts the number of requests.
 import Base from '../../layouts/Base.astro';
@@ -32,9 +32,9 @@ const t = data.batches;
 const time = (iso) => iso.slice(11, 16);
 const cliCell = (id) => byId[id];
 ---
-<Base title="Speed" description={`One engine runs every binding. On 2026-10-01 a call to Jev took a median of ${ms(h.live.median)} ms, and ThinkThen's own work took about 2 ms of it.`}>
+<Base title="Speed" description={`One engine runs every binding. In a library, ThinkThen's own work takes about 2 ms of a ${ms(h.live.median)} ms call.`}>
   <h1>Speed</h1>
-  <p class="lede">One Rust engine runs under every language and database, so every binding behaves the same. A live call through a binding took a median of {ms(h.live.median)} ms on 2026-10-01. ThinkThen's own work took about 2 ms of it. Each binding adds a median of {ms(medianAdded)} ms or less. The slowest single function, {worstLabel} <code>{worstFn}</code>, adds {ms(worstMs)} ms.</p>
+  <p class="lede">One Rust engine runs under every language and database. Every binding behaves the same. In a library, ThinkThen's own work takes about 2 ms of a {ms(h.live.median)} ms call, measured on 2026-10-01. Each command run also starts a process. <a href="#the-command">The command</a> gives its added time. Each binding adds a median of {ms(medianAdded)} ms or less. The slowest single function, {worstLabel} <code>{worstFn}</code>, adds {ms(worstMs)} ms.</p>
   <p>The bigger saving is fewer requests. <a href="#large-inputs">Large inputs</a> shows 306 song titles answered in one request. <a href="/start/pay-once/">Pay once</a> shows how records share a request.</p>
 
   <h2>The answer</h2>
@@ -51,7 +51,7 @@ const cliCell = (id) => byId[id];
 
   <h2>How it was measured</h2>
   <ul>
-    <li>The builds came from checkpoint 3, published on 2026-10-01 from commit <code>bfc180a10</code>. The published command and the published C library are debug builds. A release build of each from the same commit gives the comparison.</li>
+    <li>The measured command and C library were debug builds. Release builds from the same source give the comparison.</li>
     <li>The machine is an AMD Ryzen 7 5825U with 8 cores, 16 threads and 27 GB of memory, on Linux for x86_64. Other builds shared it all day. The load average stayed between {data.local_load[0]} and {data.local_load[1]} during the local runs. It was {data.live_load[0]} when the paid run started and {data.live_load[1]} when it ended. The spreads below include that noise.</li>
     <li>Each binding asked the same ten questions. Each question starts from the site's own sample for that function and keeps its input small. The answer cache was off for every timed call.</li>
     <li>Each binding timed its own calls with its language's clock. The clock wraps the call alone. The command was timed as a whole process.</li>
@@ -85,7 +85,7 @@ const cliCell = (id) => byId[id];
   </table>
   <p><a href="/start/speed/calls.csv">calls.csv</a> holds every binding and function. Each row gives the local median and its 10th and 90th percentiles, the median of each set, the added time, both paid calls and their HTTP time.</p>
 
-  <h2>The command</h2>
+  <h2 id="the-command">The command</h2>
   <p>Each run of the command starts a process, reads its settings and writes its usage totals to disk.</p>
   <table>
     <tr><th>Part of a run</th><th>Debug, median (ms)</th><th>Debug, 10th to 90th (ms)</th><th>Release, median (ms)</th><th>Release, 10th to 90th (ms)</th></tr>
