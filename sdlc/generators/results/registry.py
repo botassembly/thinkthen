@@ -43,7 +43,7 @@ OUTPUTS = (
     *group('dart', 'results', 'libraries/dart/lib/src/session/', 'results_generated.dart'),
     *group('dart', 'inputs', 'libraries/dart/lib/src/session/', 'inputs_generated.dart'),
     *group('dart', 'bridge', 'libraries/dart/lib/src/session/', 'abi_generated.dart'),
-    *group('ada', 'results', 'libraries/ada/src/', 'thinkthen-requests.ads', 'thinkthen-sessions-calls.ads', 'thinkthen-sessions-calls.adb', 'thinkthen_session_c.ads', 'thinkthen-requests-native.ads', 'thinkthen-requests-native.adb'),
+    *group('ada', 'results', 'libraries/ada/src/', 'thinkthen-requests.ads', 'thinkthen-sessions-calls.ads', 'thinkthen-sessions-calls.adb', 'thinkthen_session_c.ads', 'thinkthen-requests-native.ads', 'thinkthen-requests-native.adb', 'thinkthen_kinds.ads', 'thinkthen_kinds.adb', 'thinkthen-persistence.ads', 'thinkthen-persistence.adb'),
     *group('objc', 'results', 'libraries/objective-c/Sources/Foundation/', 'TTResults.g.h', 'TTResults.g.m'),
     *group('swift', 'results', 'libraries/swift/Sources/ThinkThen/', 'ResultsGenerated.swift'),
     *group('swift', 'inputs', 'libraries/swift/Sources/ThinkThen/', 'InputsGenerated.swift'),
