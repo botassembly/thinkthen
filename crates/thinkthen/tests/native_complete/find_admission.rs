@@ -1,5 +1,6 @@
 //! Find keeps the complete-set boundary while bounding caller-side source admission.
 use super::*;
+use thinkthen::RequestFunction;
 use thinkthen::{CancelToken, RecordInput};
 #[test]
 fn cancelled_find_stops_before_pulling_a_suffix_in_complete_and_released_calls() {
@@ -290,7 +291,9 @@ fn canonical_find_applies_the_engine_record_cap_before_reading_the_tail() {
         .unwrap()
         .build()
         .unwrap();
-    let request = Request::new(RequestCall::Find(RequestArguments {
+    let request = Request::new((|arguments| {
+        RequestCall::new(RequestFunction::Find, arguments)
+    })(RequestArguments {
         question: RequestQuestion::Definition {
             value: Question::find("Which?").unwrap().into(),
         },

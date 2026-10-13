@@ -966,348 +966,37 @@
       ]
     },
     "RequestCall": {
-      "description": "The closed function tag selects one native invocation.",
-      "oneOf": [
-        {
-          "description": "A yes/no judgment.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "decide"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
+      "description": "One closed function tag with the same argument object for every function.",
+      "type": "object",
+      "properties": {
+        "function": {
+          "description": "The requested judging function.",
+          "$ref": "#/$defs/RequestFunction"
         },
-        {
-          "description": "One ordered option.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "choose"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
+        "input": {
+          "description": "Explicit evidence selector.",
+          "$ref": "#/$defs/RequestInput"
         },
-        {
-          "description": "Every applicable label.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "tag"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
+        "options": {
+          "description": "Absent controls retain existing defaults.",
+          "$ref": "#/$defs/RequestOptions",
+          "default": {
+            "attempts": false,
+            "details": false,
+            "files_only": false,
+            "none": false
+          }
         },
-        {
-          "description": "A placement on ordered levels.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "score"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Keep passing records.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "filter"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Order records.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "rank"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Select a text unit.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "find"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Ask a named question set.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "annotate"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Identify named entities.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "recognize"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
-        },
-        {
-          "description": "Judge entity relations.",
-          "type": "object",
-          "properties": {
-            "function": {
-              "type": "string",
-              "const": "relate"
-            },
-            "input": {
-              "description": "Explicit evidence selector.",
-              "$ref": "#/$defs/RequestInput"
-            },
-            "options": {
-              "description": "Absent controls retain existing defaults.",
-              "$ref": "#/$defs/RequestOptions",
-              "default": {
-                "attempts": false,
-                "details": false,
-                "files_only": false,
-                "none": false
-              }
-            },
-            "question": {
-              "description": "Explicit question selector; literal @ text remains literal.",
-              "$ref": "#/$defs/RequestQuestion"
-            }
-          },
-          "additionalProperties": false,
-          "required": [
-            "function",
-            "question",
-            "input"
-          ]
+        "question": {
+          "description": "Explicit question selector; literal @ text remains literal.",
+          "$ref": "#/$defs/RequestQuestion"
         }
+      },
+      "additionalProperties": false,
+      "required": [
+        "function",
+        "question",
+        "input"
       ]
     },
     "RequestDefinition": {
@@ -1421,6 +1110,7 @@
             "questions": {
               "type": "object",
               "additionalProperties": {
+                "title": "AnnotateQuestion",
                 "anyOf": [
                   {
                     "description": "A `decide` entry: the question text, what a yes and a no each mean, and the cut or band the answer is read under. A question file's `batch` is the most records of a stream one request carries. An annotate question set's entries take no `batch`.",
@@ -1616,6 +1306,61 @@
           "description": "One record per TSV row.",
           "type": "string",
           "const": "tsv"
+        }
+      ]
+    },
+    "RequestFunction": {
+      "description": "Exactly the ten judging functions.",
+      "oneOf": [
+        {
+          "description": "A yes/no judgment.",
+          "type": "string",
+          "const": "decide"
+        },
+        {
+          "description": "One ordered option.",
+          "type": "string",
+          "const": "choose"
+        },
+        {
+          "description": "Every applicable label.",
+          "type": "string",
+          "const": "tag"
+        },
+        {
+          "description": "A placement on ordered levels.",
+          "type": "string",
+          "const": "score"
+        },
+        {
+          "description": "Keep passing records.",
+          "type": "string",
+          "const": "filter"
+        },
+        {
+          "description": "Order records.",
+          "type": "string",
+          "const": "rank"
+        },
+        {
+          "description": "Select a text unit.",
+          "type": "string",
+          "const": "find"
+        },
+        {
+          "description": "Ask a named question set.",
+          "type": "string",
+          "const": "annotate"
+        },
+        {
+          "description": "Identify named entities.",
+          "type": "string",
+          "const": "recognize"
+        },
+        {
+          "description": "Judge entity relations.",
+          "type": "string",
+          "const": "relate"
         }
       ]
     },

@@ -160,15 +160,19 @@ fn authorized_table_refusals_hide_values_and_stop_bad_width_tail() {
 #[test]
 fn authorized_table_rows_execute_through_native_composed_feeds() {
     let listener = Listener::answering(response).unwrap();
-    let request = Request::new(RequestCall::Decide(args(
-        Question::decide("Fits?").unwrap().cut().into(),
-        RequestInput::Feed {
-            name: "table".into(),
-            framing: RequestFraming::Document,
-            reading: ReaderOptions::default(),
-            images: vec![],
-        },
-    )))
+    let request = Request::named(
+        "decide",
+        args(
+            Question::decide("Fits?").unwrap().cut().into(),
+            RequestInput::Feed {
+                name: "table".into(),
+                framing: RequestFraming::Document,
+                reading: ReaderOptions::default(),
+                images: vec![],
+            },
+        ),
+    )
+    .unwrap()
     .admit()
     .unwrap();
     let reading = RecordReading::new(&["/body"], None, None).unwrap();

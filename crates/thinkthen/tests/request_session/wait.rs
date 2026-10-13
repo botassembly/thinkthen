@@ -1,5 +1,6 @@
 //! Native wait readiness, ownership and cancellation behavior.
 use super::*;
+use thinkthen::RequestFunction;
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
 use child::ChildEnvironment as _;
@@ -84,7 +85,9 @@ fn held_provider_case() {
         let arguments = framing::table_request(framing).call.arguments().clone();
         let session = Arc::new(
             engine
-                .request_session(Request::new(RequestCall::Decide(arguments)))
+                .request_session(Request::new((|arguments| {
+                    RequestCall::new(RequestFunction::Decide, arguments)
+                })(arguments)))
                 .unwrap(),
         );
         if matches!(framing, RequestFraming::Csv) {

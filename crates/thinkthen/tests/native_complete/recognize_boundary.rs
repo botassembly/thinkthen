@@ -1,5 +1,6 @@
 //! Boundary proposals use ordinary question answers and mode-specific aggregate values.
 use super::*;
+use thinkthen::RequestFunction;
 use thinkthen::{
     RecognitionMode, RecognitionValue, Recognize, RecordInput, Request, RequestArguments,
     RequestCall, RequestEnvironment, RequestInput, RequestOptions, RequestOutcome, RequestQuestion,
@@ -95,7 +96,9 @@ fn boundary_proposals_use_exact_saved_bodies_and_shared_request_answers() {
             exchanges[at]["request"].as_str().unwrap()
         );
     }
-    let request = Request::new(RequestCall::Recognize(RequestArguments {
+    let request = Request::new((|arguments| {
+        RequestCall::new(RequestFunction::Recognize, arguments)
+    })(RequestArguments {
         question: RequestQuestion::Definition {
             value: Recognize::from_json(declaration).unwrap().into(),
         },
@@ -358,7 +361,9 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
     let root = folder();
     let saved = root.join("saved.json");
     let request = |options| {
-        Request::new(RequestCall::Recognize(RequestArguments {
+        Request::new((|arguments| {
+            RequestCall::new(RequestFunction::Recognize, arguments)
+        })(RequestArguments {
             question: RequestQuestion::File {
                 path: saved.clone(),
             },
@@ -392,7 +397,9 @@ fn saved_mode_admission_precedes_evidence_and_call_whole_overrides_saved_boundar
     }
     assert_eq!(listener.count(), 0);
     std::fs::write(&saved,r#"{"version":1,"recognize":{"mode":"boundary_only","relations":[],"stage_context":{"kind_edge":"","relation":""}},"relation_threshold":0.5}"#).unwrap();
-    let request = Request::new(RequestCall::Recognize(RequestArguments {
+    let request = Request::new((|arguments| {
+        RequestCall::new(RequestFunction::Recognize, arguments)
+    })(RequestArguments {
         question: RequestQuestion::File { path: saved },
         input: RequestInput::Text {
             text: "lowercase".into(),
