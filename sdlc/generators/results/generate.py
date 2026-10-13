@@ -414,13 +414,14 @@ def main():
     parser.add_argument('--inputs', action='store_true')
     parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
+    parser.add_argument('--operations', action='store_true')
     args = parser.parse_args()
     if args.all:
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
                        [sys.executable, str(Path(__file__).resolve()), '--target', target])
-            if mode in ('inputs', 'bridge'):
+            if mode in ('inputs', 'bridge', 'operations'):
                 command.append('--' + mode)
             if args.check:
                 command.append('--check')
@@ -429,6 +430,38 @@ def main():
                 CARGO_NET_OFFLINE='true'))
             if completed.returncode:
                 return completed.returncode
+        return 0
+    if args.operations:
+        if args.target != 'c' or args.inputs or args.bridge:
+            parser.error('operation transport is a separate C producer')
+        from operations import OPERATIONS, STATUSES, PROJECTIONS
+        path = Path(__file__).parent / 'templates/operations.py'
+        spec = importlib.util.spec_from_file_location('operation_target', path)
+        emitter = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(emitter)
+        from registry import paths
+        for module, output in zip(('engine', 'session', 'typed'), paths('c', 'operations')[:3]):
+            result = emitter.render([operation for operation in OPERATIONS if operation.module == module], STATUSES if module == 'session' else (), PROJECTIONS if module == 'session' else ())
+            output = ROOT / output
+            result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            if args.check and (not output.exists() or output.read_text() != result):
+                print('generated native operations differ', file=sys.stderr)
+                return 1
+            if not args.check:
+                output.write_text(result)
+        from layouts import PRIMITIVES, AUTHOR, JSON_KINDS
+        path = Path(__file__).parent / 'templates/layouts.py'
+        spec = importlib.util.spec_from_file_location('layout_target', path)
+        layouts = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(layouts)
+        for records, kinds, output in zip((PRIMITIVES, AUTHOR), (JSON_KINDS, ()), paths('c', 'operations')[3:]):
+            output = ROOT / output
+            result = format_source(output, layouts.render(records, kinds), child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            if args.check and (not output.exists() or output.read_text() != result):
+                print('generated native layouts differ', file=sys.stderr)
+                return 1
+            if not args.check:
+                output.write_text(result)
         return 0
     if args.target == 'swift':
         sys.path.insert(0, str(Path(__file__).parent / 'templates'))
@@ -644,7 +677,6 @@ def main():
             parser.error("JVM uses the shared stable native session ABI")
         sys.path.insert(0, str(Path(__file__).parent / "templates"))
         import jvm
-        import jvm_languages
         import jvm_usage
         for filename, lines in jvm_usage.outputs(ROOT).items():
             output = output_path(ROOT, 'jvm', filename)
@@ -674,15 +706,6 @@ def main():
             input_output.write_text(input_source)
         definitions = prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS))
         result = format_source("Results.java", jvm.render(definitions), child_env())
-        for language, extension in (('kotlin', 'kt'), ('scala', 'scala')):
-            source = jvm_languages.render(definitions, language)
-            output = output_path(ROOT, 'jvm', 'Results.' + extension)
-            if args.check and (not output.exists() or output.read_text() != source):
-                print('generated ' + language + ' results differ', file=sys.stderr)
-                return 1
-            if not args.check:
-                output.parent.mkdir(parents=True, exist_ok=True)
-                output.write_text(source)
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'jvm', 'Results.java')
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]

@@ -1,5 +1,3 @@
 //! Counted strings and owned author metadata views.
-mod author;
-mod inputs;
-pub use author::*;
-pub use inputs::*;
+mod layouts_generated;
+pub use layouts_generated::*;

@@ -16,6 +16,11 @@ def group(target, mode, base, *names):
 
 OUTPUTS = (
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/session/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/native_request/', 'operations_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/session/', 'primitives_generated.rs'),
+    *group('c', 'operations', 'libraries/c/src/ffi/carriers/', 'layouts_generated.rs'),
     *group('c', 'inputs', 'libraries/c/src/ffi/native_request/', 'carriers_generated.rs'),
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
     *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),
@@ -43,9 +48,9 @@ OUTPUTS = (
     *group('swift', 'bridge', 'libraries/swift/Sources/ThinkThen/', 'ABIGenerated.swift'),
     *group('swift', 'bridge', 'libraries/swift/Sources/CThinkThen/', 'bridge.c'),
     *group('cobol', 'results', 'libraries/cobol/', 'src/tt_requests_generated.h', 'src/tt_requests_generated.c', 'copybooks/tt-native-generated.cpy'),
-    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java'),
-    *group('jvm', 'results', 'libraries/jvm/session/kotlin/', 'Results.kt', 'UsagePersistence.kt'),
-    *group('jvm', 'results', 'libraries/jvm/session/scala/', 'Results.scala', 'UsagePersistence.scala'),
+    *group('jvm', 'results', 'libraries/jvm/session/thinkthen/', 'Results.java', 'Inputs.java', 'RequestVersion.java', 'NativeWait.java', 'UsagePersistence.java', 'NativeUsageLayouts.java', 'NamedCalls.java', 'NativeNamed.java', 'ErrorKind.java'),
+    *group('jvm', 'results', 'libraries/jvm/session/kotlin/', 'UsagePersistence.kt', 'KotlinNamedCalls.kt'),
+    *group('jvm', 'results', 'libraries/jvm/session/scala/', 'UsagePersistence.scala', 'ScalaNamedCalls.scala'),
 )
 
 
