@@ -151,16 +151,17 @@ fn a_tag_row_whose_label_shares_overflow_fails() {
         .no_cache()
         .build()
         .expect("engine");
-    let tag = Question::tag::<BulkLabel>("Which labels?")
-        .and_then(|builder| builder.label(BulkLabel::First, None))
-        .and_then(|builder| builder.label(BulkLabel::Second, None))
-        .and_then(thinkthen::TagBuilder::cut)
-        .expect("tag");
-    let error = engine
-        .tag_many(&tag, ["one"])
-        .next()
-        .expect("a row")
-        .expect_err("the overflow");
+    let tag =
+        Question::from_json(r#"{"tag":"Which labels?","labels":["first","second"]}"#).expect("tag");
+    let error = crate::api::pull_tags(
+        &engine,
+        &tag,
+        crate::api::plain_records(["one"]),
+        CallOptions::new(),
+    )
+    .next()
+    .expect("a row")
+    .expect_err("the overflow");
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(
         error.to_string(),

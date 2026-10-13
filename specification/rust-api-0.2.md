@@ -12,11 +12,17 @@ The public API inventory applies these reviewed declaration changes after the hi
 - [0556](../sdlc/tickets/0556-blocking-session-read.md) adds `RequestSession::wait`, `RequestSessionWaitInterest` and `RequestSessionReady` to replace binding polls with native readiness waits.
 - [0558 and its six amendments](../sdlc/tickets/0558-cut-rust-source-below-the-ceiling.md) retire the unpublished complete, fallible-record and image wrappers below. The third and fourth amendments permit private production primitives with unchanged ownership tests. The fifth amendment retires `decide_many_complete_with` after its unchanged ownership test moves to existing `RequestRows::Decisions(batch).into_call()`.
 
-The delta leaves every documented method shipped in 0.1.2 in the historical contract, including the twelve methods that 0558 explicitly keeps. It also retains the approved `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` exceptions. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; this declaration repair changes no product code, tests or ceiling.
+[0565](../sdlc/tickets/0565-remove-compatibility-code.md) supersedes the shipped-wrapper keep rule and retires the choose, score and tag bulk pairs. Their behavioral tests use the existing Request row carriers. It also retains the approved `try_annotate_with`, `try_rank_with`, `try_find_with` and `relate_complete_with` exceptions. The retained `details_many_recoverable_with` method stays hidden and outside the documented inventory under 0359. The sixth amendment keeps the source ceiling unchanged; the declarations below retain the approved source ceiling.
 
 ### Retired public declarations
 
 ```text
+fn Engine::choose_many<'a, I, C: Choice>(&'a self, &'a ChooseQuestion<C>, I) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::choose_many_with<'a, I, C: Choice>(&'a self, &'a ChooseQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Option<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::score_many<'a, I>(&'a self, &'a Question, I) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::score_many_with<'a, I>(&'a self, &'a Question, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, f64>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::tag_many<'a, I, C: Choice>(&'a self, &'a TagQuestion<C>, I) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
+fn Engine::tag_many_with<'a, I, C: Choice>(&'a self, &'a TagQuestion<C>, I, CallOptions<'a>) -> Batch<'a, Row<I::Item, Vec<C>>> where I: IntoIterator + 'a, I::Item: Evidence
 fn CompleteChoice::legacy_details(&self) -> Result<Details, Error>
 fn CompleteDecision::legacy_details(&self) -> Result<Details, Error>
 fn CompleteRecord::legacy_details(&self) -> Result<Details, Error>

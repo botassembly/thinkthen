@@ -12,12 +12,11 @@ use crate::core::{self, Value};
 use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
 use crate::public::batch::Batch;
-use crate::public::choice::Choice;
 use crate::public::engine::{DecisionQuestion, Engine, Evidence, only};
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::pull;
-use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
+use crate::public::question::{Kind, Question};
 use crate::public::results::{
     self, Answer, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation, Row,
 };
@@ -149,102 +148,6 @@ impl Engine {
         I::Item: Evidence,
     {
         self.try_decide_input_many_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Each record's typed choice, including an unresolved `None`, in input order.
-    pub fn choose_many<'a, I, C: Choice>(
-        &'a self,
-        question: &'a ChooseQuestion<C>,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, Option<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.choose_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::choose_many`] under these controls.
-    pub fn choose_many_with<'a, I, C: Choice>(
-        &'a self,
-        question: &'a ChooseQuestion<C>,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Option<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.try_choose_input_many_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Each record's position on the declared scale, in input order.
-    pub fn score_many<'a, I>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, f64>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.score_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::score_many`] under these controls.
-    pub fn score_many_with<'a, I>(
-        &'a self,
-        question: &'a Question,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, f64>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.try_score_input_many_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Each record's labels in declared order, in input order.
-    pub fn tag_many<'a, I, C: Choice>(
-        &'a self,
-        question: &'a TagQuestion<C>,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, Vec<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.tag_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::tag_many`] under these controls.
-    pub fn tag_many_with<'a, I, C: Choice>(
-        &'a self,
-        question: &'a TagQuestion<C>,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Vec<C>>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        Batch::of(self.try_decisions(
-            crate::InputFunction::Tag,
-            &question.0,
-            records.into_iter().map(Ok),
-            options,
-            |item, (answer, _)| {
-                let Value::Tag(labels) = answer else {
-                    return Err(invalid_answer());
-                };
-                let values = labels
-                    .iter()
-                    .map(|label| C::from_label(label).ok_or_else(invalid_answer))
-                    .collect::<Result<Vec<_>, _>>()?;
-                Ok(Some(Row::new(item, values, 0.0)))
-            },
-        ))
     }
 
     pub(crate) fn try_decisions<'a, I, R: super::InputEvidence + 'a, T: 'a>(
