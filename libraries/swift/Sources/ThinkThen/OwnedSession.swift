@@ -5,22 +5,14 @@ public struct SessionBoundaryFailure: Error, Sendable, CustomStringConvertible {
     public let code: Int32
     public let message: String
     public var retryable = false
+    public var facts: String? = nil
     public var description: String { message }
-    public var kind: OwnedFailureKind {
-        switch code {
-        case Int32(THINKTHEN_EUSAGE): return .usage
-        case Int32(THINKTHEN_EBACKEND): return .backend
-        case Int32(THINKTHEN_EDEADLINE): return .deadline
-        case Int32(THINKTHEN_ELOCAL): return .local
-        case Int32(THINKTHEN_ECANCELLED): return .cancelled
-        case Int32(THINKTHEN_EDEFECT): return .defect
-        default: return .unknown(String(code))
-        }
-    }
+    public var kind: OwnedFailureKind { nativeFailureKind(code) }
+
 }
 
 func sessionCheck(_ code: Int32) throws {
-    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message())) }
+    if code != 0 { throw SessionBoundaryFailure(code: code, message: String(cString: thinkthen_session_error_message()), retryable: thinkthen_session_error_retryable() != 0, facts: thinkthen_session_error_facts_json().map { String(cString: $0) }) }
 }
 
 private final class SessionOwner: @unchecked Sendable {
@@ -300,42 +292,7 @@ public final class Client: @unchecked Sendable {
         if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: call) }
         return call
     }
-    private func call(_ call: InputRequestCall) async throws -> OwnedCall {
-        try await execute(InputRequest(call: call, schema: .unknown(ownedRequestVersion)))
-    }
-    public func decide(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.decide(InputRequestCallDecide(input: input, options: options, question: question)))
-    }
-    public func choose(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.choose(InputRequestCallChoose(input: input, options: options, question: question)))
-    }
-    public func tag(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.tag(InputRequestCallTag(input: input, options: options, question: question)))
-    }
-    public func score(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.score(InputRequestCallScore(input: input, options: options, question: question)))
-    }
-    public func filter(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.filter(InputRequestCallFilter(input: input, options: options, question: question)))
-    }
-    public func rank(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.rank(InputRequestCallRank(input: input, options: options, question: question)))
-    }
-    public func find(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.find(InputRequestCallFind(input: input, options: options, question: question)))
-    }
-    public func annotate(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.annotate(InputRequestCallAnnotate(input: input, options: options, question: question)))
-    }
-    public func recognize(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.recognize(InputRequestCallRecognize(input: input, options: options, question: question)))
-    }
-    public func relate(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {
-        try await call(.relate(InputRequestCallRelate(input: input, options: options, question: question)))
-    }
-    public func usagePersistence() throws -> OwnedUsagePersistenceStatus { try usage(thinkthen_engine_usage_persistence_v1) }
-    public func finishUsageStatus() throws -> OwnedUsagePersistenceStatus { try usage(thinkthen_engine_finish_usage_status_v1) }
-    private func usage(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> OwnedUsagePersistenceStatus {
+    func usage(_ operation: (OpaquePointer?, UnsafeMutablePointer<thinkthen_complete_usage_persistence_v1>?, UnsafeMutablePointer<thinkthen_complete_utf8_v1>?) -> Int32) throws -> OwnedUsagePersistenceStatus {
         try live { handle in
             var state = thinkthen_complete_usage_persistence_v1()
             var advice = thinkthen_complete_utf8_v1()
