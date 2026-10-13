@@ -8,3 +8,4 @@ Each line is a check the PM runs on the build team. None holds status.
 - Does the library size report show any host library above three times the median, or any change that added far more handwritten lines in one language than the others?
 - Does the surface manifest lint pass for every language library?
 - Are landed worktrees, branches and proof folders gone?
+- Does every outside pull request or issue have an owner checking it, and does any ticket marked complete still have an open outside PR or failing outside CI?
