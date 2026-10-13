@@ -6,9 +6,12 @@ from ._pandas_calls import PandasResult
 
 def answer_column(name, rows, function, detailed):
     import polars as pl
+    rows = list(rows)
     kinds = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))
     dtype = pl.Object if detailed else kinds.get(function, pl.Object)
-    return pl.Series(name, list(rows), dtype=dtype)
+    if function == 'decide' and not detailed and any(value is not None and not isinstance(value, bool) for value in rows):
+        dtype = None
+    return pl.Series(name, rows, dtype=dtype)
 
 
 def probability_column(result, name):

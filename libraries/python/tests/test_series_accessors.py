@@ -8,6 +8,29 @@ from backend_settings import configuration, isolated
 CORPUS = REPO / "conformance/cases.json"
 
 
+@pytest.mark.parametrize("reading", [
+    "The customer asks for money back.", {"action": "refund"}, ["refund", "review"],
+])
+def test_polars_question_files_preserve_authored_readings(backend, tmp_path, reading):
+    question = tmp_path / 'refund.json'
+    question.write_text(json.dumps({'decide': 'Refund?', 'true': reading, 'false': reading}))
+    printed = run(f'''
+        import polars as pl, thinkthen as tt
+        source = pl.Series('body', ['Please refund me.', None, 'Please refund me.'])
+        with tt.Engine(cache=False, batch=1) as engine:
+            result = engine.decide(tt.QuestionSource(path={str(question)!r}), source)
+            values = result.value
+            assert values.to_list() == [{reading!r}, None, {reading!r}]
+            assert values.dtype != pl.Object and values.dtype != pl.Boolean
+            assert result.positions == (0, 2)
+            assert result.facts.records == 2 and result.facts.requests_sent == 2
+            assert result.probability.to_list() == [.9, None, .9]
+        print('authored readings retained')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'authored readings retained'
+    assert backend.count() == 2
+
+
 def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(backend, tmp_path):
     printed = run('''
         import polars as pl, thinkthen as tt

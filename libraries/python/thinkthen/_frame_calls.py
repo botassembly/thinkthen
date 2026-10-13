@@ -133,11 +133,11 @@ class PolarsFrameResult(FrameResult):
 
     def _annotated(self):
         import polars as pl
+        from ._polars_calls import answer_column
         columns, failures = self._annotation_columns()
-        kinds = dict(decide=pl.Boolean, choose=pl.String, score=pl.Float64, tag=pl.List(pl.String))
         marker = pl.Struct({'failed': pl.Struct({'kind': pl.String, 'cause': pl.String})})
         failure_type = pl.Struct({name: marker for name, _ in self.members})
-        added = [pl.Series(name, columns[name], dtype=kinds[kind]) for name, kind in self.members]
+        added = [answer_column(name, columns[name], kind, False) for name, kind in self.members]
         added.append(pl.Series('failed', failures, dtype=failure_type))
         return self.source.with_columns(added)
 
