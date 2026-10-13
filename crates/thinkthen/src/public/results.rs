@@ -54,7 +54,6 @@ mod set_ranked;
 pub use set_ranked::SetRanked;
 mod tally;
 pub use tally::{Tally, TallyStart};
-mod compatibility;
 mod member;
 pub(crate) use member::Member;
 pub(crate) use member::batch_warning;

@@ -7,7 +7,7 @@ use crate::catalog::Catalog;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
+    Answer, CallOptions, Engine, For, Judgment, LoadedQuestion, QuestionKind, Settings,
 };
 
 use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
@@ -51,38 +51,18 @@ fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failu
     )))
 }
 
-/// The shared many-record details path for a contextual singleton.
-fn contextual(
-    engine: &Engine,
-    held: &LoadedQuestion,
-    evidence: String,
-    options: CallOptions<'_>,
-) -> Result<Details, Failure> {
-    crate::request::details(
-        engine,
-        held,
-        vec![crate::request::text(evidence)],
-        options,
-        true,
-    )?
-    .into_iter()
-    .next()
-    .ok_or_else(|| Failure::defect("details returned no record"))
-}
-
 /// One ordinary detail read; all question kinds keep the same engine path.
 fn scalar_details(
     engine: &Engine,
     held: &LoadedQuestion,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Details, Failure> {
+) -> Result<crate::request::JudgmentRow, Failure> {
     crate::request::details(
         engine,
         held,
         vec![crate::request::text(evidence.to_owned())],
         options,
-        false,
     )?
     .into_iter()
     .next()
@@ -114,7 +94,7 @@ fn plain_decide(
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Answer, Failure> {
-    match scalar_details(engine, held, evidence, options)?.value() {
+    match &scalar_details(engine, held, evidence, options)?.value {
         Judgment::Decision(answer) => Ok(*answer),
         _ => Err(Failure::defect("a decide answer held no decision")),
     }
@@ -128,7 +108,8 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
         let answer =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match &scalar_details(engine, &held, &evidence, options.context(&shared))?.value
+                    {
                         Judgment::Decision(answer) => Ok(*answer),
                         _ => Err(Failure::defect("a decide answer held no decision")),
                     }
@@ -161,17 +142,12 @@ fn judged(
     only(&held, name, kind)?;
     let details =
         worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-            if let Some(shared) = shared {
-                Ok(
-                    contextual(engine, &held, evidence, options.context(&shared))?
-                        .value()
-                        .clone(),
-                )
+            let options = if let Some(shared) = &shared {
+                options.context(shared)
             } else {
-                Ok(scalar_details(engine, &held, &evidence, options)?
-                    .value()
-                    .clone())
-            }
+                options
+            };
+            Ok(scalar_details(engine, &held, &evidence, options)?.value)
         })?;
     Ok(Some(details))
 }
@@ -207,12 +183,13 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
         let position =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
                 if let Some(shared) = shared {
-                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    match &scalar_details(engine, &held, &evidence, options.context(&shared))?.value
+                    {
                         Judgment::Score(value) => Ok(*value),
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
                 } else {
-                    match scalar_details(engine, &held, &evidence, options)?.value() {
+                    match &scalar_details(engine, &held, &evidence, options)?.value {
                         Judgment::Score(value) => Ok(*value),
                         _ => Err(Failure::defect("a score answer held no score")),
                     }
@@ -229,14 +206,12 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         };
         let details =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                if let Some(shared) = shared {
-                    Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
-                    )
+                let options = if let Some(shared) = &shared {
+                    options.context(shared)
                 } else {
-                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-                }
+                    options
+                };
+                Ok(scalar_details(engine, &held, &evidence, options)?.json)
             })?;
         Ok(Some(details))
     })?)
@@ -253,14 +228,12 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         };
         let details =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
-                if let Some(shared) = shared {
-                    Ok(
-                        contextual(engine, &held, evidence, options.context(&shared))?
-                            .to_scalar_json(),
-                    )
+                let options = if let Some(shared) = &shared {
+                    options.context(shared)
                 } else {
-                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-                }
+                    options
+                };
+                Ok(scalar_details(engine, &held, &evidence, options)?.json)
             })?;
         let details: serde_json::Value =
             serde_json::from_str(&details).map_err(|_| Failure::defect("a result is not JSON"))?;

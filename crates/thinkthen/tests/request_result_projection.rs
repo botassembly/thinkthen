@@ -1,4 +1,4 @@
-//! Retained result/1 projections match native batch documents without another send.
+//! Current typed projections retain originals and execution facts without another send.
 #![allow(
     clippy::unwrap_used,
     clippy::indexing_slicing,
@@ -51,122 +51,8 @@ fn record() -> RecordInput<QuestionInput> {
         .unwrap()
         .map_original(|record| record.question_input())
 }
-fn native_details(
-    engine: &Engine,
-    question: &LoadedQuestion,
-    original: QuestionInput,
-    controls: CallOptions<'_>,
-) -> Details {
-    let request = Request::for_definition(
-        question.clone().into(),
-        RequestInput::Feed {
-            name: "projection".into(),
-            framing: RequestFraming::Document,
-            reading: ReaderOptions::default(),
-            images: Vec::new(),
-        },
-        RequestOptions::default(),
-    )
-    .admit()
-    .unwrap();
-    let rows = engine
-        .execute_request_rows(&request, crate::api::plain_records([original]), controls)
-        .unwrap();
-    macro_rules! first {
-        ($rows:expr) => {
-            $rows
-                .next()
-                .unwrap()
-                .unwrap()
-                .compatibility_details()
-                .unwrap()
-        };
-    }
-    match rows {
-        RequestRows::Decisions(mut rows) => first!(rows),
-        RequestRows::Choices(mut rows) => first!(rows),
-        RequestRows::Tags(mut rows) => first!(rows),
-        RequestRows::Scores(mut rows) => first!(rows),
-        _ => panic!("fixture kind"),
-    }
-}
-fn documents(details: &Details) -> (Value, Value) {
-    (
-        serde_json::from_str(&details.to_json()).unwrap(),
-        serde_json::from_str(&details.to_scalar_json()).unwrap(),
-    )
-}
-
 #[test]
-fn all_four_record_and_scalar_projections_match_corresponding_native_batch() {
-    let listener = Listener::answering(response).unwrap();
-    let engine = engine(&listener);
-    let questions = [
-        r#"{"decide":"Fits?","threshold":"0.2:0.8"}"#,
-        r#"{"choose":"Which?","options":{"Sensitive choice":null,"Other":null}}"#,
-        r#"{"tag":"Which?","labels":{"Sensitive tag":null,"Other":null}}"#,
-        r#"{"score":"Grade?","levels":{"Sensitive score":null,"Other":null}}"#,
-    ];
-    for raw in questions {
-        let loaded = Question::from_json(raw).unwrap();
-        let controls = CallOptions::new().context("Separate context.");
-        let before = listener.count();
-        let (record_details, scalar_details) = match &loaded {
-            LoadedQuestion::Banded(_) => {
-                let call =
-                    crate::api::decide_records(&engine, &loaded, [record()], controls).unwrap();
-                let row = &call.value()[0];
-                (
-                    row.compatibility_details().unwrap(),
-                    row.result().compatibility_details().unwrap(),
-                )
-            }
-            LoadedQuestion::Question(q) => {
-                macro_rules! project {
-                    ($method:ident) => {{
-                        let call = crate::api::$method(&engine, q, [record()], controls).unwrap();
-                        let row = &call.value()[0];
-                        (
-                            row.compatibility_details().unwrap(),
-                            row.result().compatibility_details().unwrap(),
-                        )
-                    }};
-                }
-                match q.kind() {
-                    QuestionKind::Choose => project!(choose),
-                    QuestionKind::Tag => project!(tag),
-                    QuestionKind::Score => project!(score),
-                    _ => panic!("fixture kind"),
-                }
-            }
-        };
-        assert_eq!(listener.count(), before + 1, "projections send nothing");
-        let original = record().original;
-        let native = native_details(&engine, &loaded, original, controls);
-        assert_eq!(documents(&record_details), documents(&native));
-        assert_eq!(documents(&scalar_details).0, documents(&native).1);
-        assert!(documents(&record_details).0.get("input").is_some());
-        assert!(documents(&scalar_details).0.get("input").is_none());
-        assert_eq!(record_details.cached(), native.cached());
-        assert_eq!(record_details.reported_usage(), native.reported_usage());
-        for details in [&record_details, &scalar_details, &native] {
-            let debug = format!("{details:?}");
-            for secret in [
-                "Sensitive original",
-                "Sensitive choice",
-                "Sensitive tag",
-                "Sensitive score",
-                listener.base(),
-            ] {
-                assert!(!debug.contains(secret), "Debug exposed {secret}");
-            }
-        }
-        assert_eq!(listener.count(), before + 2);
-    }
-}
-
-#[test]
-fn annotation_primitive_null_and_failed_members_match_legacy_exactly() {
+fn annotation_primitive_null_and_failed_members_retain_values() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1}},"q3":{"type":"noul","noul":0.5}}}"#)).unwrap();
     let engine = engine(&listener);
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?","true":{"authored":"structured"}},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
@@ -198,7 +84,7 @@ fn annotation_primitive_null_and_failed_members_match_legacy_exactly() {
 fn request_originals_and_cache_metadata_survive_owning_projections() {
     let listener = Listener::answering(response).unwrap();
     let folder = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("legacy-projection-{}", std::process::id()));
+        .join(format!("result-projection-{}", std::process::id()));
     std::fs::create_dir(&folder).unwrap();
     let engine = crate::api::fixed(listener.base(), "projection-private")
         .cache_at(&folder)
@@ -244,21 +130,21 @@ fn request_originals_and_cache_metadata_survive_owning_projections() {
             panic!("decide")
         };
         let before = listener.count();
-        let details = rows[0].compatibility_details().unwrap();
-        let document = documents(&details).0;
+        let result = rows[0].result();
+        let document = serde_json::to_value(&rows[0]).unwrap();
         assert_eq!(
             document["input"],
             serde_json::from_str::<Value>(original).unwrap()
         );
         assert_eq!(document["value"], false);
-        assert_eq!(details.cached(), original.contains("null"));
+        assert_eq!(result.meta().cached(), original.contains("null"));
         assert_eq!(
-            details.cached(),
-            rows[0].result().compatibility_details().unwrap().cached()
+            result.meta().cached(),
+            document["meta"]["cached"].as_bool().unwrap()
         );
         assert_eq!(
-            details.observations(),
-            rows[0].result().identity().observations()
+            serde_json::to_value(result.identity().observations()).unwrap(),
+            document["meta"]["observations"]
         );
         assert_eq!(listener.count(), before);
     }
@@ -281,23 +167,22 @@ fn saved_batch_without_threshold_and_opt_in_attempts_survive_native_projection()
     };
     let controls = CallOptions::new().batch(BatchSetting::Max);
     let complete = crate::api::score(&engine, q, [record()], controls).unwrap();
-    let details = complete.value()[0].compatibility_details().unwrap();
-    let original = record().original;
-    let native = native_details(&engine, &loaded, original, controls);
-    assert_eq!(documents(&details), documents(&native));
-    assert!(documents(&details).0["meta"].get("batch_warning").is_none());
+    let before = listener.count();
+    assert!(
+        complete.value()[0]
+            .result()
+            .meta()
+            .batch_warning()
+            .is_none()
+    );
+    assert_eq!(complete.value()[0].original(), &record().original);
+    assert_eq!(listener.count(), before);
     let q = Question::decide("Fits?").unwrap().cut();
     let call =
         crate::api::decide_records(&engine, &q, [record()], controls.attempts(true)).unwrap();
     let before = listener.count();
-    let scalar = call.value()[0].result().compatibility_details().unwrap();
-    assert_eq!(
-        documents(&scalar).0["meta"]["attempts"]
-            .as_array()
-            .unwrap()
-            .len(),
-        1
-    );
+    let scalar = call.value()[0].result();
+    assert_eq!(scalar.meta().attempts().unwrap().len(), 1);
     assert_eq!(listener.count(), before);
 }
 
