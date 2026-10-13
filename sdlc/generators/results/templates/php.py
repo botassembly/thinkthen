@@ -56,7 +56,7 @@ def outputs(definitions, header):
     lines += native_readers(definitions)
     declarations = re.sub(r'^#.*$', '', selected_header(header, 'php'), flags=re.M)
     constants = ['<?php', '// Generated from the native C header; do not edit.',
-                 'declare(strict_types=1);', 'namespace ThinkThen\\Session;']
+                 'declare(strict_types=1);', 'namespace ThinkThen\\Internal\\Session;']
     for key, value in re.findall(r'^#define (THINKTHEN_(?:SESSION_\w+|E\w+|COMPLETE_USAGE_PERSISTENCE_\w+)) (\d+)\s*$', header, flags=re.M):
         constants += [f'const {key} = {value};']
     constants += ['namespace ThinkThen;', 'enum UsagePersistenceState: int {']
@@ -87,10 +87,10 @@ def inputs(definitions):
     # The adapter accepts common records and preserves selector descriptors.
     # Emit only the tagged constructors it instantiates.
     selected.update(('RecognizeQuestion', 'RelateQuestion', 'Authored_relation', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RequestInput_records', 'RequestInput_units', 'RequestInput_entities', 'RequestInput_source', 'RequestInput_feed',
-                     'RequestQuestion_text', 'RequestQuestion_definition',
+                     'RequestQuestion_text', 'RequestQuestion_definition', 'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference',
                      'RequestReaderFailure_producer'))
     lines = ['<?php', '// Generated from the shared Rust request graph; do not edit.',
-             'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;']
+             'declare(strict_types=1);', 'namespace ThinkThen\\Inputs;', 'enum Omitted { case Value; }', 'interface QuestionSource extends \\JsonSerializable {}']
     for key, source in definitions.items():
         if key not in selected:
             continue
@@ -114,9 +114,9 @@ def inputs(definitions):
         parameters = ', '.join(parameter(member) + ' $' + member for member in required)
         values = ', '.join(repr(member) + ' => $' + member for member in required)
         tags = ', '.join(repr(k) + ' => ' + repr(v) for k, v in defaults.items())
-        public = key in {'RequestOptions', 'EngineSettings', 'RecognizeQuestion', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RelateQuestion', 'Authored_relation'}
+        public = key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference', 'RequestOptions', 'EngineSettings', 'RecognizeQuestion', 'RecognizeDefinition', 'RequestDefinition_RecognizeDefinition', 'RequestDefinition_Authored_relate', 'RelateQuestion', 'Authored_relation'}
         namespace = 'ThinkThen\\Inputs' if public else 'ThinkThen\\Internal\\Requests'
-        lines += ['namespace ' + namespace + ';', 'final class ' + input_name(key) + ' extends \\ThinkThen\\Inputs\\Document', '{', *(['    public const TAGS = [' + tags + '];'] if tags else [])]
+        lines += ['namespace ' + namespace + ';', 'final class ' + input_name(key) + ' extends \\ThinkThen\\Inputs\\Document' + (' implements QuestionSource' if key in {'RequestQuestion_file', 'RequestQuestion_name', 'RequestQuestion_reference'} else ''), '{', *([('    private const TAGS = [' if public else '    public const TAGS = [') + tags + '];'] if tags else [])]
         if public:
             args, entries = [], []
             for member, field in fields.items():
@@ -125,7 +125,7 @@ def inputs(definitions):
                 reference = field.get('$ref', '').split('/')[-1] if isinstance(field, dict) else ''
                 if reference in selected and reference in {'RecognizeQuestion', 'RelateQuestion'}: typ = input_name(reference)
                 optional = member not in required
-                args.append((optional, typ + ('|Omitted' if optional and typ != 'mixed' else '') + ' $' + member + (' = Omitted::Value' if optional else '')))
+                args.append((optional, 'public readonly ' + typ + ('|Omitted' if optional and typ != 'mixed' else '') + ' $' + member + (' = Omitted::Value' if optional else '')))
                 entries.append(('...($' + member + ' === Omitted::Value ? [] : [' + repr(member) + ' => $' + member + '])') if optional else repr(member) + ' => $' + member)
             lines += ['    public function __construct(' + ', '.join(argument for _, argument in sorted(args, key=lambda item: item[0])) + ')', '    {', '        parent::__construct([' + ', '.join((['...self::TAGS'] if tags else []) + entries) + ']);', '    }', '}']
         else:
@@ -135,7 +135,7 @@ def inputs(definitions):
     lines += ['namespace ThinkThen;', 'trait NamedCalls', '{']
     for function in definitions['RequestFunction']['oneOf']:
         value = function['const']
-        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\Document|QuestionInput $question, mixed $input, array|\\ThinkThen\\Inputs\\Options $options = [], ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
+        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\Document|\\ThinkThen\\Inputs\\QuestionSource $question, mixed $input, array|\\ThinkThen\\Inputs\\Options $options = [], ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
     lines += ['}']
     return '\n'.join(lines) + '\n'
 

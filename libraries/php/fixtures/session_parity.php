@@ -78,8 +78,8 @@ try {
     $payload = consume($fixture, $client);
 } catch (CallFailure $error) {
     $kind = match (get_class($error)) {
-        ThinkThen\UsageFailure::class => ThinkThen\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Session\THINKTHEN_EDEADLINE,
-        ThinkThen\LocalFailure::class => ThinkThen\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Session\THINKTHEN_EDEFECT,
+        ThinkThen\UsageFailure::class => ThinkThen\Internal\Session\THINKTHEN_EUSAGE, ThinkThen\BackendFailure::class => ThinkThen\Internal\Session\THINKTHEN_EBACKEND, ThinkThen\DeadlineFailure::class => ThinkThen\Internal\Session\THINKTHEN_EDEADLINE,
+        ThinkThen\LocalFailure::class => ThinkThen\Internal\Session\THINKTHEN_ELOCAL, ThinkThen\CancelledFailure::class => ThinkThen\Internal\Session\THINKTHEN_ECANCELLED, default => ThinkThen\Internal\Session\THINKTHEN_EDEFECT,
     };
     $payload = ['admission' => ['code' => $kind, 'message' => $error->getMessage()]];
 } finally { $client?->close(); }

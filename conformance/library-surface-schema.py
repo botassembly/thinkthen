@@ -33,6 +33,9 @@ def generated_sources(root, target, request, result):
     header = (root / 'libraries/c/include/thinkthen.h').read_text()
     outputs = {}
     roots = getattr(template, 'ROOTS', ('completesessionPacket',))
+    if target == 'php':
+        from native import immediate_schema
+        result = immediate_schema(result)
     results = graph(result, roots)
     inputs = graph(request, getattr(template, 'INPUT_ROOTS', ('Request', 'EngineSettings', 'RequestSessionDescriptor')))
     if target == 'c':

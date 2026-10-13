@@ -314,6 +314,47 @@ class PublicSurface(unittest.TestCase):
             private.write_text(private.read_text().replace('class Json', 'public class Json'))
             self.assertIn('unlisted public type/export: .Json', invoke(original))
 
+    def test_php_traits_and_explicit_internal_namespaces(self):
+        spec = importlib.util.spec_from_file_location('surface_php', CHECK)
+        checker = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(checker)
+        source = ('namespace ThinkThen\\Inputs; class Presence { public function __construct('
+                  'public bool $present, public string|null $value, private mixed $hidden = null) {} } '
+                  'namespace ThinkThen\\Internal; class Hidden { public function extraHidden() {} } '
+                  'namespace ThinkThen\\InternalPublic; class Visible { public function extraVisible() {} }')
+        declared = checker.READ.declarations(source, 'php')
+        self.assertTrue({checker.READ.Declaration('Presence', name, 'field') for name in ['present', 'value']} <= declared)
+        self.assertFalse(any(item.name in ['hidden', 'Hidden', 'extraHidden'] for item in declared))
+        self.assertIn(checker.READ.Declaration('Visible', 'extraVisible', 'call'), declared)
+        with tempfile.TemporaryDirectory(prefix='library-surface-php-') as folder:
+            root = Path(folder)
+            for name in ['sdlc', 'specification', 'conformance']:
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/php', root / 'libraries/php', ignore=shutil.ignore_patterns('target'))
+            target = root / 'libraries/c/include/thinkthen.h'
+            target.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', target)
+            manifest = json.loads((ROOT / 'conformance/library-surface.json').read_text())
+            manifest['libraries']['php']['function_containers'] = ['Client']
+            manifest['libraries']['php']['option_containers'] = ['Options']
+            manifest['libraries']['php']['setting_containers'] = ['Settings']
+            selected = root / 'manifest.json'
+            selected.write_text(json.dumps(manifest))
+            calls = root / 'libraries/php/src/session/inputs_generated.php'
+            original = calls.read_text()
+            def invoke(source):
+                calls.write_text(source)
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest', str(selected), '--library', 'php', '--json'], capture_output=True, text=True)
+                self.assertIn(result.returncode, [0, 1], result.stderr)
+                return json.loads(result.stdout)['libraries']['php']
+            baseline = invoke(original)
+            self.assertFalse(any(error.startswith('missing function:') for error in baseline), baseline)
+            errors = invoke(original.replace('trait NamedCalls\n{', 'trait NamedCalls\n{ public function extraPublicExport() {}', 1))
+            self.assertIn('unlisted generated declaration: inputs_generated.php:NamedCalls.extraPublicExport', errors)
+            self.assertIn('unlisted public call/export: NamedCalls.extraPublicExport', errors)
+            errors = invoke(original.replace('function decide(', 'function missingDecide(', 1))
+            self.assertIn('missing function: decide', errors)
+
     def test_native_declarations_exclude_comments_and_private_fields(self):
         spec = importlib.util.spec_from_file_location('surface_cli', CHECK)
         checker = importlib.util.module_from_spec(spec)
