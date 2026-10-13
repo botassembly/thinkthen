@@ -1,4 +1,4 @@
-//! The lazy batch behind `filter`, `decide_many`, and `annotate`. Its
+//! The lazy batch behind independent Request rows and annotation calls. Its
 //! source is a pulled pipeline call in `pull`, or one error.
 
 use std::fmt;

@@ -86,8 +86,6 @@ fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let _: Call<f64> = e.score(&Question::score("how urgent").unwrap().level("low", None)?.level("high", None)?.build()?, "t")?;
     let _: Call<Vec<Desk>> = e.tag(&desks(), "text")?;
     let _: Call<Vec<Desk>> = e.tag_with(&desks(), "text", o)?;
-    let _: Vec<Result<String, Error>> = e.filter(&q, texts.clone()).collect();
-    let _: Vec<Result<&str, Error>> = e.filter_with(&q, ["a", "b"], o).collect();
     let _: Call<Vec<Ranked<&str>>> = e.rank(&Question::rank("most urgent")?, ["a", "b"])?;
     let _: Call<Found<String>> = e.find_with(&Question::find("the refund")?, texts.clone(), o)?;
     let set = QuestionSet::builder().question("refund", q.clone())?.banded("b", b.clone())?
@@ -97,7 +95,6 @@ fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let _: Call<Recognized> = e.recognize_with(&rec, "text", o)?;
     let rel = Relate::builder().relation(RelationRule::one_way("treats", "drug", "disease")?)?.build()?;
     let _: Call<Vec<Edge>> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
-    let _: Vec<Result<Row<&str, Answer>, Error>> = e.decide_many(&b, ["a"]).collect();
     let _: Call<Details> = e.details(&desk(), "text")?;
     let _: Counters = e.usage();
     Ok(())
@@ -108,13 +105,6 @@ fn descriptions() -> Result<Description, Error> {
     Description::builder().what("a refund")?.not_for("a return")?.example("give it back")?
         .field_json("tone", "\"urgent\"")?.build()
 }
-"#,
-    ),
-    (
-        "a_band_is_not_a_filter",
-        Some(("E0308", "expected `&Question`, found `&BandedQuestion`")),
-        r#"
-fn f(e: &Engine) { let _ = e.filter(&banded(), ["a"]); }
 "#,
     ),
     (

@@ -82,9 +82,13 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
 
             // Exactly two held requests, then the third arrives only after release.
             let slice = held_in_flight(|engine, index| {
-                let _answered: Vec<_> = engine
-                    .decide_many_with(&question, [refs[index]], common::singleton())
-                    .collect();
+                let _answered: Vec<_> = crate::api::pull_decisions(
+                    engine,
+                    &question,
+                    crate::api::plain_records([refs[index]]),
+                    common::singleton(),
+                )
+                .collect();
             });
             assert_eq!(slice, (2, TEXTS), "the slice in flight on the held arm");
             let decide = held_in_flight(|engine, index| {
@@ -137,13 +141,20 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
             .collect()
     });
     let (from_slice, slice_count) = answered(&|engine| {
-        engine
-            .decide_many_with(question, refs.iter().copied(), common::singleton())
-            .map(|row| {
-                row.map(|row| (*row.value() != Answer::Unsure).then(|| *row.value() == Answer::Yes))
+        crate::api::pull_decisions(
+            engine,
+            question,
+            crate::api::plain_records(refs.iter().copied()),
+            common::singleton(),
+        )
+        .map(|row| {
+            row.map(|row| {
+                (row.result().value() != Answer::Unsure)
+                    .then(|| row.result().value() == Answer::Yes)
             })
-            .collect::<Result<_, _>>()
-            .expect("the slice call")
+        })
+        .collect::<Result<_, _>>()
+        .expect("the slice call")
     });
     assert_eq!((series_count, slice_count), (count, count));
     assert_eq!(from_series, from_slice);

@@ -82,9 +82,18 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     ])
     .expect("stopping listener");
     let stopping_engine = engine(listener.base());
-    let mut rows = stopping_engine.decide_many_with(&question, texts, options);
+    let mut rows = crate::api::pull_decisions(
+        &stopping_engine,
+        &question,
+        crate::api::plain_records(texts),
+        options,
+    );
     assert_eq!(
-        *rows.next().expect("first").expect("answered").value(),
+        rows.next()
+            .expect("first")
+            .expect("answered")
+            .result()
+            .value(),
         Answer::Yes
     );
     assert_eq!(
@@ -146,7 +155,12 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     ])
     .expect("stopping request listener");
     let stopping_engine = engine(listener.base());
-    let mut rows = stopping_engine.decide_many_with(&question, texts, options);
+    let mut rows = crate::api::pull_decisions(
+        &stopping_engine,
+        &question,
+        crate::api::plain_records(texts),
+        options,
+    );
     assert_eq!(
         rows.next().expect("stop").expect_err("left failed").kind(),
         ErrorKind::Backend
@@ -197,9 +211,10 @@ fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
     let budget = SendBudget::new();
     let listener = Listener::serving(vec![Canned::status(413, "too large")]).expect("listener");
     let stopping_engine = engine(listener.base());
-    let mut stopping = stopping_engine.decide_many_with(
+    let mut stopping = crate::api::pull_decisions(
+        &stopping_engine,
         &question,
-        texts,
+        crate::api::plain_records(texts),
         CallOptions::new()
             .batch(setting)
             .send_budget(&budget, Some(1)),

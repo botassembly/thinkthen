@@ -158,22 +158,28 @@ fn coalesced_occurrences_share_one_observation_and_equal_refresh_creates_a_new_o
     let place = folder();
     let question = Question::decide("Refund?").unwrap().cut();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
-    let rows = engine
-        .details_many_with(
-            &question,
-            ["Refund me.", "Refund me."],
-            CallOptions::new().batch(BatchSetting::Max),
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .unwrap();
+    let rows = crate::api::pull_decisions(
+        &engine,
+        &question,
+        crate::api::plain_records(["Refund me.", "Refund me."]),
+        CallOptions::new().batch(BatchSetting::Max),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .unwrap();
     assert_eq!(listener.count(), 1);
     assert_eq!(listener.requests().len(), 1);
     assert_eq!(
-        rows[0].value().observations(),
-        rows[1].value().observations()
+        rows[0].result().identity().observations(),
+        rows[1].result().identity().observations()
     );
-    assert_eq!(rows[0].value().question_sources()[0].batch_size(), Some(1));
-    assert_eq!(rows[1].value().question_sources()[0].batch_size(), Some(1));
+    assert_eq!(
+        rows[0].result().identity().question_sources()[0].batch_size(),
+        Some(1)
+    );
+    assert_eq!(
+        rows[1].result().identity().question_sources()[0].batch_size(),
+        Some(1)
+    );
     let refresh = build(&listener)
         .cache_at(&place)
         .unwrap()
@@ -184,9 +190,12 @@ fn coalesced_occurrences_share_one_observation_and_equal_refresh_creates_a_new_o
     assert_eq!(listener.count(), 2);
     assert_ne!(
         renewed.value().observations(),
-        rows[0].value().observations()
+        rows[0].result().identity().observations()
     );
-    assert_eq!(renewed.value().requests(), rows[0].value().requests());
+    assert_eq!(
+        renewed.value().requests(),
+        rows[0].result().meta().requests()
+    );
     let retained = engine.details(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 2);
     assert_eq!(

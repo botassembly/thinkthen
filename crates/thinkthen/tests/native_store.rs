@@ -249,14 +249,14 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
             .iter()
             .map(|letter| char::from(*letter).to_string())
             .collect();
-        let rows = engine
-            .details_many_with(
-                &question,
-                records,
-                CallOptions::new().batch(BatchSetting::Max),
-            )
-            .collect::<Result<Vec<_>, _>>()
-            .unwrap();
+        let rows = crate::api::pull_decisions(
+            &engine,
+            &question,
+            crate::api::plain_records(records),
+            CallOptions::new().batch(BatchSetting::Max),
+        )
+        .collect::<Result<Vec<_>, _>>()
+        .unwrap();
         let requests = listener.requests();
         assert_eq!(requests.len(), 1);
         let expected_questions: serde_json::Map<String,Value> = missing.iter().enumerate().map(|(at,letter)| (format!("q{}",at+1),json!({"type":"noul","instructions":format!("The text is \"{}\". Refund?",char::from(*letter))}))).collect();
@@ -265,23 +265,29 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
             json!({"state":"Each question quotes the text it asks about.","model":"fixed","questions":expected_questions})
         );
         for row in rows {
-            let detail = row.value();
-            let source = &detail.question_sources()[0];
+            let detail = row.result();
+            let source = &detail.identity().question_sources()[0];
             if missing
                 .iter()
-                .any(|letter| row.input() == &char::from(*letter).to_string())
+                .any(|letter| row.original() == &char::from(*letter).to_string())
             {
                 assert_eq!(source.origin(), Origin::Live);
                 assert_eq!(source.batch_size(), Some(missing.len() as u32));
                 identities.insert(
-                    row.input().clone(),
-                    (detail.observations().to_vec(), source.batch_size()),
+                    row.original().clone(),
+                    (
+                        detail.identity().observations().to_vec(),
+                        source.batch_size(),
+                    ),
                 );
             } else {
                 assert_eq!(source.origin(), Origin::Cache);
                 assert_eq!(
-                    &(detail.observations().to_vec(), source.batch_size()),
-                    identities.get(row.input()).unwrap()
+                    &(
+                        detail.identity().observations().to_vec(),
+                        source.batch_size()
+                    ),
+                    identities.get(row.original()).unwrap()
                 );
             }
         }

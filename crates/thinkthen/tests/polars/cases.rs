@@ -196,9 +196,13 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
     };
     let answered = match Question::from_json(question).expect("the case's question") {
         LoadedQuestion::Banded(banded) => {
-            let listed = slice
-                .decide_many_with(&banded, texts.to_vec(), options())
-                .map(|row| row.map(|row| *row.value()));
+            let listed = crate::api::pull_decisions(
+                slice,
+                &thinkthen::LoadedQuestion::Banded(banded.clone()),
+                crate::api::plain_records(texts.to_vec()),
+                options(),
+            )
+            .map(|row| row.map(|row| row.result().value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(
@@ -210,9 +214,13 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
             );
         }
         LoadedQuestion::Question(asked) if asked.kind() == QuestionKind::Decide => {
-            let listed = slice
-                .decide_many_with(&asked, texts.to_vec(), options())
-                .map(|row| row.map(|row| *row.value()));
+            let listed = crate::api::pull_decisions(
+                slice,
+                &asked,
+                crate::api::plain_records(texts.to_vec()),
+                options(),
+            )
+            .map(|row| row.map(|row| row.result().value()));
             let listed = decided(listed.collect::<Result<_, _>>().expect("the slice form"));
             return (
                 cells(

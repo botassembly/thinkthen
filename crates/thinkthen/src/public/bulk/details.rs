@@ -3,41 +3,12 @@
 use serde::Serialize;
 
 use crate::public::batch::Batch;
-use crate::public::engine::{DetailQuestion, Engine, Evidence};
+use crate::public::engine::{DetailQuestion, Engine};
 use crate::public::error::Error;
 use crate::public::options::CallOptions;
 use crate::public::results::{Details, Row};
 
 impl Engine {
-    /// Each record's full detail under a runtime or typed question, in input order.
-    /// The input must serialize to JSON so its whole original value can appear
-    /// under `input` in the detail document.
-    pub fn details_many<'a, I, Q: DetailQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-    ) -> Batch<'a, Row<I::Item, Details>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence + Serialize,
-    {
-        self.details_many_with(question, records, CallOptions::new())
-    }
-
-    /// [`Engine::details_many`] under these controls.
-    pub fn details_many_with<'a, I, Q: DetailQuestion + ?Sized>(
-        &'a self,
-        question: &'a Q,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, Row<I::Item, Details>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence + Serialize,
-    {
-        self.try_details_input_many_with(question, records.into_iter().map(Ok), options)
-    }
-
     /// Full details over fallible explicit input items, including image files.
     /// # Errors
     /// Reader failures retain earlier completed rows; image admission sends nothing.

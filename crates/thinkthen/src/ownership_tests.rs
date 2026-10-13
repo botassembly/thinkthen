@@ -448,3 +448,5 @@ mod dynamic_choose {
         assert_eq!(listener.count(), 1);
     }
 }
+
+mod bulk_details_tests;

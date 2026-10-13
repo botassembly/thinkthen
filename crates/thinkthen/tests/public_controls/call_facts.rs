@@ -366,9 +366,10 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
     };
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
     let asked = question();
-    let mut rows = engine.decide_many_with(
+    let mut rows = crate::api::pull_decisions(
+        &engine,
         &asked,
-        ["alpha", "first", "beta", "second"],
+        crate::api::plain_records(["alpha", "first", "beta", "second"]),
         CallOptions::new().batch(setting).observe(&observe),
     );
     let later_released = AtomicUsize::new(0);

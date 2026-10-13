@@ -30,7 +30,12 @@ fn a_stop_during_a_batch_or_before_a_cache_miss_sends_nothing_new() {
             }
             backend.release();
         });
-        batch.filter_with(&asked, texts, options).collect()
+        crate::api::pull_filters(&batch, &asked, crate::api::plain_records(texts), options)
+            .filter_map(|row| match row {
+                Ok(row) => row.result().value().then(|| Ok(row.into_parts().0)),
+                Err(error) => Some(Err(error)),
+            })
+            .collect()
     });
     assert!(
         runs.all_on(thread::current().id()),
