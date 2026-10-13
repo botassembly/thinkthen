@@ -102,6 +102,13 @@ end record;
 function Encode (Value : T_Authored_inputDeclaration) return String;
 package T_Authored_inputDeclaration_Options is new Optional_Values (T_Authored_inputDeclaration);
 subtype T_Authored_inputDeclaration_Optional is T_Authored_inputDeclaration_Options.Optional;
+type T_JSON_Map_Entry is record
+Key : Unbounded_String;
+Value : T_JSON;
+end record;
+package T_JSON_Map_Vectors is new Ada.Containers.Vectors (Positive, T_JSON_Map_Entry);
+subtype T_JSON_Map is T_JSON_Map_Vectors.Vector;
+function Encode (Value : T_JSON_Map) return String;
 package T_JSON_List_Vectors is new Ada.Containers.Vectors (Positive, T_JSON);
 subtype T_JSON_List is T_JSON_List_Vectors.Vector;
 function Encode (Value : T_JSON_List) return String;
@@ -111,7 +118,7 @@ T_Authored_questionText_arm_2);
 type T_Authored_questionText (Kind : T_Authored_questionText_Kind := T_Authored_questionText_arm_0) is record
 case Kind is
 when T_Authored_questionText_arm_0 => V_0 : T_Text;
-when T_Authored_questionText_arm_1 => V_1 : T_JSON;
+when T_Authored_questionText_arm_1 => V_1 : T_JSON_Map;
 when T_Authored_questionText_arm_2 => V_2 : T_JSON_List;
 end case;
 end record;
@@ -125,7 +132,7 @@ T_Authored_criterion_arm_3);
 type T_Authored_criterion (Kind : T_Authored_criterion_Kind := T_Authored_criterion_arm_0) is record
 case Kind is
 when T_Authored_criterion_arm_0 => V_0 : T_Text;
-when T_Authored_criterion_arm_1 => V_1 : T_JSON;
+when T_Authored_criterion_arm_1 => V_1 : T_JSON_Map;
 when T_Authored_criterion_arm_2 => V_2 : T_JSON_List;
 when T_Authored_criterion_arm_3 => V_3 : T_Null;
 end case;
@@ -187,7 +194,7 @@ T_Authored_description_arm_3);
 type T_Authored_description (Kind : T_Authored_description_Kind := T_Authored_description_arm_0) is record
 case Kind is
 when T_Authored_description_arm_0 => V_0 : T_Text;
-when T_Authored_description_arm_1 => V_1 : T_JSON;
+when T_Authored_description_arm_1 => V_1 : T_JSON_Map;
 when T_Authored_description_arm_2 => V_2 : T_JSON_List;
 when T_Authored_description_arm_3 => V_3 : T_Null;
 end case;
@@ -473,7 +480,7 @@ T_ContextSchema_arm_1);
 type T_ContextSchema (Kind : T_ContextSchema_Kind := T_ContextSchema_arm_0) is record
 case Kind is
 when T_ContextSchema_arm_0 => V_0 : T_Text;
-when T_ContextSchema_arm_1 => V_1 : T_JSON;
+when T_ContextSchema_arm_1 => V_1 : T_JSON_Map;
 end case;
 end record;
 function Encode (Value : T_ContextSchema) return String;
