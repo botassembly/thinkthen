@@ -2,6 +2,13 @@ PROJ_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 EXT_NAME=thinkthen
 EXT_CONFIG=${PROJ_DIR}extension_config.cmake
 
+# Community Linux preparation and compilation run in separate containers.
+# Keep fetched crates and the pinned toolchain in their shared mounted checkout.
+ifeq ($(LINUX_CI_IN_DOCKER),1)
+export CARGO_HOME ?= $(PROJ_DIR)build/community-rust/cargo
+export RUSTUP_HOME ?= $(PROJ_DIR)build/community-rust/rustup
+endif
+
 include extension-ci-tools/makefiles/duckdb_extension.Makefile
 
 # This repository keeps its extension tests beside the DuckDB adapter.

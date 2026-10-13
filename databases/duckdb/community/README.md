@@ -9,7 +9,7 @@ git submodule update --init --recursive
 make configure_ci
 ```
 
-`configure_ci` installs Rust 1.95.0, its pinned components and the selected target, then fetches locked bridge dependencies. Community Linux CI runs this preparation inside its build container. macOS CI selects `OSX_BUILD_ARCH`; preparation installs that target for the pinned Rust toolchain.
+`configure_ci` installs Rust 1.95.0, its pinned components and the selected target, then fetches locked bridge dependencies. Community Linux CI runs this preparation inside its build container. With `LINUX_CI_IN_DOCKER=1`, Cargo and Rust homes default to `build/community-rust` in the mounted checkout, so the separate release container retains the prepared inputs. Explicit caller homes still take precedence. macOS CI selects `OSX_BUILD_ARCH`; preparation installs that target for the pinned Rust toolchain.
 
 Build and test after preparation:
 
