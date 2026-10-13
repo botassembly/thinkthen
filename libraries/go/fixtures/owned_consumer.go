@@ -69,6 +69,9 @@ func feedChecks(client *tt.Client) {
 	}
 	kind, kindErr := failure.Detail.Kind().Value.JSONValue()
 	require(prefix == 1 && kindErr == nil && kind == "local", "reader failure lost completed prefix")
+	_, answerErr := failure.Call.DecideAnswer()
+	var answerFailure *tt.SessionError
+	require(errors.As(answerErr, &answerFailure) && len(answerFailure.Call.Packets) == len(failure.Call.Packets), "one-answer reader failure lost its prefix")
 	client.Close()
 	for i, result := range []tt.OwnedCall{call, failure.Call} {
 		facts := result.Terminal.Facts()
@@ -303,6 +306,13 @@ func main() {
 		require(sends.Present && err == nil, "missing requests")
 		expectedRequests += n
 	}
+	recognitionAggregates := 0
+	for _, packet := range retained[8].Packets {
+		if _, err := packet.AsSessionPacketRecognizeAggregate(); err == nil {
+			recognitionAggregates++
+		}
+	}
+	require(recognitionAggregates == 1, "recognize did not emit exactly one aggregate")
 	decision, decisionErr := retained[0].DecideAnswer()
 	require(decisionErr == nil && decision != nil && *decision, "single normalized decision missing")
 	choice, choiceErr := retained[1].ChooseAnswer()
@@ -372,6 +382,13 @@ func main() {
 	expectedRequests += n
 	unknown, unknownErr := uncertain.DecideAnswer()
 	require(unknownErr == nil && unknown == nil, "nullable judgment changed")
+	uncertainChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), "uncertain-choice", nil)
+	require(err == nil, "uncertain choice call failed")
+	n, err = uncertainChoice.Terminal.Facts().Value.RequestsSent().Value.Int64()
+	require(err == nil, "uncertain choice requests missing")
+	expectedRequests += n
+	unknownChoice, choiceErr := uncertainChoice.ChooseAnswer()
+	require(choiceErr == nil && unknownChoice == nil, "nullable choice judgment changed")
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
 	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}, nil)

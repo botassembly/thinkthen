@@ -159,7 +159,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	}
 	var feed *producerReader
 	if feeding {
-		feed = startProducer(readerCtx, producer)
+		feed = startProducer(readerCtx, producer, session)
 	}
 	active := activeSession{cancel: stopReader}
 	if feed != nil {
@@ -167,8 +167,20 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 	}
 	c.sessions[session] = active
 	c.mu.Unlock()
+	watchStop := make(chan struct{})
+	watchDone := make(chan struct{})
+	go func() {
+		defer close(watchDone)
+		select {
+		case <-readerCtx.Done():
+			C.thinkthen_session_cancel(session)
+		case <-watchStop:
+		}
+	}()
 	defer func() {
 		stopReader()
+		close(watchStop)
+		<-watchDone
 		if feed != nil {
 			<-feed.done
 		}
@@ -197,9 +209,25 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		runtime.LockOSThread()
 		var status C.uint32_t
 		var packet *C.thinkthen_session_result
-		err = sessionFailure(C.thinkthen_session_try_read(session, &status, &packet))
+		err = sessionFailure(C.thinkthen_session_next_packet(session, C.THINKTHEN_SESSION_WAIT_RESULT_V1, &status, &packet))
 		if err != nil {
 			runtime.UnlockOSThread()
+			c.mu.Lock()
+			closed := c.closed
+			c.mu.Unlock()
+			if closed {
+				return result, ErrClosed
+			}
+			if ctx.Err() != nil {
+				return result, ctx.Err()
+			}
+			if feed != nil {
+				stopReader()
+				<-feed.done
+				if feed.err != nil {
+					return result, feed.err
+				}
+			}
 			return result, err
 		}
 		if status == 0 {
@@ -212,6 +240,15 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			}
 			C.thinkthen_session_result_free(packet)
 			runtime.UnlockOSThread()
+			if ctx.Err() != nil {
+				return result, ctx.Err()
+			}
+			c.mu.Lock()
+			closed := c.closed
+			c.mu.Unlock()
+			if closed {
+				return result, ErrClosed
+			}
 			if err != nil {
 				return result, err
 			}
@@ -246,42 +283,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			}
 		} else {
 			runtime.UnlockOSThread()
-			if status == 2 {
-				return result, errors.New("native session ended before terminal facts")
-			}
-			if feed != nil {
-				if err = feed.advance(session, stopReader); err != nil {
-					return result, err
-				}
-			}
-			var next <-chan producerValue
-			if feed != nil && !feed.finished && feed.pending == nil {
-				next = feed.values
-			}
-			interest := C.uint32_t(C.THINKTHEN_SESSION_WAIT_RESULT_V1)
-			if feed != nil && feed.pending != nil {
-				interest = C.THINKTHEN_SESSION_WAIT_INPUT_V1
-			}
-			waited := make(chan error, 1)
-			go func() {
-				runtime.LockOSThread()
-				defer runtime.UnlockOSThread()
-				var ready C.uint32_t
-				waited <- sessionFailure(C.thinkthen_session_wait(session, interest, 50, &ready))
-			}()
-			select {
-			case <-ctx.Done():
-				C.thinkthen_session_cancel(session)
-				err = <-waited
-			case value := <-next:
-				feed.pending = &value
-				err = <-waited
-			case err = <-waited:
-			}
-			// Every path joins its native wait before the deferred free.
-			if err != nil {
-				return result, err
-			}
+			return result, errors.New("native session ended before terminal facts")
 		}
 	}
 }

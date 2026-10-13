@@ -8,17 +8,14 @@ The released 0.1.2 module keeps its released API. The examples here describe the
 client, err := thinkthen.NewClient(thinkthen.EngineSettings{})
 if err != nil { return err }
 defer client.Close()
-call, err := client.Decide(ctx, thinkthen.TextQuestion("Is this urgent?"), []string{"first", "second"}, nil)
+answer, err := client.DecideAnswer(ctx, thinkthen.TextQuestion("Is this urgent?"), "Please respond today.", nil)
 if err != nil { return err }
-facts := call.Terminal.Facts()
-if facts.Present && !facts.Null && facts.Err == nil {
-    // Read facts.Value through its generated accessors.
-}
+if answer != nil { fmt.Println(*answer) }
 ```
 
 `Decide`, `Choose`, `Tag`, `Score`, `Filter`, `Rank`, `Find`, `Annotate`, `Recognize` and `Relate` take a `context.Context`, a generated `RequestQuestion`, Go evidence and optional generated `RequestOptions`. `TextQuestion` treats all wording literally. `DefinedQuestion` accepts a generated authored definition or question set. `RequestQuestionFile`, `RequestQuestionName` and `RequestQuestionReference` explicitly select native saved questions. Generated declarations follow [the Rust-owned request schema](../../specification/request.schema.json).
 
-Use generated `AuthoredChoose`, `AuthoredTag` and `AuthoredScore` values for ordered options, labels and levels. Authored values retain their permitted text, object, array and null alternatives. For example, `AuthoredDescriptionObject` keeps a structured choice description and `AuthoredCriterionNull{}` keeps an authored null decision. `Ptr` preserves an optional false, zero, empty collection or explicit null. Nil pointers mean omitted; interface alternatives carry their declared Go type. Native Rust validates every value and its applicability.
+Use generated `RequestDefinitionAuthoredChoose`, `RequestDefinitionAuthoredTag` and `RequestDefinitionAuthoredScore` values for ordered options, labels and levels. Authored values retain their permitted text, object, array and null alternatives. For example, `AuthoredDescriptionObject` keeps a structured choice description and `AuthoredCriterionNull{}` keeps an authored null decision. `Ptr` preserves an optional false, zero, empty collection or explicit null. Nil pointers mean omitted; interface alternatives carry their declared Go type. Native Rust validates every value and its applicability.
 
 Strings are literal originals. Slices and arrays retain input order, duplicates and original JSON values. `TextItem` and `JSONItem` create a generated `RequestItem` for separate per-record context, options, recognition settings and attachments. Passing a generated `RequestInput` selects an explicit source form. Passing `RequestSource` selects native files and folders, with generated framing, media and physical-unit controls. `BytesImage` retains ordered image bytes and declared media; `RequestImageFile` selects a user-named attachment. Rust validates and admits images.
 
@@ -50,3 +47,7 @@ The old `Engine`, generic JSON call and handwritten compatibility readers have b
 From a matching source checkout, run `sh libraries/go/check.sh`. It builds the native library offline, stages a separate module with that library, compiles external consumers without library-path overrides, and runs routine shared type cases, typed failures, presence, files, cancellation, bounded intake and usage persistence against counted loopback backends. It also checks formatting, generated source and the package source ceilings. The [decide example](examples/decide/main.go) and [replay smoke](examples/smoke/main.go) use the same public API.
 
 A local staged artifact can be made with `python3 libraries/go/fixtures/package_owned.py libraries/go NATIVE_PREFIX OUTPUT`, where the matching prefix contains `include/thinkthen.h` and `lib/libthinkthen.a`. Point a consumer's Go module replacement at `OUTPUT`; no Rust compiler, pkg-config or native library path is needed to build that consumer. Final release assembly, full parity and additional platforms belong to the release suite.
+
+The generated `DecideAnswer`, `ChooseAnswer`, `TagAnswer` and `ScoreAnswer` read the native normalized judgment after successful terminal settlement. Decision and choice retain null. Zero or multiple judgments return `AnswerCardinalityError`; native failure keeps `SessionError.Call` and its completed prefix. The other six `*Answer` calls return one complete typed aggregate, preserving originals, provenance and extensions. Packet APIs remain available for incremental work.
+
+Use `OrderedMap` entries for authored options, recognize kinds and annotate questions. Entries retain caller order through native request admission. The [executable example](examples/decide/main.go) shows all ten answer calls, typed `RecognizeQuestion` and `RelateQuestion` builders, and direct relation `SourceName` and `TargetName` accessors.
