@@ -102,7 +102,7 @@ try:
         replayed = subprocess.run(base + [location + '/consumer/.build/debug/Example'], env=example_env, capture_output=True, timeout=30)
         (args.out / 'installed-example.log').write_bytes(replayed.stdout + replayed.stderr)
         assert replayed.returncode == 0, (replayed.stdout, replayed.stderr)
-        assert len(replayed.stdout.splitlines()) >= 10 and examples.attempts == 11, (examples.attempts, examples.arrivals)
+        assert len(replayed.stdout.splitlines()) >= 10 and examples.attempts == 10, (examples.attempts, examples.arrivals)
         expected_options = ['billing', 'shipping', 'account', 'fraud', 'returns']
         expected_kinds = ['person', 'organization', 'location', 'product', 'event']
         criteria = [list(question.get('criteria', {})) for request in examples.requests for question in request['questions'].values()]
