@@ -16,7 +16,7 @@ def quoted(value):
     return json.dumps(value, ensure_ascii=False)
 
 
-def carrier_graph(definitions):
+def carrier_graph(definitions, roots=('RequestArguments', 'RequestSessionDescriptor', 'RequestReaderFailure')):
     """Return canonical carrier nodes and the shared inline type selector.
 
     The selector adds inline nodes to the returned mapping as callers traverse
@@ -36,7 +36,7 @@ def carrier_graph(definitions):
         elif isinstance(value, (list, tuple)):
             for child in value:
                 yield from references(child)
-    selected, pending = {}, ['RequestArguments', 'RequestSessionDescriptor', 'RequestReaderFailure']
+    selected, pending = {}, list(roots)
     while pending:
         key = pending.pop()
         if key not in selected:
@@ -79,7 +79,7 @@ def carrier_graph(definitions):
     return nodes, select
 
 
-def render(definitions):
+def render(definitions, metadata=None):
     nodes, select = carrier_graph(definitions)
     declarations, readers, done = [], [], set()
     def structure(typ, fields):
@@ -96,6 +96,8 @@ def render(definitions):
         def child(value, path):
             before = set(nodes)
             selected = select(value, path)
+            if metadata is not None:
+                metadata.setdefault("children", {})[(key, path)] = selected
             pending.extend(sorted(set(nodes) - before))
             return selected
         def read(target, pointer):
@@ -186,6 +188,8 @@ def render(definitions):
             parameter = 'context' if 'context' in conversion else '_context'
             read_body = 'let ' + variable + ' = unsafe { borrow(pointer)? };\ncontext.enter(|' + parameter + '| {\n' + conversion + '\n})'
         readers.append('pub(super) unsafe fn read_' + typ + '(pointer: *const ' + typ + ', context: &mut Context) -> Result<Value, CarrierError> {\n// SAFETY: the caller retains every referenced aligned carrier and counted extent.\n' + read_body + '\n}')
+    if metadata is not None:
+        metadata['nodes'] = nodes
     return '''// Generated counted carriers from the canonical request graph; do not edit.
 #![allow(non_camel_case_types, missing_docs, clippy::too_many_lines, reason = "generated versioned request carriers and conversion")]
 use super::{CarrierError, Context, Value, borrow, extent, optional};
