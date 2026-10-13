@@ -69,6 +69,8 @@ static class SessionChecks
             MaxRequestsTotal = new InputEngineSettingsMaxRequestsTotalAlternative1(),
             MaxEstimatedInputTokensTotal = new InputEngineSettingsMaxEstimatedInputTokensTotalAlternative1()
         });
+        try { _ = engine.DecideAsync(Question, (IAsyncEnumerable<InputRequestSessionDescriptor>)null!); throw new Exception("null caller feed admitted"); }
+        catch (ArgumentNullException error) when (error.ParamName == "feed") { }
         var authored = engine.ParseQuestion(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":{\"first\":\"First.\",\"second\":\"Second.\"}}");
         var choices = ((InputAuthoredOptionsAlternative1)((InputRequestDefinitionAuthoredChoose)authored.Value).Options.Value).Value;
         if (!choices.Keys.SequenceEqual(new[] { "first", "second" })) throw new Exception("native authored order");
