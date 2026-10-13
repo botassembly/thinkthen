@@ -594,16 +594,16 @@ sealed class InputDeclaration extends NativeObject {
   InputDeclaration(super.json);
   factory InputDeclaration.read(Object? value) {
     final map = readObject(value);
-    if (map["type"] == "string") return InputDeclarationString.read(map);
-    if (map["type"] == "object") return InputDeclarationObject.read(map);
+    if (map["type"] == "string") return InputDeclarationStringRoot.read(map);
+    if (map["type"] == "object") return InputDeclarationObjectRoot.read(map);
     throw FormatException("Unknown InputDeclaration alternative");
   }
 }
 
-final class InputDeclarationObject extends InputDeclaration {
-  InputDeclarationObject._(super.json);
-  factory InputDeclarationObject.read(Object? value) =>
-      InputDeclarationObject._(readObject(value));
+final class InputDeclarationObjectRoot extends InputDeclaration {
+  InputDeclarationObjectRoot._(super.json);
+  factory InputDeclarationObjectRoot.read(Object? value) =>
+      InputDeclarationObjectRoot._(readObject(value));
   Map<String, InputPropertyType> get properties =>
       (json["properties"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, InputPropertyType.read(v)));
@@ -615,10 +615,10 @@ final class InputDeclarationObject extends InputDeclaration {
   String get type => json["type"] as String;
 }
 
-final class InputDeclarationString extends InputDeclaration {
-  InputDeclarationString._(super.json);
-  factory InputDeclarationString.read(Object? value) =>
-      InputDeclarationString._(readObject(value));
+final class InputDeclarationStringRoot extends InputDeclaration {
+  InputDeclarationStringRoot._(super.json);
+  factory InputDeclarationStringRoot.read(Object? value) =>
+      InputDeclarationStringRoot._(readObject(value));
   String get type => json["type"] as String;
 }
 
@@ -1225,21 +1225,31 @@ sealed class RecognitionOdds extends NativeObject {
         map.containsKey("pairs") &&
         map.containsKey("pieces") &&
         map.containsKey("proposals"))
-      return RecognitionOddsFieldsNamesPairsPiecesProposals.read(map);
+      return RecognitionOddsRecognizeAnswer.read(map);
     if (map.containsKey("pieces") &&
         map.containsKey("proposals") &&
         !map.containsKey("names") &&
-        !map.containsKey("pairs"))
-      return RecognitionOddsFieldsPiecesProposals.read(map);
+        !map.containsKey("pairs")) return RecognitionOddsBoundaryOdds.read(map);
     throw FormatException("Unknown RecognitionOdds alternative");
   }
 }
 
-final class RecognitionOddsFieldsNamesPairsPiecesProposals
-    extends RecognitionOdds {
-  RecognitionOddsFieldsNamesPairsPiecesProposals._(super.json);
-  factory RecognitionOddsFieldsNamesPairsPiecesProposals.read(Object? value) =>
-      RecognitionOddsFieldsNamesPairsPiecesProposals._(readObject(value));
+final class RecognitionOddsBoundaryOdds extends RecognitionOdds {
+  RecognitionOddsBoundaryOdds._(super.json);
+  factory RecognitionOddsBoundaryOdds.read(Object? value) =>
+      RecognitionOddsBoundaryOdds._(readObject(value));
+  List<PieceOdds> get pieces => (json["pieces"] as List)
+      .map((v) => PieceOdds.read(v))
+      .toList(growable: false);
+  List<BoundaryProposal> get proposals => (json["proposals"] as List)
+      .map((v) => BoundaryProposal.read(v))
+      .toList(growable: false);
+}
+
+final class RecognitionOddsRecognizeAnswer extends RecognitionOdds {
+  RecognitionOddsRecognizeAnswer._(super.json);
+  factory RecognitionOddsRecognizeAnswer.read(Object? value) =>
+      RecognitionOddsRecognizeAnswer._(readObject(value));
   List<NameOdds> get names => (json["names"] as List)
       .map((v) => NameOdds.read(v))
       .toList(growable: false);
@@ -1251,18 +1261,6 @@ final class RecognitionOddsFieldsNamesPairsPiecesProposals
       .toList(growable: false);
   List<RecognitionProposal> get proposals => (json["proposals"] as List)
       .map((v) => RecognitionProposal.read(v))
-      .toList(growable: false);
-}
-
-final class RecognitionOddsFieldsPiecesProposals extends RecognitionOdds {
-  RecognitionOddsFieldsPiecesProposals._(super.json);
-  factory RecognitionOddsFieldsPiecesProposals.read(Object? value) =>
-      RecognitionOddsFieldsPiecesProposals._(readObject(value));
-  List<PieceOdds> get pieces => (json["pieces"] as List)
-      .map((v) => PieceOdds.read(v))
-      .toList(growable: false);
-  List<BoundaryProposal> get proposals => (json["proposals"] as List)
-      .map((v) => BoundaryProposal.read(v))
       .toList(growable: false);
 }
 
@@ -1335,6 +1333,50 @@ final class Relation extends NativeObject {
   List<RelatedEntityEdge> get value => (json["value"] as List)
       .map((v) => RelatedEntityEdge.read(v))
       .toList(growable: false);
+}
+
+sealed class RelationEndpoint extends NativeObject {
+  RelationEndpoint(super.json);
+  factory RelationEndpoint.read(Object? value) {
+    final map = readObject(value);
+    if (map.containsKey("kind") &&
+        map.containsKey("name") &&
+        !map.containsKey("file") &&
+        !map.containsKey("ordinal") &&
+        !map.containsKey("record"))
+      return RelationEndpointRelatedEntity.read(map);
+    if (map.containsKey("file") &&
+        map.containsKey("kind") &&
+        map.containsKey("name") &&
+        map.containsKey("ordinal") &&
+        map.containsKey("record")) return RelationEndpointSource.read(map);
+    throw FormatException("Unknown RelationEndpoint alternative");
+  }
+}
+
+final class RelationEndpointRelatedEntity extends RelationEndpoint {
+  RelationEndpointRelatedEntity._(super.json);
+  factory RelationEndpointRelatedEntity.read(Object? value) =>
+      RelationEndpointRelatedEntity._(readObject(value));
+  String get kind => json["kind"] as String;
+  String get name => json["name"] as String;
+}
+
+final class RelationEndpointSource extends RelationEndpoint {
+  RelationEndpointSource._(super.json);
+  factory RelationEndpointSource.read(Object? value) =>
+      RelationEndpointSource._(readObject(value));
+  String? get file => json["file"] == null ? null : json["file"] as String;
+  Presence<BigInt> get firstLine => json.containsKey("first_line")
+      ? Presence.present(readInteger(json["first_line"]))
+      : const Presence.absent();
+  String get kind => json["kind"] as String;
+  Presence<BigInt> get lastLine => json.containsKey("last_line")
+      ? Presence.present(readInteger(json["last_line"]))
+      : const Presence.absent();
+  String get name => json["name"] as String;
+  BigInt get ordinal => readInteger(json["ordinal"]);
+  Object? get record => json["record"];
 }
 
 sealed class RelationMember extends NativeObject {
@@ -1668,11 +1710,10 @@ sealed class Recognize extends NativeObject {
     final map = readObject(value);
     if (map.containsKey("entities") &&
         !map.containsKey("mode") &&
-        !map.containsKey("proposals")) return RecognizeFieldsEntities.read(map);
+        !map.containsKey("proposals")) return RecognizeEntities.read(map);
     if (map.containsKey("mode") &&
         map.containsKey("proposals") &&
-        !map.containsKey("entities"))
-      return RecognizeFieldsModeProposals.read(map);
+        !map.containsKey("entities")) return RecognizeModeProposals.read(map);
     throw FormatException("Unknown Recognize alternative");
   }
 }
@@ -1695,10 +1736,10 @@ final class RecognizeAnswer extends NativeObject {
       .toList(growable: false);
 }
 
-final class RecognizeFieldsEntities extends Recognize {
-  RecognizeFieldsEntities._(super.json);
-  factory RecognizeFieldsEntities.read(Object? value) =>
-      RecognizeFieldsEntities._(readObject(value));
+final class RecognizeEntities extends Recognize {
+  RecognizeEntities._(super.json);
+  factory RecognizeEntities.read(Object? value) =>
+      RecognizeEntities._(readObject(value));
   List<Entity> get entities => (json["entities"] as List)
       .map((v) => Entity.read(v))
       .toList(growable: false);
@@ -1709,10 +1750,10 @@ final class RecognizeFieldsEntities extends Recognize {
       : const Presence.absent();
 }
 
-final class RecognizeFieldsModeProposals extends Recognize {
-  RecognizeFieldsModeProposals._(super.json);
-  factory RecognizeFieldsModeProposals.read(Object? value) =>
-      RecognizeFieldsModeProposals._(readObject(value));
+final class RecognizeModeProposals extends Recognize {
+  RecognizeModeProposals._(super.json);
+  factory RecognizeModeProposals.read(Object? value) =>
+      RecognizeModeProposals._(readObject(value));
   String get mode => json["mode"] as String;
   List<BoundaryProposal> get proposals => (json["proposals"] as List)
       .map((v) => BoundaryProposal.read(v))
@@ -1743,62 +1784,8 @@ final class RelatedEntityEdge extends NativeObject {
       : const Presence.absent();
   num get probability => json["probability"] as num;
   String get relation => json["relation"] as String;
-  RelatedEntityEdgePropertiesSource get source =>
-      RelatedEntityEdgePropertiesSource.read(json["source"]);
-  RelatedEntityEdgePropertiesSource get target =>
-      RelatedEntityEdgePropertiesSource.read(json["target"]);
-}
-
-sealed class RelatedEntityEdgePropertiesSource extends NativeObject {
-  RelatedEntityEdgePropertiesSource(super.json);
-  factory RelatedEntityEdgePropertiesSource.read(Object? value) {
-    final map = readObject(value);
-    if (map.containsKey("kind") &&
-        map.containsKey("name") &&
-        !map.containsKey("file") &&
-        !map.containsKey("ordinal") &&
-        !map.containsKey("record"))
-      return RelatedEntityEdgePropertiesSourceFieldsKindName.read(map);
-    if (map.containsKey("file") &&
-        map.containsKey("kind") &&
-        map.containsKey("name") &&
-        map.containsKey("ordinal") &&
-        map.containsKey("record"))
-      return RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord
-          .read(map);
-    throw FormatException(
-        "Unknown RelatedEntityEdgePropertiesSource alternative");
-  }
-}
-
-final class RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord
-    extends RelatedEntityEdgePropertiesSource {
-  RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord._(
-      super.json);
-  factory RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord.read(
-          Object? value) =>
-      RelatedEntityEdgePropertiesSourceFieldsFileKindNameOrdinalRecord._(
-          readObject(value));
-  String? get file => json["file"] == null ? null : json["file"] as String;
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
-      : const Presence.absent();
-  String get kind => json["kind"] as String;
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
-      : const Presence.absent();
-  String get name => json["name"] as String;
-  BigInt get ordinal => readInteger(json["ordinal"]);
-  Object? get record => json["record"];
-}
-
-final class RelatedEntityEdgePropertiesSourceFieldsKindName
-    extends RelatedEntityEdgePropertiesSource {
-  RelatedEntityEdgePropertiesSourceFieldsKindName._(super.json);
-  factory RelatedEntityEdgePropertiesSourceFieldsKindName.read(Object? value) =>
-      RelatedEntityEdgePropertiesSourceFieldsKindName._(readObject(value));
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+  RelationEndpoint get source => RelationEndpoint.read(json["source"]);
+  RelationEndpoint get target => RelationEndpoint.read(json["target"]);
 }
 
 final class RelationRule extends NativeObject {

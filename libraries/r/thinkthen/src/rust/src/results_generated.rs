@@ -563,16 +563,16 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
         "completeImageMedia" => plain(value),
         "completeInputDeclaration" => {
             if value.get("type").and_then(Value::as_str) == Some("string") {
-                return convert("completeInputDeclaration_string", value);
+                return convert("completeInputDeclaration_StringRoot", value);
             }
             if value.get("type").and_then(Value::as_str) == Some("object") {
-                return convert("completeInputDeclaration_object", value);
+                return convert("completeInputDeclaration_ObjectRoot", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
-        "completeInputDeclaration_object" => object(
+        "completeInputDeclaration_ObjectRoot" => object(
             value,
-            "InputDeclaration_object",
+            "InputDeclaration_ObjectRoot",
             &[
                 ("properties", true, |value| {
                     mapping(value, |value| convert("completeInputPropertyType", value))
@@ -581,9 +581,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("type", true, |value| convert("completeObjectType", value)),
             ],
         ),
-        "completeInputDeclaration_string" => object(
+        "completeInputDeclaration_StringRoot" => object(
             value,
-            "InputDeclaration_string",
+            "InputDeclaration_StringRoot",
             &[("type", true, |value| convert("completeStringType", value))],
         ),
         "completeInputPropertyType" => {
@@ -1246,23 +1246,32 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 && value.get("pieces").is_some()
                 && value.get("proposals").is_some()
             {
-                return convert(
-                    "completeRecognitionOdds_fields_names_pairs_pieces_proposals",
-                    value,
-                );
+                return convert("completeRecognitionOdds_recognizeAnswer", value);
             }
             if value.get("pieces").is_some()
                 && value.get("proposals").is_some()
                 && value.get("names").is_none()
                 && value.get("pairs").is_none()
             {
-                return convert("completeRecognitionOdds_fields_pieces_proposals", value);
+                return convert("completeRecognitionOdds_BoundaryOdds", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
-        "completeRecognitionOdds_fields_names_pairs_pieces_proposals" => object(
+        "completeRecognitionOdds_BoundaryOdds" => object(
             value,
-            "RecognitionOdds_fields_names_pairs_pieces_proposals",
+            "RecognitionOdds_BoundaryOdds",
+            &[
+                ("pieces", true, |value| {
+                    array(value, |value| convert("completepieceOdds", value))
+                }),
+                ("proposals", true, |value| {
+                    array(value, |value| convert("completeBoundaryProposal", value))
+                }),
+            ],
+        ),
+        "completeRecognitionOdds_recognizeAnswer" => object(
+            value,
+            "RecognitionOdds_recognizeAnswer",
             &[
                 ("names", true, |value| {
                     array(value, |value| convert("completenameOdds", value))
@@ -1275,18 +1284,6 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
                 ("proposals", true, |value| {
                     array(value, |value| convert("completeRecognitionProposal", value))
-                }),
-            ],
-        ),
-        "completeRecognitionOdds_fields_pieces_proposals" => object(
-            value,
-            "RecognitionOdds_fields_pieces_proposals",
-            &[
-                ("pieces", true, |value| {
-                    array(value, |value| convert("completepieceOdds", value))
-                }),
-                ("proposals", true, |value| {
-                    array(value, |value| convert("completeBoundaryProposal", value))
                 }),
             ],
         ),
@@ -1348,6 +1345,43 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completeRelationDirection" => plain(value),
+        "completeRelationEndpoint" => {
+            if value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("file").is_none()
+                && value.get("ordinal").is_none()
+                && value.get("record").is_none()
+            {
+                return convert("completeRelationEndpoint_relatedEntity", value);
+            }
+            if value.get("file").is_some()
+                && value.get("kind").is_some()
+                && value.get("name").is_some()
+                && value.get("ordinal").is_some()
+                && value.get("record").is_some()
+            {
+                return convert("completeRelationEndpoint_source", value);
+            }
+            Err(crate::defect("native result has no generated alternative"))
+        }
+        "completeRelationEndpoint_relatedEntity" => object(
+            value,
+            "RelationEndpoint_relatedEntity",
+            &[("kind", true, plain), ("name", true, plain)],
+        ),
+        "completeRelationEndpoint_source" => object(
+            value,
+            "RelationEndpoint_source",
+            &[
+                ("file", true, plain),
+                ("first_line", false, plain),
+                ("kind", true, plain),
+                ("last_line", false, plain),
+                ("name", true, plain),
+                ("ordinal", true, plain),
+                ("record", true, plain),
+            ],
+        ),
         "completeRelationMember" => {
             if value.get("answer_id").is_some() {
                 return convert("completeRelationMember_answer_id", value);
@@ -1680,13 +1714,13 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 && value.get("mode").is_none()
                 && value.get("proposals").is_none()
             {
-                return convert("completerecognize_fields_entities", value);
+                return convert("completerecognize_entities", value);
             }
             if value.get("mode").is_some()
                 && value.get("proposals").is_some()
                 && value.get("entities").is_none()
             {
-                return convert("completerecognize_fields_mode_proposals", value);
+                return convert("completerecognize_mode_proposals", value);
             }
             Err(crate::defect("native result has no generated alternative"))
         }
@@ -1708,9 +1742,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
             ],
         ),
-        "completerecognize_fields_entities" => object(
+        "completerecognize_entities" => object(
             value,
-            "Recognize_fields_entities",
+            "Recognize_entities",
             &[
                 ("entities", true, |value| {
                     array(value, |value| convert("completeentity", value))
@@ -1720,9 +1754,9 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 }),
             ],
         ),
-        "completerecognize_fields_mode_proposals" => object(
+        "completerecognize_mode_proposals" => object(
             value,
-            "Recognize_fields_mode_proposals",
+            "Recognize_mode_proposals",
             &[
                 ("mode", true, |value| convert("completeBoundaryMode", value)),
                 ("proposals", true, |value| {
@@ -1748,57 +1782,12 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
                 ("probability", true, plain),
                 ("relation", true, plain),
                 ("source", true, |value| {
-                    convert("completerelatedEntityEdge_properties_source", value)
+                    convert("completeRelationEndpoint", value)
                 }),
                 ("target", true, |value| {
-                    convert("completerelatedEntityEdge_properties_source", value)
+                    convert("completeRelationEndpoint", value)
                 }),
             ],
-        ),
-        "completerelatedEntityEdge_properties_source" => {
-            if value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("file").is_none()
-                && value.get("ordinal").is_none()
-                && value.get("record").is_none()
-            {
-                return convert(
-                    "completerelatedEntityEdge_properties_source_fields_kind_name",
-                    value,
-                );
-            }
-            if value.get("file").is_some()
-                && value.get("kind").is_some()
-                && value.get("name").is_some()
-                && value.get("ordinal").is_some()
-                && value.get("record").is_some()
-            {
-                return convert(
-                    "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                    value,
-                );
-            }
-            Err(crate::defect("native result has no generated alternative"))
-        }
-        "completerelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record" => {
-            object(
-                value,
-                "RelatedEntityEdge_properties_source_fields_file_kind_name_ordinal_record",
-                &[
-                    ("file", true, plain),
-                    ("first_line", false, plain),
-                    ("kind", true, plain),
-                    ("last_line", false, plain),
-                    ("name", true, plain),
-                    ("ordinal", true, plain),
-                    ("record", true, plain),
-                ],
-            )
-        }
-        "completerelatedEntityEdge_properties_source_fields_kind_name" => object(
-            value,
-            "RelatedEntityEdge_properties_source_fields_kind_name",
-            &[("kind", true, plain), ("name", true, plain)],
         ),
         "completerelationRule" => object(
             value,

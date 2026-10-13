@@ -147,11 +147,11 @@ procedure Native_Session is
                         begin
                            for Row of Rows loop
                               Metadata (Row.meta);
-                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_FIELDS_ENTITIES_V1, "recognition kind changed");
+                              Require (Row.value.kind = K_THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1, "recognition kind changed");
                               declare
                                  type Entity_Access is access constant thinkthen_complete_entity_v1;
-                                 Entities : array (1 .. Index (Row.value.data.fields_entities.entities.len)) of Entity_Access
-                                   with Import, Address => Row.value.data.fields_entities.entities.data;
+                                 Entities : array (1 .. Index (Row.value.data.entities.entities.len)) of Entity_Access
+                                   with Import, Address => Row.value.data.entities.entities.data;
                               begin
                                  for Entity of Entities loop
                                     Entity_Count := Entity_Count + 1;

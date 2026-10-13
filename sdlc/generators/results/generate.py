@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import subprocess
+import shutil
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
 from native import selected_functions
@@ -187,7 +188,8 @@ def native_value_union(schema, definitions):
         return None
     if selected.keys() - {'boolean', 'string', 'number', 'array', 'object', 'null'}:
         return None
-    return {'primitive_variants': list(selected), 'primitive_schemas': selected,
+    metadata = {key: schema[key] for key in ('title', 'description', 'x-preserve-order') if key in schema}
+    return {**metadata, 'primitive_variants': list(selected), 'primitive_schemas': selected,
             'nullable_json': 'null' in selected}
 
 
@@ -205,7 +207,7 @@ def normalize(value):
 
 
 def lift_inline(definitions):
-    """Name nested object alternatives from their native schema position."""
+    """Name titled objects and nested alternatives from their schema source."""
     definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
@@ -214,15 +216,16 @@ def lift_inline(definitions):
             return [visit(child, path + '_' + str(index)) for index, child in enumerate(value)]
         if not isinstance(value, dict):
             return value
-        if object_variants(value, definitions):
+        if object_variants(value, definitions) or (value.get("title") and "properties" in value):
             identity = json.dumps(value, sort_keys=True)
             if identity not in seen:
                 key = value.get('title', path)
-                if key in definitions:
+                if key in definitions and definitions[key] != value:
                     raise ValueError('colliding nested result alternative name')
                 seen[identity] = key
-                definitions[key] = value
-                pending.append(key)
+                if key not in definitions:
+                    definitions[key] = value
+                    pending.append(key)
             return {'$ref': '#/$defs/' + seen[identity]}
         return {key: visit(child, path + '_' + key) for key, child in value.items()}
     while pending:
@@ -385,7 +388,15 @@ def bridge():
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
     arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]
-    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(' + ', '.join(arguments) + ');', '}']
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(' + ', '.join(arguments) + ');']
+    prototype = native['functions']['thinkthen_session_next_packet']
+    packet_parameters = {'thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint interest',
+                         'uint32_t *': 'out uint status', 'thinkthen_session_result **': 'out IntPtr result'}
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_next_packet('
+              + ', '.join(packet_parameters[argument] for argument in prototype['arguments']) + ');']
+    for state in ('RESULT', 'PENDING', 'END'):
+        lines += [' internal const uint Read' + state.title() + ' = ' + str(native['constants']['THINKTHEN_SESSION_' + state + '_V1']) + ';']
+    lines += ['}']
     return '\n'.join(lines) + '\n'
 
 def main():
@@ -438,6 +449,7 @@ def main():
                     return 1
             else:
                 loader.write_text(linux_bridge)
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print('generated Swift types differ', file=sys.stderr)
@@ -452,8 +464,16 @@ def main():
         import objc
         definitions = prepare(graph(json.loads(args.schema.read_text()), objc.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        for filename, result in objc.outputs(definitions, version).items():
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
+        input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
+        abi_spec = importlib.util.spec_from_file_location('objc_native_abi', ROOT / 'sdlc/scripts/check-c-exports.py')
+        abi_module = importlib.util.module_from_spec(abi_spec)
+        abi_spec.loader.exec_module(abi_module)
+        abi = abi_module.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
+        for filename, result in objc.outputs(definitions, version, input_definitions, abi).items():
             output = output_path(ROOT, 'objc', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Foundation results differ", file=sys.stderr)
@@ -475,6 +495,7 @@ def main():
         definitions = prepare(graph(schema, ("Request", "RequestSessionDescriptor")))
         for filename, result in cobol.outputs(ROOT, definitions).items():
             output = output_path(ROOT, 'cobol', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print(f"generated COBOL records differ: {output}", file=sys.stderr)
@@ -497,8 +518,9 @@ def main():
         if args.inputs:
             result += "const requestVersion = " + json.dumps(schema["$defs"]["RequestVersion"]["oneOf"][0]["const"]) + ";\n"
         output = output_path(ROOT, 'dart', 'abi_generated.dart' if args.bridge else 'inputs_generated.dart' if args.inputs else 'results_generated.dart')
-        result = subprocess.run([os.environ.get("TT_DART", "dart"), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
+        result = subprocess.run([os.environ.get("TT_DART", shutil.which("dart") or str(Path.home() / ".local/opt/flutter/bin/dart")), "format", "--language-version=3.3", "--output=show"], input=result, text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated Dart types differ", file=sys.stderr)
@@ -522,6 +544,7 @@ def main():
         else:
             result = cpp.render(definitions, version) + cpp.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("#pragma once\n", "")
             output = output_path(ROOT, 'cpp', 'results_generated.hpp')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated C++ results differ", file=sys.stderr)
@@ -543,6 +566,7 @@ def main():
         outputs = declarations if args.inputs else {**outputs, **declarations}
         for filename, result in outputs.items():
             output = output_path(ROOT, 'php', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated PHP results differ", file=sys.stderr)
@@ -564,6 +588,7 @@ def main():
         result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'go', 'owned_results_generated.go')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
         if args.check:
             if not output.exists() or output.read_text() != result:
                 print("generated Go results differ", file=sys.stderr)
@@ -581,6 +606,7 @@ def main():
         outputs = {output_path(ROOT, 'typescript', 'results_generated.js'): typescript.runtime(definitions, version),
                    output_path(ROOT, 'typescript', 'results_generated.d.ts'): typescript.declarations(definitions)}
         for output, result in outputs.items():
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated TypeScript results differ", file=sys.stderr)
@@ -598,6 +624,7 @@ def main():
         outputs = {output_path(ROOT, 'ruby', 'results_generated.rb'): ruby.render(definitions) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = " + repr(version) + ".freeze\n  end\nend\n",
                    output_path(ROOT, 'ruby', 'results_generated.rs'): ruby.rust(definitions)}
         for output, result in outputs.items():
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Ruby results differ", file=sys.stderr)
@@ -632,7 +659,7 @@ def main():
             source = selected[key] = input_definitions[key]
             pending.extend(references(source))
             pending.extend(child for child, _ in source.get("variants", []))
-        input_source = jvm.inputs(selected)
+        input_source = format_source("Inputs.java", jvm.inputs(selected), child_env())
         input_output = output_path(ROOT, 'jvm', 'Inputs.java')
         if args.check and (not input_output.exists() or input_output.read_text() != input_source):
             print("generated JVM inputs differ", file=sys.stderr)
@@ -640,7 +667,7 @@ def main():
         if not args.check:
             input_output.write_text(input_source)
         definitions = prepare(graph(json.loads(args.schema.read_text()), jvm.ROOTS))
-        result = jvm.render(definitions)
+        result = format_source("Results.java", jvm.render(definitions), child_env())
         for language, extension in (('kotlin', 'kt'), ('scala', 'scala')):
             source = jvm_languages.render(definitions, language)
             output = output_path(ROOT, 'jvm', 'Results.' + extension)
@@ -689,6 +716,7 @@ def main():
         for extension in ("py", "pyi"):
             output = output_path(ROOT, 'python', '_native_results.' + extension)
             result = target.types(definitions, stubs=extension == "pyi")
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Python types differ", file=sys.stderr)
@@ -700,6 +728,23 @@ def main():
             parser.error("R target generates native result conversions only")
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'r', 'results_generated.rs')
+    if args.target == "c" and args.inputs:
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import native_request
+        schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        result = subprocess.run(['rustfmt', '--edition', '2024', '--emit', 'stdout'],
+            input=native_request.render(prepare(graph(schema, ('RequestCall', 'RequestSessionDescriptor', 'RequestReaderFailure')))),
+            text=True, capture_output=True, check=True,
+            env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
+        output = output_path(ROOT, 'c', 'carriers_generated.rs')
+        result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
+        if args.check:
+            if not output.exists() or output.read_text() != result:
+                print('generated native request carriers differ', file=sys.stderr)
+                return 1
+        else:
+            output.write_text(result)
+        return 0
     if args.target == "c":
         if args.inputs or args.bridge:
             parser.error("C target generates result views only")
@@ -745,7 +790,7 @@ def main():
         spec = importlib.util.spec_from_file_location('request_csharp', path)
         target = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(target)
-        inputs = target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph)
+        inputs = format_source('RequestInputs.g.cs', target.render_inputs(json.loads((ROOT / 'specification/request.schema.json').read_text()), prepare, graph), child_env())
         output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
         if not output.exists() or output.read_text() != inputs:
             print('generated C# inputs differ; run sdlc/generators/results/generate.py --inputs', file=sys.stderr)

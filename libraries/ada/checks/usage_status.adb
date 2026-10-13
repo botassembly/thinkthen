@@ -26,7 +26,7 @@ begin
    declare
       Client : Engine;
       Error : Failure;
-      Request : T_RequestCall_decide;
+      Request : T_RequestCall;
    begin
       Configure (Client, "{""cache"":false,""max_retries"":0}", Error);
       Require (Error.Kind = None);
@@ -37,8 +37,8 @@ begin
          return;
       end if;
       Require (Usage_Persistence (Client).State = Written);
-      Request.T_question.V_0.T_text := T_RequestQuestion_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("Is it?"));
-      Request.T_input.V_0.T_text := T_RequestInput_text_field_text (Ada.Strings.Unbounded.To_Unbounded_String ("usage-ada-" & Mode));
+      Request.T_question.V_0.T_text := T_Text (Ada.Strings.Unbounded.To_Unbounded_String ("Is it?"));
+      Request.T_input.V_0.T_text := T_Text (Ada.Strings.Unbounded.To_Unbounded_String ("usage-ada-" & Mode));
       Thinkthen.Sessions.Calls.Decide (Client, Owner, Request);
       Finish (Owner);
       loop

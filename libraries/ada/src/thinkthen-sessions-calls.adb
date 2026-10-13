@@ -1,82 +1,123 @@
+-- Generated named calls from the canonical request schema; do not edit.
 package body Thinkthen.Sessions.Calls is
-procedure Decide (Owner : in out Session; Request : T_RequestCall_decide) is
+procedure Decide (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_decide, V_0 => Request)));
+Call.T_function := T_RequestFunction_decide;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Decide;
-procedure Decide (Client : Engine; Owner : in out Session; Request : T_RequestCall_decide) is
+procedure Decide (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_decide, V_0 => Request)));
+Call.T_function := T_RequestFunction_decide;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Decide;
-procedure Choose (Owner : in out Session; Request : T_RequestCall_choose) is
+procedure Choose (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_choose, V_1 => Request)));
+Call.T_function := T_RequestFunction_choose;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Choose;
-procedure Choose (Client : Engine; Owner : in out Session; Request : T_RequestCall_choose) is
+procedure Choose (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_choose, V_1 => Request)));
+Call.T_function := T_RequestFunction_choose;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Choose;
-procedure Tag (Owner : in out Session; Request : T_RequestCall_tag) is
+procedure Tag (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_tag, V_2 => Request)));
+Call.T_function := T_RequestFunction_tag;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Tag;
-procedure Tag (Client : Engine; Owner : in out Session; Request : T_RequestCall_tag) is
+procedure Tag (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_tag, V_2 => Request)));
+Call.T_function := T_RequestFunction_tag;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Tag;
-procedure Score (Owner : in out Session; Request : T_RequestCall_score) is
+procedure Score (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_score, V_3 => Request)));
+Call.T_function := T_RequestFunction_score;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Score;
-procedure Score (Client : Engine; Owner : in out Session; Request : T_RequestCall_score) is
+procedure Score (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_score, V_3 => Request)));
+Call.T_function := T_RequestFunction_score;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Score;
-procedure Filter (Owner : in out Session; Request : T_RequestCall_filter) is
+procedure Filter (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_filter, V_4 => Request)));
+Call.T_function := T_RequestFunction_filter;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Filter;
-procedure Filter (Client : Engine; Owner : in out Session; Request : T_RequestCall_filter) is
+procedure Filter (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_filter, V_4 => Request)));
+Call.T_function := T_RequestFunction_filter;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Filter;
-procedure Rank (Owner : in out Session; Request : T_RequestCall_rank) is
+procedure Rank (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_rank, V_5 => Request)));
+Call.T_function := T_RequestFunction_rank;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Rank;
-procedure Rank (Client : Engine; Owner : in out Session; Request : T_RequestCall_rank) is
+procedure Rank (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_rank, V_5 => Request)));
+Call.T_function := T_RequestFunction_rank;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Rank;
-procedure Find (Owner : in out Session; Request : T_RequestCall_find) is
+procedure Find (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_find, V_6 => Request)));
+Call.T_function := T_RequestFunction_find;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Find;
-procedure Find (Client : Engine; Owner : in out Session; Request : T_RequestCall_find) is
+procedure Find (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_find, V_6 => Request)));
+Call.T_function := T_RequestFunction_find;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Find;
-procedure Annotate (Owner : in out Session; Request : T_RequestCall_annotate) is
+procedure Annotate (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_annotate, V_7 => Request)));
+Call.T_function := T_RequestFunction_annotate;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Annotate;
-procedure Annotate (Client : Engine; Owner : in out Session; Request : T_RequestCall_annotate) is
+procedure Annotate (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_annotate, V_7 => Request)));
+Call.T_function := T_RequestFunction_annotate;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Annotate;
-procedure Recognize (Owner : in out Session; Request : T_RequestCall_recognize) is
+procedure Recognize (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_recognize, V_8 => Request)));
+Call.T_function := T_RequestFunction_recognize;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Recognize;
-procedure Recognize (Client : Engine; Owner : in out Session; Request : T_RequestCall_recognize) is
+procedure Recognize (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_recognize, V_8 => Request)));
+Call.T_function := T_RequestFunction_recognize;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Recognize;
-procedure Relate (Owner : in out Session; Request : T_RequestCall_relate) is
+procedure Relate (Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_relate, V_9 => Request)));
+Call.T_function := T_RequestFunction_relate;
+Start (Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Relate;
-procedure Relate (Client : Engine; Owner : in out Session; Request : T_RequestCall_relate) is
+procedure Relate (Client : Engine; Owner : in out Session; Request : T_RequestCall) is
+Call : T_RequestCall := Request;
 begin
-Start (Client, Owner, (T_schema => (null record), T_call => (Kind => T_RequestCall_arm_RequestCall_relate, V_9 => Request)));
+Call.T_function := T_RequestFunction_relate;
+Start (Client, Owner, (T_schema => T_RequestVersion_thinkthen_request_1, T_call => Call));
 end Relate;
 end Thinkthen.Sessions.Calls;

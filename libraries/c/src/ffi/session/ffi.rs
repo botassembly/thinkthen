@@ -211,7 +211,7 @@ unsafe fn named_text<'a>(
     unsafe { super::text(view.data.cast(), view.len) }.map_err(|_| ErrorKind::Usage)
 }
 
-fn decode_failure(error: thinkthen::Error) -> failures::Failure {
+pub(super) fn decode_failure(error: thinkthen::Error) -> failures::Failure {
     if error.request_decode_cause() == Some(thinkthen::RequestDecodeCause::Malformed) {
         ErrorKind::Usage.into()
     } else {
@@ -235,7 +235,7 @@ unsafe fn new_session(
     }
 }
 
-unsafe fn start_session(
+pub(super) unsafe fn start_session(
     engine: *const EngineHandle,
     out: *mut *mut SessionHandle,
     surface: impl FnOnce() -> Result<Surface, ErrorKind>,
@@ -251,7 +251,7 @@ unsafe fn start_session(
             .engine
             .request_session_with_surface(request()?, surface)
             .map_err(failures::Failure::from)?;
-        let owner = Box::into_raw(Box::new(SessionHandle(session)));
+        let owner = Box::into_raw(Box::new(SessionHandle(session, surface)));
         // SAFETY: required checked nonnull and the caller promises writable storage.
         unsafe {
             *out = owner;
@@ -319,7 +319,7 @@ unsafe fn read_packet(
                 .0
                 .next_packet(thinkthen::RequestSessionWaitInterest::Settlement)
                 .map_err(|error| error.kind())?,
-            _ => return Err(ErrorKind::Usage.into()),
+            _ => return Err(ErrorKind::Usage),
         };
         let (state, owner) = match packet {
             RequestSessionRead::Result(packet) => (

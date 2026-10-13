@@ -540,9 +540,12 @@ def named_calls(functions):
              'public sealed partial class Engine {']
     for function in functions:
         title = function.title()
-        for input_type, input_value, feed in [('InputRequestInput', 'input', 'null'),
-                                              ('IAsyncEnumerable<InputRequestSessionDescriptor>', 'FeedInput', 'input')]:
-            lines += [f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, {input_type} input,',
-                      'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
-                      f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, {input_value}, options), {feed}, cancellation);']
+        lines += [f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, InputRequestInput input,',
+                  'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+                  f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, input, options), null, cancellation);',
+                  f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, IAsyncEnumerable<InputRequestSessionDescriptor> feed,',
+                  'InputRequestOptions? options = null, CancellationToken cancellation = default) {',
+                  'ArgumentNullException.ThrowIfNull(feed);',
+                  f'return ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, FeedInput, options), feed, cancellation);',
+                  '}']
     return '\n'.join(lines + ['}']) + '\n'

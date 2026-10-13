@@ -291,3 +291,6 @@ pub(crate) const LOAD_RANK_SET_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_RA
 
 /// Validated uint32 descriptor spelling for `THINKTHEN_LOAD_FIND_V1`.
 pub(crate) const LOAD_FIND_V1: u32 = QuestionLoaderRoleV1::THINKTHEN_LOAD_FIND_V1 as u32;
+
+/// A counted COBOL scalar exceeds its documented representation capacity.
+pub const THINKTHEN_COBOL_OVERFLOW: i32 = 1002;
