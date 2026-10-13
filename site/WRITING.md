@@ -23,7 +23,7 @@ Follow these rules when you write or edit any page or code example on this site.
   | A named way to reach a model, such as `typesafe` | backend |
   | The program at an address | server |
 - Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
-- Link every binding to its page, even before that page exists (Ian, 2026-09-28). A language's page sits at `/languages/<slug>/` and a database's at `/install/<slug>/`. `BINDINGS` in `src/data/catalog.mjs` holds the list and each route. The link check allows exactly the install paths of the bindings with no page yet.
+- Link every binding to its page, even before that page exists (Ian, 2026-09-28). A language's page sits at `/languages/<slug>/` and a database's at `/databases/<slug>/`. `BINDINGS` in `src/data/catalog.mjs` holds the list and each route. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
 - Name the threshold in the command and in the prose. Show one band per page.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.

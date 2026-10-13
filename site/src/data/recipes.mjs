@@ -51,7 +51,7 @@ export function recipeProblems(r) {
       if (hasDecimal(decodedText(node.text))) add('unsupported numerical prose',where);
       if (/[<>]/.test(node.text)) add('carrier-shape',where);
     }
-    if (node.kind === 'link' && !/^\/(?:functions|learn|trust|install)\/[a-z0-9/-]*(?:#[a-z-]+)?$/.test(node.href)) add('carrier-shape',where);
+    if (node.kind === 'link' && !/^\/(?:functions|learn|trust|install|start|models|databases)\/[a-z0-9/-]*(?:#[a-z-]+)?$/.test(node.href)) add('carrier-shape',where);
     if (node.kind === 'evidence' && !evidence.has(node.id)) add('carrier-shape',where);
     if (node.kind === 'artifact' && !/^(?:files\/[a-z0-9.-]+|[12]-[a-z]+\.(?:sh|out))$/.test(node.file)) add('carrier-shape',where);
   }

@@ -1,6 +1,6 @@
 ---
-// Goal: show one database's install line and a first query, all ten
-// functions in its SQL, and what is different there.
+// Goal: show how to load ThinkThen into one database and ask a first query,
+// with what is different in that database.
 import SurfacePage from '../../components/SurfacePage.astro';
 import { SURFACES, BINDINGS } from '../../data/catalog.mjs';
 
@@ -12,4 +12,4 @@ export function getStaticPaths() {
 
 const { surface } = Astro.props;
 ---
-<SurfacePage surface={surface} route={`/install/${surface.slug}/`} eyebrow={['/languages/', 'Languages']} />
+<SurfacePage surface={surface} route={`/databases/${surface.slug}/`} eyebrow={['/databases/', 'Databases']} functionsAt="/databases/" />

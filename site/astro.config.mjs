@@ -22,7 +22,10 @@ export default defineConfig({
     ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c']
       .map((slug) => [`/${slug}`, `/languages/${slug}/`])),
     ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql']
-      .map((slug) => [`/${slug}`, `/install/${slug}/`])),
+      .map((slug) => [`/${slug}`, `/databases/${slug}/`])),
+    // The database pages moved under /databases/ on 2026-10-12.
+    ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql']
+      .map((slug) => [`/install/${slug}`, `/databases/${slug}/`])),
     // The language pages moved under /languages/ on 2026-10-12, and the Bash
     // techniques moved onto the Bash page.
     '/install/shell': '/languages/bash/',

@@ -2,7 +2,9 @@
 // One surface's page: install it, make a first call, see all ten functions
 // in that surface, then lists, errors, settings, models and what differs.
 // /languages/<slug>/, /languages/bash/ and the database pages draw it. A
-// page passes extra sections in the slot.
+// page passes extra sections in the slot. A database page sets
+// `functionsAt` to the page that shows all ten functions in SQL, and shows
+// a link there in place of its own samples.
 import { packageGuide, packageExample } from '../data/repo.mjs';
 import Base from '../layouts/Base.astro';
 import Terminal from './Terminal.astro';
@@ -12,7 +14,7 @@ import { backendsName, captioned, files, firstCall, installSample, sample, moreS
 import { buildLines } from '../data/build-lines.mjs';
 import postgresGrant from '../../../databases/postgresql/fixtures/grant.sql?raw';
 
-const { surface, route: pageRoute, eyebrow = ['/languages/', 'Languages'] } = Astro.props;
+const { surface, route: pageRoute, eyebrow = ['/languages/', 'Languages'], functionsAt = null } = Astro.props;
 const shell = surface.slug === 'shell';
 const full = hasSamples(surface.slug, [...CODE_FUNCTIONS.map((fn) => fn.name), 'question-file']);
 const notes = surface.install.some(([, note]) => note);
@@ -193,7 +195,13 @@ export THINKTHEN_DBT_EXTENSION_DIR="$PWD/.dbt-extensions"`} lang="bash" label="C
   )}
   <p>Not sure comes back as {parts(surface.unsureWord).map((x) => x.code ? <code>{x.part}</code> : x.part)}. Branch on it and send those cases to a person.</p>
 
-  {!shell && (
+  {!shell && functionsAt && (
+    <>
+      <h2 id="functions">All ten functions in {surface.name}</h2>
+      <p>The <a href={functionsAt}>Databases page</a> shows all ten functions in SQL, with what {surface.name} printed for each.</p>
+    </>
+  )}
+  {!shell && !functionsAt && (
     <>
       <h2 id="functions">All ten functions in {surface.name}</h2>
       {anySample

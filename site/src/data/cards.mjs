@@ -29,7 +29,7 @@ const ROUTES = {
   '/models/': 'backends',
   '/trust/': 'audit',
   ...Object.fromEntries(LANGUAGES.map((s) => [`/languages/${s}/`, 'languages'])),
-  ...Object.fromEntries(DATA.map((s) => [`${s === 'polars' ? '/languages/' : '/install/'}${s}/`, 'data'])),
+  ...Object.fromEntries(DATA.map((s) => [`${s === 'polars' ? '/languages/' : '/databases/'}${s}/`, 'data'])),
 };
 
 export const routeCard = (route) => (ROUTES[route] ? slideCard(ROUTES[route]) : null);

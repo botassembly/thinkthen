@@ -56,7 +56,7 @@ You still measure before you trust it. Label some real cases, then run `thinkthe
 
 ThinkThen is one command-line tool and [24 bindings](/languages/). Every binding calls the same Rust engine.
 
-The bindings include [DuckDB](/install/duckdb/), [SQLite](/install/sqlite/) and [PostgreSQL](/install/postgresql/). In those, a question sits in a SQL `WHERE` clause like any other condition.
+The bindings include [DuckDB](/databases/duckdb/), [SQLite](/databases/sqlite/) and [PostgreSQL](/databases/postgresql/). In those, a question sits in a SQL `WHERE` clause like any other condition.
 
 ## Cheap and fast
 

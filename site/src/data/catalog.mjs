@@ -820,7 +820,7 @@ export const SURFACES = [
 // The bindings: every language and database ThinkThen works with. Bash is
 // the command line, the one CLI, and not a binding. The talk's slides
 // name the same 24. Each binding links to
-// /install/<slug>/. A binding with no entry in SURFACES has no page yet, and
+// /languages/<slug>/ or, for a database, /databases/<slug>/. A binding with no entry in SURFACES has no page yet, and
 // scripts/check-links.mjs allows exactly those paths.
 const DATABASE_SLUGS = new Set(['duckdb', 'postgresql', 'sqlite']);
 export const BINDINGS = [
@@ -832,7 +832,7 @@ export const BINDINGS = [
   ['Ruby', 'ruby'], ['Rust', 'rust'], ['Scala', 'scala'],
   ['SQLite', 'sqlite'], ['Swift', 'swift'], ['TypeScript', 'typescript'],
   ['Zig', 'zig'],
-].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: DATABASE_SLUGS.has(slug) ? `/install/${slug}/` : `/languages/${slug}/` }));
+].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: DATABASE_SLUGS.has(slug) ? `/databases/${slug}/` : `/languages/${slug}/` }));
 
 // The install paths of the bindings with no page yet.
 export const BINDING_PATHS_WITHOUT_PAGES = BINDINGS
@@ -1821,7 +1821,7 @@ export const RECIPE_PAGES = [
       {
         "kind": "link",
         "text": "Install DuckDB and read the unsigned development extension instructions.",
-        "href": "/install/duckdb/"
+        "href": "/databases/duckdb/"
       },
       {
         "kind": "heading",
