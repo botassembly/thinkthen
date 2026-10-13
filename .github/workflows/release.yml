@@ -398,6 +398,9 @@ jobs:
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: crate-package, path: crate-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with: {name: r-package, path: r-dist}
       - name: Require the selected Go/C++ family
         if: matrix.target != 'x86_64-pc-windows-msvc'
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
@@ -426,9 +429,13 @@ jobs:
           sdlc/scripts/installer-test
           sdlc/scripts/release-workflow installer-smoke smoke-files
           sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
-      - name: Replay the public Objective-C package example
-        if: runner.os == 'macOS'
-        run: python3 sdlc/scripts/registry-readmes.py examples smoke-files --family objective-c
+      - name: Replay public package examples on the prepared host
+        if: matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'
+        env: {TARGET: "${{ matrix.target }}"}
+        run: |
+          cp crate-dist/*.crate smoke-files/
+          if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then cp r-dist/* smoke-files/; fi
+          sdlc/scripts/release-workflow public-examples "$TARGET" smoke-files
       - name: Validate and consume the downloaded Windows C archive
         if: matrix.target == 'x86_64-pc-windows-msvc'
         run: |

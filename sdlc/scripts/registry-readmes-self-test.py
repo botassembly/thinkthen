@@ -2,6 +2,8 @@
 """Exercise the package-text release boundary with positive and negative archives."""
 import importlib.util
 import io
+import os
+import sys
 import json
 from pathlib import Path
 import tarfile
@@ -12,6 +14,7 @@ import struct
 import yaml
 import zipfile
 import unittest
+from unittest.mock import patch
 
 spec = importlib.util.spec_from_file_location('registry_readmes', Path(__file__).with_name('registry-readmes.py'))
 readmes = importlib.util.module_from_spec(spec)
@@ -124,23 +127,72 @@ class PackageText(unittest.TestCase):
             with self.assertRaisesRegex(readmes.Refusal, 'example-needs-two-functions: python'):
                 readmes.example('python', root)
 
-    def test_release_replays_every_public_package_on_a_supported_host(self):
+    def test_release_replays_every_public_package_on_a_prepared_host(self):
         jobs = yaml.safe_load((readmes.REPO / '.github/workflows/release.yml').read_text())['jobs']
-        mac_steps = [step for step in jobs['smoke']['steps']
-                     if 'registry-readmes.py examples' in step.get('run', '')]
-        self.assertEqual(len(mac_steps), 1)
-        self.assertEqual(mac_steps[0]['if'], "runner.os == 'macOS'")
-        mac_families = set(readmes.re.findall(r'--family ([a-z-]+)', mac_steps[0]['run']))
-        draft = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text().split('\ndraft)\n')[1].split('\n\t;;')[0]
-        linux_families = set(readmes.re.findall(r'--family ([a-z-]+)', draft))
-        self.assertEqual(mac_families, {'objective-c'})
-        self.assertNotIn('objective-c', linux_families)
-        self.assertEqual(linux_families | mac_families, set(readmes.published_families()))
+        steps = jobs['smoke']['steps']
+        replay = next(step for step in steps if 'public-examples' in step.get('run', ''))
+        self.assertEqual(replay['if'], "matrix.target == 'x86_64-unknown-linux-gnu' || runner.os == 'macOS'")
+        self.assertLess(next(i for i, step in enumerate(steps) if 'host-setup' in step.get('run', '')), steps.index(replay))
+        script = (readmes.REPO / 'sdlc/scripts/release-workflow').read_text()
+        routing = script.split('\npublic-examples)\n')[1].split('\ncrate-smoke)')[0]
+        families = set(readmes.re.findall(r'--family ([a-z-]+)', routing))
+        self.assertEqual(families, set(readmes.published_families()))
+        self.assertNotIn('registry-readmes.py examples', script.split('\ndraft)\n')[1].split('\n\t;;')[0])
         self.assertIn('smoke', jobs['draft']['needs'])
-        self.assertTrue(any(step.get('with', {}).get('name') == 'crate-package'
-                            and step['with']['path'] == 'crate-dist' for step in jobs['draft']['steps']))
-        self.assertTrue(any('cp r-dist/* crate-dist/*.crate all-files/' in step.get('run', '')
-                            for step in jobs['draft']['steps']))
+        for name, path in [('r-package', 'r-dist'), ('crate-package', 'crate-dist')]:
+            self.assertTrue(any(step.get('with', {}).get('name') == name
+                                and step['with']['path'] == path for step in steps))
+        # Execute the actual workflow staging step with the runner replaced at its CLI boundary.
+        with tempfile.TemporaryDirectory() as scratch:
+            root = Path(scratch)
+            for name in ('r-dist', 'crate-dist', 'smoke-files', 'sdlc/scripts'):
+                (root / name).mkdir(parents=True)
+            (root / 'r-dist/thinkthen.tar.gz').write_text('R package')
+            (root / 'crate-dist/thinkthen.crate').write_text('Rust package')
+            runner = root / 'sdlc/scripts/release-workflow'
+            runner.write_text('#!/bin/sh\nset -eu\n[ "$1" = public-examples ]\n[ -f "$3/thinkthen.crate" ]\nif [ "$2" = x86_64-unknown-linux-gnu ]; then [ -f "$3/thinkthen.tar.gz" ]; fi\n')
+            runner.chmod(0o755)
+            for target in ('x86_64-unknown-linux-gnu', 'aarch64-apple-darwin'):
+                subprocess.run(['/bin/sh', '-eu', '-c', replay['run']], cwd=root,
+                               env={'PATH': '/usr/bin:/bin', 'TARGET': target}, check=True)
+
+    def test_compilers_lock_without_flock_and_replay_uses_prepared_cache(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            root = tree / 'root'
+            (root / 'site/recordings').mkdir(parents=True)
+            shutil.copyfile(readmes.REPO / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
+            shutil.copyfile(readmes.REPO / 'site/recordings/thinkthen.jsonl', root / 'site/recordings/thinkthen.jsonl')
+            packages = tree / 'packages'; packages.mkdir()
+            tools = tree / 'tools'; tools.mkdir()
+            cache = tree / 'prepared-pub-cache'; cache.mkdir()
+            lock = tree / 'compiler.lock'
+            for family, language, compiler in [('objective-c', 'objc', 'swift'), ('dart', 'dart', 'dart')]:
+                page = readmes.source(family, root)
+                page.parent.mkdir(parents=True)
+                page.write_text('```' + language + '\ndecide(); choose();\n```\n```text\nfixture\n```\n')
+                files = {'README.md': readmes.source(family).read_bytes()}
+                if family == 'dart':
+                    files['pubspec.yaml'] = (readmes.REPO / 'libraries/dart/pubspec.yaml').read_bytes()
+                archive(packages / ('thinkthen-' + family + '-' + readmes.version() + '-x86_64-unknown-linux-gnu.tar.gz'), files)
+                tool = tools / compiler
+                tool.write_text('#!' + sys.executable + '\n' +
+                    'import fcntl, os, pathlib, sys\n' +
+                    'with open(' + repr(str(lock)) + ', "a") as lock:\n' +
+                    '    try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\n' +
+                    '    except BlockingIOError: pass\n' +
+                    '    else: sys.exit("compiler ran without lock")\n' +
+                    'assert os.environ["CARGO_BUILD_JOBS"] == "2"\n' +
+                    ('assert os.environ["PUB_CACHE"] == ' + repr(str(cache)) + '\n' if family == 'dart' else '') +
+                    'out = pathlib.Path(".build/debug/RegistryExample") if sys.argv[1] == "build" else pathlib.Path(sys.argv[-1]) if sys.argv[1] == "compile" else None\n' +
+                    'if out:\n' +
+                    '    out.parent.mkdir(parents=True, exist_ok=True)\n' +
+                    '    out.write_text(' + repr('#!' + sys.executable + '\nimport fcntl\nwith open(' + repr(str(lock)) + ', "a") as lock: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)\nprint("fixture")\n') + ')\n' +
+                    '    out.chmod(0o755)\n')
+                tool.chmod(0o755)
+                work = tree / family; work.mkdir()
+                with self.subTest(family=family), patch.dict(os.environ, {'PATH': str(tools), 'PUB_CACHE': str(cache), 'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True):
+                    readmes.run_example(family, packages, work, root)
 
     def test_release_refuses_when_examples_cannot_run(self):
         with tempfile.TemporaryDirectory() as scratch:

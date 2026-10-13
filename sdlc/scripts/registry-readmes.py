@@ -10,6 +10,7 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import tarfile
 import tomllib
@@ -310,8 +311,10 @@ def run_example(family, packages, work, root=REPO, selected=None):
            'LANG': 'C.UTF-8', 'LC_ALL': 'C.UTF-8', 'XDG_CACHE_HOME': str(home / '.cache'),
            'XDG_CONFIG_HOME': str(home / '.config'), 'XDG_STATE_HOME': str(home / '.local/state'),
            'THINKTHEN_CACHE': str(cache), 'RUSTC_WRAPPER': '', 'CARGO_BUILD_RUSTC_WRAPPER': '',
-           'CARGO_HOME': str(Path.home() / '.cargo'), 'RUSTUP_HOME': str(Path.home() / '.rustup'),
-           'CARGO_NET_OFFLINE': 'true', 'CARGO_TARGET_DIR': str(root / 'target')}
+           'CARGO_HOME': os.environ.get('CARGO_HOME', str(Path.home() / '.cargo')),
+           'RUSTUP_HOME': os.environ.get('RUSTUP_HOME', str(Path.home() / '.rustup')),
+           'CARGO_NET_OFFLINE': 'true', 'CARGO_BUILD_JOBS': '2',
+           'CARGO_TARGET_DIR': str(root / 'target')}
     env['RUSTUP_TOOLCHAIN'] = tomllib.loads((root / 'rust-toolchain.toml').read_text())['toolchain']['channel']
     for name in ('HTTPS_PROXY', 'ALL_PROXY'):
         if os.environ.get(name, '').startswith('http://127.0.0.1:'):
@@ -319,7 +322,13 @@ def run_example(family, packages, work, root=REPO, selected=None):
 
     def run(command, build=False, input=None):
         if build:
-            command = ['flock', '-w', '180', '-o', '/tmp/thinkthen-heavy.lock', *command]
+            lock = os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
+            if shutil.which('flock', path=env['PATH']):
+                command = ['flock', '-w', '180', '-o', lock, *command]
+            else:
+                # The wrapper owns the lock; compiler children cannot inherit it.
+                wrapper = 'import fcntl,os,subprocess,sys; f=open(sys.argv[1], "a"); os.set_inheritable(f.fileno(),False); fcntl.flock(f,fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))'
+                command = [sys.executable, '-c', wrapper, lock, *command]
         done = subprocess.run(command, cwd=work, env=env, input=input, text=True,
                               capture_output=True, timeout=300 if build else 30)
         if done.returncode:
@@ -347,7 +356,7 @@ def run_example(family, packages, work, root=REPO, selected=None):
     elif family in ('php', 'packagist'):
         (work / 'vendor').mkdir()
         (work / 'vendor/autoload.php').symlink_to(package / 'autoload.php')
-        output = run(['php', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
+        output = run([os.environ.get('THINKTHEN_PHP_BIN', 'php'), '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', str(sample)])
     elif family == 'typescript':
         (work / 'node_modules').mkdir()
         (work / 'node_modules/thinkthen').symlink_to(package)
@@ -404,18 +413,20 @@ def run_example(family, packages, work, root=REPO, selected=None):
         (work / 'example.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings></PropertyGroup><ItemGroup><PackageReference Include="Botassembly.ThinkThen" Version="' + version(root) + '" /></ItemGroup></Project>')
         env.update(DOTNET_CLI_HOME=str(home), NUGET_PACKAGES=str(work / 'nuget'),
                    DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1')
-        run(['dotnet', 'restore', 'example.csproj', '--source', str(feed)], True)
-        run(['dotnet', 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
-        output = run(['dotnet', str(work / 'bin/example.dll')])
+        dotnet = os.environ.get('THINKTHEN_DOTNET', 'dotnet')
+        run([dotnet, 'restore', 'example.csproj', '--source', str(feed)], True)
+        run([dotnet, 'build', 'example.csproj', '--no-restore', '-o', str(work / 'bin')], True)
+        output = run([dotnet, str(work / 'bin/example.dll')])
     elif family == 'dart':
         (work / 'pubspec.yaml').write_text('name: registry_example\nenvironment:\n  sdk: ">=3.0.0 <4.0.0"\ndependencies:\n  thinkthen_dart:\n    path: ' + json.dumps(str(package)) + '\n')
-        env['PUB_CACHE'] = str(Path.home() / '.pub-cache')
-        run(['dart', 'pub', 'get', '--offline'], True)
-        run(['dart', 'compile', 'exe', str(sample), '-o', str(work / 'sample')], True)
+        env['PUB_CACHE'] = os.environ.get('PUB_CACHE', str(Path.home() / '.pub-cache'))
+        dart = os.environ.get('TT_DART', 'dart')
+        run([dart, 'pub', 'get', '--offline'], True)
+        run([dart, 'compile', 'exe', str(sample), '-o', str(work / 'sample')], True)
         output = run([str(work / 'sample')])
     elif family == 'r':
         (work / 'rlib').mkdir()
-        env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + str(Path.home() / '.cache/thinkthen-toolchains/r-library')
+        env['R_LIBS_USER'] = str(work / 'rlib') + os.pathsep + os.environ.get('R_LIBS', str(Path.home() / '.cache/thinkthen-toolchains/r-library'))
         run(['R', 'CMD', 'INSTALL', '-l', str(work / 'rlib'), str(package)], True)
         output = run(['Rscript', '--vanilla', str(sample)])
     elif family == 'sqlite':
@@ -427,7 +438,7 @@ def run_example(family, packages, work, root=REPO, selected=None):
     elif family == 'postgresql' and os.uname().sysname == 'Linux':
         pin = re.search(r'(?m)^VERSION=(.*)$', (root / 'databases/postgresql/runtime.sh').read_text()).group(1)
         tree = work / 'server'
-        shutil.copytree(Path.home() / '.cache/thinkthen-toolchains/postgresql' / pin, tree, symlinks=True)
+        shutil.copytree(Path(os.environ.get('THINKTHEN_TOOLCHAINS', str(Path.home() / '.cache/thinkthen-toolchains'))) / 'postgresql' / pin, tree, symlinks=True)
         for suffix in ('usr/lib/postgresql/16/lib', 'usr/share/postgresql/16/extension'):
             shutil.copytree(package / suffix, tree / suffix, dirs_exist_ok=True)
         binaries = tree / 'usr/lib/postgresql/16/bin'

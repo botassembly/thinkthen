@@ -369,6 +369,11 @@ PYWIN
 			sh databases/duckdb/tools/setup.sh --fetch
 			sh databases/sqlite/setup.sh
 			sh databases/postgresql/setup.sh
+			if [ "$2" = x86_64-unknown-linux-gnu ]; then
+				sudo apt-get update
+				sudo apt-get install -y r-base-dev
+				bash libraries/r/tools/setup.sh
+			fi
 		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
@@ -747,6 +752,23 @@ installer-smoke)
 		sh install.sh --version "$version"
 	[ "$("$work/bin/thinkthen" --version)" = "thinkthen $version" ] || fail 'loopback installed command reports another version'
 	;;
+public-examples)
+	[ "$#" = 3 ] || fail 'public-examples TARGET DIR'
+	case $2 in
+	x86_64-unknown-linux-gnu)
+		python3 sdlc/scripts/registry-readmes.py examples "$3" \
+			--family command --family crate --family python --family typescript \
+			--family ruby --family go --family cpp --family c --family csharp \
+			--family jvm --family swift --family zig --family php --family dart \
+			--family ada --family cobol --family r --family sqlite \
+			--family postgresql --family duckdb --family packagist
+		;;
+	*-apple-darwin)
+		python3 sdlc/scripts/registry-readmes.py examples "$3" --family objective-c
+		;;
+	*) fail 'public examples require the prepared Linux x86 or Apple smoke host' ;;
+	esac
+	;;
 crate-smoke)
 	[ "$#" = 3 ] || fail 'crate-smoke CRATE_DIR SAMPLE_DIR'
 	scratch_dir work
@@ -815,13 +837,6 @@ draft)
 		case ${package##*/} in *.sha256 | thinkthen-first-run.tar.gz) continue ;; esac
 		python3 sdlc/scripts/registry-readmes.py auto "$package"
 	done
-	# Objective-C replays in the macOS smoke jobs that this draft depends on.
-	python3 sdlc/scripts/registry-readmes.py examples "$files" \
-		--family command --family crate --family python --family typescript \
-		--family ruby --family go --family cpp --family c --family csharp \
-		--family jvm --family swift --family zig --family php --family dart \
-		--family ada --family cobol --family r --family sqlite \
-		--family postgresql --family duckdb --family packagist
 	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
 	if [ "$mode" = rehearse ]; then
 		# GitHub names a missing tag in a draft but should create its ref only
