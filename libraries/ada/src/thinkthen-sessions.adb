@@ -1,5 +1,6 @@
 with Ada.Unchecked_Conversion;
 with Thinkthen.Requests.Native;
+with Thinkthen_Kinds;
 with Interfaces.C.Strings;
 with System;
 package body Thinkthen.Sessions is
@@ -9,23 +10,7 @@ package body Thinkthen.Sessions is
    use Thinkthen_Session_C;
    Default_Client : Engine;
    type View_Access is access constant thinkthen_complete_session_packet_v1;
-   procedure Check (Code : int) is
-   begin
-      if Code = 0 then return; end if;
-      declare
-         Message : constant String := Value (thinkthen_session_error_message);
-      begin
-         case Code is
-            when K_THINKTHEN_EUSAGE => raise Usage_Error with Message;
-            when K_THINKTHEN_EBACKEND => raise Backend_Error with Message;
-            when K_THINKTHEN_EDEADLINE => raise Deadline_Error with Message;
-            when K_THINKTHEN_ELOCAL => raise Local_Error with Message;
-            when K_THINKTHEN_ECANCELLED => raise Cancelled_Error with Message;
-            when K_THINKTHEN_EDEFECT => raise Defect_Error with Message;
-            when others => raise Native_Error with Message;
-         end case;
-      end;
-   end Check;
+   procedure Check (Code : int) renames Thinkthen_Kinds.Check;
    procedure Start (Owner : in out Session; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) is
    begin
       Start (Default_Client, Owner, Request, Function_Name);
@@ -141,14 +126,8 @@ package body Thinkthen.Sessions is
       if State (Packet_View.data.terminal.failure.presence) /= Present then
          return Success;
       end if;
-      case Packet_View.data.terminal.failure.value.error.kind.kind is
-         when K_THINKTHEN_COMPLETE_FAILURE_KIND_USAGE_V1 => return Usage;
-         when K_THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1 => return Backend;
-         when K_THINKTHEN_COMPLETE_FAILURE_KIND_LOCAL_V1 => return Local;
-         when K_THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1 => return Cancelled;
-         when K_THINKTHEN_COMPLETE_FAILURE_KIND_DEADLINE_V1 => return Deadline;
-         when others => return Defect;
-      end case;
+      return Error_Status'Val (Thinkthen_Kinds.Error_Status'Pos
+        (Thinkthen_Kinds.Failure_Kind_For (Packet_View.data.terminal.failure.value.error.kind.kind)));
    end Status;
    function State (Value : Unsigned_32) return Presence is
    begin

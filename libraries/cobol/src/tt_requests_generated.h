@@ -1577,6 +1577,29 @@ int TT_SESSION_FIND(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_ANNOTATE(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_RECOGNIZE(const void *,const thinkthen_cobol_RequestCall *,void **);
 int TT_SESSION_RELATE(const void *,const thinkthen_cobol_RequestCall *,void **);
+int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,char **,
+uint64_t *);
 int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);
 int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);
+int TT_QUESTION_TEXT(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionText *arm,
+thinkthen_cobol_RequestQuestionTextText *scalar,const char *data,uint64_t length);
+int TT_QUESTION_FILE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionFile *arm,
+thinkthen_cobol_RequestQuestionFilePath *scalar,const char *data,uint64_t length);
+int TT_QUESTION_NAME(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionName *arm,
+thinkthen_cobol_RequestQuestionNameName *scalar,const char *data,uint64_t length);
+int TT_QUESTION_REFERENCE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionReference *arm,
+thinkthen_cobol_RequestQuestionReferenceReference *scalar,const char *data,uint64_t length);
+int TT_QUESTION_RELATE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRelate *value);
+int TT_QUESTION_RECOGNIZE(thinkthen_cobol_RequestQuestion *selector,thinkthen_cobol_RequestQuestionDefinition *arm,
+thinkthen_cobol_RequestDefinition *definition,const thinkthen_cobol_DefinitionRecognizeDefinition *value);
+int TT_TEXT_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalText *arm,thinkthen_cobol_RequestOriginalTextText *scalar,const char *data,
+uint64_t length);
+int TT_JSON_ITEM(thinkthen_cobol_RequestItem *item,thinkthen_cobol_RequestOriginal *original,
+thinkthen_cobol_RequestOriginalJson *arm,thinkthen_cobol_RequestOriginalJsonValue *scalar,const char *data,
+uint64_t length);
+int TT_FILE_INPUT(thinkthen_cobol_RequestInput *selector,thinkthen_cobol_RequestInputSource *arm,
+thinkthen_cobol_RequestSource *source,thinkthen_cobol_RequestSourcePaths *paths,thinkthen_cobol_RequestSourcePathsItem *path,
+const void **slots,const char *data,uint64_t length);
 #endif

@@ -1,8 +1,9 @@
 with Ada.Finalization;
 with Ada.Strings.Unbounded;
 with Thinkthen_Session_C;
+with Thinkthen_Kinds;
 package Thinkthen is
-   type Error_Kind is (None, Usage, Backend, Deadline, Local, Cancelled, Defect);
+   type Error_Kind is new Thinkthen_Kinds.Error_Kind;
    type Failure is record
       Kind : Error_Kind := None;
       Retryable : Boolean := False;

@@ -227,7 +227,7 @@ def generate(root, graph, prepare, env, check):
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
                   'with Thinkthen.Requests; use Thinkthen.Requests;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen.Requests.Native;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
     version = identifier('RequestVersion_' + enum_values(schema['$defs']['RequestVersion'])[0])
     for function in enum_values(schema['$defs']['RequestFunction']):
         declaration = f'procedure {function.title()} (Owner : in out Session; Request : T_RequestCall)'
@@ -245,6 +245,10 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-requests.ads': spec,
                'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
+    from templates.ada_values import outputs as value_outputs
+    outputs.update(value_outputs())
+    from templates.ada_usage import outputs as usage_outputs
+    outputs.update(usage_outputs((root / 'libraries/c/include/thinkthen.h').read_text()))
     for name, content in outputs.items():
         path = output_path(root, 'ada', name)
         if check:

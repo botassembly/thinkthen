@@ -144,9 +144,11 @@ def requests(definitions):
     from templates.csharp import enum_values
     for function in enum_values(definitions['RequestFunction']):
         header.append(f'int TT_SESSION_{function.upper()}(const void *,const thinkthen_cobol_RequestCall *,void **);')
-    header += ['int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
-    from templates.cobol_native import render
-    code = render(definitions, nodes)
+    header += ['int TT_PLAN(const void *,const char *,uint64_t,const thinkthen_cobol_RequestCall *,char **,uint64_t *);', 'int TT_SESSION_PUSH(const void *,const thinkthen_cobol_RequestSessionDescriptor *,uint32_t *);', 'int TT_SESSION_REQUEST(const void *engine,const thinkthen_cobol_Request *request,void **out);', '#endif']
+    from templates.cobol_native import render, builders
+    builder_header, builder_source = builders(definitions)
+    header[-1:-1] = builder_header
+    code = render(definitions, nodes) + builder_source + '\n'
     names = {key: native_name(key) for key in nodes}
     if len(set(names.values())) != len(names):
         raise ValueError('colliding semantic COBOL native names')

@@ -1,6 +1,7 @@
 with Ada.Command_Line;
 with Ada.Environment_Variables;
 with Thinkthen;
+with Thinkthen.Values;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
 with Interfaces; use Interfaces;
@@ -171,6 +172,34 @@ procedure Native_Session is
    -- Shared corpus typed call expressions are inserted here by the installed check.
    -- DECLARATIONS
 begin
+   declare
+      use Thinkthen.Values;
+      Saved : Thinkthen.Values.Value;
+   begin
+      declare
+         Original : constant Thinkthen.Values.Value := Object_Item
+           ([Named ("first", Number_Item ("123456789012345678901234567890")),
+             Named ("second", Array_Item ([Boolean_Item (False), Null_Item,
+               String_Item ("a" & Character'Val (0) & "b")])),
+             Named ("present_null", Null_Item)]);
+      begin
+         Saved := Original;
+      end;
+      Require (Length (Saved) = 3 and then Field_Name (Saved, 1) = "first"
+        and then As_Number (Field_Value (Saved, "first")) = "123456789012345678901234567890",
+        "owned decimal or caller ordering changed");
+      Require (Has_Field (Saved, "present_null") and then not Has_Field (Saved, "missing")
+        and then Kind (Field_Value (Saved, "present_null")) = Thinkthen.Values.Null_Value,
+        "null and missing values conflated");
+      declare
+         Items : constant Thinkthen.Values.Value := Field_Value (Saved, "second");
+      begin
+         Require (not As_Boolean (Element (Items, 1)) and then
+           Kind (Element (Items, 2)) = Thinkthen.Values.Null_Value and then
+           As_String (Element (Items, 3)) = "a" & Character'Val (0) & "b",
+           "owned nested value changed");
+      end;
+   end;
    if Ada.Command_Line.Argument_Count = 0 then
       -- CALLS
    else
