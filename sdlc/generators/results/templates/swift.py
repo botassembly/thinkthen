@@ -1,6 +1,7 @@
 """Swift Codable values derived from the shared Rust schema graph."""
 import json
 import re
+from host_answers import aggregate_answers, named_object_fields, usage_operations
 
 ROOTS = ('completesessionPacket', 'completeplan', 'completeReadableQuestion')
 INPUT_ROOTS = ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')
@@ -100,6 +101,12 @@ def render(definitions, inputs=False):
                 writes += [f'object[{json.dumps(prop)}] = {pname}.json' if mandatory else f'writePresence({pname}, {json.dumps(prop)}, &object)']
             keys = ', '.join(json.dumps(prop) for prop in fields)
             lines += ['    public init(' + ', '.join(args) + ') { ' + '; '.join(assignments) + ' }', f'    public static func read(_ json: JSONValue) throws -> {cls} {{', '        let object = try jsonObject(json)', f'        let known: Set<String> = [{keys}]', '        var value = Self(extensions: object.filter { !known.contains($0.key) }, ' + ', '.join(reads) + ')', '        value._sourceJSON = json', '        return value', '    }', '    public var json: JSONValue {', '        if let _sourceJSON { return _sourceJSON }', f'        let known: Set<String> = [{keys}]', '        var object = extensions.filter { !known.contains($0.key) }', *('        ' + line for line in writes), '        return .object(object)', '    }', '}']
+            if not inputs:
+                lines.pop()
+                for prop in named_object_fields(source, definitions):
+                    accessor = member(prop).strip('`') + 'Name'
+                    lines += [f'    public func {accessor}() throws -> Presence<String> {{', f'        switch try readPresence(jsonObject(self.json), {json.dumps(prop)}, JSONValue.self) {{', '        case .absent: return .absent', '        case .null: return .null', '        case .value(let object): return try readPresence(jsonObject(object), "name", String.self)', '        }', '    }']
+                lines += ['}']
         elif 'variants' in source:
             variants = source['variants']
             lines += [f'public indirect enum {cls}: JSONRepresentable {{']
@@ -128,11 +135,19 @@ def render(definitions, inputs=False):
             lines += [f'public typealias {cls} = {typ(source, key + "_Value")}']
     if inputs:
         lines += [named_calls(definitions)]
+    else:
+        lines += ['extension OwnedSessionPacket {']
+        variants = definitions['completesessionPacket']['variants']
+        for function, child, payload in aggregate_answers(definitions):
+            index = next(i for i, (candidate, _) in enumerate(variants) if candidate == child)
+            tag = variants[index][1]
+            lines += [f'    public func {function}Answer() throws -> {typ(payload, child + "_value")} {{', f'        if case .{case(tag, index)}(let packet) = self {{ return packet.value }}', f'        throw JSONConversionError("Expected {function} aggregate packet")', '    }']
+        lines += ['}', answer_helpers(definitions)]
     return '\n'.join(lines) + '\n'
 
 
 def bridge(abi):
-    lines = ['// Generated from the compiler-derived C header. Do not edit.']
+    lines = ['// Generated from the compiler-derived C header. Do not edit.', 'import CThinkThen']
     for cls, prefix, suffix in [('QuestionGrammar', 'THINKTHEN_LOAD_', '_V1'), ('UsagePersistenceState', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_', '_V1')]:
         lines += [f'public enum {cls}: UInt32, Sendable {{']
         lines += ['    case ' + literal_member(key.removeprefix(prefix).removesuffix(suffix).lower()) + ' = ' + str(value)
@@ -142,6 +157,11 @@ def bridge(abi):
     lines += ['    case ' + str(value) + ': return .' + literal_member(key.removeprefix('THINKTHEN_E').lower())
               for key, value in abi['constants'].items() if re.fullmatch(r'THINKTHEN_E[A-Z]+', key)]
     lines += ['    default: return .unknown(String(code))', '    }', '}']
+    lines += ['extension Client {']
+    for symbol, public in usage_operations(abi['functions']):
+        public = member(public).strip('`')
+        lines += [f'    public func {public}() throws -> OwnedUsagePersistenceStatus {{ try usage({symbol}) }}']
+    lines += ['}']
     return '\n'.join(lines) + '\n'
 
 
@@ -211,4 +231,45 @@ def named_calls(definitions):
         version = literal_member(definitions['RequestVersion']['oneOf'][0]['const'])
         lines += [f'    public func {function}(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> OwnedCall {{',
                   f'        try await execute(InputRequest(call: InputRequestCall(function: .{literal_member(function)}, input: input, options: options, question: question), schema: .{version}))', '    }']
+    return '\n'.join(lines + ['}'])
+
+
+def answer_helpers(definitions):
+    from host_answers import scalar_answers, judgment_route
+    route, guards = judgment_route(definitions)
+    def path(value): return '[' + ', '.join(json.dumps(field) for field in value) + ']'
+    checks = ['                guard try answerPath(packet.json, ' + path(fields) + ') == .string(' + json.dumps(value) + ') else { continue }' for fields, value in guards]
+    lines = ['public struct AnswerCardinalityError: Error, Sendable {',
+             '    public let function: String', '    public let count: Int', '    public let call: OwnedCall', '}',
+             'private func answerPath(_ json: JSONValue, _ path: [String]) throws -> JSONValue? {',
+             '    var value: JSONValue? = json', '    for key in path { guard let object = value else { return nil }; value = try jsonObject(object)[key] }', '    return value', '}',
+             'extension OwnedCall {',
+             '    private func answerJSON(_ function: String, _ judgment: String) throws -> JSONValue {',
+             '        if case .value(let failure) = terminal.failure { throw SessionFailure(failure: failure, call: self) }',
+             '        var values: [JSONValue] = []', '        for packet in packets {',
+             '            guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }',
+             '            if judgment.isEmpty {',
+             '                guard try answerPath(packet.json, ["kind"]) == .string("aggregate"), let value = try answerPath(packet.json, ["value"]) else { continue }',
+             '                values.append(value)', '            } else {',
+             *checks, '                guard let carrier = try answerPath(packet.json, ' + path(route) + ') else { continue }',
+             '                guard try answerPath(carrier, ["kind"]) == .string(judgment), let value = try answerPath(carrier, ["value"]) else { continue }',
+             '                values.append(value)', '            }', '        }',
+             '        guard values.count == 1 else { throw AnswerCardinalityError(function: function, count: values.count, call: self) }',
+             '        return values[0]', '    }']
+    def value_type(source):
+        if '$ref' in source: return 'Owned' + name(source['$ref'].split('/')[-1])
+        if source.get('type') == 'array': return '[' + value_type(source['items']) + ']'
+        return {'string': 'String', 'boolean': 'Bool', 'number': 'Double', 'integer': 'UInt64'}.get(source.get('type'), 'JSONValue')
+    answers = {function: (value_type(payload), value_type(payload), '') for function, _, payload in aggregate_answers(definitions)}
+    for function, kind, payload in scalar_answers(definitions):
+        source = dict(payload); kinds = source.get('type'); nullable = isinstance(kinds, list) and 'null' in kinds
+        if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
+        target = value_type(source)
+        answers[function] = (target + '?' if nullable else target, 'Optional<' + target + '>' if nullable else target, kind)
+    for function, (target, reader, kind) in answers.items():
+        lines += [f'    public func {function}Answer() throws -> {target} {{ try {reader}.read(answerJSON({json.dumps(function)}, {json.dumps(kind)})) }}']
+    lines += ['}', 'extension Client {']
+    for function, (target, _, _) in answers.items():
+        lines += [f'    public func {function}Answer(_ question: InputRequestQuestion, input: InputRequestInput, options: Presence<InputRequestOptions> = .absent) async throws -> {target} {{',
+                  f'        let call = try await {function}(question, input: input, options: options)', f'        return try call.{function}Answer()', '    }']
     return '\n'.join(lines + ['}'])

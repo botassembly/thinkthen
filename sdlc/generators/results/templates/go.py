@@ -2,6 +2,7 @@
 import re
 import json
 from csharp import shape
+from host_answers import aggregate_answers, named_object_fields, usage_operations
 ROOTS = ('completesessionPacket', 'completeplan')
 def name(key):
     return 'Owned' + ''.join(p[:1].upper()+p[1:] for p in re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key.removeprefix('complete')))
@@ -29,10 +30,16 @@ def render(definitions, input_definitions):
             for member,field in s['properties'].items():
                 method=name(member).removeprefix('Owned')
                 lines += [f'func (v {n}) {method}() Presence[{typ(field)}] {{ return ownedMember[{typ(field)}](v.raw, "{member}") }}']
+            for member in named_object_fields(s, definitions):
+                method = name(member).removeprefix('Owned') + 'Name'
+                lines += [f'func (v {n}) {method}() Presence[string] {{ nested:=ownedMember[json.RawMessage](v.raw,{json.dumps(member)}); if nested.Err!=nil || !nested.Present || nested.Null {{ return Presence[string]{{Present:nested.Present,Null:nested.Null,Err:nested.Err}} }}; return ownedMember[string](nested.Value,"name") }}']
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'func (v {n}) As{cn.removeprefix("Owned")}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errOwnedAlternative }}; return ownedDecode[{cn}](v.raw) }}']
-    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)
+    for function, _, payload in aggregate_answers(definitions):
+        result = typ(payload)
+        lines += [f'func (v OwnedSessionPacket) {function.title()}Answer() Presence[{result}] {{ if !ownedLiteral(v.raw, "kind", "aggregate") || !ownedLiteral(v.raw, "function", {json.dumps(function)}) {{ return Presence[{result}]{{Err:errOwnedAlternative}} }}; return ownedMember[{result}](v.raw, "value") }}']
+    return '\n'.join(lines)+'\n'+inputs(input_definitions)+named_calls(input_definitions)+answer_helpers(definitions)
 
 
 def usage(header):
@@ -45,6 +52,13 @@ def usage(header):
     lines += [')', 'func (k ErrorKind) String() string { switch k {']
     lines += ['case Kind' + word.title() + ': return ' + json.dumps(word.lower()) for word, _ in errors]
     lines += ['default: return "unknown"', '} }']
+    functions = {symbol: {'arguments': arguments.split(',')}
+                 for symbol, arguments in re.findall(r'\bint\s+(thinkthen_engine_\w+)\s*\(([^;]+)\);', header, re.S)}
+    for _, public in usage_operations(functions):
+        method = name(public).removeprefix('Owned')
+        finish = 'true' if public.startswith('finish_') else 'false'
+        lines += [f'func (c *Client) {method}() (UsageStatus,error) {{ return c.engine.{method}() }}',
+                  f'func (e *nativeEngine) {method}() (UsageStatus,error) {{ return e.usageStatus({finish}) }}']
     return '\n'.join(lines) + '\n'
 
 
@@ -172,3 +186,36 @@ def named_calls(definitions):
     return '\n'.join(
         f'func (c *Client) {item["const"].title()}(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall,error) {{ return c.call(ctx,{json.dumps(item["const"])},question,input,options) }}'
         for item in functions) + '\n'
+
+
+def answer_helpers(definitions):
+    from host_answers import scalar_answers, judgment_route
+    route, guards = judgment_route(definitions)
+    checks = []
+    for path, value in guards:
+        checks.append('ownedLiteral(ownedAnswerPath(packet.raw, []string{' + ','.join(json.dumps(field) for field in path[:-1]) + '}).Value,' + json.dumps(path[-1]) + ',' + json.dumps(value) + ')')
+    path = '[]string{' + ','.join(json.dumps(field) for field in route) + '}'
+    lines = ['type AnswerCardinalityError struct { Function string; Count int; Call OwnedCall }',
+             'func (e *AnswerCardinalityError) Error() string { return "Expected exactly one successful answer" }',
+             'func ownedAnswerPath(raw json.RawMessage, path []string) Presence[json.RawMessage] { result:=Presence[json.RawMessage]{Present:true,Value:raw}; for _,field:=range path { result=ownedMember[json.RawMessage](result.Value,field); if result.Err!=nil || !result.Present || result.Null { return result } }; return result }',
+             'func (v OwnedCall) answerTerminal() error { if v.Terminal==nil { return &AnswerCardinalityError{Call:v} }; failure:=v.Terminal.Failure(); if failure.Err!=nil { return failure.Err }; if failure.Present && !failure.Null { detail:=failure.Value.Error(); if detail.Err!=nil { return detail.Err }; return &SessionError{Call:v,Detail:detail.Value} }; return nil }',
+             'func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage,error) {',
+             'if err:=v.answerTerminal();err!=nil { return nil,err }; values:=make([]json.RawMessage,0)',
+             'for _,packet:=range v.Packets { if !ownedLiteral(packet.raw,"function",function) { continue }; var value Presence[json.RawMessage]',
+             'if judgment=="" { if !ownedLiteral(packet.raw,"kind","aggregate") { continue }; value=ownedMember[json.RawMessage](packet.raw,"value") } else {',
+             'if !(' + ' && '.join(checks) + ') { continue }; carrier:=ownedAnswerPath(packet.raw,' + path + '); if !ownedLiteral(carrier.Value,"kind",judgment) { continue }; value=ownedMember[json.RawMessage](carrier.Value,"value")',
+             '}; if value.Err!=nil { return nil,value.Err }; if value.Present { if value.Null { values=append(values,json.RawMessage("null")) } else { values=append(values,value.Value) } }',
+             '}; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
+    answers = {function: (typ(payload), '') for function, _, payload in aggregate_answers(definitions)}
+    for function, kind, payload in scalar_answers(definitions):
+        source = dict(payload)
+        kinds = source.get('type')
+        nullable = isinstance(kinds, list) and 'null' in kinds
+        if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
+        target = 'float64' if source.get('type') == 'number' else typ(source)
+        answers[function] = (('*' if nullable else '') + target, kind)
+    for function, (target, kind) in answers.items():
+        title = function.title()
+        lines += [f'func (v OwnedCall) {title}Answer() ({target},error) {{ raw,err:=v.answerJSON({json.dumps(function)},{json.dumps(kind)}); if err!=nil {{ var zero {target}; return zero,err }}; return ownedDecode[{target}](raw) }}',
+                  f'func (c *Client) {title}Answer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ({target},error) {{ call,err:=c.{title}(ctx,question,input,options); if err!=nil {{ var zero {target}; return zero,err }}; return call.{title}Answer() }}']
+    return '\n'.join(lines) + '\n'
