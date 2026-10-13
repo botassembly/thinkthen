@@ -64,7 +64,6 @@ fn pre_cancel_and_zero_deadline_send_nothing_and_do_not_fabricate_success() {
     .unwrap();
     let initial = NativeExecutor {
         engine: engine.clone(),
-        schema: serde_json::from_str(crate::complete_call_schema()).unwrap(),
     }
     .execute(Invocation::admit(params).unwrap(), &notification_token)
     .err()

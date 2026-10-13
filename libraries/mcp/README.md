@@ -79,7 +79,7 @@ native cancelled error with zero sends. Notification cancellation continues to
 cancel active requests and retire their owned work.
 
 Successes return unchanged native complete call envelopes and the packaged native
-output schema. Safe errors use `Error::complete()`, including joined started-call
+native result contract. Safe errors use `Error::complete()`, including joined started-call
 facts. Incremental failures additionally retain actual ordered `completed` results. Admission failures invent no call facts. No adapter rewrites schemas,
 origins, IDs, timing, models or cache hits. Native calls stamp the closed `mcp`
 surface and compiled-engine User-Agent, call ID and request ID.

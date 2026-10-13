@@ -38,7 +38,10 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
             .collect::<Vec<_>>(),
         *contract["parity"]["functions"].as_array().unwrap()
     );
-    let output_schema: Value = serde_json::from_str(thinkthen::complete_call_schema()).unwrap();
+    assert!(
+        serde_json::to_vec(&catalog).unwrap().len() < 25_000,
+        "catalog exceeds discovery budget"
+    );
     for tool in tools {
         assert_eq!(tool["inputSchema"]["additionalProperties"], false);
         assert!(
@@ -46,7 +49,14 @@ fn initialization_gates_tools_and_catalog_preserves_the_ten_tool_contract() {
                 .get("api_key")
                 .is_none()
         );
-        assert_eq!(tool["outputSchema"], output_schema);
+        assert!(tool.get("outputSchema").is_none());
+        assert!(tool["inputSchema"].get("$defs").is_none());
+        assert!(
+            tool["description"]
+                .as_str()
+                .unwrap()
+                .contains("thinkthen mcp --help")
+        );
     }
     assert_eq!(
         session.request("initialize", json!({}))["error"]["code"],

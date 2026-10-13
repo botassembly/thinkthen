@@ -65,9 +65,6 @@ struct Fixture {
     hold: bool,
 }
 impl Executor for Fixture {
-    fn output_schema(&self) -> Value {
-        json!({"type":"object","required":["fixture"]})
-    }
     fn execute(
         &self,
         invocation: Invocation,

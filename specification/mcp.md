@@ -88,8 +88,7 @@ produce the safe cancelled error and zero sends. This does not cancel the protoc
 request token or replace notification cancellation of active work.
 
 Successes return `structuredContent` holding the complete native call object
-and one text content block encoding the equivalent JSON. Declared output
-schemas come from the settled native complete serializers. False, null, empty
+and one text content block encoding the equivalent JSON. The compact discovery catalog omits output schemas; complete results still come from the native serializers. Full argument guidance is available with `thinkthen mcp --help`. False, null, empty
 answers and partial member failures retain native meanings. Incremental reader failures retain ordered native `completed` results beside their terminal safe error and final facts. Whole-call failures
 use `isError:true` with safe native error/facts, including actual started
 attempts; admission failures invent no started-call facts. No adapter changes

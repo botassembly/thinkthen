@@ -21,15 +21,14 @@ impl Tool {
     }
 }
 
-/// Complete output schema comes from the native owner, never an adapter-made
-/// result/2 substitute. The same typed input object is enforced by admission.
-pub(super) fn list(output_schema: &Value) -> Value {
+/// Compact discovery guidance; shared native admission owns the full grammar.
+pub(super) fn list() -> Value {
     let tools: Vec<_> = Tool::ALL
         .into_iter()
         .map(|tool| {
             json!({
-                "name":tool,"description":tool.description(),
-                "inputSchema":input_schema(tool),"outputSchema":output_schema,
+                "name":tool,"description":format!("{} Full argument grammar: thinkthen mcp --help.", tool.description()),
+                "inputSchema":input_schema(tool),
                 "execution":{"taskSupport":"forbidden"}
             })
         })
@@ -47,6 +46,9 @@ fn input_schema(tool: Tool) -> Value {
         .unwrap_or_else(|| json!({}));
     if let Some(map) = options.get_mut("properties").and_then(Value::as_object_mut) {
         map.retain(|name, _| tool.allows_option(name) && name != "details");
+        for schema in map.values_mut() {
+            *schema = summary(schema, &canonical);
+        }
         let field = map.get("field").cloned().unwrap_or_else(|| json!({}));
         map.insert("field".into(), json!({"oneOf":[{"type":"string"},field]}));
         map.insert(
@@ -59,17 +61,15 @@ fn input_schema(tool: Tool) -> Value {
         );
     }
     let mut properties = json!({
-        "question":{"oneOf":[{"type":"string"},{"$ref":"#/$defs/RequestDefinition"}]},
+        "question":{"type":["string","object"]},
         "question_file":{"type":"string","minLength":1},
         "question_name":{"type":"string","minLength":1},
         "question_reference":{"type":"string","minLength":1},
         "evidence":{"type":"string"},"records":{"type":"array"},
         "source":source_schema(false, tool.images(), &canonical),"options":options
     });
-    if !matches!(tool, Tool::Decide | Tool::Filter | Tool::Rank | Tool::Find)
-        && let Some(question) = properties.get_mut("question")
-    {
-        *question = json!({"$ref":"#/$defs/RequestDefinition"});
+    if let Some(question) = properties.get_mut("question") {
+        *question = question_schema(tool, &canonical);
     }
     if tool.images()
         && let Some(map) = properties.as_object_mut()
@@ -96,49 +96,112 @@ fn input_schema(tool: Tool) -> Value {
         json!({"required":[name],"not":{"anyOf":others.map(|other| json!({"required":[other]})).collect::<Vec<_>>()}})
     }).collect::<Vec<_>>();
     json!({"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",
-        "additionalProperties":false,"properties":properties,"$defs":canonical.get("$defs"),
+        "additionalProperties":false,"properties":properties,
         "allOf":[{"oneOf":question_choices},{"oneOf":input_choices}]})
 }
 
+fn question_schema(tool: Tool, canonical: &Value) -> Value {
+    let function = match tool {
+        Tool::Filter | Tool::Rank => Tool::Decide,
+        _ => tool,
+    };
+    let name = serde_json::to_value(function).unwrap_or(Value::Null);
+    let name = name.as_str().unwrap_or_default();
+    let reference = format!("#/$defs/Authored_{name}");
+    let definition = canonical
+        .pointer("/$defs/RequestDefinition/anyOf")
+        .and_then(Value::as_array)
+        .and_then(|choices| {
+            choices.iter().find(|choice| {
+                choice.get("$ref").and_then(Value::as_str) == Some(reference.as_str())
+                    || choice.pointer(&format!("/properties/{name}")).is_some()
+                    || (tool == Tool::Annotate && choice.pointer("/properties/questions").is_some())
+            })
+        })
+        .unwrap_or(&Value::Null);
+    let mut object = question_fields(definition, canonical, 2);
+    if tool == Tool::Rank {
+        object = json!({"type":"object","description":"A decide or score question, or an ordered question set; see server help."});
+    }
+    if matches!(tool, Tool::Decide | Tool::Filter | Tool::Rank | Tool::Find) {
+        json!({"anyOf":[{"type":"string"},object]})
+    } else {
+        object
+    }
+}
+
+fn question_fields(schema: &Value, canonical: &Value, depth: u8) -> Value {
+    if let Some(reference) = schema.get("$ref").and_then(Value::as_str)
+        && let Some(target) = canonical.pointer(reference.trim_start_matches('#'))
+    {
+        return question_fields(target, canonical, depth);
+    }
+    let mut compact = summary(schema, canonical);
+    if depth > 0
+        && let Some(properties) = schema.get("properties").and_then(Value::as_object)
+    {
+        let fields: serde_json::Map<_, _> = properties
+            .iter()
+            .map(|(name, schema)| (name.clone(), question_fields(schema, canonical, depth - 1)))
+            .collect();
+        compact["properties"] = Value::Object(fields);
+        if let Some(required) = schema.get("required") {
+            compact["required"] = required.clone();
+        }
+    }
+    compact
+}
+
+/// Retain field names from the native owner without copying nested grammars.
+fn summary(schema: &Value, canonical: &Value) -> Value {
+    if let Some(reference) = schema.get("$ref").and_then(Value::as_str)
+        && let Some(target) = canonical.pointer(reference.trim_start_matches('#'))
+    {
+        return summary(target, canonical);
+    }
+    let mut compact = serde_json::Map::new();
+    for key in ["type", "enum", "const"] {
+        if let Some(value) = schema.get(key) {
+            compact.insert(key.into(), value.clone());
+        }
+    }
+    for key in ["oneOf", "anyOf"] {
+        if let Some(choices) = schema.get(key).and_then(Value::as_array) {
+            compact.insert(
+                "anyOf".into(),
+                choices
+                    .iter()
+                    .map(|choice| summary(choice, canonical))
+                    .collect(),
+            );
+        }
+    }
+    if schema.get("type") == Some(&json!("array")) {
+        compact.insert("items".into(), json!({}));
+    }
+    Value::Object(compact)
+}
+
 fn descriptor_schema(tool: Tool, canonical: &Value) -> Value {
-    let mut descriptor = json!({"type":"object","additionalProperties":false,"properties":{
-        "text":{"type":"string"},"json":{},"source":source_schema(true, false, canonical),
-        "context":canonical.pointer("/$defs/RequestItem/properties/context"),
-        "options":{"$ref":"#/$defs/Authored_options"},
-        "examples":canonical.pointer("/$defs/RequestItem/properties/examples"),
-        "seed_spans":canonical.pointer("/$defs/RequestItem/properties/seed_spans"),
-        "images":{"type":"array","maxItems":crate::MAX_IMAGES,"items":{"oneOf":[
-            {"type":"string","minLength":1},
-            {"type":"object","additionalProperties":false,"required":["path","media"],"properties":{
-                "path":{"type":"string","minLength":1},"media":{"$ref":"#/$defs/ImageMedia"}}}
-        ]}}
-    },"oneOf":[
-        {"required":["text"],"not":{"anyOf":[{"required":["json"]},{"required":["source"]}]}},
-        {"required":["json"],"not":{"anyOf":[{"required":["text"]},{"required":["source"]}]}},
-        {"required":["source"],"not":{"anyOf":[{"required":["text"]},{"required":["json"]}]}},
-        {"required":["images"],"properties":{"images":{"minItems":1}},"not":{"anyOf":[{"required":["text"]},{"required":["json"]},{"required":["source"]}]}}
-    ]});
-    if let Some(map) = descriptor
-        .get_mut("properties")
-        .and_then(Value::as_object_mut)
-    {
-        if !tool.images() {
-            map.remove("images");
-        }
-        if !tool.allows_option("options_field") {
-            map.remove("options");
-        }
-        if !tool.allows_option("examples") {
-            map.remove("examples");
-            map.remove("seed_spans");
-        }
+    let mut properties = canonical
+        .pointer("/$defs/RequestItem/properties")
+        .and_then(Value::as_object)
+        .cloned()
+        .unwrap_or_default();
+    properties.remove("original");
+    properties.retain(|name, _| match name.as_str() {
+        "images" => tool.images(),
+        "options" => tool.allows_option("options_field"),
+        "examples" | "seed_spans" => tool.allows_option("examples"),
+        _ => true,
+    });
+    for schema in properties.values_mut() {
+        *schema = summary(schema, canonical);
     }
-    if !tool.images()
-        && let Some(choices) = descriptor.get_mut("oneOf").and_then(Value::as_array_mut)
-    {
-        choices.pop();
-    }
-    descriptor
+    properties.insert("text".into(), json!({"type":"string"}));
+    properties.insert("json".into(), json!({}));
+    properties.insert("source".into(), source_schema(true, false, canonical));
+    json!({"type":"object","additionalProperties":false,"properties":properties})
 }
 
 fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
@@ -164,7 +227,7 @@ fn source_schema(file_only: bool, images: bool, canonical: &Value) -> Value {
         .unwrap_or_else(|| json!({}));
     let mut source = json!({"type":"object","additionalProperties":false,"required":if file_only { vec!["paths","unit"] } else { vec!["paths"] },
         "properties":{"paths":{"type":"array","minItems":1,"items":{"type":"string","minLength":1}},
-            "unit":unit,"window":{"type":"integer","minimum":1},"media":media,"framing":framing}});
+            "unit":summary(&unit, canonical),"window":{"type":"integer","minimum":1},"media":summary(&media, canonical),"framing":summary(&framing, canonical)}});
     if file_only
         && let Some(properties) = source.get_mut("properties").and_then(Value::as_object_mut)
     {

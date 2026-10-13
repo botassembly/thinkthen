@@ -110,7 +110,7 @@ fn false_null_and_partial_failure_are_preserved_as_successful_native_objects() {
 
 #[test]
 fn advertised_source_schema_accepts_only_native_unit_media_window_combinations() {
-    let list = tools::list(&json!({"type":"object"}));
+    let list = tools::list();
     let decide = list["tools"]
         .as_array()
         .unwrap()
@@ -128,7 +128,6 @@ import json,sys
 from jsonschema import Draft202012Validator
 case=json.load(sys.stdin)
 for schema,source,expected in case['cases']:
-    schema['$defs']=case['defs']
     actual=Draft202012Validator(schema).is_valid(source)
     assert actual == expected, (source,expected,actual)
 "#;
