@@ -205,8 +205,11 @@ static class SessionChecks
             {
                 string text = "queued-after-hold-" + i;
                 Task<bool> push = session.PushAsync(Item(text));
-                if (!push.IsCompleted) { full = push; break; }
-                if (!await push) throw new Exception("intake closed before Full");
+                try
+                {
+                    if (!await push.WaitAsync(TimeSpan.FromSeconds(1))) throw new Exception("intake closed before Full");
+                }
+                catch (TimeoutException) { full = push; break; }
                 admitted.Add(text);
             }
             if (full is null) throw new Exception("queue did not reach Full");

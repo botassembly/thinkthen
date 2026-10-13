@@ -57,14 +57,21 @@ public sealed class OwnedSession : IDisposable
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, disposed.Token);
             using var registration = cancellation.Register(Cancel);
             byte[] bytes = descriptor.ToBytes();
-            while (true)
+            linked.Token.ThrowIfCancellationRequested();
+            try
+            {
+                bool accepted = await Task.Factory.StartNew(() =>
+                {
+                    NativeSession.Check(NativeWait.thinkthen_session_push(handle, bytes, (nuint)bytes.Length, out uint status));
+                    return status switch { 0 => true, 2 => false, _ => throw new InvalidOperationException("Invalid native push status.") };
+                }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default).ConfigureAwait(false);
+                linked.Token.ThrowIfCancellationRequested();
+                return accepted;
+            }
+            catch (Failure) when (linked.IsCancellationRequested)
             {
                 linked.Token.ThrowIfCancellationRequested();
-                NativeSession.Check(NativeSession.thinkthen_session_try_push(handle, bytes, (nuint)bytes.Length, out uint status));
-                if (status == 0) return true;
-                if (status == 2) return false;
-                if (status != 1) throw new InvalidOperationException("Invalid native push status.");
-                await WaitAsync(true).ConfigureAwait(false);
+                throw;
             }
         }
         finally { Volatile.Write(ref producing, 0); }
@@ -99,12 +106,6 @@ public sealed class OwnedSession : IDisposable
             finally { if (pinned) packet.DangerousRelease(); }
         }
     }
-    private Task WaitAsync(bool input) => Task.Factory.StartNew(() =>
-    {
-        uint interest = input ? NativeWait.Input : Volatile.Read(ref cancelled) != 0 ? NativeWait.Settlement : NativeWait.Result;
-        // Keep P/Invoke and its calling-thread diagnostic together on a dedicated thread.
-        NativeSession.Check(NativeWait.thinkthen_session_wait(handle, interest, 50, out _));
-    }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
     public void Dispose()
     {
         if (Interlocked.Exchange(ref closed, 1) != 0) return;
