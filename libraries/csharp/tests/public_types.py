@@ -33,17 +33,14 @@ def stop_backend(backend):
 run = Path(os.environ.get("THINKTHEN_TYPECASE_DLL", HERE / "bin/Release/net8.0/TypeCase.dll")).resolve(strict=True)
 if os.environ.get("THINKTHEN_ARTIFACT") and not os.environ.get("THINKTHEN_TYPECASE_DLL"):
     raise ValueError("installed C# parity requires its package-referenced caller")
-if os.environ.get("THINKTHEN_BACKEND_BIN"):
-    backend = subprocess.Popen([os.environ["THINKTHEN_BACKEND_BIN"]],
-                               stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE, env=child_env(), text=True)
-    try:
-        port = int(read_process_line(backend.stdout))
-    except BaseException:
-        stop_backend(backend)
-        raise
-else:
-    backend, port = shared.start_backend()
+backend_path = os.environ.get("THINKTHEN_BACKEND_BIN", str(Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "target")) / "debug/conformance-backend"))
+backend = subprocess.Popen([backend_path], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                           stderr=subprocess.PIPE, env=child_env(), text=True)
+try:
+    port = int(read_process_line(backend.stdout))
+except BaseException:
+    stop_backend(backend)
+    raise
 count = 0
 FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
                                    "severity": "answered", "topics": "answered"}]}
