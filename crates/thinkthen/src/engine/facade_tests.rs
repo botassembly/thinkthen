@@ -261,6 +261,8 @@ impl Drop for Scratch {
     }
 }
 
+// Keep this direct timing regression: public host checks do not deliver a
+// signal to the calling thread while both judgment and find sends are held.
 #[cfg(unix)]
 #[test]
 fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
@@ -300,6 +302,8 @@ fn a_host_signal_on_the_calling_thread_never_fails_a_single_send() {
     assert_eq!(loopback.count(), 2);
 }
 
+// Keep the direct transport regression until a public test counts one send
+// after premature close on every facade path despite enabled retries.
 #[test]
 fn a_close_after_the_body_is_never_resent_on_any_path() {
     // Each connection serves one scripted reply and closes, so a resend
@@ -340,6 +344,8 @@ fn a_close_after_the_body_is_never_resent_on_any_path() {
     }
 }
 
+// Keep this refusal table: public checks do not yet combine all five paths
+// with cancellation, deadline and profile refusals plus zero storage writes.
 #[test]
 fn local_refusals_send_nothing_and_store_nothing() {
     let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
@@ -401,6 +407,8 @@ fn local_refusals_send_nothing_and_store_nothing() {
     );
 }
 
+// Keep this concurrency regression: public ordering and prefix tests do not
+// hold a good first reply behind a broken later row and prove reads never send.
 #[test]
 fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     let first = Arc::new(Rendezvous::new(2));
@@ -452,53 +460,8 @@ fn completed_results_keep_input_order_and_reading_them_sends_nothing() {
     );
 }
 
-#[test]
-fn relate_fails_when_no_answer_is_usable_and_keeps_a_partial_result() {
-    // Each reply answers the first question it names when `first` is set,
-    // and gives every other question a probability out of range.
-    let listener = |first: bool| {
-        Listener::answering(move |body| Canned::ok(&failing_reply(body, first))).expect("listener")
-    };
-    let cancel = Cancel::default();
-
-    let failing = listener(false);
-    let Err(error) = relate_limited(&engine(failing.base()), failing.base(), None, &cancel) else {
-        panic!("no usable answer fails the call")
-    };
-    assert!(matches!(error, Error::Reply(_)), "{error:?}");
-    assert_eq!(error.kind(), Kind::Backend);
-
-    let partial = listener(true);
-    let execution = relate_limited(&engine(partial.base()), partial.base(), None, &cancel)
-        .expect("a partial result");
-    assert_eq!(execution.answered, 1);
-    assert_eq!(execution.failed, 1, "the failed answer stays counted");
-    assert_eq!(execution.logical.len(), 2);
-    assert_eq!(
-        execution.edges.len(),
-        1,
-        "the one good answer draws its edge"
-    );
-}
-
-/// A reply whose yes/no probabilities are out of range, but for the first
-/// when asked.
-fn failing_reply(body: &[u8], first: bool) -> String {
-    let request: serde_json::Value = serde_json::from_slice(body).expect("request");
-    let names = request["questions"].as_object().expect("questions").keys();
-    let answers = names
-        .enumerate()
-        .map(|(place, name)| {
-            let yes = if first && place == 0 { 0.9 } else { 1.5 };
-            (
-                name.clone(),
-                serde_json::json!({"type": "noul", "noul": yes}),
-            )
-        })
-        .collect::<serde_json::Map<_, _>>();
-    serde_json::json!({"model": "jev-latest", "answers": answers}).to_string()
-}
-
+// Keep the direct fork safeguard: the copied rate rebuilds the child pacer,
+// which public result tests cannot inspect before a process forks.
 #[test]
 fn a_model_copy_keeps_the_rate_a_forked_child_may_rebuild_from() {
     let rate = std::num::NonZeroU32::new(600);

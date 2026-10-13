@@ -34,24 +34,33 @@ fn an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six() {
 
 #[test]
 fn mixed_logical_failure_prints_details_and_exits_six() {
-    let listener = scripted(&[r#"{"type":"noul","noul":0.9}"#, WRONG]);
-    let output = run(
-        &listener,
-        &["follows=person:person", "--details"],
-        br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#,
-    );
-    crate::harness::exits(&output, 6);
-    let result: Value = serde_json::from_slice(&output.stdout).expect("details");
-    assert_eq!(result["schema"], "thinkthen.result/2");
-    assert_eq!(result["value"].as_array().expect("edges").len(), 1);
-    assert_eq!(
-        result["answer"]["questions"]
-            .as_array()
-            .expect("questions")
-            .len(),
-        2
-    );
-    assert_eq!(result["meta"]["failed_questions"], 1);
+    const CASES: [&[&str]; 2] = [
+        &[r#"{"type":"noul","noul":0.9}"#, WRONG],
+        &[
+            r#"{"type":"noul","noul":0.9}"#,
+            r#"{"type":"noul","noul":1.5}"#,
+        ],
+    ];
+    for answers in CASES {
+        let listener = scripted(answers);
+        let output = run(
+            &listener,
+            &["follows=person:person", "--details"],
+            br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#,
+        );
+        crate::harness::exits(&output, 6);
+        let result: Value = serde_json::from_slice(&output.stdout).expect("details");
+        assert_eq!(result["schema"], "thinkthen.result/2");
+        assert_eq!(result["value"].as_array().expect("edges").len(), 1);
+        assert_eq!(
+            result["answer"]["questions"]
+                .as_array()
+                .expect("questions")
+                .len(),
+            2
+        );
+        assert_eq!(result["meta"]["failed_questions"], 1);
+    }
 }
 
 #[test]
@@ -77,14 +86,17 @@ fn the_detailed_question_digest_hashes_the_printed_line_question() {
 
 #[test]
 fn no_valid_logical_answer_exits_four_without_output() {
-    let listener = scripted(&[WRONG]);
-    let output = run(
-        &listener,
-        &["follows=person:person", "--details"],
-        br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#,
-    );
-    assert_eq!(output.status.code(), Some(4));
-    assert!(output.stdout.is_empty());
+    const CASES: [&[&str]; 2] = [&[WRONG], &[r#"{"type":"noul","noul":1.5}"#]];
+    for answers in CASES {
+        let listener = scripted(answers);
+        let output = run(
+            &listener,
+            &["follows=person:person", "--details"],
+            br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"}]"#,
+        );
+        assert_eq!(output.status.code(), Some(4));
+        assert!(output.stdout.is_empty());
+    }
 }
 
 #[test]
