@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Exercise the package-text release boundary with positive and negative archives."""
 import importlib.util
+import ctypes
+import signal
 import io
 import os
 import sys
@@ -242,7 +244,13 @@ class PackageText(unittest.TestCase):
                 'out.write_text(' + repr('#!' + sys.executable + '\nprint("fixture")\n') + ')\n' +
                 'out.chmod(0o755)\n')
             compiler.chmod(0o755)
+            popen = subprocess.Popen
             communicate = subprocess.Popen.communicate
+            def bounded_popen(command, *args, **kwargs):
+                if len(command) > 1 and sys.platform == 'linux' and 'build-admission.py' in str(command[1]):
+                    command = list(command)
+                    command[command.index('--timeout') + 1] = '.4'
+                return popen(command, *args, **kwargs)
             def bounded_communicate(process, input=None, timeout=None):
                 return communicate(process, input, .4 if timeout == 300 else timeout)
             cases = [(str(tools), 'first'), (str(tools) + os.pathsep + '/usr/bin:/bin', 'first-hard')]
@@ -251,12 +259,16 @@ class PackageText(unittest.TestCase):
             for search_path, first_name in cases:
                 with self.subTest(path=search_path), patch.dict(os.environ, {
                     'PATH': search_path, 'THINKTHEN_HEAVY_LOCK': str(tree / 'compiler.lock')}, clear=True), \
-                        patch.object(subprocess.Popen, 'communicate', bounded_communicate):
+                        patch.object(subprocess, 'Popen', bounded_popen), \
+                        patch.object(popen, 'communicate', bounded_communicate):
                     marker.unlink(missing_ok=True)
                     first = tree / first_name; first.mkdir(exist_ok=True)
                     second = tree / 'second'; second.mkdir(exist_ok=True)
-                    with self.assertRaises(subprocess.TimeoutExpired):
+                    failure = readmes.Refusal if sys.platform == 'linux' else subprocess.TimeoutExpired
+                    with self.assertRaises(failure) as error:
                         readmes.run_example('swift', packages, first, root)
+                    if sys.platform == 'linux':
+                        self.assertIn('build timed out', str(error.exception))
                     self.assertTrue(marker.exists(), 'first compiler did not start')
                     self.assertNotEqual(marker.read_text(), marker.with_suffix('.worker').read_text())
                     readmes.run_example('swift', packages, second, root)
@@ -265,6 +277,75 @@ class PackageText(unittest.TestCase):
                             os.kill(int(pid_file.read_text()), 0)
                 shutil.rmtree(first)
                 shutil.rmtree(second)
+
+    @unittest.skipUnless(sys.platform == 'linux', 'nested workers require Linux subreaping')
+    def test_build_reaps_nested_workers_before_returning_its_permit(self):
+        # Own survivors only so a failing regression can clean up its fixture.
+        libc = ctypes.CDLL(None, use_errno=True)
+        previous = ctypes.c_int()
+        self.assertEqual(libc.prctl(37, ctypes.byref(previous), 0, 0, 0), 0)
+        self.assertEqual(libc.prctl(36, 1, 0, 0, 0), 0)
+        pids = []
+        try:
+            with tempfile.TemporaryDirectory() as scratch:
+                tree = Path(scratch)
+                marker = tree / 'workers'
+                compiler = tree / 'compiler.py'
+                compiler.write_text(
+                    'import os, pathlib, signal, subprocess, sys, time\n'
+                    'signal.signal(signal.SIGTERM, signal.SIG_IGN)\n'
+                    'os.setsid() if sys.argv[1] != "35" else None\n'
+                    'with pathlib.Path(sys.argv[2]).open("a") as marker: marker.write(str(os.getpid()) + "\\n")\n'
+                    'if int(sys.argv[1]):\n'
+                    '    subprocess.Popen([sys.executable, __file__, str(int(sys.argv[1]) - 1), sys.argv[2]], '
+                    'stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n'
+                    'time.sleep(30)\n')
+                lock = tree / 'build.lock'
+                popen = subprocess.Popen
+                communicate = subprocess.Popen.communicate
+                def bounded_popen(command, *args, **kwargs):
+                    if 'build-admission.py' in str(command[1]):
+                        command = list(command)
+                        command[command.index('--timeout') + 1] = '2'
+                    return popen(command, *args, **kwargs)
+                def bounded_communicate(process, input=None, timeout=None):
+                    return communicate(process, input, 2 if timeout == 300 else timeout)
+                with patch.dict(os.environ, {'THINKTHEN_HEAVY_LOCK': str(lock)}, clear=True), \
+                        patch.object(subprocess, 'Popen', bounded_popen), \
+                        patch.object(popen, 'communicate', bounded_communicate):
+                    try:
+                        done = readmes.run_build([sys.executable, str(compiler), '35', str(marker)],
+                                                tree, {'PATH': '/usr/bin:/bin'}, None)
+                    except subprocess.TimeoutExpired:
+                        done = None
+                pids = [int(pid) for pid in marker.read_text().splitlines()]
+                self.assertEqual(len(pids), 36, 'compiler did not launch all nested workers')
+                self.assertEqual(len(set(pids)), 36, 'compiler and worker PIDs must differ')
+                remaining = [pid for pid in pids if Path('/proc', str(pid)).exists()]
+                # A new process must acquire every permit and the legacy lock.
+                probe = subprocess.run([sys.executable, '-c',
+                    'import fcntl, sys; '
+                    'lock = open(sys.argv[1], "a+b"); '
+                    'fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB); '
+                    '[fcntl.lockf(lock, fcntl.LOCK_EX | fcntl.LOCK_NB, 1, slot) for slot in range(4)]',
+                    str(lock)], capture_output=True, text=True)
+                self.assertEqual(probe.returncode, 0, probe.stderr)
+                self.assertEqual(remaining, [], 'returned with live or zombie descendants')
+                self.assertIsNotNone(done, 'outer timeout interrupted the supervisor')
+                self.assertEqual(done.returncode, 124)
+                self.assertIn('build timed out', done.stderr)
+        finally:
+            for pid in pids:
+                try:
+                    os.kill(pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+            while True:
+                try:
+                    os.waitpid(-1, 0)
+                except ChildProcessError:
+                    break
+            libc.prctl(36, previous.value, 0, 0, 0)
 
     def test_replay_refuses_a_command_that_does_not_run(self):
         with tempfile.TemporaryDirectory() as scratch:

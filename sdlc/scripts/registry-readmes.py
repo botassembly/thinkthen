@@ -332,9 +332,23 @@ def run_build(command, work, env, input):
     lock_path = os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock')
     if sys.platform == 'linux':
         supervisor = REPO / 'sdlc/scripts/build-admission.py'
-        return run_process([sys.executable, str(supervisor), '--lock', lock_path,
-                            '--priority', 'normal', '--timeout', '300', '--', *command],
-                           work, env, input, 300)
+        owned = [sys.executable, str(supervisor), '--lock', lock_path,
+                 '--priority', 'normal', '--timeout', '300', '--', *command]
+        # The supervisor bounds admission and compilation, then reaps every
+        # descendant before releasing its permit. Cleanup has no second deadline.
+        with subprocess.Popen(owned, cwd=work, env=env, stdin=subprocess.PIPE,
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                              text=True, start_new_session=True) as process:
+            try:
+                stdout, stderr = process.communicate(input)
+            except BaseException:
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    pass
+                process.communicate()
+                raise
+            return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
     import fcntl
     # macOS has no Linux subreaper; keep its bounded process-group fallback.
     # Children never inherit the exclusive lock.
