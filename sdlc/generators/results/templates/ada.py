@@ -245,6 +245,8 @@ def generate(root, graph, prepare, env, check):
                'thinkthen-requests.ads': spec,
                'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
                'thinkthen_session_c.ads': header(root, env)}
+    from templates.ada_values import outputs as value_outputs
+    outputs.update(value_outputs())
     from templates.ada_usage import outputs as usage_outputs
     outputs.update(usage_outputs((root / 'libraries/c/include/thinkthen.h').read_text()))
     for name, content in outputs.items():

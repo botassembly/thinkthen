@@ -19,7 +19,7 @@ Copy `thinkthen/examples/session_demo.adb` beside this project and run `gprbuild
 
 `Thinkthen.Sessions.Calls` supplies the named typed calls. Each takes its generated `Thinkthen.Requests.T_RequestCall` record. Callers populate records, discriminated alternatives and vectors. Generated adapters copy those records into native counted carriers. Missing optional fields stay missing, and present false stays false. Only schema-declared arbitrary JSON uses `JSON_Value`. Rust owns request admission, question grammar, files, images, cache and replay.
 
-A controlled `Session` owns cancellation and closes without waiting for provider work. `Push` and `Finish` accept generated descriptors and reader failures. `Next_Packet` blocks and transfers an independent controlled `Packet`. Recognition can produce several aggregate packets followed by an empty remainder; retain every packet needed by your application. `View` borrows the complete generated result graph while its packet lives, including typed answers, observations, facts, failures, provenance and extensions. Closing a session or engine leaves previously returned packets readable. Join concurrent Ada tasks before finalizing their owners.
+A controlled `Session` owns cancellation and closes without waiting for provider work. `Push` and `Finish` accept generated descriptors and reader failures. `Next_Packet` blocks and transfers an independent controlled `Packet`. Recognition returns one aggregate packet followed by the terminal packet. Retain every packet needed by your application. `View` borrows the complete generated result graph while its packet lives, including typed answers, observations, facts, failures, provenance and extensions. Closing a session or engine leaves previously returned packets readable. Join concurrent Ada tasks before finalizing their owners.
 
 Immediate native failures raise the declared exceptions in `Thinkthen.Sessions`. Execution failures appear in the terminal packet and its typed `Status`. A failure before execution can have missing facts. Check presence before dereferencing. `State` distinguishes missing, null and present. Check kind tags before selecting unchecked union arms.
 
@@ -36,8 +36,10 @@ The convenience named calls create an engine using the ordinary environment and 
 | `Thinkthen.Native` handle operations | Controlled session and packet owners; generated C declarations remain available for direct ABI callers |
 | `Call`, `Files`, label constructors and JSON readers | Generated request records, native source descriptors and typed packet fields |
 | Root cancellation token | `Thinkthen.Sessions.Cancel` |
-| Root `Plan` JSON builder | Canonical preview through generated native `thinkthen_request_plan_json` |
+| Root `Plan` JSON builder | `Thinkthen.Sessions.Calls.Plan` using the same typed request records |
 
-The old JSON `Plan` wrapper is removed. Preview remains available to direct ABI callers through generated native declarations and their byte-buffer lifetime support. This package claims no named typed Ada Plan result.
+The generated `Thinkthen.Sessions.Calls.Plan (Client, Request)` uses native typed admission and the existing Rust preview serializer. Its returned string owns the preview bytes and remains valid after request and engine finalization. Planning sends no judgment request.
+
+`Thinkthen.Values` supplies owned native value trees. Construct strings, booleans, nulls, exact decimal spellings, arrays and ordered objects directly. Copying a value owns an independent nested tree. `Has_Field` distinguishes a missing object member from a member holding `Null_Item`; `Field_Name` preserves object order. `As_String` preserves counted characters, including embedded zero bytes. No document parser is provided.
 
 The old host judging APIs, handwritten C carriers, JSON validator and label grammar are removed. The generated header package declares the current native session interface. The routine archive consumer exercises the shared named functions, presence, failure facts, cache and replay, files, ordered images, cancellation, cleanup, explicit overflow refusal and compiler-measured layouts. Full parity and platform checks belong to the release suite.
