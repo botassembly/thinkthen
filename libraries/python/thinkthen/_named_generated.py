@@ -1,4 +1,160 @@
 # Generated from the canonical request schema; do not edit.
+from __future__ import annotations
+from os import PathLike
+from typing import Literal, TypedDict, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from . import CancelToken
+Labels = (
+    list[str] | dict[str, str] | dict[str, object] | type[object] | tuple[object, ...]
+)
+RequestBatch = Union[int, str]
+DisabledCache = Literal[False]
+CacheDocument = Union[str, DisabledCache]
+
+
+class EngineSettings(TypedDict, total=False):
+    backend: str | None
+    base_url: str | None
+    batch: RequestBatch | None
+    cache: CacheDocument | PathLike[str] | None
+    max_estimated_input_tokens_total: Union[int, None] | None
+    max_request_bytes: int | None
+    max_requests: Union[int, None] | None
+    max_requests_total: Union[int, None] | None
+    max_retries: int | None
+    model: str | None
+    profile: str | PathLike[str] | None
+    proxy: object | None
+    record: str | PathLike[str] | None
+    refresh_cache: bool | None
+    replay: str | PathLike[str] | None
+    throttle: int | None
+    timeout: int | None
+    usd_per_million_input: str | None
+    usd_per_million_output: str | None
+
+
+class _RecognitionExampleEntityRequired(TypedDict):
+    start: int
+    end: int
+    kind: str
+
+
+class RecognitionExampleEntity(_RecognitionExampleEntityRequired, total=False):
+    pass
+
+
+class _RecognitionExampleTextRequired(TypedDict):
+    text: str
+    entities: list[RecognitionExampleEntity]
+
+
+class RecognitionExampleText(_RecognitionExampleTextRequired, total=False):
+    kinds: list[str]
+
+
+RecognitionExample = Union[str, RecognitionExampleText]
+RecognitionMode = Union[Literal["whole"], Literal["boundary_only"]]
+RequestThreshold = Union[float, str]
+
+
+class _RecognitionSeedSpanRequired(TypedDict):
+    start: int
+    end: int
+
+
+class RecognitionSeedSpan(_RecognitionSeedSpanRequired, total=False):
+    kind: str
+
+
+class RecognitionStageContext(TypedDict, total=False):
+    boundary: str
+    kind_edge: str
+    relation: str
+
+
+class RequestOptions(TypedDict, total=False):
+    attempts: bool
+    batch: RequestBatch
+    context: str
+    context_field: str
+    deadline_ms: int
+    details: bool
+    examples: list[RecognitionExample]
+    examples_field: str
+    field: list[str]
+    files_only: bool
+    max_requests_total: int
+    mode: RecognitionMode
+    model: str
+    none: bool
+    options_field: str
+    relation_threshold: RequestThreshold
+    seed_spans: list[RecognitionSeedSpan]
+    seed_spans_field: str
+    snippet_pieces: int
+    stage_context: RecognitionStageContext
+    threshold: RequestThreshold
+    top: int
+
+
+class CallOptions(RequestOptions, total=False):
+    token: CancelToken
+    on: str | list[str]
+
+
+class DecideOptions(CallOptions, total=False):
+    true: object
+    false: object
+
+
+class ChooseOptions(CallOptions, total=False):
+    options: Labels
+
+
+class TagOptions(CallOptions, total=False):
+    labels: Labels
+
+
+class ScoreOptions(CallOptions, total=False):
+    levels: Labels | list[float]
+
+
+class FilterOptions(DecideOptions):
+    pass
+
+
+class RankOptions(DecideOptions):
+    pass
+
+
+class FindOptions(CallOptions):
+    pass
+
+
+class AnnotateOptions(CallOptions):
+    pass
+
+
+class RelateOptions(CallOptions, total=False):
+    relations: dict[str, tuple[str, str]] | list[tuple[str, str, str]]
+    either: list[str]
+
+
+class RecognizeOptions(RelateOptions, total=False):
+    kinds: Labels
+    descriptions: dict[str, object]
+    instructions: object
+    entity_definition: object
+
+
+class PlanOptions(
+    DecideOptions, ChooseOptions, TagOptions, ScoreOptions, RecognizeOptions
+):
+    pass
+
+
 MISSING = object()
 
 

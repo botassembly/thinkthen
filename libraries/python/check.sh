@@ -80,7 +80,7 @@ fi
 export THINKTHEN_TEST_REPO="$repo"
 if [ -z "${THINKTHEN_PARITY_PREPARED:-}" ] && [ "${THINKTHEN_COVERAGE_PHASE:-shared}" = shared ]; then
     CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-$repo/target} "$python" -m pytest -q -p no:cacheprovider --tb=short "$scratch/tests" -m 'not stress'
-    "$python" -m mypy --strict tests/native_types.py
+    "$python" -m mypy --strict tests/native_types.py tests/options_types.py
 fi
 [ "${THINKTHEN_COVERAGE_PHASE:-}" != shared ] || exit 0
 [ -z "${THINKTHEN_PARITY_PREPARE:-}" ] || exit 0

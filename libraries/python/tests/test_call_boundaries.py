@@ -129,3 +129,23 @@ def test_inline_label_conversion_preserves_order_and_refuses_invalid_labels_with
     ''', child_env(backend, tmp_path))
     assert output.splitlines() == ["ordered labels"]
     assert backend.count() == 2
+
+
+def test_native_typed_controls_preview_and_null_refusals_send_nothing(backend, tmp_path):
+    output = run('''
+        import thinkthen as tt
+        engine = tt.Engine(cache=False, backend=None, model=None, max_requests_total=0)
+        plan = engine.plan('decide', 'Late?', ['note'], attempts=True, details=True,
+                           batch=1, deadline_ms=-1, context='', model='local', threshold=.5)
+        assert plan['records'] == plan['requests'] == 1
+        assert plan['estimated_bytes'] > 0
+        assert plan['upper_bound'] is False
+        for controls in ({'model': None}, {'deadline_ms': None}, {'context': None},
+                         {'attempts': 'yes'}, {'seed_spans': [{'start': 0}]}, {'stage_context': {'boundary': 9}}):
+            try: engine.plan('decide', 'Late?', ['note'], **controls)
+            except tt.UsageError as error: assert error.kind == 'usage'
+            else: raise AssertionError('malformed control admitted')
+        print('typed controls')
+    ''', child_env(backend, tmp_path))
+    assert output.splitlines() == ['typed controls']
+    assert backend.count() == 0
