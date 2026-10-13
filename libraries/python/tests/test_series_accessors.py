@@ -8,6 +8,65 @@ from backend_settings import configuration, isolated
 CORPUS = REPO / "conformance/cases.json"
 
 
+@pytest.mark.parametrize("readings,expected,dtype", [
+    ({'true': 'refund', 'false': 'retain'}, ['refund', 'retain'], 'String'),
+    ({'true': {'action': 'refund'}, 'false': {'action': 'retain'}},
+     [{'action': 'refund'}, {'action': 'retain'}], 'Struct'),
+    ({'true': ['refund'], 'false': ['retain', 'review']}, [['refund'], ['retain', 'review']], 'List'),
+    ({'true': {'a': 1}, 'false': {'b': 2}}, [{'a': 1}, {'b': 2}], 'Object'),
+    ({'true': [1], 'false': [True]}, [[1], [True]], 'Object'),
+    ({'true': [1.0], 'false': [9007199254740993]}, [[1.0], [9007199254740993]], 'Object'),
+    ({'true': 'refund'}, ['refund', False], 'Object'),
+    ({'false': 'retain'}, [True, 'retain'], 'Object'),
+    ({'true': {'action': 'refund'}, 'false': 'retain'}, [{'action': 'refund'}, 'retain'], 'Object'),
+])
+def test_polars_question_files_preserve_authored_readings(backend, tmp_path, readings, expected, dtype):
+    question = tmp_path / 'refund.json'
+    question.write_text(json.dumps({'decide': 'Does the writer ask for a refund?', **readings}))
+    recording = tmp_path / 'recording'
+    printed = run(f'''
+        import json, threading, polars as pl, thinkthen as tt
+        from http.server import BaseHTTPRequestHandler, HTTPServer
+        class Reply(BaseHTTPRequestHandler):
+            def log_message(self, *args): pass
+            def do_POST(self):
+                body = self.rfile.read(int(self.headers['Content-Length']))
+                self.server.calls += 1
+                probability = .9 if b'refund now' in body else .1
+                response = json.dumps({{'model': 'jev-latest', 'answers': {{'q1': {{'type': 'noul', 'noul': probability}}}},
+                                       'usage': {{'input_tokens': 10, 'output_tokens': 2}}}}).encode()
+                self.send_response(200)
+                self.send_header("Connection", "close")
+                self.send_header('Content-Length', str(len(response)))
+                self.end_headers()
+                self.wfile.write(response)
+        server = HTTPServer(('127.0.0.1', 0), Reply); server.calls = 0
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        address = f'http://127.0.0.1:{{server.server_port}}/v1'
+        source = pl.Series('body', ['refund now', None, 'good morning'])
+        question = tt.QuestionSource(path={str(question)!r})
+        with tt.Engine(cache=False, batch=1, base_url=address, record={str(recording)!r}) as engine:
+            result = engine.decide(question, source)
+            assert json.dumps([row.value for row in result.results], sort_keys=True) == json.dumps({expected!r}, sort_keys=True)
+            values = result.value
+            assert json.dumps(values.to_list(), sort_keys=True) == json.dumps([{expected[0]!r}, None, {expected[1]!r}], sort_keys=True)
+            assert values.dtype.base_type() == getattr(pl, {dtype!r})
+            assert result.positions == (0, 2)
+            assert result.facts.records == 2 and result.facts.requests_sent == 2
+            assert result.probability.to_list() == [.9, None, .1]
+            assert source.to_list() == ['refund now', None, 'good morning']
+        with tt.Engine(cache=False, batch=1, base_url=address, replay={str(recording)!r}) as engine:
+            replayed = engine.decide(question, source)
+            assert json.dumps(replayed.value.to_list(), sort_keys=True) == json.dumps(values.to_list(), sort_keys=True)
+            assert replayed.facts.requests_sent == 0 and replayed.facts.records == 2
+        assert server.calls == 2
+        server.shutdown(); server.server_close()
+        print('authored readings retained')
+    ''', child_env(backend, tmp_path))
+    assert printed.strip() == 'authored readings retained'
+    assert backend.count() == 0
+
+
 def test_polars_frame_answers_keep_native_types_false_null_and_field_projection(backend, tmp_path):
     printed = run('''
         import polars as pl, thinkthen as tt
