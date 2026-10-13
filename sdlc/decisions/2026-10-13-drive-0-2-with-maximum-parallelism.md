@@ -74,3 +74,7 @@ Language lanes do not wait for G1. A language lane starts with the items that do
 - When every lane in the tickets above has merged, the coordinator runs the 0543 candidate checklist.
 - Public texts and the DuckDB listing reach Ian for approval through the PM as soon as they pass the fresh-reader test. They never wait for the candidate.
 - Publishing, the registry pushes, the DuckDB PR push and the thinkthen.dev deploy wait for Ian's one go.
+
+## Agent slots
+
+- When the harness caps native developer agents, keep those slots on the critical path: G1 first, then G2 and the hardest language lanes. Hand self-contained grunt work to `pi-job` and verify each report before merging: R help pages, Ruby RBS, ratchet scope changes, test-folder records, README fixes and example rewrites.
