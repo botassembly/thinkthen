@@ -7,5 +7,6 @@
     "hook"
   ],
   "extension": ".dart",
-  "max": 6280
+  "max": 623,
+  "scope": "handwritten-production"
 }

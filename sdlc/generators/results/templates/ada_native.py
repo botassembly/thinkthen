@@ -196,7 +196,7 @@ end UTF8;
 def plan(function_schema, header):
     import re
     function_names = ', '.join('when ' + identifier('RequestFunction_' + function) + ' => "' + function + '"' for function in enum_values(function_schema))
-    return ['function Plan (Client : Engine; Request : T_RequestCall) return String is',
+    return ['function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value is',
             'use Thinkthen_Session_C; use Interfaces.C; use Interfaces.C.Strings;',
             'Storage : Thinkthen.Requests.Native.Arena;',
             'type Arguments_Access is access constant thinkthen_request_arguments_v1;',
@@ -204,11 +204,12 @@ def plan(function_schema, header):
             'Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));',
             'Function_Name : constant String := (case Request.T_function is ' + function_names + ');',
             'Function_Bytes : chars_ptr := Null_Ptr; Surface : chars_ptr := Null_Ptr;',
-            'Output : aliased chars_ptr := Null_Ptr; Length : aliased size_t := 0; Code : int;',
+            'type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json_v1; Code : int;',
             'begin', 'Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");',
-            "Code := thinkthen_request_plan_typed_json (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address, Length'Access);",
+            "Code := thinkthen_request_plan_typed_value (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address);",
             'Free (Function_Bytes); Free (Surface);',
             'Thinkthen_Kinds.Check (Code);',
-            'declare Result : constant String := Text ((data => Output, len => Length)); begin thinkthen_free_string (Output); Output := Null_Ptr; return Result; end;',
-            'exception when others => Free (Function_Bytes); Free (Surface); thinkthen_free_string (Output); raise;',
+            'Thinkthen_Kinds.Check (thinkthen_value_view (Output, View\'Address));',
+            'declare Result : constant Thinkthen.Values.Value := Thinkthen.Native_Values.Read (View); begin thinkthen_value_free (Output); Output := null; return Result; end;',
+            'exception when others => Free (Function_Bytes); Free (Surface); thinkthen_value_free (Output); raise;',
             'end Plan;']

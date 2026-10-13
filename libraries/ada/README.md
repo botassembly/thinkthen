@@ -23,6 +23,8 @@ Copy `thinkthen/examples/session_demo.adb` beside this project and run `gprbuild
 
 `Completed` retains typed failure information, facts and its completed prefix when an answer accessor raises `Session_Failure` or `Answer_Cardinality_Error`. `Retained_Values` returns owned native values from that prefix. A successful accessor requires one valid final terminal and the scalar or aggregate cardinality prescribed by the shared answer contract. `Collect` also supports reading several projections from the same completion. `Requests_Sent`, `Records`, `Call_Id` and the other fact accessors return native values; optional fact fields preserve missing and null independently. All returned values survive packet and session finalization.
 
+`Thinkthen.Inputs` provides private typed questions, inputs, items and options. Its `Make_*`, `With_*` and `Get_*` functions construct and inspect native values; ordered maps and collections use ordinary Ada arrays. `Text_Question`, `Records_Input`, `Text_Item`, `Recognize_Question` and `Relate_Question` feed the friendly named overloads in `Thinkthen.Sessions.Calls`. `No_Options` preserves omission and `Some_Options` supplies an explicit options value. The private lowering child stays inside the implementation.
+
 A controlled `Session` owns cancellation and closes without waiting for provider work. `Push` and `Finish` accept generated descriptors and reader failures. `Next_Packet` blocks and transfers an independent controlled `Packet`. Recognition returns one aggregate packet followed by the terminal packet. Retain every packet needed by your application. `View` borrows the complete generated result graph while its packet lives, including typed answers, observations, facts, failures, provenance and extensions. Closing a session or engine leaves previously returned packets readable. Join concurrent Ada tasks before finalizing their owners.
 
 Immediate native failures raise the declared exceptions in `Thinkthen.Sessions`. Execution failures appear in the terminal packet and its typed `Status`. A failure before execution can have missing facts. Check presence before dereferencing. `State` distinguishes missing, null and present. Check kind tags before selecting unchecked union arms.
@@ -42,7 +44,7 @@ The convenience named calls create an engine using the ordinary environment and 
 | Root cancellation token | `Thinkthen.Sessions.Cancel` |
 | Root `Plan` JSON builder | `Thinkthen.Sessions.Calls.Plan` using the same typed request records |
 
-The generated `Thinkthen.Sessions.Calls.Plan (Client, Request)` uses native typed admission and the existing Rust preview serializer. Its returned string owns the preview bytes and remains valid after request and engine finalization. Planning sends no judgment request.
+The generated `Thinkthen.Sessions.Calls.Plan (Client, Request)` uses native typed admission and the existing Rust preview serializer. Its returned `Thinkthen.Values.Value` owns the native preview tree and remains valid after request and engine finalization. Read its fields with the typed value accessors. Planning sends no judgment request.
 
 `Thinkthen.Values` supplies owned native value trees. Construct strings, booleans, nulls, exact decimal spellings, arrays and ordered objects directly. Copying a value owns an independent nested tree. `Has_Field` distinguishes a missing object member from a member holding `Null_Item`; `Field_Name` preserves object order. `As_String` preserves counted characters, including embedded zero bytes. No document parser is provided.
 

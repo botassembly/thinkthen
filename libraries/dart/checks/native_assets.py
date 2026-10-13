@@ -12,8 +12,8 @@ def package_members(source):
                if (source / name).is_file()}
     if (source / 'native-assets.json').is_file():
         members.add('native-assets.json')
-    for folder in ('lib', 'hook', 'linux'):
-        members.update(str(path.relative_to(source)) for path in (source / folder).rglob('*') if path.is_file())
+    for folder in ('lib', 'hook', 'linux', 'example'):
+        members.update(str(path.relative_to(source)) for path in (source / folder).rglob('*') if path.is_file() and not any(part in ('.dart_tool', 'build') for part in path.relative_to(source).parts))
     return members
 
 

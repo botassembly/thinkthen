@@ -1,6 +1,6 @@
 {
   "name": "botassembly/thinkthen",
-  "description": "ThinkThen typed PHP client with its native library",
+  "description": "ThinkThen answers typed questions about text: decisions, labels, scores and selected records.",
   "type": "library",
   "license": "MIT",
   "require": {

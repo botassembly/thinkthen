@@ -1,43 +1,61 @@
 // Generated from the shared Rust graph. Do not edit.
-import 'values.dart';
+part of thinkthen_session;
 
-final class Annotation extends NativeObject {
-  Annotation._(super.json);
-  factory Annotation.read(Object? value) => Annotation._(readObject(value));
-  String get answerId => json["answer_id"] as String;
+final class Annotation extends _NativeValue {
+  Annotation._(super.fields);
+  factory Annotation.read(Object? value) => Annotation._(_readObject(value));
+  String get answerId => _fields["answer_id"] as String;
   Map<String, AnnotationMember> get answers =>
-      (json["answers"] as Map<String, Object?>)
+      (_fields["answers"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, AnnotationMember.read(v)));
-  Presence<String> get file => json.containsKey("file")
-      ? Presence.present(json["file"] as String)
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
       : const Presence.absent();
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Object? get input => json["input"];
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  Object? get input => _fields["input"];
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  Presence<Position> get position => json.containsKey("position")
-      ? Presence.present(Position.read(json["position"]))
+  Meta get meta => Meta.read(_fields["meta"]);
+  Presence<Position> get position => _fields.containsKey("position")
+      ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
   Map<String, AnnotatedField> get value =>
-      (json["value"] as Map<String, Object?>)
+      (_fields["value"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, AnnotatedField.read(v)));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer_id",
+            "answers",
+            "file",
+            "first_line",
+            "index",
+            "input",
+            "last_line",
+            "meta",
+            "position",
+            "schema",
+            "source",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class AnnotationMember extends NativeObject {
-  AnnotationMember(super.json);
+sealed class AnnotationMember extends _NativeValue {
+  AnnotationMember(super.fields);
   factory AnnotationMember.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("answer_id")) return AnnotationMemberAnswerId.read(map);
     if (map.containsKey("failure_id"))
       return AnnotationMemberFailureId.read(map);
@@ -46,50 +64,83 @@ sealed class AnnotationMember extends NativeObject {
 }
 
 final class AnnotationMemberAnswerId extends AnnotationMember {
-  AnnotationMemberAnswerId._(super.json);
+  AnnotationMemberAnswerId._(super.fields);
   factory AnnotationMemberAnswerId.read(Object? value) =>
-      AnnotationMemberAnswerId._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+      AnnotationMemberAnswerId._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  String get request => json["request"] as String;
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  Presence<Usage> get usage => json.containsKey("usage")
-      ? Presence.present(Usage.read(json["usage"]))
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  String get request => _fields["request"] as String;
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  Presence<Usage> get usage => _fields.containsKey("usage")
+      ? Presence.present(Usage.read(_fields["usage"]))
       : const Presence.absent();
-  Value get value => Value.read(json["value"]);
+  Value get value => Value.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "observations",
+            "question",
+            "question_sources",
+            "request",
+            "threshold",
+            "usage",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class AnnotationMemberFailureId extends AnnotationMember {
-  AnnotationMemberFailureId._(super.json);
+  AnnotationMemberFailureId._(super.fields);
   factory AnnotationMemberFailureId.read(Object? value) =>
-      AnnotationMemberFailureId._(readObject(value));
-  Failure get failure => Failure.read(json["failure"]);
-  String get failureId => json["failure_id"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+      AnnotationMemberFailureId._(_readObject(value));
+  Failure get failure => Failure.read(_fields["failure"]);
+  String get failureId => _fields["failure_id"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  String get request => json["request"] as String;
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  Presence<Usage> get usage => json.containsKey("usage")
-      ? Presence.present(Usage.read(json["usage"]))
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  String get request => _fields["request"] as String;
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  Presence<Usage> get usage => _fields.containsKey("usage")
+      ? Presence.present(Usage.read(_fields["usage"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "failure",
+            "failure_id",
+            "observations",
+            "question",
+            "question_sources",
+            "request",
+            "threshold",
+            "usage"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class AnnotationValue extends NativeObject {
-  AnnotationValue(super.json);
+sealed class AnnotationValue extends _NativeValue {
+  AnnotationValue(super.fields);
   factory AnnotationValue.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "decision") return AnnotationValueDecision.read(map);
     if (map["kind"] == "choice") return AnnotationValueChoice.read(map);
     if (map["kind"] == "score") return AnnotationValueScore.read(map);
@@ -100,367 +151,559 @@ sealed class AnnotationValue extends NativeObject {
 }
 
 final class AnnotationValueChoice extends AnnotationValue {
-  AnnotationValueChoice._(super.json);
+  AnnotationValueChoice._(super.fields);
   factory AnnotationValueChoice.read(Object? value) =>
-      AnnotationValueChoice._(readObject(value));
-  String get kind => json["kind"] as String;
-  String? get value => json["value"] == null ? null : json["value"] as String;
+      AnnotationValueChoice._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String? get value =>
+      _fields["value"] == null ? null : _fields["value"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class AnnotationValueDecision extends AnnotationValue {
-  AnnotationValueDecision._(super.json);
+  AnnotationValueDecision._(super.fields);
   factory AnnotationValueDecision.read(Object? value) =>
-      AnnotationValueDecision._(readObject(value));
-  String get kind => json["kind"] as String;
-  bool? get value => json["value"] == null ? null : json["value"] as bool;
+      AnnotationValueDecision._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  bool? get value => _fields["value"] == null ? null : _fields["value"] as bool;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class AnnotationValueFailed extends AnnotationValue {
-  AnnotationValueFailed._(super.json);
+  AnnotationValueFailed._(super.fields);
   factory AnnotationValueFailed.read(Object? value) =>
-      AnnotationValueFailed._(readObject(value));
-  String get kind => json["kind"] as String;
-  Failure get value => Failure.read(json["value"]);
+      AnnotationValueFailed._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  Failure get value => Failure.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class AnnotationValueScore extends AnnotationValue {
-  AnnotationValueScore._(super.json);
+  AnnotationValueScore._(super.fields);
   factory AnnotationValueScore.read(Object? value) =>
-      AnnotationValueScore._(readObject(value));
-  String get kind => json["kind"] as String;
-  num get value => json["value"] as num;
+      AnnotationValueScore._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  num get value => _fields["value"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class AnnotationValueTags extends AnnotationValue {
-  AnnotationValueTags._(super.json);
+  AnnotationValueTags._(super.fields);
   factory AnnotationValueTags.read(Object? value) =>
-      AnnotationValueTags._(readObject(value));
-  String get kind => json["kind"] as String;
-  List<String> get value =>
-      (json["value"] as List).map((v) => v as String).toList(growable: false);
+      AnnotationValueTags._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  List<String> get value => (_fields["value"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class Answers extends NativeObject {
-  Answers._(super.json);
-  factory Answers.read(Object? value) => Answers._(readObject(value));
-  List<RelationMember> get questions => (json["questions"] as List)
+final class Answers extends _NativeValue {
+  Answers._(super.fields);
+  factory Answers.read(Object? value) => Answers._(_readObject(value));
+  List<RelationMember> get questions => (_fields["questions"] as List)
       .map((v) => RelationMember.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["questions"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class AtomicArrayOfString extends NativeObject {
-  AtomicArrayOfString._(super.json);
-  factory AtomicArrayOfString.read(Object? value) =>
-      AtomicArrayOfString._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class TagResult extends _NativeValue {
+  TagResult._(super.fields);
+  factory TagResult.read(Object? value) => TagResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  List<String> get value =>
-      (json["value"] as List).map((v) => v as String).toList(growable: false);
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  List<String> get value => (_fields["value"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AtomicDecideValue extends NativeObject {
-  AtomicDecideValue._(super.json);
-  factory AtomicDecideValue.read(Object? value) =>
-      AtomicDecideValue._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class DecisionResult extends _NativeValue {
+  DecisionResult._(super.fields);
+  factory DecisionResult.read(Object? value) =>
+      DecisionResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  DecideValue get value => DecideValue.read(json["value"]);
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  DecideValue get value => DecideValue.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AtomicNonZeroUsize extends NativeObject {
-  AtomicNonZeroUsize._(super.json);
-  factory AtomicNonZeroUsize.read(Object? value) =>
-      AtomicNonZeroUsize._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class RankResult extends _NativeValue {
+  RankResult._(super.fields);
+  factory RankResult.read(Object? value) => RankResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  BigInt get value => readInteger(json["value"]);
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  BigInt get value => _readInteger(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AtomicNullableString extends NativeObject {
-  AtomicNullableString._(super.json);
-  factory AtomicNullableString.read(Object? value) =>
-      AtomicNullableString._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class ChoiceResult extends _NativeValue {
+  ChoiceResult._(super.fields);
+  factory ChoiceResult.read(Object? value) =>
+      ChoiceResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  String? get value => json["value"] == null ? null : json["value"] as String;
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  String? get value =>
+      _fields["value"] == null ? null : _fields["value"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AtomicBoolean extends NativeObject {
-  AtomicBoolean._(super.json);
-  factory AtomicBoolean.read(Object? value) =>
-      AtomicBoolean._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class FilterResult extends _NativeValue {
+  FilterResult._(super.fields);
+  factory FilterResult.read(Object? value) =>
+      FilterResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  bool get value => json["value"] as bool;
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  bool get value => _fields["value"] as bool;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AtomicDouble extends NativeObject {
-  AtomicDouble._(super.json);
-  factory AtomicDouble.read(Object? value) => AtomicDouble._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+final class ScoreResult extends _NativeValue {
+  ScoreResult._(super.fields);
+  factory ScoreResult.read(Object? value) => ScoreResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<List<RankMember>> get members => json.containsKey("members")
-      ? Presence.present((json["members"] as List)
+  Presence<List<RankMember>> get members => _fields.containsKey("members")
+      ? Presence.present((_fields["members"] as List)
           .map((v) => RankMember.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  Presence<String> get questionName => json.containsKey("question_name")
-      ? Presence.present(json["question_name"] as String)
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  Presence<String> get questionName => _fields.containsKey("question_name")
+      ? Presence.present(_fields["question_name"] as String)
       : const Presence.absent();
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"] == null ? null : json["threshold"];
-  num get value => json["value"] as num;
+  Object? get threshold =>
+      _fields["threshold"] == null ? null : _fields["threshold"];
+  num get value => _fields["value"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "index",
+            "input",
+            "members",
+            "meta",
+            "question",
+            "question_name",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Attempt extends NativeObject {
-  Attempt._(super.json);
-  factory Attempt.read(Object? value) => Attempt._(readObject(value));
-  BigInt get ordinal => readInteger(json["ordinal"]);
-  String get outcome => json["outcome"] as String;
-  Presence<String> get requestId => json.containsKey("request_id")
-      ? Presence.present(json["request_id"] as String)
+final class Attempt extends _NativeValue {
+  Attempt._(super.fields);
+  factory Attempt.read(Object? value) => Attempt._(_readObject(value));
+  BigInt get ordinal => _readInteger(_fields["ordinal"]);
+  String get outcome => _fields["outcome"] as String;
+  Presence<String> get requestId => _fields.containsKey("request_id")
+      ? Presence.present(_fields["request_id"] as String)
       : const Presence.absent();
-  String get requestSha256 => json["request_sha256"] as String;
-  String get sdkRequestId => json["sdk_request_id"] as String;
-  Presence<BigInt> get serverMs => json.containsKey("server_ms")
-      ? Presence.present(readInteger(json["server_ms"]))
+  String get requestSha256 => _fields["request_sha256"] as String;
+  String get sdkRequestId => _fields["sdk_request_id"] as String;
+  Presence<BigInt> get serverMs => _fields.containsKey("server_ms")
+      ? Presence.present(_readInteger(_fields["server_ms"]))
       : const Presence.absent();
-  Presence<BigInt> get status => json.containsKey("status")
-      ? Presence.present(readInteger(json["status"]))
+  Presence<BigInt> get status => _fields.containsKey("status")
+      ? Presence.present(_readInteger(_fields["status"]))
       : const Presence.absent();
-  BigInt get wallMs => readInteger(json["wall_ms"]);
+  BigInt get wallMs => _readInteger(_fields["wall_ms"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "ordinal",
+            "outcome",
+            "request_id",
+            "request_sha256",
+            "sdk_request_id",
+            "server_ms",
+            "status",
+            "wall_ms"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Batch {
+final class Batch implements _EncodedValue {
   final Object? value;
   const Batch._(this.value);
   factory Batch.read(Object? value) => value is Batch ? value : Batch._(value);
-  Object? toJson() => value;
-  const Batch.alternative0(BigInt this.value);
-  BigInt get asAlternative0 => readInteger(value);
-  const Batch.alternative1(String this.value);
-  String get asAlternative1 => value as String;
+  Object? _toValue() => value;
+  const Batch.integer(BigInt this.value);
+  BigInt get asInteger => _readInteger(value);
+  const Batch.text(String this.value);
+  String get asText => value as String;
 }
 
-final class BoundaryOdds extends NativeObject {
-  BoundaryOdds._(super.json);
-  factory BoundaryOdds.read(Object? value) => BoundaryOdds._(readObject(value));
-  List<PieceOdds> get pieces => (json["pieces"] as List)
+final class BoundaryOdds extends _NativeValue {
+  BoundaryOdds._(super.fields);
+  factory BoundaryOdds.read(Object? value) =>
+      BoundaryOdds._(_readObject(value));
+  List<PieceOdds> get pieces => (_fields["pieces"] as List)
       .map((v) => PieceOdds.read(v))
       .toList(growable: false);
-  List<BoundaryProposal> get proposals => (json["proposals"] as List)
+  List<BoundaryProposal> get proposals => (_fields["proposals"] as List)
       .map((v) => BoundaryProposal.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["pieces", "proposals"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class BoundaryProposal extends NativeObject {
-  BoundaryProposal._(super.json);
+final class BoundaryProposal extends _NativeValue {
+  BoundaryProposal._(super.fields);
   factory BoundaryProposal.read(Object? value) =>
-      BoundaryProposal._(readObject(value));
-  BigInt get end => readInteger(json["end"]);
-  BigInt get length => readInteger(json["length"]);
-  num get probability => json["probability"] as num;
-  BigInt get start => readInteger(json["start"]);
-  String get text => json["text"] as String;
+      BoundaryProposal._(_readObject(value));
+  BigInt get end => _readInteger(_fields["end"]);
+  BigInt get length => _readInteger(_fields["length"]);
+  num get probability => _fields["probability"] as num;
+  BigInt get start => _readInteger(_fields["start"]);
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["end", "length", "probability", "start", "text"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class CallError extends NativeObject {
-  CallError._(super.json);
-  factory CallError.read(Object? value) => CallError._(readObject(value));
-  Error get error => Error.read(json["error"]);
-  Presence<Facts> get facts => json.containsKey("facts")
-      ? Presence.present(Facts.read(json["facts"]))
+final class CallError extends _NativeValue {
+  CallError._(super.fields);
+  factory CallError.read(Object? value) => CallError._(_readObject(value));
+  Error get error => Error.read(_fields["error"]);
+  Presence<Facts> get facts => _fields.containsKey("facts")
+      ? Presence.present(Facts.read(_fields["facts"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["error", "facts"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class DecideValue {
+final class DecideValue implements _EncodedValue {
   final Object? value;
   const DecideValue._(this.value);
   factory DecideValue.read(Object? value) =>
       value is DecideValue ? value : DecideValue._(value);
-  Object? toJson() => value;
-  const DecideValue.alternative0(bool? this.value);
-  bool? get asAlternative0 => value == null ? null : value as bool;
-  const DecideValue.alternative1(Object? this.value);
-  Object? get asAlternative1 => value;
+  Object? _toValue() => value;
+  const DecideValue.boolean(bool? this.value);
+  bool? get asBoolean => value == null ? null : value as bool;
+  const DecideValue.reading(Object? this.value);
+  Object? get asReading => value;
 }
 
-final class EntityDocument extends NativeObject {
-  EntityDocument._(super.json);
+final class EntityDocument extends _NativeValue {
+  EntityDocument._(super.fields);
   factory EntityDocument.read(Object? value) =>
-      EntityDocument._(readObject(value));
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+      EntityDocument._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class Error extends NativeObject {
-  Error._(super.json);
-  factory Error.read(Object? value) => Error._(readObject(value));
+final class Error extends _NativeValue {
+  Error._(super.fields);
+  factory Error.read(Object? value) => Error._(_readObject(value));
   Presence<EstimatedInputDenial> get estimatedInputDenial =>
-      json.containsKey("estimated_input_denial")
+      _fields.containsKey("estimated_input_denial")
           ? Presence.present(
-              EstimatedInputDenial.read(json["estimated_input_denial"]))
+              EstimatedInputDenial.read(_fields["estimated_input_denial"]))
           : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get message => json["message"] as String;
-  bool get retryable => json["retryable"] as bool;
-  Presence<SendBudgetDenial> get sendBudgetDenial =>
-      json.containsKey("send_budget_denial")
-          ? Presence.present(SendBudgetDenial.read(json["send_budget_denial"]))
-          : const Presence.absent();
-  Stopped get stopped => Stopped.read(json["stopped"]);
+  String get kind => _fields["kind"] as String;
+  String get message => _fields["message"] as String;
+  bool get retryable => _fields["retryable"] as bool;
+  Presence<SendBudgetDenial> get sendBudgetDenial => _fields
+          .containsKey("send_budget_denial")
+      ? Presence.present(SendBudgetDenial.read(_fields["send_budget_denial"]))
+      : const Presence.absent();
+  Stopped get stopped => Stopped.read(_fields["stopped"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "estimated_input_denial",
+            "kind",
+            "message",
+            "retryable",
+            "send_budget_denial",
+            "stopped"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class EstimatedInputDenial extends NativeObject {
-  EstimatedInputDenial(super.json);
+sealed class EstimatedInputDenial extends _NativeValue {
+  EstimatedInputDenial(super.fields);
   factory EstimatedInputDenial.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "initial_request")
       return EstimatedInputDenialInitialRequest.read(map);
     if (map["kind"] == "additional_request")
@@ -471,129 +714,263 @@ sealed class EstimatedInputDenial extends NativeObject {
 }
 
 final class EstimatedInputDenialAdditionalRequest extends EstimatedInputDenial {
-  EstimatedInputDenialAdditionalRequest._(super.json);
+  EstimatedInputDenialAdditionalRequest._(super.fields);
   factory EstimatedInputDenialAdditionalRequest.read(Object? value) =>
-      EstimatedInputDenialAdditionalRequest._(readObject(value));
-  String get kind => json["kind"] as String;
-  BigInt get limit => readInteger(json["limit"]);
+      EstimatedInputDenialAdditionalRequest._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  BigInt get limit => _readInteger(_fields["limit"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "limit"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class EstimatedInputDenialInitialRequest extends EstimatedInputDenial {
-  EstimatedInputDenialInitialRequest._(super.json);
+  EstimatedInputDenialInitialRequest._(super.fields);
   factory EstimatedInputDenialInitialRequest.read(Object? value) =>
-      EstimatedInputDenialInitialRequest._(readObject(value));
-  String get kind => json["kind"] as String;
-  BigInt get limit => readInteger(json["limit"]);
+      EstimatedInputDenialInitialRequest._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  BigInt get limit => _readInteger(_fields["limit"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "limit"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class EstimatedInputDenialRetry extends EstimatedInputDenial {
-  EstimatedInputDenialRetry._(super.json);
+  EstimatedInputDenialRetry._(super.fields);
   factory EstimatedInputDenialRetry.read(Object? value) =>
-      EstimatedInputDenialRetry._(readObject(value));
-  String get kind => json["kind"] as String;
-  BigInt get lastStatus => readInteger(json["last_status"]);
-  BigInt get limit => readInteger(json["limit"]);
+      EstimatedInputDenialRetry._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  BigInt get lastStatus => _readInteger(_fields["last_status"]);
+  BigInt get limit => _readInteger(_fields["limit"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "last_status", "limit"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Facts extends NativeObject {
-  Facts._(super.json);
-  factory Facts.read(Object? value) => Facts._(readObject(value));
-  Presence<List<Attempt>> get attempts => json.containsKey("attempts")
-      ? Presence.present((json["attempts"] as List)
+final class Facts extends _NativeValue {
+  Facts._(super.fields);
+  factory Facts.read(Object? value) => Facts._(_readObject(value));
+  Presence<List<Attempt>> get attempts => _fields.containsKey("attempts")
+      ? Presence.present((_fields["attempts"] as List)
           .map((v) => Attempt.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  BigInt get cacheAnswers => readInteger(json["cache_answers"]);
-  String get callId => json["call_id"] as String;
+  BigInt get cacheAnswers => _readInteger(_fields["cache_answers"]);
+  String get callId => _fields["call_id"] as String;
   Presence<String> get estimatedCostUsd =>
-      json.containsKey("estimated_cost_usd")
-          ? Presence.present(json["estimated_cost_usd"] as String)
+      _fields.containsKey("estimated_cost_usd")
+          ? Presence.present(_fields["estimated_cost_usd"] as String)
           : const Presence.absent();
   Presence<bool> get heldModelMismatch =>
-      json.containsKey("held_model_mismatch")
-          ? Presence.present(json["held_model_mismatch"] as bool)
+      _fields.containsKey("held_model_mismatch")
+          ? Presence.present(_fields["held_model_mismatch"] as bool)
           : const Presence.absent();
-  Presence<BigInt> get inputTokens => json.containsKey("input_tokens")
-      ? Presence.present(readInteger(json["input_tokens"]))
+  Presence<BigInt> get inputTokens => _fields.containsKey("input_tokens")
+      ? Presence.present(_readInteger(_fields["input_tokens"]))
       : const Presence.absent();
-  BigInt get largestRequestBytes => readInteger(json["largest_request_bytes"]);
+  BigInt get largestRequestBytes =>
+      _readInteger(_fields["largest_request_bytes"]);
   BigInt? get largestRequestEstimatedInputTokens =>
-      json["largest_request_estimated_input_tokens"] == null
+      _fields["largest_request_estimated_input_tokens"] == null
           ? null
-          : readInteger(json["largest_request_estimated_input_tokens"]);
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+          : _readInteger(_fields["largest_request_estimated_input_tokens"]);
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<BigInt> get outputTokens => json.containsKey("output_tokens")
-      ? Presence.present(readInteger(json["output_tokens"]))
+  Presence<BigInt> get outputTokens => _fields.containsKey("output_tokens")
+      ? Presence.present(_readInteger(_fields["output_tokens"]))
       : const Presence.absent();
-  BigInt get records => readInteger(json["records"]);
-  BigInt get requestsSent => readInteger(json["requests_sent"]);
-  num get seconds => json["seconds"] as num;
-  String get tokenEstimateMethod => json["token_estimate_method"] as String;
-  Presence<PersistenceObservation> get usagePersistence => json
-          .containsKey("usage_persistence")
-      ? Presence.present(PersistenceObservation.read(json["usage_persistence"]))
-      : const Presence.absent();
+  BigInt get records => _readInteger(_fields["records"]);
+  BigInt get requestsSent => _readInteger(_fields["requests_sent"]);
+  num get seconds => _fields["seconds"] as num;
+  String get tokenEstimateMethod => _fields["token_estimate_method"] as String;
+  Presence<PersistenceObservation> get usagePersistence =>
+      _fields.containsKey("usage_persistence")
+          ? Presence.present(
+              PersistenceObservation.read(_fields["usage_persistence"]))
+          : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "attempts",
+            "cache_answers",
+            "call_id",
+            "estimated_cost_usd",
+            "held_model_mismatch",
+            "input_tokens",
+            "largest_request_bytes",
+            "largest_request_estimated_input_tokens",
+            "model",
+            "output_tokens",
+            "records",
+            "requests_sent",
+            "seconds",
+            "token_estimate_method",
+            "usage_persistence"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Find extends NativeObject {
-  Find._(super.json);
-  factory Find.read(Object? value) => Find._(readObject(value));
-  FindAnswer get answer => FindAnswer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<FindCandidate>> get candidates => json.containsKey("candidates")
-      ? Presence.present((json["candidates"] as List)
-          .map((v) => FindCandidate.read(v))
+final class Find extends _NativeValue {
+  Find._(super.fields);
+  factory Find.read(Object? value) => Find._(_readObject(value));
+  FindAnswer get answer => FindAnswer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<FindCandidate>> get candidates =>
+      _fields.containsKey("candidates")
+          ? Presence.present((_fields["candidates"] as List)
+              .map((v) => FindCandidate.read(v))
+              .toList(growable: false))
+          : const Presence.absent();
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
+      : const Presence.absent();
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
+      : const Presence.absent();
+  BigInt? get index =>
+      _fields["index"] == null ? null : _readInteger(_fields["index"]);
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
+      : const Presence.absent();
+  Meta get meta => Meta.read(_fields["meta"]);
+  Presence<Position> get position => _fields.containsKey("position")
+      ? Presence.present(Position.read(_fields["position"]))
+      : const Presence.absent();
+  FindQuestionInfo get question => FindQuestionInfo.read(_fields["question"]);
+  String get schema => _fields["schema"] as String;
+  Object? get threshold => _fields["threshold"];
+  Object? get value => _fields["value"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "candidates",
+            "file",
+            "first_line",
+            "index",
+            "last_line",
+            "meta",
+            "position",
+            "question",
+            "schema",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class FindCandidate extends _NativeValue {
+  FindCandidate._(super.fields);
+  factory FindCandidate.read(Object? value) =>
+      FindCandidate._(_readObject(value));
+  BigInt? get index =>
+      _fields["index"] == null ? null : _readInteger(_fields["index"]);
+  Object? get input => _fields["input"];
+  num get probability => _fields["probability"] as num;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
+      : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["index", "input", "probability", "source"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class Image extends _NativeValue {
+  Image._(super.fields);
+  factory Image.read(Object? value) => Image._(_readObject(value));
+  String get base64 => _fields["base64"] as String;
+  BigInt get height => _readInteger(_fields["height"]);
+  String get media => _fields["media"] as String;
+  BigInt get width => _readInteger(_fields["width"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["base64", "height", "media", "width"].contains(entry.key))
+            entry.key: entry.value
+      });
+}
+
+final class FailureFacts extends _NativeValue {
+  FailureFacts._(super.fields);
+  factory FailureFacts.read(Object? value) =>
+      FailureFacts._(_readObject(value));
+  Presence<List<Attempt>> get attempts => _fields.containsKey("attempts")
+      ? Presence.present((_fields["attempts"] as List)
+          .map((v) => Attempt.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get file => json.containsKey("file")
-      ? Presence.present(json["file"] as String)
+  BigInt get cacheAnswers => _readInteger(_fields["cache_answers"]);
+  Presence<String> get callId => _fields.containsKey("call_id")
+      ? Presence.present(_fields["call_id"] as String)
       : const Presence.absent();
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  Presence<String> get estimatedCostUsd =>
+      _fields.containsKey("estimated_cost_usd")
+          ? Presence.present(_fields["estimated_cost_usd"] as String)
+          : const Presence.absent();
+  Presence<bool> get heldModelMismatch =>
+      _fields.containsKey("held_model_mismatch")
+          ? Presence.present(_fields["held_model_mismatch"] as bool)
+          : const Presence.absent();
+  Presence<BigInt> get inputTokens => _fields.containsKey("input_tokens")
+      ? Presence.present(_readInteger(_fields["input_tokens"]))
       : const Presence.absent();
-  BigInt? get index =>
-      json["index"] == null ? null : readInteger(json["index"]);
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  BigInt get largestRequestBytes =>
+      _readInteger(_fields["largest_request_bytes"]);
+  BigInt? get largestRequestEstimatedInputTokens =>
+      _fields["largest_request_estimated_input_tokens"] == null
+          ? null
+          : _readInteger(_fields["largest_request_estimated_input_tokens"]);
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  Presence<Position> get position => json.containsKey("position")
-      ? Presence.present(Position.read(json["position"]))
+  Presence<BigInt> get outputTokens => _fields.containsKey("output_tokens")
+      ? Presence.present(_readInteger(_fields["output_tokens"]))
       : const Presence.absent();
-  ReadableQuestion2 get question => ReadableQuestion2.read(json["question"]);
-  String get schema => json["schema"] as String;
-  Object? get threshold => json["threshold"];
-  Object? get value => json["value"];
+  BigInt get records => _readInteger(_fields["records"]);
+  BigInt get requestsSent => _readInteger(_fields["requests_sent"]);
+  num get seconds => _fields["seconds"] as num;
+  String get tokenEstimateMethod => _fields["token_estimate_method"] as String;
+  Presence<PersistenceObservation> get usagePersistence =>
+      _fields.containsKey("usage_persistence")
+          ? Presence.present(
+              PersistenceObservation.read(_fields["usage_persistence"]))
+          : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "attempts",
+            "cache_answers",
+            "call_id",
+            "estimated_cost_usd",
+            "held_model_mismatch",
+            "input_tokens",
+            "largest_request_bytes",
+            "largest_request_estimated_input_tokens",
+            "model",
+            "output_tokens",
+            "records",
+            "requests_sent",
+            "seconds",
+            "token_estimate_method",
+            "usage_persistence"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class FindCandidate extends NativeObject {
-  FindCandidate._(super.json);
-  factory FindCandidate.read(Object? value) =>
-      FindCandidate._(readObject(value));
-  BigInt? get index =>
-      json["index"] == null ? null : readInteger(json["index"]);
-  Object? get input => json["input"];
-  num get probability => json["probability"] as num;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
-      : const Presence.absent();
-}
-
-final class Image extends NativeObject {
-  Image._(super.json);
-  factory Image.read(Object? value) => Image._(readObject(value));
-  String get base64 => json["base64"] as String;
-  BigInt get height => readInteger(json["height"]);
-  String get media => json["media"] as String;
-  BigInt get width => readInteger(json["width"]);
-}
-
-sealed class InputDeclaration extends NativeObject {
-  InputDeclaration(super.json);
+sealed class InputDeclaration extends _NativeValue {
+  InputDeclaration(super.fields);
   factory InputDeclaration.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["type"] == "string") return InputDeclarationStringRoot.read(map);
     if (map["type"] == "object") return InputDeclarationObjectRoot.read(map);
     throw FormatException("Unknown InputDeclaration alternative");
@@ -601,31 +978,40 @@ sealed class InputDeclaration extends NativeObject {
 }
 
 final class InputDeclarationObjectRoot extends InputDeclaration {
-  InputDeclarationObjectRoot._(super.json);
+  InputDeclarationObjectRoot._(super.fields);
   factory InputDeclarationObjectRoot.read(Object? value) =>
-      InputDeclarationObjectRoot._(readObject(value));
+      InputDeclarationObjectRoot._(_readObject(value));
   Map<String, InputPropertyType> get properties =>
-      (json["properties"] as Map<String, Object?>)
+      (_fields["properties"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, InputPropertyType.read(v)));
-  Presence<List<String>> get required => json.containsKey("required")
-      ? Presence.present((json["required"] as List)
+  Presence<List<String>> get required => _fields.containsKey("required")
+      ? Presence.present((_fields["required"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  String get type => json["type"] as String;
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["properties", "required", "type"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class InputDeclarationStringRoot extends InputDeclaration {
-  InputDeclarationStringRoot._(super.json);
+  InputDeclarationStringRoot._(super.fields);
   factory InputDeclarationStringRoot.read(Object? value) =>
-      InputDeclarationStringRoot._(readObject(value));
-  String get type => json["type"] as String;
+      InputDeclarationStringRoot._(_readObject(value));
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class InputPropertyType extends NativeObject {
-  InputPropertyType(super.json);
+sealed class InputPropertyType extends _NativeValue {
+  InputPropertyType(super.fields);
   factory InputPropertyType.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["type"] == "string") return InputPropertyTypeString.read(map);
     if (map["type"] == "number") return InputPropertyTypeNumber.read(map);
     if (map["type"] == "boolean") return InputPropertyTypeBoolean.read(map);
@@ -635,113 +1021,168 @@ sealed class InputPropertyType extends NativeObject {
 }
 
 final class InputPropertyTypeArray extends InputPropertyType {
-  InputPropertyTypeArray._(super.json);
+  InputPropertyTypeArray._(super.fields);
   factory InputPropertyTypeArray.read(Object? value) =>
-      InputPropertyTypeArray._(readObject(value));
-  StringRoot get items => StringRoot.read(json["items"]);
-  String get type => json["type"] as String;
+      InputPropertyTypeArray._(_readObject(value));
+  StringRoot get items => StringRoot.read(_fields["items"]);
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["items", "type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class InputPropertyTypeBoolean extends InputPropertyType {
-  InputPropertyTypeBoolean._(super.json);
+  InputPropertyTypeBoolean._(super.fields);
   factory InputPropertyTypeBoolean.read(Object? value) =>
-      InputPropertyTypeBoolean._(readObject(value));
-  String get type => json["type"] as String;
+      InputPropertyTypeBoolean._(_readObject(value));
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class InputPropertyTypeNumber extends InputPropertyType {
-  InputPropertyTypeNumber._(super.json);
+  InputPropertyTypeNumber._(super.fields);
   factory InputPropertyTypeNumber.read(Object? value) =>
-      InputPropertyTypeNumber._(readObject(value));
-  String get type => json["type"] as String;
+      InputPropertyTypeNumber._(_readObject(value));
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class InputPropertyTypeString extends InputPropertyType {
-  InputPropertyTypeString._(super.json);
+  InputPropertyTypeString._(super.fields);
   factory InputPropertyTypeString.read(Object? value) =>
-      InputPropertyTypeString._(readObject(value));
-  String get type => json["type"] as String;
+      InputPropertyTypeString._(_readObject(value));
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class Label extends NativeObject {
-  Label._(super.json);
-  factory Label.read(Object? value) => Label._(readObject(value));
-  Presence<Object?> get description => json.containsKey("description")
-      ? Presence.present(json["description"])
+final class Label extends _NativeValue {
+  Label._(super.fields);
+  factory Label.read(Object? value) => Label._(_readObject(value));
+  Presence<Object?> get description => _fields.containsKey("description")
+      ? Presence.present(_fields["description"])
       : const Presence.absent();
-  String get name => json["name"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["description", "name"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Meta extends NativeObject {
-  Meta._(super.json);
-  factory Meta.read(Object? value) => Meta._(readObject(value));
-  Presence<String> get answeredBy => json.containsKey("answered_by")
-      ? Presence.present(json["answered_by"] as String)
+final class Meta extends _NativeValue {
+  Meta._(super.fields);
+  factory Meta.read(Object? value) => Meta._(_readObject(value));
+  Presence<String> get answeredBy => _fields.containsKey("answered_by")
+      ? Presence.present(_fields["answered_by"] as String)
       : const Presence.absent();
-  Presence<List<Attempt>> get attempts => json.containsKey("attempts")
-      ? Presence.present((json["attempts"] as List)
+  Presence<List<Attempt>> get attempts => _fields.containsKey("attempts")
+      ? Presence.present((_fields["attempts"] as List)
           .map((v) => Attempt.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BatchSetting> get batchSetting => json.containsKey("batch_setting")
-      ? Presence.present(BatchSetting.read(json["batch_setting"]))
+  Presence<BatchSetting> get batchSetting =>
+      _fields.containsKey("batch_setting")
+          ? Presence.present(BatchSetting.read(_fields["batch_setting"]))
+          : const Presence.absent();
+  Presence<BatchWarning> get batchWarning =>
+      _fields.containsKey("batch_warning")
+          ? Presence.present(BatchWarning.read(_fields["batch_warning"]))
+          : const Presence.absent();
+  bool get cached => _fields["cached"] as bool;
+  Presence<String> get contextSha256 => _fields.containsKey("context_sha256")
+      ? Presence.present(_fields["context_sha256"] as String)
       : const Presence.absent();
-  Presence<BatchWarning> get batchWarning => json.containsKey("batch_warning")
-      ? Presence.present(BatchWarning.read(json["batch_warning"]))
-      : const Presence.absent();
-  bool get cached => json["cached"] as bool;
-  Presence<String> get contextSha256 => json.containsKey("context_sha256")
-      ? Presence.present(json["context_sha256"] as String)
-      : const Presence.absent();
-  BigInt get failedQuestions => readInteger(json["failed_questions"]);
-  String get model => json["model"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+  BigInt get failedQuestions => _readInteger(_fields["failed_questions"]);
+  String get model => _fields["model"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
   String? get origin =>
-      json["origin"] == null ? null : json["origin"] as String;
+      _fields["origin"] == null ? null : _fields["origin"] as String;
   Presence<ProfileWarning> get profileWarning =>
-      json.containsKey("profile_warning")
-          ? Presence.present(ProfileWarning.read(json["profile_warning"]))
+      _fields.containsKey("profile_warning")
+          ? Presence.present(ProfileWarning.read(_fields["profile_warning"]))
           : const Presence.absent();
-  Presence<String> get questionSha256 => json.containsKey("question_sha256")
-      ? Presence.present(json["question_sha256"] as String)
+  Presence<String> get questionSha256 => _fields.containsKey("question_sha256")
+      ? Presence.present(_fields["question_sha256"] as String)
       : const Presence.absent();
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  Presence<String> get questionsSha256 => json.containsKey("questions_sha256")
-      ? Presence.present(json["questions_sha256"] as String)
-      : const Presence.absent();
-  List<String> get requests => (json["requests"] as List)
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  Presence<String> get questionsSha256 =>
+      _fields.containsKey("questions_sha256")
+          ? Presence.present(_fields["questions_sha256"] as String)
+          : const Presence.absent();
+  List<String> get requests => (_fields["requests"] as List)
       .map((v) => v as String)
       .toList(growable: false);
-  BigInt get requestsSent => readInteger(json["requests_sent"]);
-  String get tool => json["tool"] as String;
-  String get url => json["url"] as String;
-  Presence<Usage> get usage => json.containsKey("usage")
-      ? Presence.present(Usage.read(json["usage"]))
+  BigInt get requestsSent => _readInteger(_fields["requests_sent"]);
+  String get tool => _fields["tool"] as String;
+  String get url => _fields["url"] as String;
+  Presence<Usage> get usage => _fields.containsKey("usage")
+      ? Presence.present(Usage.read(_fields["usage"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answered_by",
+            "attempts",
+            "batch_setting",
+            "batch_warning",
+            "cached",
+            "context_sha256",
+            "failed_questions",
+            "model",
+            "observations",
+            "origin",
+            "profile_warning",
+            "question_sha256",
+            "question_sources",
+            "questions_sha256",
+            "requests",
+            "requests_sent",
+            "tool",
+            "url",
+            "usage"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class ObjectRoot extends NativeObject {
-  ObjectRoot._(super.json);
-  factory ObjectRoot.read(Object? value) => ObjectRoot._(readObject(value));
+final class ObjectRoot extends _NativeValue {
+  ObjectRoot._(super.fields);
+  factory ObjectRoot.read(Object? value) => ObjectRoot._(_readObject(value));
   Map<String, InputPropertyType> get properties =>
-      (json["properties"] as Map<String, Object?>)
+      (_fields["properties"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, InputPropertyType.read(v)));
-  Presence<List<String>> get required => json.containsKey("required")
-      ? Presence.present((json["required"] as List)
+  Presence<List<String>> get required => _fields.containsKey("required")
+      ? Presence.present((_fields["required"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  String get type => json["type"] as String;
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["properties", "required", "type"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class Observation extends NativeObject {
-  Observation(super.json);
+sealed class Observation extends _NativeValue {
+  Observation(super.fields);
   factory Observation.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("observation_id"))
       return ObservationObservationId.read(map);
     if (map.containsKey("failure_id")) return ObservationFailureId.read(map);
@@ -750,103 +1191,151 @@ sealed class Observation extends NativeObject {
 }
 
 final class ObservationFailureId extends Observation {
-  ObservationFailureId._(super.json);
+  ObservationFailureId._(super.fields);
   factory ObservationFailureId.read(Object? value) =>
-      ObservationFailureId._(readObject(value));
-  String get failureId => json["failure_id"] as String;
+      ObservationFailureId._(_readObject(value));
+  String get failureId => _fields["failure_id"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["failure_id"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class ObservationObservationId extends Observation {
-  ObservationObservationId._(super.json);
+  ObservationObservationId._(super.fields);
   factory ObservationObservationId.read(Object? value) =>
-      ObservationObservationId._(readObject(value));
-  String get observationId => json["observation_id"] as String;
+      ObservationObservationId._(_readObject(value));
+  String get observationId => _fields["observation_id"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["observation_id"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class PersistenceObservation extends NativeObject {
-  PersistenceObservation._(super.json);
+final class PersistenceObservation extends _NativeValue {
+  PersistenceObservation._(super.fields);
   factory PersistenceObservation.read(Object? value) =>
-      PersistenceObservation._(readObject(value));
-  Presence<String> get advice => json.containsKey("advice")
-      ? Presence.present(json["advice"] as String)
+      PersistenceObservation._(_readObject(value));
+  Presence<String> get advice => _fields.containsKey("advice")
+      ? Presence.present(_fields["advice"] as String)
       : const Presence.absent();
-  String get observedAt => json["observed_at"] as String;
-  String get state => json["state"] as String;
+  String get observedAt => _fields["observed_at"] as String;
+  String get state => _fields["state"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["advice", "observed_at", "state"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class PhysicalSource extends NativeObject {
-  PhysicalSource._(super.json);
+final class PhysicalSource extends _NativeValue {
+  PhysicalSource._(super.fields);
   factory PhysicalSource.read(Object? value) =>
-      PhysicalSource._(readObject(value));
-  String get file => json["file"] as String;
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+      PhysicalSource._(_readObject(value));
+  String get file => _fields["file"] as String;
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["file", "first_line", "last_line"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Position extends NativeObject {
-  Position._(super.json);
-  factory Position.read(Object? value) => Position._(readObject(value));
-  String? get file => json["file"] == null ? null : json["file"] as String;
-  Presence<BigInt> get first => json.containsKey("first")
-      ? Presence.present(readInteger(json["first"]))
+final class Position extends _NativeValue {
+  Position._(super.fields);
+  factory Position.read(Object? value) => Position._(_readObject(value));
+  String? get file =>
+      _fields["file"] == null ? null : _fields["file"] as String;
+  Presence<BigInt> get first => _fields.containsKey("first")
+      ? Presence.present(_readInteger(_fields["first"]))
       : const Presence.absent();
-  Presence<List<String>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+  Presence<List<String>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => v as String)
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get last => json.containsKey("last")
-      ? Presence.present(readInteger(json["last"]))
+  Presence<BigInt> get last => _fields.containsKey("last")
+      ? Presence.present(_readInteger(_fields["last"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["file", "first", "images", "last"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class QuestionSource extends NativeObject {
-  QuestionSource._(super.json);
+final class QuestionSource extends _NativeValue {
+  QuestionSource._(super.fields);
   factory QuestionSource.read(Object? value) =>
-      QuestionSource._(readObject(value));
-  String get answeredBy => json["answered_by"] as String;
-  Presence<BigInt> get batchSize => json.containsKey("batch_size")
-      ? Presence.present(readInteger(json["batch_size"]))
+      QuestionSource._(_readObject(value));
+  String get answeredBy => _fields["answered_by"] as String;
+  Presence<BigInt> get batchSize => _fields.containsKey("batch_size")
+      ? Presence.present(_readInteger(_fields["batch_size"]))
       : const Presence.absent();
-  String get origin => json["origin"] as String;
+  String get origin => _fields["origin"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["answered_by", "batch_size", "origin"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class RankMember extends NativeObject {
-  RankMember._(super.json);
-  factory RankMember.read(Object? value) => RankMember._(readObject(value));
-  String get name => json["name"] as String;
-  RankMemberResult get result => RankMemberResult.read(json["result"]);
+final class RankMember extends _NativeValue {
+  RankMember._(super.fields);
+  factory RankMember.read(Object? value) => RankMember._(_readObject(value));
+  String get name => _fields["name"] as String;
+  RankMemberResult get result => RankMemberResult.read(_fields["result"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["name", "result"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class RankMemberResult extends NativeObject {
-  RankMemberResult._(super.json);
+final class RankMemberResult extends _NativeValue {
+  RankMemberResult._(super.fields);
   factory RankMemberResult.read(Object? value) =>
-      RankMemberResult._(readObject(value));
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<List<Image>> get images => json.containsKey("images")
-      ? Presence.present((json["images"] as List)
+      RankMemberResult._(_readObject(value));
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<List<Image>> get images => _fields.containsKey("images")
+      ? Presence.present((_fields["images"] as List)
           .map((v) => Image.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  Meta get meta => Meta.read(_fields["meta"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"];
-  BigInt get value => readInteger(json["value"]);
+  Object? get threshold => _fields["threshold"];
+  BigInt get value => _readInteger(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "images",
+            "meta",
+            "question",
+            "schema",
+            "source",
+            "threshold",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class ReadableQuestion extends NativeObject {
-  ReadableQuestion(super.json);
+sealed class ReadableQuestion extends _NativeValue {
+  ReadableQuestion(super.fields);
   factory ReadableQuestion.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["verb"] == "decide") return ReadableQuestionDecide.read(map);
     if (map["verb"] == "choose") return ReadableQuestionChoose.read(map);
     if (map["verb"] == "tag") return ReadableQuestionTag.read(map);
@@ -855,372 +1344,550 @@ sealed class ReadableQuestion extends NativeObject {
   }
 }
 
-final class ReadableQuestion2 extends NativeObject {
-  ReadableQuestion2._(super.json);
-  factory ReadableQuestion2.read(Object? value) =>
-      ReadableQuestion2._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+final class FindQuestionInfo extends _NativeValue {
+  FindQuestionInfo._(super.fields);
+  factory FindQuestionInfo.read(Object? value) =>
+      FindQuestionInfo._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  bool get none => json["none"] as bool;
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  bool get none => _fields["none"] as bool;
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Object? get text => json["text"];
-  String get verb => json["verb"] as String;
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "none",
+            "on",
+            "profile",
+            "text",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class ReadableQuestion3 extends NativeObject {
-  ReadableQuestion3._(super.json);
-  factory ReadableQuestion3.read(Object? value) =>
-      ReadableQuestion3._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+final class RecognitionQuestionInfo extends _NativeValue {
+  RecognitionQuestionInfo._(super.fields);
+  factory RecognitionQuestionInfo.read(Object? value) =>
+      RecognitionQuestionInfo._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
   Presence<Object?> get entityDefinition =>
-      json.containsKey("entity_definition")
-          ? Presence.present(json["entity_definition"])
+      _fields.containsKey("entity_definition")
+          ? Presence.present(_fields["entity_definition"])
           : const Presence.absent();
-  Presence<Object?> get instructions => json.containsKey("instructions")
-      ? Presence.present(json["instructions"])
+  Presence<Object?> get instructions => _fields.containsKey("instructions")
+      ? Presence.present(_fields["instructions"])
       : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
   Map<String, Object?> get kinds =>
-      (json["kinds"] as Map<String, Object?>).map((k, v) => MapEntry(k, v));
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+      (_fields["kinds"] as Map<String, Object?>).map((k, v) => MapEntry(k, v));
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get mode => json.containsKey("mode")
-      ? Presence.present(json["mode"] as String)
+  Presence<String> get mode => _fields.containsKey("mode")
+      ? Presence.present(_fields["mode"] as String)
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
   Presence<Object?> get relationThreshold =>
-      json.containsKey("relation_threshold")
-          ? Presence.present(json["relation_threshold"])
+      _fields.containsKey("relation_threshold")
+          ? Presence.present(_fields["relation_threshold"])
           : const Presence.absent();
-  Presence<List<RelationRule>> get relations => json.containsKey("relations")
-      ? Presence.present((json["relations"] as List)
+  Presence<List<RelationRule>> get relations => _fields.containsKey("relations")
+      ? Presence.present((_fields["relations"] as List)
           .map((v) => RelationRule.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<BigInt> get snippetPieces => json.containsKey("snippet_pieces")
-      ? Presence.present(readInteger(json["snippet_pieces"]))
+  Presence<BigInt> get snippetPieces => _fields.containsKey("snippet_pieces")
+      ? Presence.present(_readInteger(_fields["snippet_pieces"]))
       : const Presence.absent();
-  Presence<RecognitionStageContext> get stageContext => json
+  Presence<RecognitionStageContext> get stageContext => _fields
           .containsKey("stage_context")
-      ? Presence.present(RecognitionStageContext.read(json["stage_context"]))
+      ? Presence.present(RecognitionStageContext.read(_fields["stage_context"]))
       : const Presence.absent();
-  Object? get threshold => json["threshold"];
-  String get verb => json["verb"] as String;
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Object? get threshold => _fields["threshold"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "entity_definition",
+            "instructions",
+            "item_schema",
+            "kinds",
+            "label_details",
+            "mode",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "relation_threshold",
+            "relations",
+            "snippet_pieces",
+            "stage_context",
+            "threshold",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class ReadableQuestion4 extends NativeObject {
-  ReadableQuestion4._(super.json);
-  factory ReadableQuestion4.read(Object? value) =>
-      ReadableQuestion4._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+final class RelationQuestionInfo extends _NativeValue {
+  RelationQuestionInfo._(super.fields);
+  factory RelationQuestionInfo.read(Object? value) =>
+      RelationQuestionInfo._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
   RelateFields? get fields =>
-      json["fields"] == null ? null : RelateFields.read(json["fields"]);
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+      _fields["fields"] == null ? null : RelateFields.read(_fields["fields"]);
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  List<RelationRule> get relations => (json["relations"] as List)
+  List<RelationRule> get relations => (_fields["relations"] as List)
       .map((v) => RelationRule.read(v))
       .toList(growable: false);
-  Object? get threshold => json["threshold"];
-  String get verb => json["verb"] as String;
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Object? get threshold => _fields["threshold"];
+  String get verb => _fields["verb"] as String;
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "fields",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "relations",
+            "threshold",
+            "verb",
+            "wording_version"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class ReadableQuestionChoose extends ReadableQuestion {
-  ReadableQuestionChoose._(super.json);
+  ReadableQuestionChoose._(super.fields);
   factory ReadableQuestionChoose.read(Object? value) =>
-      ReadableQuestionChoose._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+      ReadableQuestionChoose._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
-  List<String> get options =>
-      (json["options"] as List).map((v) => v as String).toList(growable: false);
-  Object? get text => json["text"];
-  String get verb => json["verb"] as String;
+  List<String> get options => (_fields["options"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "options",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class ReadableQuestionDecide extends ReadableQuestion {
-  ReadableQuestionDecide._(super.json);
+  ReadableQuestionDecide._(super.fields);
   factory ReadableQuestionDecide.read(Object? value) =>
-      ReadableQuestionDecide._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+      ReadableQuestionDecide._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
-  Presence<Object?> get falseValue => json.containsKey("false")
-      ? Presence.present(json["false"])
+  Presence<Object?> get falseValue => _fields.containsKey("false")
+      ? Presence.present(_fields["false"])
       : const Presence.absent();
-  Object? get text => json["text"];
-  Presence<Object?> get trueValue => json.containsKey("true")
-      ? Presence.present(json["true"])
+  Object? get text => _fields["text"];
+  Presence<Object?> get trueValue => _fields.containsKey("true")
+      ? Presence.present(_fields["true"])
       : const Presence.absent();
-  String get verb => json["verb"] as String;
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "false",
+            "text",
+            "true",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class ReadableQuestionScore extends ReadableQuestion {
-  ReadableQuestionScore._(super.json);
+  ReadableQuestionScore._(super.fields);
   factory ReadableQuestionScore.read(Object? value) =>
-      ReadableQuestionScore._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+      ReadableQuestionScore._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
-  List<String> get levels =>
-      (json["levels"] as List).map((v) => v as String).toList(growable: false);
-  Object? get text => json["text"];
-  String get verb => json["verb"] as String;
+  List<String> get levels => (_fields["levels"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "levels",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class ReadableQuestionTag extends ReadableQuestion {
-  ReadableQuestionTag._(super.json);
+  ReadableQuestionTag._(super.fields);
   factory ReadableQuestionTag.read(Object? value) =>
-      ReadableQuestionTag._(readObject(value));
-  Presence<Batch> get batch => json.containsKey("batch")
-      ? Presence.present(Batch.read(json["batch"]))
+      ReadableQuestionTag._(_readObject(value));
+  Presence<Batch> get batch => _fields.containsKey("batch")
+      ? Presence.present(Batch.read(_fields["batch"]))
       : const Presence.absent();
   Presence<InputDeclaration> get contextSchema =>
-      json.containsKey("context_schema")
-          ? Presence.present(InputDeclaration.read(json["context_schema"]))
+      _fields.containsKey("context_schema")
+          ? Presence.present(InputDeclaration.read(_fields["context_schema"]))
           : const Presence.absent();
-  Presence<InputDeclaration> get itemSchema => json.containsKey("item_schema")
-      ? Presence.present(InputDeclaration.read(json["item_schema"]))
-      : const Presence.absent();
-  Presence<List<Label>> get labelDetails => json.containsKey("label_details")
-      ? Presence.present((json["label_details"] as List)
+  Presence<InputDeclaration> get itemSchema =>
+      _fields.containsKey("item_schema")
+          ? Presence.present(InputDeclaration.read(_fields["item_schema"]))
+          : const Presence.absent();
+  Presence<List<Label>> get labelDetails => _fields.containsKey("label_details")
+      ? Presence.present((_fields["label_details"] as List)
           .map((v) => Label.read(v))
           .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get model => json.containsKey("model")
-      ? Presence.present(json["model"] as String)
+  Presence<String> get model => _fields.containsKey("model")
+      ? Presence.present(_fields["model"] as String)
       : const Presence.absent();
-  Presence<String> get name => json.containsKey("name")
-      ? Presence.present(json["name"] as String)
+  Presence<String> get name => _fields.containsKey("name")
+      ? Presence.present(_fields["name"] as String)
       : const Presence.absent();
-  Presence<List<String>> get on => json.containsKey("on")
-      ? Presence.present(
-          (json["on"] as List).map((v) => v as String).toList(growable: false))
+  Presence<List<String>> get on => _fields.containsKey("on")
+      ? Presence.present((_fields["on"] as List)
+          .map((v) => v as String)
+          .toList(growable: false))
       : const Presence.absent();
-  Presence<String> get profile => json.containsKey("profile")
-      ? Presence.present(json["profile"] as String)
+  Presence<String> get profile => _fields.containsKey("profile")
+      ? Presence.present(_fields["profile"] as String)
       : const Presence.absent();
-  Presence<BigInt> get wordingVersion => json.containsKey("wording_version")
-      ? Presence.present(readInteger(json["wording_version"]))
+  Presence<BigInt> get wordingVersion => _fields.containsKey("wording_version")
+      ? Presence.present(_readInteger(_fields["wording_version"]))
       : const Presence.absent();
-  List<String> get labels =>
-      (json["labels"] as List).map((v) => v as String).toList(growable: false);
-  Object? get text => json["text"];
-  String get verb => json["verb"] as String;
+  List<String> get labels => (_fields["labels"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Object? get text => _fields["text"];
+  String get verb => _fields["verb"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "batch",
+            "context_schema",
+            "item_schema",
+            "label_details",
+            "model",
+            "name",
+            "on",
+            "profile",
+            "wording_version",
+            "labels",
+            "text",
+            "verb"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Recognition extends NativeObject {
-  Recognition._(super.json);
-  factory Recognition.read(Object? value) => Recognition._(readObject(value));
-  RecognitionOdds get answer => RecognitionOdds.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<String> get file => json.containsKey("file")
-      ? Presence.present(json["file"] as String)
+final class Recognition extends _NativeValue {
+  Recognition._(super.fields);
+  factory Recognition.read(Object? value) => Recognition._(_readObject(value));
+  RecognitionOdds get answer => RecognitionOdds.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
       : const Presence.absent();
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  Presence<Position> get position => json.containsKey("position")
-      ? Presence.present(Position.read(json["position"]))
+  Meta get meta => Meta.read(_fields["meta"]);
+  Presence<Position> get position => _fields.containsKey("position")
+      ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  ReadableQuestion3 get question => ReadableQuestion3.read(json["question"]);
-  String get schema => json["schema"] as String;
-  Presence<PhysicalSource> get source => json.containsKey("source")
-      ? Presence.present(PhysicalSource.read(json["source"]))
+  RecognitionQuestionInfo get question =>
+      RecognitionQuestionInfo.read(_fields["question"]);
+  String get schema => _fields["schema"] as String;
+  Presence<PhysicalSource> get source => _fields.containsKey("source")
+      ? Presence.present(PhysicalSource.read(_fields["source"]))
       : const Presence.absent();
-  Recognize get value => Recognize.read(json["value"]);
+  Recognize get value => Recognize.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "file",
+            "first_line",
+            "index",
+            "input",
+            "last_line",
+            "meta",
+            "position",
+            "question",
+            "schema",
+            "source",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class RecognitionEdgeDocument extends NativeObject {
-  RecognitionEdgeDocument._(super.json);
+final class RecognitionEdgeDocument extends _NativeValue {
+  RecognitionEdgeDocument._(super.fields);
   factory RecognitionEdgeDocument.read(Object? value) =>
-      RecognitionEdgeDocument._(readObject(value));
-  bool get either => json["either"] as bool;
-  num get probability => json["probability"] as num;
-  String get relation => json["relation"] as String;
-  Entity get source => Entity.read(json["source"]);
-  Entity get target => Entity.read(json["target"]);
+      RecognitionEdgeDocument._(_readObject(value));
+  bool get either => _fields["either"] as bool;
+  num get probability => _fields["probability"] as num;
+  String get relation => _fields["relation"] as String;
+  Entity get source => Entity.read(_fields["source"]);
+  Entity get target => Entity.read(_fields["target"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "probability", "relation", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class RecognitionOdds extends NativeObject {
-  RecognitionOdds(super.json);
+sealed class RecognitionOdds extends _NativeValue {
+  RecognitionOdds(super.fields);
   factory RecognitionOdds.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("names") &&
         map.containsKey("pairs") &&
         map.containsKey("pieces") &&
@@ -1235,110 +1902,159 @@ sealed class RecognitionOdds extends NativeObject {
 }
 
 final class RecognitionOddsBoundaryOdds extends RecognitionOdds {
-  RecognitionOddsBoundaryOdds._(super.json);
+  RecognitionOddsBoundaryOdds._(super.fields);
   factory RecognitionOddsBoundaryOdds.read(Object? value) =>
-      RecognitionOddsBoundaryOdds._(readObject(value));
-  List<PieceOdds> get pieces => (json["pieces"] as List)
+      RecognitionOddsBoundaryOdds._(_readObject(value));
+  List<PieceOdds> get pieces => (_fields["pieces"] as List)
       .map((v) => PieceOdds.read(v))
       .toList(growable: false);
-  List<BoundaryProposal> get proposals => (json["proposals"] as List)
+  List<BoundaryProposal> get proposals => (_fields["proposals"] as List)
       .map((v) => BoundaryProposal.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["pieces", "proposals"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class RecognitionOddsRecognizeAnswer extends RecognitionOdds {
-  RecognitionOddsRecognizeAnswer._(super.json);
+  RecognitionOddsRecognizeAnswer._(super.fields);
   factory RecognitionOddsRecognizeAnswer.read(Object? value) =>
-      RecognitionOddsRecognizeAnswer._(readObject(value));
-  List<NameOdds> get names => (json["names"] as List)
+      RecognitionOddsRecognizeAnswer._(_readObject(value));
+  List<NameOdds> get names => (_fields["names"] as List)
       .map((v) => NameOdds.read(v))
       .toList(growable: false);
-  List<PairOdds> get pairs => (json["pairs"] as List)
+  List<PairOdds> get pairs => (_fields["pairs"] as List)
       .map((v) => PairOdds.read(v))
       .toList(growable: false);
-  List<PieceOdds> get pieces => (json["pieces"] as List)
+  List<PieceOdds> get pieces => (_fields["pieces"] as List)
       .map((v) => PieceOdds.read(v))
       .toList(growable: false);
-  List<RecognitionProposal> get proposals => (json["proposals"] as List)
+  List<RecognitionProposal> get proposals => (_fields["proposals"] as List)
       .map((v) => RecognitionProposal.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["names", "pairs", "pieces", "proposals"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class RecognitionProposal extends NativeObject {
-  RecognitionProposal._(super.json);
+final class RecognitionProposal extends _NativeValue {
+  RecognitionProposal._(super.fields);
   factory RecognitionProposal.read(Object? value) =>
-      RecognitionProposal._(readObject(value));
-  BigInt get end => readInteger(json["end"]);
-  bool get kept => json["kept"] as bool;
-  Presence<String> get kind => json.containsKey("kind")
-      ? Presence.present(json["kind"] as String)
+      RecognitionProposal._(_readObject(value));
+  BigInt get end => _readInteger(_fields["end"]);
+  bool get kept => _fields["kept"] as bool;
+  Presence<String> get kind => _fields.containsKey("kind")
+      ? Presence.present(_fields["kind"] as String)
       : const Presence.absent();
-  Presence<Place> get selected => json.containsKey("selected")
-      ? Presence.present(Place.read(json["selected"]))
+  Presence<Place> get selected => _fields.containsKey("selected")
+      ? Presence.present(Place.read(_fields["selected"]))
       : const Presence.absent();
-  num get spanProbability => json["span_probability"] as num;
-  BigInt get start => readInteger(json["start"]);
-  Presence<num> get strength => json.containsKey("strength")
-      ? Presence.present(json["strength"] as num)
+  num get spanProbability => _fields["span_probability"] as num;
+  BigInt get start => _readInteger(_fields["start"]);
+  Presence<num> get strength => _fields.containsKey("strength")
+      ? Presence.present(_fields["strength"] as num)
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "end",
+            "kept",
+            "kind",
+            "selected",
+            "span_probability",
+            "start",
+            "strength"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class RecognitionStageContext extends NativeObject {
-  RecognitionStageContext._(super.json);
+final class RecognitionStageContext extends _NativeValue {
+  RecognitionStageContext._(super.fields);
   factory RecognitionStageContext.read(Object? value) =>
-      RecognitionStageContext._(readObject(value));
-  Presence<String> get boundary => json.containsKey("boundary")
-      ? Presence.present(json["boundary"] as String)
+      RecognitionStageContext._(_readObject(value));
+  Presence<String> get boundary => _fields.containsKey("boundary")
+      ? Presence.present(_fields["boundary"] as String)
       : const Presence.absent();
-  Presence<String> get kindEdge => json.containsKey("kind_edge")
-      ? Presence.present(json["kind_edge"] as String)
+  Presence<String> get kindEdge => _fields.containsKey("kind_edge")
+      ? Presence.present(_fields["kind_edge"] as String)
       : const Presence.absent();
-  Presence<String> get relation => json.containsKey("relation")
-      ? Presence.present(json["relation"] as String)
+  Presence<String> get relation => _fields.containsKey("relation")
+      ? Presence.present(_fields["relation"] as String)
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["boundary", "kind_edge", "relation"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Relation extends NativeObject {
-  Relation._(super.json);
-  factory Relation.read(Object? value) => Relation._(readObject(value));
-  Answers get answer => Answers.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  Presence<String> get file => json.containsKey("file")
-      ? Presence.present(json["file"] as String)
+final class Relation extends _NativeValue {
+  Relation._(super.fields);
+  factory Relation.read(Object? value) => Relation._(_readObject(value));
+  Answers get answer => Answers.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
       : const Presence.absent();
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  Presence<BigInt> get index => json.containsKey("index")
-      ? Presence.present(readInteger(json["index"]))
+  Presence<BigInt> get index => _fields.containsKey("index")
+      ? Presence.present(_readInteger(_fields["index"]))
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
   Presence<List<SessionInputSource>> get inputSources =>
-      json.containsKey("input_sources")
-          ? Presence.present((json["input_sources"] as List)
+      _fields.containsKey("input_sources")
+          ? Presence.present((_fields["input_sources"] as List)
               .map((v) => SessionInputSource.read(v))
               .toList(growable: false))
           : const Presence.absent();
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  Meta get meta => Meta.read(json["meta"]);
-  Presence<Position> get position => json.containsKey("position")
-      ? Presence.present(Position.read(json["position"]))
+  Meta get meta => Meta.read(_fields["meta"]);
+  Presence<Position> get position => _fields.containsKey("position")
+      ? Presence.present(Position.read(_fields["position"]))
       : const Presence.absent();
-  ReadableQuestion4 get question => ReadableQuestion4.read(json["question"]);
-  String get schema => json["schema"] as String;
-  List<RelatedEntityEdge> get value => (json["value"] as List)
+  RelationQuestionInfo get question =>
+      RelationQuestionInfo.read(_fields["question"]);
+  String get schema => _fields["schema"] as String;
+  List<RelatedEntityEdge> get value => (_fields["value"] as List)
       .map((v) => RelatedEntityEdge.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer",
+            "answer_id",
+            "file",
+            "first_line",
+            "index",
+            "input",
+            "input_sources",
+            "last_line",
+            "meta",
+            "position",
+            "question",
+            "schema",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class RelationEndpoint extends NativeObject {
-  RelationEndpoint(super.json);
+sealed class RelationEndpoint extends _NativeValue {
+  RelationEndpoint(super.fields);
+  String get name;
   factory RelationEndpoint.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("kind") &&
         map.containsKey("name") &&
         !map.containsKey("file") &&
@@ -1355,34 +2071,52 @@ sealed class RelationEndpoint extends NativeObject {
 }
 
 final class RelationEndpointRelatedEntity extends RelationEndpoint {
-  RelationEndpointRelatedEntity._(super.json);
+  RelationEndpointRelatedEntity._(super.fields);
   factory RelationEndpointRelatedEntity.read(Object? value) =>
-      RelationEndpointRelatedEntity._(readObject(value));
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+      RelationEndpointRelatedEntity._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class RelationEndpointSource extends RelationEndpoint {
-  RelationEndpointSource._(super.json);
+  RelationEndpointSource._(super.fields);
   factory RelationEndpointSource.read(Object? value) =>
-      RelationEndpointSource._(readObject(value));
-  String? get file => json["file"] == null ? null : json["file"] as String;
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+      RelationEndpointSource._(_readObject(value));
+  String? get file =>
+      _fields["file"] == null ? null : _fields["file"] as String;
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  String get kind => _fields["kind"] as String;
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  String get name => json["name"] as String;
-  BigInt get ordinal => readInteger(json["ordinal"]);
-  Object? get record => json["record"];
+  String get name => _fields["name"] as String;
+  BigInt get ordinal => _readInteger(_fields["ordinal"]);
+  Object? get record => _fields["record"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "file",
+            "first_line",
+            "kind",
+            "last_line",
+            "name",
+            "ordinal",
+            "record"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class RelationMember extends NativeObject {
-  RelationMember(super.json);
+sealed class RelationMember extends _NativeValue {
+  RelationMember(super.fields);
   factory RelationMember.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("answer_id")) return RelationMemberAnswerId.read(map);
     if (map.containsKey("failure_id")) return RelationMemberFailureId.read(map);
     throw FormatException("Unknown RelationMember alternative");
@@ -1390,65 +2124,111 @@ sealed class RelationMember extends NativeObject {
 }
 
 final class RelationMemberAnswerId extends RelationMember {
-  RelationMemberAnswerId._(super.json);
+  RelationMemberAnswerId._(super.fields);
   factory RelationMemberAnswerId.read(Object? value) =>
-      RelationMemberAnswerId._(readObject(value));
-  String get direction => json["direction"] as String;
-  String get method => json["method"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+      RelationMemberAnswerId._(_readObject(value));
+  String get direction => _fields["direction"] as String;
+  String get method => _fields["method"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  String get reads => json["reads"] as String;
-  String get relation => json["relation"] as String;
-  String get request => json["request"] as String;
-  RelatedEntity get source => RelatedEntity.read(json["source"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  String get reads => _fields["reads"] as String;
+  String get relation => _fields["relation"] as String;
+  String get request => _fields["request"] as String;
+  RelatedEntity get source => RelatedEntity.read(_fields["source"]);
   RelatedEntity? get target =>
-      json["target"] == null ? null : RelatedEntity.read(json["target"]);
-  Object? get threshold => json["threshold"];
-  Presence<Usage> get usage => json.containsKey("usage")
-      ? Presence.present(Usage.read(json["usage"]))
+      _fields["target"] == null ? null : RelatedEntity.read(_fields["target"]);
+  Object? get threshold => _fields["threshold"];
+  Presence<Usage> get usage => _fields.containsKey("usage")
+      ? Presence.present(Usage.read(_fields["usage"]))
       : const Presence.absent();
-  bool get accepted => json["accepted"] as bool;
-  Answer get answer => Answer.read(json["answer"]);
-  String get answerId => json["answer_id"] as String;
-  num get probability => json["probability"] as num;
+  bool get accepted => _fields["accepted"] as bool;
+  Answer get answer => Answer.read(_fields["answer"]);
+  String get answerId => _fields["answer_id"] as String;
+  num get probability => _fields["probability"] as num;
+  String get sourceName => source.name;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "direction",
+            "method",
+            "observations",
+            "question",
+            "question_sources",
+            "reads",
+            "relation",
+            "request",
+            "source",
+            "target",
+            "threshold",
+            "usage",
+            "accepted",
+            "answer",
+            "answer_id",
+            "probability"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class RelationMemberFailureId extends RelationMember {
-  RelationMemberFailureId._(super.json);
+  RelationMemberFailureId._(super.fields);
   factory RelationMemberFailureId.read(Object? value) =>
-      RelationMemberFailureId._(readObject(value));
-  String get direction => json["direction"] as String;
-  String get method => json["method"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+      RelationMemberFailureId._(_readObject(value));
+  String get direction => _fields["direction"] as String;
+  String get method => _fields["method"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  String get reads => json["reads"] as String;
-  String get relation => json["relation"] as String;
-  String get request => json["request"] as String;
-  RelatedEntity get source => RelatedEntity.read(json["source"]);
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  String get reads => _fields["reads"] as String;
+  String get relation => _fields["relation"] as String;
+  String get request => _fields["request"] as String;
+  RelatedEntity get source => RelatedEntity.read(_fields["source"]);
   RelatedEntity? get target =>
-      json["target"] == null ? null : RelatedEntity.read(json["target"]);
-  Object? get threshold => json["threshold"];
-  Presence<Usage> get usage => json.containsKey("usage")
-      ? Presence.present(Usage.read(json["usage"]))
+      _fields["target"] == null ? null : RelatedEntity.read(_fields["target"]);
+  Object? get threshold => _fields["threshold"];
+  Presence<Usage> get usage => _fields.containsKey("usage")
+      ? Presence.present(Usage.read(_fields["usage"]))
       : const Presence.absent();
-  Failure get failure => Failure.read(json["failure"]);
-  String get failureId => json["failure_id"] as String;
+  Failure get failure => Failure.read(_fields["failure"]);
+  String get failureId => _fields["failure_id"] as String;
+  String get sourceName => source.name;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "direction",
+            "method",
+            "observations",
+            "question",
+            "question_sources",
+            "reads",
+            "relation",
+            "request",
+            "source",
+            "target",
+            "threshold",
+            "usage",
+            "failure",
+            "failure_id"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class SendBudgetDenial extends NativeObject {
-  SendBudgetDenial(super.json);
+sealed class SendBudgetDenial extends _NativeValue {
+  SendBudgetDenial(super.fields);
   factory SendBudgetDenial.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "before_first_send")
       return SendBudgetDenialBeforeFirstSend.read(map);
     if (map["kind"] == "before_additional_send")
@@ -1460,63 +2240,90 @@ sealed class SendBudgetDenial extends NativeObject {
 }
 
 final class SendBudgetDenialBeforeAdditionalSend extends SendBudgetDenial {
-  SendBudgetDenialBeforeAdditionalSend._(super.json);
+  SendBudgetDenialBeforeAdditionalSend._(super.fields);
   factory SendBudgetDenialBeforeAdditionalSend.read(Object? value) =>
-      SendBudgetDenialBeforeAdditionalSend._(readObject(value));
-  String get kind => json["kind"] as String;
+      SendBudgetDenialBeforeAdditionalSend._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SendBudgetDenialBeforeFirstSend extends SendBudgetDenial {
-  SendBudgetDenialBeforeFirstSend._(super.json);
+  SendBudgetDenialBeforeFirstSend._(super.fields);
   factory SendBudgetDenialBeforeFirstSend.read(Object? value) =>
-      SendBudgetDenialBeforeFirstSend._(readObject(value));
-  String get kind => json["kind"] as String;
+      SendBudgetDenialBeforeFirstSend._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SendBudgetDenialBeforeRetry extends SendBudgetDenial {
-  SendBudgetDenialBeforeRetry._(super.json);
+  SendBudgetDenialBeforeRetry._(super.fields);
   factory SendBudgetDenialBeforeRetry.read(Object? value) =>
-      SendBudgetDenialBeforeRetry._(readObject(value));
-  String get kind => json["kind"] as String;
-  BigInt get lastStatus => readInteger(json["last_status"]);
+      SendBudgetDenialBeforeRetry._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  BigInt get lastStatus => _readInteger(_fields["last_status"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "last_status"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Stopped extends NativeObject {
-  Stopped._(super.json);
-  factory Stopped.read(Object? value) => Stopped._(readObject(value));
-  Presence<BigInt> get at => json.containsKey("at")
-      ? Presence.present(readInteger(json["at"]))
+final class Stopped extends _NativeValue {
+  Stopped._(super.fields);
+  factory Stopped.read(Object? value) => Stopped._(_readObject(value));
+  Presence<BigInt> get at => _fields.containsKey("at")
+      ? Presence.present(_readInteger(_fields["at"]))
       : const Presence.absent();
-  String get cause => json["cause"] as String;
-  bool get retryable => json["retryable"] as bool;
-  Presence<BigInt> get status => json.containsKey("status")
-      ? Presence.present(readInteger(json["status"]))
+  String get cause => _fields["cause"] as String;
+  bool get retryable => _fields["retryable"] as bool;
+  Presence<BigInt> get status => _fields.containsKey("status")
+      ? Presence.present(_readInteger(_fields["status"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["at", "cause", "retryable", "status"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class StringRoot extends NativeObject {
-  StringRoot._(super.json);
-  factory StringRoot.read(Object? value) => StringRoot._(readObject(value));
-  String get type => json["type"] as String;
+final class StringRoot extends _NativeValue {
+  StringRoot._(super.fields);
+  factory StringRoot.read(Object? value) => StringRoot._(_readObject(value));
+  String get type => _fields["type"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["type"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class Usage extends NativeObject {
-  Usage._(super.json);
-  factory Usage.read(Object? value) => Usage._(readObject(value));
-  Presence<BigInt> get inputTokens => json.containsKey("input_tokens")
-      ? Presence.present(readInteger(json["input_tokens"]))
+final class Usage extends _NativeValue {
+  Usage._(super.fields);
+  factory Usage.read(Object? value) => Usage._(_readObject(value));
+  Presence<BigInt> get inputTokens => _fields.containsKey("input_tokens")
+      ? Presence.present(_readInteger(_fields["input_tokens"]))
       : const Presence.absent();
-  Presence<BigInt> get outputTokens => json.containsKey("output_tokens")
-      ? Presence.present(readInteger(json["output_tokens"]))
+  Presence<BigInt> get outputTokens => _fields.containsKey("output_tokens")
+      ? Presence.present(_readInteger(_fields["output_tokens"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["input_tokens", "output_tokens"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class AnnotatedField {
+final class AnnotatedField implements _EncodedValue {
   final Object? value;
   const AnnotatedField(this.value);
   factory AnnotatedField.read(Object? value) =>
       value is AnnotatedField ? value : AnnotatedField(value);
-  Object? toJson() => value;
+  Object? _toValue() => value;
   bool get asBoolean => value as bool;
   String get asString => value as String;
   List<String> get asArray =>
@@ -1525,10 +2332,10 @@ final class AnnotatedField {
   Failed get asObject => Failed.read(value);
 }
 
-sealed class Answer extends NativeObject {
-  Answer(super.json);
+sealed class Answer extends _NativeValue {
+  Answer(super.fields);
   factory Answer.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "yes_no") return AnswerYesNo.read(map);
     if (map["kind"] == "choice") return AnswerChoice.read(map);
     if (map["kind"] == "tag") return AnswerTag.read(map);
@@ -1538,176 +2345,265 @@ sealed class Answer extends NativeObject {
 }
 
 final class AnswerChoice extends Answer {
-  AnswerChoice._(super.json);
-  factory AnswerChoice.read(Object? value) => AnswerChoice._(readObject(value));
-  Presence<num> get confidence => json.containsKey("confidence")
-      ? Presence.present(json["confidence"] as num)
+  AnswerChoice._(super.fields);
+  factory AnswerChoice.read(Object? value) =>
+      AnswerChoice._(_readObject(value));
+  Presence<num> get confidence => _fields.containsKey("confidence")
+      ? Presence.present(_fields["confidence"] as num)
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get pick => json["pick"] as String;
+  String get kind => _fields["kind"] as String;
+  String get pick => _fields["pick"] as String;
   Map<String, num> get probabilities =>
-      (json["probabilities"] as Map<String, Object?>)
+      (_fields["probabilities"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["confidence", "kind", "pick", "probabilities"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class AnswerScore extends Answer {
-  AnswerScore._(super.json);
-  factory AnswerScore.read(Object? value) => AnswerScore._(readObject(value));
-  Presence<num> get confidence => json.containsKey("confidence")
-      ? Presence.present(json["confidence"] as num)
+  AnswerScore._(super.fields);
+  factory AnswerScore.read(Object? value) => AnswerScore._(_readObject(value));
+  Presence<num> get confidence => _fields.containsKey("confidence")
+      ? Presence.present(_fields["confidence"] as num)
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get level => json["level"] as String;
+  String get kind => _fields["kind"] as String;
+  String get level => _fields["level"] as String;
   Map<String, num> get probabilities =>
-      (json["probabilities"] as Map<String, Object?>)
+      (_fields["probabilities"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["confidence", "kind", "level", "probabilities"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class AnswerTag extends Answer {
-  AnswerTag._(super.json);
-  factory AnswerTag.read(Object? value) => AnswerTag._(readObject(value));
-  String get kind => json["kind"] as String;
+  AnswerTag._(super.fields);
+  factory AnswerTag.read(Object? value) => AnswerTag._(_readObject(value));
+  String get kind => _fields["kind"] as String;
   Map<String, num> get probabilities =>
-      (json["probabilities"] as Map<String, Object?>)
+      (_fields["probabilities"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "probabilities"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class AnswerYesNo extends Answer {
-  AnswerYesNo._(super.json);
-  factory AnswerYesNo.read(Object? value) => AnswerYesNo._(readObject(value));
-  String get kind => json["kind"] as String;
-  num get probability => json["probability"] as num;
+  AnswerYesNo._(super.fields);
+  factory AnswerYesNo.read(Object? value) => AnswerYesNo._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  num get probability => _fields["probability"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "probability"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class BatchSetting {
+final class BatchSetting implements _EncodedValue {
   final Object? value;
   const BatchSetting._(this.value);
   factory BatchSetting.read(Object? value) =>
       value is BatchSetting ? value : BatchSetting._(value);
-  Object? toJson() => value;
-  const BatchSetting.alternative0(BigInt this.value);
-  BigInt get asAlternative0 => readInteger(value);
-  const BatchSetting.alternative1(String this.value);
-  String get asAlternative1 => value as String;
+  Object? _toValue() => value;
+  const BatchSetting.integer(BigInt this.value);
+  BigInt get asInteger => _readInteger(value);
+  const BatchSetting.text(String this.value);
+  String get asText => value as String;
 }
 
-final class BatchWarning extends NativeObject {
-  BatchWarning._(super.json);
-  factory BatchWarning.read(Object? value) => BatchWarning._(readObject(value));
-  BatchSetting get running => BatchSetting.read(json["running"]);
-  BatchSetting get tunedFor => BatchSetting.read(json["tuned_for"]);
+final class BatchWarning extends _NativeValue {
+  BatchWarning._(super.fields);
+  factory BatchWarning.read(Object? value) =>
+      BatchWarning._(_readObject(value));
+  BatchSetting get running => BatchSetting.read(_fields["running"]);
+  BatchSetting get tunedFor => BatchSetting.read(_fields["tuned_for"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["running", "tuned_for"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Entity extends NativeObject {
-  Entity._(super.json);
-  factory Entity.read(Object? value) => Entity._(readObject(value));
-  BigInt get end => readInteger(json["end"]);
-  Presence<String> get file => json.containsKey("file")
-      ? Presence.present(json["file"] as String)
+final class Entity extends _NativeValue {
+  Entity._(super.fields);
+  factory Entity.read(Object? value) => Entity._(_readObject(value));
+  BigInt get end => _readInteger(_fields["end"]);
+  Presence<String> get file => _fields.containsKey("file")
+      ? Presence.present(_fields["file"] as String)
       : const Presence.absent();
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  String get kind => _fields["kind"] as String;
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  BigInt get length => readInteger(json["length"]);
-  BigInt get start => readInteger(json["start"]);
-  num get strength => json["strength"] as num;
-  String get text => json["text"] as String;
+  BigInt get length => _readInteger(_fields["length"]);
+  BigInt get start => _readInteger(_fields["start"]);
+  num get strength => _fields["strength"] as num;
+  String get text => _fields["text"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "end",
+            "file",
+            "first_line",
+            "kind",
+            "last_line",
+            "length",
+            "start",
+            "strength",
+            "text"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class EntityEdge extends NativeObject {
-  EntityEdge._(super.json);
-  factory EntityEdge.read(Object? value) => EntityEdge._(readObject(value));
-  Presence<bool> get either => json.containsKey("either")
-      ? Presence.present(json["either"] as bool)
+final class EntityEdge extends _NativeValue {
+  EntityEdge._(super.fields);
+  factory EntityEdge.read(Object? value) => EntityEdge._(_readObject(value));
+  Presence<bool> get either => _fields.containsKey("either")
+      ? Presence.present(_fields["either"] as bool)
       : const Presence.absent();
-  num get probability => json["probability"] as num;
-  String get relation => json["relation"] as String;
-  Entity get source => Entity.read(json["source"]);
-  Entity get target => Entity.read(json["target"]);
+  num get probability => _fields["probability"] as num;
+  String get relation => _fields["relation"] as String;
+  Entity get source => Entity.read(_fields["source"]);
+  Entity get target => Entity.read(_fields["target"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "probability", "relation", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Failed extends NativeObject {
-  Failed._(super.json);
-  factory Failed.read(Object? value) => Failed._(readObject(value));
-  Failure get failed => Failure.read(json["failed"]);
+final class Failed extends _NativeValue {
+  Failed._(super.fields);
+  factory Failed.read(Object? value) => Failed._(_readObject(value));
+  Failure get failed => Failure.read(_fields["failed"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["failed"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class Failure extends NativeObject {
-  Failure._(super.json);
-  factory Failure.read(Object? value) => Failure._(readObject(value));
-  String get cause => json["cause"] as String;
-  String get kind => json["kind"] as String;
+final class Failure extends _NativeValue {
+  Failure._(super.fields);
+  factory Failure.read(Object? value) => Failure._(_readObject(value));
+  String get cause => _fields["cause"] as String;
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["cause", "kind"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class FindAnswer extends NativeObject {
-  FindAnswer._(super.json);
-  factory FindAnswer.read(Object? value) => FindAnswer._(readObject(value));
-  Presence<num> get confidence => json.containsKey("confidence")
-      ? Presence.present(json["confidence"] as num)
+final class FindAnswer extends _NativeValue {
+  FindAnswer._(super.fields);
+  factory FindAnswer.read(Object? value) => FindAnswer._(_readObject(value));
+  Presence<num> get confidence => _fields.containsKey("confidence")
+      ? Presence.present(_fields["confidence"] as num)
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  String get pick => json["pick"] as String;
+  String get kind => _fields["kind"] as String;
+  String get pick => _fields["pick"] as String;
   Map<String, num> get probabilities =>
-      (json["probabilities"] as Map<String, Object?>)
+      (_fields["probabilities"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["confidence", "kind", "pick", "probabilities"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class NameOdds extends NativeObject {
-  NameOdds._(super.json);
-  factory NameOdds.read(Object? value) => NameOdds._(readObject(value));
-  Map<String, num>? get edges => json["edges"] == null
+final class NameOdds extends _NativeValue {
+  NameOdds._(super.fields);
+  factory NameOdds.read(Object? value) => NameOdds._(_readObject(value));
+  Map<String, num>? get edges => _fields["edges"] == null
       ? null
-      : (json["edges"] as Map<String, Object?>)
+      : (_fields["edges"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
-  BigInt get end => readInteger(json["end"]);
-  Map<String, num>? get kinds => json["kinds"] == null
+  BigInt get end => _readInteger(_fields["end"]);
+  Map<String, num>? get kinds => _fields["kinds"] == null
       ? null
-      : (json["kinds"] as Map<String, Object?>)
+      : (_fields["kinds"] as Map<String, Object?>)
           .map((k, v) => MapEntry(k, v as num));
-  BigInt get start => readInteger(json["start"]);
+  BigInt get start => _readInteger(_fields["start"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["edges", "end", "kinds", "start"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class PairOdds extends NativeObject {
-  PairOdds._(super.json);
-  factory PairOdds.read(Object? value) => PairOdds._(readObject(value));
-  num get probability => json["probability"] as num;
-  String get relation => json["relation"] as String;
-  Place get source => Place.read(json["source"]);
-  Place get target => Place.read(json["target"]);
+final class PairOdds extends _NativeValue {
+  PairOdds._(super.fields);
+  factory PairOdds.read(Object? value) => PairOdds._(_readObject(value));
+  num get probability => _fields["probability"] as num;
+  String get relation => _fields["relation"] as String;
+  Place get source => Place.read(_fields["source"]);
+  Place get target => Place.read(_fields["target"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["probability", "relation", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class PieceOdds extends NativeObject {
-  PieceOdds._(super.json);
-  factory PieceOdds.read(Object? value) => PieceOdds._(readObject(value));
-  BigInt get end => readInteger(json["end"]);
-  BigInt get start => readInteger(json["start"]);
-  Map<String, num> get tags => (json["tags"] as Map<String, Object?>)
+final class PieceOdds extends _NativeValue {
+  PieceOdds._(super.fields);
+  factory PieceOdds.read(Object? value) => PieceOdds._(_readObject(value));
+  BigInt get end => _readInteger(_fields["end"]);
+  BigInt get start => _readInteger(_fields["start"]);
+  Map<String, num> get tags => (_fields["tags"] as Map<String, Object?>)
       .map((k, v) => MapEntry(k, v as num));
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["end", "start", "tags"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Place extends NativeObject {
-  Place._(super.json);
-  factory Place.read(Object? value) => Place._(readObject(value));
-  BigInt get end => readInteger(json["end"]);
-  BigInt get start => readInteger(json["start"]);
+final class Place extends _NativeValue {
+  Place._(super.fields);
+  factory Place.read(Object? value) => Place._(_readObject(value));
+  BigInt get end => _readInteger(_fields["end"]);
+  BigInt get start => _readInteger(_fields["start"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["end", "start"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class ProfileWarning extends NativeObject {
-  ProfileWarning._(super.json);
+final class ProfileWarning extends _NativeValue {
+  ProfileWarning._(super.fields);
   factory ProfileWarning.read(Object? value) =>
-      ProfileWarning._(readObject(value));
-  String get running => json["running"] as String;
-  String get tunedFor => json["tuned_for"] as String;
+      ProfileWarning._(_readObject(value));
+  String get running => _fields["running"] as String;
+  String get tunedFor => _fields["tuned_for"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["running", "tuned_for"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class Recognize extends NativeObject {
-  Recognize(super.json);
+sealed class Recognize extends _NativeValue {
+  Recognize(super.fields);
   factory Recognize.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map.containsKey("entities") &&
         !map.containsKey("mode") &&
         !map.containsKey("proposals")) return RecognizeEntities.read(map);
@@ -1718,109 +2614,155 @@ sealed class Recognize extends NativeObject {
   }
 }
 
-final class RecognizeAnswer extends NativeObject {
-  RecognizeAnswer._(super.json);
+final class RecognizeAnswer extends _NativeValue {
+  RecognizeAnswer._(super.fields);
   factory RecognizeAnswer.read(Object? value) =>
-      RecognizeAnswer._(readObject(value));
-  List<NameOdds> get names => (json["names"] as List)
+      RecognizeAnswer._(_readObject(value));
+  List<NameOdds> get names => (_fields["names"] as List)
       .map((v) => NameOdds.read(v))
       .toList(growable: false);
-  List<PairOdds> get pairs => (json["pairs"] as List)
+  List<PairOdds> get pairs => (_fields["pairs"] as List)
       .map((v) => PairOdds.read(v))
       .toList(growable: false);
-  List<PieceOdds> get pieces => (json["pieces"] as List)
+  List<PieceOdds> get pieces => (_fields["pieces"] as List)
       .map((v) => PieceOdds.read(v))
       .toList(growable: false);
-  List<RecognitionProposal> get proposals => (json["proposals"] as List)
+  List<RecognitionProposal> get proposals => (_fields["proposals"] as List)
       .map((v) => RecognitionProposal.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["names", "pairs", "pieces", "proposals"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class RecognizeEntities extends Recognize {
-  RecognizeEntities._(super.json);
+  RecognizeEntities._(super.fields);
   factory RecognizeEntities.read(Object? value) =>
-      RecognizeEntities._(readObject(value));
-  List<Entity> get entities => (json["entities"] as List)
+      RecognizeEntities._(_readObject(value));
+  List<Entity> get entities => (_fields["entities"] as List)
       .map((v) => Entity.read(v))
       .toList(growable: false);
-  Presence<List<EntityEdge>> get relations => json.containsKey("relations")
-      ? Presence.present((json["relations"] as List)
+  Presence<List<EntityEdge>> get relations => _fields.containsKey("relations")
+      ? Presence.present((_fields["relations"] as List)
           .map((v) => EntityEdge.read(v))
           .toList(growable: false))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["entities", "relations"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class RecognizeModeProposals extends Recognize {
-  RecognizeModeProposals._(super.json);
+  RecognizeModeProposals._(super.fields);
   factory RecognizeModeProposals.read(Object? value) =>
-      RecognizeModeProposals._(readObject(value));
-  String get mode => json["mode"] as String;
-  List<BoundaryProposal> get proposals => (json["proposals"] as List)
+      RecognizeModeProposals._(_readObject(value));
+  String get mode => _fields["mode"] as String;
+  List<BoundaryProposal> get proposals => (_fields["proposals"] as List)
       .map((v) => BoundaryProposal.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["mode", "proposals"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class RelateFields extends NativeObject {
-  RelateFields._(super.json);
-  factory RelateFields.read(Object? value) => RelateFields._(readObject(value));
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+final class RelateFields extends _NativeValue {
+  RelateFields._(super.fields);
+  factory RelateFields.read(Object? value) =>
+      RelateFields._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class RelatedEntity extends NativeObject {
-  RelatedEntity._(super.json);
+final class RelatedEntity extends _NativeValue {
+  RelatedEntity._(super.fields);
   factory RelatedEntity.read(Object? value) =>
-      RelatedEntity._(readObject(value));
-  String get kind => json["kind"] as String;
-  String get name => json["name"] as String;
+      RelatedEntity._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String get name => _fields["name"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "name"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class RelatedEntityEdge extends NativeObject {
-  RelatedEntityEdge._(super.json);
+final class RelatedEntityEdge extends _NativeValue {
+  RelatedEntityEdge._(super.fields);
   factory RelatedEntityEdge.read(Object? value) =>
-      RelatedEntityEdge._(readObject(value));
-  Presence<bool> get either => json.containsKey("either")
-      ? Presence.present(json["either"] as bool)
+      RelatedEntityEdge._(_readObject(value));
+  Presence<bool> get either => _fields.containsKey("either")
+      ? Presence.present(_fields["either"] as bool)
       : const Presence.absent();
-  num get probability => json["probability"] as num;
-  String get relation => json["relation"] as String;
-  RelationEndpoint get source => RelationEndpoint.read(json["source"]);
-  RelationEndpoint get target => RelationEndpoint.read(json["target"]);
+  num get probability => _fields["probability"] as num;
+  String get relation => _fields["relation"] as String;
+  RelationEndpoint get source => RelationEndpoint.read(_fields["source"]);
+  RelationEndpoint get target => RelationEndpoint.read(_fields["target"]);
+  String get sourceName => source.name;
+  String get targetName => target.name;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "probability", "relation", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class RelationRule extends NativeObject {
-  RelationRule._(super.json);
-  factory RelationRule.read(Object? value) => RelationRule._(readObject(value));
-  bool get either => json["either"] as bool;
-  String get name => json["name"] as String;
-  String get reads => json["reads"] as String;
-  Presence<bool> get single => json.containsKey("single")
-      ? Presence.present(json["single"] as bool)
+final class RelationRule extends _NativeValue {
+  RelationRule._(super.fields);
+  factory RelationRule.read(Object? value) =>
+      RelationRule._(_readObject(value));
+  bool get either => _fields["either"] as bool;
+  String get name => _fields["name"] as String;
+  String get reads => _fields["reads"] as String;
+  Presence<bool> get single => _fields.containsKey("single")
+      ? Presence.present(_fields["single"] as bool)
       : const Presence.absent();
-  String get source => json["source"] as String;
-  String get target => json["target"] as String;
+  String get source => _fields["source"] as String;
+  String get target => _fields["target"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "name", "reads", "single", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class SessionAnnotation extends NativeObject {
-  SessionAnnotation._(super.json);
+final class SessionAnnotation extends _NativeValue {
+  SessionAnnotation._(super.fields);
   factory SessionAnnotation.read(Object? value) =>
-      SessionAnnotation._(readObject(value));
-  String get name => json["name"] as String;
-  AnnotationValue get value => AnnotationValue.read(json["value"]);
+      SessionAnnotation._(_readObject(value));
+  String get name => _fields["name"] as String;
+  AnnotationValue get value => AnnotationValue.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["name", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class SessionInputSource extends NativeObject {
-  SessionInputSource._(super.json);
+final class SessionInputSource extends _NativeValue {
+  SessionInputSource._(super.fields);
   factory SessionInputSource.read(Object? value) =>
-      SessionInputSource._(readObject(value));
-  BigInt get index => readInteger(json["index"]);
-  PhysicalSource get source => PhysicalSource.read(json["source"]);
+      SessionInputSource._(_readObject(value));
+  BigInt get index => _readInteger(_fields["index"]);
+  PhysicalSource get source => PhysicalSource.read(_fields["source"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["index", "source"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class SessionJudgment extends NativeObject {
-  SessionJudgment(super.json);
+sealed class SessionJudgment extends _NativeValue {
+  SessionJudgment(super.fields);
   factory SessionJudgment.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "decision") return SessionJudgmentDecision.read(map);
     if (map["kind"] == "choice") return SessionJudgmentChoice.read(map);
     if (map["kind"] == "score") return SessionJudgmentScore.read(map);
@@ -1830,50 +2772,73 @@ sealed class SessionJudgment extends NativeObject {
 }
 
 final class SessionJudgmentChoice extends SessionJudgment {
-  SessionJudgmentChoice._(super.json);
+  SessionJudgmentChoice._(super.fields);
   factory SessionJudgmentChoice.read(Object? value) =>
-      SessionJudgmentChoice._(readObject(value));
-  String get kind => json["kind"] as String;
-  String? get value => json["value"] == null ? null : json["value"] as String;
+      SessionJudgmentChoice._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  String? get value =>
+      _fields["value"] == null ? null : _fields["value"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionJudgmentDecision extends SessionJudgment {
-  SessionJudgmentDecision._(super.json);
+  SessionJudgmentDecision._(super.fields);
   factory SessionJudgmentDecision.read(Object? value) =>
-      SessionJudgmentDecision._(readObject(value));
-  String get kind => json["kind"] as String;
-  bool? get value => json["value"] == null ? null : json["value"] as bool;
+      SessionJudgmentDecision._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  bool? get value => _fields["value"] == null ? null : _fields["value"] as bool;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionJudgmentScore extends SessionJudgment {
-  SessionJudgmentScore._(super.json);
+  SessionJudgmentScore._(super.fields);
   factory SessionJudgmentScore.read(Object? value) =>
-      SessionJudgmentScore._(readObject(value));
-  String get kind => json["kind"] as String;
-  num get value => json["value"] as num;
+      SessionJudgmentScore._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  num get value => _fields["value"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionJudgmentTags extends SessionJudgment {
-  SessionJudgmentTags._(super.json);
+  SessionJudgmentTags._(super.fields);
   factory SessionJudgmentTags.read(Object? value) =>
-      SessionJudgmentTags._(readObject(value));
-  String get kind => json["kind"] as String;
-  List<String> get value =>
-      (json["value"] as List).map((v) => v as String).toList(growable: false);
+      SessionJudgmentTags._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  List<String> get value => (_fields["value"] as List)
+      .map((v) => v as String)
+      .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class SessionNamedProbability extends NativeObject {
-  SessionNamedProbability._(super.json);
+final class SessionNamedProbability extends _NativeValue {
+  SessionNamedProbability._(super.fields);
   factory SessionNamedProbability.read(Object? value) =>
-      SessionNamedProbability._(readObject(value));
-  String get name => json["name"] as String;
-  num get probability => json["probability"] as num;
+      SessionNamedProbability._(_readObject(value));
+  String get name => _fields["name"] as String;
+  num get probability => _fields["probability"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["name", "probability"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class SessionObservation extends NativeObject {
-  SessionObservation(super.json);
+sealed class SessionObservation extends _NativeValue {
+  SessionObservation(super.fields);
   factory SessionObservation.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "question") return SessionObservationQuestion.read(map);
     if (map["kind"] == "row") return SessionObservationRow.read(map);
     throw FormatException("Unknown SessionObservation alternative");
@@ -1881,35 +2846,46 @@ sealed class SessionObservation extends NativeObject {
 }
 
 final class SessionObservationQuestion extends SessionObservation {
-  SessionObservationQuestion._(super.json);
+  SessionObservationQuestion._(super.fields);
   factory SessionObservationQuestion.read(Object? value) =>
-      SessionObservationQuestion._(readObject(value));
+      SessionObservationQuestion._(_readObject(value));
   SessionQuestionDetail get detail =>
-      SessionQuestionDetail.read(json["detail"]);
-  BigInt get index => readInteger(json["index"]);
-  String get kind => json["kind"] as String;
-  Presence<String> get member => json.containsKey("member")
-      ? Presence.present(json["member"] as String)
+      SessionQuestionDetail.read(_fields["detail"]);
+  BigInt get index => _readInteger(_fields["index"]);
+  String get kind => _fields["kind"] as String;
+  Presence<String> get member => _fields.containsKey("member")
+      ? Presence.present(_fields["member"] as String)
       : const Presence.absent();
-  BigInt get position => readInteger(json["position"]);
-  Presence<String> get stage => json.containsKey("stage")
-      ? Presence.present(json["stage"] as String)
+  BigInt get position => _readInteger(_fields["position"]);
+  Presence<String> get stage => _fields.containsKey("stage")
+      ? Presence.present(_fields["stage"] as String)
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["detail", "index", "kind", "member", "position", "stage"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionObservationRow extends SessionObservation {
-  SessionObservationRow._(super.json);
+  SessionObservationRow._(super.fields);
   factory SessionObservationRow.read(Object? value) =>
-      SessionObservationRow._(readObject(value));
-  BigInt get index => readInteger(json["index"]);
-  String get kind => json["kind"] as String;
-  SessionObservedRow get value => SessionObservedRow.read(json["value"]);
+      SessionObservationRow._(_readObject(value));
+  BigInt get index => _readInteger(_fields["index"]);
+  String get kind => _fields["kind"] as String;
+  SessionObservedRow get value => SessionObservedRow.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["index", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class SessionObservedRow extends NativeObject {
-  SessionObservedRow(super.json);
+sealed class SessionObservedRow extends _NativeValue {
+  SessionObservedRow(super.fields);
   factory SessionObservedRow.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "judgment") return SessionObservedRowJudgment.read(map);
     if (map["kind"] == "annotated")
       return SessionObservedRowAnnotated.read(map);
@@ -1923,54 +2899,74 @@ sealed class SessionObservedRow extends NativeObject {
 }
 
 final class SessionObservedRowAnnotated extends SessionObservedRow {
-  SessionObservedRowAnnotated._(super.json);
+  SessionObservedRowAnnotated._(super.fields);
   factory SessionObservedRowAnnotated.read(Object? value) =>
-      SessionObservedRowAnnotated._(readObject(value));
-  String get kind => json["kind"] as String;
-  List<SessionAnnotation> get value => (json["value"] as List)
+      SessionObservedRowAnnotated._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  List<SessionAnnotation> get value => (_fields["value"] as List)
       .map((v) => SessionAnnotation.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionObservedRowFind extends SessionObservedRow {
-  SessionObservedRowFind._(super.json);
+  SessionObservedRowFind._(super.fields);
   factory SessionObservedRowFind.read(Object? value) =>
-      SessionObservedRowFind._(readObject(value));
-  String get kind => json["kind"] as String;
+      SessionObservedRowFind._(_readObject(value));
+  String get kind => _fields["kind"] as String;
   BigInt? get value =>
-      json["value"] == null ? null : readInteger(json["value"]);
+      _fields["value"] == null ? null : _readInteger(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionObservedRowJudgment extends SessionObservedRow {
-  SessionObservedRowJudgment._(super.json);
+  SessionObservedRowJudgment._(super.fields);
   factory SessionObservedRowJudgment.read(Object? value) =>
-      SessionObservedRowJudgment._(readObject(value));
-  String get kind => json["kind"] as String;
-  SessionJudgment get value => SessionJudgment.read(json["value"]);
+      SessionObservedRowJudgment._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  SessionJudgment get value => SessionJudgment.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionObservedRowRecognized extends SessionObservedRow {
-  SessionObservedRowRecognized._(super.json);
+  SessionObservedRowRecognized._(super.fields);
   factory SessionObservedRowRecognized.read(Object? value) =>
-      SessionObservedRowRecognized._(readObject(value));
-  String get kind => json["kind"] as String;
-  SessionRecognition get value => SessionRecognition.read(json["value"]);
+      SessionObservedRowRecognized._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  SessionRecognition get value => SessionRecognition.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionObservedRowRelations extends SessionObservedRow {
-  SessionObservedRowRelations._(super.json);
+  SessionObservedRowRelations._(super.fields);
   factory SessionObservedRowRelations.read(Object? value) =>
-      SessionObservedRowRelations._(readObject(value));
-  String get kind => json["kind"] as String;
-  List<SessionRelationEdge> get value => (json["value"] as List)
+      SessionObservedRowRelations._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  List<SessionRelationEdge> get value => (_fields["value"] as List)
       .map((v) => SessionRelationEdge.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-sealed class SessionPacket extends NativeObject {
-  SessionPacket(super.json);
+sealed class SessionPacket extends _NativeValue {
+  SessionPacket(super.fields);
   factory SessionPacket.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["function"] == "decide" && map["kind"] == "row")
       return SessionPacketDecideRow.read(map);
     if (map["function"] == "choose" && map["kind"] == "row")
@@ -2010,191 +3006,281 @@ sealed class SessionPacket extends NativeObject {
 }
 
 final class SessionPacketAnnotateAggregate extends SessionPacket {
-  SessionPacketAnnotateAggregate._(super.json);
+  SessionPacketAnnotateAggregate._(super.fields);
   factory SessionPacketAnnotateAggregate.read(Object? value) =>
-      SessionPacketAnnotateAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<Annotation> get value => (json["value"] as List)
+      SessionPacketAnnotateAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<Annotation> get value => (_fields["value"] as List)
       .map((v) => Annotation.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketAnnotateRow extends SessionPacket {
-  SessionPacketAnnotateRow._(super.json);
+  SessionPacketAnnotateRow._(super.fields);
   factory SessionPacketAnnotateRow.read(Object? value) =>
-      SessionPacketAnnotateRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  Annotation get value => Annotation.read(json["value"]);
+      SessionPacketAnnotateRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  Annotation get value => Annotation.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketChooseAggregate extends SessionPacket {
-  SessionPacketChooseAggregate._(super.json);
+  SessionPacketChooseAggregate._(super.fields);
   factory SessionPacketChooseAggregate.read(Object? value) =>
-      SessionPacketChooseAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicNullableString> get value => (json["value"] as List)
-      .map((v) => AtomicNullableString.read(v))
+      SessionPacketChooseAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<ChoiceResult> get value => (_fields["value"] as List)
+      .map((v) => ChoiceResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketChooseRow extends SessionPacket {
-  SessionPacketChooseRow._(super.json);
+  SessionPacketChooseRow._(super.fields);
   factory SessionPacketChooseRow.read(Object? value) =>
-      SessionPacketChooseRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  AtomicNullableString get value => AtomicNullableString.read(json["value"]);
+      SessionPacketChooseRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  ChoiceResult get value => ChoiceResult.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketDecideAggregate extends SessionPacket {
-  SessionPacketDecideAggregate._(super.json);
+  SessionPacketDecideAggregate._(super.fields);
   factory SessionPacketDecideAggregate.read(Object? value) =>
-      SessionPacketDecideAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicDecideValue> get value => (json["value"] as List)
-      .map((v) => AtomicDecideValue.read(v))
+      SessionPacketDecideAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<DecisionResult> get value => (_fields["value"] as List)
+      .map((v) => DecisionResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketDecideRow extends SessionPacket {
-  SessionPacketDecideRow._(super.json);
+  SessionPacketDecideRow._(super.fields);
   factory SessionPacketDecideRow.read(Object? value) =>
-      SessionPacketDecideRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  AtomicDecideValue get value => AtomicDecideValue.read(json["value"]);
+      SessionPacketDecideRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  DecisionResult get value => DecisionResult.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketFilterAggregate extends SessionPacket {
-  SessionPacketFilterAggregate._(super.json);
+  SessionPacketFilterAggregate._(super.fields);
   factory SessionPacketFilterAggregate.read(Object? value) =>
-      SessionPacketFilterAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicBoolean> get value => (json["value"] as List)
-      .map((v) => AtomicBoolean.read(v))
+      SessionPacketFilterAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<FilterResult> get value => (_fields["value"] as List)
+      .map((v) => FilterResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketFilterRow extends SessionPacket {
-  SessionPacketFilterRow._(super.json);
+  SessionPacketFilterRow._(super.fields);
   factory SessionPacketFilterRow.read(Object? value) =>
-      SessionPacketFilterRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  AtomicBoolean get value => AtomicBoolean.read(json["value"]);
+      SessionPacketFilterRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  FilterResult get value => FilterResult.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketFindAggregate extends SessionPacket {
-  SessionPacketFindAggregate._(super.json);
+  SessionPacketFindAggregate._(super.fields);
   factory SessionPacketFindAggregate.read(Object? value) =>
-      SessionPacketFindAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  Find get value => Find.read(json["value"]);
+      SessionPacketFindAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  Find get value => Find.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketObservation extends SessionPacket {
-  SessionPacketObservation._(super.json);
+  SessionPacketObservation._(super.fields);
   factory SessionPacketObservation.read(Object? value) =>
-      SessionPacketObservation._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  SessionObservation get value => SessionObservation.read(json["value"]);
+      SessionPacketObservation._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  SessionObservation get value => SessionObservation.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketRankAggregate extends SessionPacket {
-  SessionPacketRankAggregate._(super.json);
+  SessionPacketRankAggregate._(super.fields);
   factory SessionPacketRankAggregate.read(Object? value) =>
-      SessionPacketRankAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicNonZeroUsize> get value => (json["value"] as List)
-      .map((v) => AtomicNonZeroUsize.read(v))
+      SessionPacketRankAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<RankResult> get value => (_fields["value"] as List)
+      .map((v) => RankResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketRecognizeAggregate extends SessionPacket {
-  SessionPacketRecognizeAggregate._(super.json);
+  SessionPacketRecognizeAggregate._(super.fields);
   factory SessionPacketRecognizeAggregate.read(Object? value) =>
-      SessionPacketRecognizeAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<Recognition> get value => (json["value"] as List)
+      SessionPacketRecognizeAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<Recognition> get value => (_fields["value"] as List)
       .map((v) => Recognition.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketRelateAggregate extends SessionPacket {
-  SessionPacketRelateAggregate._(super.json);
+  SessionPacketRelateAggregate._(super.fields);
   factory SessionPacketRelateAggregate.read(Object? value) =>
-      SessionPacketRelateAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  Relation get value => Relation.read(json["value"]);
+      SessionPacketRelateAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  Relation get value => Relation.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketScoreAggregate extends SessionPacket {
-  SessionPacketScoreAggregate._(super.json);
+  SessionPacketScoreAggregate._(super.fields);
   factory SessionPacketScoreAggregate.read(Object? value) =>
-      SessionPacketScoreAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicDouble> get value => (json["value"] as List)
-      .map((v) => AtomicDouble.read(v))
+      SessionPacketScoreAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<ScoreResult> get value => (_fields["value"] as List)
+      .map((v) => ScoreResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketScoreRow extends SessionPacket {
-  SessionPacketScoreRow._(super.json);
+  SessionPacketScoreRow._(super.fields);
   factory SessionPacketScoreRow.read(Object? value) =>
-      SessionPacketScoreRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  AtomicDouble get value => AtomicDouble.read(json["value"]);
+      SessionPacketScoreRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  ScoreResult get value => ScoreResult.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketTagAggregate extends SessionPacket {
-  SessionPacketTagAggregate._(super.json);
+  SessionPacketTagAggregate._(super.fields);
   factory SessionPacketTagAggregate.read(Object? value) =>
-      SessionPacketTagAggregate._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  List<AtomicArrayOfString> get value => (json["value"] as List)
-      .map((v) => AtomicArrayOfString.read(v))
+      SessionPacketTagAggregate._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  List<TagResult> get value => (_fields["value"] as List)
+      .map((v) => TagResult.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketTagRow extends SessionPacket {
-  SessionPacketTagRow._(super.json);
+  SessionPacketTagRow._(super.fields);
   factory SessionPacketTagRow.read(Object? value) =>
-      SessionPacketTagRow._(readObject(value));
-  String get function => json["function"] as String;
-  String get kind => json["kind"] as String;
-  AtomicArrayOfString get value => AtomicArrayOfString.read(json["value"]);
+      SessionPacketTagRow._(_readObject(value));
+  String get function => _fields["function"] as String;
+  String get kind => _fields["kind"] as String;
+  TagResult get value => TagResult.read(_fields["value"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["function", "kind", "value"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
 final class SessionPacketTerminal extends SessionPacket {
-  SessionPacketTerminal._(super.json);
+  SessionPacketTerminal._(super.fields);
   factory SessionPacketTerminal.read(Object? value) =>
-      SessionPacketTerminal._(readObject(value));
-  Presence<Facts> get facts => json.containsKey("facts")
-      ? Presence.present(Facts.read(json["facts"]))
+      SessionPacketTerminal._(_readObject(value));
+  Presence<Facts> get facts => _fields.containsKey("facts")
+      ? Presence.present(Facts.read(_fields["facts"]))
       : const Presence.absent();
-  Presence<CallError> get failure => json.containsKey("failure")
-      ? Presence.present(CallError.read(json["failure"]))
+  Presence<CallError> get failure => _fields.containsKey("failure")
+      ? Presence.present(CallError.read(_fields["failure"]))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
+  String get kind => _fields["kind"] as String;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["facts", "failure", "kind"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-sealed class SessionProbabilities extends NativeObject {
-  SessionProbabilities(super.json);
+sealed class SessionProbabilities extends _NativeValue {
+  SessionProbabilities(super.fields);
   factory SessionProbabilities.read(Object? value) {
-    final map = readObject(value);
+    final map = _readObject(value);
     if (map["kind"] == "yes_no") return SessionProbabilitiesYesNo.read(map);
     if (map["kind"] == "named") return SessionProbabilitiesNamed.read(map);
     throw FormatException("Unknown SessionProbabilities alternative");
@@ -2202,149 +3288,223 @@ sealed class SessionProbabilities extends NativeObject {
 }
 
 final class SessionProbabilitiesNamed extends SessionProbabilities {
-  SessionProbabilitiesNamed._(super.json);
+  SessionProbabilitiesNamed._(super.fields);
   factory SessionProbabilitiesNamed.read(Object? value) =>
-      SessionProbabilitiesNamed._(readObject(value));
-  String get kind => json["kind"] as String;
-  List<SessionNamedProbability> get value => (json["value"] as List)
+      SessionProbabilitiesNamed._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  List<SessionNamedProbability> get value => (_fields["value"] as List)
       .map((v) => SessionNamedProbability.read(v))
       .toList(growable: false);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
 final class SessionProbabilitiesYesNo extends SessionProbabilities {
-  SessionProbabilitiesYesNo._(super.json);
+  SessionProbabilitiesYesNo._(super.fields);
   factory SessionProbabilitiesYesNo.read(Object? value) =>
-      SessionProbabilitiesYesNo._(readObject(value));
-  String get kind => json["kind"] as String;
-  num get value => json["value"] as num;
+      SessionProbabilitiesYesNo._(_readObject(value));
+  String get kind => _fields["kind"] as String;
+  num get value => _fields["value"] as num;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["kind", "value"].contains(entry.key)) entry.key: entry.value
+      });
 }
 
-final class SessionQuestionDetail extends NativeObject {
-  SessionQuestionDetail._(super.json);
+final class SessionQuestionDetail extends _NativeValue {
+  SessionQuestionDetail._(super.fields);
   factory SessionQuestionDetail.read(Object? value) =>
-      SessionQuestionDetail._(readObject(value));
-  Presence<String> get answerId => json.containsKey("answer_id")
-      ? Presence.present(json["answer_id"] as String)
+      SessionQuestionDetail._(_readObject(value));
+  Presence<String> get answerId => _fields.containsKey("answer_id")
+      ? Presence.present(_fields["answer_id"] as String)
       : const Presence.absent();
-  bool get cached => json["cached"] as bool;
-  Presence<num> get confidence => json.containsKey("confidence")
-      ? Presence.present(json["confidence"] as num)
+  bool get cached => _fields["cached"] as bool;
+  Presence<num> get confidence => _fields.containsKey("confidence")
+      ? Presence.present(_fields["confidence"] as num)
       : const Presence.absent();
-  BigInt get failedQuestions => readInteger(json["failed_questions"]);
-  Presence<Failure> get failure => json.containsKey("failure")
-      ? Presence.present(Failure.read(json["failure"]))
+  BigInt get failedQuestions => _readInteger(_fields["failed_questions"]);
+  Presence<Failure> get failure => _fields.containsKey("failure")
+      ? Presence.present(Failure.read(_fields["failure"]))
       : const Presence.absent();
-  Presence<String> get failureId => json.containsKey("failure_id")
-      ? Presence.present(json["failure_id"] as String)
+  Presence<String> get failureId => _fields.containsKey("failure_id")
+      ? Presence.present(_fields["failure_id"] as String)
       : const Presence.absent();
-  Presence<Object?> get input => json.containsKey("input")
-      ? Presence.present(json["input"])
+  Presence<Object?> get input => _fields.containsKey("input")
+      ? Presence.present(_fields["input"])
       : const Presence.absent();
-  Presence<PhysicalSource> get inputSource => json.containsKey("input_source")
-      ? Presence.present(PhysicalSource.read(json["input_source"]))
-      : const Presence.absent();
-  List<SessionInputSource> get inputSources => (json["input_sources"] as List)
-      .map((v) => SessionInputSource.read(v))
-      .toList(growable: false);
+  Presence<PhysicalSource> get inputSource =>
+      _fields.containsKey("input_source")
+          ? Presence.present(PhysicalSource.read(_fields["input_source"]))
+          : const Presence.absent();
+  List<SessionInputSource> get inputSources =>
+      (_fields["input_sources"] as List)
+          .map((v) => SessionInputSource.read(v))
+          .toList(growable: false);
   List<Object?> get inputs =>
-      (json["inputs"] as List).map((v) => v).toList(growable: false);
-  String get model => json["model"] as String;
-  List<Observation> get observations => (json["observations"] as List)
+      (_fields["inputs"] as List).map((v) => v).toList(growable: false);
+  String get model => _fields["model"] as String;
+  List<Observation> get observations => (_fields["observations"] as List)
       .map((v) => Observation.read(v))
       .toList(growable: false);
-  Presence<SessionProbabilities> get probabilities =>
-      json.containsKey("probabilities")
-          ? Presence.present(SessionProbabilities.read(json["probabilities"]))
-          : const Presence.absent();
-  ReadableQuestion get question => ReadableQuestion.read(json["question"]);
-  String get questionSha256 => json["question_sha256"] as String;
-  List<QuestionSource> get questionSources => (json["question_sources"] as List)
-      .map((v) => QuestionSource.read(v))
-      .toList(growable: false);
-  Presence<String> get rawPick => json.containsKey("raw_pick")
-      ? Presence.present(json["raw_pick"] as String)
+  Presence<SessionProbabilities> get probabilities => _fields
+          .containsKey("probabilities")
+      ? Presence.present(SessionProbabilities.read(_fields["probabilities"]))
       : const Presence.absent();
-  Presence<Usage> get reportedUsage => json.containsKey("reported_usage")
-      ? Presence.present(Usage.read(json["reported_usage"]))
+  ReadableQuestion get question => ReadableQuestion.read(_fields["question"]);
+  String get questionSha256 => _fields["question_sha256"] as String;
+  List<QuestionSource> get questionSources =>
+      (_fields["question_sources"] as List)
+          .map((v) => QuestionSource.read(v))
+          .toList(growable: false);
+  Presence<String> get rawPick => _fields.containsKey("raw_pick")
+      ? Presence.present(_fields["raw_pick"] as String)
       : const Presence.absent();
-  List<String> get requests => (json["requests"] as List)
+  Presence<Usage> get reportedUsage => _fields.containsKey("reported_usage")
+      ? Presence.present(Usage.read(_fields["reported_usage"]))
+      : const Presence.absent();
+  List<String> get requests => (_fields["requests"] as List)
       .map((v) => v as String)
       .toList(growable: false);
-  BigInt get requestsSent => readInteger(json["requests_sent"]);
-  Presence<Object?> get threshold => json.containsKey("threshold")
-      ? Presence.present(json["threshold"])
+  BigInt get requestsSent => _readInteger(_fields["requests_sent"]);
+  Presence<Object?> get threshold => _fields.containsKey("threshold")
+      ? Presence.present(_fields["threshold"])
       : const Presence.absent();
-  String get url => json["url"] as String;
-  Presence<TokenUsage> get usage => json.containsKey("usage")
-      ? Presence.present(TokenUsage.read(json["usage"]))
+  String get url => _fields["url"] as String;
+  Presence<TokenUsage> get usage => _fields.containsKey("usage")
+      ? Presence.present(TokenUsage.read(_fields["usage"]))
       : const Presence.absent();
-  Presence<Value> get value => json.containsKey("value")
-      ? Presence.present(Value.read(json["value"]))
+  Presence<Value> get value => _fields.containsKey("value")
+      ? Presence.present(Value.read(_fields["value"]))
       : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "answer_id",
+            "cached",
+            "confidence",
+            "failed_questions",
+            "failure",
+            "failure_id",
+            "input",
+            "input_source",
+            "input_sources",
+            "inputs",
+            "model",
+            "observations",
+            "probabilities",
+            "question",
+            "question_sha256",
+            "question_sources",
+            "raw_pick",
+            "reported_usage",
+            "requests",
+            "requests_sent",
+            "threshold",
+            "url",
+            "usage",
+            "value"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class SessionRecognition extends NativeObject {
-  SessionRecognition._(super.json);
+final class SessionRecognition extends _NativeValue {
+  SessionRecognition._(super.fields);
   factory SessionRecognition.read(Object? value) =>
-      SessionRecognition._(readObject(value));
-  List<Entity> get entities => (json["entities"] as List)
+      SessionRecognition._(_readObject(value));
+  List<Entity> get entities => (_fields["entities"] as List)
       .map((v) => Entity.read(v))
       .toList(growable: false);
-  String get mode => json["mode"] as String;
-  Presence<List<BoundaryProposal>> get proposals =>
-      json.containsKey("proposals")
-          ? Presence.present((json["proposals"] as List)
-              .map((v) => BoundaryProposal.read(v))
-              .toList(growable: false))
-          : const Presence.absent();
+  String get mode => _fields["mode"] as String;
+  Presence<List<BoundaryProposal>> get proposals => _fields
+          .containsKey("proposals")
+      ? Presence.present((_fields["proposals"] as List)
+          .map((v) => BoundaryProposal.read(v))
+          .toList(growable: false))
+      : const Presence.absent();
   Presence<List<RecognitionEdgeDocument>> get relations =>
-      json.containsKey("relations")
-          ? Presence.present((json["relations"] as List)
+      _fields.containsKey("relations")
+          ? Presence.present((_fields["relations"] as List)
               .map((v) => RecognitionEdgeDocument.read(v))
               .toList(growable: false))
           : const Presence.absent();
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["entities", "mode", "proposals", "relations"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class SessionRelationEdge extends NativeObject {
-  SessionRelationEdge._(super.json);
+final class SessionRelationEdge extends _NativeValue {
+  SessionRelationEdge._(super.fields);
   factory SessionRelationEdge.read(Object? value) =>
-      SessionRelationEdge._(readObject(value));
-  bool get either => json["either"] as bool;
-  num get probability => json["probability"] as num;
-  String get relation => json["relation"] as String;
-  EntityDocument get source => EntityDocument.read(json["source"]);
-  EntityDocument get target => EntityDocument.read(json["target"]);
+      SessionRelationEdge._(_readObject(value));
+  bool get either => _fields["either"] as bool;
+  num get probability => _fields["probability"] as num;
+  String get relation => _fields["relation"] as String;
+  EntityDocument get source => EntityDocument.read(_fields["source"]);
+  EntityDocument get target => EntityDocument.read(_fields["target"]);
+  String get sourceName => source.name;
+  String get targetName => target.name;
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["either", "probability", "relation", "source", "target"]
+              .contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class SourceRelationEndpoint extends NativeObject {
-  SourceRelationEndpoint._(super.json);
+final class SourceRelationEndpoint extends _NativeValue {
+  SourceRelationEndpoint._(super.fields);
   factory SourceRelationEndpoint.read(Object? value) =>
-      SourceRelationEndpoint._(readObject(value));
-  String? get file => json["file"] == null ? null : json["file"] as String;
-  Presence<BigInt> get firstLine => json.containsKey("first_line")
-      ? Presence.present(readInteger(json["first_line"]))
+      SourceRelationEndpoint._(_readObject(value));
+  String? get file =>
+      _fields["file"] == null ? null : _fields["file"] as String;
+  Presence<BigInt> get firstLine => _fields.containsKey("first_line")
+      ? Presence.present(_readInteger(_fields["first_line"]))
       : const Presence.absent();
-  String get kind => json["kind"] as String;
-  Presence<BigInt> get lastLine => json.containsKey("last_line")
-      ? Presence.present(readInteger(json["last_line"]))
+  String get kind => _fields["kind"] as String;
+  Presence<BigInt> get lastLine => _fields.containsKey("last_line")
+      ? Presence.present(_readInteger(_fields["last_line"]))
       : const Presence.absent();
-  String get name => json["name"] as String;
-  BigInt get ordinal => readInteger(json["ordinal"]);
-  Object? get record => json["record"];
+  String get name => _fields["name"] as String;
+  BigInt get ordinal => _readInteger(_fields["ordinal"]);
+  Object? get record => _fields["record"];
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (![
+            "file",
+            "first_line",
+            "kind",
+            "last_line",
+            "name",
+            "ordinal",
+            "record"
+          ].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class TokenUsage extends NativeObject {
-  TokenUsage._(super.json);
-  factory TokenUsage.read(Object? value) => TokenUsage._(readObject(value));
-  BigInt get inputTokens => readInteger(json["input_tokens"]);
-  BigInt get outputTokens => readInteger(json["output_tokens"]);
+final class TokenUsage extends _NativeValue {
+  TokenUsage._(super.fields);
+  factory TokenUsage.read(Object? value) => TokenUsage._(_readObject(value));
+  BigInt get inputTokens => _readInteger(_fields["input_tokens"]);
+  BigInt get outputTokens => _readInteger(_fields["output_tokens"]);
+  Map<String, Object?> get extensions => Map.unmodifiable({
+        for (final entry in _fields.entries)
+          if (!["input_tokens", "output_tokens"].contains(entry.key))
+            entry.key: entry.value
+      });
 }
 
-final class Value {
+final class Value implements _EncodedValue {
   final Object? value;
   const Value(this.value);
   factory Value.read(Object? value) => value is Value ? value : Value(value);
-  Object? toJson() => value;
+  Object? _toValue() => value;
   bool get asBoolean => value as bool;
   String get asString => value as String;
   List<String> get asArray =>
