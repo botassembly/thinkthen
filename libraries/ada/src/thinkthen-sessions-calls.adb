@@ -85,6 +85,86 @@ procedure Relate (Client : Engine; Owner : in out Session; Request : T_RequestCa
 begin
 Start (Client, Owner, Request, "relate");
 end Relate;
+procedure Decide (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "decide");
+end Decide;
+procedure Decide (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "decide");
+end Decide;
+procedure Choose (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "choose");
+end Choose;
+procedure Choose (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "choose");
+end Choose;
+procedure Tag (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "tag");
+end Tag;
+procedure Tag (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "tag");
+end Tag;
+procedure Score (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "score");
+end Score;
+procedure Score (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "score");
+end Score;
+procedure Filter (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "filter");
+end Filter;
+procedure Filter (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "filter");
+end Filter;
+procedure Rank (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "rank");
+end Rank;
+procedure Rank (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "rank");
+end Rank;
+procedure Find (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "find");
+end Find;
+procedure Find (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "find");
+end Find;
+procedure Annotate (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "annotate");
+end Annotate;
+procedure Annotate (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "annotate");
+end Annotate;
+procedure Recognize (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "recognize");
+end Recognize;
+procedure Recognize (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "recognize");
+end Recognize;
+procedure Relate (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "relate");
+end Relate;
+procedure Relate (Client : Engine; Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False)) is
+begin
+Start (Client, Owner, (T_question => Question, T_input => Input, T_options => Options, others => <>), "relate");
+end Relate;
 function Plan (Client : Engine; Request : T_RequestCall) return String is
 use Thinkthen_Session_C; use Interfaces.C; use Interfaces.C.Strings;
 Storage : Thinkthen.Requests.Native.Arena;

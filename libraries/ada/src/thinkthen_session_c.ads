@@ -277,6 +277,41 @@ package Thinkthen_Session_C is
       len : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_request_text_v1 is record
+      text : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_unsigned_v1 is record
+      value : aliased Interfaces.Unsigned_64;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_batch_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_unsigned_v1;
+         when others =>
+            arm_2 : access constant thinkthen_request_text_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_batch_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_batch_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_null_v1 is record
+      reserved : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_json_value_v1 is record
+      text : aliased thinkthen_complete_utf8_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_boolean_v1 is record
+      value : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_string_v1 is record
       data : Interfaces.C.Strings.chars_ptr;
       len : aliased Interfaces.C.size_t;
@@ -343,10 +378,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_request_image_media_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_text_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_request_image_file_v1 is record
       m_media : access constant thinkthen_request_image_media_v1;
       m_path : access constant thinkthen_request_text_v1;
@@ -391,10 +422,6 @@ package Thinkthen_Session_C is
       m_value : access constant thinkthen_request_input_json_value_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_json_value_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_request_json_value_map_entry_v1 is record
       key : aliased thinkthen_complete_utf8_v1;
       value : access constant thinkthen_request_json_value_v1;
@@ -418,10 +445,6 @@ package Thinkthen_Session_C is
    type thinkthen_request_context_schema_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_context_schema_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_unsigned_v1 is record
-      value : aliased Interfaces.Unsigned_64;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_recognition_example_entity_v1 is record
@@ -681,25 +704,6 @@ package Thinkthen_Session_C is
       data : aliased thinkthen_request_input_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_boolean_v1 is record
-      value : aliased Interfaces.Unsigned_32;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_batch_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            arm_1 : access constant thinkthen_request_unsigned_v1;
-         when others =>
-            arm_2 : access constant thinkthen_request_text_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_request_batch_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_batch_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
    type thinkthen_request_integer_v1 is record
       value : aliased Interfaces.Integer_64;
    end record
@@ -893,10 +897,6 @@ package Thinkthen_Session_C is
    type thinkthen_request_question_text_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_question_text_data_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_null_v1 is record
-      reserved : aliased Interfaces.Unsigned_32;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_criterion_data_v1 (discr : unsigned := 0) is record
@@ -1388,9 +1388,47 @@ package Thinkthen_Session_C is
       m_location : access constant thinkthen_request_session_source_location_v1;
    end record
    with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_v1;
+   type thinkthen_complete_json_array_v1 is record
+      data : System.Address;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_entry_v1 is record
+      name : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_object_v1 is record
+      data : access constant thinkthen_complete_json_entry_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_complete_json_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            boolean : aliased Interfaces.Unsigned_32;
+         when 1 =>
+            number : aliased thinkthen_complete_utf8_v1;
+         when 2 =>
+            string : aliased thinkthen_complete_utf8_v1;
+         when 3 =>
+            c_array : aliased thinkthen_complete_json_array_v1;
+         when others =>
+            object : aliased thinkthen_complete_json_object_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_complete_json_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_complete_json_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
    type thinkthen_complete_extension_v1 is record
       name : aliased thinkthen_complete_utf8_v1;
       json : aliased thinkthen_complete_utf8_v1;
+      value : access constant thinkthen_complete_json_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_extensions_v1 is record
@@ -1489,43 +1527,6 @@ package Thinkthen_Session_C is
    type thinkthen_complete_u64_presence_v1 is record
       presence : aliased Interfaces.Unsigned_32;
       value : aliased Interfaces.Unsigned_64;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_v1;
-   type thinkthen_complete_json_array_v1 is record
-      data : System.Address;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_entry_v1 is record
-      name : aliased thinkthen_complete_utf8_v1;
-      value : access constant thinkthen_complete_json_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_object_v1 is record
-      data : access constant thinkthen_complete_json_entry_v1;
-      len : aliased Interfaces.C.size_t;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_complete_json_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            boolean : aliased Interfaces.Unsigned_32;
-         when 1 =>
-            number : aliased thinkthen_complete_utf8_v1;
-         when 2 =>
-            string : aliased thinkthen_complete_utf8_v1;
-         when 3 =>
-            c_array : aliased thinkthen_complete_json_array_v1;
-         when others =>
-            object : aliased thinkthen_complete_json_object_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_complete_json_v1 is record
-      kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_complete_json_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_complete_json_presence_v1 is record
