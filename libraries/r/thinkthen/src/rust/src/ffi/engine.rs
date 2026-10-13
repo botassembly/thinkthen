@@ -1,54 +1,11 @@
 //! Convert the public R constructor settings without changing positional arguments.
 
-use crate::usage;
-use extendr_api::{Rinternals, Types};
+use super::{Crossed, Robj, text_of};
 
-use super::{Crossed, Robj, Rtype, batch_of, text_of, whole_of};
-
-pub(super) fn configure(values: [Robj; 15]) -> Crossed<()> {
-    let [
-        base_url,
-        model,
-        throttle,
-        max_requests,
-        max_requests_total,
-        max_request_bytes,
-        cache,
-        timeout,
-        max_retries,
-        record,
-        replay,
-        profile,
-        batch,
-        backend,
-        refresh_cache,
-    ] = values;
-    let optional =
-        |value: &Robj, what: &str| (!value.is_null()).then(|| text_of(value, what)).transpose();
-    let cache = match cache.rtype() {
-        Rtype::Null => None,
-        Rtype::Logicals if cache.as_bool() == Some(false) => Some(None),
-        _ => Some(Some(text_of(&cache, "cache")?)),
-    };
-    crate::choose_engine(crate::Settings {
-        backend: optional(&backend, "backend")?,
-        base_url: optional(&base_url, "base_url")?,
-        model: optional(&model, "model")?,
-        throttle: whole_of(&throttle, "throttle")?,
-        max_requests: whole_of(&max_requests, "max_requests")?,
-        max_requests_total: whole_of(&max_requests_total, "max_requests_total")?,
-        max_request_bytes: whole_of(&max_request_bytes, "max_request_bytes")?,
-        cache,
-        timeout: whole_of(&timeout, "timeout")?,
-        max_retries: whole_of(&max_retries, "max_retries")?,
-        record: optional(&record, "record")?,
-        replay: optional(&replay, "replay")?,
-        profile: optional(&profile, "profile")?,
-        batch: batch_of(&batch)?,
-        refresh_cache: refresh_cache
-            .as_bool()
-            .ok_or_else(|| usage("refresh_cache is TRUE or FALSE"))?,
-    })
+pub(super) fn configure(value: Robj) -> Crossed<()> {
+    let settings = serde_json::from_str(&text_of(&value, "settings")?)
+        .map_err(|_| crate::usage("settings JSON is one object"))?;
+    crate::choose_engine(crate::Settings(settings))
 }
 
 /// One observation of the existing selected engine, not a facts snapshot.

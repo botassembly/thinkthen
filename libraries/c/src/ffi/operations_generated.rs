@@ -6,6 +6,23 @@
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::failures;
 use thinkthen::ErrorKind;
+/// Build from environment plus closed UTF-8 JSON settings. NULL uses the environment.
+/// Construction sends nothing; failures return NULL and occupy the constructor slot.
+/// # Safety
+/// settings_json is NULL or live NUL-terminated UTF-8 for the call.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_engine_new_with(
+    settings_json: *const std::ffi::c_char,
+) -> *mut crate::EngineHandle {
+    failures::guard(None, std::ptr::null_mut(), || {
+        // SAFETY: the caller retains all constructor input until admission returns.
+        failures::built(|| unsafe { super::settings_json(settings_json) })
+            .map_or(std::ptr::null_mut(), |engine| {
+                Box::into_raw(Box::new(crate::EngineHandle(failures::Held::new(engine))))
+            })
+    })
+}
+
 /// The calling thread's last message on this engine; never null.
 ///
 /// # Safety

@@ -258,6 +258,7 @@ cpp)
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
 		cp libraries/cpp/include/thinkthen/*.hpp "$folder/include/thinkthen/"
+	cp -R libraries/cpp/examples "$folder/examples"
 		;;
 csharp)
 		mkdir -p "$folder/feed"

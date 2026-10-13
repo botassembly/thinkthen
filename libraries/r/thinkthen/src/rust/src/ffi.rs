@@ -30,7 +30,7 @@ use crate::usage;
 mod engine;
 mod request;
 mod values;
-use values::{batch_of, completion_of, required_completion, whole_of};
+use values::{completion_of, required_completion};
 
 #[allow(
     improper_ctypes,
@@ -209,44 +209,8 @@ fn tt_usage_counters() -> Crossed<String> {
 }
 
 #[extendr]
-#[expect(
-    clippy::too_many_arguments,
-    reason = "R's engine constructor passes its public settings through this binding"
-)]
-fn tt_engine_set(
-    base_url: Robj,
-    model: Robj,
-    throttle: Robj,
-    max_requests: Robj,
-    max_requests_total: Robj,
-    max_request_bytes: Robj,
-    cache: Robj,
-    timeout: Robj,
-    max_retries: Robj,
-    record: Robj,
-    replay: Robj,
-    profile: Robj,
-    batch: Robj,
-    backend: Robj,
-    refresh_cache: Robj,
-) -> Crossed<()> {
-    engine::configure([
-        base_url,
-        model,
-        throttle,
-        max_requests,
-        max_requests_total,
-        max_request_bytes,
-        cache,
-        timeout,
-        max_retries,
-        record,
-        replay,
-        profile,
-        batch,
-        backend,
-        refresh_cache,
-    ])
+fn tt_engine_set(settings: Robj) -> Crossed<()> {
+    engine::configure(settings)
 }
 
 #[extendr]

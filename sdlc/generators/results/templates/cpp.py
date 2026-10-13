@@ -56,8 +56,17 @@ def condition(tag):
     if mode=='member': return f'value_.contains({json.dumps(member)})'
     return ' && '.join([f'value_.contains({json.dumps(k)})' for k in value['required']]+[f'!value_.contains({json.dumps(k)})' for k in value['excluded']])
 
+def cache_field(value_type, method):
+    slot = 'std::shared_ptr<const ' + value_type + '>'
+    return f'private: std::shared_ptr<{slot}> cached_{method}_ = std::make_shared<{slot}>();'
+
+
+def cache_body(owner, value_type, method, expression):
+    return f'inline const {value_type}& {owner}::{method}() const {{ auto stored = std::atomic_load(cached_{method}_.get()); if (!stored) {{ auto candidate = std::make_shared<const {value_type}>({expression}); if (std::atomic_compare_exchange_strong(cached_{method}_.get(), &stored, candidate)) stored = std::move(candidate); }} return *stored; }}'
+
+
 def render(definitions,version):
-    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
+    lines=['// Generated from the shared Rust result graph; do not edit.','#pragma once','#include "result_value.hpp"','#include <memory>','#include <atomic>','namespace tt::results {',f'inline constexpr const char* request_version = {json.dumps(version)};']
     for key in definitions: lines += [f'class {name(key)};']
     bodies=[]
     for key,raw in definitions.items():
@@ -66,8 +75,8 @@ def render(definitions,version):
         if 'properties' in s:
             for member,field in s['properties'].items():
                 t=typ(field, presence=True); method=member+'_' if member in ('template','class','operator','namespace','default','true','false') else member
-                lines += [f'private: mutable std::shared_ptr<const Presence<{t}>> cached_{method}_;', f'public: const Presence<{t}>& {method}() const;']
-                bodies += [f'inline const Presence<{t}>& {n}::{method}() const {{ if (!cached_{method}_) cached_{method}_ = std::make_shared<const Presence<{t}>>(detail::member_value<{t}>(value_, {json.dumps(member)})); return *cached_{method}_; }}']
+                lines += [cache_field(f'Presence<{t}>', method), f'public: const Presence<{t}>& {method}() const;']
+                bodies += [cache_body(n, f'Presence<{t}>', method, f'detail::member_value<{t}>(value_, {json.dumps(member)})')]
         from host_answers import named_object_fields
         for member in named_object_fields(s, definitions):
             lines += [f'    std::string {member}_name() const;']
@@ -78,8 +87,8 @@ def render(definitions,version):
             bodies += [f'inline std::optional<{cn}> {n}::as_{cn}() const {{ if ({condition(tag)}) return {cn}(value_); return std::nullopt; }}']
         if 'properties' not in s and 'variants' not in s:
             t=typ(s)
-            lines += [f'private: mutable std::shared_ptr<const {t}> cached_value_;', f'public: const {t}& value() const;']
-            bodies += [f'inline const {t}& {n}::value() const {{ if (!cached_value_) cached_value_ = std::make_shared<const {t}>(decode<{t}>(value_)); return *cached_value_; }}']
+            lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']
+            bodies += [cache_body(n, t, 'value', f'decode<{t}>(value_)')]
         lines += ['};']
     return '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions)
 

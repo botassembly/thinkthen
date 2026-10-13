@@ -29,7 +29,8 @@ try:
     env = child_env(home=str(scratch), XDG_CONFIG_HOME=str(scratch),
                     XDG_CACHE_HOME=str(scratch / 'cache'), XDG_STATE_HOME=str(scratch / 'state'),
                     THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
-                    THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
+                    THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'),
+                    THINKTHEN_CPP_RECORD=str(scratch / 'recorded'))
     if len(sys.argv) > 4 and sys.argv[4] == 'usage':
         for mode in ('usage-written', 'usage-failed'):
             state = scratch / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
@@ -42,6 +43,10 @@ try:
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)
     for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
+        source = prefix / 'share/thinkthen-cpp/examples' / (verb + '.cpp')
+        assert source.is_file(), 'CPP_EXAMPLE_MISSING ' + verb
+        authored = source.read_text()
+        assert '.answer()' in authored and not any(old in authored for old in ('.collect(', 'as_SessionPacket', 'from_document(')), 'CPP_EXAMPLE_STALE ' + verb
         case = next(case for case in cases if case['verb'] == verb)
         question = dict(case.get('question', case.get('question_set', {})))
         original = case.get('text', case['exchanges'][0]['evidence'])
@@ -60,6 +65,20 @@ try:
         assert terminal['kind'] == 'terminal' and 'failure' not in terminal, terminal
         assert terminal['facts']['requests_sent'] >= 1, terminal
         print('CPP_INSTALLED_NAMED_PASS', verb, 'packets=' + str(len(packets)))
+        example = binary.parent / ('example_' + verb)
+        sampled = subprocess.run([example, qpath, ipath, scratch / 'recorded'], env=env, capture_output=True, text=True, timeout=20)
+        assert sampled.returncode == 0, (verb, sampled.returncode, sampled.stdout, sampled.stderr)
+        assert sampled.stderr == '', (verb, sampled.stderr)
+        sampled_value = json.loads(sampled.stdout)
+        if verb in ('decide', 'choose', 'tag', 'score'):
+            judgments = [p['value']['value']['value'] for p in packets
+                         if p['kind'] == 'observation' and p['value']['kind'] == 'row'
+                         and p['value']['value']['kind'] == 'judgment']
+            assert len(judgments) == 1 and sampled_value == judgments[0]['value'], (verb, sampled_value, judgments)
+        elif verb in ('filter', 'rank', 'annotate', 'recognize'):
+            assert len(sampled_value) == 1 and sampled_value[0]['input'] == original, (verb, sampled_value)
+        print('CPP_INSTALLED_EXAMPLE_PASS', verb)
+
     assert len(server.requests) == 11, len(server.requests)
     question = {"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
     qpath = scratch / 'annotate-null-question.json'
@@ -89,6 +108,16 @@ try:
         assert result.stdout.strip() in ('values-pass','admission-pass','failure-pass','closed-push-pass'), result
         assert len(server.requests) == baseline + (mode == 'failure'), (mode,len(server.requests))
         print('CPP_INSTALLED_EDGE_PASS',mode)
+    for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 1)):
+        before = len(server.requests)
+        result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0 and result.stdout.strip() == ('cardinality-pass judgments=0' if sends == 0 else 'cardinality-pass judgments=2'), (mode, result.returncode, result.stdout, result.stderr)
+        assert len(server.requests) == before + sends, (mode, len(server.requests), before)
+        if sends:
+            wire = server.requests[before]
+            assert wire['state'] == 'Each question quotes the text it asks about.' and len(wire['questions']) == 2, wire
+            assert [question['instructions'] for question in wire['questions'].values()] == ['The text is "first". Is it?', 'The text is "second". Is it?'], wire
+        print('CPP_INSTALLED_CARDINALITY_PASS', mode)
     source = scratch / 'physical.txt'
     source.write_text('yes\n\nno\n')
     result = subprocess.run([binary,'files',scratch / 'decide-question.json',source],env=env,capture_output=True,text=True,timeout=5)

@@ -33,7 +33,7 @@ pub mod session;
 pub mod native_request;
 
 use crate::EngineHandle;
-use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, USAGE, guard};
+use crate::failures::{DEFECT, Failure, Held, NO_MESSAGE, USAGE, guard};
 
 /// The engine behind a host's pointer, or `None` for null.
 ///
@@ -121,32 +121,12 @@ pub extern "C" fn thinkthen_engine_new() -> *mut EngineHandle {
     unsafe { thinkthen_engine_new_with(std::ptr::null()) }
 }
 
-/// Build with a UTF-8 JSON settings object; null uses the environment.
-///
-/// # Safety
-///
-/// `settings_json` is null or a live NUL-terminated string.
-/// Build from the environment plus a closed UTF-8 settings object; NULL/{}
-/// uses environment alone. Keys/types and token accounting: DESIGN.md.
-/// No key is accepted. Unknown/repeated keys or bad types return NULL/EUSAGE
-/// in the calling thread's null-engine slot. A named backend captures its key;
-/// an explicit base_url receives that key. Building sends nothing.
-#[unsafe(no_mangle)]
-pub unsafe extern "C" fn thinkthen_engine_new_with(
-    settings_json: *const c_char,
-) -> *mut EngineHandle {
-    guard(None, std::ptr::null_mut(), || {
-        let build = || {
-            let text = if settings_json.is_null() {
-                "{}"
-            } else {
-                // SAFETY: the host promises a live NUL-terminated string.
-                unsafe { string(settings_json, "settings JSON") }?
-            };
-            crate::settings::build(text)
-        };
-        failures::built(build).map_or(std::ptr::null_mut(), |engine| {
-            Box::into_raw(Box::new(EngineHandle(Held::new(engine))))
-        })
-    })
+unsafe fn settings_json(settings_json: *const c_char) -> Result<thinkthen::Engine, Failure> {
+    let text = if settings_json.is_null() {
+        "{}"
+    } else {
+        // SAFETY: the host retains its NUL-terminated settings throughout admission.
+        unsafe { string(settings_json, "settings JSON") }?
+    };
+    crate::settings::build(text)
 }

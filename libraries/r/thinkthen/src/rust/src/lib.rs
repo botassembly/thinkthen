@@ -3,7 +3,7 @@
 //! The R half composes each question as the question file's JSON and hands
 //! it here with the caller's texts. This half runs one engine call on a
 //! fresh worker thread, waits on R's main thread with R's interrupt check
-//! every 100 ms, and builds R values from the plain data the worker returns.
+//! every 50 ms, and builds R values from the plain data the worker returns.
 //! It holds no rule, retry, or request of its own.
 //!
 pub mod ffi;
@@ -16,7 +16,7 @@ mod results_generated;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use thinkthen::{BatchSetting, Engine, EngineBuilder, Error, ErrorKind};
+use thinkthen::{Engine, EngineBuilder, Error, ErrorKind};
 
 pub use ffi::get_thinkthen_metadata;
 
@@ -84,112 +84,31 @@ fn interrupted() -> NativeError {
     }
 }
 
-/// The engine settings `tt_engine` takes, as the caller gave them.
-#[derive(Clone, Debug, Default, PartialEq)]
-pub(crate) struct Settings {
-    pub(crate) backend: Option<String>,
-    pub(crate) base_url: Option<String>,
-    pub(crate) model: Option<String>,
-    pub(crate) throttle: Option<u8>,
-    pub(crate) max_requests: Option<usize>,
-    pub(crate) max_requests_total: Option<u64>,
-    pub(crate) max_request_bytes: Option<usize>,
-    /// A folder, or `None` inside for `cache = FALSE`.
-    pub(crate) cache: Option<Option<String>>,
-    pub(crate) timeout: Option<u64>,
-    pub(crate) max_retries: Option<u32>,
-    pub(crate) record: Option<String>,
-    pub(crate) replay: Option<String>,
-    pub(crate) profile: Option<String>,
-    pub(crate) batch: Option<BatchSetting>,
-    pub(crate) refresh_cache: bool,
-}
-
+/// Settings retain caller equality and safe diagnostic spelling; Rust admits them.
+#[derive(Clone, Debug, PartialEq)]
+struct Settings(serde_json::Map<String, serde_json::Value>);
 impl Settings {
-    /// The settings in force, named without their values' secrets.
-    fn named(&self) -> String {
-        let cache = self.cache.as_ref().map(|folder| match folder {
-            Some(_) => "cache = <folder>".to_owned(),
-            None => "cache = FALSE".to_owned(),
-        });
-        let named: Vec<String> = [
-            self.backend.as_ref().map(|it| format!("backend = {it:?}")),
-            self.base_url.as_ref().map(|_| "base_url".to_owned()),
-            self.model.as_ref().map(|it| format!("model = {it:?}")),
-            self.throttle.map(|it| format!("throttle = {it}")),
-            self.max_requests.map(|it| format!("max_requests = {it}")),
-            self.max_requests_total
-                .map(|it| format!("max_requests_total = {it}")),
-            self.max_request_bytes
-                .map(|it| format!("max_request_bytes = {it}")),
-            cache,
-            self.timeout.map(|it| format!("timeout = {it}")),
-            self.max_retries.map(|it| format!("max_retries = {it}")),
-            self.record.as_ref().map(|_| "record = <folder>".to_owned()),
-            self.replay.as_ref().map(|_| "replay = <folder>".to_owned()),
-            self.profile
-                .as_ref()
-                .map(|_| "profile = <folder>".to_owned()),
-            self.batch.map(|it| format!("batch = {it:?}")),
-        ]
-        .into_iter()
-        .flatten()
-        .collect();
-        if named.is_empty() {
-            "the environment's settings".to_owned()
-        } else {
-            named.join(", ")
-        }
-    }
-
-    /// The engine these settings build over the environment's own.
     fn build(&self) -> Result<Engine, Error> {
-        let mut builder = EngineBuilder::from_env()?.refresh_cache(self.refresh_cache);
-        if let Some(backend) = &self.backend {
-            builder = builder.backend(backend)?;
+        EngineBuilder::from_settings_json(&serde_json::Value::Object(self.0.clone()).to_string())?
+            .build()
+    }
+    fn named(&self) -> String {
+        let names = self
+            .0
+            .iter()
+            .filter(|(name, _)| name.as_str() != "refresh_cache")
+            .map(|(name, value)| match name.as_str() {
+                "base_url" => name.clone(),
+                "cache" if value == &serde_json::Value::Bool(false) => "cache = FALSE".into(),
+                "cache" | "record" | "replay" | "profile" => format!("{name} = <folder>"),
+                _ => format!("{name} = {value}"),
+            })
+            .collect::<Vec<_>>();
+        if names.is_empty() {
+            "the environment's settings".into()
+        } else {
+            names.join(", ")
         }
-        if let Some(base) = &self.base_url {
-            builder = builder.base_url(base)?;
-        }
-        if let Some(model) = &self.model {
-            builder = builder.model(model)?;
-        }
-        if let Some(throttle) = self.throttle {
-            builder = builder.throttle(throttle)?;
-        }
-        if self.max_requests.is_some() {
-            builder = builder.max_requests(self.max_requests)?;
-        }
-        if self.max_requests_total.is_some() {
-            builder = builder.max_requests_total(self.max_requests_total);
-        }
-        if let Some(bytes) = self.max_request_bytes {
-            builder = builder.max_request_bytes(bytes)?;
-        }
-        builder = match &self.cache {
-            Some(Some(folder)) => builder.cache_at(folder)?,
-            Some(None) => builder.no_cache(),
-            None => builder,
-        };
-        if let Some(seconds) = self.timeout {
-            builder = builder.timeout(std::time::Duration::from_secs(seconds))?;
-        }
-        if let Some(retries) = self.max_retries {
-            builder = builder.max_retries(retries);
-        }
-        if let Some(folder) = &self.record {
-            builder = builder.record(folder)?;
-        }
-        if let Some(folder) = &self.replay {
-            builder = builder.replay(folder)?;
-        }
-        if let Some(path) = &self.profile {
-            builder = builder.profile(path)?;
-        }
-        if let Some(batch) = self.batch {
-            builder = builder.batch(batch);
-        }
-        builder.build()
     }
 }
 
@@ -231,7 +150,11 @@ fn engine() -> Result<Engine, NativeError> {
     static DEFAULT: Mutex<Option<Engine>> = Mutex::new(None);
     let mut slot = DEFAULT.lock().unwrap_or_else(PoisonError::into_inner);
     if slot.is_none() {
-        *slot = Some(Settings::default().build().map_err(|error| carry(&error))?);
+        *slot = Some(
+            EngineBuilder::from_env()
+                .and_then(EngineBuilder::build)
+                .map_err(|error| carry(&error))?,
+        );
     }
     slot.as_ref()
         .cloned()
