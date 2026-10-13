@@ -549,7 +549,10 @@ def main():
         import go
         definitions = prepare(graph(json.loads(args.schema.read_text()), go.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        result = subprocess.run(["gofmt"], input=go.render(definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
+        request_schema = json.loads((ROOT / "specification/request.schema.json").read_text())
+        request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
+        input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'EngineSettings')))
+        result = subprocess.run(["gofmt"], input=go.render(definitions, input_definitions) + "\nconst OwnedRequestVersion = " + json.dumps(version) + "\n" + go.usage((ROOT / "libraries/c/include/thinkthen.h").read_text()).replace("package thinkthen\n", ""), text=True, capture_output=True, check=True,
                                 env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
         output = output_path(ROOT, 'go', 'owned_results_generated.go')
         if args.check:

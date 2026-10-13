@@ -18,7 +18,7 @@ def condition(tag):
     if mode=='literals': return ' && '.join(f'ownedLiteral(v.raw, {json.dumps(k)}, {json.dumps(x)})' for k,x in value.items())
     if mode=='member': return f'ownedHas(v.raw, {json.dumps(field)})'
     return ' && '.join([f'ownedHas(v.raw, {json.dumps(k)})' for k in value['required']]+[f'!ownedHas(v.raw, {json.dumps(k)})' for k in value['excluded']])
-def render(definitions):
+def render(definitions, input_definitions):
     lines=['// Generated from the shared Rust result graph; do not edit.','package thinkthen','import "encoding/json"']
     for key, raw in definitions.items():
         n=name(key); s=shape(raw)
@@ -32,7 +32,7 @@ def render(definitions):
         for child,tag in s.get('variants',[]):
             cn=name(child)
             lines += [f'func (v {n}) As{cn.removeprefix("Owned")}() ({cn}, error) {{ if !({condition(tag)}) {{ return {cn}{{}}, errOwnedAlternative }}; return ownedDecode[{cn}](v.raw) }}']
-    return '\n'.join(lines)+'\n'+inputs()
+    return '\n'.join(lines)+'\n'+inputs(input_definitions)
 
 
 def usage(header):
@@ -42,12 +42,9 @@ def usage(header):
     return '\n'.join(lines + [')']) + '\n'
 
 
-def inputs():
+def inputs(definitions):
     """Generate Go input values from the Rust-owned request grammar."""
-    from pathlib import Path
-    schema = json.loads((Path(__file__).resolve().parents[4] / 'specification/request.schema.json').read_text())
-    definitions = schema['$defs']
-    definitions['Request'] = {k:v for k,v in schema.items() if k != '$defs'}
+    definitions = dict(definitions)
     pending = ['RequestSessionDescriptor', 'Request', 'EngineSettings', 'RequestOptions', 'RequestQuestion', 'RequestItem', 'RequestSource', 'RequestInput']
     generated = {}
     lines = []
@@ -79,6 +76,10 @@ def inputs():
             s = {**s, 'anyOf':[{'type':t} for t in s['type']]}; s.pop('type')
         if s is True or not s:
             lines.append(f'type {n} = any'); continue
+        if s.get('variants'):
+            s = {'oneOf': [{'$ref': '#/$defs/' + child} for child, _ in s['variants']]}
+        elif s.get('primitive_variants'):
+            s = {'anyOf': [s['primitive_schemas'][kind] for kind in s['primitive_variants']]}
         alternatives = s.get('oneOf', s.get('anyOf', []))
         if alternatives and not ('properties' in s):
             # Literal string enums retain their schema spelling and typed constants.
