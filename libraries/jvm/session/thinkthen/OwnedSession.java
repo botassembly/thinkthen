@@ -9,13 +9,11 @@ public final class OwnedSession implements AutoCloseable {
     private Read buffered;
     private boolean closed;
     private java.util.concurrent.CompletableFuture<Void> inputWait, resultWait;
-    private final java.util.concurrent.ExecutorService workers = java.util.concurrent.Executors.newFixedThreadPool(2, task -> {
-        var worker = new Thread(task, "thinkthen-session-wait"); worker.setDaemon(true); return worker;
-    });
+    private final SessionWorkers workers;
     private final Arena arena = Arena.ofShared();
     private final MemorySegment status = arena.allocate(ValueLayout.JAVA_INT);
     private final MemorySegment output = arena.allocate(ValueLayout.ADDRESS);
-    OwnedSession(MemorySegment pointer) { this.pointer = pointer; }
+    OwnedSession(MemorySegment pointer, SessionWorkers workers) { this.pointer = pointer; this.workers = workers.retain(); }
     private void live() { if (closed || pointer.equals(MemorySegment.NULL)) throw new IllegalStateException("Session is closed"); }
     public synchronized void cancel() {
         if (!pointer.equals(MemorySegment.NULL)) NativeSession.free("thinkthen_session_cancel", pointer);
@@ -79,7 +77,7 @@ public final class OwnedSession implements AutoCloseable {
     }
     public Read nextPacket() { return nextPacket(false); }
     public java.util.concurrent.CompletableFuture<Read> nextPacketAsync(boolean settlement) {
-        var pending = java.util.concurrent.CompletableFuture.supplyAsync(() -> nextPacket(settlement), workers);
+        var pending = java.util.concurrent.CompletableFuture.supplyAsync(() -> nextPacket(settlement), workers.executor);
         pending.whenComplete((value, error) -> { if (pending.isCancelled()) cancel(); });
         return pending;
     }
@@ -95,7 +93,7 @@ public final class OwnedSession implements AutoCloseable {
                 NativeSession.check(NativeWait.push(retained, bytes, bytes.byteSize(), state));
                 return state.get(ValueLayout.JAVA_INT, 0);
             } finally { completedWait(); }
-        }, workers);
+        }, workers.executor);
         pending.whenComplete((value, error) -> { if (pending.isCancelled()) cancel(); });
         return pending;
     }
@@ -110,7 +108,7 @@ public final class OwnedSession implements AutoCloseable {
         var result = new java.util.concurrent.CompletableFuture<Void>();
         if (input) inputWait = result; else resultWait = result;
         result.whenComplete((value, error) -> { if (result.isCancelled()) cancel(); });
-        workers.execute(() -> {
+        workers.executor.execute(() -> {
             RuntimeException failure = null;
             try { waitNative(input); }
             catch (RuntimeException error) { failure = error; }
@@ -141,10 +139,11 @@ public final class OwnedSession implements AutoCloseable {
         NativeSession.free("thinkthen_session_free", pointer);
         pointer = MemorySegment.NULL;
         arena.close();
+        workers.close();
     }
     @Override public synchronized void close() {
         if (closed) return;
-        cancel(); closed = true; workers.shutdown();
+        cancel(); closed = true;
         if (waiters == 0) release();
     }
 }

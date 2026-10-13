@@ -3,7 +3,6 @@ package thinkthen;
 import java.lang.foreign.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 
 /** Ten named asynchronous calls over one shared owned native session boundary. */
 public final class Engine extends NamedCalls implements AutoCloseable {
@@ -11,6 +10,7 @@ public final class Engine extends NamedCalls implements AutoCloseable {
     public enum Surface { JAVA, KOTLIN, SCALA }
     private final Surface surface;
     private MemorySegment pointer;
+    private final SessionWorkers workers = new SessionWorkers();
     public Engine(Inputs.EngineSettings settings) { this(settings, Surface.JAVA); }
     public Engine(Inputs.EngineSettings settings, Surface surface) { this(Values.object(settings.json()), surface); }
     public OwnedSession startSession(Inputs.Request request) { return startSession(Values.object(request.json())); }
@@ -49,7 +49,7 @@ public final class Engine extends NamedCalls implements AutoCloseable {
             var token = arguments.allocateFrom(ValueLayout.JAVA_BYTE, NativeSession.utf8(surface.name().toLowerCase(Locale.ROOT)));
             NativeSession.check((int)NativeSession.call("thinkthen_session_new_with_surface", ValueLayout.JAVA_INT,
                 new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS, NativeSession.SIZE, ValueLayout.ADDRESS}, pointer, bytes, bytes.byteSize(), token, token.byteSize(), output));
-            return new OwnedSession(output.get(ValueLayout.ADDRESS, 0));
+            return new OwnedSession(output.get(ValueLayout.ADDRESS, 0), workers);
         }
     }
     private synchronized Results.Plan plan(Map<String,?> request) {
@@ -98,15 +98,14 @@ public final class Engine extends NamedCalls implements AutoCloseable {
         }
         result.whenComplete((value,error) -> session.close());
         if (feed != null) {
-            Thread producer = new Thread(() -> {
+            workers.executor.execute(() -> {
                 try {
                     for (var descriptor : feed) if (session.push(descriptor).join() == 2) break;
                     session.finish();
                 } catch (RuntimeException error) { result.completeExceptionally(error); }
-            }, "thinkthen-input");
-            producer.setDaemon(true); producer.start();
+            });
         }
-        Thread reader = new Thread(() -> {
+        workers.executor.execute(() -> {
             var packets = new ArrayList<Results.SessionPacket>();
             Results.SessionPacketTerminal terminal = null;
             try {
@@ -124,14 +123,13 @@ public final class Engine extends NamedCalls implements AutoCloseable {
                     }
                 }
             } catch (RuntimeException error) { result.completeExceptionally(error); }
-        }, "thinkthen-session");
-        reader.setDaemon(true); reader.start();
+        });
         return result;
     }
     @Override protected CompletableFuture<OwnedCall> named(Inputs.RequestFunction function, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {
         try {
             final OwnedSession session;
-            synchronized (this) { live(); session = new OwnedSession(NativeNamed.create(pointer, surface, function, question, input, options)); }
+            synchronized (this) { live(); session = new OwnedSession(NativeNamed.create(pointer, surface, function, question, input, options), workers); }
             return execute(session, null);
         } catch (RuntimeException error) { return CompletableFuture.failedFuture(error); }
     }
@@ -144,6 +142,6 @@ public final class Engine extends NamedCalls implements AutoCloseable {
         live(); return NativeSession.usage(pointer, "thinkthen_engine_finish_usage_status_v1");
     }
     @Override public synchronized void close() {
-        if (!pointer.equals(MemorySegment.NULL)) { NativeSession.free("thinkthen_engine_free", pointer); pointer = MemorySegment.NULL; }
+        if (!pointer.equals(MemorySegment.NULL)) { NativeSession.free("thinkthen_engine_free", pointer); pointer = MemorySegment.NULL; workers.close(); }
     }
 }
