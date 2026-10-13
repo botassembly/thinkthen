@@ -49,9 +49,9 @@ tt_request_plan <- function(request) .Call(wrap__tt_request_plan, request)
 
 tt_request_batch_start <- function(request) .Call(wrap__tt_request_batch_start, request)
 
-tt_request_batch_wait <- function(batch, input) .Call(wrap__tt_request_batch_wait, batch, input)
-
 tt_request_batch_poll <- function(batch) .Call(wrap__tt_request_batch_poll, batch)
+
+tt_request_batch_wait <- function(batch, input) .Call(wrap__tt_request_batch_wait, batch, input)
 
 tt_request_batch_cancel <- function(batch) .Call(wrap__tt_request_batch_cancel, batch)
 
