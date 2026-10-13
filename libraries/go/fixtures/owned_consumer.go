@@ -90,29 +90,29 @@ func main() {
 		require(err == nil, "plan constructor")
 		defer planClient.Close()
 		input := tt.RequestInputText{Text: "Refund me please."}
-		plan, err := planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: input}})
+		plan, err := planClient.Plan(tt.Request{Call: tt.RequestCall{Function: tt.RequestFunctionDecide, Question: tt.TextQuestion("asks for a refund"), Input: input}})
 		require(err == nil, "canonical decide plan")
 		for _, call := range []tt.RequestCall{
-			tt.RequestCallChoose{Question: tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"})}), Input: input},
-			tt.RequestCallTag{Question: tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), Input: input},
-			tt.RequestCallScore{Question: tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), Input: input},
+			tt.RequestCall{Function: tt.RequestFunctionChoose, Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"})}), Input: input},
+			tt.RequestCall{Function: tt.RequestFunctionTag, Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), Input: input},
+			tt.RequestCall{Function: tt.RequestFunctionScore, Question: tt.DefinedQuestion(tt.RequestDefinitionAuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), Input: input},
 		} {
 			preview, err := planClient.Plan(tt.Request{Call: call})
 			require(err == nil && preview.FirstBodyUtf8().Present && !preview.FirstBodyUtf8().Null, "atomic preview")
 		}
 		for _, call := range []tt.RequestCall{
-			tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputFeed{Name: "dynamic"}},
-			tt.RequestCallAnnotate{Question: tt.TextQuestion("asks for a refund"), Input: input},
-			tt.RequestCallDecide{Question: tt.RequestQuestionFile{Path: "missing-question.json"}, Input: input},
+			tt.RequestCall{Function: tt.RequestFunctionDecide, Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputFeed{Name: "dynamic"}},
+			tt.RequestCall{Function: tt.RequestFunctionAnnotate, Question: tt.TextQuestion("asks for a refund"), Input: input},
+			tt.RequestCall{Function: tt.RequestFunctionDecide, Question: tt.RequestQuestionFile{Path: "missing-question.json"}, Input: input},
 		} {
 			_, err := planClient.Plan(tt.Request{Call: call})
 			var refused *tt.Error
 			require(errors.As(err, &refused), fmt.Sprintf("plan refusal lost typed error for %T: %v", call, err))
 		}
-		empty, err := planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputRecords{Items: []tt.RequestItem{}}}})
+		empty, err := planClient.Plan(tt.Request{Call: tt.RequestCall{Function: tt.RequestFunctionDecide, Question: tt.TextQuestion("asks for a refund"), Input: tt.RequestInputRecords{Items: []tt.RequestItem{}}}})
 		require(err == nil && empty.FirstBodyUtf8().Present && empty.FirstBodyUtf8().Null, "empty plan lost null")
 		planClient.Close()
-		_, err = planClient.Plan(tt.Request{Call: tt.RequestCallDecide{Question: tt.TextQuestion("asks for a refund"), Input: input}})
+		_, err = planClient.Plan(tt.Request{Call: tt.RequestCall{Function: tt.RequestFunctionDecide, Question: tt.TextQuestion("asks for a refund"), Input: input}})
 		require(errors.Is(err, tt.ErrClosed), "closed preview admitted")
 		records, err := plan.Records().Value.Int64()
 		require(err == nil && records == 1, "owned plan lost after close")
@@ -278,15 +278,15 @@ func main() {
 	}
 	asks := []ask{
 		{"decide", tt.TextQuestion("Is it?"), "text"},
-		{"choose", tt.DefinedQuestion(tt.AuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsObject{"a": tt.AuthoredDescriptionObject{"what": "Charges and refunds.", "examples": []string{"refund"}}, "b": tt.AuthoredDescriptionArray{"other", "shipping"}})}), "text"},
-		{"tag", tt.DefinedQuestion(tt.AuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), "text"},
-		{"score", tt.DefinedQuestion(tt.AuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), "text"},
+		{"choose", tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsObject{{Key: "a", Value: tt.AuthoredDescriptionObject{"what": "Charges and refunds.", "examples": []string{"refund"}}}, {Key: "b", Value: tt.AuthoredDescriptionArray{"other", "shipping"}}})}), "text"},
+		{"tag", tt.DefinedQuestion(tt.RequestDefinitionAuthoredTag{Tag: tt.AuthoredQuestionTextString("Which?"), Labels: tt.Ptr[tt.AuthoredLabels](tt.AuthoredLabelsArray{"a", "b"})}), "text"},
+		{"score", tt.DefinedQuestion(tt.RequestDefinitionAuthoredScore{Score: tt.AuthoredQuestionTextString("How?"), Levels: tt.Ptr[tt.AuthoredLevels](tt.AuthoredLevelsArray{"low", "high"})}), "text"},
 		{"filter", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
 		{"rank", tt.TextQuestion("Is it?"), []string{"alpha", "beta"}},
 		{"find", tt.TextQuestion("Which?"), []string{"alpha", "beta"}},
-		{"annotate", tt.DefinedQuestion(tt.RequestDefinitionQuestions{Questions: map[string]tt.RequestDefinitionQuestionsQuestionsValue{"ok": tt.RequestDefinitionQuestionsQuestionsValueDecide{Decide: tt.AuthoredQuestionTextString("Is it?")}}}), []string{"text"}},
-		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognize{Recognize: tt.RequestDefinitionRecognizeRecognize{Kinds: tt.Ptr(map[string]tt.AuthoredDescription{"person": tt.AuthoredDescriptionNull{}})}}), "Ana Lima"},
-		{"relate", tt.DefinedQuestion(tt.AuthoredRelate{Relate: tt.AuthoredRelateRelate{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
+		{"annotate", tt.DefinedQuestion(tt.RequestDefinitionAnnotateDefinition{Questions: tt.OrderedMap[tt.AnnotateQuestion]{{Key: "ok", Value: tt.AnnotateQuestionDecide{Decide: tt.AuthoredQuestionTextString("Is it?")}}}}), []string{"text"}},
+		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognizeDefinition{Recognize: tt.RecognizeQuestion{Kinds: tt.Ptr(tt.OrderedMap[tt.AuthoredDescription]{{Key: "person", Value: tt.AuthoredDescriptionNull{}}})}}), "Ana Lima"},
+		{"relate", tt.DefinedQuestion(tt.RequestDefinitionAuthoredRelate{Relate: tt.RelateQuestion{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
 	}
 	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
 	retained := []tt.OwnedCall{}
@@ -303,8 +303,26 @@ func main() {
 		require(sends.Present && err == nil, "missing requests")
 		expectedRequests += n
 	}
+	decision, decisionErr := retained[0].DecideAnswer()
+	require(decisionErr == nil && decision != nil && *decision, "single normalized decision missing")
+	choice, choiceErr := retained[1].ChooseAnswer()
+	require(choiceErr == nil && choice != nil && *choice == "a", "single normalized choice missing")
+	tags, tagsErr := retained[2].TagAnswer()
+	require(tagsErr == nil && len(tags) == 2 && tags[0] == "a" && tags[1] == "b", "single normalized tags missing")
+	score, scoreErr := retained[3].ScoreAnswer()
+	require(scoreErr == nil && score == 0.1, "single normalized score missing")
+	for _, input := range [][]string{{}, {"cardinality-one", "cardinality-two"}} {
+		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), input, nil)
+		require(err == nil && completed.Terminal != nil, "cardinality call did not settle")
+		n, err := completed.Terminal.Facts().Value.RequestsSent().Value.Int64()
+		require(err == nil, "cardinality call requests missing")
+		expectedRequests += n
+		_, err = completed.DecideAnswer()
+		var cardinality *tt.AnswerCardinalityError
+		require(errors.As(err, &cardinality) && cardinality.Count == len(input), "answer cardinality did not refuse")
+	}
 	// A false value must remain false, not absent or null.
-	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
+	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -327,7 +345,7 @@ func main() {
 	require(falseErr == nil, "nonboolean decision")
 	require(value.Present && !value.Null && falseValue == false, "false changed")
 	// Authored null is different from a missing field, and file positions survive.
-	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.AuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
+	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -345,6 +363,15 @@ func main() {
 		}
 	}
 	require(nullFound, "null row missing")
+	normalized, normalizedErr := nullCall.DecideAnswer()
+	require(normalizedErr == nil && normalized != nil && *normalized, "authored null replaced normalized judgment")
+	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), "unsure", nil)
+	require(err == nil, "uncertain call failed")
+	n, err = uncertain.Terminal.Facts().Value.RequestsSent().Value.Int64()
+	require(err == nil, "uncertain requests missing")
+	expectedRequests += n
+	unknown, unknownErr := uncertain.DecideAnswer()
+	require(unknownErr == nil && unknown == nil, "nullable judgment changed")
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
 	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}, nil)
