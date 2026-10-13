@@ -29,7 +29,8 @@ try:
     env = child_env(home=str(scratch), XDG_CONFIG_HOME=str(scratch),
                     XDG_CACHE_HOME=str(scratch / 'cache'), XDG_STATE_HOME=str(scratch / 'state'),
                     THINKTHEN_BASE_URL=f'http://127.0.0.1:{server.server_port}/generic/v1',
-                    THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'))
+                    THINKTHEN_API_KEY='tt-canary-301', THINKTHEN_CACHE=str(scratch / 'cache'),
+                    THINKTHEN_CPP_RECORD=str(scratch / 'recorded'))
     if len(sys.argv) > 4 and sys.argv[4] == 'usage':
         for mode in ('usage-written', 'usage-failed'):
             state = scratch / mode / 'state/thinkthen'; state.mkdir(mode=0o700, parents=True)
@@ -60,6 +61,20 @@ try:
         assert terminal['kind'] == 'terminal' and 'failure' not in terminal, terminal
         assert terminal['facts']['requests_sent'] >= 1, terminal
         print('CPP_INSTALLED_NAMED_PASS', verb, 'packets=' + str(len(packets)))
+        example = binary.parent / ('example_' + verb)
+        sampled = subprocess.run([example, qpath, ipath, scratch / 'recorded'], env=env, capture_output=True, text=True, timeout=20)
+        assert sampled.returncode == 0, (verb, sampled.returncode, sampled.stdout, sampled.stderr)
+        assert sampled.stderr == '', (verb, sampled.stderr)
+        sampled_value = json.loads(sampled.stdout)
+        if verb in ('decide', 'choose', 'tag', 'score'):
+            judgments = [p['value']['value']['value'] for p in packets
+                         if p['kind'] == 'observation' and p['value']['kind'] == 'row'
+                         and p['value']['value']['kind'] == 'judgment']
+            assert len(judgments) == 1 and sampled_value == judgments[0]['value'], (verb, sampled_value, judgments)
+        elif verb in ('filter', 'rank', 'annotate', 'recognize'):
+            assert len(sampled_value) == 1 and sampled_value[0]['input'] == original, (verb, sampled_value)
+        print('CPP_INSTALLED_EXAMPLE_PASS', verb)
+
     assert len(server.requests) == 11, len(server.requests)
     question = {"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?", "threshold": "0.2:0.8"}}}
     qpath = scratch / 'annotate-null-question.json'
@@ -89,6 +104,12 @@ try:
         assert result.stdout.strip() in ('values-pass','admission-pass','failure-pass','closed-push-pass'), result
         assert len(server.requests) == baseline + (mode == 'failure'), (mode,len(server.requests))
         print('CPP_INSTALLED_EDGE_PASS',mode)
+    for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 2)):
+        before = len(server.requests)
+        result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
+        assert result.returncode == 0 and result.stdout.strip() == 'cardinality-pass', (mode, result.returncode, result.stdout, result.stderr)
+        assert len(server.requests) == before + sends, (mode, len(server.requests), before)
+        print('CPP_INSTALLED_CARDINALITY_PASS', mode)
     source = scratch / 'physical.txt'
     source.write_text('yes\n\nno\n')
     result = subprocess.run([binary,'files',scratch / 'decide-question.json',source],env=env,capture_output=True,text=True,timeout=5)

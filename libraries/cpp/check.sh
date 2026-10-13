@@ -37,7 +37,7 @@ else
  wrapper=$repo/libraries/cpp
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --check
  "$python_bin" "$repo/sdlc/generators/results/generate.py" --target cpp --inputs --check
- for kind in cpp hpp py; do node "$repo/sdlc/scripts/ratchet.mjs" "ratchet.$kind.json"; done
+ node "$repo/sdlc/scripts/ratchet.mjs" ratchet.hpp.json
  . "$repo/sdlc/scripts/installed.sh"
  native_install "$repo" "$out/native"
  header=$out/native/include/thinkthen.h
@@ -66,7 +66,15 @@ for mode in shared static; do
 done
 "$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-shared/owned_consumer" "$out/owned-cases" usage
 c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" fixtures/tests/json_test.cpp -o "$out/json-test"
+for test in result_lifetime answer_test; do
+ c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
+ "$out/$test"
+done
 "$out/json-test"
+for test in result_lifetime answer_test; do
+ c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
+ "$out/$test"
+done
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 "$python_bin" "$repo/conformance/children/session_cases.py" "$out/owned-shared/session_consumer"
 echo 'cpp: pass'

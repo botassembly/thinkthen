@@ -108,7 +108,14 @@ int main(int argc,char** argv) {
             unsigned sum=0; for(unsigned i=0;i<100;++i) sum+=i;
             if(sum!=4950) return 9;
             std::cout<<"host-progress\n"<<std::flush;
-            client.close(); call.cancel();
+            std::exception_ptr unexpected;
+            std::thread reader([&] {
+                try { call.next(); unexpected=std::make_exception_ptr(std::logic_error("cancelled read returned a packet")); }
+                catch(const NativeFailure& error) { if(error.kind!=NativeFailureKind::cancelled) unexpected=std::current_exception(); }
+                catch(...) { unexpected=std::current_exception(); }
+            });
+            client.close(); call.cancel(); reader.join();
+            if(unexpected) std::rethrow_exception(unexpected);
             } // Destructor releases the session before the provider is released.
             std::cout<<"cleaned\n"<<std::flush; return 0;
         }
@@ -131,7 +138,7 @@ int main(int argc,char** argv) {
         const std::string originalNumeric=std::setlocale(LC_NUMERIC,nullptr);
         std::optional<CallerLocale> locale;
         if(verb=="locale") locale.emplace();
-        Client client;
+        Client client(std::getenv("THINKTHEN_CPP_RECORD") ? Json::Object{{"record",std::getenv("THINKTHEN_CPP_RECORD")}} : Json::Object{});
         if(verb=="locale") {
             Json original{{"nested",Json::Array{Json{{"number",0.5}},1.25}}};
             auto input=RequestInputRecords().set_items({item(original)});
@@ -153,9 +160,18 @@ int main(int argc,char** argv) {
             if(std::locale()!=originalLocale || originalNumeric!=std::setlocale(LC_NUMERIC,nullptr)) return 44;
             return answered && packets.back().as_SessionPacketTerminal() ? 0:43;
         }
+        if(verb=="cardinality-zero" || verb=="cardinality-many") {
+            auto input=verb=="cardinality-zero" ? RequestInput(RequestInputFeed().set_name("empty")) : RequestInput(RequestInputRecords().set_items({item(Json("first")),item(Json("second"))}));
+            auto call=client.decide(RequestQuestionText().set_text("Is it?"),input);
+            try { call.answer(); return 48; }
+            catch(const results::AnswerCardinalityFailure& error) {
+                if(error.packets.empty() || !error.packets.back().as_SessionPacketTerminal()) return 49;
+                std::cout<<"cardinality-pass\n"; return 0;
+            }
+        }
         if(verb=="failure") {
             auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("backend-failure")); call.finish();
-            try { call.collect(); return 15; }
+            try { call.answer(); return 15; }
             catch(const SessionFailure& error) {
                 if(error.failure.error().value->kind().value->value()!="backend" || error.failure.error().value->retryable().value.value()) return 16;
                 if(error.failure.facts().state!=results::PresenceState::value || *error.failure.facts().value->requests_sent().value!=1) return 17;
@@ -196,6 +212,17 @@ int main(int argc,char** argv) {
                     if(!std::visit([](const auto& value){ return std::is_same_v<std::decay_t<decltype(value)>,std::nullptr_t>; },fields[0].second.value())) return 25;
                 }
                 if(Json::parse(packet.document().dump())!=packet.document()) return 26;
+            }
+            // The shipped nested range form must retain its decoded container.
+            if(auto ranked=packet.as_SessionPacketRankAggregate()) {
+                for(const auto& index:*ranked->value().value) {
+                    if(*index.value().value==0) return 46;
+                }
+            }
+            if(auto found=packet.as_SessionPacketRecognizeAggregate()) {
+                for(const auto& entity:*found->value().value) {
+                    if(entity.document().is_null()) return 47;
+                }
             }
             std::cout<<packet.document().dump()<<'\n';
         }
