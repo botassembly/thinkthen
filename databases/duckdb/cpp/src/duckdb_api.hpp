@@ -16,6 +16,11 @@ using ThinkThenScalarBinder = unique_ptr<FunctionData> (*)(ClientContext &, cons
 using ThinkThenIdentifier = Identifier;
 using ThinkThenColumnNames = vector<Identifier>;
 
+template <class Function>
+void ThinkThenFallible(Function &function) {
+    function.SetFallible();
+}
+
 template <ThinkThenScalarBinder Binder>
 unique_ptr<FunctionData> ThinkThenBindScalar(BindScalarFunctionInput &input) {
     return Binder(input.GetClientContext(), input.GetBoundFunction().GetName().GetIdentifierName(), input.GetArguments());
@@ -60,6 +65,10 @@ inline bool ThinkThenTemporaryTable(ClientContext &context, const string &name) 
 #else
 using ThinkThenIdentifier = string;
 using ThinkThenColumnNames = vector<string>;
+
+template <class Function>
+void ThinkThenFallible(Function &) {
+}
 
 template <ThinkThenScalarBinder Binder>
 unique_ptr<FunctionData> ThinkThenBindScalar(ClientContext &context, ScalarFunction &function,

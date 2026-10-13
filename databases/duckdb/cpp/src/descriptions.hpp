@@ -22,6 +22,7 @@ void DescribeRegistration(ExtensionLoader &loader, Info info, const string &purp
 
 template <class Function>
 void RegisterDescribedScalar(ExtensionLoader &loader, Function function, const string &purpose) {
+    ThinkThenFallible(function);
     DescribeRegistration(loader, CreateScalarFunctionInfo(std::move(function)), purpose);
 }
 

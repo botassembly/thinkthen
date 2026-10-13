@@ -10,6 +10,8 @@ DuckDB 2.0 `Connection::Query` returns the unified `QueryResult`. Its blocking `
 
 The 2.0 JSON alias uses `Value::WithType`, retaining serialized bytes without another parser. Macro registration uses the built-in parser, preserving its independence from connection settings.
 
+Every scalar registration, including each overload set, declares runtime errors through 2.0 `SetFallible`. The older host keeps its existing error behavior. DuckDB 2.0 otherwise converts the extension's usage refusals into internal errors and changes `TRY` and optimizer handling. The single scalar registration owner applies this property before publishing any signature.
+
 Root CMake selects `DONT_LINK` only when `duckdb_extension_statically_link` is absent. DuckDB 2.0 rejects that old flag and links only explicitly selected extensions. Both branches therefore build this extension for dynamic loading through the standard local repository.
 
 The checked ownership slice is `duckdb_api.hpp`, `json_result.hpp`, `descriptions.hpp`, `complete.cpp`, `files.cpp`, `find.cpp`, `images.cpp`, `nested.cpp`, `plan.cpp`, `portable.cpp`, `relate.cpp`, `relate_query.cpp`, `removed.cpp` and `usage.cpp`, all under `databases/duckdb/cpp/src`. The coordinator confirmed no concurrent DuckDB edits before the repair.
