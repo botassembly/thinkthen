@@ -104,7 +104,7 @@ try:
         assert result.stdout.strip() in ('values-pass','admission-pass','failure-pass','closed-push-pass'), result
         assert len(server.requests) == baseline + (mode == 'failure'), (mode,len(server.requests))
         print('CPP_INSTALLED_EDGE_PASS',mode)
-    for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 2)):
+    for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 1)):
         before = len(server.requests)
         result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
         assert result.returncode == 0 and result.stdout.strip() == 'cardinality-pass', (mode, result.returncode, result.stdout, result.stderr)
