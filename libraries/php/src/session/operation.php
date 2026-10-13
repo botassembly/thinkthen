@@ -16,10 +16,10 @@ final class Operation
     private array $packets = [];
     private ?\ThinkThen\Results\Node $terminal = null;
     public function __construct(private ?Client $client, private readonly \FFI $ffi, \FFI\CData $engine,
-        string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
+        string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
         array|\ThinkThen\Inputs\Options $options, private readonly ?Cancellation $token)
     {
-        if ($input instanceof FileInput) {
+        if ($input instanceof Files) {
             $source = new Input\InputSource(new Input\Source($input->paths,
                 ['reading' => new Input\Reader($input->reading), ...($input->framing === null ? [] : ['framing' => $input->framing]), ...($input->media === null ? [] : ['media' => $input->media])]));
         } elseif ($input instanceof \Traversable) {
@@ -27,10 +27,10 @@ final class Operation
             $source = new Input\InputFeed('php');
         } else {
             $records = is_array($input) && array_is_list($input) ? $input : [$input];
-            $source = new Input\InputRecords(array_map(fn($item) => new Input\Item(Client::descriptor($item)), $records));
+            $source = new Input\InputRecords(array_map(fn($item) => new Input\Item(\ThinkThen\Internal\descriptor($item)), $records));
         }
-        $question = $question instanceof QuestionInput
-            ? new Input\Question($question->descriptor)
+        $question = $question instanceof \ThinkThen\Inputs\QuestionSource
+            ? $question
             : (is_string($question) ? new Input\QuestionText($question) : new Input\QuestionDefinition($question));
         $buffers = [];
         $request = $ffi->new('struct thinkthen_named_request_v1');
@@ -70,11 +70,11 @@ final class Operation
         $status = $this->ffi->new('uint32_t');
         $owner = $this->ffi->new('struct thinkthen_session_result *');
         $code = $blocking
-            ? $this->ffi->thinkthen_session_next_packet($this->session, \ThinkThen\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, \FFI::addr($status), \FFI::addr($owner))
+            ? $this->ffi->thinkthen_session_next_packet($this->session, \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, \FFI::addr($status), \FFI::addr($owner))
             : $this->ffi->thinkthen_session_try_read($this->session, \FFI::addr($status), \FFI::addr($owner));
         $this->check($code);
-        if ($status->cdata === \ThinkThen\Session\THINKTHEN_SESSION_END_V1 && $this->terminal === null) throw new DefectFailure('native session ended without terminal facts');
-        if ($status->cdata !== \ThinkThen\Session\THINKTHEN_SESSION_RESULT_V1) return null;
+        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_END_V1 && $this->terminal === null) throw new DefectFailure('native session ended without terminal facts');
+        if ($status->cdata !== \ThinkThen\Internal\Session\THINKTHEN_SESSION_RESULT_V1) return null;
         try {
             $view = $this->ffi->new('const thinkthen_complete_session_packet_v1 *');
             $this->check($this->ffi->thinkthen_session_result_view($owner, \FFI::addr($view)));
@@ -91,7 +91,7 @@ final class Operation
     {
         if ($this->session === null) throw new UsageFailure('operation is closed');
         $ready = $this->ffi->new('uint32_t');
-        $interest = $this->producer !== null ? \ThinkThen\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
+        $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
         $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, 50, \FFI::addr($ready)));
     }
     public function result(): \ThinkThen\Results\Completed
@@ -127,7 +127,7 @@ final class Operation
                     $finished = true;
                 } else {
                     $finished = false;
-                    $this->pending = \ThinkThen\Internal\Encoder::encode(new Input\SessionDescriptor(new Input\Item(Client::descriptor($this->producer->current()))));
+                    $this->pending = \ThinkThen\Internal\Encoder::encode(new Input\SessionDescriptor(new Input\Item(\ThinkThen\Internal\descriptor($this->producer->current()))));
                 }
             } catch (\Throwable $error) {
                 $this->producerError = $error;
@@ -144,8 +144,8 @@ final class Operation
         }
         $status = $this->ffi->new('uint32_t');
         $this->check($this->ffi->thinkthen_session_try_push($this->session, $this->pending, strlen($this->pending), \FFI::addr($status)));
-        if ($status->cdata === \ThinkThen\Session\THINKTHEN_SESSION_ACCEPTED_V1) { $this->pending = null; $this->advance = true; }
-        elseif ($status->cdata === \ThinkThen\Session\THINKTHEN_SESSION_CLOSED_V1) { $this->pending = null; $this->producer = null; }
+        if ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_ACCEPTED_V1) { $this->pending = null; $this->advance = true; }
+        elseif ($status->cdata === \ThinkThen\Internal\Session\THINKTHEN_SESSION_CLOSED_V1) { $this->pending = null; $this->producer = null; }
     }
     public function cancel(): void
     {

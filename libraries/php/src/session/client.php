@@ -25,20 +25,13 @@ final class Client
         }
         $this->engine = $engine;
     }
-    public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): FileInput { return new FileInput($paths, $reading, $framing, $media); }
-    public static function questionFile(string $path): QuestionInput { return new QuestionInput(['kind' => 'file', 'path' => $path]); }
-    public static function questionNamed(string $name): QuestionInput { return new QuestionInput(['kind' => 'name', 'name' => $name]); }
-    public static function questionReference(string $reference): QuestionInput { return new QuestionInput(['kind' => 'reference', 'reference' => $reference]); }
-    public static function images(array $images): ItemInput { return new ItemInput(null, ['images' => $images], false); }
-    public static function item(mixed $value, array $fields = []): ItemInput { return new ItemInput($value, $fields); }
-    public static function descriptor(mixed $value): array
-    {
-        $fields = $value instanceof ItemInput ? $value->fields : [];
-        $original = !($value instanceof ItemInput) || $value->original;
-        if ($value instanceof ItemInput) $value = $value->value;
-        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
-    }
-    public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
+    public static function files(array $paths, array $reading = [], ?string $framing = null, ?string $media = null): Files { return new Files($paths, $reading, $framing, $media); }
+    public static function questionFile(string $path): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionFile($path); }
+    public static function questionNamed(string $name): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionName($name); }
+    public static function questionReference(string $reference): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionReference($reference); }
+    public static function images(array $images): Item { return new Item(null, ['images' => $images], false); }
+    public static function item(mixed $value, array $fields = []): Item { return new Item($value, $fields); }
+    public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
         array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): Operation
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
@@ -47,7 +40,7 @@ final class Client
         $this->operations[$operation] = true;
         return $operation;
     }
-    private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|QuestionInput $question, mixed $input,
+    private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
         array|\ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
     {
         $operation = $this->start($function, $question, $input, $options, $cancel);
@@ -79,11 +72,11 @@ final class Client
     public function __debugInfo(): array { return ['type' => self::class]; }
 }
 
-final readonly class FileInput
+final readonly class Files
 {
     public function __construct(public array $paths, public array $reading = [], public ?string $framing = null, public ?string $media = null) {}
 }
-final readonly class ItemInput
+final readonly class Item
 {
     public function __construct(public mixed $value, public array $fields = [], public bool $original = true) {}
 }
@@ -91,9 +84,4 @@ final readonly class ItemInput
 final readonly class UsageStatus
 {
     public function __construct(public UsagePersistenceState $state, public ?string $advice) {}
-}
-
-final readonly class QuestionInput
-{
-    public function __construct(public array $descriptor) {}
 }

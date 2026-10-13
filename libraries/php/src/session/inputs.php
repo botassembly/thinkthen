@@ -2,8 +2,6 @@
 declare(strict_types=1);
 namespace ThinkThen\Inputs;
 
-enum Omitted { case Value; }
-
 /** Input documents retain present nulls and unknown fields for native admission. */
 abstract class Document implements \JsonSerializable
 {
@@ -13,6 +11,14 @@ abstract class Document implements \JsonSerializable
 }
 
 namespace ThinkThen\Internal;
+
+function descriptor(mixed $value): array
+    {
+        $fields = $value instanceof \ThinkThen\Item ? $value->fields : [];
+        $original = !($value instanceof \ThinkThen\Item) || $value->original;
+        if ($value instanceof \ThinkThen\Item) $value = $value->value;
+        return [...($original ? ['original' => is_string($value) ? ['kind' => 'text', 'text' => $value] : ['kind' => 'json', 'value' => $value]] : []), ...$fields];
+    }
 
 /** Keep one validated JSON value unchanged for the native definition parser. */
 final readonly class RawJson

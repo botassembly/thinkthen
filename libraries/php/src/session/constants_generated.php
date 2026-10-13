@@ -1,7 +1,7 @@
 <?php
 // Generated from the native C header; do not edit.
 declare(strict_types=1);
-namespace ThinkThen\Session;
+namespace ThinkThen\Internal\Session;
 const THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1 = 1;
 const THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1 = 4;
 const THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1 = 2;
