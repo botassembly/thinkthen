@@ -117,7 +117,7 @@ fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() 
         ),
         (
             RequestFunction::Score,
-            r#"{"score":"Grade?","levels":["low","high"]}"#,
+            r#"{"score":"Grade?","levels":{"low":{"what":"Little."},"high":null}}"#,
             json!([null, 0.1, null, 0.9, null]),
             None,
         ),
@@ -146,6 +146,19 @@ fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() 
                 .unwrap(),
             items,
         );
+        if let RequestValue::Scores(rows) = call.value() {
+            let question = rows[0].result().question();
+            let levels = question.options().collect::<Vec<_>>();
+            assert_eq!(
+                levels.iter().map(|level| level.name()).collect::<Vec<_>>(),
+                ["low", "high"]
+            );
+            assert_eq!(
+                levels[0].description().unwrap().to_json().unwrap(),
+                r#"{"what":"Little."}"#
+            );
+            assert!(levels[1].description().unwrap().is_null());
+        }
         let before = listener.count();
         assert!(before > 0);
         let view = column.view(call.value()).unwrap().unwrap();
