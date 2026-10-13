@@ -82,7 +82,48 @@ func feedChecks(client *tt.Client) {
 	fmt.Println("bounded-feed-results-pass requests=4")
 }
 
+func collectionAnswerChecks() {
+	var terminal tt.OwnedSessionPacket
+	require(json.Unmarshal([]byte(`{"kind":"terminal"}`), &terminal) == nil, "decode collection terminal")
+	for _, test := range []struct {
+		function string
+		kind     string
+		value    string
+		want     string
+		fails    bool
+	}{
+		{"filter", "aggregate", `[{"input":false},{"input":null},{"input":{"id":7}},{"input":["x"]}]`, `[false,null,{"id":7},["x"]]`, false},
+		{"filter", "row", `{"input":"original"}`, `["original"]`, false},
+		{"filter", "aggregate", `[]`, `[]`, false},
+		{"filter", "aggregate", `[{}]`, ``, true},
+		{"rank", "aggregate", `[{"index":3,"value":1},{"index":0,"value":2}]`, `[3,0]`, false},
+		{"rank", "aggregate", `[]`, `[]`, false},
+		{"rank", "aggregate", `[{"value":1}]`, ``, true},
+		{"rank", "aggregate", `[{"index":null}]`, ``, true},
+		{"rank", "aggregate", `[{"index":-1}]`, ``, true},
+		{"rank", "aggregate", `[{"index":1.5}]`, ``, true},
+	} {
+		var packet tt.OwnedSessionPacket
+		raw := fmt.Sprintf(`{"function":%q,"kind":%q,"value":%s}`, test.function, test.kind, test.value)
+		require(json.Unmarshal([]byte(raw), &packet) == nil, "decode collection packet")
+		call := tt.OwnedCall{Packets: []tt.OwnedSessionPacket{packet}, Terminal: &terminal}
+		var answer any
+		var err error
+		if test.function == "rank" {
+			answer, err = call.RankAnswer()
+		} else {
+			answer, err = call.FilterAnswer()
+		}
+		require((err != nil) == test.fails, "collection answer admission changed")
+		if !test.fails {
+			encoded, err := json.Marshal(answer)
+			require(err == nil && string(encoded) == test.want, "collection answer changed originals or indexes")
+		}
+	}
+}
+
 func main() {
+	collectionAnswerChecks()
 	client, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 	if err != nil {
 		panic(err)
@@ -321,6 +362,12 @@ func main() {
 	require(tagsErr == nil && len(tags) == 2 && tags[0] == "a" && tags[1] == "b", "single normalized tags missing")
 	score, scoreErr := retained[3].ScoreAnswer()
 	require(scoreErr == nil && score == 0.1, "single normalized score missing")
+	var filtered []any
+	filtered, filterErr := retained[4].FilterAnswer()
+	require(filterErr == nil && len(filtered) == 2 && filtered[0] == "alpha" && filtered[1] == "beta", "filter answer changed original inputs")
+	var ranked []uint64
+	ranked, rankErr := retained[5].RankAnswer()
+	require(rankErr == nil && len(ranked) == 2 && ranked[0] == 0 && ranked[1] == 1, "rank answer lost zero-based stable input indexes")
 	for _, input := range [][]string{{}, {"cardinality-one", "cardinality-two"}} {
 		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), input, nil)
 		require(err == nil && completed.Terminal != nil, "cardinality call did not settle")

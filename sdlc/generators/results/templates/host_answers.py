@@ -14,6 +14,27 @@ def aggregate_answers(definitions):
     return answers
 
 
+def aggregate_projection(function, payload, definitions):
+    """Project convenient collection answers without changing receipt payloads.
+
+    Rank selects the original zero-based input index, not the ranked position.
+    Filter selects the original input, including an explicit JSON null.
+    The returned member is read from each receipt after rows are collected.
+    """
+    member = {'rank': 'index', 'filter': 'input'}.get(function)
+    if member is None:
+        return payload, None
+    if payload.get('type') != 'array':
+        raise ValueError(function + ' answer requires a receipt collection')
+    item = payload['items']
+    if '$ref' in item:
+        item = definitions[item['$ref'].split('/')[-1]]
+    fields = item.get('properties', {})
+    if member not in fields:
+        raise ValueError(function + ' receipt has no ' + member)
+    return {'type': 'array', 'items': fields[member]}, member
+
+
 def named_object_fields(source, definitions):
     """Find fields whose every object alternative carries a required text name."""
     def named(value):

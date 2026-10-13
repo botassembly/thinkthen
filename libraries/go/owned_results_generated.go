@@ -3946,6 +3946,32 @@ func (v OwnedCall) answerJSON(function, judgment string) (json.RawMessage, error
 	}
 	return values[0], nil
 }
+func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T, error) {
+	rows, err := ownedDecode[[]json.RawMessage](raw)
+	if err != nil {
+		return nil, err
+	}
+	values := make([]T, 0, len(rows))
+	for _, row := range rows {
+		field := ownedMember[json.RawMessage](row, member)
+		if field.Err != nil {
+			return nil, field.Err
+		}
+		if !field.Present {
+			return nil, errOwnedAlternative
+		}
+		value := field.Value
+		if field.Null {
+			value = json.RawMessage("null")
+		}
+		decoded, err := ownedDecode[T](value)
+		if err != nil {
+			return nil, err
+		}
+		values = append(values, decoded)
+	}
+	return values, nil
+}
 func (v OwnedCall) DecideAnswer() (*bool, error) {
 	raw, err := v.answerJSON("decide", "decision")
 	if err != nil {
@@ -4010,34 +4036,34 @@ func (c *Client) ScoreAnswer(ctx context.Context, question RequestQuestion, inpu
 	}
 	return call.ScoreAnswer()
 }
-func (v OwnedCall) FilterAnswer() ([]OwnedAtomicBoolean, error) {
+func (v OwnedCall) FilterAnswer() ([]any, error) {
 	raw, err := v.answerJSON("filter", "")
 	if err != nil {
-		var zero []OwnedAtomicBoolean
+		var zero []any
 		return zero, err
 	}
-	return ownedDecode[[]OwnedAtomicBoolean](raw)
+	return ownedAnswerProjection[any](raw, "input")
 }
-func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAtomicBoolean, error) {
+func (c *Client) FilterAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]any, error) {
 	call, err := c.Filter(ctx, question, input, options)
 	if err != nil {
-		var zero []OwnedAtomicBoolean
+		var zero []any
 		return zero, err
 	}
 	return call.FilterAnswer()
 }
-func (v OwnedCall) RankAnswer() ([]OwnedAtomicNonZeroUsize, error) {
+func (v OwnedCall) RankAnswer() ([]uint64, error) {
 	raw, err := v.answerJSON("rank", "")
 	if err != nil {
-		var zero []OwnedAtomicNonZeroUsize
+		var zero []uint64
 		return zero, err
 	}
-	return ownedDecode[[]OwnedAtomicNonZeroUsize](raw)
+	return ownedAnswerProjection[uint64](raw, "index")
 }
-func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]OwnedAtomicNonZeroUsize, error) {
+func (c *Client) RankAnswer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ([]uint64, error) {
 	call, err := c.Rank(ctx, question, input, options)
 	if err != nil {
-		var zero []OwnedAtomicNonZeroUsize
+		var zero []uint64
 		return zero, err
 	}
 	return call.RankAnswer()

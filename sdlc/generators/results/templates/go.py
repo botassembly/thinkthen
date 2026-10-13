@@ -189,7 +189,7 @@ def named_calls(definitions):
 
 
 def answer_helpers(definitions):
-    from host_answers import scalar_answers, judgment_route
+    from host_answers import scalar_answers, judgment_route, aggregate_projection
     route, guards = judgment_route(definitions)
     checks = []
     for path, value in guards:
@@ -209,16 +209,27 @@ def answer_helpers(definitions):
              'if !(' + ' && '.join(checks) + ') { continue }; carrier:=ownedAnswerPath(packet.raw,' + path + '); if !ownedLiteral(carrier.Value,"kind",judgment) { continue }; value=ownedMember[json.RawMessage](carrier.Value,"value")',
              '}; if value.Err!=nil { return nil,value.Err }; if value.Present { raw:=value.Value; if value.Null { raw=json.RawMessage("null") }; if row { raw,err:=json.Marshal([]json.RawMessage{raw}); if err!=nil { return nil,err }; values=append(values,raw) } else { values=append(values,raw) } }',
              '}; if judgment=="" && collection { combined:=make([]json.RawMessage,0); for _,value:=range values { var items []json.RawMessage; if err:=json.Unmarshal(value,&items);err!=nil { return nil,err }; combined=append(combined,items...) }; return json.Marshal(combined) }; if len(values)!=1 { return nil,&AnswerCardinalityError{Function:function,Count:len(values),Call:v} }; return values[0],nil', '}']
-    answers = {function: (typ(payload), '') for function, _, payload in aggregate_answers(definitions)}
+    answers = {}
+    for function, _, payload in aggregate_answers(definitions):
+        projected, member = aggregate_projection(function, payload, definitions)
+        target = typ(projected)
+        if member and shape(projected['items']).get('format', '').startswith('uint'):
+            target = '[]uint64'
+        answers[function] = (target, '', member)
+    lines += ['func ownedAnswerProjection[T any](raw json.RawMessage, member string) ([]T,error) {',
+              'rows,err:=ownedDecode[[]json.RawMessage](raw); if err!=nil { return nil,err }; values:=make([]T,0,len(rows))',
+              'for _,row:=range rows { field:=ownedMember[json.RawMessage](row,member); if field.Err!=nil { return nil,field.Err }; if !field.Present { return nil,errOwnedAlternative }; value:=field.Value; if field.Null { value=json.RawMessage("null") }; decoded,err:=ownedDecode[T](value); if err!=nil { return nil,err }; values=append(values,decoded) }; return values,nil', '}']
     for function, kind, payload in scalar_answers(definitions):
         source = dict(payload)
         kinds = source.get('type')
         nullable = isinstance(kinds, list) and 'null' in kinds
         if isinstance(kinds, list): source['type'] = next(value for value in kinds if value != 'null')
         target = 'float64' if source.get('type') == 'number' else typ(source)
-        answers[function] = (('*' if nullable else '') + target, kind)
-    for function, (target, kind) in answers.items():
+        answers[function] = (('*' if nullable else '') + target, kind, None)
+    for function, (target, kind, member) in answers.items():
         title = function.title()
-        lines += [f'func (v OwnedCall) {title}Answer() ({target},error) {{ raw,err:=v.answerJSON({json.dumps(function)},{json.dumps(kind)}); if err!=nil {{ var zero {target}; return zero,err }}; return ownedDecode[{target}](raw) }}',
+        reader = ('ownedAnswerProjection[' + target.removeprefix('[]') + '](raw,' + json.dumps(member) + ')'
+                  if member else 'ownedDecode[' + target + '](raw)')
+        lines += [f'func (v OwnedCall) {title}Answer() ({target},error) {{ raw,err:=v.answerJSON({json.dumps(function)},{json.dumps(kind)}); if err!=nil {{ var zero {target}; return zero,err }}; return {reader} }}',
                   f'func (c *Client) {title}Answer(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) ({target},error) {{ call,err:=c.{title}(ctx,question,input,options); if err!=nil {{ var zero {target}; return zero,err }}; return call.{title}Answer() }}']
     return '\n'.join(lines) + '\n'
