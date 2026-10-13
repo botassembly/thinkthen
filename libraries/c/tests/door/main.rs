@@ -46,6 +46,11 @@ use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
 
+fn consumer_name(source: &Path) -> String {
+    let relative = source.strip_prefix(crate_dir()).expect("a crate fixture");
+    relative.to_string_lossy().replace(['/', '\\'], "-")
+}
+
 fn crate_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
 }

@@ -71,10 +71,7 @@ pub(super) fn compile(source: &Path) -> PathBuf {
     if let Some(binary) = built.get(source) {
         return binary.clone();
     }
-    let name = source
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .expect("a name");
+    let name = consumer_name(source);
     let binary = root().join(format!("c-{name}"));
     let folder = archive();
     let linked = child::command("cc", &[])

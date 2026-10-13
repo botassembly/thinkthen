@@ -67,10 +67,7 @@ fn compile_mode(source: &Path, sanitizer: bool) -> PathBuf {
     if let Some(binary) = built.get(&(source.to_owned(), sanitizer)) {
         return binary.clone();
     }
-    let name = source
-        .file_stem()
-        .and_then(|name| name.to_str())
-        .expect("a name");
+    let name = consumer_name(source);
     let binary = root().join(format!(
         "c-{name}{}.exe",
         if sanitizer { "-asan" } else { "" }
