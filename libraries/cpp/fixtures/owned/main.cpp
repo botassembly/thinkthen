@@ -166,7 +166,15 @@ int main(int argc,char** argv) {
             try { call.answer(); return 48; }
             catch(const results::AnswerCardinalityFailure& error) {
                 if(error.packets.empty() || !error.packets.back().as_SessionPacketTerminal()) return 49;
-                std::cout<<"cardinality-pass\n"; return 0;
+                const bool empty=verb=="cardinality-zero";
+                if(std::string(error.what())!=(empty ? "no matching judgment":"multiple matching judgments")) return 50;
+                size_t judgments=0;
+                for(const auto& packet:error.packets) {
+                    const auto& value=packet.document();
+                    if(value.at("kind").get<std::string>()=="observation" && value.at("value").at("kind").get<std::string>()=="row" && value.at("value").at("value").at("kind").get<std::string>()=="judgment") ++judgments;
+                }
+                if(judgments!=(empty ? 0u:2u)) return 51;
+                std::cout<<"cardinality-pass judgments="<<judgments<<'\n'; return 0;
             }
         }
         if(verb=="failure") {

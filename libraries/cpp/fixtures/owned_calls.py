@@ -43,6 +43,10 @@ try:
             print('CPP_USAGE_INSTALLED_PASS', mode, 'requests=1')
         sys.exit(0)
     for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
+        source = prefix / 'share/thinkthen-cpp/examples' / (verb + '.cpp')
+        assert source.is_file(), 'CPP_EXAMPLE_MISSING ' + verb
+        authored = source.read_text()
+        assert '.answer()' in authored and not any(old in authored for old in ('.collect(', 'as_SessionPacket', 'from_document(')), 'CPP_EXAMPLE_STALE ' + verb
         case = next(case for case in cases if case['verb'] == verb)
         question = dict(case.get('question', case.get('question_set', {})))
         original = case.get('text', case['exchanges'][0]['evidence'])
@@ -107,8 +111,12 @@ try:
     for mode, sends in (('cardinality-zero', 0), ('cardinality-many', 1)):
         before = len(server.requests)
         result = subprocess.run([binary, mode, scratch, scratch], env=env, capture_output=True, text=True, timeout=5)
-        assert result.returncode == 0 and result.stdout.strip() == 'cardinality-pass', (mode, result.returncode, result.stdout, result.stderr)
+        assert result.returncode == 0 and result.stdout.strip() == ('cardinality-pass judgments=0' if sends == 0 else 'cardinality-pass judgments=2'), (mode, result.returncode, result.stdout, result.stderr)
         assert len(server.requests) == before + sends, (mode, len(server.requests), before)
+        if sends:
+            wire = server.requests[before]
+            assert wire['state'] == 'Each question quotes the text it asks about.' and len(wire['questions']) == 2, wire
+            assert [question['instructions'] for question in wire['questions'].values()] == ['The text is "first". Is it?', 'The text is "second". Is it?'], wire
         print('CPP_INSTALLED_CARDINALITY_PASS', mode)
     source = scratch / 'physical.txt'
     source.write_text('yes\n\nno\n')
