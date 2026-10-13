@@ -78,13 +78,19 @@ public final class OwnedSession implements AutoCloseable {
         } finally { completedWait(); }
     }
     public Read nextPacket() { return nextPacket(false); }
+    public java.util.concurrent.CompletableFuture<Read> nextPacketAsync(boolean settlement) {
+        var pending = java.util.concurrent.CompletableFuture.supplyAsync(() -> nextPacket(settlement), workers);
+        pending.whenComplete((value, error) -> { if (pending.isCancelled()) cancel(); });
+        return pending;
+    }
     /** Transfer one descriptor when native input room is available. */
     public java.util.concurrent.CompletableFuture<Integer> push(Inputs.RequestSessionDescriptor descriptor) {
+        var payload = descriptor.json();
         var pending = java.util.concurrent.CompletableFuture.supplyAsync(() -> {
             final MemorySegment retained;
             synchronized (this) { live(); retained = pointer; waiters++; }
             try (Arena arguments = Arena.ofConfined()) {
-                var bytes = NativeSession.bytes(arguments, descriptor.json());
+                var bytes = NativeSession.bytes(arguments, payload);
                 var state = arguments.allocate(ValueLayout.JAVA_INT);
                 NativeSession.check(NativeWait.push(retained, bytes, bytes.byteSize(), state));
                 return state.get(ValueLayout.JAVA_INT, 0);

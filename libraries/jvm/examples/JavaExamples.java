@@ -16,7 +16,10 @@ public final class JavaExamples {
         answers.add(engine.find(SampleInputs.find(), SampleInputs.units(), SampleInputs.options()).join().find());
         answers.add(engine.annotate(SampleInputs.annotate(), SampleInputs.input("session-annotate"), SampleInputs.options()).join().annotate());
         answers.add(engine.recognize(SampleInputs.recognize(), SampleInputs.input("Maria Chen"), SampleInputs.options()).join().recognize());
-        answers.add(engine.relate(SampleInputs.relate(), SampleInputs.entities(), SampleInputs.options()).join().relate());
+        var relation = engine.relate(SampleInputs.relate(), SampleInputs.entities(), SampleInputs.options()).join().relate();
+        var edge = relation.value().getFirst();
+        System.out.println(edge.sourceName() + " -> " + edge.targetName());
+        answers.add(relation);
         return java.util.Collections.unmodifiableList(answers);
     }
 }

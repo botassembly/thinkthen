@@ -23,6 +23,8 @@ try (var engine = new thinkthen.Engine(new thinkthen.Inputs.EngineSettings())) {
 }
 ```
 
+The shipped `examples/` sources call all ten functions with typed questions and read one answer from each completed call. Java shares the question builders; Kotlin uses suspend functions and Scala waits for Future handles. Relation examples read `sourceName()` and `targetName()` directly. The installed routine check compiles and replays these exact sources.
+
 Run `sh libraries/jvm/check.sh` for the focused stable installed consumers. It builds the package through the ordinary builder and checks all three languages with counted loopback requests. `THINKTHEN_JVM_NATIVE` supplies an existing matching native library; otherwise the check builds the C library offline. `THINKTHEN_ARTIFACT` selects an already built stable archive. `THINKTHEN_TEST_PROFILE=full` additionally runs every required shared case through the installed named Java, Kotlin and Scala calls; `THINKTHEN_PORTABLE_BATCH=1` also selects them. This full campaign belongs to the release suite. For a focused development check, run `python3 libraries/jvm/tests/public_types.py --jars /absolute/built/jars --out /absolute/scratch --case CASE_ID`; selectors name existing shared cases and report only that subset. Final platform and distribution qualification remain required.
 
 Kotlin suspend functions and Scala Future handles return the shared Java `Engine.OwnedCall` and `Results` records. Record getters and `Presence` retain omission, explicit null and values without another decode. Both facades offer `plan`, `execute`, caller-owned sessions and explicit cancellation.

@@ -151,6 +151,8 @@ public final class SessionConsumer {
         }
         check(retained.terminal().facts().value().records().intValueExact() == 1,"result died with engine");
         check(retainedFailure.call().terminal().facts().value().requestsSent().intValueExact() == 1,"failure facts died with engine");
+        try { retainedFailure.call().decide(); throw new AssertionError("failed call answered"); }
+        catch (Engine.SessionFailure expected) { check(expected.call() == retainedFailure.call(), "answer helper retains actual failed prefix"); }
         check(retainedFailure.failure().error().message() != null,"typed failure died with engine");
         var missing = new Results.Facts(Map.of());
         check(missing.model().state() == Presence.State.MISSING,"missing presence");

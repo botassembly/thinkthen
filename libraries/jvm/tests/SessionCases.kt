@@ -15,7 +15,7 @@ fun main(args: Array<String>): Unit = runBlocking {
                     override fun finish(f:Inputs.RequestReaderFailure?)=session.finish(f)
                     override fun cancel()=session.cancel()
                     override fun waitReady(input:Boolean){session.waitReady(input).join()}
-                    override fun read():thinkthen.OwnedSession.Read {val read=session.tryRead();return thinkthen.OwnedSession.Read(read.packet?.let {SessionCases.packet(it.json)},read.ended)}
+                    override fun read():thinkthen.OwnedSession.Read {val read=session.tryRead();return thinkthen.OwnedSession.Read(read.packet,read.ended)}
                     override fun close()=session.close()
                 }
                 println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.drain(feed,data,input),data)))
@@ -28,7 +28,7 @@ fun main(args: Array<String>): Unit = runBlocking {
                 "find"->engine.find(question,input,options); "annotate"->engine.annotate(question,input,options)
                 "recognize"->engine.recognize(question,input,options); "relate"->engine.relate(question,input,options)
                 else->error("unknown fixture function")
-            } } catch(failure: SessionFailure) { failure.call }
+            } } catch(failure: SessionFailure) { failure.call() }
             // Read the owning language's facts before projecting the shared fixture shape.
             call.terminal().facts().state()
             println(thinkthen.SessionCases.write(SessionCases.normalize(SessionCases.javaCall(call.packets().map { it.json() },call.terminal().json()),data)))

@@ -46,6 +46,7 @@ object SessionScala {
       val retained = row.value().input().value().asInstanceOf[java.util.Map[String, Any]]
       assert(retained.get("metadata").asInstanceOf[java.util.List[Any]].get(0).asInstanceOf[java.util.Map[String, Any]].containsKey("present"))
       assert(nested.terminal().facts().value().requestsSent().intValueExact() == 1)
+      assert(nested.decide() == true, "normalized answer remains separate from authored JSON")
       try { Await.result(engine.decide(authored, records, new Inputs.RequestOptions().extension("field", List(7).asJava)).result, 10.seconds); throw new AssertionError("invalid field admitted") }
       catch { case _: thinkthen.scala.NativeFailure => () }
       retainedCall = independent

@@ -9,9 +9,9 @@ import java.util.concurrent.CompletableFuture
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 /** Coroutine facade over the shared owned JVM sessions. */
-class KotlinEngine private constructor(private val engine: Engine) : AutoCloseable {
+class KotlinEngine private constructor(private val engine: Engine) : KotlinNamedCalls(engine), AutoCloseable {
     constructor(settings: Inputs.EngineSettings = Inputs.EngineSettings()) : this(nativeResult { Engine(settings, Engine.Surface.KOTLIN) })
-    private suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall {
+    protected override suspend fun await(start: () -> CompletableFuture<Engine.OwnedCall>): OwnedCall {
         currentCoroutineContext().ensureActive()
         val call = start()
         return suspendCancellableCoroutine { continuation ->
@@ -22,16 +22,6 @@ class KotlinEngine private constructor(private val engine: Engine) : AutoCloseab
             }
         }
     }
-    suspend fun decide(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.decide(question, input, options) }
-    suspend fun choose(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.choose(question, input, options) }
-    suspend fun tag(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.tag(question, input, options) }
-    suspend fun score(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.score(question, input, options) }
-    suspend fun filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.filter(question, input, options) }
-    suspend fun rank(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.rank(question, input, options) }
-    suspend fun find(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.find(question, input, options) }
-    suspend fun annotate(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.annotate(question, input, options) }
-    suspend fun recognize(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.recognize(question, input, options) }
-    suspend fun relate(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions? = null): OwnedCall = await { engine.relate(question, input, options) }
     fun plan(request: Inputs.Request): Results.Plan = try { engine.plan(request) } catch (error: Throwable) { throw convertFailure(error) }
     fun startSession(request: Inputs.Request): OwnedSession = nativeResult { OwnedSession(engine.startSession(request)) }
     suspend fun execute(request: Inputs.Request): OwnedCall = await { engine.execute(request) }
@@ -44,6 +34,7 @@ class KotlinEngine private constructor(private val engine: Engine) : AutoCloseab
 typealias OwnedCall = Engine.OwnedCall
 typealias SessionFailure = Engine.SessionFailure
 private fun convertFailure(error: Throwable): Throwable = when (error) {
+    is java.util.concurrent.CompletionException -> error.cause?.let { convertFailure(it) } ?: error
     is Engine.SessionFailure -> error
     is thinkthen.NativeFailure -> NativeFailure(error)
     else -> error
@@ -63,7 +54,11 @@ class OwnedSession internal constructor(private val native: thinkthen.OwnedSessi
         continuation.invokeOnCancellation { native.cancel(); pending.cancel(false) }
         pending.whenComplete { value, error -> if (error == null) continuation.resume(value) else continuation.resumeWithException(convertFailure(error)) }
     }
-    fun nextPacket(settlement: Boolean = false): Read = nativeResult { val read = native.nextPacket(settlement); Read(read.packet(), read.ended()) }
+    suspend fun nextPacket(settlement: Boolean = false): Read = suspendCancellableCoroutine { continuation ->
+        val pending = native.nextPacketAsync(settlement)
+        continuation.invokeOnCancellation { native.cancel(); pending.cancel(false) }
+        pending.whenComplete { value, error -> if (error == null) continuation.resume(Read(value.packet(), value.ended())) else continuation.resumeWithException(convertFailure(error)) }
+    }
     fun finish(failure: Inputs.RequestReaderFailure? = null) = nativeResult { native.finish(failure) }
     fun cancel() = native.cancel()
     fun waitReady(input: Boolean): java.util.concurrent.CompletableFuture<Void> = native.waitReady(input)
