@@ -65,7 +65,11 @@ func sessionFailure(code C.int) error {
 	if code == 0 {
 		return nil
 	}
-	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message())}
+	var facts json.RawMessage
+	if borrowed := C.thinkthen_session_error_facts_json(); borrowed != nil {
+		facts = json.RawMessage(C.GoString(borrowed))
+	}
+	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message()), Retryable: C.thinkthen_session_error_retryable() != 0, Facts: facts}
 }
 func descriptor(value any) RequestItem {
 	if item, ok := value.(RequestItem); ok {
@@ -281,36 +285,6 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		}
 	}
 }
-func (c *Client) Decide(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "decide", question, input, options)
-}
-func (c *Client) Choose(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "choose", question, input, options)
-}
-func (c *Client) Tag(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "tag", question, input, options)
-}
-func (c *Client) Score(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "score", question, input, options)
-}
-func (c *Client) Filter(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "filter", question, input, options)
-}
-func (c *Client) Rank(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "rank", question, input, options)
-}
-func (c *Client) Find(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "find", question, input, options)
-}
-func (c *Client) Annotate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "annotate", question, input, options)
-}
-func (c *Client) Recognize(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "recognize", question, input, options)
-}
-func (c *Client) Relate(ctx context.Context, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	return c.call(ctx, "relate", question, input, options)
-}
 
 // UsageStatus owns one native observation and remains valid after Close.
 type UsageStatus struct {
@@ -318,12 +292,8 @@ type UsageStatus struct {
 	advice Presence[string]
 }
 
-func (s UsageStatus) State() UsagePersistenceState              { return s.state }
-func (s UsageStatus) Advice() Presence[string]                  { return s.advice }
-func (c *Client) UsagePersistence() (UsageStatus, error)        { return c.engine.UsagePersistence() }
-func (c *Client) FinishUsageStatus() (UsageStatus, error)       { return c.engine.FinishUsageStatus() }
-func (e *nativeEngine) UsagePersistence() (UsageStatus, error)  { return e.usageStatus(false) }
-func (e *nativeEngine) FinishUsageStatus() (UsageStatus, error) { return e.usageStatus(true) }
+func (s UsageStatus) State() UsagePersistenceState { return s.state }
+func (s UsageStatus) Advice() Presence[string]     { return s.advice }
 func (e *nativeEngine) usageStatus(finish bool) (UsageStatus, error) {
 	e.mu.RLock()
 	defer e.mu.RUnlock()
