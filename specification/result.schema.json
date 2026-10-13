@@ -8145,7 +8145,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "decide"
         },
         {
           "properties": {
@@ -8165,7 +8166,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "choose"
         },
         {
           "properties": {
@@ -8183,7 +8185,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "score"
         },
         {
           "properties": {
@@ -8203,7 +8206,8 @@
             "value"
           ],
           "type": "object",
-          "unevaluatedProperties": false
+          "unevaluatedProperties": false,
+          "x-request-function": "tag"
         }
       ]
     },
@@ -10848,7 +10852,8 @@
             "kind",
             "value"
           ],
-          "type": "object"
+          "type": "object",
+          "x-request-function": "decide"
         },
         {
           "properties": {
@@ -10867,7 +10872,8 @@
             "kind",
             "value"
           ],
-          "type": "object"
+          "type": "object",
+          "x-request-function": "choose"
         },
         {
           "properties": {
@@ -10884,7 +10890,8 @@
             "kind",
             "value"
           ],
-          "type": "object"
+          "type": "object",
+          "x-request-function": "score"
         },
         {
           "properties": {
@@ -10903,7 +10910,8 @@
             "kind",
             "value"
           ],
-          "type": "object"
+          "type": "object",
+          "x-request-function": "tag"
         }
       ]
     },
