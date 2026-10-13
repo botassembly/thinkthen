@@ -76,49 +76,10 @@ BINDING_SOURCE_EXTENSIONS = {
     ".swift", ".zig", ".php", ".dart", ".adb", ".ads", ".m", ".mm", ".cob", ".cpy", ".sql",
 }
 SOURCE_OUTPUT_FOLDERS = {"target", "build", "vendor", "rvendor", "node_modules", ".dart_tool", ".build"}
-GENERATED_BINDING_SOURCES = {
-    "libraries/swift/Sources/ThinkThen/ABIGenerated.swift",
-    "libraries/swift/Sources/CThinkThen/bridge.c",
-    "libraries/swift/Sources/ThinkThen/InputsGenerated.swift",
-    "libraries/swift/Sources/ThinkThen/ResultsGenerated.swift",
-    "libraries/ada/src/thinkthen-requests.ads",
-    "libraries/ada/src/thinkthen-requests.adb",
-    "libraries/ada/src/thinkthen-sessions-calls.ads",
-    "libraries/ada/src/thinkthen-sessions-calls.adb",
-    "libraries/ada/src/thinkthen_session_c.ads",
-    "libraries/dart/lib/src/session/results_generated.dart",
-    "libraries/dart/lib/src/session/inputs_generated.dart",
-    "libraries/dart/lib/src/session/abi_generated.dart",
-    "libraries/cpp/include/thinkthen/results_generated.hpp",
-    "libraries/cpp/include/thinkthen/inputs_generated.hpp",
-    "libraries/typescript/results_generated.js",
-    "libraries/typescript/results_generated.d.ts",
-    "libraries/go/owned_results_generated.go",
-    "libraries/php/src/session/ffi_generated.h",
-    "libraries/ruby/src/ffi/results_generated.rs",
-    "libraries/ruby/lib/thinkthen/results_generated.rb",
-    "libraries/objective-c/Sources/Foundation/TTResults.g.h",
-    "libraries/objective-c/Sources/Foundation/TTResults.g.m",
-    "libraries/jvm/session/thinkthen/Results.java",
-    "libraries/jvm/session/thinkthen/Inputs.java",
-    "libraries/jvm/session/kotlin/Results.kt",
-    "libraries/jvm/session/scala/Results.scala",
-    "libraries/jvm/session/thinkthen/RequestVersion.java",
-    "libraries/python/src/results_generated.rs",
-    "libraries/python/thinkthen/_native_results.py",
-    "libraries/python/thinkthen/_native_results.pyi",
-    "libraries/c/include/thinkthen.h",
-    "libraries/cobol/copybooks/tt-native-generated.cpy",
-    "libraries/cobol/src/tt_requests_generated.c",
-    "libraries/cobol/src/tt_requests_generated.h",
-    "libraries/c/src/session/views_generated.rs",
-    "libraries/zig/src/request_generated.zig",
-    "libraries/zig/src/plan_generated.zig",
-    "libraries/r/thinkthen/src/rust/document.rs",
-    "libraries/r/thinkthen/src/rust/src/results_generated.rs",
-    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc",
-    "libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h",
-}
+sys.path.insert(0, str(REPO / "sdlc/generators/results"))
+from registry import generated_paths
+GENERATED_BINDING_SOURCES = generated_paths()
+
 # Main held three `rustfmt::skip` attributes when ticket 0088 pinned this count.
 MAX_FORMAT_SKIPS = 3
 INHERITED = {"workspace": True}
