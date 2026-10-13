@@ -71,7 +71,13 @@ fn a_typed_list_replaces_the_files_whole_list_and_never_merges_with_it() {
         "{plan}"
     );
     assert!(!plan.contains("billing"), "{plan}");
-    assert!(plan.contains(r#""options":"command line""#), "{plan}");
+    assert!(
+        plan.contains(
+            r#""instructions":"The text is \"Refund me please.\". Which team owns this?""#
+        ),
+        "{plan}"
+    );
+    assert!(plan.contains(r#""from":{"question":"file","options":"command line","threshold":"default","on":"default","model":"default"}"#), "{plan}");
 }
 
 #[test]

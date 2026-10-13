@@ -17,6 +17,18 @@ The public API inventory applies these reviewed declaration changes after the hi
 ### Retired public declarations
 
 ```text
+fn BandedQuestion::with_wording_version(self, WordingVersion) -> Result<BandedQuestion, Error>
+fn ChooseBuilder::with_wording_version(self, WordingVersion) -> Result<ChooseBuilder<C>, Error>
+fn ChooseQuestion::with_wording_version(self, WordingVersion) -> Result<ChooseQuestion<C>, Error>
+fn DecideBuilder::with_wording_version(self, WordingVersion) -> Result<DecideBuilder, Error>
+fn LabelBuilder::with_wording_version(self, WordingVersion) -> Result<LabelBuilder, Error>
+fn Question::with_wording_version(self, WordingVersion) -> Result<Question, Error>
+fn Recognize::with_wording_version(self, WordingVersion) -> Result<Recognize, Error>
+fn RecordChooseQuestion::with_wording_version(self, WordingVersion) -> Result<RecordChooseQuestion, Error>
+fn Relate::with_wording_version(self, WordingVersion) -> Result<Relate, Error>
+fn ScoreBuilder::with_wording_version(self, WordingVersion) -> Result<ScoreBuilder, Error>
+fn TagBuilder::with_wording_version(self, WordingVersion) -> Result<TagBuilder<C>, Error>
+fn TagQuestion::with_wording_version(self, WordingVersion) -> Result<TagQuestion<C>, Error>
 fn Engine::relate_complete_with<I>(&self, &Relate, I, CallOptions<'_>) -> Result<Call<CompleteRelated>, Error> where I: IntoIterator<Item = Entity>
 fn Engine::try_annotate_with<'a, I, T>(&'a self, &'a QuestionSet, I, CallOptions<'a>) -> Batch<'a, AnnotatedRecord<T>> where I: IntoIterator<Item = Result<T, Error>> + 'a, T: Evidence + 'a
 fn Engine::try_find_with<I, T>(&self, &Question, I, CallOptions<'_>) -> Result<Call<Found<T>>, Error> where I: IntoIterator<Item = Result<T, Error>>, T: Evidence
