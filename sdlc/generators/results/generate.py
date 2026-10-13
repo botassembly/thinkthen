@@ -10,6 +10,7 @@ import subprocess
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from registry import OUTPUTS, invocations, output_path
 from native import selected_functions
+from formatting import format_source
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
@@ -345,10 +346,10 @@ def bridge():
     abi = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(abi)
     native = abi.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
-    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint'}
+    types = {'const char *': 'IntPtr', 'size_t': 'nuint', 'uint32_t': 'uint', 'thinkthen_complete_utf8_v1': 'CompleteUtf8V1'}
     lines = ['// Generated from the compiler-derived C header ABI; do not edit.',
              'using System.Runtime.InteropServices;', 'namespace ThinkThen;']
-    carriers = ('thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1')
+    carriers = ('thinkthen_string_v1', 'thinkthen_complete_usage_persistence_v1', 'thinkthen_complete_utf8_v1', 'thinkthen_named_request_v1')
     def host(name):
         return ''.join(word.title() for word in name.removeprefix('thinkthen_').split('_'))
     for carrier in carriers:
@@ -369,7 +370,15 @@ def bridge():
         lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern '
                   + {'int': 'int'}[prototype['return']] + ' ' + name + '('
                   + ', '.join(parameters[argument] for argument in prototype['arguments']) + ');']
-    lines += ['}', 'internal static class NativeWait {']
+    prototype = native['functions']['thinkthen_session_new_named_with_surface']
+    named_parameters = {'const thinkthen_engine *': 'EngineHandle engine',
+                        'const thinkthen_named_request_v1 *': 'in NamedRequestV1 request',
+                        'thinkthen_complete_utf8_v1': 'CompleteUtf8V1 surface',
+                        'thinkthen_session **': 'out IntPtr session'}
+    lines += ['}', 'internal static class NativeNamed {',
+              ' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_new_named_with_surface('
+              + ', '.join(named_parameters[argument] for argument in prototype['arguments']) + ');',
+              '}', 'internal static class NativeWait {']
     for name, value in native['constants'].items():
         if name.startswith('THINKTHEN_SESSION_WAIT_'):
             lines += [' internal const uint ' + name.removeprefix('THINKTHEN_SESSION_WAIT_').removesuffix('_V1').title() + ' = ' + str(value) + ';']
@@ -697,6 +706,16 @@ def main():
         if args.output == OUTPUT:
             args.output = output_path(ROOT, 'c', 'views_generated.rs')
     if args.bridge:
+        sys.path.insert(0, str(Path(__file__).parent / 'templates'))
+        import csharp
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        calls_path = output_path(ROOT, 'csharp', 'NamedCalls.g.cs')
+        calls = format_source(calls_path, csharp.named_calls(csharp.enum_values(request_schema['$defs']['RequestFunction'])), child_env())
+        if args.check and (not calls_path.exists() or calls_path.read_text() != calls):
+            print('generated C# named calls differ', file=sys.stderr)
+            return 1
+        if not args.check:
+            calls_path.write_text(calls)
         result = bridge()
         args.output = output_path(ROOT, 'csharp', 'NativeBridge.g.cs')
     elif args.inputs and args.target == 'zig':
@@ -712,6 +731,7 @@ def main():
         args.output = output_path(ROOT, 'csharp', 'RequestInputs.g.cs')
     else:
         result = generated(json.loads(args.schema.read_text()), args.target)
+    result = format_source(args.output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
     if args.check:
         if not args.output.exists() or args.output.read_text() != result:
             print('generated results differ; run sdlc/generators/results/generate.py',

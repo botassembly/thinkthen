@@ -369,7 +369,7 @@ def render_inputs(schema, prepare, graph):
         names = definitions.get(key, {}).get('_variant_names')
         if names:
             return names[index]
-        tag = next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
+        tag = alt.get('const') if key == 'RequestFunction' else next((p['const'] for p in alt.get('properties', {}).values() if isinstance(p.get('const'), str)), None)
         return key + '_' + (tag if tag else 'Alternative' + str(index))
     def mark_read(value, path, wrapper=False):
         if isinstance(value, bool):
@@ -531,3 +531,18 @@ public abstract class InputDocument {
         lines.append('}')
         output.append('\n'.join(lines))
     return header + '\n\n'.join(output) + '\n'
+
+
+def named_calls(functions):
+    """Generate public named operations over one shared session construction."""
+    lines = ['// Generated from canonical RequestFunction; do not edit.', '#nullable enable',
+             'using ThinkThen.Inputs;', 'namespace ThinkThen;',
+             'public sealed partial class Engine {']
+    for function in functions:
+        title = function.title()
+        for input_type, input_value, feed in [('InputRequestInput', 'input', 'null'),
+                                              ('IAsyncEnumerable<InputRequestSessionDescriptor>', 'FeedInput', 'input')]:
+            lines += [f'public Task<OwnedCall> {title}Async(InputRequestQuestion question, {input_type} input,',
+                      'InputRequestOptions? options = null, CancellationToken cancellation = default) =>',
+                      f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, {input_value}, options), {feed}, cancellation);']
+    return '\n'.join(lines + ['}']) + '\n'

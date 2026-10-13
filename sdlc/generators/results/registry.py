@@ -19,7 +19,7 @@ OUTPUTS = (
     Output('c', 'header', 'libraries/c/include/thinkthen.h', 'header'),
     *group('csharp', 'results', 'sdlc/generators/results/csharp/', 'CompleteFacts.g.cs'),
     *group('csharp', 'inputs', 'libraries/csharp/src/', 'RequestInputs.g.cs'),
-    *group('csharp', 'bridge', 'libraries/csharp/src/', 'NativeBridge.g.cs'),
+    *group('csharp', 'bridge', 'libraries/csharp/src/', 'NativeBridge.g.cs', 'NamedCalls.g.cs'),
     *group('r', 'results', 'libraries/r/thinkthen/src/rust/src/', 'results_generated.rs'),
     *group('python', 'results', 'libraries/python/src/', 'results_generated.rs'),
     *group('python', 'results', 'libraries/python/thinkthen/', '_native_results.py', '_native_results.pyi'),
