@@ -106,7 +106,7 @@ def portable(root):
                     assert options['env'] == environment
                     assert options.get('text', False) is (caller is MSVC)
                 else:
-                    assert 'text' not in options and options['input'].startswith(b'decide 3\n')
+                    assert 'text' not in options and 'input' not in options
                     assert not any(name in options['env'] for name in ('INCLUDE', 'LIB', 'LIBPATH', 'CL', '_CL_', 'LINK'))
                 return BOUNDED.capture(args, **(options | {'timeout': 1}))
             started = time.monotonic()
