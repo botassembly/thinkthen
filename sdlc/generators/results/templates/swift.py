@@ -3,7 +3,7 @@ import json
 import re
 from host_answers import aggregate_answers, named_object_fields, usage_operations
 
-ROOTS = ('completesessionPacket', 'completeplan', 'completeReadableQuestion')
+ROOTS = ('completesessionPacket', 'completeplan', 'completequestionDocument')
 INPUT_ROOTS = ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')
 
 

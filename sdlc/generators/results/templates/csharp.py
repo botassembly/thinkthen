@@ -6,8 +6,6 @@ from host_answers import alternative_name
 
 def name(value):
     value = value.removeprefix('complete')
-    if value.startswith('ReadableQuestion'):
-        value = value.removeprefix('Readable')
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+',
                        value.removeprefix('complete'))
     return ''.join(word[0].upper() + word[1:] for word in words)

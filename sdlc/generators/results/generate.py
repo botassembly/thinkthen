@@ -329,7 +329,7 @@ def generated(schema, language="csharp"):
     spec.loader.exec_module(target)
     roots = ('completeFacts', 'completeanswer', 'completefindAnswer',
              'completeCallError', 'completeRelationMember', 'completeObservation',
-             'completeUsage', 'completeReadableQuestion', 'completesourceRelationEndpoint',
+             'completeUsage', 'completequestionDocument', 'completesourceRelationEndpoint',
              'completesessionPacket', 'completeplan')
     return target.render(prepare(graph(schema, roots)))
 
