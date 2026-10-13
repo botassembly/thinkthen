@@ -66,13 +66,13 @@ for mode in shared static; do
 done
 "$python_bin" fixtures/owned_calls.py "$out/install" "$out/owned-shared/owned_consumer" "$out/owned-cases" usage
 c++ -std=c++17 -Wall -Wextra -Werror -I "$out/install/include" fixtures/tests/json_test.cpp -o "$out/json-test"
-for test in result_lifetime answer_test; do
- c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
+for test in result_lifetime answer_test result_concurrency; do
+ c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -pthread -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
  "$out/$test"
 done
 "$out/json-test"
-for test in result_lifetime answer_test; do
- c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
+for test in result_lifetime answer_test result_concurrency; do
+ c++ -std=c++17 -Wall -Wextra -Werror -fsanitize=address -fno-omit-frame-pointer -pthread -I "$out/install/include" "fixtures/tests/$test.cpp" -o "$out/$test"
  "$out/$test"
 done
 cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
