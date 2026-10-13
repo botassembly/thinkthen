@@ -123,14 +123,28 @@ fn opaque_token(word: &str) -> bool {
 pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
     !text.is_empty()
         && (body.windows(text.len()).any(|part| part == text.as_bytes())
-            || serde_json::to_vec(text).is_ok_and(|literal| {
-                literal
-                    .get(1..literal.len().saturating_sub(1))
-                    .is_some_and(|escaped| {
-                        !escaped.is_empty()
-                            && body.windows(escaped.len()).any(|part| part == escaped)
-                    })
-            }))
+            || std::str::from_utf8(body)
+                .ok()
+                .and_then(|body| Json::parse(body).ok())
+                .is_some_and(|body| {
+                    let literal = serde_json::to_string(text).unwrap_or_default();
+                    submitted_text(&body, text, &literal)
+                }))
+}
+
+fn submitted_text(value: &Json, text: &str, literal: &str) -> bool {
+    match value {
+        Json::String(value) => {
+            value.contains(text) || !literal.is_empty() && value.contains(literal)
+        }
+        Json::Array(values) => values
+            .iter()
+            .any(|value| submitted_text(value, text, literal)),
+        Json::Object(values) => values
+            .iter()
+            .any(|(_, value)| submitted_text(value, text, literal)),
+        _ => false,
+    }
 }
 
 pub(super) fn key_echo(text: &str, key: &Key) -> bool {
