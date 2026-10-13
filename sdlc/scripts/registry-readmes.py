@@ -25,7 +25,9 @@ def version(root=REPO):
 
 def source(family, root=REPO):
     if family == 'crate':
-        return root / 'crates/thinkthen/README-PUBLIC.md'
+        return root / 'crates/thinkthen/README.md'
+    if family in ('typescript', 'go', 'ruby'):
+        return root / 'libraries' / family / 'README.md'
     if family in ('sqlite', 'postgresql', 'duckdb'):
         return root / 'databases' / family / 'README-PUBLIC.md'
     if family == 'flutter':
@@ -122,7 +124,12 @@ def check_package(family, path, root=REPO):
         metadata = gzip.decompress(files['metadata.gz']).decode()
         # Gem emits description as a YAML scalar, potentially folded by its serializer.
         text = re.search(r'(?m)^description: (.*(?:\n  [^\n]*)*)', metadata).group(1)
-        check_description(family, ' '.join(text.split()), root)
+        text = ' '.join(text.split())
+        if text.startswith("'") and text.endswith("'"):
+            text = text[1:-1].replace("''", "'")
+        elif text.startswith('"'):
+            text = json.loads(text)
+        check_description(family, text, root)
     elif family == 'csharp' and path.suffix != '.nupkg':
         check_readme(family, unique_suffix(files, 'README.md'), root)
         nested = [name for name in files if name.endswith('.nupkg')]
@@ -130,11 +137,15 @@ def check_package(family, path, root=REPO):
             raise Refusal('missing-or-repeated-nupkg')
         check_nupkg(files[nested[0]], root)
     else:
-        check_readme(family, unique_suffix(files, 'README.md'), root)
+        prefix = {'crate': 'thinkthen-' + version(root) + '/', 'r': 'thinkthen/', 'typescript': 'package/', 'flutter': 'flutter/'}.get(family, '')
+        name = prefix + 'README.md'
+        if name not in files:
+            raise Refusal('missing-or-repeated-member: ' + name)
+        check_readme(family, files[name], root)
         if family == 'typescript':
             check_description(family, json.loads(unique_suffix(files, 'package.json'))['description'], root)
         elif family == 'crate':
-            check_description(family, tomllib.loads(unique_suffix(files, 'Cargo.toml').decode())['package']['description'], root)
+            check_description(family, tomllib.loads(files[prefix + 'Cargo.toml'].decode())['package']['description'], root)
         elif family == 'php':
             check_description(family, json.loads(unique_suffix(files, 'composer.json'))['description'], root)
         elif family == 'jvm':
@@ -144,7 +155,7 @@ def check_package(family, path, root=REPO):
             text = unique_suffix(files, 'pubspec.yaml').decode()
             check_description(family, re.search(r'(?m)^description: (.+)$', text).group(1), root)
         elif family == 'r':
-            text = unique_suffix(files, 'DESCRIPTION').decode()
+            text = files[prefix + 'DESCRIPTION'].decode()
             check_description(family, re.search(r'(?m)^Description: (.*(?:\n[ \t]+[^\n]*)*)', text).group(1), root)
         elif family == 'csharp':
             check_nupkg(path.read_bytes(), root)

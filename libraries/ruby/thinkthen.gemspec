@@ -6,8 +6,8 @@ Gem::Specification.new do |spec|
   spec.name = "thinkthen"
   manifest = File.read(File.expand_path("../../crates/thinkthen/Cargo.toml", __dir__))
   spec.version = manifest[/^version = "([^"]+)"/, 1]
-  spec.summary = "The thinkthen surface for Ruby"
-  spec.description = "The ten thinkthen verbs over the thinkthen engine."
+  spec.summary = "Typed questions about text for Ruby"
+  spec.description = "ThinkThen answers typed questions about text: decisions, labels, scores and selected records."
   spec.authors = ["Ian Maurer"]
   spec.homepage = "https://thinkthen.dev"
   spec.metadata = {
@@ -16,9 +16,10 @@ Gem::Specification.new do |spec|
     "bug_tracker_uri" => "https://github.com/botassembly/thinkthen/issues"
   }
   spec.license = "MIT"
+  spec.extra_rdoc_files = ["README.md"]
   if ENV["THINKTHEN_RUBY_FALLBACK"] == "1"
     spec.platform = Gem::Platform::RUBY
-    spec.files = ["fallback/lib/thinkthen.rb", "lib/thinkthen/version.rb"]
+    spec.files = ["README.md", "fallback/lib/thinkthen.rb", "lib/thinkthen/version.rb"]
     spec.require_paths = ["fallback/lib", "lib"]
     # Let unsupported Ruby versions select the current diagnostic package.
     spec.required_ruby_version = ">= 0"
@@ -32,7 +33,7 @@ Gem::Specification.new do |spec|
     extension = "lib/thinkthen/thinkthen.#{RbConfig::CONFIG["DLEXT"]}"
     raise "#{extension} is missing; run build.sh" unless File.file?(File.expand_path(extension, __dir__))
 
-    spec.files = ["lib/thinkthen.rb", extension, "lib/thinkthen/version.rb", "lib/thinkthen/session.rb", "lib/thinkthen/results_generated.rb"]
+    spec.files = ["README.md", "lib/thinkthen.rb", extension, "lib/thinkthen/version.rb", "lib/thinkthen/session.rb", "lib/thinkthen/results_generated.rb"]
     spec.require_paths = ["lib"]
     # Built and tested on 3.4 only. 4.x is another ABI.
     spec.required_ruby_version = [">= 3.4", "< 4"].freeze

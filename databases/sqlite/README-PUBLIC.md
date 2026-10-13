@@ -12,7 +12,7 @@ Download and unpack the release archive for your platform. Enable extension load
 
 ## Example
 
-Configure a model backend before running this query. 
+Configure a model backend before running this query.
 
 ```sql
 SELECT thinkthen_decide('Does this ask for a refund?', 'Please refund my order.');
