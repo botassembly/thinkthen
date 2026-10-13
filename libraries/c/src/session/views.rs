@@ -58,6 +58,7 @@ impl Storage {
                 values.push(thinkthen_complete_extension_v1 {
                     name: self.text(name),
                     json: self.text(node.raw.get()),
+                    value: read_json(node, self)?,
                 });
             }
         }
