@@ -8,6 +8,8 @@ pub(crate) mod descriptors;
 #[cfg(test)]
 mod execute;
 pub(crate) mod question;
+#[cfg(test)]
+mod request;
 mod values;
 pub(crate) use descriptors::QuestionData;
 #[cfg(test)]

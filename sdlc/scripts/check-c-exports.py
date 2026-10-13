@@ -283,11 +283,11 @@ def self_test(header):
     text = re.sub(r'/\*.*?\*/', '', Path(header).read_text(), flags=re.S)
     plants = [
         ('field', r'const char \*data;\s*size_t len;', 'size_t len; const char *data;'),
-        ('union-arm', r'(?:struct )?thinkthen_decide_value_v1 decide;', 'uint64_t decide;'),
+        ('union-arm', r'const (?:struct )?thinkthen_complete_session_judgment_decision_v1 \*decision;', 'uint64_t decision;'),
         ('enum', r'#define THINKTHEN_FUNCTION_DECIDE_V1 (?:UINT32_C\(1\)|1u?\b)', '#define THINKTHEN_FUNCTION_DECIDE_V1 99'),
-        ('argument', r'size_t member\b', 'uint16_t member'),
-        ('return', 'int thinkthen_result_row(', 'uint64_t thinkthen_result_row('),
-        ('pointer-depth', r'thinkthen_result \*\*(?:out\b)?', 'thinkthen_result *out'),
+        ('argument', r'size_t descriptor_len\b', 'uint16_t descriptor_len'),
+        ('return', 'int thinkthen_session_try_read(', 'uint64_t thinkthen_session_try_read('),
+        ('pointer-depth', r'(?:struct )?thinkthen_session_result \*\*out\b', 'struct thinkthen_session_result *out'),
         ('by-value', r'uint32_t media,\s*(?:struct )?thinkthen_optional_string_v1 filename', 'uint32_t media, const thinkthen_optional_string_v1 *filename'),
     ]
     with tempfile.TemporaryDirectory(prefix='thinkthen-c-abi-plants-') as scratch:
@@ -306,7 +306,7 @@ def self_test(header):
             else:
                 raise ValueError(f'C ABI drift was accepted: {name}')
     missing = copy.deepcopy(native)
-    del missing['functions']['thinkthen_result_row']
+    del missing['functions']['thinkthen_session_try_read']
     try:
         compare_abi(native, missing)
     except ValueError:

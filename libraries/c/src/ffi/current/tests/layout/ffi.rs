@@ -4,13 +4,11 @@
     reason = "inspect initialized union storage under the declared C layout"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
+use crate::ffi::carriers::{DecideValueDataV1, MemberValueDataV1};
 #[cfg(unix)]
 use crate::ffi::carriers::{
-    AnswerV1, DetailsV1, InputDeclarationV1, InputPropertyV1, MetaV1, ObservationV1,
-    QuestionAuthorV1, QuestionViewV1, RecognitionTaskV1, RecordV1, SourceEndpointV1,
-    SourceRecognitionV1, SourceRelationsV1, SummaryV1,
+    InputDeclarationV1, InputPropertyV1, QuestionAuthorV1, RecognitionTaskV1, RecordV1,
 };
-use crate::ffi::carriers::{DecideValueDataV1, MemberValueDataV1};
 #[cfg(unix)]
 use std::mem::align_of;
 use std::mem::size_of;
@@ -22,21 +20,6 @@ fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() 
             "RECOGNITION_TASK",
             size_of::<RecognitionTaskV1>(),
             align_of::<RecognitionTaskV1>(),
-        ),
-        (
-            "SOURCE_RECOGNITION",
-            size_of::<SourceRecognitionV1>(),
-            align_of::<SourceRecognitionV1>(),
-        ),
-        (
-            "SOURCE_RELATIONS",
-            size_of::<SourceRelationsV1>(),
-            align_of::<SourceRelationsV1>(),
-        ),
-        (
-            "SOURCE_ENDPOINT",
-            size_of::<SourceEndpointV1>(),
-            align_of::<SourceEndpointV1>(),
         ),
         (
             "AUTHOR",
@@ -54,20 +37,6 @@ fn c11_and_cpp17_consumers_match_reviewed_signatures_and_rust_carrier_layouts() 
             align_of::<InputPropertyV1>(),
         ),
         ("RECORD", size_of::<RecordV1>(), align_of::<RecordV1>()),
-        (
-            "QUESTION",
-            size_of::<QuestionViewV1>(),
-            align_of::<QuestionViewV1>(),
-        ),
-        ("ANSWER", size_of::<AnswerV1>(), align_of::<AnswerV1>()),
-        ("DETAILS", size_of::<DetailsV1>(), align_of::<DetailsV1>()),
-        ("META", size_of::<MetaV1>(), align_of::<MetaV1>()),
-        ("SUMMARY", size_of::<SummaryV1>(), align_of::<SummaryV1>()),
-        (
-            "OBSERVATION",
-            size_of::<ObservationV1>(),
-            align_of::<ObservationV1>(),
-        ),
     ];
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
     for (compiler, standard, language) in [("cc", "c11", "c"), ("c++", "c++17", "c++")] {

@@ -59,13 +59,13 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 | Borrowed error-slot facts | Terminal packet failure and final facts |
 | `thinkthen_plan_json` | `thinkthen_request_plan_json` with the canonical Request |
 
-All frozen compatibility exports remain available with their original symbols, signatures, layouts, errors and lifetime rules. The [compatibility header table](DESIGN.md#the-header-table) and [counted interface](TYPED.md) describe those contracts. They retain separate ownership rules. New callers use sessions.
+All frozen compatibility exports remain available with their original symbols, signatures, layouts, errors and lifetime rules. The [header table](DESIGN.md#the-header-table) describes those contracts. They retain separate ownership rules. New callers use sessions.
 
 ## Compatibility exports
 
 The frozen 0.1 exports retain their symbols, signatures, layouts, error codes and accepted legacy JSON behavior. Existing consumers may keep using them. The [existing header table](DESIGN.md#the-header-table) describes these families; the generated header remains the declaration authority. Shared engine construction, cancellation and cleanup functions also serve the recommended API.
 
-The bare typed calls, their `_opts` forms, later `*_with_facts` forms, collecting JSON door and older plan door remain available for compatibility. The [counted complete and batch interface](TYPED.md) retains its separate ownership rules; it does not acquire session lifetimes. No compatibility entrypoint redirects to the new session contract.
+The bare typed calls, their `_opts` forms, later `*_with_facts` forms, collecting JSON door and older plan door remain available for compatibility. No compatibility entrypoint redirects to the new session contract.
 
 `thinkthen_question_file(engine, path, &json, &length)` reads one named UTF-8 question file of at most 1 MiB and returns its validated source JSON. Pass that owned string to `thinkthen_decide_with_facts` or use it to construct a JSON-door request, then free it once with `thinkthen_free_string`. A bad file returns non-retryable `THINKTHEN_ELOCAL` without changing either output or sending a request. The existing bare question and inline JSON arguments remain literal and report typed grammar errors as `THINKTHEN_EUSAGE`.
 
@@ -75,7 +75,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 ## Counted typed calls
 
-[The typed C contract](TYPED.md) describes the unpublished 0426 work: counted question/source/image constructors, immutable image views and canonical result/2 carrier layouts. These compatibility views retain their original ownership rules. Sessions expose the generated complete graph described above.
+Counted question/source/image constructors and immutable image views retain their ownership rules in the generated header. Sessions expose the generated complete graph described above.
 
 ## Windows x86-64
 
