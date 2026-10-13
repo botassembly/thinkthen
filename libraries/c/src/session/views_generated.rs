@@ -321,7 +321,7 @@ pub struct thinkthen_complete_annotation_member_answer_id_v1 {
     pub answer: *const thinkthen_complete_answer_v1,
     pub answer_id: *const thinkthen_complete_answer_id_v1,
     pub observations: thinkthen_complete_observation_list_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_sources: thinkthen_complete_question_source_list_v1,
     pub request: thinkthen_complete_utf8_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
@@ -349,7 +349,7 @@ pub(crate) fn read_thinkthen_complete_annotation_member_answer_id_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_sources: {
@@ -420,7 +420,7 @@ pub struct thinkthen_complete_annotation_member_failure_id_v1 {
     pub failure: *const thinkthen_complete_failure_v1,
     pub failure_id: *const thinkthen_complete_failure_id_v1,
     pub observations: thinkthen_complete_observation_list_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_sources: thinkthen_complete_question_source_list_v1,
     pub request: thinkthen_complete_utf8_v1,
     pub threshold: thinkthen_complete_threshold_presence_v1,
@@ -447,7 +447,7 @@ pub(crate) fn read_thinkthen_complete_annotation_member_failure_id_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_sources: {
@@ -859,7 +859,7 @@ pub struct thinkthen_complete_atomic_array_of_string_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -928,7 +928,7 @@ pub(crate) fn read_thinkthen_complete_atomic_array_of_string_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -1016,7 +1016,7 @@ pub struct thinkthen_complete_atomic_decide_value_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -1085,7 +1085,7 @@ pub(crate) fn read_thinkthen_complete_atomic_decide_value_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -1175,7 +1175,7 @@ pub struct thinkthen_complete_atomic_non_zero_usize_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -1244,7 +1244,7 @@ pub(crate) fn read_thinkthen_complete_atomic_non_zero_usize_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -1325,7 +1325,7 @@ pub struct thinkthen_complete_atomic_nullable_string_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -1394,7 +1394,7 @@ pub(crate) fn read_thinkthen_complete_atomic_nullable_string_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -1484,7 +1484,7 @@ pub struct thinkthen_complete_atomic_boolean_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -1553,7 +1553,7 @@ pub(crate) fn read_thinkthen_complete_atomic_boolean_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -1634,7 +1634,7 @@ pub struct thinkthen_complete_atomic_double_v1 {
     pub input: thinkthen_complete_json_presence_v1,
     pub members: thinkthen_complete_rank_member_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_name: thinkthen_complete_utf8_presence_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
@@ -1703,7 +1703,7 @@ pub(crate) fn read_thinkthen_complete_atomic_double_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_name: {
@@ -2546,7 +2546,7 @@ pub struct thinkthen_complete_find_v1 {
     pub last_line: thinkthen_complete_u64_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
-    pub question: *const thinkthen_complete_readable_question_2_v1,
+    pub question: *const thinkthen_complete_find_question_document_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub threshold: thinkthen_complete_json_presence_v1,
     pub value: thinkthen_complete_json_presence_v1,
@@ -2625,7 +2625,7 @@ pub(crate) fn read_thinkthen_complete_find_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_2_v1(value, store)
+            read_thinkthen_complete_find_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         schema: {
@@ -3888,7 +3888,7 @@ pub struct thinkthen_complete_rank_member_result_v1 {
     pub answer_id: *const thinkthen_complete_answer_id_v1,
     pub images: thinkthen_complete_image_list_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub threshold: thinkthen_complete_json_presence_v1,
@@ -3928,7 +3928,7 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         schema: {
@@ -3979,1557 +3979,6 @@ pub(crate) fn read_thinkthen_complete_rank_member_result_v1(
     })
 }
 
-pub const THINKTHEN_COMPLETE_READABLE_QUESTION_DECIDE_V1: u32 = 1;
-
-pub const THINKTHEN_COMPLETE_READABLE_QUESTION_CHOOSE_V1: u32 = 2;
-
-pub const THINKTHEN_COMPLETE_READABLE_QUESTION_TAG_V1: u32 = 3;
-
-pub const THINKTHEN_COMPLETE_READABLE_QUESTION_SCORE_V1: u32 = 4;
-
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub union thinkthen_complete_readable_question_data_v1 {
-    pub decide: *const thinkthen_complete_readable_question_decide_v1,
-    pub choose: *const thinkthen_complete_readable_question_choose_v1,
-    pub tag: *const thinkthen_complete_readable_question_tag_v1,
-    pub score: *const thinkthen_complete_readable_question_score_v1,
-}
-impl std::fmt::Debug for thinkthen_complete_readable_question_data_v1 {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str("union payload")
-    }
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_v1 {
-    pub kind: u32,
-    pub data: thinkthen_complete_readable_question_data_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_v1, ErrorKind> {
-    if node.is_member("verb", "decide") {
-        let value = read_thinkthen_complete_readable_question_decide_v1(node, store)
-            .map(|value| store.hold(value))?;
-        return Ok(thinkthen_complete_readable_question_v1 {
-            kind: THINKTHEN_COMPLETE_READABLE_QUESTION_DECIDE_V1,
-            data: thinkthen_complete_readable_question_data_v1 { decide: value },
-        });
-    }
-    if node.is_member("verb", "choose") {
-        let value = read_thinkthen_complete_readable_question_choose_v1(node, store)
-            .map(|value| store.hold(value))?;
-        return Ok(thinkthen_complete_readable_question_v1 {
-            kind: THINKTHEN_COMPLETE_READABLE_QUESTION_CHOOSE_V1,
-            data: thinkthen_complete_readable_question_data_v1 { choose: value },
-        });
-    }
-    if node.is_member("verb", "tag") {
-        let value = read_thinkthen_complete_readable_question_tag_v1(node, store)
-            .map(|value| store.hold(value))?;
-        return Ok(thinkthen_complete_readable_question_v1 {
-            kind: THINKTHEN_COMPLETE_READABLE_QUESTION_TAG_V1,
-            data: thinkthen_complete_readable_question_data_v1 { tag: value },
-        });
-    }
-    if node.is_member("verb", "score") {
-        let value = read_thinkthen_complete_readable_question_score_v1(node, store)
-            .map(|value| store.hold(value))?;
-        return Ok(thinkthen_complete_readable_question_v1 {
-            kind: THINKTHEN_COMPLETE_READABLE_QUESTION_SCORE_V1,
-            data: thinkthen_complete_readable_question_data_v1 { score: value },
-        });
-    }
-    Err(ErrorKind::Defect)
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_batch_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_batch_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_input_declaration_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_input_declaration_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_label_list_v1 {
-    pub data: *const *const thinkthen_complete_label_v1,
-    pub len: usize,
-}
-
-pub(crate) fn read_thinkthen_complete_label_list_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_label_list_v1, ErrorKind> {
-    let mut values = Vec::new();
-    for item in node.array()? {
-        values.push(read_thinkthen_complete_label_v1(item, store).map(|value| store.hold(value))?);
-    }
-    let (data, len) = store.slice(values);
-    Ok(thinkthen_complete_label_list_v1 { data, len })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_label_list_presence_v1 {
-    pub presence: u32,
-    pub value: thinkthen_complete_label_list_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_question_name_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_question_name_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_wording_version_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_wording_version_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_2_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub none: u32,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub text: thinkthen_complete_json_presence_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_2_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_2_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_2_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        none: {
-            let value = node.required("none")?;
-            read_boolean(value, store)?
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        text: {
-            let (presence, value) = read_presence(
-                node.member("text"),
-                true,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "none",
-                "on",
-                "profile",
-                "text",
-                "verb",
-                "wording_version",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_map_entry_v1 {
-    pub name: thinkthen_complete_utf8_v1,
-    pub value: *const thinkthen_complete_json_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_json_map_v1 {
-    pub data: *const thinkthen_complete_json_map_entry_v1,
-    pub len: usize,
-}
-
-pub(crate) fn read_thinkthen_complete_json_map_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_json_map_v1, ErrorKind> {
-    let mut values = Vec::new();
-    for (key, item) in node.object()? {
-        values.push(thinkthen_complete_json_map_entry_v1 {
-            name: store.text(key),
-            value: read_json(item, store)?,
-        });
-    }
-    let (data, len) = store.slice(values);
-    Ok(thinkthen_complete_json_map_v1 { data, len })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_recognition_mode_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_recognition_mode_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_relation_rule_list_v1 {
-    pub data: *const *const thinkthen_complete_relation_rule_v1,
-    pub len: usize,
-}
-
-pub(crate) fn read_thinkthen_complete_relation_rule_list_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_relation_rule_list_v1, ErrorKind> {
-    let mut values = Vec::new();
-    for item in node.array()? {
-        values.push(
-            read_thinkthen_complete_relation_rule_v1(item, store).map(|value| store.hold(value))?,
-        );
-    }
-    let (data, len) = store.slice(values);
-    Ok(thinkthen_complete_relation_rule_list_v1 { data, len })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_relation_rule_list_presence_v1 {
-    pub presence: u32,
-    pub value: thinkthen_complete_relation_rule_list_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_recognition_stage_context_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_recognition_stage_context_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_3_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub entity_definition: thinkthen_complete_json_presence_v1,
-    pub instructions: thinkthen_complete_json_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub kinds: thinkthen_complete_json_map_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub mode: thinkthen_complete_recognition_mode_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub relation_threshold: thinkthen_complete_threshold_presence_v1,
-    pub relations: thinkthen_complete_relation_rule_list_presence_v1,
-    pub snippet_pieces: thinkthen_complete_u64_presence_v1,
-    pub stage_context: thinkthen_complete_recognition_stage_context_presence_v1,
-    pub threshold: *const thinkthen_complete_threshold_v1,
-    pub verb: *const thinkthen_complete_verb_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_3_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_3_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_3_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        entity_definition: {
-            let (presence, value) = read_presence(
-                node.member("entity_definition"),
-                false,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        instructions: {
-            let (presence, value) = read_presence(
-                node.member("instructions"),
-                false,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        kinds: {
-            let value = node.required("kinds")?;
-            read_thinkthen_complete_json_map_v1(value, store)?
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        mode: {
-            let (presence, value) = read_presence(
-                node.member("mode"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_recognition_mode_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_recognition_mode_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        relation_threshold: {
-            let (presence, value) = read_presence(
-                node.member("relation_threshold"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_threshold_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_threshold_presence_v1 { presence, value }
-        },
-        relations: {
-            let (presence, value) = read_presence(
-                node.member("relations"),
-                false,
-                thinkthen_complete_relation_rule_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_relation_rule_list_v1,
-                store,
-            )?;
-            thinkthen_complete_relation_rule_list_presence_v1 { presence, value }
-        },
-        snippet_pieces: {
-            let (presence, value) =
-                read_presence(node.member("snippet_pieces"), false, 0, read_number, store)?;
-            thinkthen_complete_u64_presence_v1 { presence, value }
-        },
-        stage_context: {
-            let (presence, value) = read_presence(
-                node.member("stage_context"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_recognition_stage_context_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_recognition_stage_context_presence_v1 { presence, value }
-        },
-        threshold: {
-            let value = node.required("threshold")?;
-            read_thinkthen_complete_threshold_v1(value, store).map(|value| store.hold(value))?
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_thinkthen_complete_verb_v1(value, store).map(|value| store.hold(value))?
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "entity_definition",
-                "instructions",
-                "item_schema",
-                "kinds",
-                "label_details",
-                "mode",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "relation_threshold",
-                "relations",
-                "snippet_pieces",
-                "stage_context",
-                "threshold",
-                "verb",
-                "wording_version",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_relate_fields_presence_v1 {
-    pub presence: u32,
-    pub value: *const thinkthen_complete_relate_fields_v1,
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_4_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub fields: thinkthen_complete_relate_fields_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub relations: thinkthen_complete_relation_rule_list_v1,
-    pub threshold: *const thinkthen_complete_threshold_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_4_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_4_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_4_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        fields: {
-            let (presence, value) = read_presence(
-                node.member("fields"),
-                true,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_relate_fields_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_relate_fields_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        relations: {
-            let value = node.required("relations")?;
-            read_thinkthen_complete_relation_rule_list_v1(value, store)?
-        },
-        threshold: {
-            let value = node.required("threshold")?;
-            read_thinkthen_complete_threshold_v1(value, store).map(|value| store.hold(value))?
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "fields",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "relations",
-                "threshold",
-                "verb",
-                "wording_version",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_choose_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub options: thinkthen_complete_string_list_v1,
-    pub text: thinkthen_complete_json_presence_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_choose_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_choose_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_choose_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        options: {
-            let value = node.required("options")?;
-            read_thinkthen_complete_string_list_v1(value, store)?
-        },
-        text: {
-            let (presence, value) = read_presence(
-                node.member("text"),
-                true,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "wording_version",
-                "options",
-                "text",
-                "verb",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_decide_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub false_: thinkthen_complete_json_presence_v1,
-    pub text: thinkthen_complete_json_presence_v1,
-    pub true_: thinkthen_complete_json_presence_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_decide_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_decide_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_decide_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        false_: {
-            let (presence, value) = read_presence(
-                node.member("false"),
-                false,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        text: {
-            let (presence, value) = read_presence(
-                node.member("text"),
-                true,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        true_: {
-            let (presence, value) = read_presence(
-                node.member("true"),
-                false,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "wording_version",
-                "false",
-                "text",
-                "true",
-                "verb",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_score_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub levels: thinkthen_complete_string_list_v1,
-    pub text: thinkthen_complete_json_presence_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_score_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_score_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_score_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        levels: {
-            let value = node.required("levels")?;
-            read_thinkthen_complete_string_list_v1(value, store)?
-        },
-        text: {
-            let (presence, value) = read_presence(
-                node.member("text"),
-                true,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "wording_version",
-                "levels",
-                "text",
-                "verb",
-            ],
-        )?,
-    })
-}
-
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct thinkthen_complete_readable_question_tag_v1 {
-    pub batch: thinkthen_complete_batch_presence_v1,
-    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
-    pub label_details: thinkthen_complete_label_list_presence_v1,
-    pub model: thinkthen_complete_utf8_presence_v1,
-    pub name: thinkthen_complete_question_name_presence_v1,
-    pub on: thinkthen_complete_string_list_presence_v1,
-    pub profile: thinkthen_complete_utf8_presence_v1,
-    pub wording_version: thinkthen_complete_wording_version_presence_v1,
-    pub labels: thinkthen_complete_string_list_v1,
-    pub text: thinkthen_complete_json_presence_v1,
-    pub verb: thinkthen_complete_utf8_v1,
-    pub extensions: thinkthen_complete_extensions_v1,
-}
-
-pub(crate) fn read_thinkthen_complete_readable_question_tag_v1(
-    node: &Node,
-    store: &mut Storage,
-) -> Result<thinkthen_complete_readable_question_tag_v1, ErrorKind> {
-    Ok(thinkthen_complete_readable_question_tag_v1 {
-        batch: {
-            let (presence, value) = read_presence(
-                node.member("batch"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_batch_presence_v1 { presence, value }
-        },
-        context_schema: {
-            let (presence, value) = read_presence(
-                node.member("context_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        item_schema: {
-            let (presence, value) = read_presence(
-                node.member("item_schema"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_input_declaration_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_input_declaration_presence_v1 { presence, value }
-        },
-        label_details: {
-            let (presence, value) = read_presence(
-                node.member("label_details"),
-                false,
-                thinkthen_complete_label_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_label_list_v1,
-                store,
-            )?;
-            thinkthen_complete_label_list_presence_v1 { presence, value }
-        },
-        model: {
-            let (presence, value) = read_presence(
-                node.member("model"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        name: {
-            let (presence, value) = read_presence(
-                node.member("name"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_question_name_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_question_name_presence_v1 { presence, value }
-        },
-        on: {
-            let (presence, value) = read_presence(
-                node.member("on"),
-                false,
-                thinkthen_complete_string_list_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_thinkthen_complete_string_list_v1,
-                store,
-            )?;
-            thinkthen_complete_string_list_presence_v1 { presence, value }
-        },
-        profile: {
-            let (presence, value) = read_presence(
-                node.member("profile"),
-                false,
-                thinkthen_complete_utf8_v1 {
-                    data: std::ptr::null(),
-                    len: 0,
-                },
-                read_text,
-                store,
-            )?;
-            thinkthen_complete_utf8_presence_v1 { presence, value }
-        },
-        wording_version: {
-            let (presence, value) = read_presence(
-                node.member("wording_version"),
-                false,
-                std::ptr::null(),
-                |value, store| {
-                    read_thinkthen_complete_wording_version_v1(value, store)
-                        .map(|value| store.hold(value))
-                },
-                store,
-            )?;
-            thinkthen_complete_wording_version_presence_v1 { presence, value }
-        },
-        labels: {
-            let value = node.required("labels")?;
-            read_thinkthen_complete_string_list_v1(value, store)?
-        },
-        text: {
-            let (presence, value) = read_presence(
-                node.member("text"),
-                true,
-                std::ptr::null(),
-                read_json,
-                store,
-            )?;
-            thinkthen_complete_json_presence_v1 { presence, value }
-        },
-        verb: {
-            let value = node.required("verb")?;
-            read_text(value, store)?
-        },
-        extensions: store.extensions(
-            node,
-            &[
-                "batch",
-                "context_schema",
-                "item_schema",
-                "label_details",
-                "model",
-                "name",
-                "on",
-                "profile",
-                "wording_version",
-                "labels",
-                "text",
-                "verb",
-            ],
-        )?,
-    })
-}
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_recognition_v1 {
@@ -5542,7 +3991,7 @@ pub struct thinkthen_complete_recognition_v1 {
     pub last_line: thinkthen_complete_u64_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
-    pub question: *const thinkthen_complete_readable_question_3_v1,
+    pub question: *const thinkthen_complete_recognize_question_document_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub source: thinkthen_complete_physical_source_presence_v1,
     pub value: *const thinkthen_complete_recognize_v1,
@@ -5619,7 +4068,7 @@ pub(crate) fn read_thinkthen_complete_recognition_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_3_v1(value, store)
+            read_thinkthen_complete_recognize_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         schema: {
@@ -6168,7 +4617,7 @@ pub struct thinkthen_complete_relation_v1 {
     pub last_line: thinkthen_complete_u64_presence_v1,
     pub meta: *const thinkthen_complete_meta_v1,
     pub position: thinkthen_complete_position_presence_v1,
-    pub question: *const thinkthen_complete_readable_question_4_v1,
+    pub question: *const thinkthen_complete_relate_question_document_v1,
     pub schema: *const thinkthen_complete_version_v1,
     pub value: thinkthen_complete_related_entity_edge_list_v1,
     pub extensions: thinkthen_complete_extensions_v1,
@@ -6256,7 +4705,7 @@ pub(crate) fn read_thinkthen_complete_relation_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_4_v1(value, store)
+            read_thinkthen_complete_relate_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         schema: {
@@ -6530,7 +4979,7 @@ pub struct thinkthen_complete_relation_member_answer_id_v1 {
     pub direction: *const thinkthen_complete_relation_direction_v1,
     pub method: *const thinkthen_complete_relation_method_v1,
     pub observations: thinkthen_complete_observation_list_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_sources: thinkthen_complete_question_source_list_v1,
     pub reads: thinkthen_complete_utf8_v1,
     pub relation: thinkthen_complete_utf8_v1,
@@ -6567,7 +5016,7 @@ pub(crate) fn read_thinkthen_complete_relation_member_answer_id_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_sources: {
@@ -6666,7 +5115,7 @@ pub struct thinkthen_complete_relation_member_failure_id_v1 {
     pub direction: *const thinkthen_complete_relation_direction_v1,
     pub method: *const thinkthen_complete_relation_method_v1,
     pub observations: thinkthen_complete_observation_list_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_sources: thinkthen_complete_question_source_list_v1,
     pub reads: thinkthen_complete_utf8_v1,
     pub relation: thinkthen_complete_utf8_v1,
@@ -6701,7 +5150,7 @@ pub(crate) fn read_thinkthen_complete_relation_member_failure_id_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_sources: {
@@ -7966,6 +6415,237 @@ pub(crate) fn read_thinkthen_complete_find_answer_v1(
 
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_batch_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_batch_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_input_declaration_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_input_declaration_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_label_list_v1 {
+    pub data: *const *const thinkthen_complete_label_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_label_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_label_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(read_thinkthen_complete_label_v1(item, store).map(|value| store.hold(value))?);
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_label_list_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_label_list_presence_v1 {
+    pub presence: u32,
+    pub value: thinkthen_complete_label_list_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_name_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_question_name_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_wording_version_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_wording_version_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_find_question_document_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub none: u32,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub text: thinkthen_complete_json_presence_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_find_question_document_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_find_question_document_v1, ErrorKind> {
+    Ok(thinkthen_complete_find_question_document_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        none: {
+            let value = node.required("none")?;
+            read_boolean(value, store)?
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        text: {
+            let (presence, value) = read_presence(
+                node.member("text"),
+                true,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "none",
+                "on",
+                "profile",
+                "text",
+                "verb",
+                "wording_version",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
 pub struct thinkthen_complete_number_map_presence_v1 {
     pub presence: u32,
     pub value: thinkthen_complete_number_map_v1,
@@ -8139,6 +6819,800 @@ pub(crate) fn read_thinkthen_complete_profile_warning_v1(
     })
 }
 
+pub const THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1: u32 = 1;
+
+pub const THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1: u32 = 2;
+
+pub const THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG_V1: u32 = 3;
+
+pub const THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE_V1: u32 = 4;
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+pub union thinkthen_complete_question_document_data_v1 {
+    pub decide: *const thinkthen_complete_question_document_decide_v1,
+    pub choose: *const thinkthen_complete_question_document_choose_v1,
+    pub tag: *const thinkthen_complete_question_document_tag_v1,
+    pub score: *const thinkthen_complete_question_document_score_v1,
+}
+impl std::fmt::Debug for thinkthen_complete_question_document_data_v1 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("union payload")
+    }
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_document_v1 {
+    pub kind: u32,
+    pub data: thinkthen_complete_question_document_data_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_question_document_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_question_document_v1, ErrorKind> {
+    if node.is_member("verb", "decide") {
+        let value = read_thinkthen_complete_question_document_decide_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_question_document_v1 {
+            kind: THINKTHEN_COMPLETE_QUESTION_DOCUMENT_DECIDE_V1,
+            data: thinkthen_complete_question_document_data_v1 { decide: value },
+        });
+    }
+    if node.is_member("verb", "choose") {
+        let value = read_thinkthen_complete_question_document_choose_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_question_document_v1 {
+            kind: THINKTHEN_COMPLETE_QUESTION_DOCUMENT_CHOOSE_V1,
+            data: thinkthen_complete_question_document_data_v1 { choose: value },
+        });
+    }
+    if node.is_member("verb", "tag") {
+        let value = read_thinkthen_complete_question_document_tag_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_question_document_v1 {
+            kind: THINKTHEN_COMPLETE_QUESTION_DOCUMENT_TAG_V1,
+            data: thinkthen_complete_question_document_data_v1 { tag: value },
+        });
+    }
+    if node.is_member("verb", "score") {
+        let value = read_thinkthen_complete_question_document_score_v1(node, store)
+            .map(|value| store.hold(value))?;
+        return Ok(thinkthen_complete_question_document_v1 {
+            kind: THINKTHEN_COMPLETE_QUESTION_DOCUMENT_SCORE_V1,
+            data: thinkthen_complete_question_document_data_v1 { score: value },
+        });
+    }
+    Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_document_choose_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub options: thinkthen_complete_string_list_v1,
+    pub text: thinkthen_complete_json_presence_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_question_document_choose_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_question_document_choose_v1, ErrorKind> {
+    Ok(thinkthen_complete_question_document_choose_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        options: {
+            let value = node.required("options")?;
+            read_thinkthen_complete_string_list_v1(value, store)?
+        },
+        text: {
+            let (presence, value) = read_presence(
+                node.member("text"),
+                true,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "wording_version",
+                "options",
+                "text",
+                "verb",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_document_decide_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub false_: thinkthen_complete_json_presence_v1,
+    pub text: thinkthen_complete_json_presence_v1,
+    pub true_: thinkthen_complete_json_presence_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_question_document_decide_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_question_document_decide_v1, ErrorKind> {
+    Ok(thinkthen_complete_question_document_decide_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        false_: {
+            let (presence, value) = read_presence(
+                node.member("false"),
+                false,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        text: {
+            let (presence, value) = read_presence(
+                node.member("text"),
+                true,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        true_: {
+            let (presence, value) = read_presence(
+                node.member("true"),
+                false,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "wording_version",
+                "false",
+                "text",
+                "true",
+                "verb",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_document_score_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub levels: thinkthen_complete_string_list_v1,
+    pub text: thinkthen_complete_json_presence_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_question_document_score_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_question_document_score_v1, ErrorKind> {
+    Ok(thinkthen_complete_question_document_score_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        levels: {
+            let value = node.required("levels")?;
+            read_thinkthen_complete_string_list_v1(value, store)?
+        },
+        text: {
+            let (presence, value) = read_presence(
+                node.member("text"),
+                true,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "wording_version",
+                "levels",
+                "text",
+                "verb",
+            ],
+        )?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_question_document_tag_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub labels: thinkthen_complete_string_list_v1,
+    pub text: thinkthen_complete_json_presence_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_question_document_tag_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_question_document_tag_v1, ErrorKind> {
+    Ok(thinkthen_complete_question_document_tag_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        labels: {
+            let value = node.required("labels")?;
+            read_thinkthen_complete_string_list_v1(value, store)?
+        },
+        text: {
+            let (presence, value) = read_presence(
+                node.member("text"),
+                true,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "wording_version",
+                "labels",
+                "text",
+                "verb",
+            ],
+        )?,
+    })
+}
+
 pub const THINKTHEN_COMPLETE_RECOGNIZE_ENTITIES_V1: u32 = 1;
 
 pub const THINKTHEN_COMPLETE_RECOGNIZE_MODE_PROPOSALS_V1: u32 = 2;
@@ -8191,6 +7665,339 @@ pub(crate) fn read_thinkthen_complete_recognize_v1(
         });
     }
     Err(ErrorKind::Defect)
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_json_map_entry_v1 {
+    pub name: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_json_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_json_map_v1 {
+    pub data: *const thinkthen_complete_json_map_entry_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_json_map_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_json_map_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for (key, item) in node.object()? {
+        values.push(thinkthen_complete_json_map_entry_v1 {
+            name: store.text(key),
+            value: read_json(item, store)?,
+        });
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_json_map_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_recognition_mode_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_recognition_mode_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relation_rule_list_v1 {
+    pub data: *const *const thinkthen_complete_relation_rule_v1,
+    pub len: usize,
+}
+
+pub(crate) fn read_thinkthen_complete_relation_rule_list_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_relation_rule_list_v1, ErrorKind> {
+    let mut values = Vec::new();
+    for item in node.array()? {
+        values.push(
+            read_thinkthen_complete_relation_rule_v1(item, store).map(|value| store.hold(value))?,
+        );
+    }
+    let (data, len) = store.slice(values);
+    Ok(thinkthen_complete_relation_rule_list_v1 { data, len })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relation_rule_list_presence_v1 {
+    pub presence: u32,
+    pub value: thinkthen_complete_relation_rule_list_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_recognition_stage_context_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_recognition_stage_context_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_recognize_question_document_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub entity_definition: thinkthen_complete_json_presence_v1,
+    pub instructions: thinkthen_complete_json_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub kinds: thinkthen_complete_json_map_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub mode: thinkthen_complete_recognition_mode_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub relation_threshold: thinkthen_complete_threshold_presence_v1,
+    pub relations: thinkthen_complete_relation_rule_list_presence_v1,
+    pub snippet_pieces: thinkthen_complete_u64_presence_v1,
+    pub stage_context: thinkthen_complete_recognition_stage_context_presence_v1,
+    pub threshold: *const thinkthen_complete_threshold_v1,
+    pub verb: *const thinkthen_complete_verb_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_recognize_question_document_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_recognize_question_document_v1, ErrorKind> {
+    Ok(thinkthen_complete_recognize_question_document_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        entity_definition: {
+            let (presence, value) = read_presence(
+                node.member("entity_definition"),
+                false,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        instructions: {
+            let (presence, value) = read_presence(
+                node.member("instructions"),
+                false,
+                std::ptr::null(),
+                read_json,
+                store,
+            )?;
+            thinkthen_complete_json_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        kinds: {
+            let value = node.required("kinds")?;
+            read_thinkthen_complete_json_map_v1(value, store)?
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        mode: {
+            let (presence, value) = read_presence(
+                node.member("mode"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_recognition_mode_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_recognition_mode_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        relation_threshold: {
+            let (presence, value) = read_presence(
+                node.member("relation_threshold"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_threshold_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_threshold_presence_v1 { presence, value }
+        },
+        relations: {
+            let (presence, value) = read_presence(
+                node.member("relations"),
+                false,
+                thinkthen_complete_relation_rule_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_relation_rule_list_v1,
+                store,
+            )?;
+            thinkthen_complete_relation_rule_list_presence_v1 { presence, value }
+        },
+        snippet_pieces: {
+            let (presence, value) =
+                read_presence(node.member("snippet_pieces"), false, 0, read_number, store)?;
+            thinkthen_complete_u64_presence_v1 { presence, value }
+        },
+        stage_context: {
+            let (presence, value) = read_presence(
+                node.member("stage_context"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_recognition_stage_context_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_recognition_stage_context_presence_v1 { presence, value }
+        },
+        threshold: {
+            let value = node.required("threshold")?;
+            read_thinkthen_complete_threshold_v1(value, store).map(|value| store.hold(value))?
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_thinkthen_complete_verb_v1(value, store).map(|value| store.hold(value))?
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "entity_definition",
+                "instructions",
+                "item_schema",
+                "kinds",
+                "label_details",
+                "mode",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "relation_threshold",
+                "relations",
+                "snippet_pieces",
+                "stage_context",
+                "threshold",
+                "verb",
+                "wording_version",
+            ],
+        )?,
+    })
 }
 
 #[repr(C)]
@@ -8321,6 +8128,199 @@ pub(crate) fn read_thinkthen_complete_relate_fields_v1(
             read_text(value, store)?
         },
         extensions: store.extensions(node, &["kind", "name"])?,
+    })
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relate_fields_presence_v1 {
+    pub presence: u32,
+    pub value: *const thinkthen_complete_relate_fields_v1,
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, Debug)]
+pub struct thinkthen_complete_relate_question_document_v1 {
+    pub batch: thinkthen_complete_batch_presence_v1,
+    pub context_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub fields: thinkthen_complete_relate_fields_presence_v1,
+    pub item_schema: thinkthen_complete_input_declaration_presence_v1,
+    pub label_details: thinkthen_complete_label_list_presence_v1,
+    pub model: thinkthen_complete_utf8_presence_v1,
+    pub name: thinkthen_complete_question_name_presence_v1,
+    pub on: thinkthen_complete_string_list_presence_v1,
+    pub profile: thinkthen_complete_utf8_presence_v1,
+    pub relations: thinkthen_complete_relation_rule_list_v1,
+    pub threshold: *const thinkthen_complete_threshold_v1,
+    pub verb: thinkthen_complete_utf8_v1,
+    pub wording_version: thinkthen_complete_wording_version_presence_v1,
+    pub extensions: thinkthen_complete_extensions_v1,
+}
+
+pub(crate) fn read_thinkthen_complete_relate_question_document_v1(
+    node: &Node,
+    store: &mut Storage,
+) -> Result<thinkthen_complete_relate_question_document_v1, ErrorKind> {
+    Ok(thinkthen_complete_relate_question_document_v1 {
+        batch: {
+            let (presence, value) = read_presence(
+                node.member("batch"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_batch_v1(value, store).map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_batch_presence_v1 { presence, value }
+        },
+        context_schema: {
+            let (presence, value) = read_presence(
+                node.member("context_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        fields: {
+            let (presence, value) = read_presence(
+                node.member("fields"),
+                true,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_relate_fields_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_relate_fields_presence_v1 { presence, value }
+        },
+        item_schema: {
+            let (presence, value) = read_presence(
+                node.member("item_schema"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_input_declaration_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_input_declaration_presence_v1 { presence, value }
+        },
+        label_details: {
+            let (presence, value) = read_presence(
+                node.member("label_details"),
+                false,
+                thinkthen_complete_label_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_label_list_v1,
+                store,
+            )?;
+            thinkthen_complete_label_list_presence_v1 { presence, value }
+        },
+        model: {
+            let (presence, value) = read_presence(
+                node.member("model"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        name: {
+            let (presence, value) = read_presence(
+                node.member("name"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_question_name_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_question_name_presence_v1 { presence, value }
+        },
+        on: {
+            let (presence, value) = read_presence(
+                node.member("on"),
+                false,
+                thinkthen_complete_string_list_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_thinkthen_complete_string_list_v1,
+                store,
+            )?;
+            thinkthen_complete_string_list_presence_v1 { presence, value }
+        },
+        profile: {
+            let (presence, value) = read_presence(
+                node.member("profile"),
+                false,
+                thinkthen_complete_utf8_v1 {
+                    data: std::ptr::null(),
+                    len: 0,
+                },
+                read_text,
+                store,
+            )?;
+            thinkthen_complete_utf8_presence_v1 { presence, value }
+        },
+        relations: {
+            let value = node.required("relations")?;
+            read_thinkthen_complete_relation_rule_list_v1(value, store)?
+        },
+        threshold: {
+            let value = node.required("threshold")?;
+            read_thinkthen_complete_threshold_v1(value, store).map(|value| store.hold(value))?
+        },
+        verb: {
+            let value = node.required("verb")?;
+            read_text(value, store)?
+        },
+        wording_version: {
+            let (presence, value) = read_presence(
+                node.member("wording_version"),
+                false,
+                std::ptr::null(),
+                |value, store| {
+                    read_thinkthen_complete_wording_version_v1(value, store)
+                        .map(|value| store.hold(value))
+                },
+                store,
+            )?;
+            thinkthen_complete_wording_version_presence_v1 { presence, value }
+        },
+        extensions: store.extensions(
+            node,
+            &[
+                "batch",
+                "context_schema",
+                "fields",
+                "item_schema",
+                "label_details",
+                "model",
+                "name",
+                "on",
+                "profile",
+                "relations",
+                "threshold",
+                "verb",
+                "wording_version",
+            ],
+        )?,
     })
 }
 
@@ -10269,7 +10269,7 @@ pub struct thinkthen_complete_session_question_detail_v1 {
     pub model: thinkthen_complete_utf8_v1,
     pub observations: thinkthen_complete_observation_list_v1,
     pub probabilities: thinkthen_complete_session_probabilities_presence_v1,
-    pub question: *const thinkthen_complete_readable_question_v1,
+    pub question: *const thinkthen_complete_question_document_v1,
     pub question_sha256: thinkthen_complete_utf8_v1,
     pub question_sources: thinkthen_complete_question_source_list_v1,
     pub raw_pick: thinkthen_complete_utf8_presence_v1,
@@ -10393,7 +10393,7 @@ pub(crate) fn read_thinkthen_complete_session_question_detail_v1(
         },
         question: {
             let value = node.required("question")?;
-            read_thinkthen_complete_readable_question_v1(value, store)
+            read_thinkthen_complete_question_document_v1(value, store)
                 .map(|value| store.hold(value))?
         },
         question_sha256: {
