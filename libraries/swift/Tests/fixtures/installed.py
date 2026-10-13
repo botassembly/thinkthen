@@ -14,7 +14,7 @@ HERE = Path(__file__).resolve().parent
 PACKAGE = HERE.parents[1]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
-from backend import Backend
+from backend import Backend, QUOTED_STATE
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--package', type=Path, required=True)
@@ -77,7 +77,7 @@ try:
         result = subprocess.run(base + [location + '/consumer/.build/debug/Owned', settings, location + '/barrier'], env=env, capture_output=True, timeout=30)
         (args.out / 'installed-owned.log').write_bytes(result.stdout + result.stderr)
         assert result.returncode == 0 and b'OWNED_SWIFT_PASS' in result.stdout, (result.stdout, result.stderr)
-        assert server.arrivals == ['hold-owned-swift', 'owned-swift', 'unsure', 'authored-null', 'hold-explicit-swift', 'status-401'] and server.attempts == server.connections == 6, server.arrivals
+        assert server.arrivals == ['hold-owned-swift', 'owned-swift', QUOTED_STATE, 'unsure', 'authored-null', 'hold-explicit-swift', 'status-401'] and server.attempts == server.connections == 7, server.arrivals
         print(result.stdout.decode(), end='')
         if not apple:
             asset = work / 'consumer/.build/debug/ThinkThen_ThinkThen.bundle/Native/x86_64-unknown-linux-gnu/libthinkthen.so'
@@ -88,7 +88,7 @@ try:
             try:
                 refused = subprocess.run(base + ['/work/consumer/.build/debug/Owned', settings, '/work/barrier'], env=env, capture_output=True, timeout=5)
                 assert refused.returncode != 0 and b'ThinkThen native package could not be loaded' in refused.stderr, (refused.stdout, refused.stderr)
-                assert server.attempts == 6, server.arrivals
+                assert server.attempts == 7, server.arrivals
                 print('Missing bundled native asset refuses locally with zero extra requests')
             finally:
                 hidden.rename(asset)
@@ -116,6 +116,6 @@ try:
     # Retain the installed executable and its resource bundle for shared cases.
     installed = args.out / 'installed'
     shutil.copytree(work / 'consumer/.build/debug', installed, symlinks=False)
-    print('Installed versioned SwiftPM dependency PASS; bundled native loading, six counted requests')
+    print('Installed versioned SwiftPM dependency PASS; bundled native loading, seven counted requests')
 finally:
     shutil.rmtree(work)

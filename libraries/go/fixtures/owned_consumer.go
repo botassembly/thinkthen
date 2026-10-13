@@ -311,10 +311,15 @@ func main() {
 	require(tagsErr == nil && len(tags) == 2 && tags[0] == "a" && tags[1] == "b", "single normalized tags missing")
 	score, scoreErr := retained[3].ScoreAnswer()
 	require(scoreErr == nil && score == 0.1, "single normalized score missing")
-	for _, packets := range [][]tt.OwnedSessionPacket{nil, append(append([]tt.OwnedSessionPacket{}, retained[0].Packets...), retained[0].Packets...)} {
-		_, err := (tt.OwnedCall{Packets: packets, Terminal: retained[0].Terminal}).DecideAnswer()
+	for _, input := range [][]string{{}, {"cardinality-one", "cardinality-two"}} {
+		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), input, nil)
+		require(err == nil && completed.Terminal != nil, "cardinality call did not settle")
+		n, err := completed.Terminal.Facts().Value.RequestsSent().Value.Int64()
+		require(err == nil, "cardinality call requests missing")
+		expectedRequests += n
+		_, err = completed.DecideAnswer()
 		var cardinality *tt.AnswerCardinalityError
-		require(errors.As(err, &cardinality) && (cardinality.Count == 0 || cardinality.Count == 2), "answer cardinality did not refuse")
+		require(errors.As(err, &cardinality) && cardinality.Count == len(input), "answer cardinality did not refuse")
 	}
 	// A false value must remain false, not absent or null.
 	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)

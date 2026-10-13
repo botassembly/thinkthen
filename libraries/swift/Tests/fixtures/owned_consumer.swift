@@ -51,12 +51,12 @@ import ThinkThen
         try expect(try row.value.json.data() == Data("true".utf8), "Typed native answer")
         try expect(call.terminal.facts.isPresent, "Native final facts missing")
         try expect(try call.decideAnswer() == true, "Normalized scalar answer")
-        for (packets, count) in [([OwnedSessionPacket](), 0), (call.packets + call.packets, 2)] {
+        for (items, count) in [([InputRequestItem](), 0), ([.text("cardinality-one"), .text("cardinality-two")], 2)] {
             do {
-                _ = try OwnedCall(packets: packets, terminal: call.terminal).decideAnswer()
+                _ = try await client.decideAnswer(.text("Is it?"), input: .records(InputRequestInputRecords(items: items)))
                 throw JSONConversionError("Answer cardinality accepted")
             } catch let failure as AnswerCardinalityError {
-                try expect(failure.count == count, "Wrong answer cardinality")
+                try expect(failure.count == count && failure.call.terminal.facts.isPresent, "Wrong answer cardinality or missing native settlement")
             }
         }
         let unknown = try await client.decideAnswer(.definition(InputRequestQuestionDefinition(value: .alternative0(InputRequestDefinitionAuthoredDecide(decide: .alternative0("Is it?"), threshold: .value(.alternative1("0.2:0.8")))))), input: .text("unsure"))
