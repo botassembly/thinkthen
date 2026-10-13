@@ -19,6 +19,8 @@ USE = {
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
             'thinkthen_session_result_view', 'thinkthen_session_new_typed_with_surface',
             'thinkthen_session_try_push_typed', 'thinkthen_session_push_typed', 'thinkthen_session_finish_typed',
+            'thinkthen_request_plan_typed_json', 'thinkthen_free_string',
+            'thinkthen_question_parse', 'thinkthen_question_author', 'thinkthen_question_free',
             'THINKTHEN_COBOL_OVERFLOW',
             'THINKTHEN_COMPLETE_FAILURE_KIND_BACKEND_V1',
             'THINKTHEN_COMPLETE_FAILURE_KIND_CANCELLED_V1',

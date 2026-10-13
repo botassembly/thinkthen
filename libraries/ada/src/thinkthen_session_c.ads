@@ -265,6 +265,7 @@ package Thinkthen_Session_C is
    K_THINKTHEN_SESSION_WAIT_RESULT_V1 : constant := 0;
    K_THINKTHEN_SESSION_WAIT_SETTLEMENT_V1 : constant := 2;
    type thinkthen_engine is null record;
+   type thinkthen_question is null record;
    type thinkthen_session is null record;
    type thinkthen_session_result is null record;
    type thinkthen_complete_usage_persistence_v1 is record
@@ -276,60 +277,47 @@ package Thinkthen_Session_C is
       len : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_reader_failure_producer_v1 is record
-      reserved : aliased Interfaces.Unsigned_32;
+   type thinkthen_string_v1 is record
+      data : Interfaces.C.Strings.chars_ptr;
+      len : aliased Interfaces.C.size_t;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_text_v1 is record
-      text : aliased thinkthen_complete_utf8_v1;
+   type thinkthen_optional_string_v1 is record
+      present : aliased int;
+      value : aliased thinkthen_string_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_unsigned_v1 is record
+   type thinkthen_optional_u64_v1 is record
+      present : aliased int;
       value : aliased Interfaces.Unsigned_64;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_request_session_source_location_v1 is record
-      m_file : access constant thinkthen_request_text_v1;
-      m_first_line : access constant thinkthen_request_unsigned_v1;
-      m_last_line : access constant thinkthen_request_unsigned_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_reader_failure_io_v1 is record
-      m_location : access constant thinkthen_request_session_source_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_reader_failure_utf_8_v1 is record
-      m_location : access constant thinkthen_request_session_source_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_reader_failure_invalid_input_v1 is record
-      m_location : access constant thinkthen_request_session_source_location_v1;
-   end record
-   with Convention => C_Pass_By_Copy;
-   type thinkthen_request_reader_failure_data_v1 (discr : unsigned := 0) is record
-      case discr is
-         when 0 =>
-            arm_1 : access constant thinkthen_request_reader_failure_producer_v1;
-         when 1 =>
-            arm_2 : access constant thinkthen_request_reader_failure_io_v1;
-         when 2 =>
-            arm_3 : access constant thinkthen_request_reader_failure_utf_8_v1;
-         when others =>
-            arm_4 : access constant thinkthen_request_reader_failure_invalid_input_v1;
-      end case;
-   end record
-   with Convention => C_Pass_By_Copy,
-        Unchecked_Union => True;
-   type thinkthen_request_reader_failure_v1 is record
+   type thinkthen_input_property_v1 is record
+      name : aliased thinkthen_string_v1;
       kind : aliased Interfaces.Unsigned_32;
-      data : aliased thinkthen_request_reader_failure_data_v1;
    end record
    with Convention => C_Pass_By_Copy;
-   type thinkthen_named_request_v1 is record
-      c_function : aliased thinkthen_complete_utf8_v1;
-      question_json : aliased thinkthen_complete_utf8_v1;
-      input_json : aliased thinkthen_complete_utf8_v1;
-      options_json : aliased thinkthen_complete_utf8_v1;
+   type thinkthen_input_properties_v1 is record
+      data : access constant thinkthen_input_property_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_strings_v1 is record
+      data : access constant thinkthen_string_v1;
+      len : aliased Interfaces.C.size_t;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_input_declaration_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      properties : aliased thinkthen_input_properties_v1;
+      required : aliased thinkthen_strings_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_question_author_v1 is record
+      name : aliased thinkthen_optional_string_v1;
+      wording_version : aliased thinkthen_optional_u64_v1;
+      item_schema : aliased thinkthen_input_declaration_v1;
+      context_schema : aliased thinkthen_input_declaration_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_literal_image_jpeg_v1 is record
@@ -353,6 +341,10 @@ package Thinkthen_Session_C is
    type thinkthen_request_image_media_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_image_media_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_text_v1 is record
+      text : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_image_file_v1 is record
@@ -426,6 +418,10 @@ package Thinkthen_Session_C is
    type thinkthen_request_context_schema_v1 is record
       kind : aliased Interfaces.Unsigned_32;
       data : aliased thinkthen_request_context_schema_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_unsigned_v1 is record
+      value : aliased Interfaces.Unsigned_64;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_recognition_example_entity_v1 is record
@@ -1337,6 +1333,54 @@ package Thinkthen_Session_C is
       m_input : access constant thinkthen_request_input_v1;
       m_options : access constant thinkthen_request_call_options_v1;
       m_question : access constant thinkthen_request_question_selector_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_reader_failure_producer_v1 is record
+      reserved : aliased Interfaces.Unsigned_32;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_session_source_location_v1 is record
+      m_file : access constant thinkthen_request_text_v1;
+      m_first_line : access constant thinkthen_request_unsigned_v1;
+      m_last_line : access constant thinkthen_request_unsigned_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_reader_failure_io_v1 is record
+      m_location : access constant thinkthen_request_session_source_location_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_reader_failure_utf_8_v1 is record
+      m_location : access constant thinkthen_request_session_source_location_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_reader_failure_invalid_input_v1 is record
+      m_location : access constant thinkthen_request_session_source_location_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_request_reader_failure_data_v1 (discr : unsigned := 0) is record
+      case discr is
+         when 0 =>
+            arm_1 : access constant thinkthen_request_reader_failure_producer_v1;
+         when 1 =>
+            arm_2 : access constant thinkthen_request_reader_failure_io_v1;
+         when 2 =>
+            arm_3 : access constant thinkthen_request_reader_failure_utf_8_v1;
+         when others =>
+            arm_4 : access constant thinkthen_request_reader_failure_invalid_input_v1;
+      end case;
+   end record
+   with Convention => C_Pass_By_Copy,
+        Unchecked_Union => True;
+   type thinkthen_request_reader_failure_v1 is record
+      kind : aliased Interfaces.Unsigned_32;
+      data : aliased thinkthen_request_reader_failure_data_v1;
+   end record
+   with Convention => C_Pass_By_Copy;
+   type thinkthen_named_request_v1 is record
+      c_function : aliased thinkthen_complete_utf8_v1;
+      question_json : aliased thinkthen_complete_utf8_v1;
+      input_json : aliased thinkthen_complete_utf8_v1;
+      options_json : aliased thinkthen_complete_utf8_v1;
    end record
    with Convention => C_Pass_By_Copy;
    type thinkthen_request_session_descriptor_v1 is record
@@ -3525,6 +3569,36 @@ package Thinkthen_Session_C is
    with Import => True,
         Convention => C,
         External_Name => "thinkthen_error_retryable";
+   procedure thinkthen_free_string (text : Interfaces.C.Strings.chars_ptr)
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_free_string";
+   function thinkthen_question_author (owner : access constant thinkthen_question; c_out : access thinkthen_question_author_v1) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_question_author";
+   procedure thinkthen_question_free (owner : access thinkthen_question)
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_question_free";
+   function thinkthen_question_parse
+     (engine : access constant thinkthen_engine;
+      role : Interfaces.Unsigned_32;
+      json : thinkthen_string_v1;
+      c_out : System.Address) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_question_parse";
+   function thinkthen_request_plan_typed_json
+     (engine : access constant thinkthen_engine;
+      c_function : thinkthen_complete_utf8_v1;
+      arguments : access constant thinkthen_request_arguments_v1;
+      surface_name : thinkthen_complete_utf8_v1;
+      c_out : System.Address;
+      out_len : access Interfaces.C.size_t) return int
+   with Import => True,
+        Convention => C,
+        External_Name => "thinkthen_request_plan_typed_json";
    procedure thinkthen_session_cancel (session : access thinkthen_session)
    with Import => True,
         Convention => C,

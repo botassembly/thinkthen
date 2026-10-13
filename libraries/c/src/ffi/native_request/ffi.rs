@@ -201,43 +201,60 @@ pub unsafe extern "C" fn thinkthen_session_finish_typed(
     })
 }
 
+unsafe fn typed_request(
+    function: thinkthen_complete_utf8_v1,
+    arguments: *const carriers::thinkthen_request_arguments_v1,
+    surface: Surface,
+) -> Result<Request, failures::Failure> {
+    let mut context = Context::new(surface);
+    // SAFETY: the caller retains the counted argument tree throughout conversion.
+    let Value::Object(values) =
+        unsafe { carriers::read_thinkthen_request_arguments_v1(arguments, &mut context) }?
+    else {
+        return Err(ErrorKind::Usage.into());
+    };
+    let (mut question, mut input, mut options) = (None, None, "{}".to_owned());
+    for (name, value) in values {
+        match name.as_str() {
+            "question" => question = Some(value.json()?),
+            "input" => input = Some(value.json()?),
+            "options" => options = value.json()?,
+            _ => return Err(ErrorKind::Defect.into()),
+        }
+    }
+    // SAFETY: the function name is a live counted view under the entry contract.
+    Request::named_from_json(
+        &unsafe { context.text(function) }?,
+        &question.ok_or(ErrorKind::Usage)?,
+        &input.ok_or(ErrorKind::Usage)?,
+        &options,
+    )
+    .map_err(super::session::decode_failure)
+}
+
 unsafe fn typed_session(
     engine: &EngineHandle,
     function: thinkthen_complete_utf8_v1,
     arguments: *const carriers::thinkthen_request_arguments_v1,
     surface_name: thinkthen_complete_utf8_v1,
 ) -> Result<*mut SessionHandle, failures::Failure> {
-    // SAFETY: the caller retains its engine, carrier tree and writable output.
+    // SAFETY: the caller retains its engine, function and carrier tree.
     unsafe {
         super::session::start_session(
             engine,
             || surface(surface_name),
-            || {
-                let mut context = Context::new(surface(surface_name)?);
-                let Value::Object(values) =
-                    carriers::read_thinkthen_request_arguments_v1(arguments, &mut context)?
-                else {
-                    return Err(ErrorKind::Usage.into());
-                };
-                let mut question = None;
-                let mut input = None;
-                let mut options = "{}".to_owned();
-                for (name, value) in values {
-                    match name.as_str() {
-                        "question" => question = Some(value.json()?),
-                        "input" => input = Some(value.json()?),
-                        "options" => options = value.json()?,
-                        _ => return Err(ErrorKind::Defect.into()),
-                    }
-                }
-                Request::named_from_json(
-                    &context.text(function)?,
-                    &question.ok_or(ErrorKind::Usage)?,
-                    &input.ok_or(ErrorKind::Usage)?,
-                    &options,
-                )
-                .map_err(super::session::decode_failure)
-            },
+            || typed_request(function, arguments, surface(surface_name)?),
         )
     }
+}
+
+unsafe fn typed_plan(
+    engine: &EngineHandle,
+    function: thinkthen_complete_utf8_v1,
+    arguments: *const carriers::thinkthen_request_arguments_v1,
+    surface_name: thinkthen_complete_utf8_v1,
+) -> Result<(*mut std::ffi::c_char, usize), failures::Failure> {
+    // SAFETY: counted selectors and carriers remain live until admission returns.
+    let request = unsafe { typed_request(function, arguments, surface(surface_name)?) }?;
+    super::request_preview::plan(engine, request).map_err(Into::into)
 }
