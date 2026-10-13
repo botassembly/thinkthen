@@ -9352,9 +9352,6 @@
           "$ref": "#/$defs/annotateDetails"
         },
         {
-          "$ref": "#/$defs/recognizeDetails"
-        },
-        {
           "$ref": "#/$defs/relateDetails"
         }
       ]
@@ -9695,50 +9692,6 @@
         "index",
         "unit",
         "probability"
-      ],
-      "type": "object"
-    },
-    "legacyRecognitionOdds": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/legacyRecognizeAnswer"
-        },
-        {
-          "$ref": "#/$defs/BoundaryOdds"
-        }
-      ]
-    },
-    "legacyRecognizeAnswer": {
-      "properties": {
-        "names": {
-          "items": {
-            "$ref": "#/$defs/nameOdds"
-          },
-          "type": "array"
-        },
-        "pairs": {
-          "items": {
-            "$ref": "#/$defs/pairOdds"
-          },
-          "type": "array"
-        },
-        "pieces": {
-          "items": {
-            "$ref": "#/$defs/pieceOdds"
-          },
-          "type": "array"
-        },
-        "proposals": {
-          "items": {
-            "$ref": "#/$defs/RecognitionProposal"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "pieces",
-        "names",
-        "pairs"
       ],
       "type": "object"
     },
@@ -10348,32 +10301,6 @@
         "names",
         "proposals",
         "pairs"
-      ],
-      "type": "object"
-    },
-    "recognizeDetails": {
-      "properties": {
-        "answer": {
-          "$ref": "#/$defs/legacyRecognitionOdds"
-        },
-        "input": {},
-        "meta": {
-          "$ref": "#/$defs/meta"
-        },
-        "question": true,
-        "schema": {
-          "type": "string"
-        },
-        "value": {
-          "$ref": "#/$defs/recognize"
-        }
-      },
-      "required": [
-        "schema",
-        "value",
-        "question",
-        "answer",
-        "meta"
       ],
       "type": "object"
     },
@@ -12114,6 +12041,6 @@
   "$id": "urn:thinkthen:result",
   "$ref": "#/$defs/detailed",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a C interface value against its verb's definition; released definitions retain result/1 and complete definitions describe result/2 and its additive call envelope.",
-  "title": "thinkthen native results and compatibility structures"
+  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a scalar result against its verb's definition; scalar definitions describe result/1 and complete definitions describe result/2 and its call envelope.",
+  "title": "thinkthen native results"
 }
