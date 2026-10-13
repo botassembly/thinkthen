@@ -52,7 +52,7 @@ def answers(definitions):
              'if (!packet.containsKey("value") || packet.get("value") == null) throw new CardinalityFailure(call);',
              'answer = packet.get("value"); count++;',
              'if (array) { if (row) values.add(answer); else { if (!(answer instanceof List<?> list)) throw new CardinalityFailure(call); values.addAll(list); } }', '}',
-             'if (array) return Collections.unmodifiableList(values);',
+             'if (array) { if (!rows && count != 1) throw new CardinalityFailure(call); return Collections.unmodifiableList(values); }',
              'if (count != 1) throw new CardinalityFailure(call); return answer;', '}']
     scalar_functions = set()
     for function, kind, payload in scalar_answers(definitions):

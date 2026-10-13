@@ -4197,7 +4197,10 @@ public final class Results {
                     }
                 }
             }
-            if (array) return Collections.unmodifiableList(values);
+            if (array) {
+                if (!rows && count != 1) throw new CardinalityFailure(call);
+                return Collections.unmodifiableList(values);
+            }
             if (count != 1) throw new CardinalityFailure(call);
             return answer;
         }
