@@ -44,7 +44,7 @@ fn empty_dynamic_choose_finishes_without_candidates_and_still_validates_batch_co
     assert_eq!(call.facts().requests_sent(), 0);
     assert!(call.facts().attempts().unwrap().is_empty());
     assert!(call.facts().call_id().is_some());
-    assert!(call.complete().is_some());
+    assert!(call.facts().call_id().is_some());
     assert_eq!(listener.count(), 0);
 }
 

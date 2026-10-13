@@ -1,46 +1,8 @@
-//! Additive complete envelopes preserve the released generic Call serialization.
-use super::{Call, CompleteFacts};
+//! Safe failure envelopes retain actual invocation facts.
+use super::CompleteFacts;
 use crate::public::{Error, ErrorKind, EstimatedInputDenial, SendBudgetDenial, Stopped};
 use serde::Serialize;
 use std::fmt;
-
-/// One concrete native result value and its actual complete invocation facts.
-#[derive(Serialize)]
-#[cfg_attr(test, derive(schemars::JsonSchema))]
-pub struct CompleteCall<'a, T> {
-    value: &'a T,
-    facts: CompleteFacts<'a>,
-}
-impl<T> Call<T> {
-    /// Borrow the complete envelope for this admitted invocation.
-    /// Aggregate tallies cannot invent a call identity.
-    #[must_use]
-    pub fn complete(&self) -> Option<CompleteCall<'_, T>> {
-        Some(CompleteCall {
-            value: self.value(),
-            facts: self.facts().complete()?,
-        })
-    }
-}
-impl<T> CompleteCall<'_, T> {
-    /// Concrete complete result or collection supplied by the native executor.
-    #[must_use]
-    pub const fn value(&self) -> &T {
-        self.value
-    }
-    /// Actual invocation facts, including requested attempts.
-    #[must_use]
-    pub const fn facts(&self) -> &CompleteFacts<'_> {
-        &self.facts
-    }
-}
-impl<T> fmt::Debug for CompleteCall<'_, T> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("CompleteCall")
-            .field("call_id", &self.facts.call_id())
-            .finish_non_exhaustive()
-    }
-}
 
 /// Safe failure fields; no successful result or answer identity is fabricated.
 #[derive(Clone, Copy, Debug, Serialize)]

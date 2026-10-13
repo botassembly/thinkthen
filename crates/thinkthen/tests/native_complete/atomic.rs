@@ -186,7 +186,7 @@ fn typed_score_document(engine: &Engine, score: &Question, choice: &Question, li
     schema::call(&graded, "completeScore");
     assert_eq!(result.value(), 0.75);
     assert_eq!(result.confidence(), None);
-    let document = serde_json::to_value(graded.complete().unwrap()).unwrap();
+    let document = serde_json::to_value(&graded).unwrap();
     assert_eq!(
         document["value"][0]["question"]["levels"],
         json!(["low", "high"])

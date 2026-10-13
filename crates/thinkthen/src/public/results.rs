@@ -19,7 +19,7 @@ mod complete_call;
 mod complete_schema;
 pub use complete_schema::complete_call_schema;
 mod complete_facts;
-pub use complete_call::{CompleteCall, CompleteError, ErrorSnapshot};
+pub use complete_call::{CompleteError, ErrorSnapshot};
 mod complete_find;
 pub use complete_facts::CompleteFacts;
 mod complete_recognize;
