@@ -63,12 +63,7 @@ fn a_status_keeps_its_action_and_only_the_documented_token_limit_shape() {
             listener.base(),
             &["--max-retries", "0"],
             Some("sk-test-value"),
-            if message == "private \"quoted\" evidence" {
-                message
-            } else {
-                EVIDENCE
-            },
-            "private \"quoted\" evidence",
+            EVIDENCE,
         )
         .expect("the compiled binary runs");
         assert_eq!(output.status.code(), Some(4), "{status} {body}");
@@ -104,6 +99,7 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         "The selected model is unavailable",
         "sk-test-value",
         EVIDENCE,
+        "private \"quoted\" evidence",
         "c2stdGVzdC12YWx1ZQ==",
         "echo:c2stdGVzdC12YWx1ZQ==",
         "736b2d746573742d76616c7565",
@@ -123,7 +119,11 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
             listener.base(),
             &["--max-retries", "0"],
             Some("sk-test-value"),
-            EVIDENCE,
+            if message == "private \"quoted\" evidence" {
+                message
+            } else {
+                EVIDENCE
+            },
         )
         .unwrap();
         let said = crate::harness::said(&output);
