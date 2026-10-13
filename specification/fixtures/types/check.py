@@ -24,6 +24,14 @@ def validators(schema):
     return checks
 
 
+def subset(actual, expected):
+    if isinstance(expected, dict):
+        return isinstance(actual, dict) and all(
+            key in actual and subset(actual[key], value) for key, value in expected.items()
+        )
+    return actual == expected
+
+
 def check_schema(cases, checks):
     for case in cases:
         name = case["name"]
