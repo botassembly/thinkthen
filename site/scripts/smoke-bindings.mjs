@@ -274,7 +274,7 @@ function withBuild({ slug, tools, needs = () => null, versions, env = {}, buildE
           if (done.status !== 0) throw new Error(`${rel} did not build\n${line.join(' ')}\n${done.stdout}${done.stderr}`);
         }
         if (slug === 'rust') {
-          const built = compile('cargo', ['build', '--quiet', '--locked', '--offline', '--bins'], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
+          const built = compile('cargo', ['build', '--quiet', '--offline', '--bins'], { cwd: dir, env: { ...process.env, ...runEnv, ...buildEnv } });
           if (built.status !== 0) throw new Error(`${rel} did not build\n${built.stdout}${built.stderr}`);
         }
         dirs.set(rel, { dir, run: slug === 'rust' ? path.join(runEnv.CARGO_TARGET_DIR, 'debug', name.replace(/\.[^.]+$/, '')) : lines.run.join(' ') });

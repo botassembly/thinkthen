@@ -90,6 +90,8 @@ const builtIns = backends().map((b) => b.name);
   {surface.slug === 'python' && <p>Working with data frames? <a href="/languages/pandas/">pandas</a> and <a href="/languages/polars/">Polars</a> have their own pages.</p>}
   {!shell && full && <p>The <a href={guide}>{surface.name} package guide</a> and its <a href={packageExample(surface.slug)}>consumer example</a> give the full API.</p>}
 
+  {!shell && full && <p>Call Jev from TypeSafe, another SystemOne server, OpenAI Decisions or a local model from {surface.name}. <a href="/models/">Models</a> gives each backend's setup.</p>}
+
   <h2>Install</h2>
   <table class="install">
     <tr><th>Channel</th>{notes && <th>Note</th>}</tr>
