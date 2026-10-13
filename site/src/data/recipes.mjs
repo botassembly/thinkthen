@@ -8,7 +8,7 @@ const FUNCTION_NAMES = ['decide','choose','tag','score','filter','rank','find','
 
 // An evidence grid shows one row per method and cohort. Its cells read the
 // measured entries `${method}-${cohort}-tp`, `-fp` and `-fn`.
-export const GRID_COLUMNS = [['tp', 'Right'], ['fp', 'Wrong yes'], ['fn', 'Missed yes']];
+export const GRID_COLUMNS = [['tp', 'Right'], ['fp', 'Wrong value'], ['fn', 'Missed value']];
 export const gridRows = (node, evidence) => node.cohorts.flatMap((cohort) => node.methods.map((method) => ({
   method, cohort,
   cells: GRID_COLUMNS.map(([key]) => evidence.get(`${method}-${cohort}-${key}`)),

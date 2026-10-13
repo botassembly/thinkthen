@@ -302,7 +302,7 @@ export const FUNCTIONS = [
     shared: [...SET_FLAGS, '--context-field'],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
-    howtos: [],
+    howtos: ['pull-products-and-makers-from-an-inbox'],
     see: {
       '0-kinds': 'A support message names a customer, a product and a city. recognize finds all three and gives each its kind: person, product or place.',
       '1-names': 'Each --kind gives a kind a description. --plan shows the first question without sending it. The descriptions tell the model which literal spans to find; this example shows no model answer.',
@@ -331,7 +331,7 @@ export const FUNCTIONS = [
     shared: SET_FLAGS,
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
-    howtos: [],
+    howtos: ['pull-products-and-makers-from-an-inbox'],
     see: {
       '1-makes': 'The products a support inbox names, and the companies that make them. Apple makes the iPhone, and Amazon makes the Kindle. The two wrong pairs do not reach the default threshold.',
     },
@@ -1111,8 +1111,8 @@ export const HOWTOS = [
     },
   },
   {
-    slug: 'pull-products-and-makers-from-an-inbox', group: 'Business teams', title: 'Pull products and their makers from a support inbox', reader: 'for support and product teams',
-    gain: 'Find the products a customer names, and tie each to the company that makes it.',
+    slug: 'pull-products-and-makers-from-an-inbox', group: 'Business teams', title: 'Pull products and their makers from a support message', reader: 'for support and product teams',
+    gain: 'Find the products a customer names, and tie each to its maker in your catalog.',
     said: '`recognize` pulls the names out of a message and keeps the products. `relate` reads your catalog of companies and products and says which company makes which product. `jq` keeps the makers of the products the message named.',
     functions: ['recognize', 'relate'],
     see: {
