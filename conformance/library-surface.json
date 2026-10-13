@@ -1,0 +1,569 @@
+{
+  "version": 1,
+  "authority": {
+    "request": "specification/request.schema.json",
+    "result": "specification/result.schema.json"
+  },
+  "helpers": [
+    "plan",
+    "question_file",
+    "question_name",
+    "question_reference",
+    "item",
+    "files",
+    "usage_persistence",
+    "finish_usage_status"
+  ],
+  "categories": {
+    "lifecycle": [
+      "Engine",
+      "Client",
+      "Session",
+      "Operation",
+      "Completed",
+      "OwnedCall",
+      "OwnedSession",
+      "Presence",
+      "Result",
+      "UsageStatus",
+      "CancelToken",
+      "ABSENT",
+      "InputPresence",
+      "InputDocument",
+      "QuestionSource",
+      "Item",
+      "Files",
+      "Records",
+      "Image",
+      "Source",
+      "Question",
+      "Input",
+      "QuestionFile",
+      "ImageBytes",
+      "ItemFields",
+      "Controls",
+      "FileSelection",
+      "SourceRecord"
+    ],
+    "errors": [
+      "ThinkThenError",
+      "UsageError",
+      "BackendError",
+      "LocalError",
+      "Cancelled",
+      "DeadlineError",
+      "DefectError",
+      "ClientError",
+      "Failure",
+      "FailureKind",
+      "SessionFailure",
+      "NativeFailure",
+      "UsageFailure",
+      "BackendFailure",
+      "LocalFailure",
+      "DeadlineFailure",
+      "DefectFailure",
+      "CancelledFailure"
+    ],
+    "lifecycle_members": [
+      "new",
+      "init",
+      "init_with_settings",
+      "close",
+      "free",
+      "cancel",
+      "start",
+      "iterate",
+      "finish",
+      "try_read",
+      "try_push",
+      "read",
+      "push",
+      "wait",
+      "wait_native",
+      "next",
+      "result",
+      "return",
+      "usage",
+      "asyncio",
+      "dispose",
+      "deinit",
+      "constructor"
+    ],
+    "representation_members": [
+      "value",
+      "state",
+      "advice",
+      "is_present",
+      "from_document",
+      "to_document",
+      "write",
+      "encode",
+      "decode",
+      "read",
+      "json_serialize",
+      "debug_info",
+      "ptr"
+    ]
+  },
+  "exceptions": {
+    "python": {
+      "name": "dataframe and pydantic adapters",
+      "paths": [
+        "libraries/python/thinkthen/pandas.py",
+        "libraries/python/thinkthen/pandas.pyi",
+        "libraries/python/thinkthen/polars.py",
+        "libraries/python/thinkthen/polars.pyi",
+        "libraries/python/thinkthen/pydantic.py",
+        "libraries/python/thinkthen/_pandas_calls.pyi",
+        "libraries/python/thinkthen/_polars_calls.pyi",
+        "libraries/python/thinkthen/_frame_calls.pyi",
+        "libraries/python/thinkthen/_pandas_calls.py",
+        "libraries/python/thinkthen/_polars_calls.py",
+        "libraries/python/thinkthen/_frame_calls.py",
+        "libraries/python/thinkthen/_frames.py"
+      ],
+      "names": [
+        "on",
+        "kinds",
+        "relations",
+        "either",
+        "descriptions",
+        "instructions",
+        "entity_definition"
+      ]
+    }
+  },
+  "libraries": {
+    "python": {
+      "root": "libraries/python",
+      "language": "python",
+      "naming": "snake",
+      "declarations": [
+        "libraries/python/thinkthen/*.py",
+        "libraries/python/thinkthen/*.pyi"
+      ],
+      "option_containers": [
+        "Engine.*"
+      ],
+      "setting_containers": [
+        "Engine.__init__"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "typescript": {
+      "root": "libraries/typescript",
+      "language": "typescript",
+      "naming": "camel",
+      "declarations": [
+        "libraries/typescript/native.d.ts"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "ruby": {
+      "root": "libraries/ruby",
+      "language": "ruby",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ruby/lib/**/*.rb"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "r": {
+      "root": "libraries/r",
+      "language": "r",
+      "naming": "snake",
+      "declarations": [
+        "libraries/r/thinkthen/NAMESPACE",
+        "libraries/r/thinkthen/R/*.R"
+      ],
+      "option_containers": [
+        "tt_request_options"
+      ],
+      "setting_containers": [
+        "tt_engine"
+      ],
+      "function_prefix": "tt_",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "c": {
+      "root": "libraries/c",
+      "language": "c",
+      "naming": "snake",
+      "declarations": [
+        "libraries/c/include/thinkthen.h"
+      ],
+      "option_containers": [
+        "thinkthen_request_options_v1"
+      ],
+      "setting_containers": [
+        "thinkthen_engine_settings_v1"
+      ],
+      "function_prefix": "thinkthen_",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "cpp": {
+      "root": "libraries/cpp",
+      "language": "cpp",
+      "naming": "snake",
+      "declarations": [
+        "libraries/cpp/include/thinkthen/*.hpp"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "csharp": {
+      "root": "libraries/csharp",
+      "language": "csharp",
+      "naming": "pascal",
+      "declarations": [
+        "libraries/csharp/src/*.cs",
+        "sdlc/generators/results/csharp/CompleteFacts.g.cs"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "go": {
+      "root": "libraries/go",
+      "language": "go",
+      "naming": "pascal",
+      "declarations": [
+        "libraries/go/*.go"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "jvm": {
+      "root": "libraries/jvm",
+      "language": "java",
+      "naming": "camel",
+      "declarations": [
+        "libraries/jvm/session/thinkthen/*.java",
+        "libraries/jvm/session/kotlin/*.kt",
+        "libraries/jvm/session/scala/*.scala"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "swift": {
+      "root": "libraries/swift",
+      "language": "swift",
+      "naming": "camel",
+      "declarations": [
+        "libraries/swift/Sources/ThinkThen/*.swift"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "zig": {
+      "root": "libraries/zig",
+      "language": "zig",
+      "naming": "camel",
+      "declarations": [
+        "libraries/zig/src/*.zig"
+      ],
+      "option_containers": [
+        "RequestOptions"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "php": {
+      "root": "libraries/php",
+      "language": "php",
+      "naming": "snake",
+      "declarations": [
+        "libraries/php/src/session/*.php"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "dart": {
+      "root": "libraries/dart",
+      "language": "dart",
+      "naming": "camel",
+      "declarations": [
+        "libraries/dart/lib/**/*.dart"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "ada": {
+      "root": "libraries/ada",
+      "language": "ada",
+      "naming": "snake",
+      "declarations": [
+        "libraries/ada/src/*.ads"
+      ],
+      "option_containers": [
+        "T_RequestOptions"
+      ],
+      "setting_containers": [
+        "T_EngineSettings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "objc": {
+      "root": "libraries/objective-c",
+      "language": "objc",
+      "naming": "camel",
+      "declarations": [
+        "libraries/objective-c/Sources/Foundation/*.h"
+      ],
+      "option_containers": [
+        "RequestOptions",
+        "InputRequestOptions",
+        "Controls"
+      ],
+      "setting_containers": [
+        "EngineSettings",
+        "InputEngineSettings",
+        "Settings"
+      ],
+      "function_prefix": "",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    },
+    "cobol": {
+      "root": "libraries/cobol",
+      "language": "cobol",
+      "naming": "upper",
+      "declarations": [
+        "libraries/cobol/copybooks/*.cpy",
+        "libraries/cobol/src/*.h"
+      ],
+      "option_containers": [
+        "TT-REQUEST-OPTIONS"
+      ],
+      "setting_containers": [
+        "TT-ENGINE-SETTINGS"
+      ],
+      "function_prefix": "tt-",
+      "test_folders": [
+        "tests",
+        "Tests",
+        "checks",
+        "fixtures",
+        "consumer",
+        "examples",
+        "Examples"
+      ]
+    }
+  }
+}

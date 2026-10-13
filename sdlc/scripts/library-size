@@ -1,0 +1,168 @@
+#!/usr/bin/env python3
+"""Report tracked host source size; candidate acceptance belongs to the release."""
+import argparse
+import importlib.util
+import json
+from pathlib import Path
+import statistics
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+MANIFEST = ROOT / 'conformance/library-surface.json'
+EXTENSIONS = {'.rs', '.py', '.pyi', '.js', '.ts', '.rb', '.R', '.c', '.h', '.cpp',
+              '.hpp', '.cc', '.cs', '.go', '.java', '.kt', '.scala', '.swift', '.zig',
+              '.php', '.dart', '.ads', '.adb', '.cob', '.cbl', '.cpy', '.m'}
+# These declarations come from real tool invocations rather than the schema generator.
+TOOL_GENERATED = {'libraries/r/thinkthen/R/extendr-wrappers.R',
+                  'libraries/r/thinkthen/src/entrypoint.c',
+                  'libraries/ruby/fallback/thinkthen.h',
+                  'libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc',
+                  'libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h',
+                  'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.cc',
+                  'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.h'}
+
+
+def git(root, *args):
+    return subprocess.check_output(['git', '-C', str(root), *args], text=True)
+
+
+def registry(root):
+    spec = importlib.util.spec_from_file_location(
+        'surface_registry', root / 'sdlc/generators/results/registry.py')
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module.generated_paths()
+
+
+def owner(path, manifest):
+    for name, config in manifest['libraries'].items():
+        if path.startswith(config['root'] + '/'):
+            return name
+    if path == 'sdlc/generators/results/csharp/CompleteFacts.g.cs':
+        return 'csharp'
+    return None
+
+
+def classification(path, name, manifest, generated):
+    if Path(path).suffix not in EXTENSIONS:
+        return None
+    config = manifest['libraries'][name]
+    parts = Path(path).parts
+    if path in generated or path in TOOL_GENERATED:
+        return 'generated'
+    if any(folder in parts for folder in config['test_folders']):
+        return 'test'
+    return 'handwritten'
+
+
+def release_base(root):
+    tags = git(root, 'tag', '--merged', 'HEAD').splitlines()
+    # Release tags have a numeric version; candidate tags cannot be a baseline.
+    import re
+    tags = [tag for tag in tags if re.fullmatch(r'v?\d+\.\d+\.\d+', tag)]
+    if not tags:
+        raise ValueError('no release tag; supply --since REVISION')
+    return max(tags, key=lambda tag: int(git(root, 'log', '-1', '--format=%ct', tag)))
+
+
+def additions(root, since, manifest, generated):
+    result = []
+    for commit in git(root, 'rev-list', '--reverse', '--first-parent', since + '..HEAD').splitlines():
+        counts = {name: 0 for name in manifest['libraries']}
+        patch = git(root, 'show', '--format=', '--first-parent', '--unified=0',
+                    '--no-renames', commit, '--', 'libraries',
+                    'sdlc/generators/results/csharp/CompleteFacts.g.cs')
+        path = None
+        for line in patch.splitlines():
+            if line.startswith('+++ b/'):
+                path = line[6:]
+            elif line.startswith('+++ '):
+                path = None
+            elif line.startswith('+') and line[1:].strip() and path:
+                name = owner(path, manifest)
+                if name and classification(path, name, manifest, generated) == 'handwritten':
+                    counts[name] += 1
+        result.append({'commit': commit, 'handwritten_added': counts})
+    return result
+
+
+def measure(root, manifest, since):
+    generated = registry(root)
+    counts = {name: dict(handwritten=0, generated=0, test=0, exception=0,
+                         languages={}) for name in manifest['libraries']}
+    for path in git(root, 'ls-files').splitlines():
+        name = owner(path, manifest)
+        if not name:
+            continue
+        kind = classification(path, name, manifest, generated)
+        if not kind:
+            continue
+        total = sum(bool(line.strip()) for line in (root / path).read_text().splitlines())
+        row = counts[name]
+        row[kind] += total
+        exception = manifest.get('exceptions', {}).get(name, {})
+        if kind == 'handwritten' and path in exception.get('paths', []):
+            row['exception'] += total
+        if name == 'jvm':
+            language = {'.java': 'java', '.kt': 'kotlin', '.scala': 'scala'}.get(Path(path).suffix, 'native')
+            languages = row['languages'].setdefault(language, dict(handwritten=0, generated=0, test=0))
+            languages[kind] += total
+    medians = {kind: statistics.median(row[kind] for row in counts.values())
+               for kind in ('handwritten', 'generated', 'test')}
+    for row in counts.values():
+        row['ratios'] = {kind: round(row[kind] / median, 4) if median else None
+                         for kind, median in medians.items()}
+        row['handwritten_without_exception'] = row['handwritten'] - row['exception']
+    return {'revision': git(root, 'rev-parse', 'HEAD').strip(), 'since': since,
+            'units': 'nonblank source lines', 'history_classification': 'current registry and conventions',
+            'medians': medians, 'libraries': counts,
+            'commits': additions(root, since, manifest, generated)}
+
+
+def summary(report):
+    lines = ['Library size at ' + report['revision'],
+             'library handwritten generated test exception handwritten/median']
+    for name, row in report['libraries'].items():
+        ratio = row['ratios']['handwritten']
+        lines.append(f"{name} {row['handwritten']} {row['generated']} {row['test']} "
+                     f"{row['exception']} {ratio if ratio is not None else 'undefined'}")
+        for language, counts in sorted(row['languages'].items()):
+            lines.append(f"  {language} {counts['handwritten']} {counts['generated']} {counts['test']}")
+    lines.append('Handwritten additions since ' + report['since'] + ':')
+    for commit in report['commits']:
+        changes = ', '.join(f'{name}={count}' for name, count in commit['handwritten_added'].items() if count)
+        if changes:
+            lines.append(commit['commit'] + ' ' + changes)
+    return '\n'.join(lines) + '\n'
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--root', type=Path, default=ROOT)
+    parser.add_argument('--since', help='last release revision; defaults to latest reachable release tag')
+    parser.add_argument('--json', action='store_true', help='machine readable output')
+    parser.add_argument('--store', metavar='NAME', help='save a short candidate summary under sdlc/records/coverage')
+    args = parser.parse_args()
+    try:
+        root = args.root.resolve()
+        manifest = json.loads((root / 'conformance/library-surface.json').read_text())
+        since = args.since or release_base(root)
+        git(root, 'rev-parse', '--verify', since + '^{commit}')
+        report = measure(root, manifest, since)
+        print(json.dumps(report, indent=2, sort_keys=True) if args.json else summary(report), end='\n' if args.json else '')
+        if args.store:
+            if not args.store.replace('-', '').replace('_', '').isalnum():
+                raise ValueError('--store accepts a simple report name')
+            folder = root / 'sdlc/records/coverage'
+            folder.mkdir(parents=True, exist_ok=True)
+            (folder / (args.store + '-library-size.txt')).write_text(summary(report))
+        return 0
+    except (ValueError, OSError, subprocess.CalledProcessError) as error:
+        print('library-size: ' + str(error), file=sys.stderr)
+        return 2
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
