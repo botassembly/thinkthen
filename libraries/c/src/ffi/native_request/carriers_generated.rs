@@ -6,7 +6,12 @@
     reason = "generated versioned request carriers and conversion"
 )]
 use super::{CarrierError, Context, Value, borrow, extent, optional};
-use crate::session::views::thinkthen_complete_utf8_v1;
+use crate::session::views::{
+    THINKTHEN_COMPLETE_JSON_ARRAY_V1, THINKTHEN_COMPLETE_JSON_BOOLEAN_V1,
+    THINKTHEN_COMPLETE_JSON_NULL_V1, THINKTHEN_COMPLETE_JSON_NUMBER_V1,
+    THINKTHEN_COMPLETE_JSON_OBJECT_V1, THINKTHEN_COMPLETE_JSON_STRING_V1,
+    thinkthen_complete_json_v1, thinkthen_complete_utf8_v1,
+};
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_engine_settings_v1 {
@@ -1119,7 +1124,7 @@ pub struct thinkthen_request_engine_settings_max_requests_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_json_value_v1 {
-    pub text: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_json_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -1153,7 +1158,7 @@ pub struct thinkthen_request_recognition_seed_span_list_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_original_json_value_v1 {
-    pub text: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_json_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
@@ -1363,12 +1368,64 @@ pub struct thinkthen_request_item_list_v1 {
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_input_json_value_v1 {
-    pub text: thinkthen_complete_utf8_v1,
+    pub value: *const thinkthen_complete_json_v1,
 }
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct thinkthen_request_literal_max_v1 {
     pub reserved: u32,
+}
+unsafe fn read_json_value(
+    pointer: *const thinkthen_complete_json_v1,
+    context: &mut Context,
+) -> Result<Value, CarrierError> {
+    // SAFETY: the caller retains its aligned node and all counted children.
+    let input = unsafe { borrow(pointer)? };
+    context.enter(|context| {
+        // SAFETY: only the validated tag selects a payload; each extent is checked.
+        unsafe {
+            match input.kind {
+                THINKTHEN_COMPLETE_JSON_NULL_V1 => Value::literal("null"),
+                THINKTHEN_COMPLETE_JSON_BOOLEAN_V1 => {
+                    Ok(Value::Boolean(match input.data.boolean {
+                        0 => false,
+                        1 => true,
+                        _ => return Err(CarrierError::Invalid),
+                    }))
+                }
+                THINKTHEN_COMPLETE_JSON_NUMBER_V1 => {
+                    let number = context.text(input.data.number)?;
+                    if !matches!(number.as_bytes().first(), Some(b'-' | b'0'..=b'9')) {
+                        return Err(CarrierError::Invalid);
+                    }
+                    Value::literal(&number)
+                }
+                THINKTHEN_COMPLETE_JSON_STRING_V1 => {
+                    Ok(Value::Text(context.text(input.data.string)?))
+                }
+                THINKTHEN_COMPLETE_JSON_ARRAY_V1 => {
+                    let input = input.data.array;
+                    let mut values = Vec::new();
+                    for item in extent(input.data, input.len)? {
+                        values.push(read_json_value(*item, context)?);
+                    }
+                    Ok(Value::Array(values))
+                }
+                THINKTHEN_COMPLETE_JSON_OBJECT_V1 => {
+                    let input = input.data.object;
+                    let mut values = Vec::new();
+                    for item in extent(input.data, input.len)? {
+                        values.push((
+                            context.text(item.name)?,
+                            read_json_value(item.value, context)?,
+                        ));
+                    }
+                    Ok(Value::Object(values))
+                }
+                _ => Err(CarrierError::Invalid),
+            }
+        }
+    })
 }
 pub(super) unsafe fn read_thinkthen_request_engine_settings_v1(
     pointer: *const thinkthen_request_engine_settings_v1,
@@ -4511,7 +4568,16 @@ pub(super) unsafe fn read_thinkthen_request_json_value_v1(
     let input = unsafe { borrow(pointer)? };
     context.enter(|context| {
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe { Value::literal(&context.text(input.text)?) }
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
     })
 }
 pub(super) unsafe fn read_thinkthen_request_boolean_v1(
@@ -4616,7 +4682,16 @@ pub(super) unsafe fn read_thinkthen_request_original_json_value_v1(
     let input = unsafe { borrow(pointer)? };
     context.enter(|context| {
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe { Value::literal(&context.text(input.text)?) }
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
     })
 }
 pub(super) unsafe fn read_thinkthen_request_literal_image_jpeg_v1(
@@ -5042,7 +5117,16 @@ pub(super) unsafe fn read_thinkthen_request_input_json_value_v1(
     let input = unsafe { borrow(pointer)? };
     context.enter(|context| {
         // SAFETY: nested pointers retain the caller's live counted carrier graph.
-        unsafe { Value::literal(&context.text(input.text)?) }
+        unsafe {
+            Ok({
+                let value = read_json_value(input.value, context)?;
+                if value.json().map_err(|_| CarrierError::Invalid)?.len() > context.scalar_capacity
+                {
+                    return Err(CarrierError::Overflow);
+                }
+                value
+            })
+        }
     })
 }
 pub(super) unsafe fn read_thinkthen_request_literal_max_v1(
