@@ -1,0 +1,22 @@
+# DuckDB community build inputs
+
+The starting ticket source was `3db2de66645bf96faf8ffc9a23f85de1a64542a2`. The coordinator integrated the actual 0.2 source `a65f09ef9` into the ticket at `ce0fc75172c2e837fc6d2d67cf339aa8b2555c7a`. Corrected product build inputs begin at `9009a74ae`; its later recommendation-only commit changes no build source.
+
+The [submitted descriptor](https://github.com/imaurer/community-extensions/blob/572f90ea9bc611a8c580c0514ccdbf94809b339f/extensions/thinkthen/description.yml) pins ThinkThen `d5b1598c7efb293c1dc1e64b87298b4d5badb813`. The [failed run](https://github.com/duckdb/community-extensions/actions/runs/37386602514/attempts/2) uses community workflow merge `14b1f68c427b51cd00edbc3f25ee55ad8c7eaaac` and CI tools `3fd6109fc01555673b7c7123eba8d0d143fe8ce4` from `v1.5-variegata`. DuckDB 1.5.6 is `069cc9f9b5be802405797faecc284961b07c70ef`. The ARM job failed at the missing manifest before compilation; x86-64 was cancelled. Neither result establishes a passing Linux build.
+
+The pinned [distribution workflow](https://github.com/duckdb/extension-ci-tools/blob/3fd6109fc01555673b7c7123eba8d0d143fe8ce4/.github/workflows/_extension_distribution.yml) builds the supplied Dockerfiles with vcpkg `84bab45d415d22042bd0b9081aea57f362da3f35`. Linux uses manylinux_2_28, CMake 4.0.2 and `/vcpkg/scripts/buildsystems/vcpkg.cmake`. Make sets `VCPKG_BUILD=1` and `VCPKG_MANIFEST_DIR` to the extension root. Preparation, release and SQL tests run in separate containers as `make configure_ci`, `make release` and `make test_release`. The Rust preparation installs the repository's exact 1.95.0 toolchain; the failed log confirms rustc `59807616e` from 2026-04-14.
+
+| Platform | Community runner | vcpkg target triplet | Local evidence host |
+| --- | --- | --- | --- |
+| linux_amd64 | ubuntu-24.04 | x64-linux-release | Native Linux x86-64 container |
+| linux_arm64 | ubuntu-24.04-arm | arm64-linux-release | Native ARM64 Linux Docker on Apple Silicon |
+| osx_arm64 | macos-15 | arm64-osx-release | Available Apple Silicon Mac, macOS 26; this differs from the community runner |
+| osx_amd64 | macos-15 | x64-osx-release | Cross compilation on the same Mac if its prerequisites allow it |
+
+The root manifest copies [DuckDB's actual extension-template manifest at a733bb150523d49b88ce882302b413d79c71c9b8](https://github.com/duckdb/extension-template/blob/a733bb150523d49b88ce882302b413d79c71c9b8/vcpkg.json). It includes OpenSSL and the CI tools' port/triplet overlays. A byte comparison and JSON parse pass. Template dependence is explicit; an empty substitute manifest would reproduce different inputs.
+
+The inspected current [next-version workflow](https://github.com/duckdb/community-extensions/blob/f1616cb0fff91ab9ad9753e090121513aaee35fa/.github/workflows/build_next.yml) selects `v2.0-cyanoptera`, CI tools `main` and requires `repo.ref_next`. The inspected DuckDB branch head is `d4355d01c59362d57036ad377735dd5340276a5b`; the CI tools main head is `a68570fde10384547868301a12327d5c67909527`. These moving branches must be pinned to those inspected revisions for local reproduction. The [psql descriptor](https://github.com/duckdb/community-extensions/blob/f1616cb0fff91ab9ad9753e090121513aaee35fa/extensions/psql/description.yml) demonstrates separate `ref` and `ref_next` fields. The final descriptor must name the reviewed 0.2 candidate in both fields, unless actual host API differences require separate source commits.
+
+The pinned community `build.yml` disables `doc_test` with `if: false`. That skip is independent of the Linux failure. Local execution of the descriptor's hello_world query must therefore be reported as local example proof. The disabled [documentation workflow](https://github.com/duckdb/community-extensions/blob/14b1f68c427b51cd00edbc3f25ee55ad8c7eaaac/.github/workflows/generate_docs.yml) installs the built extension into stock DuckDB 1.5.6 before running the generator; that generator also downloads public statistics and loads httpfs. Example success alone does not establish the whole generator's success.
+
+Retained input files and gate logs belong to this ticket's ignored `target/0577-ci` folder. Each long job has an owner, a child PID, a complete log and an atomic exit file. A gate result is read only after that gate exits. Local build commands cap jobs at two, clear `RUSTC_WRAPPER`, and keep path remapping; runtime checks release the shared compiler lock. No workflow was dispatched and no community PR/fork was changed.
