@@ -192,8 +192,9 @@ pub(super) fn key_echo(text: &str, key: &Key) -> bool {
 
 fn encoded_key(word: &str, key: &Key) -> bool {
     let bytes = key.as_str().as_bytes();
+    // A malformed escape makes the token ambiguous; keep the entire prose private.
     if percent_decoded(word)
-        .is_some_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+        .is_none_or(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
     {
         return true;
     }
