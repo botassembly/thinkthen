@@ -78,9 +78,9 @@ def generated_sources(root, target, request, result):
                 pending.extend(generator.references(source))
                 pending.extend(child for child, _ in source.get('variants', []))
         outputs['Inputs.java'] = template.inputs(selected)
-        languages = importlib.import_module('jvm_languages')
-        outputs['Results.kt'] = languages.render(results, 'kotlin')
-        outputs['Results.scala'] = languages.render(results, 'scala')
+        usage = importlib.import_module('jvm_usage')
+        outputs.update({filename: '\n'.join(lines) + '\n'
+                        for filename, lines in usage.outputs(root).items()})
     elif target == 'zig':
         outputs['plan_generated.zig'] = template.render(graph(result, ('completeplan',)))
         outputs['request_generated.zig'] = template.render(inputs)

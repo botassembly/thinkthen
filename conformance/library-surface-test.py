@@ -232,6 +232,35 @@ class PublicSurface(unittest.TestCase):
                                             'record BatchInteger(BigInteger value, java.util.Map<String, java.util.List<Results.BatchInteger>>[] surprise)'))
             self.assertIn('unlisted generated declaration: Results.java:BatchInteger.surprise', extra)
             self.assertNotIn('missing generated declaration: Results.java:BatchInteger.value', baseline)
+            self.assertEqual(baseline, [])
+            invoke(original)
+            for filename, container, facade in [('thinkthen/NamedCalls.java', 'Engine', ''),
+                                                   ('kotlin/KotlinNamedCalls.kt', 'KotlinEngine', ' (kotlin)'),
+                                                   ('scala/ScalaNamedCalls.scala', 'ScalaEngine', ' (scala)')]:
+                base = root / 'libraries/jvm/session' / filename
+                source = base.read_text()
+                base.write_text(source.replace('decide(', 'surprise('))
+                self.assertIn('missing function: decide' + facade, invoke(original))
+                base.write_text(source)
+            engine = root / 'libraries/jvm/session/thinkthen/Engine.java'
+            source = engine.read_text()
+            engine.write_text(source.replace('extends NamedCalls', 'extends AbsentCalls'))
+            self.assertIn('missing function: decide', invoke(original))
+            engine.write_text(source)
+            unrelated = root / 'libraries/jvm/session/thinkthen/Unrelated.java'
+            unrelated.write_text('public class Unrelated { public void execute() {} }')
+            self.assertIn('unlisted public call/export: Unrelated.execute', invoke(original))
+            unrelated.unlink()
+            inputs = root / 'libraries/jvm/session/thinkthen/Inputs.java'
+            source = inputs.read_text()
+            inputs.write_text(source.replace(' context(', ' surpriseOption(').replace(' backend(', ' surpriseSetting('))
+            errors = invoke(original)
+            self.assertTrue(any(error.startswith('missing option: context') for error in errors))
+            self.assertTrue(any(error.startswith('missing setting: backend') for error in errors))
+            inputs.write_text(source)
+            private = root / 'libraries/jvm/session/thinkthen/Json.java'
+            private.write_text(private.read_text().replace('class Json', 'public class Json'))
+            self.assertIn('unlisted public type/export: .Json', invoke(original))
 
     def test_native_declarations_exclude_comments_and_private_fields(self):
         spec = importlib.util.spec_from_file_location('surface_cli', CHECK)

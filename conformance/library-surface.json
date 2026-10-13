@@ -719,13 +719,101 @@
         "Engine",
         "KotlinEngine",
         "ScalaEngine",
-        "OwnedSession"
+        "OwnedSession",
+        "OwnedCall",
+        "Read",
+        "SessionFailure",
+        "NativeFailure"
       ],
       "representation_owners": [
         "Presence",
         "UsageStatus",
-        "UsagePersistence"
-      ]
+        "UsagePersistence",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "lifecycle_members": {
+        "Engine": [
+          "execute",
+          "start_session"
+        ],
+        "KotlinEngine": [
+          "execute",
+          "start_session"
+        ],
+        "ScalaEngine": [
+          "execute",
+          "start_session"
+        ],
+        "OwnedCall": [
+          "packets",
+          "terminal"
+        ],
+        "OwnedSession": [
+          "next_packet",
+          "next_packet_async",
+          "wait_ready"
+        ],
+        "Read": [
+          "ended",
+          "packet"
+        ],
+        "SessionFailure": [
+          "call",
+          "failure"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      },
+      "representation_types": [
+        "KotlinEngine",
+        "ScalaEngine",
+        "Call",
+        "Read",
+        "Surface",
+        "Values",
+        "Builder",
+        "View"
+      ],
+      "representation_members": {
+        "Values": [
+          "freeze",
+          "integer",
+          "json",
+          "object",
+          "list",
+          "map"
+        ],
+        "Builder": [
+          "extension",
+          "json"
+        ],
+        "View": [
+          "json"
+        ]
+      },
+      "wrapper_members": {
+        "State": [
+          "MISSING",
+          "NULL"
+        ],
+        "Surface": [
+          "JAVA",
+          "KOTLIN",
+          "SCALA"
+        ],
+        "NativeFailure": [
+          "code",
+          "facts",
+          "kind",
+          "retryable"
+        ]
+      }
     },
     "swift": {
       "root": "libraries/swift",

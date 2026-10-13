@@ -83,6 +83,8 @@ def cstyle(source, language):
             continue
         prefix = text[max(text.rfind('\n', 0, match.start()), text.rfind('}', 0, match.start())) + 1:match.start()]
         if language in ('java', 'csharp', 'swift') and not match[0].startswith('extension') and not re.search(r'\bpublic\b', prefix):
+            if language == 'java':
+                hidden.append((start, pairs[start]))
             continue
         name = match[1]
         if language == 'go' and not name[:1].isupper():
@@ -96,6 +98,11 @@ def cstyle(source, language):
             if alias:
                 name = alias[1]
         scopes.append((start, end, name))
+        if language in ('java', 'kotlin', 'scala'):
+            header = text[match.end():start]
+            base = re.search(r'\bextends\s+(\w+)|^\s*(?:private\s+constructor\s*\([^)]*\)\s*)?:\s*(\w+)', header)
+            if base:
+                result.add(Declaration(name, next(group for group in base.groups() if group), 'inherited'))
         if language == 'java' and match[0].startswith('record'):
             header = text[match.end():start]
             opening = header.find('(')
@@ -172,7 +179,7 @@ def cstyle(source, language):
                 continue
         tail = text[match.end():match.end() + 3]
         kind = 'call' if '(' in match[0] or language in ('swift', 'objc', 'php') and 'func' in match[0] or language in ('kotlin', 'scala', 'zig') and re.search(r'\b(fun|def|fn)\b', match[0]) else 'field'
-        if kind == 'call' and name == container:
+        if kind == 'call' and (name == container or language == 'scala' and name == 'this'):
             continue
         result.add(Declaration(container, name, kind))
     # Enum constants form the public contract even without a field declaration.
@@ -370,3 +377,14 @@ def declarations(source, language):
     if language in ('r', 'ruby', 'ada', 'cobol'):
         return other(source, language)
     return cstyle(source, language)
+
+
+def public_inherited(declared):
+    result = {d for d in declared if d.kind != 'inherited'}
+    while True:
+        promoted = {Declaration(link.owner, member.name, member.kind)
+                    for link in declared if link.kind == 'inherited'
+                    for member in result if member.owner == link.name and member.kind in ('call', 'field')}
+        if promoted <= result:
+            return result
+        result.update(promoted)
