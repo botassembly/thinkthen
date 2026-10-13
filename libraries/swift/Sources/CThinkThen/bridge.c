@@ -11,6 +11,7 @@ struct native_functions {
     thinkthen_engine * (*thinkthen_engine_new_with)(const char *);
     int (*thinkthen_engine_usage_persistence_v1)(const thinkthen_engine *, thinkthen_complete_usage_persistence_v1 *, thinkthen_complete_utf8_v1 *);
     int (*thinkthen_error_code)(const thinkthen_engine *);
+    const char * (*thinkthen_error_facts_json)(const thinkthen_engine *);
     const char * (*thinkthen_error_message)(const thinkthen_engine *);
     int (*thinkthen_error_retryable)(const thinkthen_engine *);
     void (*thinkthen_free_string)(char *);
@@ -18,7 +19,9 @@ struct native_functions {
     int (*thinkthen_question_parse)(const thinkthen_engine *, uint32_t, thinkthen_string_v1, thinkthen_question **);
     int (*thinkthen_request_plan_json)(const thinkthen_engine *, const char *, size_t, char **, size_t *);
     void (*thinkthen_session_cancel)(thinkthen_session *);
+    const char * (*thinkthen_session_error_facts_json)(void);
     const char * (*thinkthen_session_error_message)(void);
+    int (*thinkthen_session_error_retryable)(void);
     int (*thinkthen_session_finish)(thinkthen_session *, const char *, size_t);
     void (*thinkthen_session_free)(thinkthen_session *);
     int (*thinkthen_session_new_named_with_surface)(const thinkthen_engine *, const thinkthen_named_request_v1 *, thinkthen_complete_utf8_v1, thinkthen_session **);
@@ -63,6 +66,10 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_error_code) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_error_code, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_error_facts_json");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_error_facts_json) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_error_facts_json, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_error_message");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_error_message) == sizeof(symbol), "function pointer width");
@@ -91,10 +98,18 @@ int thinkthen_swift_load(const char *path) {
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_cancel) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_cancel, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_error_facts_json");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_error_facts_json) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_error_facts_json, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_error_message");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_error_message) == sizeof(symbol), "function pointer width");
             memcpy(&candidate.thinkthen_session_error_message, &symbol, sizeof(symbol));
+            symbol = dlsym(handle, "thinkthen_session_error_retryable");
+            if (!symbol) goto failed;
+            _Static_assert(sizeof(candidate.thinkthen_session_error_retryable) == sizeof(symbol), "function pointer width");
+            memcpy(&candidate.thinkthen_session_error_retryable, &symbol, sizeof(symbol));
             symbol = dlsym(handle, "thinkthen_session_finish");
             if (!symbol) goto failed;
             _Static_assert(sizeof(candidate.thinkthen_session_finish) == sizeof(symbol), "function pointer width");
@@ -172,6 +187,10 @@ int thinkthen_error_code(const thinkthen_engine * arg0) {
     if (!native.thinkthen_error_code) abort();
     return native.thinkthen_error_code(arg0);
 }
+const char * thinkthen_error_facts_json(const thinkthen_engine * arg0) {
+    if (!native.thinkthen_error_facts_json) abort();
+    return native.thinkthen_error_facts_json(arg0);
+}
 const char * thinkthen_error_message(const thinkthen_engine * arg0) {
     if (!native.thinkthen_error_message) abort();
     return native.thinkthen_error_message(arg0);
@@ -200,9 +219,17 @@ void thinkthen_session_cancel(thinkthen_session * arg0) {
     if (!native.thinkthen_session_cancel) abort();
     native.thinkthen_session_cancel(arg0);
 }
+const char * thinkthen_session_error_facts_json(void) {
+    if (!native.thinkthen_session_error_facts_json) abort();
+    return native.thinkthen_session_error_facts_json();
+}
 const char * thinkthen_session_error_message(void) {
     if (!native.thinkthen_session_error_message) abort();
     return native.thinkthen_session_error_message();
+}
+int thinkthen_session_error_retryable(void) {
+    if (!native.thinkthen_session_error_retryable) abort();
+    return native.thinkthen_session_error_retryable();
 }
 int thinkthen_session_finish(thinkthen_session * arg0, const char * arg1, size_t arg2) {
     if (!native.thinkthen_session_finish) abort();
