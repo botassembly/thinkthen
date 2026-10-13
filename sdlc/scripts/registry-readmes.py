@@ -13,6 +13,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 REPO = Path(__file__).resolve().parents[2]
+OPENING = 'ThinkThen puts ten functions on top of any model: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Your code branches on typed answers, gets not sure instead of a guess, packs many records into few requests, and caches each question so you pay once. Tests replay saved answers with no key or network. Use Jev, OpenAI or a local model from every language and database.'
 
 
 class Refusal(ValueError):
@@ -76,6 +77,8 @@ def check_readme(family, data, root=REPO):
     expected = source(family, root).read_bytes()
     if data != expected:
         raise Refusal('readme-source-mismatch: ' + family)
+    if not data.decode().startswith('# ') or data.decode().split('\n\n')[1:2] != [OPENING]:
+        raise Refusal('shared-opening: ' + family)
 
 
 def members(data, zipped=False):

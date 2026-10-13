@@ -1,10 +1,8 @@
 # ThinkThen for DuckDB
 
-ThinkThen answers questions about text in SQL. Use it to find messages that ask for a refund, label support requests or score answers against a rubric. Functions return SQL values such as booleans, labels and numbers.
+ThinkThen puts ten functions on top of any model: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Your code branches on typed answers, gets not sure instead of a guess, packs many records into few requests, and caches each question so you pay once. Tests replay saved answers with no key or network. Use Jev, OpenAI or a local model from every language and database.
 
-ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
-
-Install from the DuckDB community repository:
+Install from the DuckDB community repository for DuckDB 1.5.6 and 2.0:
 
 ```sql
 INSTALL thinkthen FROM community;

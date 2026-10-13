@@ -21,8 +21,8 @@ docs:
     -- Preview one request without a key or a model call.
     SELECT (thinkthen_plan('Does the writer ask for a refund?', '{"7":"Please refund my order."}', '{}')).records;
   extended_description: |
-    ThinkThen answers questions about text in SQL. Use it to find messages that ask for a refund, label support requests or score answers against a rubric.
+    ThinkThen puts ten functions on top of any model: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Your code branches on typed answers, gets not sure instead of a guess, packs many records into few requests, and caches each question so you pay once. Tests replay saved answers with no key or network. Use Jev, OpenAI or a local model from every language and database.
 
-    The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use on your own machine.
+    The extension is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
-    The example previews one request and makes no model call. To judge text, select a backend and model first. A hosted call sends the question and text to that backend. See https://thinkthen.dev/install/backends/ for setup and https://github.com/botassembly/thinkthen/tree/main/databases/duckdb for the SQL reference.
+    This submission targets DuckDB 1.5.6 and 2.0. See https://thinkthen.dev/install/duckdb/ for installation and SQL examples.

@@ -1,6 +1,6 @@
 # ThinkThen for SQLite
 
-ThinkThen answers typed questions about text inside SQL. Ask whether a message requests a refund, label records, or score answers. ThinkThen gives code typed answers to branch on, caches each question so you pay once, and replays recorded answers offline for tests. Backends include Jev, SystemOne, OpenAI and local models.
+ThinkThen puts ten functions on top of any model: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Your code branches on typed answers, gets not sure instead of a guess, packs many records into few requests, and caches each question so you pay once. Tests replay saved answers with no key or network. Use Jev, OpenAI or a local model from every language and database.
 
 Download and unpack the release archive for your platform. Enable extension loading in your SQLite host and load the shared library:
 
