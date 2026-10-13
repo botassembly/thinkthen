@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.2
 
+Depends on: 0574
+
 ## Outcome
 
 Each package registry page that ships with 0.2 shows a short README written for a stranger: what ThinkThen is, one example in that language, what it costs, and how to install it. No registry page names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version. A release check fails the release if one does.
@@ -30,3 +32,5 @@ Each package registry page that ships with 0.2 shows a short README written for 
 ## Progress
 
 PM amendment, 2026-10-13. Review of the drafts at 53f10e414 before they go to marketing. Revise every public README this way. Capitalize the language name in each title, as in "ThinkThen for Python". Delete "Failed calls remain separate from answers." Say in one sentence why a developer would use ThinkThen over calling a model directly: answers code can branch on, each question paid once through the cache, and offline replay for tests. Name Jev, SystemOne, OpenAI and local models as backends, per Ian's 2026-10-13 search ruling. Replace "Configure a model backend" with the one line that sets the key, such as `export THINKTHEN_API_KEY=...`. Show one typed answer read in each example, never `results[0]`. Keep each page under 40 lines.
+
+PM amendment, 2026-10-13, from the marketing lead. This replaces the 457bba8fa wording rules. (1) Every public package README, the one DuckDB README page, the DuckDB descriptor's `extended_description` and the PR description open with the reviewed pitch from the docs team's README on `docs/0.2-refresh`: the ten functions, then why not call the model yourself: typed answers code branches on, not sure instead of a guess, many records packed into few requests, the cache, and any model (Jev, OpenAI or a local model) in every language and database. Reuse one opening paragraph word for word on every page; only the install line and the example differ. Keep the free, MIT and per-token lines. Delete `sdlc/records/0577-duckdb-readme-draft.md`; one DuckDB page only. (2) Each example shows real use: at least two functions over several records, such as decide and choose over a tickets table in SQL or a list in a library, read with that library's one-line typed answer. No plan-only or single-sentence examples. Say "DuckDB 1.5.6 and 2.0", never "preview". (3) The release check replays the example on every published package page and on the DuckDB page, as the site replays its samples, and fails the release on any that does not run. This ticket therefore follows 0574. (4) Send the rewritten texts to the docs team for its fresh-reader page test. Only texts that pass go to marketing for Ian. Post and push nothing to the DuckDB PR or any registry before Ian approves the exact words.

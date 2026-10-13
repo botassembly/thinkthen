@@ -29,3 +29,5 @@ When a live backend fails, ThinkThen stops or retries correctly and tells the us
 - Defers: nothing.
 
 ## Progress
+
+PM amendment, 2026-10-13. Add the marketing lead's Ollama finding. On the M5 with Ollama 0.40.3, a plain `--url` to Ollama with no named backend fails `backends check` with three status 400 errors, because Ollama still refuses description objects, and the message says to "check --model and the request size". A status 400 shows the provider's own message. When the address looks like Ollama, the message also suggests `--backend ollama`. Drop the advice about `--model` and request size unless the provider's message points there. Keep the ollama built-in's text workaround.
