@@ -15,7 +15,7 @@ pub const Question = struct {
         defer engine.allocator.free(json);
         var raw: ?*c.thinkthen_question = null;
         const code = c.thinkthen_question_parse(@as(*c.thinkthen_engine, @ptrCast(engine.handle)), @intFromEnum(role), .{ .data = json.ptr, .len = json.len }, &raw);
-        if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, @as(*c.thinkthen_engine, @ptrCast(engine.handle)), code) };
+        if (code != c.THINKTHEN_OK) return .{ .failed = try tt.capture(engine.allocator, engine, code) };
         return .{ .ok = .{ .handle = raw orelse return error.Defect } };
     }
     pub fn name(self: Question) !?[]const u8 {

@@ -2,6 +2,8 @@ const std = @import("std");
 const tt = @import("thinkthen");
 comptime {
     if (@hasDecl(tt, "c") or @hasDecl(tt.results, "readSessionPacket")) @compileError("native readers must stay private");
+    const capture_engine = @typeInfo(@TypeOf(tt.capture)).@"fn".params[1].type.?;
+    if (capture_engine != ?*tt.Engine) @compileError("capture must accept the Zig engine: " ++ @typeName(capture_engine));
     for (std.meta.declarations(tt.inputs)) |declaration| {
         const value = @field(tt.inputs, declaration.name);
         if (@TypeOf(value) == type) _ = @sizeOf(value);

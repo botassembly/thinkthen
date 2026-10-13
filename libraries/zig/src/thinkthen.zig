@@ -80,8 +80,8 @@ pub const Engine = struct {
     }
 };
 
-pub fn capture(allocator: std.mem.Allocator, engine: ?*c.thinkthen_engine, code: c_int) !Failure {
-    const raw = c.thinkthen_error_view(engine);
+pub fn capture(allocator: std.mem.Allocator, engine: ?*Engine, code: c_int) !Failure {
+    const raw = c.thinkthen_error_view(if (engine) |value| @ptrCast(value.handle) else null);
     if (raw == null) return error.Defect;
     const view = raw[0];
     var arena = std.heap.ArenaAllocator.init(allocator);
