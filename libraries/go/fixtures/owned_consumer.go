@@ -83,7 +83,7 @@ func feedChecks(client *tt.Client) {
 }
 
 func collectionAnswerChecks() {
-	var terminal tt.OwnedSessionPacket
+	var terminal tt.OwnedSessionPacketTerminal
 	require(json.Unmarshal([]byte(`{"kind":"terminal"}`), &terminal) == nil, "decode collection terminal")
 	for _, test := range []struct {
 		function string
