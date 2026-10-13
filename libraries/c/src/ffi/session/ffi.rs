@@ -5,7 +5,8 @@
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
 use crate::EngineHandle;
-use crate::session::{SessionHandle, SessionResultHandle, errors};
+use crate::failures;
+use crate::session::{SessionHandle, SessionResultHandle};
 use std::ffi::c_char;
 use thinkthen::{
     ErrorKind, Request, RequestReaderFailure, RequestSessionPushStatus, RequestSessionRead, Surface,
@@ -60,7 +61,7 @@ pub unsafe extern "C" fn thinkthen_session_wait(
     timeout_ms: u32,
     out_ready: *mut u32,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         required(out_ready)?;
         use thinkthen::{RequestSessionReady as Ready, RequestSessionWaitInterest as Interest};
         let interest = match interest {
@@ -210,11 +211,11 @@ unsafe fn named_text<'a>(
     unsafe { super::text(view.data.cast(), view.len) }.map_err(|_| ErrorKind::Usage)
 }
 
-fn decode_failure(error: thinkthen::Error) -> errors::Failure {
+fn decode_failure(error: thinkthen::Error) -> failures::Failure {
     if error.request_decode_cause() == Some(thinkthen::RequestDecodeCause::Malformed) {
-        errors::Failure::Kind(ErrorKind::Usage)
+        ErrorKind::Usage.into()
     } else {
-        errors::Failure::Native(error)
+        error.into()
     }
 }
 
@@ -238,9 +239,9 @@ unsafe fn start_session(
     engine: *const EngineHandle,
     out: *mut *mut SessionHandle,
     surface: impl FnOnce() -> Result<Surface, ErrorKind>,
-    request: impl FnOnce() -> Result<Request, errors::Failure>,
+    request: impl FnOnce() -> Result<Request, failures::Failure>,
 ) -> std::ffi::c_int {
-    errors::native_call(|| {
+    failures::session_native_call(|| {
         required(out)?;
         let surface = surface()?;
         // SAFETY: the caller keeps its engine live until this call returns.
@@ -249,7 +250,7 @@ unsafe fn start_session(
             .0
             .engine
             .request_session_with_surface(request()?, surface)
-            .map_err(errors::Failure::Native)?;
+            .map_err(failures::Failure::from)?;
         let owner = Box::into_raw(Box::new(SessionHandle(session)));
         // SAFETY: required checked nonnull and the caller promises writable storage.
         unsafe {
@@ -271,7 +272,7 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
     status: *mut u32,
     out: *mut *mut SessionResultHandle,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         required(status)?;
         required(out)?;
         if status.cast::<()>() == out.cast::<()>() {
@@ -305,7 +306,7 @@ pub unsafe extern "C" fn thinkthen_session_try_read(
 /// session is NULL or live throughout the call.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_cancel(session: *mut SessionHandle) {
-    errors::guard((), || {
+    failures::session_guard((), || {
         // SAFETY: the caller provides NULL or a live owner.
         if let Some(session) = unsafe { session.as_ref() } {
             session.0.cancel();
@@ -319,7 +320,7 @@ pub unsafe extern "C" fn thinkthen_session_cancel(session: *mut SessionHandle) {
 /// session is NULL or an unfreed owner no operation is using.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_free(session: *mut SessionHandle) {
-    errors::guard((), || {
+    failures::session_guard((), || {
         if !session.is_null() {
             // SAFETY: the constructor boxed this owner and all operations returned.
             drop(unsafe { Box::from_raw(session) });
@@ -332,9 +333,9 @@ pub unsafe extern "C" fn thinkthen_session_free(session: *mut SessionHandle) {
 /// Execution failures arrive as terminal packets and never change this slot.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_session_error_message() -> *const c_char {
-    errors::guard(
+    failures::session_guard(
         c"defect: a session operation failed".as_ptr(),
-        errors::message,
+        failures::session_message,
     )
 }
 
@@ -342,7 +343,7 @@ pub extern "C" fn thinkthen_session_error_message() -> *const c_char {
 /// Returns zero before a failure. Success and engine construction preserve it.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_session_error_retryable() -> std::ffi::c_int {
-    errors::guard(0, errors::retryable)
+    failures::session_guard(0, failures::session_retryable)
 }
 
 /// Borrow the native facts JSON of the last immediate session failure, or NULL.
@@ -350,7 +351,7 @@ pub extern "C" fn thinkthen_session_error_retryable() -> std::ffi::c_int {
 /// or thread exit. Success and engine construction preserve the same pointer.
 #[unsafe(no_mangle)]
 pub extern "C" fn thinkthen_session_error_facts_json() -> *const c_char {
-    errors::guard(std::ptr::null(), errors::facts)
+    failures::session_guard(std::ptr::null(), failures::session_facts)
 }
 
 /// Release an independent packet owner. NULL is ignored.
@@ -358,7 +359,7 @@ pub extern "C" fn thinkthen_session_error_facts_json() -> *const c_char {
 /// result is NULL or an unfreed owner no operation or borrowed view is using.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn thinkthen_session_result_free(result: *mut SessionResultHandle) {
-    errors::guard((), || {
+    failures::session_guard((), || {
         if !result.is_null() {
             // SAFETY: try_read boxed this owner and all borrowers finished.
             drop(unsafe { Box::from_raw(result) });
@@ -380,7 +381,7 @@ pub unsafe extern "C" fn thinkthen_session_try_push(
     descriptor_len: usize,
     status: *mut u32,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         required(status)?;
         // SAFETY: the caller keeps its owner live and supplies readable bytes.
         let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
@@ -415,7 +416,7 @@ pub unsafe extern "C" fn thinkthen_session_finish(
     failure_json: *const c_char,
     failure_len: usize,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         // SAFETY: the caller keeps the owner live during the call.
         let session = unsafe { session.as_ref() }.ok_or(ErrorKind::Usage)?;
         let failure = if failure_json.is_null() && failure_len == 0 {
@@ -443,7 +444,7 @@ pub unsafe extern "C" fn thinkthen_session_result_json(
     out: *mut *const c_char,
     out_len: *mut usize,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         required(out)?;
         required(out_len)?;
         if out.cast::<()>() == out_len.cast::<()>() {
@@ -473,7 +474,7 @@ pub unsafe extern "C" fn thinkthen_session_result_view(
     result: *const SessionResultHandle,
     out: *mut *const crate::session::views_generated::thinkthen_complete_session_packet_v1,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         required(out)?;
         // SAFETY: the caller keeps the independent result owner live.
         let result = unsafe { result.as_ref() }.ok_or(ErrorKind::Usage)?;
@@ -542,7 +543,7 @@ unsafe fn usage_status(
 ) -> std::ffi::c_int {
     use crate::session::views_generated as view;
     use thinkthen::UsagePersistence;
-    errors::call(|| {
+    failures::session_call(|| {
         required(out_state)?;
         required(out_advice)?;
         if out_state.cast::<()>() == out_advice.cast::<()>() {

@@ -1,5 +1,4 @@
 //! Owned native sessions and packets have no foreign or engine-table borrows.
-pub(crate) mod errors;
 pub mod views;
 pub mod views_generated;
 use std::ffi::{CString, c_char};

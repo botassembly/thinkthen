@@ -80,6 +80,20 @@ impl Failure {
     }
 }
 
+impl From<ErrorKind> for Failure {
+    fn from(kind: ErrorKind) -> Self {
+        let message = match kind {
+            ErrorKind::Usage => "invalid session arguments or input",
+            ErrorKind::Backend => "session backend refused the operation",
+            ErrorKind::Deadline => "session deadline expired",
+            ErrorKind::Local => "session local operation failed",
+            ErrorKind::Cancelled => "session operation cancelled",
+            ErrorKind::Defect => "defect: a session operation failed",
+        };
+        thinkthen::Error::new(kind, message).into()
+    }
+}
+
 impl From<thinkthen::Error> for Failure {
     fn from(error: thinkthen::Error) -> Self {
         Self {
@@ -166,6 +180,8 @@ thread_local! {
     /// The calling thread's last failed `thinkthen_engine_new`, which the
     /// error functions report for a null engine. A built engine clears it.
     static UNBUILT: RefCell<Option<Last>> = const { RefCell::new(None) };
+    /// Immediate session failures remain independent from constructors and engines.
+    static SESSION: RefCell<Option<Last>> = const { RefCell::new(None) };
 }
 
 /// Build an engine and keep it, or record why none came for the calling
@@ -248,7 +264,7 @@ pub(crate) fn code(held: Option<&Held>) -> i32 {
 
 /// Whether the last failure could pass later; 0 when none is held.
 pub(crate) fn retryable(held: Option<&Held>) -> i32 {
-    last(held, |last| i32::from(last.retryable)).unwrap_or(0)
+    last(held, Last::retryable).unwrap_or(0)
 }
 
 /// The last message. The pointer stays valid until the calling thread
@@ -256,7 +272,7 @@ pub(crate) fn retryable(held: Option<&Held>) -> i32 {
 /// thread exits. With a null engine, its distinct slot lasts until the
 /// next constructor call on this thread or thread exit.
 pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
-    last(held, |last| last.message.as_ptr()).unwrap_or_else(|| {
+    last(held, Last::message).unwrap_or_else(|| {
         if held.is_some() {
             c"no failure yet"
         } else {
@@ -268,9 +284,7 @@ pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
 
 /// Borrow the calling thread's last started-failure facts, if present.
 pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
-    last(held, |last| last.facts.as_ref().map(|facts| facts.as_ptr()))
-        .flatten()
-        .unwrap_or(std::ptr::null())
+    last(held, Last::facts).unwrap_or(std::ptr::null())
 }
 
 /// Run one interface body so no panic unwinds into the host. A panic records the
@@ -279,12 +293,76 @@ pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
 /// `try_with`, so a call after thread-local teardown, such as a free from
 /// an `atexit` handler, exits clean (R2-7).
 pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> T) -> T {
-    contained(body).unwrap_or_else(|| {
+    protect(fallback, body, || {
         if let Some(held) = held {
             held.fail(Failure::defect("a panic crossed the C interface"));
         }
+    })
+}
+
+fn protect<T>(fallback: T, body: impl FnOnce() -> T, failed: impl FnOnce()) -> T {
+    contained(body).unwrap_or_else(|| {
+        failed();
         fallback
     })
+}
+
+/// Record an immediate session failure without changing either engine slot.
+fn session_fail(failure: Failure) -> i32 {
+    let code = failure.code;
+    let _ = SESSION.try_with(|slot| {
+        if let Ok(mut slot) = slot.try_borrow_mut() {
+            *slot = Some(Last::of(failure));
+        }
+    });
+    code
+}
+
+/// Run a session operation with fixed diagnostics for its error kind.
+pub(crate) fn session_call(body: impl FnOnce() -> Result<(), ErrorKind>) -> i32 {
+    session_native_call(|| body().map_err(Failure::from))
+}
+
+/// Run a session operation with its owned native diagnostics.
+pub(crate) fn session_native_call(body: impl FnOnce() -> Result<(), Failure>) -> i32 {
+    session_guard(DEFECT, || match body() {
+        Ok(()) => OK,
+        Err(failure) => session_fail(failure),
+    })
+}
+
+/// Contain a session panic and record the fixed session defect message.
+pub(crate) fn session_guard<T>(fallback: T, body: impl FnOnce() -> T) -> T {
+    protect(fallback, body, || {
+        session_fail(ErrorKind::Defect.into());
+    })
+}
+
+fn session_last<T>(fallback: T, inspect: impl Fn(&Last) -> T) -> T {
+    SESSION
+        .try_with(|slot| {
+            slot.try_borrow()
+                .ok()
+                .and_then(|held| held.as_ref().map(inspect))
+        })
+        .ok()
+        .flatten()
+        .unwrap_or(fallback)
+}
+
+/// Borrow the immediate session message until the calling thread's next failure.
+pub(crate) fn session_message() -> *const c_char {
+    session_last(c"no session failure yet".as_ptr(), Last::message)
+}
+
+/// Whether the immediate session failure could pass later.
+pub(crate) fn session_retryable() -> i32 {
+    session_last(0, Last::retryable)
+}
+
+/// Borrow the immediate session failure's count-only facts, if present.
+pub(crate) fn session_facts() -> *const c_char {
+    session_last(std::ptr::null(), Last::facts)
 }
 
 /// A message the interface hands out when no engine table holds one.
