@@ -5,6 +5,14 @@
 set -eu
 HERE=$(cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$HERE"
+# The routine owns the approved release and source preview. The archive runner
+# remains explicit while packaging moves off its older release-only inputs.
+if [ "${THINKTHEN_DUCKDB_CHECK_ARCHIVES:-}" != 1 ]; then
+	cargo fmt --all --manifest-path bridge/Cargo.toml -- --check
+	cargo clippy --locked --offline --manifest-path bridge/Cargo.toml --all-targets --all-features -- -D warnings
+	python3 tools/source_hosts.py
+	exit 0
+fi
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
