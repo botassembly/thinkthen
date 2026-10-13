@@ -271,7 +271,17 @@ fn fallible_batches_return_the_prefix_then_reader_error_with_final_counts() {
         .expect("set");
     let pulls = AtomicUsize::new(0);
     reader_failure(
-        engine.try_annotate_with(&set, failing_input(&pulls), options),
+        crate::api::annotation_rows(
+            crate::api::rows(
+                &engine,
+                thinkthen::RequestFunction::Annotate,
+                set.clone().into(),
+                failing_input(&pulls).map(|row| row.map(crate::api::record)),
+                options,
+            )
+            .expect("annotation rows"),
+        )
+        .expect("annotations"),
         &pulls,
         |_| {},
     );

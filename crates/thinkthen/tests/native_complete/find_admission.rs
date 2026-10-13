@@ -182,6 +182,7 @@ fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
     let listener = Listener::answering(|_| Canned::ok("unused")).unwrap();
     let engine = engine(&listener);
     let ask = thinkthen::Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}"#).unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
     for complete in [false, true] {
         let entities = (0..256)
             .map(|at| thinkthen::Entity::new(&format!("person {at}"), "person").unwrap())
@@ -189,9 +190,23 @@ fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
                 panic!("relate read beyond its first excess entity")
             }));
         let error = if complete {
-            engine
-                .relate_complete_with(&ask, entities, CallOptions::new())
-                .map(|_| ())
+            crate::api::relation(
+                &engine,
+                &ask,
+                entities.map(|entity| {
+                    Ok(reading
+                        .compose(
+                            thinkthen::RawRecord::json(
+                                &serde_json::json!({"name":entity.name(),"kind":entity.kind()})
+                                    .to_string(),
+                            )
+                            .unwrap(),
+                        )
+                        .unwrap())
+                }),
+                CallOptions::new(),
+            )
+            .map(|_| ())
         } else {
             engine
                 .relate_with(&ask, entities, CallOptions::new())

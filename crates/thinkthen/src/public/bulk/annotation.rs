@@ -245,21 +245,6 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        self.try_annotate_with(questions, records.into_iter().map(Ok), options)
-    }
-
-    /// Fallible input for [`Engine::annotate_with`], preserving input order.
-    /// A reader failure ends the batch after its earlier admitted rows.
-    pub fn try_annotate_with<'a, I, T>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, AnnotatedRecord<T>>
-    where
-        I: IntoIterator<Item = Result<T, Error>> + 'a,
-        T: Evidence + 'a,
-    {
         let mut options = options;
         options.legacy_annotation = true;
         Batch::of(crate::public::request::pull::annotation(
@@ -267,7 +252,7 @@ impl Engine {
             questions.clone(),
             records
                 .into_iter()
-                .map(|row| row.map(crate::public::record_input::plain)),
+                .map(|row| Ok(crate::public::record_input::plain(row))),
             options,
             |original, _, result| AnnotatedRecord::complete(original, result).map(Some),
         ))

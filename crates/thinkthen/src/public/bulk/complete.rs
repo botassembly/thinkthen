@@ -50,30 +50,12 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
-        self.try_rank_with(question, records.into_iter().map(Ok), options)
-    }
-
-    /// Fallible complete-set input for [`Engine::rank_with`].
-    ///
-    /// # Errors
-    /// Returns an input failure before sending, or the call errors of
-    /// [`Engine::rank_with`].
-    pub fn try_rank_with<I, T>(
-        &self,
-        question: &Question,
-        records: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Ranked<T>>>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-        T: Evidence,
-    {
         only(question, &[Kind::Rank], "rank")?;
         self.try_rank_records_complete_with(
             question,
             records
                 .into_iter()
-                .map(|row| row.map(crate::public::record_input::plain)),
+                .map(|row| Ok(crate::public::record_input::plain(row))),
             options,
         )?
         .try_map(|rows| {
@@ -122,27 +104,8 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
-        self.try_find_with(question, units.into_iter().map(Ok), options)
-    }
-
-    /// Fallible complete-set input for [`Engine::find_with`].
-    /// Admission stops at the first count, evidence-byte or reader failure.
-    ///
-    /// # Errors
-    /// Returns an input failure before sending, or the call errors of
-    /// [`Engine::find_with`].
-    pub fn try_find_with<I, T>(
-        &self,
-        question: &Question,
-        units: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<Found<T>>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-        T: Evidence,
-    {
         Ok(self
-            .try_find_complete_with(question, units, options)?
+            .try_find_complete_with(question, units.into_iter().map(Ok), options)?
             .map(|result| result.found))
     }
 
@@ -175,17 +138,7 @@ impl Engine {
         &self,
         records: I,
     ) -> Result<std::vec::IntoIter<I::Item>, Error> {
-        self.try_within_limit(records.into_iter().map(Ok))
-    }
-
-    pub(in crate::public) fn try_within_limit<I, T>(
-        &self,
-        records: I,
-    ) -> Result<std::vec::IntoIter<T>, Error>
-    where
-        I: IntoIterator<Item = Result<T, Error>>,
-    {
-        self.try_within_admission(records, &CallOptions::new())
+        self.try_within_admission(records.into_iter().map(Ok), &CallOptions::new())
     }
 }
 

@@ -1,5 +1,5 @@
 use super::*;
-use thinkthen::{Entity, Kind, QuestionSet, Recognize, Relate, RelationRule};
+use thinkthen::{Kind, QuestionSet, Recognize, Relate, RelationRule};
 
 #[test]
 fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original() {
@@ -113,47 +113,59 @@ fn complete_relations_keep_full_answers_rejections_failures_and_empty_metadata()
         .unwrap()
         .build()
         .unwrap();
-    let result = engine
-        .relate_complete_with(
-            &ask,
-            [
-                Entity::new("Ada", "person").unwrap(),
-                Entity::new("Grace", "person").unwrap(),
-            ],
-            CallOptions::new().context("Separate.").attempts(true),
-        )
-        .unwrap();
+    let reading = thinkthen::RecordReading::new(&[], None, None).unwrap();
+    let result = crate::api::relation(
+        &engine,
+        &ask,
+        [
+            r#"{"name":"Ada","kind":"person"}"#,
+            r#"{"name":"Grace","kind":"person"}"#,
+        ]
+        .map(|json| {
+            Ok(reading
+                .compose(thinkthen::RawRecord::json(json).unwrap())
+                .unwrap())
+        }),
+        CallOptions::new().context("Separate.").attempts(true),
+    )
+    .unwrap();
     schema::call(&result, "completeRelation");
-    assert_eq!(result.value().value().len(), 1);
-    let members = result.value().members().collect::<Vec<_>>();
-    relation_reading(result.value());
+    let related = crate::api::related(&result).unwrap().result();
+    assert_eq!(related.value().len(), 1);
+    let members = related.members().collect::<Vec<_>>();
+    relation_reading(related);
     assert_eq!(members[0].probability(), Some(0.9));
     assert!(members[0].probabilities().is_some());
     assert!(members[0].answer_id().is_some());
     assert!(members[1].failure_id().is_some());
     assert_eq!(members[1].probabilities(), None);
-    let document: Value = serde_json::from_str(&result.value().to_json().unwrap()).unwrap();
+    let document: Value = serde_json::from_str(&related.to_json().unwrap()).unwrap();
     assert_eq!(
         document["answer"]["questions"][0]["answer"]["probability"],
         0.9
     );
     assert_eq!(document["meta"]["failed_questions"], 1);
-    relation_member_documents(result.value(), &document);
+    relation_member_documents(related, &document);
     let body: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
     assert_eq!(body["state"]["context"], "Separate.");
     assert!(body["state"]["evidence"].is_object());
-    let empty = engine
-        .relate_complete_with(&ask, [], CallOptions::new().attempts(true))
-        .unwrap();
+    let empty = crate::api::relation(
+        &engine,
+        &ask,
+        crate::api::plain_records(std::iter::empty::<thinkthen::RecordEvidence>()),
+        CallOptions::new().attempts(true),
+    )
+    .unwrap();
     schema::call(&empty, "completeRelation");
-    let document: Value = serde_json::from_str(&empty.value().to_json().unwrap()).unwrap();
+    let related = crate::api::related(&empty).unwrap().result();
+    let document: Value = serde_json::from_str(&related.to_json().unwrap()).unwrap();
     assert_eq!(document["meta"]["origin"], Value::Null);
     assert_eq!(document["meta"]["cached"], false);
     assert_eq!(document["meta"]["observations"], json!([]));
     assert_eq!(document["meta"]["attempts"], json!([]));
     assert!(document["meta"].get("answered_by").is_none());
     assert!(empty.facts().model().is_none());
-    empty_metadata(empty.value().meta());
+    empty_metadata(related.meta());
     assert_eq!(listener.count(), 1);
 }
 

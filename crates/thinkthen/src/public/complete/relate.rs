@@ -10,23 +10,6 @@ use std::sync::Arc;
 mod records;
 
 impl Engine {
-    /// Relate one whole set, retaining rejected and failed logical members.
-    /// # Errors
-    /// Invalid entities refuse before sending; all-failed calls and transport stops return final facts.
-    pub fn relate_complete_with<I>(
-        &self,
-        ask: &Relate,
-        entities: I,
-        options: CallOptions<'_>,
-    ) -> Result<Call<CompleteRelated>, Error>
-    where
-        I: IntoIterator<Item = Entity>,
-    {
-        self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
-            engine.relate_admitted_complete(ask, entities, options, (false, false), &[])
-        })
-    }
-
     pub(crate) fn relate_strict_with<I: IntoIterator<Item = Entity>>(
         &self,
         ask: &Relate,
