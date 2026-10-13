@@ -13,6 +13,7 @@ pub(super) fn decorate(
     key: &Key,
     api: ApiType,
     plain: bool,
+    request: &[u8],
 ) -> Error {
     let parsed = body
         .and_then(|bytes| std::str::from_utf8(bytes).ok())
@@ -56,6 +57,7 @@ pub(super) fn decorate(
                 .flatten()
                 .and_then(|bytes| std::str::from_utf8(bytes).ok())
         })
+        .filter(|text| !request_echo(text, request))
         .and_then(|text| safe_message(text, key));
     if !quota && message.is_none() {
         return error;
@@ -115,6 +117,14 @@ fn opaque_token(word: &str) -> bool {
         && word
             .bytes()
             .all(|byte| byte.is_ascii_alphanumeric() || b"_-/+=".contains(&byte))
+}
+
+/// Apply the submitted-body collision boundary before carrying untrusted prose.
+pub(super) fn request_echo(text: &str, body: &[u8]) -> bool {
+    !text.is_empty()
+        && (body.windows(text.len()).any(|part| part == text.as_bytes())
+            || serde_json::to_vec(text)
+                .is_ok_and(|literal| body.windows(literal.len()).any(|part| part == literal)))
 }
 
 pub(super) fn key_echo(text: &str, key: &Key) -> bool {

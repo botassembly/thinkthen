@@ -115,9 +115,7 @@ impl Attempts {
         }
         if attempt.unopened && !self.connection_retried {
             self.connection_retried = true;
-            return cancel
-                .wait(exchange.retry_wait.min(longest(timeout)))
-                .map_or(Ok(()), Err);
+            return cancel.passed().map_or(Ok(()), Err);
         }
         if self.statuses >= exchange.max_retries
             || !attempt.failure.retryable()

@@ -263,7 +263,14 @@ fn refused(
     } else {
         Error::Status(status)
     };
-    let failure = super::diagnostic::decorate(failure, body.as_deref(), exchange.key, api, plain);
+    let failure = super::diagnostic::decorate(
+        failure,
+        body.as_deref(),
+        exchange.key,
+        api,
+        plain,
+        exchange.body,
+    );
     Box::new(Attempt {
         failure,
         asked,
