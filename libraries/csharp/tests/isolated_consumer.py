@@ -32,13 +32,14 @@ work.mkdir()
 home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
 local=work/'feed';local.mkdir();shutil.copyfile(package,local/f'Botassembly.ThinkThen.{V}.nupkg')
 # Only consumer source and package feed are visible; compiler and original source are absent.
-if mode == 'example':
- shutil.copyfile(R/'examples/Program.cs',work/'Installed.cs')
+if mode.startswith('example'):
+ sample = 'Program.cs' if mode == 'example' else mode.removeprefix('example-').capitalize()+'.cs'
+ shutil.copyfile(R/'examples'/sample,work/'Installed.cs')
 else:
  shutil.copyfile(R/'tests/source/SessionChecks.cs',work/'SessionChecks.cs')
  shutil.copyfile(R/'tests/source/Installed.cs',work/'Installed.cs')
 shutil.copyfile(R/'tests/Installed.csproj',work/'Installed.csproj')
-barrier=work/'barrier';barrier.mkdir();server=Backend(barrier, arrivals='packed', packed_questions={'Is it?', 'Is it relevant?'}, hold_first=True)
+barrier=work/'barrier';barrier.mkdir();server=Backend(barrier, arrivals='state' if mode.startswith('example') else 'packed', packed_questions=None if mode.startswith('example') else {'Is it?', 'Is it relevant?'}, hold_first=True)
 cmd=['/usr/bin/bwrap','--unshare-all','--share-net','--die-with-parent','--dir','/usr','--dir','/usr/bin','--dir','/opt','--ro-bind',str(dotnet.parent),'/opt/dotnet','--ro-bind','/usr/lib','/usr/lib','--ro-bind','/usr/share','/usr/share','--ro-bind','/lib','/lib','--ro-bind','/lib64','/lib64','--ro-bind','/etc/passwd','/etc/passwd','--ro-bind','/etc/group','/etc/group','--proc','/proc','--dev','/dev','--tmpfs','/tmp','--bind',str(work),'/work','--chdir','/work','--','/opt/dotnet/dotnet','run','--project','/work/Installed.csproj','--configuration','Release','-p:RestoreSources=/work/feed','-p:RestoreIgnoreFailedSources=true']
 env={'PATH':'/usr/bin:/bin','HOME':'/work/home','XDG_CONFIG_HOME':'/work/home','XDG_CACHE_HOME':'/work/home','DOTNET_CLI_HOME':'/work/home','NUGET_PACKAGES':'/work/nuget','DOTNET_CLI_TELEMETRY_OPTOUT':'1','DOTNET_SKIP_FIRST_TIME_EXPERIENCE':'1','DOTNET_NOLOGO':'1','DOTNET_MULTILEVEL_LOOKUP':'0','THINKTHEN_CACHE':'/work/cache','THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1','THINKTHEN_API_KEY':'tt-canary-290'}
 if os.environ.get('LLVM_PROFILE_FILE'):
@@ -77,13 +78,41 @@ try:
   assert required <= actual and actual <= required + admitted,counted
   assert server.attempts==server.connections==len(server.arrivals),counted
   print('installed C# owned sessions, bounded Full/Closed, held cancellation, explicit drain, ownership and presence PASS',flush=True)
- elif mode=='example':
-  assert result.stdout.strip().endswith(b'True'),result.stdout
-  assert server.arrivals==['example'] and server.attempts==server.connections==1,counted
-  assert len(bodies)==1,bodies
-  expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'The text is "example". Is it?'}},'state':'Each question quotes the text it asks about.'}
-  assert json.loads(bodies[0])==expected,json.loads(bodies[0])
-  print('installed C# shipped example, normalized decision and one exact send PASS',flush=True)
+ elif mode.startswith('example'):
+  function='decide' if mode=='example' else mode.removeprefix('example-')
+  outputs={'decide':'True','choose':'first','score':'0.1','tag':'first,second','filter':'1:True',
+           'rank':'1,2','find':'0','annotate':'True','recognize':'John Smith','relate':'A -> B'}
+  sends=2 if function=='recognize' else 1
+  assert result.stdout.strip()==outputs[function].encode(),result.stdout
+  assert len(bodies)==sends and server.attempts==server.connections==sends,counted
+  assert server.user_agents==[f'thinkthen/{V} (csharp)']*sends,server.user_agents
+  parsed=[json.loads(body) for body in bodies]
+  quoted={'model':'jev-1.13.0','state':'Each question quotes the text it asks about.'}
+  question=lambda kind,instructions,**extra: dict(type=kind,instructions=instructions,**extra)
+  if function in ('decide','annotate'):
+   expected=dict(quoted,questions={'q1':question('noul','The text is "example". Is it?')})
+  elif function=='choose':
+   expected=dict(quoted,questions={'q1':question('choice','The text is "example". Which?',criteria={'first':None,'second':None})})
+  elif function=='score':
+   expected=dict(quoted,questions={'q1':question('score','The text is "example". How much?',criteria=['low','high'])})
+  elif function=='tag':
+   expected=dict(quoted,questions={f'q{i}':question('noul',f'The text is "example". Which labels?\n\nDetermine whether the label "{label}" applies to this item.') for i,label in enumerate(('first','second'),1)})
+  elif function in ('filter','rank'):
+   expected=dict(quoted,questions={f'q{i}':question('noul',f'The text is "{text}". Is it?') for i,text in enumerate(('first','second'),1)})
+  elif function=='find':
+   expected={'model':'jev-1.13.0','state':'[{"id":"u001","evidence":"first"},{"id":"u002","evidence":"second"}]',
+             'questions':{'q1':question('choice','Is it?',criteria={'u001':None,'u002':None})}}
+  elif function=='relate':
+   expected={'model':'jev-1.13.0','state':{'entities':[{'id':'i1','name':'A','kind':'person'},{'id':'i2','name':'B','kind':'person'}]},
+             'questions':{'q1':question('noul','Is it true that i1 linked i2?'),'q2':question('noul','Is it true that i2 linked i1?')}}
+  else:
+   assert server.arrivals==['John Smith','John Smith'],counted
+   assert [list(body['questions']) for body in parsed]==[['q1','q2'],['q1']],parsed
+   assert list(parsed[0]['questions']['q1']['criteria'])==['BEGIN','INSIDE','END','SINGLE','OUT'],parsed
+   assert list(parsed[1]['questions']['q1']['criteria'])==['person','none of these'],parsed
+   assert all(body['model']=='jev-1.13.0' and body['state']=='John Smith' for body in parsed),parsed
+  if function!='recognize': assert parsed==[expected],parsed
+  print(f'installed C# shipped {function} sample, exact answer and {sends} counted sends PASS',flush=True)
  elif mode=='portable':
   fixture=R.parents[1]/'specification/fixtures/batching'
   corpus=json.loads((fixture/'portable-records.json').read_text())

@@ -95,6 +95,9 @@ python3 "$here/tests/run_matrix.py"
 run_dir=$(mktemp -d "$here/target/logs/package-XXXXXX")
 python3 "$here/tests/isolated_consumer.py" alpha "$run_dir"
 python3 "$here/tests/isolated_consumer.py" example "$run_dir"
+for function in choose score tag filter rank find annotate recognize relate; do
+    python3 "$here/tests/isolated_consumer.py" "example-$function" "$run_dir"
+done
 python3 "$here/tests/isolated_consumer.py" sessions "$run_dir"
 for state in disabled written failed; do
     python3 "$here/tests/isolated_consumer.py" "usage-$state" "$run_dir"
