@@ -64,17 +64,14 @@ pub(super) fn archive() -> &'static Path {
 }
 
 /// Compile one C program against the archive, under AddressSanitizer, once.
-/// Three tests share `driver.c`, and a relink fails another test's launch.
+/// Session checks share one compiled caller, so compilation stays synchronized.
 pub(super) fn compile(source: &Path) -> PathBuf {
     static BUILT: Mutex<BTreeMap<PathBuf, PathBuf>> = Mutex::new(BTreeMap::new());
     let mut built = BUILT.lock().unwrap_or_else(PoisonError::into_inner);
     if let Some(binary) = built.get(source) {
         return binary.clone();
     }
-    let name = source
-        .file_stem()
-        .and_then(|stem| stem.to_str())
-        .expect("a name");
+    let name = consumer_name(source);
     let binary = root().join(format!("c-{name}"));
     let folder = archive();
     let linked = child::command("cc", &[])

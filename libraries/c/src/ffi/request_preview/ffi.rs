@@ -4,7 +4,7 @@
     reason = "the counted C interface reads and writes caller storage"
 )]
 #![deny(unsafe_op_in_unsafe_fn)]
-use crate::{EngineHandle, session::errors};
+use crate::{EngineHandle, failures};
 use std::ffi::{CString, c_char};
 use thinkthen::{ErrorKind, Request, RequestEnvironment};
 
@@ -25,7 +25,7 @@ pub(crate) unsafe extern "C" fn thinkthen_request_plan_json(
     out: *mut *mut c_char,
     out_len: *mut usize,
 ) -> std::ffi::c_int {
-    errors::call(|| {
+    failures::session_call(|| {
         if out.is_null() || out_len.is_null() || out.cast::<()>() == out_len.cast::<()>() {
             return Err(ErrorKind::Usage);
         }

@@ -8,7 +8,6 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
-typedef struct thinkthen_cancel_token thinkthen_cancel_token;
 
 /*
  C value `THINKTHEN_ANSWER_CHOICE_V1`.
@@ -930,26 +929,10 @@ typedef enum thinkthen_question_loader_role_v1 {
 } thinkthen_question_loader_role_v1;
 
 /*
- thinkthen.h is the single C header for thinkthen, version 0.2.0.
- Plain calls equal their _opts twin with THINKTHEN_NO_DEADLINE and a NULL token.
- Engines serve concurrent callers and rebuild state after a fork; free them
- only after all calls return. Free owned strings with thinkthen_free_string.
- Error messages and failure facts are borrowed; never free their pointers.
- See thinkthen_error_message for engine and NULL-engine pointer lifetimes.
- Nonzero returns leave all outputs unchanged. Eager calls have no partial
- rows. Bare typed, *_with_facts and collecting JSON forms retain their
- contracts until their remaining callers move to sessions.
- Recommended 0.2 judgments use the owned thinkthen_session_* interface and its adjacent independent session/packet contracts. Shared engine construction and cleanup also serve it.
- Reference: https://github.com/botassembly/thinkthen/blob/main/libraries/c/DESIGN.md
- DESIGN.md references below name this online reference; archives retain
- their header/library contents.
- Argument refusals send nothing. NULL engine returns EUSAGE or NULL.
- question_json/request_json/spec_json must be NUL-terminated UTF-8.
- text reads exactly text_len bytes, never a terminator. NULL requires length
- zero; empty evidence still follows the engine's blank-evidence refusal.
- texts/lengths/bulk out have count entries; NULL is allowed only at count=0.
- Decide out and recognize/relate out/out_len must be nonnull.
- A NULL _opts token means no cancellation token.
+ The current C interface owns engines, parsed questions, sessions and packet views.
+ Free each owner after its last use. Request preview returns an owned string
+ released with thinkthen_free_string. Diagnostics borrow per-thread storage.
+ Session cancellation uses thinkthen_session_cancel.
  Opaque engine owner. Free after every concurrent call finishes.
  */
 typedef struct thinkthen_engine thinkthen_engine;
@@ -968,21 +951,6 @@ typedef struct thinkthen_session thinkthen_session;
  Independent packet owner. It remains live after its session and engine are freed.
  */
 typedef struct thinkthen_session_result thinkthen_session_result;
-
-/*
- The header's `thinkthen_answer`: the outcome code, then the probability
- of yes. Two fixed fields, never a third.
- */
-typedef struct thinkthen_answer {
-  /*
-   `THINKTHEN_YES`, `THINKTHEN_NO`, or `THINKTHEN_UNSURE`.
-   */
-  int outcome;
-  /*
-   The probability the backend gave the yes side.
-   */
-  double probability;
-} thinkthen_answer;
 
 typedef struct thinkthen_complete_usage_persistence_v1 {
   uint32_t kind;
@@ -4460,200 +4428,6 @@ extern "C" {
 #endif // __cplusplus
 
 /*
- Call `thinkthen_call_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- The JSON interface with no budget and no token: exactly
- `thinkthen_call_opts` with THINKTHEN_NO_DEADLINE and a null token.
- */
-char *thinkthen_call(const struct thinkthen_engine *engine, const char *request_json);
-
-/*
- The JSON interface: one request, its answer as JSON text, or null.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- Read one NUL-terminated UTF-8 JSON request; return owned answer JSON,
- freed once with thinkthen_free_string. Envelope/result schemas: DESIGN.md.
- Asking success returns {"value":VALUE,"facts":FACTS}; usage returns direct
- counters and takes no options. NULL means failure with no partial value;
- error_code/message/retryable and error_facts_json describe that failure.
- */
-char *thinkthen_call_opts(const struct thinkthen_engine *engine,
-                          const char *request_json,
-                          int64_t deadline_ms,
-                          thinkthen_cancel_token *cancel);
-
-/*
- Fire a token from any thread; null is ignored.
-
- # Safety
-
- `token` is null or a live token.
- Fire a token: the calls carrying it start no new request or retry, let
- the requests they sent finish, and return THINKTHEN_ECANCELLED with no
- results, even when a sent request's reply arrives after the fire. A
- token is one-shot: a fire leaves it fired, a second fire is ignored,
- and no call re-arms it. Thread-safe from any thread, and it allocates
- nothing; a null token is accepted and ignored.
- */
-void thinkthen_cancel(thinkthen_cancel_token *token);
-
-/*
- Free a token; null is ignored.
-
- # Safety
-
- `token` is null or a live token no call is carrying.
- Free a token. NULL is accepted and ignored.
- */
-void thinkthen_cancel_token_free(thinkthen_cancel_token *token);
-
-/*
- Create a cancel token.
- Create a cancel token.
- */
-thinkthen_cancel_token *thinkthen_cancel_token_new(void);
-
-/*
- Call `thinkthen_decide_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- Ask one yes-or-no question of one text: exactly `thinkthen_decide_opts`
- with THINKTHEN_NO_DEADLINE and a null token. `question_json` is one
- decide question in the question-file grammar, or the bare text of a
- decide question at the cut of one half; `text` and `text_len` are the
- evidence. The judgment lands in `out` on THINKTHEN_OK.
- */
-int thinkthen_decide(const struct thinkthen_engine *engine,
-                     const char *question_json,
-                     const char *text,
-                     size_t text_len,
-                     struct thinkthen_answer *out);
-
-/*
- Call `thinkthen_decide_many_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- Bulk decide keeps judgments in input order at the engine throttle.
- Equivalent to decide_many_opts with THINKTHEN_NO_DEADLINE and a NULL token.
- texts and lengths have count pointers/byte lengths; out has count answers.
- Inputs are borrowed for the call, and failure changes no output.
- */
-int thinkthen_decide_many(const struct thinkthen_engine *engine,
-                          const char *question_json,
-                          const char *const *texts,
-                          const size_t *lengths,
-                          size_t count,
-                          struct thinkthen_answer *out);
-
-/*
- One question over every text, in input order; all rows or none.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- The same bulk call with the options beside it.
- */
-int thinkthen_decide_many_opts(const struct thinkthen_engine *engine,
-                               const char *question_json,
-                               const char *const *texts,
-                               const size_t *lengths,
-                               size_t count,
-                               int64_t deadline_ms,
-                               thinkthen_cancel_token *cancel,
-                               struct thinkthen_answer *out);
-
-/*
- Call `thinkthen_decide_many_with_facts_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- */
-int thinkthen_decide_many_with_facts(const struct thinkthen_engine *engine,
-                                     const char *question_json,
-                                     const char *const *texts,
-                                     const size_t *lengths,
-                                     size_t count,
-                                     struct thinkthen_answer *out,
-                                     char **facts_json,
-                                     size_t *facts_len);
-
-/*
- Decide in input order and return final owned batch facts.
-
- # Safety
- Pointers and output storage obey the C header's rules.
- */
-int thinkthen_decide_many_with_facts_opts(const struct thinkthen_engine *engine,
-                                          const char *question_json,
-                                          const char *const *texts,
-                                          const size_t *lengths,
-                                          size_t count,
-                                          int64_t deadline_ms,
-                                          thinkthen_cancel_token *cancel,
-                                          struct thinkthen_answer *out,
-                                          char **facts_json,
-                                          size_t *facts_len);
-
-/*
- One yes-or-no question over one text; the judgment lands in `out`.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- The same call with the options beside it: `deadline_ms` is the budget
- and `cancel` is the token, documented on THINKTHEN_NO_DEADLINE.
- */
-int thinkthen_decide_opts(const struct thinkthen_engine *engine,
-                          const char *question_json,
-                          const char *text,
-                          size_t text_len,
-                          int64_t deadline_ms,
-                          thinkthen_cancel_token *cancel,
-                          struct thinkthen_answer *out);
-
-/*
- Call `thinkthen_decide_with_facts_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- Compatibility typed forms: each successful call owns final facts JSON beside
- its result. The facts object contains records, requests_sent, cache_answers,
- seconds, and optional input_tokens, output_tokens, and model. Free each
- returned JSON string with thinkthen_free_string. The original decide, decide_many, recognize and relate
- forms remain ABI-compatible bare-result forms; they do not return facts.
- A nonzero code changes no output slot. A started failure's facts remain
- available from thinkthen_error_facts_json under its borrowed lifetime.
- All output slots must be nonnull (except the zero-count answer array) and
- must not share an address. Counts times pointer, size_t, and answer sizes,
- and every text length, must fit PTRDIFF_MAX. The caller supplies live,
- aligned, adequately sized, nonoverlapping input and output storage.
- */
-int thinkthen_decide_with_facts(const struct thinkthen_engine *engine,
-                                const char *question_json,
-                                const char *evidence,
-                                size_t evidence_len,
-                                struct thinkthen_answer *out,
-                                char **facts_json,
-                                size_t *facts_len);
-
-/*
- Decide and return an owned facts JSON string.
-
- # Safety
- Pointers and output storage obey the C header's rules.
- */
-int thinkthen_decide_with_facts_opts(const struct thinkthen_engine *engine,
-                                     const char *question_json,
-                                     const char *evidence,
-                                     size_t evidence_len,
-                                     int64_t deadline_ms,
-                                     thinkthen_cancel_token *cancel,
-                                     struct thinkthen_answer *out,
-                                     char **facts_json,
-                                     size_t *facts_len);
-
-/*
  Finish this engine's current usage deltas and observe their persistence.
  Only usage-lock acquisition has a deadline; other filesystem work can take
  longer. Written covers current deltas only, not future calls or other engines.
@@ -4779,28 +4553,9 @@ int thinkthen_error_retryable(const struct thinkthen_engine *engine);
  # Safety
 
  `text` is null or a string the interface returned and has not freed.
- Free a string `thinkthen_call`, `thinkthen_recognize`, or
- `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted
- and ignored.
+ Free the owned JSON returned by thinkthen_request_plan_json. NULL is accepted.
  */
 void thinkthen_free_string(char *text);
-
-/*
- Preview one `thinkthen.plan-input/1` object as `plan` JSON text.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- Preview a closed thinkthen.plan-input/1 object without key/cache reads
- or sends. Grammar and plan fields: DESIGN.md. Success owns NUL-terminated
- plan JSON in out and its byte length; free once with thinkthen_free_string.
- Unknown/repeated fields, bad verb/input/settings, conflicting question
- settings or NULL pointers return EUSAGE with both outputs unchanged.
- */
-int thinkthen_plan_json(const struct thinkthen_engine *engine,
-                        const char *plan_json,
-                        char **out,
-                        size_t *out_len);
 
 /*
  Borrow the native author snapshot owned by this question.
@@ -4810,24 +4565,6 @@ int thinkthen_plan_json(const struct thinkthen_engine *engine,
  */
 int thinkthen_question_author(const struct thinkthen_question *owner,
                               struct thinkthen_question_author_v1 *out);
-
-/*
- Read one named question into an owned validated JSON string.
-
- # Safety
-
- Every pointer follows the header's argument and lifetime rules.
- Read at most 1 MiB of named UTF-8 single-question JSON without sending.
- Success owns NUL-terminated original JSON in out and its byte length;
- free it once with thinkthen_free_string. NULL/bad UTF-8 path or output is
- EUSAGE; unreadable/overlarge/non-UTF-8/malformed files are ELOCAL,
- non-retryable. Failure leaves both outputs unchanged and discloses neither
- path nor contents. Grammar and usage examples: DESIGN.md.
- */
-int thinkthen_question_file(const struct thinkthen_engine *engine,
-                            const char *path,
-                            char **out,
-                            size_t *out_len);
 
 /*
  Free the owned handle; NULL is harmless.
@@ -4849,142 +4586,6 @@ int thinkthen_question_parse(const struct thinkthen_engine *engine,
                              uint32_t role,
                              struct thinkthen_string_v1 json,
                              struct thinkthen_question **out);
-
-/*
- Call `thinkthen_recognize_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- Recognize a text using version-one recognize question JSON; follow cache.
- Equivalent to recognize_opts with THINKTHEN_NO_DEADLINE and a NULL token.
- Success owns {"entities": [...], "relations": [...]} JSON in out and its
- byte length in out_len; free with thinkthen_free_string. Entity offsets
- count code points. Failure returns its kind and leaves outputs unchanged.
- Question/result fields and default kind: DESIGN.md.
- */
-int thinkthen_recognize(const struct thinkthen_engine *engine,
-                        const char *spec_json,
-                        const char *text,
-                        size_t text_len,
-                        char **out,
-                        size_t *out_len);
-
-/*
- Every name in one text and the relations the rules allow, as JSON.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- The same call with the options beside it.
- */
-int thinkthen_recognize_opts(const struct thinkthen_engine *engine,
-                             const char *spec_json,
-                             const char *text,
-                             size_t text_len,
-                             int64_t deadline_ms,
-                             thinkthen_cancel_token *cancel,
-                             char **out,
-                             size_t *out_len);
-
-/*
- Call `thinkthen_recognize_with_facts_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- */
-int thinkthen_recognize_with_facts(const struct thinkthen_engine *engine,
-                                   const char *spec_json,
-                                   const char *evidence,
-                                   size_t evidence_len,
-                                   char **out,
-                                   size_t *out_len,
-                                   char **facts_json,
-                                   size_t *facts_len);
-
-/*
- Recognize and return owned result and facts JSON strings.
-
- # Safety
- Pointers and output storage obey the C header's rules.
- */
-int thinkthen_recognize_with_facts_opts(const struct thinkthen_engine *engine,
-                                        const char *spec_json,
-                                        const char *evidence,
-                                        size_t evidence_len,
-                                        int64_t deadline_ms,
-                                        thinkthen_cancel_token *cancel,
-                                        char **out,
-                                        size_t *out_len,
-                                        char **facts_json,
-                                        size_t *facts_len);
-
-/*
- Call `thinkthen_relate_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- Relate count JSON records with counted byte lengths; count>255 is EUSAGE
- before any pointer read. Equivalent to relate_opts with THINKTHEN_NO_DEADLINE/NULL.
- Version-one relate JSON supplies rules; records carry name/kind. Other
- fields pointers are EUSAGE. Success owns {"edges": [...]} JSON in out
- with byte length in out_len; free with thinkthen_free_string. Failure
- returns its kind and leaves both outputs unchanged. Schema: DESIGN.md.
- */
-int thinkthen_relate(const struct thinkthen_engine *engine,
-                     const char *spec_json,
-                     const char *const *texts,
-                     const size_t *lengths,
-                     size_t count,
-                     char **out,
-                     size_t *out_len);
-
-/*
- How the given records relate, as `{"edges": [...]}`.
-
- # Safety
-
- Every pointer follows the header's argument rules.
- The same call with the options beside it.
- */
-int thinkthen_relate_opts(const struct thinkthen_engine *engine,
-                          const char *spec_json,
-                          const char *const *texts,
-                          const size_t *lengths,
-                          size_t count,
-                          int64_t deadline_ms,
-                          thinkthen_cancel_token *cancel,
-                          char **out,
-                          size_t *out_len);
-
-/*
- Call `thinkthen_relate_with_facts_opts` without a deadline or cancellation token.
- # Safety
- All pointers obey the corresponding options form's contract.
- */
-int thinkthen_relate_with_facts(const struct thinkthen_engine *engine,
-                                const char *spec_json,
-                                const char *const *texts,
-                                const size_t *lengths,
-                                size_t count,
-                                char **out,
-                                size_t *out_len,
-                                char **facts_json,
-                                size_t *facts_len);
-
-/*
- Relate and return owned result and facts JSON strings.
-
- # Safety
- Pointers and output storage obey the C header's rules.
- */
-int thinkthen_relate_with_facts_opts(const struct thinkthen_engine *engine,
-                                     const char *spec_json,
-                                     const char *const *texts,
-                                     const size_t *lengths,
-                                     size_t count,
-                                     int64_t deadline_ms,
-                                     thinkthen_cancel_token *cancel,
-                                     char **out,
-                                     size_t *out_len,
-                                     char **facts_json,
-                                     size_t *facts_len);
 
 /*
  Preview canonical Request JSON without reading a key or cache or sending.

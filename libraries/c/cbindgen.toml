@@ -2,8 +2,6 @@ language = "C"
 include_guard = "THINKTHEN_H"
 autogen_warning = "/* Generated from Rust by cbindgen 0.29.4. Run sdlc/scripts/generate-c-header.py; do not edit. */"
 cpp_compat = true
-# The native dependency owns this opaque type; parsing dependencies would expose its internals.
-after_includes = "typedef struct thinkthen_cancel_token thinkthen_cancel_token;"
 usize_is_size_t = true
 style = "both"
 documentation = true

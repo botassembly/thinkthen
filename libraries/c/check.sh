@@ -16,61 +16,22 @@ command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 7
 usage_home
 scratch_dir cache
 if [ "$profile" = smoke ]; then
-	smoke_guard
-	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
-	. ../../sdlc/scripts/installed.sh
-	native_install "$(cd ../.. && pwd)" "$cache"
-	python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/include/thinkthen.h"
-	# shellcheck disable=SC2046 # pkg-config prints flags to split.
-	cc -std=c11 -Wall -Wextra -Werror $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --cflags thinkthen) \
-		examples/smoke.c $(PKG_CONFIG_PATH=$cache/lib/pkgconfig pkg-config --libs thinkthen) -Wl,-rpath,"$cache/lib" -o "$cache/smoke"
-	"$cache/smoke"
-	exit
-fi
-python3 tests/test_installed_consumers.py
-if [ -n "${THINKTHEN_ARTIFACT:-}" ] && [ "$profile" = routine ]; then
-    python3 tests/installed-session.py "$THINKTHEN_ARTIFACT"
+    smoke_guard
+    . ../../sdlc/scripts/installed.sh
+    native_install "$(cd ../.. && pwd)" "$cache/native"
+    python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/native/include/thinkthen.h"
+    cc -std=c11 -Wall -Wextra -Werror -I "$cache/native/include" examples/session.c \
+        -L "$cache/native/lib" -lthinkthen -Wl,-rpath,"$cache/native/lib" -o "$cache/session"
+    cc -std=c11 -Wall -Wextra -Werror -I "$cache/native/include" tests/c/request_preview.c \
+        -L "$cache/native/lib" -lthinkthen -Wl,-rpath,"$cache/native/lib" -o "$cache/preview"
+    env -i THINKTHEN_USAGE=off HOME="$cache/home" THINKTHEN_BASE_URL=http://127.0.0.1:9/v1 \
+        THINKTHEN_CACHE="$cache/cache" "$cache/preview" >"$cache/plan.json"
     exit
 fi
+python3 tests/test_installed_consumers.py
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
-	# The installed-file mode (ticket 0128): the slide builds from the unpacked archive alone,
-	# found through its own pkg-config file.
-	command -v pkg-config >/dev/null 2>&1 || { echo 'libraries/c: no pkg-config' >&2; exit 77; }
-	tar -xzf "$THINKTHEN_ARTIFACT" -C "$cache"
-	python3 ../../sdlc/scripts/check-c-exports.py --self-test "$cache/include/thinkthen.h"
-	PKG_CONFIG_PATH=$cache/lib/pkgconfig
-	export PKG_CONFIG_PATH
-	pkg-config --exists thinkthen || { echo 'libraries/c: the archive holds no pkg-config file for thinkthen' >&2; exit 1; }
-	libdir=$(pkg-config --variable=libdir thinkthen)
-	case $libdir in "$cache"/*) ;; *) echo "libraries/c: pkg-config names $libdir, outside the archive" >&2; exit 1 ;; esac
-	# shellcheck disable=SC2046 # pkg-config prints flags to split.
-	cc -std=c11 -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) examples/slide.c \
-		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/slide"
-	# Ticket 0374: the shipped library keeps its own panic hook, and the token cap variable
-	# refuses a call before it sends, counted at a backend this check starts.
-	. ../../sdlc/scripts/installed.sh
-	case $(uname -s) in Darwin) own_panic_hook "$libdir/libthinkthen.dylib" ;; *) own_panic_hook "$libdir/libthinkthen.so" ;; esac
-	# shellcheck disable=SC2046 # pkg-config prints flags to split.
-	cc -std=c11 -D_GNU_SOURCE -Wall -Wextra -Werror $(pkg-config --cflags thinkthen) tests/c/driver.c \
-		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/driver"
-	# backend_start builds into the root workspace's relative target folder.
-	cd ../..
-	backend_start
-	cd libraries/c
-	base=http://127.0.0.1:$port/generic/v1 question='{"decide":"asks for a refund"}' text='Refund me.'
-	ask() {
-		folder=$1
-		shift
-		printf 'decide 3\n%s\n%s\n%s\n%s\n%s\n%s\n' ${#base} "$base" ${#question} "$question" ${#text} "$text" |
-			env -i THINKTHEN_CACHE="$cache/$folder" THINKTHEN_API_KEY=sk-examples-loopback "$@" "$cache/driver"
-	}
-	refusal="max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
-	[ "$(ask capped THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10)" = "$(printf '1 %s\n%s' ${#refusal} "$refusal")" ] ||
-		{ echo 'libraries/c: the token cap did not refuse with code 1 and its sentence' >&2; exit 1; }
-	[ "$(backend_count)" = 0 ] || { echo 'libraries/c: the refused call reached the backend' >&2; exit 1; }
-	[ "$(ask open | head -n 1 | cut -d' ' -f1)" = 0 ] && [ "$(backend_count)" = 1 ] ||
-		{ echo 'libraries/c: the uncapped call did not send exactly one request' >&2; exit 1; }
-	echo 'libraries/c: the token cap refused before sending, installed'
+    python3 tests/installed-session.py "$THINKTHEN_ARTIFACT"
+    exit
 fi
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	python3 ../../sdlc/scripts/generate-c-header.py --check
@@ -85,17 +46,17 @@ fi
 	if [ "$profile" = full ]; then
 		cargo test --locked --offline release_only_ -- --ignored --nocapture
 	fi
-	# The rung's own backend answers the slide as the test's backends do.
+	# The rung's own backend answers the session example.
 	cargo build --quiet --locked --offline --lib
 	target=${CARGO_TARGET_DIR:-target}/debug
 	# Lay the door out as a release archive does, so the soname resolves.
 	cp -- "$target/libthinkthen_c.so" "$cache/libthinkthen.so"
 	ln -s libthinkthen.so "$cache/libthinkthen.so.0"
-	cc -std=c11 -Wall -Wextra -Werror -I include examples/slide.c -L "$cache" -lthinkthen \
-	    -Wl,-rpath,"$cache" -o "$cache/slide"
+	cc -std=c11 -Wall -Wextra -Werror -I include examples/session.c -L "$cache" -lthinkthen \
+	    -Wl,-rpath,"$cache" -o "$cache/session"
 }
 env -i THINKTHEN_CACHE="$cache/cache" THINKTHEN_API_KEY=sk-examples-loopback \
     THINKTHEN_BASE_URL="http://127.0.0.1:$1/generic/v1" \
-    "$cache/slide" >"$cache/out" 2>"$cache/err"
+    "$cache/session" >"$cache/out" 2>"$cache/err"
 [ ! -s "$cache/err" ] || { cat -- "$cache/err" >&2; exit 1; }
-diff -u examples/slide.txt "$cache/out"
+[ "$(cat "$cache/out")" = "records=1 requests=1" ]

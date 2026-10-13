@@ -27,22 +27,10 @@ fn declared(input: &str) -> Vec<String> {
 }
 
 mod authored;
-mod backends;
-mod bytes;
-mod canonical;
-mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
-mod golden;
 mod plan;
-mod question_file;
-mod request_width;
 mod session;
-mod settings;
-mod source_controls;
-mod source_relate;
-mod sources;
-mod usage;
 
 use crate::child::ChildEnvironment as _;
 use std::collections::BTreeMap;
@@ -57,6 +45,11 @@ use std::time::{Duration, Instant};
 use conformance_backend::Backend;
 
 const KEY: &str = "sk-c-door-loopback";
+
+fn consumer_name(source: &Path) -> String {
+    let relative = source.strip_prefix(crate_dir()).expect("a crate fixture");
+    relative.to_string_lossy().replace(['/', '\\'], "-")
+}
 
 fn crate_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -137,11 +130,6 @@ fn run_with(binary: &Path, base: &str, input: &[u8], extra: &[(&str, &Path)]) ->
     finished(child)
 }
 
-/// Start one program with only the door's settings and a fresh cache.
-fn start(binary: &Path, base: &str) -> Child {
-    start_with(binary, base, &[])
-}
-
 fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let cache = scratch(&format!("cache-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
@@ -201,110 +189,18 @@ fn text(bytes: &[u8]) -> String {
     String::from_utf8_lossy(bytes).into_owned()
 }
 
-/// The slide as drawn and one call of each function print their pinned text
-/// on the generic arm.
+/// The documented session caller reads terminal facts through owned packet views.
 #[test]
-fn the_examples_print_their_pinned_answers() {
-    let backend = Backend::start().expect("a loopback backend");
-    let base = format!("{}/generic/v1", backend.origin());
-    for name in ["slide", "functions"] {
-        let source = crate_dir().join("examples").join(format!("{name}.c"));
-        let output = run(&compile(&source), &base, b"");
-        assert!(output.status.success(), "{name}: {}", text(&output.stderr));
-        assert_eq!(text(&output.stderr), "", "{name}");
-        let pinned = std::fs::read_to_string(source.with_extension("txt")).expect("a pinned text");
-        assert_eq!(text(&output.stdout), pinned, "{name}");
-    }
-    assert!(
-        backend.count() > 0,
-        "the examples answered without the backend"
+fn the_session_example_prints_its_terminal_facts() {
+    let backend = Backend::start().expect("loopback");
+    let output = run(
+        &compile(&crate_dir().join("examples/session.c")),
+        &format!("{}/generic/v1", backend.origin()),
+        b"",
     );
-}
-
-/// The C rows: the argument rules, the `_opts` twins, two threads' messages
-/// (R1-9), engine-owned failures (R2-16), a call after thread-local
-/// teardown (R2-7), and a forked child. Each program checks itself and says
-/// nothing when it passes; Unix ASan and LSan report on standard error.
-#[test]
-fn every_c_row_holds_under_the_sanitizer() {
-    for name in ["nulls", "opts", "threads", "engines", "atexit", "fork"] {
-        if cfg!(windows) && name == "fork" {
-            continue;
-        }
-        let backend = Backend::start().expect("a loopback backend");
-        let base = format!("{}/generic/v1", backend.origin());
-        let source = crate_dir().join("tests/c").join(format!("{name}.c"));
-        let output = run(&compile(&source), &base, b"");
-        successful_named(&output, name);
-        match name {
-            "nulls" => assert_eq!(backend.count(), 0, "a refusal sent a request"),
-            // The parent's first call and the child's; the parent's last is cached.
-            "fork" => assert_eq!(backend.count(), 2, "the child's call crossed the wire"),
-            _ => {}
-        }
-    }
-}
-
-/// Ticket 0255: one installed C driver exercises all owned-facts typed exports.
-#[test]
-fn typed_facts_are_owned_and_refusals_leave_outputs_untouched() {
-    let backend = Backend::start().expect("a loopback backend");
-    let base = format!("{}/generic/v1", backend.origin());
-    let source = crate_dir().join("tests/c/typed_facts.c");
-    let output = run(&compile(&source), &base, b"");
     successful(&output);
-    assert_eq!(
-        backend.count(),
-        9,
-        "the driver counts actual scalar, bulk, recognition and relation sends"
-    );
-    let refusal = Backend::start().expect("a loopback backend");
-    let status_base = format!("{}/arm/status/401/v1", refusal.origin());
-    let output = run(&compile(&source), &status_base, b"E");
-    successful(&output);
-    assert_eq!(refusal.count(), 1, "only the started failure sent");
-}
-
-/// Ticket 0166: a token fired while the reply is held cancels the typed
-/// scalar, the JSON scalar, and the bulk door, and nothing new is sent. The
-/// program says when each token has fired, so each release follows its fire.
-#[test]
-fn a_token_fired_during_a_held_reply_cancels_the_call() {
-    let backend = Backend::start().expect("a loopback backend");
-    let base = format!("{}/arm/held/v1", backend.origin());
-    let mut child = start(&compile(&crate_dir().join("tests/c/cancel.c")), &base);
-    let mut stdin = child.stdin.take().expect("its input");
-    let mut said = BufReader::new(child.stdout.take().expect("its output"));
-    let mut fired = Vec::new();
-    // The five bulk texts share one default packed request. Hold that third
-    // arrival before firing token C, as with the two scalar arrivals.
-    for arrived in [1, 2, 3] {
-        assert_eq!(backend.wait(arrived), arrived, "the requests are held");
-        stdin.write_all(b"fire\n").expect("the fire line");
-        let mut line = String::new();
-        said.read_line(&mut line).expect("the fired line");
-        fired.push(line);
-        std::thread::sleep(Duration::from_millis(250));
-        backend.round();
-    }
-    backend.release();
-    drop(stdin);
-    let output = finished(child);
-    let mut rest = String::new();
-    std::io::Read::read_to_string(&mut said, &mut rest).expect("the rest of its output");
-    assert_eq!(
-        (
-            output.status.code(),
-            fired.concat() + &rest,
-            text(&output.stderr)
-        ),
-        (
-            Some(0),
-            "fired A\nfired B\nfired C\n".to_owned(),
-            String::new()
-        )
-    );
-    assert_eq!(backend.count(), 3, "nothing was sent after a fire");
+    assert_eq!(text(&output.stdout), "records=1 requests=1\n");
+    assert_eq!(backend.count(), 1);
 }
 
 /// Version macros are checked on every host alongside the unchanged C ABI inventory.

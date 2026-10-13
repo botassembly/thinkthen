@@ -3,7 +3,7 @@ use super::{
     thinkthen_session_error_facts_json as facts, thinkthen_session_error_message as message,
     thinkthen_session_error_retryable as retryable,
 };
-use crate::session::errors;
+use crate::failures;
 
 #[test]
 fn immediate_native_diagnostics_keep_retry_and_owned_facts() {
@@ -23,7 +23,7 @@ fn immediate_native_diagnostics_keep_retry_and_owned_facts() {
     let error = engine.decide(&question, "text").expect_err("backend fails");
     assert!(error.retryable());
     assert_eq!(
-        errors::native_call(|| Err(errors::Failure::Native(error))),
+        failures::session_native_call(|| Err(error.into())),
         crate::ffi::values::THINKTHEN_EBACKEND
     );
     drop(engine);
@@ -35,7 +35,10 @@ fn immediate_native_diagnostics_keep_retry_and_owned_facts() {
     let json = unsafe { std::ffi::CStr::from_ptr(saved_facts) }.to_owned();
     let value: serde_json::Value = serde_json::from_slice(json.to_bytes()).expect("facts JSON");
     assert_eq!(value["requests_sent"], 1);
-    assert_eq!(errors::call(|| Ok(())), crate::ffi::values::THINKTHEN_OK);
+    assert_eq!(
+        failures::session_call(|| Ok(())),
+        crate::ffi::values::THINKTHEN_OK
+    );
     let constructor = crate::failures::built(|| crate::settings::build("{}"));
     assert!(constructor.is_some());
     drop(constructor);
@@ -50,7 +53,7 @@ fn immediate_native_diagnostics_keep_retry_and_owned_facts() {
     );
     assert_eq!(crate::failures::retryable(None), 0);
     assert_eq!(
-        errors::call(|| Err(thinkthen::ErrorKind::Usage)),
+        failures::session_call(|| Err(thinkthen::ErrorKind::Usage)),
         crate::ffi::values::THINKTHEN_EUSAGE
     );
     assert_eq!(retryable(), 0);
