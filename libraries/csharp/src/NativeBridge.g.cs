@@ -48,4 +48,9 @@ internal static class NativeWait {
     internal const uint Settlement = 2;
     [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(SessionHandle session,
     uint interest, uint timeoutMilliseconds, out uint ready);
+    [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_next_packet(SessionHandle session,
+    uint interest, out uint status, out IntPtr result);
+    internal const uint ReadResult = 0;
+    internal const uint ReadPending = 1;
+    internal const uint ReadEnd = 2;
 }

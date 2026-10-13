@@ -12,9 +12,13 @@ use serde::Serialize;
 )]
 #[serde(tag = "kind", content = "value", rename_all = "lowercase")]
 pub(crate) enum JudgmentDocument<'a> {
+    #[cfg_attr(test, schemars(extend("x-request-function" = crate::RequestFunction::Decide)))]
     Decision(Option<bool>),
+    #[cfg_attr(test, schemars(extend("x-request-function" = crate::RequestFunction::Choose)))]
     Choice(Option<&'a str>),
+    #[cfg_attr(test, schemars(extend("x-request-function" = crate::RequestFunction::Score)))]
     Score(f64),
+    #[cfg_attr(test, schemars(extend("x-request-function" = crate::RequestFunction::Tag)))]
     Tags(&'a [String]),
 }
 impl<'a> JudgmentDocument<'a> {

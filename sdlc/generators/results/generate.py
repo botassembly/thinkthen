@@ -187,7 +187,8 @@ def native_value_union(schema, definitions):
         return None
     if selected.keys() - {'boolean', 'string', 'number', 'array', 'object', 'null'}:
         return None
-    return {'primitive_variants': list(selected), 'primitive_schemas': selected,
+    metadata = {key: schema[key] for key in ('title', 'description', 'x-preserve-order') if key in schema}
+    return {**metadata, 'primitive_variants': list(selected), 'primitive_schemas': selected,
             'nullable_json': 'null' in selected}
 
 
@@ -205,7 +206,7 @@ def normalize(value):
 
 
 def lift_inline(definitions):
-    """Name nested object alternatives from their native schema position."""
+    """Name titled objects and nested alternatives from their schema source."""
     definitions = normalize(definitions)
     pending = list(definitions)
     seen = {}
@@ -214,15 +215,16 @@ def lift_inline(definitions):
             return [visit(child, path + '_' + str(index)) for index, child in enumerate(value)]
         if not isinstance(value, dict):
             return value
-        if object_variants(value, definitions):
+        if object_variants(value, definitions) or (value.get("title") and "properties" in value):
             identity = json.dumps(value, sort_keys=True)
             if identity not in seen:
                 key = value.get('title', path)
-                if key in definitions:
+                if key in definitions and definitions[key] != value:
                     raise ValueError('colliding nested result alternative name')
                 seen[identity] = key
-                definitions[key] = value
-                pending.append(key)
+                if key not in definitions:
+                    definitions[key] = value
+                    pending.append(key)
             return {'$ref': '#/$defs/' + seen[identity]}
         return {key: visit(child, path + '_' + key) for key, child in value.items()}
     while pending:
@@ -385,7 +387,15 @@ def bridge():
     prototype = native['functions']['thinkthen_session_wait']
     parameters = {'const thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint', 'uint32_t *': 'out uint ready'}
     arguments = [parameters[typ] + (' interest' if at == 1 else ' timeoutMilliseconds' if at == 2 else '') for at, typ in enumerate(prototype['arguments'])]
-    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(' + ', '.join(arguments) + ');', '}']
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_wait(' + ', '.join(arguments) + ');']
+    prototype = native['functions']['thinkthen_session_next_packet']
+    packet_parameters = {'thinkthen_session *': 'SessionHandle session', 'uint32_t': 'uint interest',
+                         'uint32_t *': 'out uint status', 'thinkthen_session_result **': 'out IntPtr result'}
+    lines += [' [DllImport("thinkthen", CallingConvention=CallingConvention.Cdecl)] internal static extern int thinkthen_session_next_packet('
+              + ', '.join(packet_parameters[argument] for argument in prototype['arguments']) + ');']
+    for state in ('RESULT', 'PENDING', 'END'):
+        lines += [' internal const uint Read' + state.title() + ' = ' + str(native['constants']['THINKTHEN_SESSION_' + state + '_V1']) + ';']
+    lines += ['}']
     return '\n'.join(lines) + '\n'
 
 def main():
@@ -452,8 +462,16 @@ def main():
         import objc
         definitions = prepare(graph(json.loads(args.schema.read_text()), objc.ROOTS))
         version = json.loads((ROOT / "specification/request.schema.json").read_text())["$defs"]["RequestVersion"]["oneOf"][0]["const"]
-        for filename, result in objc.outputs(definitions, version).items():
+        request_schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        request_schema['$defs']['Request'] = {key: value for key, value in request_schema.items() if key != '$defs'}
+        input_definitions = prepare(graph(request_schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
+        abi_spec = importlib.util.spec_from_file_location('objc_native_abi', ROOT / 'sdlc/scripts/check-c-exports.py')
+        abi_module = importlib.util.module_from_spec(abi_spec)
+        abi_spec.loader.exec_module(abi_module)
+        abi = abi_module.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
+        for filename, result in objc.outputs(definitions, version, input_definitions, abi).items():
             output = output_path(ROOT, 'objc', filename)
+            result = format_source(output, result, child_env(keep=(*CARGO, "LANG", "LC_ALL", "TMPDIR")))
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print("generated Foundation results differ", file=sys.stderr)
