@@ -53,3 +53,5 @@ PM amendment, 2026-10-12. The coordinator's scope recommendation stands. Every h
 ## Progress
 
 PM amendment, 2026-10-13. C is the shared native layer that the C-session host libraries call, so the three-times-median proof does not apply to it. Stop cutting C at 1,982 handwritten lines and set its ratchet there. Keep a diagnostic, the raw JSON entry points or an export only while a library or the CLI calls it. Delete any that nothing calls, and make no further C cuts beyond that.
+
+PM amendment, 2026-10-13. Add a generated native typed plan export for Ada, COBOL and the other C-session libraries. It reuses typed admission and the current Rust plan serialization, and it sends nothing. The C handwritten ratchet stays at 1,982 lines. Offset any handwritten C line it needs with a cut elsewhere in C.
