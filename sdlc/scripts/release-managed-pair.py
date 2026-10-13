@@ -139,9 +139,8 @@ def check_jar(data, kind, inventory):
     members, dirs = zip_members(data, f"{kind} JAR")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is None or manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
-    if kind == "session":
-        embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
-        require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
+    embedded = members.pop("META-INF/thinkthen/product-inventory.json", None)
+    require(embedded is not None and json.loads(embedded) == {key: value for key, value in inventory.items() if key != "members"}, "JAR product inventory differs")
     expected = set(inventory['members'][kind])
     allowed_dirs = {'META-INF/'} | {str(parent) + '/' for member in expected for parent in Path(member).parents if str(parent) != '.'}
     require(dirs <= allowed_dirs, f'{kind} JAR directory inventory differs')

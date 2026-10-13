@@ -144,12 +144,12 @@ def fixture(base):
         managed[kind] = sha(path.read_bytes())
     spec = importlib.machinery.SourceFileLoader('package_inventory', str(HELPER.with_name('package-inventory.py'))).load_module()
     definition = spec.jvm_inventory()
-    session = jars / 'thinkthen-session.jar'
-    files = read_zip(session.read_bytes())
-    files.pop('META-INF/MANIFEST.MF')
-    files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
-    write_zip(session, files)
-    managed['session'] = sha(session.read_bytes())
+    for kind, name in definition['jars'].items():
+        path = jars / name
+        files = read_zip(path.read_bytes())
+        files['META-INF/thinkthen/product-inventory.json'] = json.dumps(definition).encode()
+        write_zip(path, files)
+        managed[kind] = sha(path.read_bytes())
     classifier, asset = next((name, asset) for name, asset in definition['native'].items() if asset['target'] == TARGET)
     path = jars / asset['jar']
     write_zip(path, {name: b'fixture shared library' for name in asset['files']})
@@ -381,6 +381,15 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    for kind in ("session", "kotlin", "scala"):
+        def stale_inventory(data):
+            members = read_zip(data)
+            members["META-INF/thinkthen/product-inventory.json"] = b"{}"
+            buffer = io.BytesIO()
+            write_zip(buffer, members)
+            return buffer.getvalue()
+        inner_rejection(f"stale {kind} embedded inventory", kind, stale_inventory,
+                        "JAR product inventory differs")
     inner_rejection("missing NuGet native asset", "nupkg",
                     lambda data: changed_zip(data, remove="runtimes/linux-x64/native/libthinkthen.so"),
                     "nupkg inventory differs")
