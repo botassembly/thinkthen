@@ -2,15 +2,17 @@
 """Plant contract omissions and extra exports at the checker CLI boundary."""
 import importlib.util
 import json
-import os
 import shutil
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 CHECK = ROOT / 'conformance/library-surface.py'
+sys.path.insert(0, str(ROOT))
+from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
@@ -30,7 +32,7 @@ class PublicSurface(unittest.TestCase):
                 client.write_text(source)
                 calls.write_text(mixin)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'cpp', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(run.returncode, (0, 1), run.stderr)
                 return json.loads(run.stdout)['libraries']['cpp']
             baseline = invoke()
@@ -116,7 +118,7 @@ class PublicSurface(unittest.TestCase):
                 write('libraries/typescript/results_generated.d.ts', graph)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--json'],
                                      capture_output=True, text=True,
-                                     env=dict(os.environ, HOME=folder))
+                                     env=child_env(home=folder))
                 return run.returncode, json.loads(run.stdout)['libraries']['typescript']
             code, errors = invoke()
             self.assertEqual((code, errors), (0, []))
@@ -172,7 +174,7 @@ class PublicSurface(unittest.TestCase):
                               'func (v ownedJSON) ExtraRepresentationExport() {}\n')
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
-                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                 capture_output=True, text=True, env=child_env(home=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertEqual(run.returncode, 1)
             self.assertFalse(any('schema declaration derivation failed:' in error for error in errors))
@@ -190,7 +192,7 @@ class PublicSurface(unittest.TestCase):
             generated.write_text(source)
             run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                   str(ROOT / 'conformance/library-surface.json'), '--library', 'go', '--json'],
-                                 capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                 capture_output=True, text=True, env=child_env(home=folder))
             errors = json.loads(run.stdout)['libraries']['go']
             self.assertIn('missing generated declaration: owned_results_generated.go:RequestOptions.Context', errors)
             self.assertIn('unlisted generated declaration: owned_results_generated.go:RequestOptions.Surprise', errors)
@@ -216,7 +218,7 @@ class PublicSurface(unittest.TestCase):
                 calls.write_text(source)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'csharp', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 return json.loads(run.stdout)['libraries']['csharp']
             baseline = invoke(original)
             self.assertEqual(baseline, [])
@@ -273,7 +275,7 @@ class PublicSurface(unittest.TestCase):
                 records.write_text(source)
                 run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
                                       str(ROOT / 'conformance/library-surface.json'), '--library', 'jvm', '--json'],
-                                     capture_output=True, text=True, env=dict(os.environ, HOME=folder))
+                                     capture_output=True, text=True, env=child_env(home=folder))
                 return json.loads(run.stdout)['libraries']['jvm']
             baseline = invoke(original)
             missing = invoke(original.replace('record BatchInteger(BigInteger value)',
@@ -344,7 +346,9 @@ class PublicSurface(unittest.TestCase):
             original = calls.read_text()
             def invoke(source):
                 calls.write_text(source)
-                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest', str(selected), '--library', 'php', '--json'], capture_output=True, text=True)
+                result = subprocess.run(['python3', str(CHECK), '--root', str(root), '--manifest',
+                                         str(selected), '--library', 'php', '--json'],
+                                        capture_output=True, text=True, env=child_env(home=folder))
                 self.assertIn(result.returncode, [0, 1], result.stderr)
                 return json.loads(result.stdout)['libraries']['php']
             baseline = invoke(original)
