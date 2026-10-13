@@ -3919,6 +3919,13 @@ public struct OwnedRelationMemberAnswerId: JSONRepresentable {
     object["probability"] = `probability`.json
     return .object(object)
   }
+  public func sourceName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
+  }
 }
 public struct OwnedRelationMemberFailureId: JSONRepresentable {
   public let extensions: [String: JSONValue]
@@ -4008,6 +4015,13 @@ public struct OwnedRelationMemberFailureId: JSONRepresentable {
     object["failure"] = `failure`.json
     object["failure_id"] = `failureId`.json
     return .object(object)
+  }
+  public func sourceName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
   }
 }
 public enum OwnedRelationMethod: JSONRepresentable {
@@ -5446,6 +5460,20 @@ public struct OwnedRelatedEntityEdge: JSONRepresentable {
     object["source"] = `source`.json
     object["target"] = `target`.json
     return .object(object)
+  }
+  public func sourceName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
+  }
+  public func targetName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "target", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
   }
 }
 public struct OwnedRelationRule: JSONRepresentable {
@@ -7131,6 +7159,20 @@ public struct OwnedSessionRelationEdge: JSONRepresentable {
     object["target"] = `target`.json
     return .object(object)
   }
+  public func sourceName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "source", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
+  }
+  public func targetName() throws -> Presence<String> {
+    switch try readPresence(jsonObject(self.json), "target", JSONValue.self) {
+    case .absent: return .absent
+    case .null: return .null
+    case .value(let object): return try readPresence(jsonObject(object), "name", String.self)
+    }
+  }
 }
 public struct OwnedSourceRelationEndpoint: JSONRepresentable {
   public let extensions: [String: JSONValue]
@@ -7300,5 +7342,190 @@ public indirect enum OwnedValue: JSONRepresentable {
     case .alternative3(let value): return value.json
     case .alternative4(let value): return value.json
     }
+  }
+}
+extension OwnedSessionPacket {
+  public func decideAnswer() throws -> [OwnedAtomicDecideValue] {
+    if case .`decideAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected decide aggregate packet")
+  }
+  public func chooseAnswer() throws -> [OwnedAtomicNullableString] {
+    if case .`chooseAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected choose aggregate packet")
+  }
+  public func tagAnswer() throws -> [OwnedAtomicArrayOfString] {
+    if case .`tagAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected tag aggregate packet")
+  }
+  public func scoreAnswer() throws -> [OwnedAtomicDouble] {
+    if case .`scoreAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected score aggregate packet")
+  }
+  public func filterAnswer() throws -> [OwnedAtomicBoolean] {
+    if case .`filterAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected filter aggregate packet")
+  }
+  public func rankAnswer() throws -> [OwnedAtomicNonZeroUsize] {
+    if case .`rankAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected rank aggregate packet")
+  }
+  public func findAnswer() throws -> OwnedFind {
+    if case .`findAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected find aggregate packet")
+  }
+  public func annotateAnswer() throws -> [OwnedAnnotation] {
+    if case .`annotateAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected annotate aggregate packet")
+  }
+  public func recognizeAnswer() throws -> [OwnedRecognition] {
+    if case .`recognizeAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected recognize aggregate packet")
+  }
+  public func relateAnswer() throws -> OwnedRelation {
+    if case .`relateAggregate`(let packet) = self { return packet.value }
+    throw JSONConversionError("Expected relate aggregate packet")
+  }
+}
+public struct AnswerCardinalityError: Error, Sendable {
+  public let function: String
+  public let count: Int
+  public let call: OwnedCall
+}
+private func answerPath(_ json: JSONValue, _ path: [String]) throws -> JSONValue? {
+  var value: JSONValue? = json
+  for key in path {
+    guard let object = value else { return nil }
+    value = try jsonObject(object)[key]
+  }
+  return value
+}
+extension OwnedCall {
+  private func answerJSON(_ function: String, _ judgment: String) throws -> JSONValue {
+    if case .value(let failure) = terminal.failure {
+      throw SessionFailure(failure: failure, call: self)
+    }
+    var values: [JSONValue] = []
+    for packet in packets {
+      guard try answerPath(packet.json, ["function"]) == .string(function) else { continue }
+      if judgment.isEmpty {
+        guard try answerPath(packet.json, ["kind"]) == .string("aggregate"),
+          let value = try answerPath(packet.json, ["value"])
+        else { continue }
+        values.append(value)
+      } else {
+        guard try answerPath(packet.json, ["kind"]) == .string("observation") else { continue }
+        guard try answerPath(packet.json, ["value", "kind"]) == .string("row") else { continue }
+        guard try answerPath(packet.json, ["value", "value", "kind"]) == .string("judgment") else {
+          continue
+        }
+        guard let carrier = try answerPath(packet.json, ["value", "value", "value"]) else {
+          continue
+        }
+        guard try answerPath(carrier, ["kind"]) == .string(judgment),
+          let value = try answerPath(carrier, ["value"])
+        else { continue }
+        values.append(value)
+      }
+    }
+    guard values.count == 1 else {
+      throw AnswerCardinalityError(function: function, count: values.count, call: self)
+    }
+    return values[0]
+  }
+  public func decideAnswer() throws -> Bool? {
+    try Optional<Bool>.read(answerJSON("decide", "decision"))
+  }
+  public func chooseAnswer() throws -> String? {
+    try Optional<String>.read(answerJSON("choose", "choice"))
+  }
+  public func tagAnswer() throws -> [String] { try [String].read(answerJSON("tag", "tags")) }
+  public func scoreAnswer() throws -> Double { try Double.read(answerJSON("score", "score")) }
+  public func filterAnswer() throws -> [OwnedAtomicBoolean] {
+    try [OwnedAtomicBoolean].read(answerJSON("filter", ""))
+  }
+  public func rankAnswer() throws -> [OwnedAtomicNonZeroUsize] {
+    try [OwnedAtomicNonZeroUsize].read(answerJSON("rank", ""))
+  }
+  public func findAnswer() throws -> OwnedFind { try OwnedFind.read(answerJSON("find", "")) }
+  public func annotateAnswer() throws -> [OwnedAnnotation] {
+    try [OwnedAnnotation].read(answerJSON("annotate", ""))
+  }
+  public func recognizeAnswer() throws -> [OwnedRecognition] {
+    try [OwnedRecognition].read(answerJSON("recognize", ""))
+  }
+  public func relateAnswer() throws -> OwnedRelation {
+    try OwnedRelation.read(answerJSON("relate", ""))
+  }
+}
+extension Client {
+  public func decideAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> Bool? {
+    let call = try await decide(question, input: input, options: options)
+    return try call.decideAnswer()
+  }
+  public func chooseAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> String? {
+    let call = try await choose(question, input: input, options: options)
+    return try call.chooseAnswer()
+  }
+  public func tagAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> [String] {
+    let call = try await tag(question, input: input, options: options)
+    return try call.tagAnswer()
+  }
+  public func scoreAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> Double {
+    let call = try await score(question, input: input, options: options)
+    return try call.scoreAnswer()
+  }
+  public func filterAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> [OwnedAtomicBoolean] {
+    let call = try await filter(question, input: input, options: options)
+    return try call.filterAnswer()
+  }
+  public func rankAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> [OwnedAtomicNonZeroUsize] {
+    let call = try await rank(question, input: input, options: options)
+    return try call.rankAnswer()
+  }
+  public func findAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedFind {
+    let call = try await find(question, input: input, options: options)
+    return try call.findAnswer()
+  }
+  public func annotateAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> [OwnedAnnotation] {
+    let call = try await annotate(question, input: input, options: options)
+    return try call.annotateAnswer()
+  }
+  public func recognizeAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> [OwnedRecognition] {
+    let call = try await recognize(question, input: input, options: options)
+    return try call.recognizeAnswer()
+  }
+  public func relateAnswer(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedRelation {
+    let call = try await relate(question, input: input, options: options)
+    return try call.relateAnswer()
   }
 }

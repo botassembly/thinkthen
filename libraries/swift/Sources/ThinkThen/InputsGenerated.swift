@@ -1,18 +1,40 @@
 // Generated from the shared Rust graph. Do not edit.
 import Foundation
 
+public struct InputOrderedEntry<Value: JSONRepresentable>: Sendable {
+  public let key: String
+  public let value: Value
+  public init(_ key: String, _ value: Value) {
+    self.key = key
+    self.value = value
+  }
+}
+public struct InputOrderedMap<Value: JSONRepresentable>: JSONRepresentable {
+  public let entries: [InputOrderedEntry<Value>]
+  public init(_ entries: [InputOrderedEntry<Value>]) { self.entries = entries }
+  public static func read(_ json: JSONValue) throws -> Self {
+    let members: [JSONMember]
+    switch json.kind {
+    case .orderedObject(let value): members = value
+    case .object(let value): members = value.map { JSONMember($0.key, $0.value) }
+    default: throw JSONConversionError("Expected JSON object")
+    }
+    return Self(try members.map { InputOrderedEntry($0.key, try Value.read($0.value)) })
+  }
+  public var json: JSONValue { .orderedObject(entries.map { JSONMember($0.key, $0.value.json) }) }
+}
 public struct InputAnnotateDefinition: JSONRepresentable {
   public let extensions: [String: JSONValue]
   private var _sourceJSON: JSONValue? = nil
   public let `batch`: Presence<JSONValue>
   public let `profile`: Presence<InputAuthoredProfile>
-  public let `questions`: [String: InputAnnotateQuestion]
+  public let `questions`: InputOrderedMap<InputAnnotateQuestion>
   public let `threshold`: Presence<InputAuthoredThreshold>
   public let `version`: Int64
   public init(
     extensions: [String: JSONValue] = [:], `batch`: Presence<JSONValue> = .absent,
     `profile`: Presence<InputAuthoredProfile> = .absent,
-    `questions`: [String: InputAnnotateQuestion],
+    `questions`: InputOrderedMap<InputAnnotateQuestion>,
     `threshold`: Presence<InputAuthoredThreshold> = .absent, `version`: Int64 = 1
   ) {
     self.extensions = extensions
@@ -29,7 +51,7 @@ public struct InputAnnotateDefinition: JSONRepresentable {
       extensions: object.filter { !known.contains($0.key) },
       batch: try readPresence(object, "batch", JSONValue.self),
       profile: try readPresence(object, "profile", InputAuthoredProfile.self),
-      questions: try [String: InputAnnotateQuestion].read(jsonRequired(object, "questions")),
+      questions: try InputOrderedMap<InputAnnotateQuestion>.read(jsonRequired(object, "questions")),
       threshold: try readPresence(object, "threshold", InputAuthoredThreshold.self),
       version: try Int64.read(jsonRequired(object, "version")))
     value._sourceJSON = json
@@ -944,10 +966,10 @@ public indirect enum InputAuthoredLevels: JSONRepresentable {
 public typealias InputAuthoredName = String
 public indirect enum InputAuthoredOptions: JSONRepresentable {
   case alternative0([InputAuthoredName])
-  case alternative1([String: InputAuthoredDescription])
+  case alternative1(InputOrderedMap<InputAuthoredDescription>)
   public static func read(_ json: JSONValue) throws -> InputAuthoredOptions {
     if let value = try? [InputAuthoredName].read(json) { return .alternative0(value) }
-    if let value = try? [String: InputAuthoredDescription].read(json) {
+    if let value = try? InputOrderedMap<InputAuthoredDescription>.read(json) {
       return .alternative1(value)
     }
     throw JSONConversionError("Unknown InputAuthoredOptions value")
@@ -1521,20 +1543,18 @@ public indirect enum InputEngineSettingsMaxRequestsTotal: JSONRepresentable {
 public enum InputImageMedia: JSONRepresentable {
   case `imageJpeg`
   case `imagePng`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputImageMedia {
     let value = try String.read(json)
     switch value {
     case "image/jpeg": return .`imageJpeg`
     case "image/png": return .`imagePng`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputImageMedia value")
     }
   }
   public var json: JSONValue {
     switch self {
     case .`imageJpeg`: return .string("image/jpeg")
     case .`imagePng`: return .string("image/png")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -1573,20 +1593,18 @@ public struct InputOptionSchema: JSONRepresentable {
 public enum InputReaderMedia: JSONRepresentable {
   case `text`
   case `image`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputReaderMedia {
     let value = try String.read(json)
     switch value {
     case "text": return .`text`
     case "image": return .`image`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputReaderMedia value")
     }
   }
   public var json: JSONValue {
     switch self {
     case .`text`: return .string("text")
     case .`image`: return .string("image")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -1678,20 +1696,18 @@ public struct InputRecognitionExampleText: JSONRepresentable {
 public enum InputRecognitionMode: JSONRepresentable {
   case `whole`
   case `boundaryOnly`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputRecognitionMode {
     let value = try String.read(json)
     switch value {
     case "whole": return .`whole`
     case "boundary_only": return .`boundaryOnly`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputRecognitionMode value")
     }
   }
   public var json: JSONValue {
     switch self {
     case .`whole`: return .string("whole")
     case .`boundaryOnly`: return .string("boundary_only")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -1853,7 +1869,7 @@ public struct InputRecognizeQuestion: JSONRepresentable {
   private var _sourceJSON: JSONValue? = nil
   public let `entityDefinition`: Presence<InputAuthoredQuestionText>
   public let `instructions`: Presence<InputAuthoredQuestionText>
-  public let `kinds`: Presence<[String: InputAuthoredDescription]>
+  public let `kinds`: Presence<InputOrderedMap<InputAuthoredDescription>>
   public let `mode`: Presence<InputRecognitionMode>
   public let `relations`: Presence<[InputAuthoredRelation]>
   public let `snippetPieces`: Presence<UInt64>
@@ -1862,7 +1878,7 @@ public struct InputRecognizeQuestion: JSONRepresentable {
     extensions: [String: JSONValue] = [:],
     `entityDefinition`: Presence<InputAuthoredQuestionText> = .absent,
     `instructions`: Presence<InputAuthoredQuestionText> = .absent,
-    `kinds`: Presence<[String: InputAuthoredDescription]> = .absent,
+    `kinds`: Presence<InputOrderedMap<InputAuthoredDescription>> = .absent,
     `mode`: Presence<InputRecognitionMode> = .absent,
     `relations`: Presence<[InputAuthoredRelation]> = .absent,
     `snippetPieces`: Presence<UInt64> = .absent,
@@ -1888,7 +1904,7 @@ public struct InputRecognizeQuestion: JSONRepresentable {
       entityDefinition: try readPresence(
         object, "entity_definition", InputAuthoredQuestionText.self),
       instructions: try readPresence(object, "instructions", InputAuthoredQuestionText.self),
-      kinds: try readPresence(object, "kinds", [String: InputAuthoredDescription].self),
+      kinds: try readPresence(object, "kinds", InputOrderedMap<InputAuthoredDescription>.self),
       mode: try readPresence(object, "mode", InputRecognitionMode.self),
       relations: try readPresence(object, "relations", [InputAuthoredRelation].self),
       snippetPieces: try readPresence(object, "snippet_pieces", UInt64.self),
@@ -2140,13 +2156,13 @@ public struct InputRequestDefinitionAnnotateDefinition: JSONRepresentable {
   private var _sourceJSON: JSONValue? = nil
   public let `batch`: Presence<JSONValue>
   public let `profile`: Presence<InputAuthoredProfile>
-  public let `questions`: [String: InputAnnotateQuestion]
+  public let `questions`: InputOrderedMap<InputAnnotateQuestion>
   public let `threshold`: Presence<InputAuthoredThreshold>
   public let `version`: Int64
   public init(
     extensions: [String: JSONValue] = [:], `batch`: Presence<JSONValue> = .absent,
     `profile`: Presence<InputAuthoredProfile> = .absent,
-    `questions`: [String: InputAnnotateQuestion],
+    `questions`: InputOrderedMap<InputAnnotateQuestion>,
     `threshold`: Presence<InputAuthoredThreshold> = .absent, `version`: Int64 = 1
   ) {
     self.extensions = extensions
@@ -2163,7 +2179,7 @@ public struct InputRequestDefinitionAnnotateDefinition: JSONRepresentable {
       extensions: object.filter { !known.contains($0.key) },
       batch: try readPresence(object, "batch", JSONValue.self),
       profile: try readPresence(object, "profile", InputAuthoredProfile.self),
-      questions: try [String: InputAnnotateQuestion].read(jsonRequired(object, "questions")),
+      questions: try InputOrderedMap<InputAnnotateQuestion>.read(jsonRequired(object, "questions")),
       threshold: try readPresence(object, "threshold", InputAuthoredThreshold.self),
       version: try Int64.read(jsonRequired(object, "version")))
     value._sourceJSON = json
@@ -2790,7 +2806,6 @@ public enum InputRequestFraming: JSONRepresentable {
   case `jsonl`
   case `csv`
   case `tsv`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputRequestFraming {
     let value = try String.read(json)
     switch value {
@@ -2799,7 +2814,7 @@ public enum InputRequestFraming: JSONRepresentable {
     case "jsonl": return .`jsonl`
     case "csv": return .`csv`
     case "tsv": return .`tsv`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputRequestFraming value")
     }
   }
   public var json: JSONValue {
@@ -2809,7 +2824,6 @@ public enum InputRequestFraming: JSONRepresentable {
     case .`jsonl`: return .string("jsonl")
     case .`csv`: return .string("csv")
     case .`tsv`: return .string("tsv")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -2824,7 +2838,6 @@ public enum InputRequestFunction: JSONRepresentable {
   case `annotate`
   case `recognize`
   case `relate`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputRequestFunction {
     let value = try String.read(json)
     switch value {
@@ -2838,7 +2851,7 @@ public enum InputRequestFunction: JSONRepresentable {
     case "annotate": return .`annotate`
     case "recognize": return .`recognize`
     case "relate": return .`relate`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputRequestFunction value")
     }
   }
   public var json: JSONValue {
@@ -2853,7 +2866,6 @@ public enum InputRequestFunction: JSONRepresentable {
     case .`annotate`: return .string("annotate")
     case .`recognize`: return .string("recognize")
     case .`relate`: return .string("relate")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -3932,18 +3944,16 @@ public indirect enum InputRequestThreshold: JSONRepresentable {
 }
 public enum InputRequestVersion: JSONRepresentable {
   case `thinkthenRequest_1`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputRequestVersion {
     let value = try String.read(json)
     switch value {
     case "thinkthen.request/1": return .`thinkthenRequest_1`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputRequestVersion value")
     }
   }
   public var json: JSONValue {
     switch self {
     case .`thinkthenRequest_1`: return .string("thinkthen.request/1")
-    case .unknown(let value): return .string(value)
     }
   }
 }
@@ -3987,14 +3997,13 @@ public enum InputSourceUnit: JSONRepresentable {
   case `line`
   case `window`
   case `file`
-  case unknown(String)
   public static func read(_ json: JSONValue) throws -> InputSourceUnit {
     let value = try String.read(json)
     switch value {
     case "line": return .`line`
     case "window": return .`window`
     case "file": return .`file`
-    default: return .unknown(value)
+    default: throw JSONConversionError("Unknown InputSourceUnit value")
     }
   }
   public var json: JSONValue {
@@ -4002,8 +4011,109 @@ public enum InputSourceUnit: JSONRepresentable {
     case .`line`: return .string("line")
     case .`window`: return .string("window")
     case .`file`: return .string("file")
-    case .unknown(let value): return .string(value)
     }
+  }
+}
+extension Client {
+  public func decide(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`decide`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func choose(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`choose`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func tag(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`tag`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func score(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`score`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func filter(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`filter`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func rank(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`rank`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func find(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`find`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func annotate(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`annotate`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func recognize(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`recognize`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
+  }
+  public func relate(
+    _ question: InputRequestQuestion, input: InputRequestInput,
+    options: Presence<InputRequestOptions> = .absent
+  ) async throws -> OwnedCall {
+    try await execute(
+      InputRequest(
+        call: InputRequestCall(
+          function: .`relate`, input: input, options: options, question: question),
+        schema: .`thinkthenRequest_1`))
   }
 }
 public let ownedRequestVersion = "thinkthen.request/1"
