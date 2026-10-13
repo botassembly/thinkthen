@@ -417,6 +417,7 @@ def main():
     parser.add_argument('--operations', action='store_true')
     args = parser.parse_args()
     if args.all:
+        failures = []
         for producer, target, mode in invocations():
             command = ([sys.executable, str(ROOT / 'sdlc/scripts/generate-c-header.py')]
                        if producer == 'header' else
@@ -429,8 +430,10 @@ def main():
                 keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR', 'TT_DART'),
                 CARGO_NET_OFFLINE='true'))
             if completed.returncode:
-                return completed.returncode
-        return 0
+                failures.append(f'{producer}:{target}:{mode}')
+        if failures:
+            print('generation failed: ' + ', '.join(failures), file=sys.stderr)
+        return int(bool(failures))
     if args.operations:
         if args.target != 'c' or args.inputs or args.bridge:
             parser.error('operation transport is a separate C producer')
@@ -756,7 +759,9 @@ def main():
         primary = 'request_generated.zig' if args.inputs else 'plan_generated.zig'
         for filename, result in outputs.items():
             output = args.output if filename == primary and args.output != OUTPUT else output_path(ROOT, 'zig', filename)
-            result = format_source(output, result, child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR')))
+            result = subprocess.run(['zig', 'fmt', '--stdin'], input=result,
+                                    text=True, capture_output=True, check=True,
+                                    env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).stdout
             if args.check:
                 if not output.exists() or output.read_text() != result:
                     print('generated Zig source differs: ' + filename, file=sys.stderr)
