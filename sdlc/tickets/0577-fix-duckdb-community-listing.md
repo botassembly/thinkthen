@@ -30,3 +30,5 @@ The ThinkThen DuckDB extension builds in DuckDB's community CI on Linux x86-64 a
 - Defers: macOS and Windows community targets, unless CI requires them.
 
 ## Progress
+
+- 2026-10-13 started
