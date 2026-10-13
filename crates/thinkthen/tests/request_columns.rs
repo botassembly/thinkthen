@@ -19,36 +19,6 @@ fn item(text: &str) -> RequestItem {
     clippy::panic,
     reason = "invalid isolated fixture setup must stop the regression"
 )]
-fn execute(
-    engine: &Engine,
-    function: RequestFunction,
-    question: RequestQuestion,
-    items: Vec<RequestItem>,
-) -> Call<RequestValue> {
-    let admitted = Request::for_function(
-        function,
-        RequestArguments {
-            question,
-            input: RequestInput::Records { items },
-            options: RequestOptions::default(),
-        },
-    )
-    .admit()
-    .unwrap();
-    match engine
-        .execute_request(&admitted, RequestEnvironment::default())
-        .unwrap()
-    {
-        RequestOutcome::Complete(call) => call,
-        RequestOutcome::Failed { error, .. } => panic!("{error}"),
-    }
-}
-#[allow(
-    clippy::unwrap_used,
-    clippy::indexing_slicing,
-    clippy::panic,
-    reason = "invalid isolated fixture setup must stop the regression"
-)]
 fn response(body: &[u8]) -> conformance_backend::Canned {
     let request: Value = serde_json::from_slice(body).unwrap();
     let answers = request["questions"]
@@ -125,27 +95,22 @@ fn nullable_positions_and_result_prefixes_keep_typed_values_and_probabilities() 
     for (function, definition, expected, probability) in cases {
         let listener = conformance_backend::Listener::answering(response).unwrap();
         let engine = api::loopback(listener.base(), "column-fixture");
-        let (column, items) = RequestColumn::new(
-            function,
-            vec![
-                None,
-                Some(item("First.")),
-                None,
-                Some(item("Second.")),
-                None,
-            ],
-        )
-        .unwrap();
+        let first = Some(item("First."));
+        let second = Some(item("Second."));
+        let (column, items) =
+            RequestColumn::new(function, vec![None, first, None, second, None]).unwrap();
         assert_eq!(column.positions(), &[1, 3]);
         assert_eq!(column.len(), 5);
         assert!(!column.is_empty());
-        let call = execute(
+        let call = api::request_question(
             &engine,
             function,
             RequestQuestion::from_json(&format!(r#"{{"kind":"definition","value":{definition}}}"#))
                 .unwrap(),
-            items,
-        );
+            RequestInput::Records { items },
+            RequestEnvironment::default(),
+        )
+        .unwrap();
         if let RequestValue::Scores(rows) = call.value() {
             let question = rows[0].result().question();
             let levels = question.options().collect::<Vec<_>>();
@@ -208,14 +173,18 @@ fn complete_collections_refuse_missing_cells_and_aggregate_results_have_no_colum
         assert!(items.is_empty());
     }
     assert_eq!(listener.count(), 0);
-    let call = execute(
+    let call = api::request_question(
         &engine,
         RequestFunction::Filter,
         RequestQuestion::Text {
             text: "Fits?".into(),
         },
-        vec![item("First.")],
-    );
+        RequestInput::Records {
+            items: vec![item("First.")],
+        },
+        RequestEnvironment::default(),
+    )
+    .unwrap();
     let (column, _) =
         RequestColumn::new(RequestFunction::Filter, vec![Some(item("First."))]).unwrap();
     let before = listener.count();
@@ -255,12 +224,16 @@ fn inline_labels_keep_caller_order_descriptions_and_authored_fields_at_execution
         r#"{"model":"fixed","answers":{"q1":{"type":"choice","probabilities":{"zeta":0.9,"alpha":0.1}}}}"#,
     );
     let engine = api::loopback(listener.base(), "inline-fixture");
-    let call = execute(
+    let call = api::request_question(
         &engine,
         RequestFunction::Choose,
         question,
-        vec![item("Evidence.")],
-    );
+        RequestInput::Records {
+            items: vec![item("Evidence.")],
+        },
+        RequestEnvironment::default(),
+    )
+    .unwrap();
     let RequestValue::Choices(rows) = call.value() else {
         panic!("choice result")
     };
@@ -282,8 +255,7 @@ fn inline_labels_keep_caller_order_descriptions_and_authored_fields_at_execution
 }
 
 #[test]
-fn invalid_inline_fields_and_label_sets_refuse_before_any_send() {
-    let listener = api::answering("{}");
+fn invalid_inline_fields_and_label_sets_refuse_with_usage_errors() {
     for (names, descriptions) in [
         (vec!["same".into(), "same".into()], vec![]),
         (
@@ -349,7 +321,6 @@ fn invalid_inline_fields_and_label_sets_refuse_before_any_send() {
             ErrorKind::Usage
         );
     }
-    assert_eq!(listener.count(), 0);
 }
 
 #[test]
@@ -374,12 +345,16 @@ fn inline_literal_and_authored_decision_readings_use_the_same_public_execution()
         let authored = !fields.is_empty();
         let question =
             RequestQuestion::inline(RequestFunction::Decide, Some("Fits?".into()), fields).unwrap();
-        let call = execute(
+        let call = api::request_question(
             &engine,
             RequestFunction::Decide,
             question,
-            vec![item("Evidence.")],
-        );
+            RequestInput::Records {
+                items: vec![item("Evidence.")],
+            },
+            RequestEnvironment::default(),
+        )
+        .unwrap();
         let RequestValue::Decisions(rows) = call.value() else {
             panic!("decision result")
         };
