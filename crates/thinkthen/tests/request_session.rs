@@ -377,6 +377,116 @@ fn whole_set_requests_publish_one_aggregate_then_truthful_terminal() {
     assert_eq!(terminal.facts.as_ref().unwrap().records(), 2);
 }
 
+#[allow(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "malformed owned recognition request fixtures stop the behavior test"
+)]
+fn recognition_response(body: &[u8], failure: Option<&str>) -> Canned {
+    let request: Value = serde_json::from_slice(body).unwrap();
+    if request.to_string().contains("second") && failure == Some("provider") {
+        return Canned::ok("{}");
+    }
+    let answers = request["questions"]
+        .as_object()
+        .unwrap()
+        .iter()
+        .map(|(name, q)| {
+            let probabilities = q["criteria"]
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(|label| (label.clone(), json!(u8::from(label == "OUT"))))
+                .collect::<serde_json::Map<_, _>>();
+            (
+                name.clone(),
+                json!({"type":"choice","probabilities":probabilities}),
+            )
+        })
+        .collect::<serde_json::Map<_, _>>();
+    Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
+}
+
+#[test]
+fn recognition_publishes_one_ordered_aggregate_even_after_later_failure() {
+    for (count, failure) in [
+        (0, None),
+        (2, None),
+        (1, Some("reader")),
+        (1, Some("provider")),
+    ] {
+        let listener =
+            Listener::answering(move |body| recognition_response(body, failure)).unwrap();
+        let ask = Recognize::builder()
+            .kind(Kind::new("person", None).unwrap())
+            .unwrap()
+            .build()
+            .unwrap();
+        let input_count = count + usize::from(failure == Some("provider"));
+        let input = if failure == Some("reader") {
+            feed()
+        } else {
+            RequestInput::Records {
+                items: ["first", "second"]
+                    .into_iter()
+                    .take(input_count)
+                    .map(|text| descriptor(text).item)
+                    .collect(),
+            }
+        };
+        let session = engine(&listener)
+            .request_session(Request::new(RequestCall::Recognize(RequestArguments {
+                question: RequestQuestion::Definition { value: ask.into() },
+                input,
+                options: RequestOptions::default(),
+            })))
+            .unwrap();
+        if failure == Some("reader") {
+            assert!(matches!(
+                session.try_push(descriptor("first")).unwrap(),
+                RequestSessionPush::Accepted
+            ));
+            session
+                .finish(Some(RequestReaderFailure::Producer))
+                .unwrap();
+        }
+        let packets = drain(&session);
+        let aggregates = packets
+            .iter()
+            .filter_map(|packet| match packet {
+                RequestSessionResult::Aggregate(RequestValue::Recognized(rows)) => Some(rows),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(aggregates.len(), 1);
+        let rows = aggregates[0];
+        assert_eq!(rows.len(), count);
+        for (index, row) in rows.iter().enumerate() {
+            assert_eq!(row.ordinal(), index);
+            let document = serde_json::to_value(row.original()).unwrap();
+            assert!(document.to_string().contains(["first", "second"][index]));
+        }
+        assert!(matches!(
+            packets[packets.len() - 2],
+            RequestSessionResult::Aggregate(_)
+        ));
+        assert_eq!(
+            packets
+                .iter()
+                .filter(|p| matches!(p, RequestSessionResult::Terminal(_)))
+                .count(),
+            1
+        );
+        let RequestSessionResult::Terminal(terminal) = packets.last().unwrap() else {
+            panic!("actual terminal")
+        };
+        assert_eq!(terminal.error.is_some(), failure.is_some());
+        let facts = terminal.facts.as_ref().unwrap();
+        assert_eq!(facts.records(), count as u64);
+        assert_eq!(facts.requests_sent(), listener.requests().len() as u64);
+    }
+}
+
 #[test]
 fn filter_observes_rejected_occurrences_and_selects_only_first_passing_file() {
     let listener = Listener::answering(response).unwrap();

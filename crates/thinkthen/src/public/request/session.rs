@@ -7,7 +7,10 @@ use super::{
 };
 use crate::{CallOptions, Engine, Error, SourceLocation, Surface};
 use serde::Deserialize;
-use std::sync::{Arc, Mutex};
+use std::{
+    cell::RefCell,
+    sync::{Arc, Mutex},
+};
 
 /// Owned input content and physical provenance, separate from selected evidence.
 #[derive(Debug, Clone)]
@@ -422,7 +425,13 @@ fn run(
     };
     let files = Mutex::new(std::collections::BTreeSet::new());
     let files_only = request.request.call.arguments().options.files_only;
-    let sink = |value| publish_rows(queue, value, files_only, &files, options.all_filter_results);
+    // Recognition completes records incrementally, but exposes one whole-request packet.
+    // Keep its completed prefix until the native invocation settles, including a failure.
+    let recognized = RefCell::new(Vec::new());
+    let sink = |value| match value {
+        RequestValue::Recognized(rows) => recognized.borrow_mut().extend(rows),
+        value => publish_rows(queue, value, files_only, &files, options.all_filter_results),
+    };
     let feed = match &request.request.call.arguments().input {
         RequestInput::Feed { name, .. } => {
             Some(configured_feed(name.clone(), Arc::clone(queue), &options))
@@ -441,13 +450,7 @@ fn run(
         Ok(RequestOutcome::Complete(call)) => {
             let facts = call.facts().clone();
             queue.close_intake();
-            publish_rows(
-                queue,
-                call.into_value(),
-                files_only,
-                &files,
-                options.all_filter_results,
-            );
+            sink(call.into_value());
             RequestSessionTerminal {
                 facts: Some(facts),
                 error: None,
@@ -455,13 +458,7 @@ fn run(
         }
         Ok(RequestOutcome::Failed { completed, error }) => {
             queue.close_intake();
-            publish_rows(
-                queue,
-                completed,
-                files_only,
-                &files,
-                options.all_filter_results,
-            );
+            sink(completed);
             RequestSessionTerminal::failed(error)
         }
         Err(error) => {
@@ -469,6 +466,11 @@ fn run(
             RequestSessionTerminal::failed(error)
         }
     };
+    if function == super::RequestFunction::Recognize {
+        queue.publish(RequestSessionResult::Aggregate(RequestValue::Recognized(
+            recognized.into_inner(),
+        )));
+    }
     queue.settle(terminal);
 }
 
