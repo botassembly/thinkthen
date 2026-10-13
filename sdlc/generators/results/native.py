@@ -1,5 +1,7 @@
 """Select the declarations each native adapter uses, including carrier dependencies."""
 import re
+import json
+from pathlib import Path
 
 COMMON = (
     'thinkthen_engine_free', 'thinkthen_engine_new_with',
@@ -12,11 +14,7 @@ COMMON = (
 )
 USE = {
     'php': (*COMMON, 'thinkthen_session_new_named_with_surface', 'thinkthen_session_result_json'),
-    'swift': (*COMMON, 'thinkthen_error_retryable', 'thinkthen_error_facts_json',
-              'thinkthen_session_error_retryable', 'thinkthen_session_error_facts_json', 'thinkthen_free_string',
-              'thinkthen_question_free', 'thinkthen_question_parse', 'thinkthen_request_plan_json',
-              'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
-              'thinkthen_session_result_json'),
+    'swift': (),
     'ada': (*COMMON, 'thinkthen_engine_new', 'thinkthen_error_retryable',
             'thinkthen_session_new_with_surface', 'thinkthen_session_new_named_with_surface',
             'thinkthen_session_result_view', 'thinkthen_session_new_typed_with_surface',
@@ -31,8 +29,26 @@ USE = {
 }
 
 
+def referenced_symbols(language):
+    """Derive native references from production and registered generated host source."""
+    from sources import production
+    from registry import generated_paths
+    root = Path(__file__).resolve().parents[3]
+    manifest = json.loads((root / 'conformance/library-surface.json').read_text())
+    config = manifest['libraries'][language]
+    generated = generated_paths()
+    names = set()
+    paths = {path for pattern in config['declarations'] for path in root.glob(pattern)}
+    for path in sorted(paths):
+        relative = path.relative_to(root).as_posix()
+        if relative in generated or production(relative, manifest):
+            names.update(re.findall(r'\b(?:thinkthen_\w+|THINKTHEN_\w+)\b', path.read_text()))
+    return names
+
+
 def selected_functions(functions, language):
-    names = {name for name in USE[language] if name.startswith('thinkthen_')}
+    names = (referenced_symbols(language) & functions.keys() if language == 'swift' else
+             {name for name in USE[language] if name.startswith('thinkthen_')})
     missing = names - functions.keys()
     if missing:
         raise ValueError('missing native declarations: ' + ', '.join(sorted(missing)))
@@ -62,7 +78,8 @@ def selected_header(header, language):
             match = re.search(r'\b(thinkthen_\w+)\s*\(', text)
         if match:
             definitions[match[1]] = text
-    wanted = set(USE[language])
+    wanted = (referenced_symbols(language) & (definitions.keys() | macros.keys())
+              if language == 'swift' else set(USE[language]))
     wanted.update(name for name in macros if name.startswith(('THINKTHEN_E', 'THINKTHEN_SESSION_', 'THINKTHEN_COMPLETE_USAGE_PERSISTENCE_')))
     pending = list(wanted)
     while pending:
