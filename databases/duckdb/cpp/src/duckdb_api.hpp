@@ -3,6 +3,7 @@
 #include "duckdb.hpp"
 #include "duckdb/catalog/catalog.hpp"
 #include "duckdb/parser/parsed_data/create_info.hpp"
+#include "duckdb/parser/parser.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
 
 namespace duckdb {
@@ -39,6 +40,12 @@ vector<LogicalType> ThinkThenRegistrationTypes(const Function &function) {
     }
     return types;
 }
+inline Value ThinkThenJSONValue(const string &text) {
+    return Value(text).WithType(LogicalType::JSON());
+}
+inline Parser ThinkThenMacroParser() {
+    return Parser::GetBuiltinParser();
+}
 inline void ThinkThenMacroSchema(CreateInfo &info) {
     info.SetSchema(Identifier::DefaultSchema());
 }
@@ -74,6 +81,14 @@ inline void ThinkThenArgument(ScalarFunction &function, idx_t index, LogicalType
 template <class Function>
 vector<LogicalType> ThinkThenRegistrationTypes(const Function &function) {
     return function.arguments;
+}
+inline Value ThinkThenJSONValue(const string &text) {
+    Value value(text);
+    value.GetTypeMutable() = LogicalType::JSON();
+    return value;
+}
+inline Parser ThinkThenMacroParser() {
+    return Parser();
 }
 inline void ThinkThenMacroSchema(CreateInfo &info) {
     info.schema = DEFAULT_SCHEMA;

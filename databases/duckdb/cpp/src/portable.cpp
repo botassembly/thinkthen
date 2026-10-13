@@ -369,7 +369,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 }
 
 void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
-	Parser parser;
+	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	ThinkThenMacroSchema(*statement.info);
