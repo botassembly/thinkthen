@@ -39,3 +39,5 @@ The ThinkThen DuckDB extension builds in DuckDB's community CI on Linux x86-64 a
 ## Progress
 
 - 2026-10-13 started
+
+PM amendment, 2026-10-13. The fresh-reader test of the DuckDB README page, the descriptor's `extended_description` and the PR description runs under 0575, and each opens with the site README's pitch word for word, as 0578 says.

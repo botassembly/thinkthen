@@ -1,8 +1,12 @@
 # 0572: Refresh the docs to sell one idea
 
-Status: OPEN. In progress. Jarvis owns it as the docs team, on local branch `docs/0.2-refresh` in its own worktree, kept in sync with main and not merged until 0.2 ships and Ian reviews it. The 0.2 team does not work on it.
+Status: WITHDRAWN.
+
+Opened as: 2026-10-13, superseded by 0575. In progress. Jarvis owns it as the docs team, on local branch `docs/0.2-refresh` in its own worktree, kept in sync with main and not merged until 0.2 ships and Ian reviews it. The 0.2 team does not work on it.
 
 Milestone: 0.2.1
+
+Superseded by: 0575
 
 ## Outcome
 
