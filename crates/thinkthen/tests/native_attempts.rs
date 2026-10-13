@@ -354,3 +354,17 @@ fn encoded_key_response_ids_are_omitted_and_ordinary_ids_survive_failures() {
         assert!(!format!("{error:?}").contains("sk-test-?"));
     }
 }
+
+#[test]
+fn short_private_evidence_is_omitted_from_native_failure_text_and_debug() {
+    let body = r#"{"error":{"message":"Rejected S7code! because it is unsupported"}}"#;
+    let listener = Listener::serving(vec![Canned::status(400, body)]).unwrap();
+    let engine = engine(&listener).unwrap();
+    let question = Question::decide("Refund?").unwrap().cut();
+    let error = engine.decide(&question, "S7code!").unwrap_err();
+    assert_eq!(error.kind(), thinkthen::ErrorKind::Backend);
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(error.facts().unwrap().requests_sent(), 1);
+    assert_eq!(error.to_string(), "the backend answered with status 400");
+    assert!(!format!("{error:?}").contains("S7code!"));
+}

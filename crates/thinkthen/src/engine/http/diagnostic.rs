@@ -149,10 +149,9 @@ fn submitted_text(value: &Json, text: &str, literal: &str) -> bool {
     }
 }
 
-// Short generic input words collide with ordinary provider prose. Longer exact
-// literals, including decoded strings inside framed JSON, must stay private.
+// Submitted literals, including decoded strings inside framed JSON, stay private.
 fn reflected_literal(value: &str, text: &str) -> bool {
-    value.chars().count() >= 8 && text.contains(value)
+    !value.is_empty() && text.contains(value)
         || value.char_indices().any(|(offset, character)| {
             character == '"'
                 && serde_json::Deserializer::from_str(value.get(offset..).unwrap_or_default())
@@ -186,12 +185,20 @@ fn encoded_key(word: &str, key: &Key) -> bool {
         general_purpose::URL_SAFE,
         general_purpose::URL_SAFE_NO_PAD,
     ] {
-        if decoder
-            .decode(word)
-            .is_ok_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
+        if word.contains(&decoder.encode(bytes))
+            || decoder
+                .decode(word)
+                .is_ok_and(|decoded| decoded.windows(bytes.len()).any(|part| part == bytes))
         {
             return true;
         }
+    }
+    let representation = bytes
+        .iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<String>();
+    if word.to_ascii_lowercase().contains(&representation) {
+        return true;
     }
     let hex = word
         .as_bytes()

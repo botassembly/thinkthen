@@ -103,6 +103,12 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
         "c2stdGVzdC12YWx1ZQ==",
         "echo:c2stdGVzdC12YWx1ZQ==",
         "echo(c2stdGVzdC12YWx1ZQ==)",
+        "echo-c2stdGVzdC12YWx1ZQ==",
+        "echo_c2stdGVzdC12YWx1ZQ==",
+        "prefixc2stdGVzdC12YWx1ZQ==suffix",
+        "echo+c2stdGVzdC12YWx1ZQ==/suffix",
+        "echo-c2stdGVzdC12YWx1ZQ",
+        "echo_736b2d746573742d76616c7565suffix",
         "echo/736b2d746573742d76616c7565!",
         "echo(sk%2Dtest%2Dvalue)",
         "The backend rejected private evidence marker because it is unsupported",
@@ -147,13 +153,33 @@ fn safe_provider_messages_are_bounded_and_credential_echoes_are_withheld() {
 #[test]
 fn reflected_nested_evidence_is_withheld_without_hiding_unrelated_prose() {
     for (evidence, message, shown) in [
+        ("Z", "Rejected Z because it is unsupported", false),
+        ("Ada", "Rejected Ada because it is unsupported", false),
+        (
+            "S7code!",
+            "Rejected S7code! because it is unsupported",
+            false,
+        ),
+        (
+            "S8code!!",
+            "Rejected S8code!! because it is unsupported",
+            false,
+        ),
         (
             r#"{"nested":{"text":"private \"quoted\" evidence"}}"#,
             "Rejected private \"quoted\" evidence because it is unsupported",
             false,
         ),
-        ("model", "The selected model is unavailable", true),
-        ("a", "The selected model is unavailable", true),
+        (
+            "unrelated evidence",
+            "The selected model is unavailable",
+            true,
+        ),
+        (
+            "separate evidence",
+            "The selected model is unavailable",
+            true,
+        ),
     ] {
         let body = serde_json::json!({"error":{"message":message}}).to_string();
         let listener = Listener::serving(vec![Canned::status(400, &body)]).unwrap();
