@@ -1,5 +1,7 @@
 """Generate owned JVM status types and carrier measurements from the C compiler."""
 import importlib.util
+import json
+from jvm_host import named_calls
 
 
 def outputs(root):
@@ -75,5 +77,27 @@ def outputs(root):
         waits += ['static int ' + method + '(' + arguments + ') {',
                   'return (int)NativeSession.call("' + function + '", ValueLayout.JAVA_INT, new MemoryLayout[]{' + carriers + '}, ' + values + ');', '}']
     waits += ['}']
-    return {'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
+    request_schema = json.loads((root / 'specification/request.schema.json').read_text())
+    named = native['records']['thinkthen_named_request_v1']
+    named_lines = ['// Generated from compiler-derived C carriers. Do not edit.',
+                   'package thinkthen;', 'import java.lang.foreign.*;',
+                   'final class NativeNamed {', 'private NativeNamed() {}',
+                   f'static final MemoryLayout REQUEST = MemoryLayout.sequenceLayout({named["size"]}, ValueLayout.JAVA_BYTE).withByteAlignment({named["alignment"]});',
+                   'static void text(Arena arena, MemorySegment view, String text) {',
+                   'var data = arena.allocateFrom(ValueLayout.JAVA_BYTE, NativeSession.utf8(text));',
+                   f'view.set(ValueLayout.ADDRESS, {advice["fields"]["data"]["offset"]}, data);',
+                   f'view.set(NativeSession.SIZE, {advice["fields"]["len"]["offset"]}, data.byteSize());', '}',
+                   'static MemorySegment create(MemorySegment engine, Engine.Surface surface, Inputs.RequestFunction function, Inputs.RequestQuestion question, Inputs.RequestInput input, Inputs.RequestOptions options) {',
+                   'try (Arena arena = Arena.ofConfined()) {', 'var request = arena.allocate(REQUEST);']
+    for field in named['fields']:
+        value = {'function': '(String)function.json()', 'question_json': 'Json.write(question.json())',
+                 'input_json': 'Json.write(input.json())', 'options_json': 'options == null ? "{}" : Json.write(options.json())'}[field]
+        named_lines += [f'text(arena, request.asSlice({named["fields"][field]["offset"]}, {advice["size"]}), {value});']
+    named_lines += [f'var token = arena.allocate(NativeUsageLayouts.ADVICE);',
+                    'text(arena, token, surface.name().toLowerCase(java.util.Locale.ROOT));',
+                    'var output = arena.allocate(ValueLayout.ADDRESS);',
+                    'NativeSession.check((int)NativeSession.call("thinkthen_session_new_named_with_surface", ValueLayout.JAVA_INT,',
+                    'new MemoryLayout[]{ValueLayout.ADDRESS, ValueLayout.ADDRESS, MemoryLayout.structLayout(ValueLayout.ADDRESS, NativeSession.SIZE), ValueLayout.ADDRESS}, engine, request, token, output));',
+                    'return output.get(ValueLayout.ADDRESS, 0);', '}', '}', '}']
+    return {'thinkthen/NamedCalls.java': named_calls(request_schema['$defs']), 'thinkthen/NativeNamed.java': named_lines, 'thinkthen/NativeWait.java': waits, 'thinkthen/UsagePersistence.java': java, 'thinkthen/NativeUsageLayouts.java': layouts,
             'kotlin/UsagePersistence.kt': kotlin, 'scala/UsagePersistence.scala': scala}

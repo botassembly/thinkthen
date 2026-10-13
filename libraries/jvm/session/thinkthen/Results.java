@@ -2213,6 +2213,9 @@ public final class Results {
             Object value = required("probability");
             return (BigDecimal)value;
         }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
+        }
     }
     public static final class RelationMemberFailureId extends Values.View implements RelationMember {
         public RelationMemberFailureId(Object value) {
@@ -2275,6 +2278,9 @@ public final class Results {
         public FailureId failureId() {
             Object value = required("failure_id");
             return FailureId.read(value);
+        }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
         }
     }
     public static final class RelationMethod extends Values.View {
@@ -3089,6 +3095,12 @@ public final class Results {
         public RelationEndpoint target() {
             Object value = required("target");
             return RelationEndpoint.read(value);
+        }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
+        }
+        public String targetName() {
+            return (String)Values.object(required("target")).get("name");
         }
     }
     public static final class RelationRule extends Values.View {
@@ -3964,6 +3976,12 @@ public final class Results {
             Object value = required("target");
             return EntityDocument.read(value);
         }
+        public String sourceName() {
+            return (String)Values.object(required("source")).get("name");
+        }
+        public String targetName() {
+            return (String)Values.object(required("target")).get("name");
+        }
     }
     public static final class SourceRelationEndpoint extends Values.View {
         public SourceRelationEndpoint(Object value) {
@@ -4103,6 +4121,127 @@ public final class Results {
         }
         public Object json() {
             return Values.json(value);
+        }
+    }
+    public static final class CallAnswers {
+        private CallAnswers() {
+        }
+        public static final class CardinalityFailure extends IllegalStateException {
+            private static final long serialVersionUID = 1L;
+            private final transient Engine.OwnedCall call;
+            CardinalityFailure(Engine.OwnedCall call) {
+                super("Expected exactly one successful matching answer");
+                this.call = call;
+            }
+            public Engine.OwnedCall call() {
+                return call;
+            }
+        }
+        private static Object path(Object value, String[] members) {
+            for (String member : members) {
+                if (!(value instanceof Map<?,?> object)) return null;
+                value = object.get(member);
+            } return value;
+        }
+        private static void terminal(Engine.OwnedCall call) {
+            Map<String,Object> terminal = Values.object(call.terminal().json());
+            if (!"terminal".equals(terminal.get("kind"))) throw new CardinalityFailure(call);
+            if (terminal.containsKey("failure")) {
+                if (!(terminal.get("failure") instanceof Map<?,?> failure) || !(failure.get("error") instanceof Map<?,
+                ?> error) || !(error.get("message") instanceof String)) throw new CardinalityFailure(call);
+                throw new Engine.SessionFailure(call);
+            }
+        }
+        private static Object scalar(Engine.OwnedCall call, String function, String kind, boolean nullable) {
+            terminal(call);
+            Object answer = null;
+            int count = 0;
+            for (SessionPacket item : call.packets()) {
+                Map<String,Object> packet = Values.object(item.json());
+                if (!function.equals(packet.get("function")) || !("observation".equals(path(packet, new String[]{
+                    "kind"
+                })) && "row".equals(path(packet, new String[]{
+                    "value", "kind"
+                })) && "judgment".equals(path(packet, new String[]{
+                    "value", "value", "kind"
+                })))) continue;
+                Object raw = path(packet, new String[]{
+                    "value", "value", "value"
+                });
+                if (!(raw instanceof Map<?,?> judgment) || !kind.equals(judgment.get("kind"))) continue;
+                if (!judgment.containsKey("value") || (!nullable && judgment.get("value") == null)) throw new CardinalityFailure(call);
+                answer = judgment.get("value");
+                count++;
+            }
+            if (count != 1) throw new CardinalityFailure(call);
+            return answer;
+        }
+        private static Object collection(Engine.OwnedCall call, String function, boolean array, boolean rows) {
+            terminal(call);
+            List<Object> values = new ArrayList<>();
+            Object answer = null;
+            int count = 0;
+            for (SessionPacket item : call.packets()) {
+                Map<String,Object> packet = Values.object(item.json());
+                if (!function.equals(packet.get("function"))) continue;
+                boolean row = rows && "row".equals(packet.get("kind"));
+                if (!row && !"aggregate".equals(packet.get("kind"))) continue;
+                if (!packet.containsKey("value") || packet.get("value") == null) throw new CardinalityFailure(call);
+                answer = packet.get("value");
+                count++;
+                if (array) {
+                    if (row) values.add(answer);
+                    else {
+                        if (!(answer instanceof List<?> list)) throw new CardinalityFailure(call);
+                        values.addAll(list);
+                    }
+                }
+            }
+            if (array) return Collections.unmodifiableList(values);
+            if (count != 1) throw new CardinalityFailure(call);
+            return answer;
+        }
+        public static Boolean decide(Engine.OwnedCall call) {
+            Object value = scalar(call, "decide", "decision", true);
+            if (value == null) return null;
+            return (Boolean)value;
+        }
+        public static String choose(Engine.OwnedCall call) {
+            Object value = scalar(call, "choose", "choice", true);
+            if (value == null) return null;
+            return (String)value;
+        }
+        public static BigDecimal score(Engine.OwnedCall call) {
+            Object value = scalar(call, "score", "score", false);
+            return (BigDecimal)value;
+        }
+        public static List<String> tag(Engine.OwnedCall call) {
+            Object value = scalar(call, "tag", "tags", false);
+            return Values.list(value, item0 -> (String)item0);
+        }
+        public static List<AtomicBoolean> filter(Engine.OwnedCall call) {
+            Object value = collection(call, "filter", true, true);
+            return Values.list(value, item0 -> AtomicBoolean.read(item0));
+        }
+        public static List<AtomicNonZeroUsize> rank(Engine.OwnedCall call) {
+            Object value = collection(call, "rank", true, false);
+            return Values.list(value, item0 -> AtomicNonZeroUsize.read(item0));
+        }
+        public static Find find(Engine.OwnedCall call) {
+            Object value = collection(call, "find", false, false);
+            return Find.read(value);
+        }
+        public static List<Annotation> annotate(Engine.OwnedCall call) {
+            Object value = collection(call, "annotate", true, true);
+            return Values.list(value, item0 -> Annotation.read(item0));
+        }
+        public static List<Recognition> recognize(Engine.OwnedCall call) {
+            Object value = collection(call, "recognize", true, false);
+            return Values.list(value, item0 -> Recognition.read(item0));
+        }
+        public static Relation relate(Engine.OwnedCall call) {
+            Object value = collection(call, "relate", false, false);
+            return Relation.read(value);
         }
     }
 }
