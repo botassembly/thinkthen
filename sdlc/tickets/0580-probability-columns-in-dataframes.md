@@ -8,6 +8,8 @@ Depends on: 0581
 
 Reviews: revision eef28ca, reject
 
+Reviews: revision 6d5d69d, accept
+
 ## Outcome
 
 Rust Polars returns a value-and-probability struct and a records column for all ten functions, with no `probability` switch and no `_complete` or details frame methods.
