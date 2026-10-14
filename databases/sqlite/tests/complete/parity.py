@@ -90,9 +90,9 @@ def main():
     contract=inventory.inventory()
     rows=list(inventory.required_cases(contract,consumer).values())
     try:
+        if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' and (selected is not None or len(sys.argv)>2):
+            raise ValueError('full SQL parity refuses a case selector')
         if selected is not None:
-            if os.environ.get('THINKTHEN_TEST_PROFILE')=='full':
-                raise ValueError('full SQL parity refuses a case selector')
             if len(sys.argv)>2:
                 raise ValueError('conflicting SQL case selectors')
             ids=selected_case_ids(selected)

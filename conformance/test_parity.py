@@ -482,11 +482,13 @@ class PublicAssertions(unittest.TestCase):
                 ('nonmatching', '25-defect-fault', [], 'matches no required'),
                 ('conflict', '01-decide-yes-captured', ['01-decide-yes-captured'], 'conflicting SQL'),
                 ('full', '01-decide-yes-captured', [], 'full SQL parity refuses'),
+                ('full-positional', None, ['01-decide-yes-captured'], 'full SQL parity refuses'),
             )
             for name, selector, arguments, cause in cases:
                 with self.subTest(name=name):
-                    selected = {**env, 'THINKTHEN_CONFORMANCE_IDS': selector}
-                    if name == 'full': selected['THINKTHEN_TEST_PROFILE'] = 'full'
+                    selected = dict(env)
+                    if selector is not None: selected['THINKTHEN_CONFORMANCE_IDS'] = selector
+                    if name.startswith('full'): selected['THINKTHEN_TEST_PROFILE'] = 'full'
                     result = subprocess.run([sys.executable,
                         str(parity.ROOT / 'databases/sqlite/tests/complete/parity.py'),
                         'postgresql', *arguments], env=selected, capture_output=True, text=True, timeout=5)
