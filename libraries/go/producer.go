@@ -7,7 +7,6 @@ package thinkthen
 import "C"
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"runtime"
@@ -42,7 +41,7 @@ func startProducer(ctx context.Context, producer Producer, session *C.thinkthen_
 			var data []byte
 			failureKind := "io"
 			if err == nil {
-				data, err = json.Marshal(RequestSessionDescriptor{Item: descriptor(value)})
+				data, err = transportMarshal(RequestSessionDescriptor{Item: descriptor(value)})
 				failureKind = "invalid_input"
 			}
 			if err != nil {

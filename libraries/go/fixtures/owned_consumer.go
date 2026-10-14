@@ -8,6 +8,7 @@ import (
 	tt "github.com/botassembly/thinkthen/libraries/go"
 	"io"
 	"os"
+	"reflect"
 	"sync/atomic"
 	"time"
 )
@@ -31,7 +32,7 @@ func feedChecks(client *tt.Client) {
 		index++
 		return tt.TextItem(fmt.Sprintf("record-%d", index)), nil
 	})
-	call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), producer, &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
+	call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(producer), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	require(err == nil && index == 3 && call.Terminal != nil, "bounded feed did not finish")
 	rows := 0
 	for _, packet := range call.Packets {
@@ -44,11 +45,11 @@ func feedChecks(client *tt.Client) {
 	require(rows == 3, "bounded feed lost ordered rows")
 	started := 0
 	invalid := producerFunc(func(context.Context) (any, error) { started++; return nil, io.EOF })
-	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), invalid, &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(invalid), &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
 	require(err != nil && started == 0, "invalid request started intake")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), invalid, nil)
+	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), fixtureInput(invalid), nil)
 	require(errors.Is(err, context.Canceled) && started == 0, "precancelled feed started intake")
 	read := 0
 	broken := producerFunc(func(context.Context) (any, error) {
@@ -58,7 +59,7 @@ func feedChecks(client *tt.Client) {
 		}
 		return nil, errors.New("private reader diagnostic")
 	})
-	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), broken, &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(broken), &tt.RequestOptions{Batch: tt.Ptr[tt.RequestBatch](tt.RequestBatchInteger(1))})
 	var failure *tt.SessionError
 	require(errors.As(err, &failure) && failure.Call.Terminal != nil, "reader failure lost typed terminal")
 	prefix := 0
@@ -73,7 +74,7 @@ func feedChecks(client *tt.Client) {
 	var answerFailure *tt.SessionError
 	require(errors.As(answerErr, &answerFailure) && len(answerFailure.Call.Packets) == len(failure.Call.Packets), "one-answer reader failure lost its prefix")
 	client.Close()
-	for i, result := range []tt.OwnedCall{call, failure.Call} {
+	for i, result := range []tt.Call{call, failure.Call} {
 		facts := result.Terminal.Facts()
 		require(facts.Present && facts.Value.CallId().Present, "feed facts lost after close")
 		sent, err := facts.Value.RequestsSent().Value.Int64()
@@ -83,7 +84,7 @@ func feedChecks(client *tt.Client) {
 }
 
 func collectionAnswerChecks() {
-	var terminal tt.OwnedSessionPacketTerminal
+	var terminal tt.SessionPacketTerminal
 	require(json.Unmarshal([]byte(`{"kind":"terminal"}`), &terminal) == nil, "decode collection terminal")
 	for _, test := range []struct {
 		function string
@@ -103,10 +104,10 @@ func collectionAnswerChecks() {
 		{"rank", "aggregate", `[{"index":-1}]`, ``, true},
 		{"rank", "aggregate", `[{"index":1.5}]`, ``, true},
 	} {
-		var packet tt.OwnedSessionPacket
+		var packet tt.SessionPacket
 		raw := fmt.Sprintf(`{"function":%q,"kind":%q,"value":%s}`, test.function, test.kind, test.value)
 		require(json.Unmarshal([]byte(raw), &packet) == nil, "decode collection packet")
-		call := tt.OwnedCall{Packets: []tt.OwnedSessionPacket{packet}, Terminal: &terminal}
+		call := tt.Call{Packets: []tt.SessionPacket{packet}, Terminal: &terminal}
 		var answer any
 		var err error
 		if test.function == "rank" {
@@ -122,13 +123,52 @@ func collectionAnswerChecks() {
 	}
 }
 
+type EmbeddedOriginal struct {
+	Label string `json:"label"`
+}
+type StructuredOriginal struct {
+	EmbeddedOriginal
+	Count   int            `json:"count,string"`
+	Empty   []string       `json:"empty,omitempty"`
+	Members map[string]int `json:"members,omitempty"`
+}
+
+func authoredEncoding(client *tt.Client, cyclic bool) {
+	if cyclic {
+		value := map[string]any{}
+		value["self"] = value
+		var pointer any
+		pointer = &pointer
+		for _, value := range []any{value, pointer} {
+			_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
+			require(err != nil, "cyclic authored value accepted")
+		}
+		fmt.Println("cyclic-authored-refusal-pass")
+		return
+	}
+	for _, value := range []any{[]byte{65}, StructuredOriginal{EmbeddedOriginal: EmbeddedOriginal{Label: "kept"}, Count: 7, Empty: []string{}, Members: map[string]int{}}, map[string]any{"bytes": []byte{65}}} {
+		_, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(value)), nil)
+		require(err == nil, "authored encoding call failed")
+	}
+	fmt.Println("authored-encoding-pass requests=3")
+}
 func main() {
+	for _, value := range []any{tt.TextInput("text"), tt.Request{}, tt.SessionPacket{}, tt.OrderedMap[string]{}, tt.Facts{}} {
+		_, exposes := value.(json.Marshaler)
+		require(!exposes, "transport JSON encoder remains public")
+	}
+	inputType := reflect.TypeOf((*tt.Client).Decide).In(3)
+	require(inputType.Name() == "DecideInput" && inputType.NumMethod() > 0, "decision input became untyped")
 	collectionAnswerChecks()
 	client, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 	if err != nil {
 		panic(err)
 	}
 	defer client.Close()
+	if len(os.Args) > 1 && (os.Args[1] == "encoding" || os.Args[1] == "cyclic") {
+		authoredEncoding(client, os.Args[1] == "cyclic")
+		return
+	}
 	if len(os.Args) > 1 && os.Args[1] == "plan" {
 		planClient, err := tt.NewClient(tt.EngineSettings{BaseUrl: tt.Ptr(os.Getenv("THINKTHEN_BASE_URL")), Model: tt.Ptr("jev-1.13.0"), Cache: tt.Ptr[tt.CacheDocument](tt.DisabledCache(false))})
 		require(err == nil, "plan constructor")
@@ -160,13 +200,13 @@ func main() {
 		require(errors.Is(err, tt.ErrClosed), "closed preview admitted")
 		records, err := plan.Records().Value.Int64()
 		require(err == nil && records == 1, "owned plan lost after close")
-		require(json.NewEncoder(os.Stdout).Encode(plan) == nil, "plan encoding")
+		require(json.NewEncoder(os.Stdout).Encode(fixtureValue(plan)) == nil, "plan encoding")
 		return
 	}
 	if len(os.Args) > 1 && (os.Args[1] == "usage-written" || os.Args[1] == "usage-failed") {
-		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "surface-attribution", nil)
+		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput("surface-attribution"), nil)
 		require(err == nil && call.Terminal != nil, "usage call lost answer")
-		earlier, err := json.Marshal(call.Terminal.Facts().Value)
+		earlier, err := json.Marshal(fixtureValue(call.Terminal.Facts().Value))
 		require(err == nil, "facts encoding")
 		answered := false
 		for _, packet := range call.Packets {
@@ -197,7 +237,7 @@ func main() {
 		require(err == nil && repeated == finished, "state not retained")
 		repeated, err = client.FinishUsageStatus()
 		require(err == nil && repeated == finished, "finalization not retained")
-		after, err := json.Marshal(call.Terminal.Facts().Value)
+		after, err := json.Marshal(fixtureValue(call.Terminal.Facts().Value))
 		require(err == nil && string(after) == string(earlier), "status mutated retained facts")
 		sent, err := call.Terminal.Facts().Value.RequestsSent().Value.Int64()
 		require(err == nil && sent == 1, "usage changed sends")
@@ -215,13 +255,13 @@ func main() {
 		return
 	}
 	if len(os.Args) > 1 && os.Args[1] == "surface" {
-		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", nil)
+		call, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput("text"), nil)
 		require(err == nil && call.Terminal != nil, "surface decision failed")
-		_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "status-401", nil)
+		_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput("status-401"), nil)
 		var failure *tt.SessionError
 		require(errors.As(err, &failure), "surface failure lost typed error")
 		client.Close()
-		for _, retained := range []tt.OwnedCall{call, failure.Call} {
+		for _, retained := range []tt.Call{call, failure.Call} {
 			facts := retained.Terminal.Facts()
 			require(facts.Present && facts.Value.CallId().Present, "surface facts lost after close")
 			sent := facts.Value.RequestsSent()
@@ -290,7 +330,7 @@ func main() {
 				return nil, readerCtx.Err()
 			})
 		}
-		result, callErr := client.Decide(ctx, tt.TextQuestion("Is it?"), input, options)
+		result, callErr := client.Decide(ctx, tt.TextQuestion("Is it?"), fixtureInput(input), options)
 		err = callErr
 		if feeding {
 			require(result.Terminal == nil, "cancellation fabricated terminal facts")
@@ -332,8 +372,28 @@ func main() {
 		{"recognize", tt.DefinedQuestion(tt.RequestDefinitionRecognizeDefinition{Recognize: tt.RecognizeQuestion{Kinds: tt.Ptr(tt.OrderedMap[tt.AuthoredDescription]{{Key: "person", Value: tt.AuthoredDescriptionNull{}}})}}), "Ana Lima"},
 		{"relate", tt.DefinedQuestion(tt.RequestDefinitionAuthoredRelate{Relate: tt.RelateQuestion{Relations: []tt.AuthoredRelation{{Name: "knows", Source: tt.Ptr(tt.AuthoredName("person")), Target: tt.Ptr(tt.AuthoredName("person")), Either: tt.Ptr(false)}}}}), []any{map[string]any{"name": "Ana", "kind": "person"}, map[string]any{"name": "Bob", "kind": "person"}}},
 	}
-	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.OwnedCall, error){"decide": client.Decide, "choose": client.Choose, "tag": client.Tag, "score": client.Score, "filter": client.Filter, "rank": client.Rank, "find": client.Find, "annotate": client.Annotate, "recognize": client.Recognize, "relate": client.Relate}
-	retained := []tt.OwnedCall{}
+	calls := map[string]func(context.Context, tt.RequestQuestion, any, *tt.RequestOptions) (tt.Call, error){"decide": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Decide(ctx, q, fixtureInput(input), o)
+	}, "choose": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Choose(ctx, q, fixtureInput(input), o)
+	}, "tag": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Tag(ctx, q, fixtureInput(input), o)
+	}, "score": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Score(ctx, q, fixtureInput(input), o)
+	}, "filter": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Filter(ctx, q, fixtureInput(input), o)
+	}, "rank": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Rank(ctx, q, fixtureInput(input), o)
+	}, "find": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Find(ctx, q, fixtureInput(input), o)
+	}, "annotate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Annotate(ctx, q, fixtureInput(input), o)
+	}, "recognize": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Recognize(ctx, q, fixtureInput(input), o)
+	}, "relate": func(ctx context.Context, q tt.RequestQuestion, input any, o *tt.RequestOptions) (tt.Call, error) {
+		return client.Relate(ctx, q, fixtureInput(input), o)
+	}}
+	retained := []tt.Call{}
 	expectedRequests := int64(0)
 	for _, a := range asks {
 		result, err := calls[a.verb](context.Background(), a.q, a.input, nil)
@@ -369,7 +429,7 @@ func main() {
 	ranked, rankErr := retained[5].RankAnswer()
 	require(rankErr == nil && len(ranked) == 2 && ranked[0] == 0 && ranked[1] == 1, "rank answer lost zero-based stable input indexes")
 	for _, input := range [][]string{{}, {"cardinality-one", "cardinality-two"}} {
-		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), input, nil)
+		completed, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(input), nil)
 		require(err == nil && completed.Terminal != nil, "cardinality call did not settle")
 		n, err := completed.Terminal.Facts().Value.RequestsSent().Value.Int64()
 		require(err == nil, "cardinality call requests missing")
@@ -379,7 +439,7 @@ func main() {
 		require(errors.As(err, &cardinality) && cardinality.Count == len(input), "answer cardinality did not refuse")
 	}
 	// A false value must remain false, not absent or null.
-	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), "text", nil)
+	falsity, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdNumber(.95))}), fixtureInput("text"), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -387,7 +447,7 @@ func main() {
 	n, err := falseSends.Value.Int64()
 	require(falseSends.Present && err == nil, "missing false requests")
 	expectedRequests += n
-	var row tt.OwnedSessionPacketDecideRow
+	var row tt.SessionPacketDecideRow
 	found := false
 	for _, packet := range falsity.Packets {
 		row, err = packet.AsSessionPacketDecideRow()
@@ -402,7 +462,7 @@ func main() {
 	require(falseErr == nil, "nonboolean decision")
 	require(value.Present && !value.Null && falseValue == false, "false changed")
 	// Authored null is different from a missing field, and file positions survive.
-	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), "text", nil)
+	nullCall, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionNull{})}), fixtureInput("text"), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -422,14 +482,14 @@ func main() {
 	require(nullFound, "null row missing")
 	normalized, normalizedErr := nullCall.DecideAnswer()
 	require(normalizedErr == nil && normalized != nil && *normalized, "authored null replaced normalized judgment")
-	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), "unsure", nil)
+	uncertain, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), Threshold: tt.Ptr[tt.AuthoredThreshold](tt.AuthoredThresholdString("0.2:0.8"))}), fixtureInput("unsure"), nil)
 	require(err == nil, "uncertain call failed")
 	n, err = uncertain.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain requests missing")
 	expectedRequests += n
 	unknown, unknownErr := uncertain.DecideAnswer()
 	require(unknownErr == nil && unknown == nil, "nullable judgment changed")
-	uncertainChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), "uncertain-choice", nil)
+	uncertainChoice, err := client.Choose(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{Choose: tt.AuthoredQuestionTextString("Which?"), Options: tt.Ptr[tt.AuthoredOptions](tt.AuthoredOptionsArray{"a", "b"}), Threshold: tt.Ptr[tt.AuthoredCut](tt.AuthoredCutNumber(.95))}), fixtureInput("uncertain-choice"), nil)
 	require(err == nil, "uncertain choice call failed")
 	n, err = uncertainChoice.Terminal.Facts().Value.RequestsSent().Value.Int64()
 	require(err == nil, "uncertain choice requests missing")
@@ -438,7 +498,7 @@ func main() {
 	require(choiceErr == nil && unknownChoice == nil, "nullable choice judgment changed")
 	path := os.Getenv("HOME") + "/records.txt"
 	require(os.WriteFile(path, []byte("alpha\n\nbeta\n"), 0600) == nil, "fixture file")
-	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}, nil)
+	files, err := client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput(tt.RequestSource{Paths: []string{path}, Reading: tt.Ptr(tt.RequestReader{Unit: tt.Ptr(tt.RequestSourceUnitLine)})}), nil)
 	if err != nil {
 		panic(err)
 	}
@@ -460,24 +520,26 @@ func main() {
 	require(len(lines) == 2 && lines[0] == 1 && lines[1] == 3, "physical positions changed")
 	meta := row.Value().Value.Meta()
 	require(meta.Present && meta.Value.Model().Present && meta.Value.AnsweredBy().Present, "native provenance missing")
-	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", &tt.RequestOptions{DeadlineMs: tt.Ptr[int64](0)})
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput("text"), &tt.RequestOptions{DeadlineMs: tt.Ptr[int64](0)})
 	var failure *tt.SessionError
 	require(errors.As(err, &failure), "untyped failure")
 	require(failure.Call.Terminal.Failure().Present, "lost native failure facts")
-	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), "text", &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
-	require(err != nil, "invalid input accepted")
+	_, err = client.Decide(context.Background(), tt.TextQuestion("Is it?"), fixtureInput("text"), &tt.RequestOptions{Field: tt.Ptr([]string{"bad pointer"})})
+	var refused *tt.Error
+	require(errors.As(err, &refused) && refused.Kind == tt.KindUsage, "invalid input lost native error kind")
+	require(refused.Facts.RequestsSent().Err == nil, "admission facts cannot be read as typed fields")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), "text", nil)
+	_, err = client.Decide(ctx, tt.TextQuestion("Is it?"), fixtureInput("text"), nil)
 	require(errors.Is(err, context.Canceled), "precancel ignored")
-	var packet tt.OwnedSessionPacket
+	var packet tt.SessionPacket
 	require(json.Unmarshal([]byte(`{"kind":"terminal","extra":{"future":false},"failure":null}`), &packet) == nil, "owned decode")
 	terminal, err := packet.AsSessionPacketTerminal()
 	require(err == nil && terminal.Failure().Present && terminal.Failure().Null && !terminal.Facts().Present, "null/absence changed")
 	_, err = packet.AsSessionPacketDecideRow()
 	require(err != nil, "wrong alternative accepted")
-	roundtrip, _ := json.Marshal(packet)
-	require(string(roundtrip) == `{"kind":"terminal","extra":{"future":false},"failure":null}`, "unknown field lost")
+	roundtrip, _ := json.Marshal(fixtureValue(packet))
+	require(string(roundtrip) == `{"extra":{"future":false},"failure":null,"kind":"terminal"}`, "unknown field lost")
 	client.Close()
 	for _, call := range retained {
 		facts := call.Terminal.Facts()

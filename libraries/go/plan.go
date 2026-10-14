@@ -7,16 +7,15 @@ package thinkthen
 import "C"
 
 import (
-	"encoding/json"
 	"runtime"
 )
 
 // Plan previews a canonical typed request without a key, cache reads or sends.
 // Rust admits the supported questions and inputs. Unsupported or dynamic inputs
 // retain native refusal errors. The result owns all of its bytes.
-func (c *Client) Plan(request Request) (OwnedPlan, error) {
-	var plan OwnedPlan
-	data, err := json.Marshal(request)
+func (c *Client) Plan(request Request) (Plan, error) {
+	var plan Plan
+	data, err := transportMarshal(request)
 	if err != nil {
 		return plan, err
 	}
@@ -40,5 +39,5 @@ func (c *Client) Plan(request Request) (OwnedPlan, error) {
 	if err != nil {
 		return plan, err
 	}
-	return ownedDecode[OwnedPlan](raw)
+	return ownedDecode[Plan](raw)
 }

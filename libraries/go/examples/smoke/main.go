@@ -14,7 +14,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer client.Close()
-	answer, err := client.DecideAnswer(context.Background(), tt.TextQuestion(os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION")), os.Getenv("THINKTHEN_TEST_SMOKE_TEXT"), nil)
+	answer, err := client.DecideAnswer(context.Background(), tt.TextQuestion(os.Getenv("THINKTHEN_TEST_SMOKE_QUESTION")), tt.TextInput(os.Getenv("THINKTHEN_TEST_SMOKE_TEXT")), nil)
 	if err != nil {
 		log.Fatal(err)
 	}
