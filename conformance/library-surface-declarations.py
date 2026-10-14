@@ -485,7 +485,7 @@ def other(source, language):
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', line)
             if match:
                 result.add(Declaration(container, match[1], 'field'))
-        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', source))
+        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', masked(source, r'#[^\n]*')))
         result = {d for d in result if d.owner.split('.')[0] not in hidden_types
                   and not (d.kind == 'type' and d.name in hidden_types)}
     elif language == 'ada':
