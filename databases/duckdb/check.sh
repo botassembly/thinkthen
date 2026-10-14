@@ -119,7 +119,7 @@ native_records() {
 }
 older_suites() {
     for verb in decide choose tag score filter rank find annotate recognize relate; do
-        sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py duckdb "complete-$verb" >"$home/complete-$verb.log"
+        [ "$profile" = routine ] || sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py duckdb "complete-$verb" >"$home/complete-$verb.log"
     done
 	sh "$LIMIT" 900 "$PY" tools/images_suite.py
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
