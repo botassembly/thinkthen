@@ -67,7 +67,7 @@ PY
 		;; esac
 	fi
 	[ -x "$TOOLS/venv/bin/python" ] || { echo "not run: DuckDB $version Python host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
-	observed=$("$TOOLS/venv/bin/python" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchone()[1])')
+	observed=$("$TOOLS/venv/bin/python" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchall()[0][1])')
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || {
 		echo 'setup: the Python DuckDB source differs from its pin' >&2; exit 1;
 	}

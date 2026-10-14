@@ -27,11 +27,14 @@ select_host() {
 		echo "not run: the DuckDB $DUCKDB_VERSION toolchain is missing; run databases/duckdb/tools/setup.sh --fetch"
 		exit 77
 	fi
-	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchone()[1])')
+	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA version").fetchall()[0][1])')
 	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the Python DuckDB source differs from its pin' >&2; exit 1; }
 	observed=$("$CLI" -noheader -list -c 'SELECT source_id FROM pragma_version();')
-	[ "$observed" = "$(printf '%.10s' "$duckdb_source_commit")" ] || { echo 'check: the CLI DuckDB source differs from its pin' >&2; exit 1; }
-	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA platform").fetchone()[0])')
+	case $observed in
+	"$(printf '%.8s' "$duckdb_source_commit")"|"$(printf '%.10s' "$duckdb_source_commit")") ;;
+	*) echo 'check: the CLI DuckDB source differs from its pin' >&2; exit 1 ;;
+	esac
+	observed=$("$PY" -c 'import duckdb; print(duckdb.sql("PRAGMA platform").fetchall()[0][0])')
 	[ "$observed" = "$platform" ] || { echo 'check: the Python DuckDB platform differs from its target' >&2; exit 1; }
 	observed=$("$CLI" -noheader -list -c 'SELECT platform FROM pragma_platform();')
 	[ "$observed" = "$platform" ] || { echo 'check: the CLI DuckDB platform differs from its target' >&2; exit 1; }

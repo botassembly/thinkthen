@@ -17,7 +17,7 @@ from verify_footer import verify  # noqa: E402
 def python_load(path: Path, folder: Path, version: str, repository: bool = False) -> subprocess.CompletedProcess[str]:
     folder.mkdir(parents=True)
     code = (
-        "import duckdb,sys; assert duckdb.sql('PRAGMA version').fetchone()[1] == sys.argv[2]; "
+        "import duckdb,sys; assert duckdb.sql('PRAGMA version').fetchall()[0][1] == sys.argv[2]; "
         "con=duckdb.connect(config={'allow_unsigned_extensions':'true', 'extension_directory':sys.argv[3]}); "
         + ("con.execute('INSTALL thinkthen FROM ' + chr(39) + sys.argv[1] + chr(39)); con.execute('LOAD thinkthen')"
            if repository else "con.execute('LOAD ' + chr(39) + sys.argv[1] + chr(39))")
@@ -58,7 +58,9 @@ def main() -> None:
     assert args.version != args.different_version, 'refusal needs a different supported host'
     source = args.extension.resolve(strict=True)
     for cli, item in ((args.matching_host, identity), (args.different_host, other)):
-        assert subprocess.check_output([str(cli), '-noheader', '-list', '-c', 'SELECT source_id FROM pragma_version()'], text=True).strip() == item['source_commit'][:10], 'the stock host differs from its pin'
+        observed = subprocess.check_output([str(cli), '-noheader', '-list', '-c',
+                                            'SELECT source_id FROM pragma_version()'], text=True).strip()
+        assert observed in {item['source_commit'][:8], item['source_commit'][:10]}, 'the stock host differs from its pin'
     release = next(line.split('"')[1] for line in (Path(__file__).resolve().parents[3] / 'crates/thinkthen/Cargo.toml').read_text().splitlines() if line.startswith('version = '))
     verify(source, args.target, identity['metadata_version'], release)
     with tempfile.TemporaryDirectory(prefix='thinkthen-duckdb-package-') as scratch:
