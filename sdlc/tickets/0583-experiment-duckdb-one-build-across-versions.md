@@ -1,8 +1,10 @@
 # 0583: Experiment: one DuckDB build across 1.4, 1.5 and 2.0
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
+
+Reviews: revision 0e46dc2, accept
 
 ## Outcome
 
@@ -18,3 +20,7 @@ Learn whether one ThinkThen DuckDB extension build, made against DuckDB's stable
 - Decision it changes: Ian's decision 17 (support 1.4 only if free) and PRD 09's build-once rule. Tell the coordinator at once if anything found helps 0577.
 - Machine: the Beelink.
 - Defers: any change to the shipped extension goes to a 0.3 product ticket after the record lands.
+
+## Progress
+
+- 2026-10-14 started
