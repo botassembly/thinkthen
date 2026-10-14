@@ -87,14 +87,21 @@ try:
   function='decide' if mode in ('example','example-public') else mode.removeprefix('example-')
   outputs={'decide':'True','choose':'first','score':'0.1','tag':'first,second','filter':'1:first',
            'rank':'0,1','find':'first','annotate':'True','recognize':'John Smith','relate':'A -> B'}
-  sends=2 if function=='recognize' else 1
+  sends=6 if mode=='example-public' else 2 if function=='recognize' else 1
+  if mode=='example-public': outputs['decide']='True\nTrue\nTrue\nbilling\nbilling\nbilling'
   assert result.stdout.strip()==outputs[function].encode(),result.stdout
   assert len(bodies)==sends and server.attempts==server.connections==sends,counted
   assert server.user_agents==[f'thinkthen/{V} (csharp)']*sends,server.user_agents
   parsed=[json.loads(body) for body in bodies]
   quoted={'model':'jev-1.13.0','state':'Each question quotes the text it asks about.'}
   question=lambda kind,instructions,**extra: dict(type=kind,instructions=instructions,**extra)
-  if function in ('decide','annotate'):
+  if mode=='example-public':
+   refund_texts=['Please refund my order. It arrived broken.','Thanks for the quick help yesterday!','I want to send this back.']
+   team_texts=['Please refund the extra fee on my invoice.','My parcel went to the wrong address.','I cannot reset my password.']
+   expected=[dict(quoted,questions={'q1':question('noul',f'The text is {json.dumps(text)}. Does the customer ask for a refund?')}) for text in refund_texts]
+   criteria={'billing':'Invoices, fees, and refunds.','shipping':'Parcels and delivery.','account':'Logins and passwords.'}
+   expected += [dict(quoted,questions={'q1':question('choice',f'The text is {json.dumps(text)}. Which team owns this?',criteria=criteria)}) for text in team_texts]
+  elif function in ('decide','annotate'):
    expected=dict(quoted,questions={'q1':question('noul','The text is "Please refund my order.". Does this ask for a refund?' if mode=='example-public' else 'The text is "example". Is it?')})
   elif function=='choose':
    expected=dict(quoted,questions={'q1':question('choice','The text is "example". Which?',criteria={'first':None,'second':None})})
@@ -116,7 +123,7 @@ try:
    assert list(parsed[0]['questions']['q1']['criteria'])==['BEGIN','INSIDE','END','SINGLE','OUT'],parsed
    assert list(parsed[1]['questions']['q1']['criteria'])==['person','none of these'],parsed
    assert all(body['model']=='jev-1.13.0' and body['state']=='John Smith' for body in parsed),parsed
-  if function!='recognize': assert parsed==[expected],parsed
+  if function!='recognize': assert parsed==(expected if mode=='example-public' else [expected]),parsed
   print(f'installed C# shipped {function} sample, exact answer and {sends} counted sends PASS',flush=True)
  elif mode=='portable':
   fixture=R.parents[1]/'specification/fixtures/batching'
