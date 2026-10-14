@@ -90,7 +90,8 @@ function blocks(node, out) {
     }
     if (kid.tag === 'pre') {
       const body = raw(kid).replace(/`/g, '');
-      out.push('```\n' + body.replace(/\n+$/, '') + '\n```');
+      const lang = kid.attrs?.['data-lang'] === 'output' ? 'text' : (kid.attrs?.['data-lang'] || '');
+      out.push('```' + lang + '\n' + body.replace(/\n+$/, '') + '\n```');
       continue;
     }
     if (kid.tag === 'table') {
@@ -171,6 +172,16 @@ function pages(dir, acc = []) {
   return acc;
 }
 
+// A blurb of at most 160 characters, cut at the last sentence end, else at
+// the last space.
+function shorten(text, max = 160) {
+  if (text.length <= max) return text;
+  const head = text.slice(0, max + 1);
+  const sentence = head.lastIndexOf('. ');
+  if (sentence > 40) return head.slice(0, sentence + 1);
+  return head.slice(0, head.lastIndexOf(' ')).replace(/[,;:]$/, '') + '…';
+}
+
 const found = pages(DIST).sort();
 const list = [];
 
@@ -192,13 +203,16 @@ for (const file of found) {
   fs.mkdirSync(path.dirname(target), { recursive: true });
   fs.writeFileSync(target, body + '\n');
   const first = body.split('\n').find((l) => l && !l.startsWith('#')) || '';
-  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: first.slice(0, 160), body });
+  list.push({ url, md: route === '/' ? '/index.md' : route + '.md', title, blurb: shorten(first), body });
 }
+
+// The home page leads both llms files.
+list.sort((a, b) => (b.url === '/') - (a.url === '/'));
 
 const llms = [
   '# ThinkThen',
   '',
-  '> ThinkThen: code that knows what you mean. Simple functions that give your software the judgment to handle whatever comes its way. Ten functions, in your scripts, your programs, and your queries.',
+  "> ThinkThen: code that knows what you mean. ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It works whether the model runs on your own servers, at TypeSafe or at another provider. ThinkThen makes these models simple to call from any language or database.",
   '',
   'Every page on this site has a Markdown twin at the same address with .md added. https://thinkthen.dev/llms-full.txt holds every twin in one file.',
   '',

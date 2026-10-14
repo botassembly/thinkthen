@@ -73,7 +73,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE',
     options: [
-      flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The bar the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
+      flag('--threshold T or LOW:HIGH', `${CUT_TAKES}, or a band LOW:HIGH`, cutOn('decide'), 'The threshold the probability of yes must reach. One number is a cut. Two numbers are a band, and the middle answers not sure.'),
       ...MEANS,
       QUIET,
     ],
@@ -91,7 +91,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'choose',
-    goal: 'choose picks one option from your list, or says not sure when no option clears the bar.',
+    goal: 'choose picks one option from your list, or says not sure when no option clears the threshold.',
     primitive: 'Pick one',
     line: 'Pick one option from your list.',
     takes: `one question, one piece of evidence, and ${setting('Options').range.min} to ${setting('Options').range.max} options`,
@@ -100,7 +100,7 @@ export const FUNCTIONS = [
     requests: 'One request for one piece of evidence. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then OPTION...',
     options: [
-      flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The bar the winning option must reach. One number only. A band is a usage error.'),
+      flag('--threshold T', CUT_TAKES, cutOn('choose'), 'The threshold the winning option must reach. One number only. A band is a usage error.'),
       flag('--option LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `One option and what it means. It replaces the positional options. ${LIST_RULE}`),
       flag('--options POINTER', 'an RFC 6901 pointer', 'none', 'Takes the options from each record. It needs `--jsonl`.'),
       flag('--raw', 'nothing', 'off', 'Prints the label without quotation marks. CSV and TSV refuse it.'),
@@ -121,7 +121,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'tag',
-    goal: 'tag returns every label that clears the bar, each judged on its own.',
+    goal: 'tag returns every label that clears the threshold, each judged on its own.',
     primitive: 'Yes or no, per label',
     line: 'Name every label that fits.',
     takes: `one question, one piece of evidence, and ${setting('Labels').range.min} to ${setting('Labels').range.max} labels`,
@@ -129,7 +129,7 @@ export const FUNCTIONS = [
     requests: 'Every label rides in one request. One request for one piece of evidence, whatever the label count. In a stream, records share requests by default, and --batch 1 asks one record a request.',
     args: 'QUESTION or @FILE, then LABEL...',
     options: [
-      flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The bar every label must reach on its own. A band is refused.'),
+      flag('--threshold T', CUT_TAKES, cutOn('tag'), 'The threshold every label must reach on its own. A band is refused.'),
       flag('--label LABEL=DESCRIPTION', 'a label and what it means, and it may repeat', 'none', `A label and what it means. It replaces the positional labels. ${LIST_RULE}`),
     ],
     shared: RECORD_FLAGS,
@@ -177,7 +177,7 @@ export const FUNCTIONS = [
     argsNote: 'It reads one record per line. A pointer from `--field` or a question file makes it read JSON Lines.',
     options: [
       flag('--files-only', 'nothing', lower(setting('Matching files only').default), 'Prints each matching file once in first-match order. It changes output only.'),
-      flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The bar a record must reach to be kept. A band is a usage error.'),
+      flag('--threshold T', CUT_TAKES, cutOn('filter'), 'The threshold a record must reach to be kept. A band is a usage error.'),
       flag('-n, --line-number', 'nothing', lower(setting('Line numbers').default), 'Prefixes physical line numbers. Several named sources also show the filename.'),
       flag('--scores', 'nothing', lower(setting('Display scores').default), 'Shows the yes probability, or the weighted value of a saved score question on rank.'),
       flag('--around N', lower(setting('Neighbor lines').allowed), lower(setting('Neighbor lines').default), 'Prints independent groups with N physical neighbors on either side. Snapshots all sources before sending. Text display flags refuse details, CSV and TSV.'),
@@ -274,7 +274,7 @@ export const FUNCTIONS = [
   },
   {
     name: 'recognize',
-    goal: 'recognize finds the names in a text, gives each a kind from your list, and keeps those that clear the bar.',
+    goal: 'recognize finds the names in a text, gives each a kind from your list, and keeps those that clear the threshold.',
     primitive: 'Pick one, per word',
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
@@ -302,9 +302,9 @@ export const FUNCTIONS = [
     shared: [...SET_FLAGS, '--context-field'],
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'With kinds, the model picks each name\'s kind from them. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
-    howtos: [],
+    howtos: ['pull-products-and-makers-from-an-inbox'],
     see: {
-      '0-kinds': 'recognize finds three names and gives each one of the three kinds: a person, an organization, and a place.',
+      '0-kinds': 'A support message names a customer, a product and a city. recognize finds all three and gives each its kind: person, product or place.',
       '1-names': 'Each --kind gives a kind a description. --plan shows the first question without sending it. The descriptions tell the model which literal spans to find; this example shows no model answer.',
     },
     moreSee: {
@@ -331,9 +331,9 @@ export const FUNCTIONS = [
     shared: SET_FLAGS,
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
-    howtos: [],
+    howtos: ['pull-products-and-makers-from-an-inbox'],
     see: {
-      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default threshold.',
+      '1-makes': 'The products a support inbox names, and the companies that make them. Apple makes the iPhone, and Amazon makes the Kindle. The two wrong pairs do not reach the default threshold.',
     },
     moreSee: {
       duckdb: 'The same eight rules as rows of a table. relate reads them through a query and returns the contradicting pairs by id.',
@@ -356,8 +356,8 @@ export const FUNCTIONS = [
       flag('levels', '', '', 'The scale, lowest first.'),
       flag('threshold', '', '', 'A cut, or a band written LOW:HIGH.'),
       flag('on', '', '', 'One JSON Pointer, or a list of them.'),
-      flag('name, wording_version', '', '', 'Optional author name and wording version in development 0.2. They do not change the question digest.'),
-      flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection in development 0.2. They never project or coerce the input.'),
+      flag('name, wording_version', '', '', 'Optional author name and wording version. They do not change the question digest.'),
+      flag('item_schema, context_schema', '', '', 'Restricted declarations validated after selection. They never project or coerce the input.'),
       flag('model, profile', '', '', 'The model to ask and the calibration profile to apply.'),
     ],
     exits: [[5, 'the file could not be read, is not one JSON object, or breaks a rule'], [2, 'the command names the wrong verb for the file']],
@@ -366,6 +366,7 @@ export const FUNCTIONS = [
     see: {
       '1-yes': "The saved question answers true for a plain request for money back.",
       '2-unsure': "Sending it back could mean an exchange or money back. The band in the file calls it not sure. decide prints null and exits 3.",
+      '3-records': "--plan shows the request and sends nothing. The record's policy goes out as state. The file's readings become the criteria.",
     },
     moreSee: {
       duckdb: 'Two messages as rows of a table, asked with refund.json. The money-back message gets true. The send-back message lands inside the band and gets NULL.',
@@ -439,6 +440,12 @@ export const SURFACES = [
       ['curl -fsSL https://thinkthen.dev/install.sh | sh', 'Download script.'],
       ['brew install botassembly/thinkthen/thinkthen', 'Homebrew, an option on a Mac.'],
     ],
+    windows: [
+      'On Windows x86-64, download `https://thinkthen.dev/install.ps1`, read it, and run `.\\install.ps1` in Windows PowerShell 5.1 or PowerShell 7. It installs `thinkthen.exe` and its receipt in `%LOCALAPPDATA%\\Programs\\thinkthen`, or in the folder `THINKTHEN_INSTALL_DIR` names. That folder must be an absolute path on a local NTFS drive.',
+      'The script checks the archive against its checksum and checks the command\'s version. A checksum does not prove who published the archive.',
+      'The script changes no execution policy, profile, registry or runtime configuration. It prints the command\'s path. When the install folder is not on `PATH`, it also prints a `PATH` command for the current session.',
+      'To remove ThinkThen, delete `thinkthen.exe`, `thinkthen.install.json` and `.thinkthen-install.lock` from the install folder.',
+    ],
     uninstall: {
       text: 'To remove the download, delete the binary and its receipt. If you set `THINKTHEN_INSTALL_DIR`, delete the same two files there. With Homebrew, run `brew uninstall thinkthen`.',
       code: 'rm ~/.local/bin/thinkthen \\\n  ~/.local/bin/thinkthen.install.json',
@@ -454,7 +461,7 @@ export const SURFACES = [
     slug: 'python', name: 'Python', deckHeading: 'Python',
     backends: 'code',
     lang: 'python', tab: 'Python',
-    blurb: "Use one `Engine` and read `Result.value` or generated `Result.results`.",
+    blurb: "Use one `Engine` and read each answer from `Result.value`.",
     unsureWord: '`None`',
     facts: "`Result.facts` retains actual final native settlement.",
     errors: 'Every failure raises a `ThinkThenError`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `Cancelled`.',
@@ -481,7 +488,7 @@ export const SURFACES = [
     slug: 'pandas', name: 'pandas', deckHeading: null,
     backends: 'python',
     lang: 'python', tab: 'Python',
-    blurb: "Use the opt-in `series.tt` namespace or named engine methods; retain original positions and null masks.",
+    blurb: "Use the opt-in `series.tt` namespace or named engine methods.",
     unsureWord: '`pd.NA`',
     facts: "`Result.facts` retains settled call observations.",
     errors: 'Every failure raises a `ThinkThenError`, as in Python. Its subclass names the kind.',
@@ -493,7 +500,7 @@ export const SURFACES = [
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     backends: 'code',
     lang: 'ts', tab: 'TypeScript',
-    blurb: "Await one of the ten `Client` methods. Read generated answers from `call.results`.",
+    blurb: "Await one of the ten `Client` methods. Read each answer from `call.results`.",
     unsureWord: '`null`',
     facts: "`call.facts` retains final native observations.",
     errors: "`ClientError` retains native kind, retryability, failure facts and completed results.",
@@ -505,7 +512,7 @@ export const SURFACES = [
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     backends: 'code',
     lang: 'ruby', tab: 'Ruby',
-    blurb: "Use the ten named methods on `ThinkThen::Client`; read the owned result and its generated rows.",
+    blurb: "Use the ten named methods on `ThinkThen::Client` and read each answer from the result.",
     unsureWord: '`nil`',
     facts: "`result.facts` retains final native observations.",
     errors: 'Every failure raises a `ThinkThen::Error`. Its subclass names the kind: `UsageError`, `BackendError`, `LocalError`, `DeadlineError`, `DefectError` or `CancelledError`.',
@@ -517,13 +524,14 @@ export const SURFACES = [
     slug: 'r', name: 'R', deckHeading: 'R',
     backends: 'code',
     lang: 'r', tab: 'R',
-    blurb: "Use named `tt_*` calls with question and input; read generated results and call facts.",
+    blurb: "Call `tt_decide` and nine more functions from R, on text, vectors and data frames.",
+    call: 'Call `tt_decide(question, input)` and read the answer from `call$results`. The other nine functions follow the same shape, such as `tt_choose` and `tt_rank`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "`call$results` retains generated rows and `call$facts` retains native settlement.",
     errors: 'Each failure arrives as an R condition named for its kind, such as `thinkthen_usage`. Each condition carries `retryable`.',
     settings: "`tt_engine(backend =)` configures the native engine; call controls go in `options = list()`.",
     install: [
-      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'Public installation remains 0.1.2 until 0.2 publishes. On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
+      ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))', 'On Linux this route builds from source: R 4.2+, jsonlite 2.0.0+, R development headers, C compiler/linker, make, cargo and rustc 1.95.0+; installation fetches Rust dependencies.'],
       ['install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev/bin/linux/resolute-x86_64/4.6/", "https://cloud.r-project.org"))', 'Ubuntu 26.04 (Resolute), R 4.6, x86-64 only. Use `resolute-arm64` for ARM64. Dependencies or missing binaries can fall back to source; keep source prerequisites then.'],
     ],
     particular: ["Authored lists supply questions, labels and thresholds.", "`tt_batch` streams generated results; `tt_plan` previews supported native requests."],
@@ -547,26 +555,28 @@ export const SURFACES = [
     slug: 'c', name: 'C', deckHeading: 'C',
     backends: 'code',
     lang: 'c', tab: 'Rust',
-    blurb: "Use C sessions for the ten functions with generated requests and complete owned packets.",
+    blurb: "Call the ten functions from C through one header and one library.",
+    call: 'Write the request as JSON, start it with `thinkthen_session_new`, and read the answers the session returns.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated complete session views retain presence and terminal facts.",
     errors: "Admission diagnostics remain thread-local; terminal packets retain native typed failures.",
     settings: "`thinkthen_engine_new_with` forwards native settings to Rust.",
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     fragment: 'Keep the `#include` lines on top. Put the rest inside `int main(void)` and end it with `return 0;`.',
-    particular: ["New callers use generated native sessions; frozen 0.1 symbols remain deprecated compatibility.", "The C package owns the matching generated header and native library."],
+    particular: ["New callers use generated native sessions.", "The C package owns the matching generated header and native library."],
   },
   {
     slug: 'cpp', name: 'C++', deckHeading: null,
     backends: 'code',
     lang: 'cpp', tab: 'C++',
-    blurb: "Use `tt::Client` named methods with generated inputs and owned session packets.",
+    blurb: "Call the ten functions from C++17 through a header-only CMake package.",
+    call: 'Open a `tt::Client` and call one of its ten named methods, such as `decide`, with a question and the text.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated `tt::results` retain typed answers, explicit presence and terminal facts.",
     errors: "`tt::SessionFailure` retains generated errors and facts; admission throws `tt::NativeFailure`.",
     settings: "`tt::Client` takes native settings. Rust owns configuration, recording and replay.",
     install: [
-      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release.'],
+      ['thinkthen-cpp-VERSION-TARGET.tar.gz', 'The header and a CMake package, from each release. Needs a C++17 compiler and CMake.'],
     ],
     particular: ["`Call` owns polling, cancellation, close and RAII cleanup.", "Use generated `tt::inputs` and `tt::results`; old Engine and JSON helpers are removed."],
   },
@@ -574,41 +584,44 @@ export const SURFACES = [
     slug: 'objective-c', name: 'Objective-C', deckHeading: null,
     backends: 'code',
     lang: 'objective-c', tab: 'Objective-C',
-    blurb: "Use Apple-only `TTFoundationClient` with generated results, ARC and blocks.",
+    blurb: "Call the ten functions from Objective-C on Apple platforms, with blocks and ARC.",
+    call: 'Create a `TTFoundationClient` and call `decide:input:options:feed:completion:error:`. The completion block receives the answer.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "`TTCall` retains generated packets and typed terminal facts with explicit presence.",
     errors: "`NSError` retains native typed failures under `TTFailureDetailsKey`.",
     settings: "`initWithSettings:error:` forwards Foundation settings to Rust.",
     install: [
-      ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The binding\'s source, from each release.'],
+      ['thinkthen-objective-c-VERSION-TARGET.tar.gz', 'The Swift package `ThinkThenFoundation`, from each release. A SwiftPM project on an Apple platform depends on it and imports `ThinkThenFoundation.h`.'],
     ],
-    particular: ["GNU support has ended. The package uses Apple Foundation and ARC.", "Apple SDK compilation exists; matching installed Foundation execution remains unrun."],
+    particular: ["The package uses Apple Foundation and ARC."],
   },
   {
     slug: 'cobol', name: 'COBOL', deckHeading: null,
     backends: 'code',
     lang: 'cobol', tab: 'COBOL',
-    blurb: "Use ten `TT_SESSION_*` named functions with generated input records and owned sessions.",
+    blurb: "Call the ten functions from GnuCOBOL through copybooks and called programs.",
+    call: 'Fill the request record for a function and call its `TT_SESSION_*` program. The session returns the answer records.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated session records retain typed results, presence and final facts.",
     errors: "Generated session diagnostics preserve native errors and refuse representation overflow.",
     settings: "The generated engine declarations forward settings to Rust.",
     install: [
-      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybook and the called programs, from each release.'],
+      ['thinkthen-cobol-VERSION-TARGET.tar.gz', 'The copybooks, the bridge and the native library, from each release. Needs GnuCOBOL 4 on Linux x86-64.'],
     ],
-    particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library; candidate checks qualify other platforms."],
+    particular: ["Generated declarations require a matching compiler-measured platform layout.", "The package carries its native library."],
   },
   {
     slug: 'ada', name: 'Ada', deckHeading: null,
     backends: 'code',
     lang: 'ada', tab: 'Ada',
-    blurb: "Use named `Thinkthen.Sessions.Calls` procedures with generated inputs and owned sessions.",
+    blurb: "Call the ten functions from Ada 2022 through a GNAT project.",
+    call: 'Fill the request record for a function and call its procedure in `Thinkthen.Sessions.Calls`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated native records retain result presence and terminal facts.",
     errors: "Typed native failures preserve kind, retryability and owned messages.",
     settings: "`Configure` forwards engine settings to Rust.",
     install: [
-      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release.'],
+      ['thinkthen-ada-VERSION-TARGET.tar.gz', 'The package and its GNAT project, from each release. Needs GNAT 13.3, gprbuild and Ada 2022 on Linux x86-64.'],
     ],
     particular: ["Release owned sessions after their borrowers finish.", "Direct ABI planning remains; no named typed Ada Plan result is claimed."],
   },
@@ -616,28 +629,30 @@ export const SURFACES = [
     slug: 'java', name: 'Java', deckHeading: null,
     backends: 'code',
     lang: 'java', tab: 'Java',
-    blurb: "Use stable JDK 22 `thinkthen.Engine` named methods with generated declarations and session packets.",
+    blurb: "Call the ten functions from Java 22 or later. Each call returns a future.",
+    call: 'Open a `thinkthen.Engine`, call `engine.decide(question, input)`, and `join()` the future it returns.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Owned packets retain generated results, explicit presence and terminal facts.",
     errors: "Native admission and session failures retain typed errors and completed results.",
     settings: "`Engine` takes generated settings; Rust owns recording and replay.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION', 'The Maven coordinate. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
-    particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target. Final Maven distribution and platform execution remain candidate work."],
+    particular: ["Use `--enable-native-access=ALL-UNNAMED`; no `--enable-preview` flag or manual library path is required.", "The package loads its bundled native target."],
   },
   {
     slug: 'kotlin', name: 'Kotlin', deckHeading: null,
     backends: 'code',
     lang: 'kotlin', tab: 'Kotlin',
-    blurb: "Use `KotlinEngine` named calls with generated declarations over the shared JVM session.",
+    blurb: "Call the ten functions from Kotlin as suspend functions.",
+    call: 'Open a `KotlinEngine` and call its `decide` suspend function from a coroutine.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated owned packets retain results, presence and terminal facts.",
     errors: "Typed native failures preserve completed results and actual facts.",
     settings: "`KotlinEngine` uses the generated JVM engine settings.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Kotlin JAR. Add the Java coordinate beside it.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION:kotlin', 'The Maven coordinate with the `kotlin` classifier. It needs no separate Java dependency. Add `org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0` beside it. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Kotlin cancellation and cleanup follow the shared owned session."],
@@ -646,13 +661,14 @@ export const SURFACES = [
     slug: 'scala', name: 'Scala', deckHeading: null,
     backends: 'code',
     lang: 'scala', tab: 'Scala',
-    blurb: "Use `ScalaEngine` named calls with generated declarations over the shared JVM session.",
+    blurb: "Call the ten functions from Scala. Each call returns a Future you can cancel.",
+    call: 'Open a `ScalaEngine` and call `decide`. It returns a `Future` you can cancel.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated owned packets retain results, presence and terminal facts.",
     errors: "Typed native failures preserve completed results and actual facts.",
     settings: "`ScalaEngine` uses the generated JVM engine settings.",
     install: [
-      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Scala JAR. Add the Java coordinate beside it.'],
+      ['io.github.botassembly:thinkthen-jvm:VERSION:scala', 'The Maven coordinate with the `scala` classifier. It needs no separate Java dependency. Keep the normal Scala runtime libraries. Needs JDK 22 or later. Run with `--enable-native-access=ALL-UNNAMED`.'],
       ['thinkthen-jvm-VERSION-TARGET.tar.gz', 'The session, Kotlin and Scala JARs, from each release.'],
     ],
     particular: ["Stable JDK 22 or later is required, with native access and no `--enable-preview` flag.", "Keep the normal Scala runtime libraries on the class path."],
@@ -661,28 +677,30 @@ export const SURFACES = [
     slug: 'csharp', name: 'C#', deckHeading: null,
     backends: 'code',
     lang: 'csharp', tab: 'C#',
-    blurb: "Use named `Engine` asynchronous methods with generated inputs and owned result types.",
+    blurb: "Await the ten functions from .NET 8, with cancellation tokens.",
+    call: 'Open an `Engine` with `Engine.Open` and `await engine.DecideAsync(question, input)`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated `ThinkThen.Results` preserve presence, completed answers and terminal facts.",
     errors: "Typed failures retain native kind, retryability, final facts and completed prefixes.",
     settings: "`Engine.Open(InputEngineSettings)` forwards generated settings to Rust.",
     install: [
-      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package.'],
+      ['dotnet add package Botassembly.ThinkThen', 'The NuGet package. Needs .NET 8.'],
       ['thinkthen-csharp-VERSION-TARGET.tar.gz', 'The package file, from each release. Its folder serves as a local feed.'],
     ],
-    particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup; final platform qualification runs at the candidate."],
+    particular: ["The package loads its bundled native target automatically.", "Use CancellationToken and scoped cleanup."],
   },
   {
     slug: 'go', name: 'Go', deckHeading: null,
     backends: 'code',
     lang: 'go', tab: 'Go',
-    blurb: "Use `NewClient(EngineSettings)` and ten named `Client` methods with generated questions and inputs.",
+    blurb: "Call the ten functions from Go, with a context for deadlines and cancellation.",
+    call: 'Create a client with `thinkthen.NewClient` and call `client.Decide(ctx, question, input, nil)`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "`OwnedCall` retains generated packets, explicit presence and terminal facts.",
     errors: "`SessionError` retains failed calls; admission returns typed `Error` values.",
     settings: "`NewClient(EngineSettings)` forwards native settings to Rust.",
     install: [
-      ['go get github.com/botassembly/thinkthen/libraries/go', null],
+      ['go get github.com/botassembly/thinkthen/libraries/go', 'Needs Go 1.22 and a C compiler.'],
       ['thinkthen-go-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
     ],
     particular: ["The native-bearing package requires Go and a C compiler.", "A context deadline reaches native execution; producers must return promptly on cancellation."],
@@ -691,13 +709,14 @@ export const SURFACES = [
     slug: 'swift', name: 'Swift', deckHeading: null,
     backends: 'code',
     lang: 'swift', tab: 'Swift',
-    blurb: "Use one typed `Client` family with named `async throws` methods and owned packets.",
+    blurb: "Await the ten functions from Swift with async throws.",
+    call: 'Create a `Client` and call `try await client.decide(.text(question), input: .text(text))`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "`OwnedCall` retains generated packets and the actual native terminal.",
     errors: "`SessionFailure.call` preserves typed failure settlement and completed packets.",
     settings: "`Client` takes generated engine settings and loads its packaged native target.",
     install: [
-      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
+      ['thinkthen-swift-VERSION-TARGET.tar.gz', 'The package source, from each release. Needs Swift 6.'],
     ],
     particular: ["Close the client after use; generated results remain owned.", "Rust owns files, images, cache, replay and admission."],
   },
@@ -705,13 +724,14 @@ export const SURFACES = [
     slug: 'zig', name: 'Zig', deckHeading: null,
     backends: 'code',
     lang: 'zig', tab: 'Zig',
-    blurb: "Use named typed sessions with generated questions and owned packets.",
+    blurb: "Call the ten functions from Zig through a source module.",
+    call: 'Call a named function in `thinkthen.session` with its request, read the answer, and release it with `deinit`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated values retain complete typed fields and explicit presence after native cleanup.",
     errors: "Read native typed failure packets and release their owners with `deinit`.",
     settings: "Generated engine settings forward recording and replay configuration to Rust.",
     install: [
-      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release.'],
+      ['thinkthen-zig-VERSION-TARGET.tar.gz', 'The module source, from each release. Needs Zig 0.15.2.'],
     ],
     particular: ["The package carries its generated header and native engine.", "`Request.plan` returns an owned plan; release owners with `deinit` after borrowers finish."],
   },
@@ -719,13 +739,14 @@ export const SURFACES = [
     slug: 'php', name: 'PHP', deckHeading: null,
     backends: 'code',
     lang: 'php', tab: 'PHP',
-    blurb: "Use one `Client` family through PHP FFI and generated `Completed` results.",
+    blurb: "Call the ten functions from PHP 8.3 through FFI.",
+    call: 'Create a `ThinkThen\\Client` and call `$client->decide($question, $text)`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "Generated result objects retain presence, completed answers and terminal facts.",
     errors: "Typed native failures retain their kind, retryability and final settlement.",
     settings: "`Client` forwards native settings to Rust and loads its packaged native library.",
     install: [
-      ['composer require botassembly/thinkthen', null],
+      ['composer require botassembly/thinkthen', 'Needs PHP 8.3 with `ext-ffi`. Run PHP with `-d ffi.enable=1`.'],
       ['thinkthen-php-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
     particular: ["Enable PHP FFI and release the client after use.", "Use `Client::item` and `Client::files` for explicit input selectors."],
@@ -734,16 +755,17 @@ export const SURFACES = [
     slug: 'dart', name: 'Dart', deckHeading: null,
     backends: 'code',
     lang: 'dart', tab: 'Dart',
-    blurb: "Use `Engine.open` and ten named asynchronous methods with generated inputs and owned packets.",
+    blurb: "Await the ten functions from Dart and Flutter.",
+    call: 'Open an `Engine` with `Engine.open()`, `await engine.decide(question, input)`, and close the engine in `finally`.',
     unsureWord: 'a present null generated answer; typed failures remain separate',
     facts: "`OwnedCall` retains generated packets, presence and native terminal facts.",
     errors: "`NativeFailure` reports admission errors; `SessionFailure` retains the failed call.",
     settings: "`Engine.open(settings: InputEngineSettings(...))` loads the bundled native asset.",
     install: [
-      ['dart pub add thinkthen_dart', null],
+      ['dart pub add thinkthen_dart', 'Needs Dart 3.10 or later.'],
       ['thinkthen-dart-VERSION-TARGET.tar.gz', 'The package source, from each release.'],
     ],
-    particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route; platform distribution remains candidate qualification."],
+    particular: ["Close engines and sessions in `finally`.", "Dart and Flutter share the native asset route."],
   },
   {
     slug: 'duckdb', backends: 'sql', name: 'DuckDB', deckHeading: 'DuckDB',
@@ -798,7 +820,7 @@ export const SURFACES = [
 // The bindings: every language and database ThinkThen works with. Bash is
 // the command line, the one CLI, and not a binding. The talk's slides
 // name the same 24. Each binding links to
-// /install/<slug>/. A binding with no entry in SURFACES has no page yet, and
+// /languages/<slug>/ or, for a database, /databases/<slug>/. A binding with no entry in SURFACES has no page yet, and
 // scripts/check-links.mjs allows exactly those paths.
 const DATABASE_SLUGS = new Set(['duckdb', 'postgresql', 'sqlite']);
 export const BINDINGS = [
@@ -810,7 +832,7 @@ export const BINDINGS = [
   ['Ruby', 'ruby'], ['Rust', 'rust'], ['Scala', 'scala'],
   ['SQLite', 'sqlite'], ['Swift', 'swift'], ['TypeScript', 'typescript'],
   ['Zig', 'zig'],
-].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: `/install/${slug}/` }));
+].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: DATABASE_SLUGS.has(slug) ? `/databases/${slug}/` : `/languages/${slug}/` }));
 
 // The install paths of the bindings with no page yet.
 export const BINDING_PATHS_WITHOUT_PAGES = BINDINGS
@@ -832,19 +854,8 @@ for (const s of SURFACES) {
   if (s.backends && !['env', 'builder', 'code', 'sql', 'cli', 'python'].includes(s.backends)) throw new Error(`catalog: the surface ${s.slug} has the backends route ${s.backends}`);
 }
 
-// The tabs on the home page sample, and on every code block that has variants.
-export const TABS = ['Bash', 'Python', 'TypeScript', 'Ruby', 'R', 'Rust', 'SQL'];
-
-// Which surface each tab draws from.
-export const TAB_SURFACE = {
-  Bash: 'shell', Python: 'python', TypeScript: 'typescript',
-  Ruby: 'ruby', R: 'r', Rust: 'rust', SQL: 'duckdb',
-};
-
-// A function page groups its language tabs, so a reader finds one of 24
-// quickly on a phone or a desktop. Every surface sits in one group. A tab
-// shows when its sample file exists, or when the function names it in
-// `cannot`.
+// The surfaces by kind. /languages/ lists its languages in these groups.
+// Every surface sits in one group.
 export const TAB_GROUPS = [
   { name: 'Command line', slugs: ['shell'] },
   { name: 'Python and data', slugs: ['python', 'pandas', 'polars', 'r'] },
@@ -874,15 +885,39 @@ export const TUTORIAL_SEE = {
   '1-band': "\"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8. decide prints null and exits 3.",
 };
 
-// The captions for the Caching and replay page's scripts.
+// The release's no-key sample. /start/ shows this download line.
+export const FIRST_RUN_SAMPLE = 'curl -fsSL https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz | tar -xz';
+
+// Captions for the Start pages' own examples, keyed by page and script name.
+export const START_SEE = {
+  start: {
+    '1-no-key': 'The answer comes from the recording in the sample. No key is set, and nothing is sent.',
+  },
+  'pay-once': {
+    '1-one-request': 'The plan packs all three messages into the first request. It sends nothing.',
+    '2-one-each': '--batch 1 puts one message in each request. The plan estimates more input tokens.',
+  },
+  tune: {
+    '1-suggest': 'audit tunes a threshold on part of the ten labelled songs and checks it on the rest, 20 times over. 0.78 is the steady threshold. Nothing is sent.',
+    '2-diff': 'The same saved run, read at 0.5 and then at 0.78. Three songs turn from yes to no, and the right answers go from 5 to 8. No request is sent.',
+  },
+  'your-data': {
+    '1-field': 'Only each comment travels. The id column stays on your machine. The plan sends nothing.',
+  },
+};
+
+// The DuckDB page's caption for asking saved answers in SQL.
+export const SAVED_ANSWERS_SQL_SEE = 'Seven saved rows: five answered, two with no answer, and no request sent. None of the five answers sits near the cut of 0.75.';
+
+// The See before you send page's caption for install/backends/1-plan.
+export const PLAN_BODY_SEE = 'The plan names the address, the model, and the variable a key would come from. It holds no key.';
+
+// The captions for the caching scripts that Pay once and Replay show.
 export const CACHING_SEE = {
   '1-replay': 'The answers come from the folder. Nothing is sent, and no key is set.',
   '2-batch-one': 'One review a request reads the same saved answers and keeps the same two reviews.',
   '3-unused': 'The folder holds one answer the four reviews never asked for.',
 };
-
-// The Functional patterns page's caption for functions/filter/1-lines.
-export const FUNCTIONAL_PIPE_SEE = 'filter keeps the lines whose answer is yes, in order.';
 
 // The tutorial's caption for functions/decide/1-lines in its stream step.
 export const TUTORIAL_STREAM_SEE = "Each answer sits beside its message. The send-back line is the null from step 3.";
@@ -893,21 +928,22 @@ export const SETTINGS_SEE = {
   '2-flag': 'The same variable is set, and --url names another address. The flag wins.',
 };
 
-// The Backends section under /install/backends/, in side-list order. Each
-// page runs the scripts in examples/install/backends/<slug>/, and `see`
-// says what to look for in each.
+// The Models section under /models/, in side-list order. Each page runs
+// the scripts in examples/install/backends/<slug>/, and `see` says what to
+// look for in each.
 export const BACKEND_PAGES = [
-  { slug: '', title: 'Backends', label: 'Overview', group: null },
-  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Built in' },
-  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Built in' },
-  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'Your own' },
-  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'Built in' },
-  { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Built in' },
-  { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Built in' },
-  { slug: 'system-one', title: 'Any System One server', label: 'Any System One server', group: 'Your own' },
-  { slug: 'other-servers', title: 'Servers without System One', label: 'Servers without System One', group: 'Your own' },
-  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Built in' },
-].map((p) => ({ ...p, route: `/install/backends/${p.slug ? `${p.slug}/` : ''}` }));
+  { slug: '', title: 'Models', label: 'Overview', group: null },
+  { slug: 'typesafe', title: 'TypeSafe Jev', label: 'TypeSafe Jev', group: 'Hosted' },
+  { slug: 'liquid', title: 'Liquid d1', label: 'Liquid d1', group: 'Hosted' },
+  { slug: 'openai', title: 'OpenAI Decisions API', label: 'OpenAI Decisions API', group: 'Hosted' },
+  { slug: 'perplexity', title: 'Perplexity Decisions', label: 'Perplexity Decisions', group: 'Hosted' },
+  { slug: 'openrouter', title: 'OpenRouter', label: 'OpenRouter', group: 'Hosted' },
+  { slug: 'ollama', title: 'Ollama', label: 'Ollama', group: 'On your machine' },
+  { slug: 'local', title: 'Run a model locally', label: 'Run a model locally', group: 'On your machine' },
+  { slug: 'system-one', title: 'Any compatible server', label: 'Any compatible server', group: 'Your own server' },
+  { slug: 'other-servers', title: 'Other servers', label: 'Other servers', group: 'Your own server' },
+  { slug: 'check', title: 'Check a model', label: 'Check a model', group: 'Before you rely on one' },
+].map((p) => ({ ...p, route: `/models/${p.slug ? `${p.slug}/` : ''}` }));
 
 // The three built-in backends each language page shows, in this order. The
 // key variables repeat the "Named backends" table in
@@ -928,12 +964,11 @@ export const BACKEND_ROUTES = [
   return { ...r, title: page.title, route: page.route, base: r.address ?? row.base };
 });
 
-// Public installation remains 0.1.2; this explicitly describes the development route.
-export const OPENAI_ANNOUNCED = 'Development 0.2 supports OpenAI Decisions text through the named <code>openai</code> backend. Public installation remains 0.1.2. The <a href="/install/backends/openai/">OpenAI Decisions API page</a> gives development setup and its text-only limits.';
+export const OPENAI_ANNOUNCED = 'The named <code>openai</code> backend sends text questions to the OpenAI Decisions API. All ten functions run on it with text, and it refuses images. The <a href="/models/openai/">OpenAI Decisions API page</a> gives its setup.';
 
 export const BACKENDS_SEE = {
   typesafe: {
-    '1-one': 'Jev answers yes. Sending the item back asks for a refund.',
+    '1-one': 'Jev answers yes at the default threshold.',
     '2-lines': 'One request carries all three lines. The thanks is the only no.',
     '3-check-plan': "The check would post to TypeSafe's address with Jev's pinned model. The plan sends nothing.",
   },
@@ -968,47 +1003,52 @@ export const CONFIGURATION_SEE = {
   '4-file': 'The file names liquid. THINKTHEN_BACKEND outranks the file and names ollama.',
 };
 
-// The /how-tos/ index shows one section per group, in this order. Each
-// section lists its pages in HOWTOS order. A group with no pages shows
-// nothing.
-export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Ops/Security'];
+// The /recipes/ index opens with the recipes whose `featured` number is set,
+// in that order, then shows one section per group, in this order, then the
+// shell jobs and the pipelines. Each section lists its pages in HOWTOS
+// order. A group with no pages shows nothing. Each page's `gain` opens it
+// and lists it, in one sentence with no digits.
+export const HOWTO_GROUPS = ['Business teams', 'Data science', 'Operations and security'];
 
-// The how-tos. Each page runs the scripts in examples/how-tos/<slug>/, and
+// The recipes for one reader. Each page sits at /recipes/<slug>/, runs the
+// scripts in examples/how-tos/<slug>/, and
 // `see` says what to look for in each. `group` names its HOWTO_GROUPS
 // section. An optional `files` maps the files/ names the page shows, in
 // order, to their captions. Without it, the page shows every file.
 export const HOWTOS = [
   {
     slug: 'triage-a-support-inbox', group: 'Business teams', title: 'Triage a support inbox', reader: 'for support teams',
-    goal: 'Two commands in a pipe keep the messages that need a reply and label each by kind and urgency.',
+    featured: 1,
+    gain: 'Drop the messages that need no reply, and label the rest by kind and urgency in one pipe.',
     said: 'Keep the messages that need a reply, and label each by kind and urgency. `filter` keeps them. `annotate` labels them.',
     functions: ['filter', 'annotate'],
     see: { '1-inbox': 'Three messages need a reply, each beside its kind and its urgency from 0 to 2. The order needed tonight sits near 2, Immediate. The thank-you note drops out.' },
   },
   {
     slug: 'join-two-tables-by-meaning', group: 'Data science', title: 'Join two tables by meaning', reader: 'for data analysts',
-    goal: 'filter joins two tables on meaning when no key and no shared word links them.',
+    featured: 3,
+    gain: 'Join two tables when no key and no shared word links them.',
     said: 'Match each ticket to the incident it describes, even when the words differ. The loop pairs every ticket with every incident. `filter` keeps the pairs that match.',
     functions: ['filter'],
     see: { '1-join': 'Of the four pairs, the two that match come back: the card failure with the payment gateway, and the late export with the export queue.' },
   },
   {
     slug: 'code-open-ended-survey-answers', group: 'Data science', title: 'Sort survey answers by mood and problem', reader: 'for survey and market researchers',
-    goal: 'score finds the unhappy answers and tag names what went wrong in each.',
+    gain: 'Find the unhappy survey answers and name what went wrong in each.',
     said: 'Place every answer between unhappy and happy, then name what went wrong. `score` places them. `tag` names the problem.',
     functions: ['score', 'tag'],
     see: { '1-answers': 'Three answers are unhappy. Each prints beside its tag: price, bugs, and speed. The happy answer drops out.' },
   },
   {
     slug: 'screen-studies-for-a-review', group: 'Data science', title: 'Screen studies for a review', reader: 'for researchers',
-    goal: 'A band sorts the clear studies in or out and hands a person the ones too thin to judge.',
+    gain: 'Sort the clear studies in or out, and hand a person only the ones too thin to judge.',
     said: 'Sort the clear studies in or out, and hand a person the ones that give too little to judge. `decide` with a band does both.',
     functions: ['decide'],
     see: { '1-studies': 'The survey with a result is true and the opinion essay is false. The bare title gives too little to judge. Inside the band 0.1:0.9, it is not sure. It prints null, and a person reads it.' },
   },
   {
-    slug: 'group-alerts-into-incidents', group: 'Ops/Security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
-    goal: 'find picks the open incident a new alert belongs to, or none, and decide confirms the match.',
+    slug: 'group-alerts-into-incidents', group: 'Operations and security', title: 'Group alerts into incidents', reader: 'for on-call engineers',
+    gain: 'Tie a new alert to the open incident it belongs to, or learn that none fits.',
     said: 'Tell whether a new alert belongs to an open incident. `find` picks the incident, or none. `decide` confirms the match.',
     functions: ['find', 'decide'],
     see: {
@@ -1018,21 +1058,22 @@ export const HOWTOS = [
   },
   {
     slug: 'rank-the-inbound-leads', group: 'Business teams', title: 'Rank the inbound leads', reader: 'for sales teams',
-    goal: 'Three functions in one pipe drop the noise, order the leads, and route each to a team.',
+    featured: 2,
+    gain: 'Drop the noise, put the buyer ready to pay first, and route each lead to its sales team.',
     said: 'Drop the noise, put the buyer ready to pay first, and send each to the right sales team. `filter`, `rank`, and `choose` do it in one pipeline.',
     functions: ['filter', 'rank', 'choose'],
     see: { '1-leads': 'The unsubscribe and the compliment on the talk drop out. Neither asks to buy. The team of six buying today comes first and goes to smb. The 200 seats next quarter go to enterprise.' },
   },
   {
     slug: 'check-an-expense-against-the-policy', group: 'Business teams', title: 'Check an expense against the policy', reader: 'for finance staff',
-    goal: 'find pulls the policy rule that covers an expense, and decide says whether the expense fits it.',
+    gain: 'Pull the policy rule that covers an expense, and check the expense against it.',
     said: 'Check an expense against your policy. `find` pulls the rule. `decide` says whether the expense fits.',
     functions: ['find', 'decide'],
     see: { '1-expense': 'The rule find pulled prints beside the answer. The $60 dinner fits the $75 meal rule.' },
   },
   {
     slug: 'split-a-scanned-packet-into-documents', group: 'Business teams', title: 'Split a scanned packet into documents', reader: 'for back-office staff',
-    goal: 'choose names each page and decide marks where a new document starts.',
+    gain: 'Turn a stack of scanned pages into separate documents, each named by kind.',
     said: 'Split a stack of scanned pages into documents. `choose` says what kind each page is. `decide` marks where a new document starts.',
     functions: ['choose', 'decide'],
     see: {
@@ -1042,7 +1083,7 @@ export const HOWTOS = [
   },
   {
     slug: 'screen-a-post-before-it-goes-up', group: 'Business teams', title: 'Screen a post before it goes up', reader: 'for community moderators',
-    goal: 'One narrow decide question per rule judges a post against each rule on its own.',
+    gain: 'Check a post against each rule with its own narrow question, and see which rule it breaks.',
     said: 'Judge a post against each rule on its own. `decide` asks one narrow question per rule.',
     functions: ['decide'],
     see: {
@@ -1052,13 +1093,15 @@ export const HOWTOS = [
   },
   {
     slug: 'search-youtube-transcripts-by-meaning', group: 'Data science', title: 'Search YouTube transcripts by meaning', reader: 'for anyone who learns from talks',
-    goal: 'rank orders the passages of a talk by how well each answers a question, and filter keeps the ones that do.',
+    record: ['The saved measurement', 'https://github.com/botassembly/thinkthen/blob/main/site/examples/how-tos/search-youtube-transcripts-by-meaning/files/measured.txt'],
+    featured: 4,
+    gain: 'Find the passages of a talk that answer your question, best first.',
     said: 'Ask a question of a talk, and find the passages that answer it. `paste` joins the caption lines into passages. `rank` puts the best answers first. `filter` keeps the passages that answer yes.',
     functions: ['rank', 'filter'],
     files: {
       'fetch.sh': 'fetch.sh downloads the automatic captions of a YouTube talk with yt-dlp. Change the id to search another talk.',
       'vtt-to-lines.awk': 'vtt-to-lines.awk writes one timed line per caption. Automatic captions repeat each line as it scrolls, so it keeps only the lines that carry new words.',
-      'measured.txt': 'measured.txt records the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
+      'measured.txt': 'measured.txt is the saved record of the full experiment. ThinkThen searched three whole talks, 292 passages, in under half a second per question. Each question cost about a quarter of a cent.',
     },
     see: {
       '1-lines': 'transcript.txt holds 200 timed lines from the talk Introducing ThinkThen, in the form fetch.sh writes. They cover the first four minutes and the minutes from 15:45 on. The speaker corrected these captions by hand.',
@@ -1067,11 +1110,22 @@ export const HOWTOS = [
       '4-filter': 'filter keeps a passage when its answer is yes at the default cut of 0.5. This question asks for more, and one passage clears the cut. Use rank to explore and filter to keep.',
     },
   },
+  {
+    slug: 'pull-products-and-makers-from-an-inbox', group: 'Business teams', title: 'Pull products and their makers from a support message', reader: 'for support and product teams',
+    gain: 'Find the products a customer names, and tie each to its maker in your catalog.',
+    said: '`recognize` pulls the names out of a message and keeps the products. `relate` reads your catalog of companies and products and says which company makes which product. `jq` keeps the makers of the products the message named.',
+    functions: ['recognize', 'relate'],
+    see: {
+      '1-products': 'jq keeps only the products recognize found and saves them to products.txt. The message names one: the Kindle.',
+      '2-makers': 'relate finds which company in the catalog makes which product. jq keeps the maker of the Kindle: Amazon.',
+    },
+  },
 ];
 
-// The Bash techniques and recipes under /how-tos/bash/. Each page runs the
-// scripts in examples/how-tos/bash/<slug>/. A technique teaches one shell
-// form. A recipe does one job with the tools you already have.
+// The Bash techniques under /languages/bash/ and the shell jobs under
+// /recipes/. Each page runs the scripts in examples/how-tos/bash/<slug>/.
+// A technique teaches one shell form. A shell job does one job with the
+// tools you already have.
 export const TECHNIQUES = [
   {
     slug: 'if', title: 'Branch with if', label: 'if',
@@ -1126,6 +1180,7 @@ export const TECHNIQUES = [
       '1-pass': 'No line hedges. The check prints nothing and passes.',
       '2-fail': 'One line hedges. The check prints it and exits 1.',
     },
+    related: { text: 'This gate stops the build at the first hedge. To list every hedging line with its line number instead, see', href: '/recipes/lint-prose-for-hedging/', label: 'Lint prose for hedging' },
   },
   {
     slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
@@ -1146,12 +1201,18 @@ export const TECHNIQUES = [
     source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
     see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
   },
+  {
+    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'bad records aside',
+    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
+    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
+    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
+  },
 ];
 
 export const SHELL_JOBS = [
   {
     slug: 'label-a-json-file', title: 'Label a JSON file and keep its ids', label: 'Label a JSON file',
-    goal: 'annotate labels a JSON array and keeps every other field, and a second run costs nothing.',
+    gain: 'Label each record from one field, and keep its id and every other field.',
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date stay in each record. Run it again, and the answers come from the answer cache with no request sent.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
@@ -1159,36 +1220,30 @@ export const SHELL_JOBS = [
   },
   {
     slug: 'review-a-diff-by-what-it-does', title: 'Review a diff by what it does', label: 'Review a diff',
-    goal: 'decide separates the hunks of a diff that change behavior from those that do not.',
+    gain: 'Separate the hunks of a diff that change what the code does from those that do not.',
     said: '`jq` cuts a unified diff into hunks. `decide` asks of each hunk whether it changes what the code does. The file name and the hunk header stay in each record.',
     see: { '1-diff': 'Two hunks change what the code does: the refund limit and the rounded tax. The comment and the rename do not.' },
   },
   {
     slug: 'lint-prose-for-hedging', title: 'Lint prose for hedging', label: 'Lint prose',
-    goal: 'filter finds the hedging lines in a draft and keeps their line numbers.',
+    gain: 'Find the hedging lines in a draft, with their line numbers.',
     said: '`jq` numbers the lines. `filter` keeps the lines that hedge, and each comes back as it went in, line number and all.',
     see: { '1-lint': 'The two hedging lines come back with their line numbers.' },
   },
   {
     slug: 'fill-a-form-by-selection', title: 'Fill a form by selection', label: 'Fill a form',
-    goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
+    gain: 'Fill a form from your own lists. No field holds text a model wrote.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
   },
-  {
-    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
-    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
-    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
-    see: { '1-split': 'The malformed line and the numeric body stay aside. decide judges the three text records.' },
-  },
 ];
 
-// The Bash section in side-list order. Its first page is the section's index.
-export const BASH_FIRST = { slug: '', title: 'Bash techniques', label: 'Bash techniques', route: '/how-tos/bash/', group: null };
+// The Bash language page and its techniques, in side-list order. Its first
+// page is the Bash page.
+export const BASH_FIRST = { slug: '', title: 'Bash', label: 'Bash', route: '/languages/bash/', group: null };
 export const BASH = [
   BASH_FIRST,
-  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/how-tos/bash/${t.slug}/` })),
-  ...SHELL_JOBS.map((r) => ({ ...r, group: 'Shell jobs', route: `/how-tos/bash/${r.slug}/` })),
+  ...TECHNIQUES.map((t) => ({ ...t, group: 'Techniques', route: `/languages/bash/${t.slug}/` })),
 ];
 
 // Measured recipes are separate from the existing shell jobs.
@@ -1197,17 +1252,11 @@ export const RECIPE_PAGES = [
   {
     "slug": "rules-propose-model-confirms",
     "title": "Rules propose, the model confirms",
-    "goal": "Confirm a proposed total without inventing a replacement.",
-    "job": "Confirm a proposed total without inventing a replacement.",
+    "gain": "Let your own rules find the candidate totals, and let the model pick one. No total is ever made up.",
     "functions": [
       "choose"
     ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/rules-propose-model-confirms",
-    "issue": "sdlc/issues/closed/2026-10-03-draft-function-extract.md",
-    "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": RULES_MEASURED,
     "fixtureAssertions": [
@@ -1289,207 +1338,16 @@ export const RECIPE_PAGES = [
       },
       {
         "kind": "heading",
-        "text": "Measured comparison and qualifications"
+        "text": "How it measured"
       },
       {
-        "kind": "evidence",
-        "id": "rules-full-resolved"
+        "kind": "evidence-grid",
+        "methods": ["rules", "choose", "recognize"],
+        "cohorts": ["full", "matched"]
       },
       {
-        "kind": "evidence",
-        "id": "rules-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-full-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-resolved"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-tp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-fp"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-fn"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-precision"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-matched-recall"
-      },
-      {
-        "kind": "evidence",
-        "id": "candidate-misses"
-      },
-      {
-        "kind": "evidence",
-        "id": "dictionary"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "rules-abstain"
-      },
-      {
-        "kind": "evidence",
-        "id": "name-recognize"
-      },
-      {
-        "kind": "evidence",
-        "id": "name-choose"
-      },
-      {
-        "kind": "evidence",
-        "id": "date-recognize"
-      },
-      {
-        "kind": "evidence",
-        "id": "date-choose"
-      },
-      {
-        "kind": "evidence",
-        "id": "usage"
-      },
-      {
-        "kind": "evidence",
-        "id": "exposure"
-      },
-      {
-        "kind": "evidence",
-        "id": "historical-charge"
-      },
-      {
-        "kind": "evidence",
-        "id": "choose-hold"
-      },
-      {
-        "kind": "evidence",
-        "id": "recognize-hold"
+        "kind": "text",
+        "text": "Rules used frozen regexes, a broad dictionary and candidate caps. They are not the best possible rules. Only choose confirmation was tested, not decide. Recognize used one custom configuration. The source record holds the other controls and the charges."
       },
       {
         "kind": "heading",
@@ -1502,43 +1360,13 @@ export const RECIPE_PAGES = [
     ]
   },
   {
-    "slug": "link-records",
-    "title": "Link records",
-    "goal": "Choose a matching record and leave uncertain matches for a person.",
-    "job": "Choose a matching record and leave uncertain matches for a person.",
-    "functions": [
-      "choose"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: link none measurements are being rerun; no wording improvement is established.",
-    "example": "site/examples/recipes/link-records",
-    "issue": "sdlc/issues/2026-10-03-draft-function-link.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: link none measurements are being rerun; no wording improvement is established."
-      }
-    ]
-  },
-  {
     "slug": "verify-a-claim",
     "title": "Verify a claim",
-    "goal": "Judge a claim against its source and have a person review every supports result.",
-    "job": "Review every supports result before taking action.",
+    "gain": "See whether a source supports, contradicts or never states a claim, and send only the supports to a person.",
     "functions": [
       "choose"
     ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
     "example": "site/examples/recipes/verify-a-claim",
-    "issue": "sdlc/issues/closed/2026-10-03-draft-function-verify.md",
-    "owner": "Queue owner",
     "sourceRecord": "sdlc/records/0402-documentation.md",
     "measured": [
       {
@@ -1660,185 +1488,8 @@ export const RECIPE_PAGES = [
       },
       {
         "kind": "text",
-        "text": "Qualification of negation, uncertainty and attributed claims remains later on this shared verify route. This recipe promises no automatic qualification judgment. Faults and replay misses remain failures; an uncertain answer grants no acceptance."
+        "text": "This recipe does not judge negation, uncertainty or attributed claims. Faults and replay misses remain failures; an uncertain answer grants no acceptance."
       }
     ]
   },
-  {
-    "slug": "navigate-many-documents",
-    "title": "Navigate many documents",
-    "goal": "Find passages across documents with a caller-owned manifest and fallback.",
-    "job": "Find passages across documents with a caller-owned manifest and fallback.",
-    "functions": [
-      "filter",
-      "rank",
-      "find"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
-    "example": "site/examples/recipes/navigate-many-documents",
-    "issue": "sdlc/issues/2026-10-03-draft-function-navigate.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
-      }
-    ]
-  },
-  {
-    "slug": "search-transcripts",
-    "title": "Search transcripts",
-    "goal": "Retain context around transcript search results.",
-    "job": "Retain context around transcript search results.",
-    "functions": [
-      "rank",
-      "filter"
-    ],
-    "draft": true,
-    "publication": "waiting",
-    "wait": "Later: held-out passage search did not generalize; no general recall advantage is established.",
-    "example": "site/examples/recipes/search-transcripts",
-    "issue": "sdlc/issues/2026-10-05-recipe-search-transcripts.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Later: held-out passage search did not generalize; no general recall advantage is established."
-      }
-    ]
-  },
-  {
-    "slug": "ask-your-cache-with-duckdb",
-    "title": "Ask your cache with DuckDB",
-    "goal": "Ask analysis questions of retained answers.",
-    "job": "Ask analysis questions of retained answers.",
-    "functions": [
-      "choose"
-    ],
-    "draft": false,
-    "publication": "ready",
-    "wait": "Approved core recipe; scoped measurements and limitations remain visible.",
-    "example": "site/examples/recipes/ask-your-cache-with-duckdb",
-    "issue": "sdlc/issues/closed/2026-10-05-recipe-ask-your-cache-with-duckdb.md",
-    "owner": "Queue owner",
-    "sourceRecord": "sdlc/records/0402-documentation.md",
-    "measured": [
-      {
-        "id": "analytics-spend",
-        "evidenceClass": "measured",
-        "value": "$0",
-        "denominator": "8",
-        "definition": "New model/API spend for eight retained-data analytics questions",
-        "qualification": "Offline retrospective analysis; historical receipt charges remain separate.",
-        "cohort": "Reviewed saved-decision SQL experiment",
-        "backend": "not applicable",
-        "model": "not applicable",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
-      },
-      {
-        "id": "historical-replay",
-        "evidenceClass": "measured",
-        "value": "100000/100000",
-        "denominator": "100000",
-        "definition": "Recorded cache answers in a historical cached local replay",
-        "qualification": "Processed-row denominator; not unique questions or measured lookup hit rate. Zero requests were recorded.",
-        "cohort": "One retained news-classification replay",
-        "backend": "not applicable",
-        "model": "not applicable",
-        "resolved": "not applicable",
-        "unresolved": "not applicable",
-        "source": "https://github.com/botassembly/thinkthen/blob/main/sdlc/records/0402-documentation.md"
-      }
-    ],
-    "fixtureAssertions": [],
-    "body": [
-      {
-        "kind": "text",
-        "text": "Query retained detailed answers with ordinary DuckDB SQL. This example reads saved JSONL and invokes no model or ThinkThen extension."
-      },
-      {
-        "kind": "heading",
-        "text": "Supported setup"
-      },
-      {
-        "kind": "artifact",
-        "file": "files/environment.txt"
-      },
-      {
-        "kind": "text",
-        "text": "For extension calls, follow the DuckDB install page and its unsigned development instructions. This read-only example needs only the stock CLI."
-      },
-      {
-        "kind": "link",
-        "text": "Install DuckDB and read the unsigned development extension instructions.",
-        "href": "/install/duckdb/"
-      },
-      {
-        "kind": "heading",
-        "text": "Inspect the retained rows"
-      },
-      {
-        "kind": "text",
-        "text": "These controlled purchase-note answers come from the Rules sample. Their probabilities and unanswered rows demonstrate the query shape, not provider quality."
-      },
-      {
-        "kind": "artifact",
-        "file": "files/results.jsonl"
-      },
-      {
-        "kind": "heading",
-        "text": "Run the SQL"
-      },
-      {
-        "kind": "artifact",
-        "file": "files/queries.sql"
-      },
-      {
-        "kind": "artifact",
-        "file": "1-query.sh"
-      },
-      {
-        "kind": "artifact",
-        "file": "1-query.out"
-      },
-      {
-        "kind": "heading",
-        "text": "Measured retrospective evidence"
-      },
-      {
-        "kind": "evidence",
-        "id": "analytics-spend"
-      },
-      {
-        "kind": "evidence",
-        "id": "historical-replay"
-      },
-      {
-        "kind": "heading",
-        "text": "Keep the denominators honest"
-      },
-      {
-        "kind": "text",
-        "text": "A stored answer is not a cache lookup event. A replayed row does not prove an independent trial or a live cache hit. Accuracy needs labels; selected-label probability is not accuracy or confidence."
-      },
-      {
-        "kind": "text",
-        "text": "Deduplicate receipts before joining questions. Dividing request cost across answers is an allocation. Missing cost, timing, usage and retry links stay unknown. Question-key changes alone do not prove unchanged evidence, context, options or served model."
-      },
-      {
-        "kind": "text",
-        "text": "Use audit for labeled accuracy and diff for saved comparisons with its identity limits. Stock SQL can summarize retained fields; it cannot recover fields the recording never stored."
-      }
-    ]
-  }
 ];

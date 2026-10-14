@@ -1,23 +1,45 @@
 ---
-// Goal: show in one screen what ThinkThen does, with one real call in the
-// reader's language.
+// Goal: show a newcomer in one minute what to paste, whether ThinkThen fits
+// their setup, and what ten functions gain them over calling a model
+// directly.
 import Base from '../layouts/Base.astro';
-import CrossView from '../components/CrossView.astro';
-import { CODE_FUNCTIONS, HOWTOS, COUNTS } from '../data/catalog.mjs';
+import Terminal from '../components/Terminal.astro';
+import InstallLine from '../components/InstallLine.astro';
+import { CODE_FUNCTIONS, FUNCTIONS, COUNTS, SURFACES } from '../data/catalog.mjs';
+import { run } from '../data/samples.mjs';
+import { REPO } from '../data/repo.mjs';
+import overhead from '../data/overhead.json';
 
-const sixHowtos = HOWTOS.slice(0, 6);
+const shell = SURFACES.find((s) => s.slug === 'shell');
+const decide = FUNCTIONS.find((f) => f.name === 'decide');
+const refund = { ...run('functions/decide', '0-refund'), see: decide.see['0-refund'] };
+const batching = `${REPO}/blob/main/sdlc/planning/adr/0055-decide-filter-and-rank-batches-send-each-record-once.md`;
+const findRecord = `${REPO}/blob/main/specification/find.md#what-the-live-checks-measured`;
+const callMs = Math.round(overhead.head.live.median);
 ---
-<Base title="ThinkThen">
+<Base title="ThinkThen: Jev and decision models in your code" description="Call Jev from TypeSafe, OpenAI or a local model from any language or database. Get typed answers, pack records, cache answers and test offline.">
   <h1>Code that knows what you mean.</h1>
-  <p class="lede">Simple functions that give your software judgment. Hand one a message, ask "Does the customer ask for a refund?", and get back yes or no.</p>
+  <p class="lede">ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any model like it. It puts these decision models in your code, whatever model, language or database you use. Use Jev, OpenAI or a local model. Ask a typed question and get back <code>true</code>, <code>false</code>, a label or a number. Your code branches on the answer. A model can say not sure, and a failed call never looks like an answer. ThinkThen packs many records into few requests, saves each answer for reuse, and lets tests replay saved answers with no key and no network.</p>
 
-  <CrossView fn="decide" install />
-  <p class="pagelinks"><a href="/install/">Every binding and backend</a></p>
+  <InstallLine line={shell.install[0][0]} caption="Install the command" />
+  <p>It fits your setup. Start in <a href="/languages/bash/">Bash</a>, then call the same functions from <a href="/languages/python/">Python</a>, <a href="/languages/typescript/">TypeScript</a> and <a href="/languages/">every other language</a>. Ask them in SQL inside <a href="/databases/duckdb/">DuckDB</a>, <a href="/databases/sqlite/">SQLite</a> and <a href="/databases/postgresql/">PostgreSQL</a>. Point them at TypeSafe's Jev, another SystemOne server, OpenAI Decisions or a model on your own machine with <a href="/models/">one backend option</a>. <a href="/start/">Start</a> gives Homebrew, Windows and a try with no API key.</p>
 
-  <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. Every answer rests on the model's probabilities. On <code>decide</code>, a band sends anything between its two sides back as not sure. A person reads those.</p>
+  <Terminal run={refund} caption={refund.see} />
+
+  <h2>Why not call the model yourself?</h2>
+  <ul>
+    <li><b>Decisions your code can branch on.</b> <code>decide</code> exits 0 for yes, 1 for no and 3 for not sure, and a failure never looks like "no". <a href="/functions/answers/#exit-codes">How answers work</a></li>
+    <li><b>Pay once.</b> Many records share one request. Each question keeps its own saved answer, however records group. <a href="/start/pay-once/">Pay once</a></li>
+    <li><b>Test offline.</b> A test replays saved answers with no API key and no network. <a href="/start/replay/">Replay in tests</a></li>
+    <li><b>Tune for free.</b> Change the threshold on saved answers with zero new calls. <code>runs audit</code> picks the threshold from your own labels. <a href="/start/tune/">Tune for free</a></li>
+    <li><b>See the cost before you send.</b> <code>--plan</code> prints the first request and counts every request and its expected tokens. It sends nothing. <a href="/start/plan/">See before you send</a></li>
+    <li><b>Structure from decisions.</b> <a href="/functions/recognize/"><code>recognize</code></a> pulls names out of text. <a href="/functions/find/"><code>find</code></a> picks the one line that answers, or says nothing fits. On twenty test documents it sent <a href={findRecord}>20 requests where ranking every line sent 239</a>. <a href="/functions/relate/"><code>relate</code></a> links the named things.</li>
+    <li><b>Your data and keys stay put.</b> <code>--field /body</code> sends one field of each record and keeps the rest on your machine. Your API key never shows in a plan, a result, a recording or an error. ThinkThen never acts on what it reads. <a href="/start/your-data/">Your data stays yours</a></li>
+    <li><b>One engine everywhere.</b> The same code runs in every language and database. One option switches the model or provider. In a library, ThinkThen's own work takes about 2 ms of a {callMs} ms call. <a href="/start/speed/">Speed</a></li>
+  </ul>
 
   <h2>The ten functions</h2>
-  <p class="counts">{COUNTS.functions}, <a href="/install/shell/">{COUNTS.cli}</a>, <a href="/install/">{COUNTS.bindings}</a>.</p>
+  <p class="counts">{COUNTS.functions}, <a href="/languages/bash/">{COUNTS.cli}</a>, <a href="/languages/">{COUNTS.bindings}</a>.</p>
   <table>
     <tr><th>Function</th><th>What it does</th></tr>
     {CODE_FUNCTIONS.map((fn) => (
@@ -26,17 +48,5 @@ const sixHowtos = HOWTOS.slice(0, 6);
   </table>
   <p class="pagelinks"><a href="/functions/question-file/">Save a question as a file</a></p>
 
-  <h2>Learn it on the Beatles</h2>
-  <p><a href="/learn/beatles-bench/">Beatles Bench</a> asks questions about Beatles songs. A script set the right answer to each scored question ahead of time, from Wikipedia and Wikidata. New to ThinkThen? Start with the <a href="/learn/tutorial/">tutorial</a>.</p>
-
-  <h2>Jobs your software can take on</h2>
-  <div class="grid">
-    {sixHowtos.map((h) => (
-      <a class="tile" href={`/how-tos/${h.slug}/`}>
-        <b>{h.title}</b>
-        <span>{h.reader}</span>
-      </a>
-    ))}
-  </div>
-  <p class="pagelinks"><a href="/how-tos/">See every how-to</a></p>
+  <p class="pagelinks"><a href="/start/">Install and get a first answer</a> · <a href="/start/tutorial/">Tutorial</a> · <a href="/recipes/">Recipes</a> · <a href="/learn/beatles-bench/">Beatles Bench</a></p>
 </Base>

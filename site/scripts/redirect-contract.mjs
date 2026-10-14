@@ -1,28 +1,50 @@
-// Independent compatibility inventory: 42 historical aliases and 19 moved pages.
-import { RECIPE_PAGES } from '../src/data/catalog.mjs';
-import { recipeSelection } from '../src/data/recipes.mjs';
+// Independent compatibility inventory: every old address the site has
+// served, each pointing straight at its final page or anchor. 169 entries:
+// historical aliases, moved pages, and the Start, Models, Databases, Recipes,
+// Learn and Beatles Bench moves.
 import fs from 'node:fs';
 import path from 'node:path';
 import { SITE, isStub } from '../src/lib/listed-pages.mjs';
 export const ALIASES = Object.freeze({
-  '/surfaces': '/install/', '/backends': '/install/backends/',
-  '/tutorial': '/learn/tutorial/', '/recipes': '/how-tos/bash/',
-  ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection'].map(s => [`/how-tos/${s}`, `/how-tos/bash/${s}/`])),
-  ...Object.fromEntries(['shell', 'python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'duckdb', 'sqlite', 'postgresql'].map(s => [`/${s}`, `/install/${s}/`])),
+  '/surfaces': '/start/', '/backends': '/models/',
+  '/tutorial': '/start/tutorial/',
+  '/how-tos': '/recipes/', '/how-tos/bash': '/languages/bash/#techniques', '/guides': '/recipes/',
+  '/how-tos/set-aside-bad-records': '/languages/bash/set-aside-bad-records/',
+  '/recipes/set-aside-bad-records': '/languages/bash/set-aside-bad-records/',
+  '/recipes/ask-your-cache-with-duckdb': '/databases/duckdb/#ask-your-saved-answers',
+  ...Object.fromEntries([...['triage-a-support-inbox', 'join-two-tables-by-meaning', 'code-open-ended-survey-answers', 'screen-studies-for-a-review', 'group-alerts-into-incidents', 'rank-the-inbound-leads', 'check-an-expense-against-the-policy', 'split-a-scanned-packet-into-documents', 'screen-a-post-before-it-goes-up', 'search-youtube-transcripts-by-meaning'], ...['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection']].map(s => [`/how-tos/${s}`, `/recipes/${s}/`])),
+  ...Object.fromEntries(['label-a-json-file', 'review-a-diff-by-what-it-does', 'lint-prose-for-hedging', 'fill-a-form-by-selection'].map(s => [`/how-tos/bash/${s}`, `/recipes/${s}/`])),
+  '/shell': '/languages/bash/',
+  ...Object.fromEntries(['python', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c'].map(s => [`/${s}`, `/languages/${s}/`])),
+  ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql'].map(s => [`/${s}`, `/databases/${s}/`])),
+  ...Object.fromEntries(['duckdb', 'sqlite', 'postgresql'].map(s => [`/install/${s}`, `/databases/${s}/`])),
+  '/install/shell': '/languages/bash/',
+  ...Object.fromEntries(['python', 'pandas', 'polars', 'typescript', 'ruby', 'r', 'rust', 'c', 'cpp', 'objective-c', 'cobol', 'ada', 'java', 'kotlin', 'scala', 'csharp', 'go', 'swift', 'zig', 'php', 'dart'].map(s => [`/install/${s}`, `/languages/${s}/`])),
+  ...Object.fromEntries(['if', 'case', 'not-sure', 'threshold-band', 'while-read', 'pipeline', 'batches', 'ci-gate', 'long-lived-loop', 'judge-paragraphs', 'agent-tool-guard', 'set-aside-bad-records'].map(s => [`/how-tos/bash/${s}`, `/languages/bash/${s}/`])),
   '/blog/code-that-understands': '/blog/introducing-thinkthen/',
   '/beatles-bench': '/learn/beatles-bench/',
   '/beatles-bench/the-data': '/learn/beatles-bench/',
   '/beatles-bench/run-it-for-free': '/learn/beatles-bench/',
-  '/beatles-bench/every-language': '/install/',
-  ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad'].map(s => [`/beatles-bench/${s}`, `/learn/beatles-bench/${s}/`])),
-  '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
-  '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+  '/beatles-bench/every-language': '/languages/',
+  ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad'].map(s => [`/beatles-bench/${s}`, `/learn/beatles-bench/#${s}`])),
+  '/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
+  '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/#strings',
   '/reference/annotate': '/functions/annotate/#edge-cases',
-  '/learn/beatles-bench/bench-run': '/learn/beatles-bench/bench-field/',
+  '/learn/beatles-bench/bench-run': '/learn/beatles-bench/#bench-field',
+  ...Object.fromEntries(['strings', 'jev', 'runs-in', 'decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'recognize', 'relate', 'question-file', 'annotate', 'bash', 'languages', 'data', 'blind-spots', 'rad', 'audit', 'diff', 'use-cases', 'shell-uses', 'data-uses', 'retrieval', 'competitors', 'bench-field', 'backends'].map(s => [`/learn/beatles-bench/${s}`, `/learn/beatles-bench/#${s}`])),
   ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'question-file'].map(s => [`/reference/functions/${s}`, `/functions/${s}/`])),
-  ...Object.fromEntries(['audit', 'diff', 'check', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
-  ...Object.fromEntries(['answers', 'question-sets', 'recording'].map(s => [`/reference/${s}`, `/learn/${s}/`])),
+  ...Object.fromEntries(['audit', 'diff', 'transform'].map(s => [`/reference/${s}`, `/functions/${s}/`])),
+  '/reference/check': '/models/check/',
+  '/reference/answers': '/functions/answers/', '/reference/question-sets': '/functions/question-file/#question-sets',
+  '/learn': '/start/', '/learn/answers': '/functions/answers/', '/learn/question-sets': '/functions/question-file/#question-sets',
+  '/reference/recording': '/start/replay/',
   '/reference': '/functions/',
+  '/install': '/start/', '/install/settings': '/start/settings/', '/install/configuration': '/start/configuration/',
+  '/learn/tutorial': '/start/tutorial/', '/learn/functional': '/start/pay-once/',
+  '/learn/caching': '/start/replay/', '/learn/recording': '/start/replay/',
+  '/learn/files': '/start/files/', '/learn/overhead': '/start/speed/',
+  '/install/backends': '/models/', '/functions/check': '/models/check/',
+  ...Object.fromEntries(['typesafe', 'liquid', 'openai', 'perplexity', 'openrouter', 'ollama', 'local', 'system-one', 'other-servers'].map(s => [`/install/backends/${s}`, `/models/${s}/`])),
 });
 export const routeFile = (dist, route) => path.join(dist, route.replace(/^\//, ''), 'index.html');
 export function preserver(fixed) {
@@ -58,15 +80,4 @@ export function validateStub(html, alias, fixed, dist, transformed = true) {
   return refresh[0][0];
 }
 
-export function recipeRouteState(catalog = RECIPE_PAGES, preview = process.env.THINKTHEN_DRAFTS === '1') {
-  return recipeSelection(catalog, preview);
-}
-export function validateCompatibility(html, alias, fixed, dist, transformed = true, state = recipeRouteState()) {
-  if (alias !== '/recipes' || !state.index) return validateStub(html,alias,fixed,dist,transformed);
-  const fail = message => { throw new Error(`alias compatibility: /recipes: ${message}`); };
-  if (isStub(html) || html.includes(preserver(fixed))) fail('expected recipe index, found redirect');
-  if ((html.match(/<main(?:\s|>)/g) || []).length !== 1 || !html.includes('href="https://thinkthen.dev/recipes/"')) fail('missing canonical recipe index');
-  if (/<main\b[^>]*\sdata-draft(?:\s|=|>)/.test(html) !== state.draftIndex) fail('missing draft index marker or unexpected draft index');
-  if (state.draftIndex && !html.includes('Draft catalog:')) fail('missing visible draft index notice');
-  return null;
-}
+export const validateCompatibility = validateStub;

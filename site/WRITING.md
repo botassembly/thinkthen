@@ -23,7 +23,7 @@ Follow these rules when you write or edit any page or code example on this site.
   | A named way to reach a model, such as `typesafe` | backend |
   | The program at an address | server |
 - Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
-- Link every binding to its install page, even before that page exists (Ian, 2026-09-28). `BINDINGS` in `src/data/catalog.mjs` holds the list. The link check allows exactly the install paths of the bindings with no page yet.
+- Link every binding to its page, even before that page exists (Ian, 2026-09-28). A language's page sits at `/languages/<slug>/` and a database's at `/databases/<slug>/`. `BINDINGS` in `src/data/catalog.mjs` holds the list and each route. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
 - Name the threshold in the command and in the prose. Show one band per page.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
@@ -56,6 +56,8 @@ Follow these rules when you write or edit any page or code example on this site.
 ## Code examples
 
 Every example reads top to bottom. A reader sees the question, what goes in, the call, and what came out, in that order.
+
+Every language shows the same case for a function: the same question, choices and input that `src/data/cases.mjs` holds. `scripts/check-cases.mjs` fails the build when a sample strays.
 
 ### Name the question and the choices first
 
@@ -116,7 +118,7 @@ A page may name `--details` where the reference or an edge case needs it (docs c
 
 ### Keep a function page's example short
 
-Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). The opening example in every language is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in every language. Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
+Each function page opens with one plain command example of 3 to 25 lines, the script and its shown output together (Ian, 2026-09-28). On a language page, each function's first sample is one plain call and its answer, with no batching and no option the call does not need (Ian, 2026-10-01). A bigger sample follows it. Every option, batching, and the larger examples sit lower on the page, under Reference. The home page shows the decide page's opening example in Bash only and links the bindings (`sdlc/decisions/2026-10-12-docs-sell-one-idea.md`). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
 
 ### Honest examples
 
@@ -138,19 +140,19 @@ Library examples assert the answer (Ian, 2026-10-01). The assert shows the reade
 | Ruby | `raise unless is_refund == true` after reading `.value` |
 | R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
 | Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
-| C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
+| C | `assert(is_refund);` after `#include <assert.h>`, with `bool is_refund` read from the decide row of the session packets |
 | Java | `assert Boolean.TRUE.equals(isRefund.value().value().value());`, run with assertions on (`java -ea`) |
 | Kotlin | `check(isRefund.value.value.value == true)` |
 | Scala | `assert(isRefund.value.value.value == true)` |
 | C# | `Trace.Assert(isRefund.OutcomeKind == Outcome.Yes);` after `using System.Diagnostics;`. Compare fields, never raw JSON text. |
-| C++ | `assert(is_refund.value.outcome == tt::Outcome::yes);` after `#include <cassert>` |
+| C++ | `assert(is_refund);` after `#include <cassert>`, with `bool is_refund` read from the decide row of `call.collect()` |
 | Go | `if isRefund.Value.Outcome != thinkthen.Yes {`, then `log.Fatal("expected yes")` in the block. Go has no assert, so `log.Fatal` ends the run |
-| Swift | `precondition(isRefund.value.outcome == .yes)` |
-| Zig | `std.debug.assert(is_refund.value.outcome == .yes);` |
+| Swift | `precondition(isRefund)`, with `isRefund` read from the `.decideRow` packet of `call.packets` |
+| Zig | `std.debug.assert(is_refund);`, with `is_refund` read from the decide row that `call.read()` returns |
 | PHP | `assert($isRefund === ThinkThen::YES);`, run with `-d zend.assertions=1` |
 | Dart | `assert(isRefund == Outcome.yes);`, run with `dart run --enable-asserts` |
 | Ada | `pragma Assert (Is_Refund.Value = Yes);`, built with `gnatmake -gnata` |
-| Objective-C | `assert(is_refund.outcome == TTOutcomeYes);` after `#include <assert.h>` |
+| Objective-C | `assert(isRefund);` after `#include <assert.h>`, with `isRefund` read from the `TTSessionPacketDecideRow` in `call.packets` |
 | COBOL | `if not is-refund-yes`, then `stop run returning 1` in the block. COBOL has no assert, so the nonzero return ends the run |
 
 A library sample prints only when the printed form is the point, such as a stream, a table, a JSON shape, or a data frame. It prints with the language's ordinary print to standard output. Its saved output sits beside it as `<sample>.out`, and the page shows it under the sample. `npm run smoke-bindings` fails a sample that prints something other than its `.out`, and a sample that prints with no `.out`. `node scripts/smoke-bindings.mjs --update <path>` writes the file. Read it before the commit. A sample that prints nothing passes on its asserts.
@@ -245,44 +247,10 @@ Give each explanation one home and link to it elsewhere. Repeat a shared API con
 
 ## Recipes and publication evidence
 
-Recipes are caller-owned preparation plus existing judgments, never a new command or annotate mode. The shell catalog is `SHELL_JOBS`; measured recipe pages are the separate `RECIPE_PAGES` catalog. All entries, including hidden drafts, pass source validation. Verify and qualify share `verify-a-claim`. Waiting drafts name missing evidence and contain no placeholder outputs.
+Recipes are caller-owned preparation plus existing judgments, never a new command or annotate mode. Each opens with the reader's gain in one sentence. Reader recipes are `HOWTOS`, the shell catalog is `SHELL_JOBS`; measured recipe pages are the separate `RECIPE_PAGES` catalog. Every entry passes source validation.
 
-A complete recipe presents the job and boundary, question file, independently labeled small sample, named call and answer, retained audit output, interpretation/abstention/failures, then measured evidence and immutable owning-record links. Use existing code renderers, named answers, sample widths and comment-free displayed scripts. Link to canonical function, recording, audit, reading-rule and glossary explanations.
+A complete recipe presents the job and boundary, question file, independently labeled small sample, named call and answer, retained audit output, interpretation/abstention/failures, then measured evidence and immutable source-record links. Use existing code renderers, named answers, sample widths and comment-free displayed scripts. Link to canonical function, recording, audit, reading-rule and glossary explanations.
 
-Recipe narrative uses the closed body model in `recipes.mjs`. Titles, goals, jobs, headings, captions and link labels contain no literal decimal digits, including Unicode digits. Numerical claims use evidence-reference nodes with no author replacement value. Measured carriers require exact value, denominator, cohort, measure definition, resolved/unresolved accounting, backend/model qualification and public owning-record source. Fixture carriers require the saved artifact, selector, denominator and visible controlled-fixture qualification. Artifact nodes display exact declared files; their code/output digits are not quality evidence. Human review still judges quantities written as words. Raw HTML, arbitrary expressions and free-form Markdown are not recipe bodies.
+Recipe narrative uses the closed body model in `recipes.mjs`. Titles, gains, headings, captions and link labels contain no literal decimal digits, including Unicode digits. Numerical claims use evidence-reference nodes, or one evidence grid of right, wrong yes and missed yes per method and cohort, with no author replacement value. Measured carriers require exact value, denominator, cohort, measure definition, resolved/unresolved accounting, backend/model qualification and public source record. Fixture carriers require the saved artifact, selector, denominator and visible controlled-fixture qualification. Artifact nodes display exact declared files; their code/output digits are not quality evidence. Human review still judges quantities written as words. Raw HTML, arbitrary expressions and free-form Markdown are not recipe bodies.
 
 `check-recipes.mjs` checks actual HTML, Markdown and llms exports against source carriers, rejects numerical narrative outside them and verifies visibility. Controlled loopback recordings prove replay and wiring, never provider performance. Audit agreement on a tiny fixture never becomes a quality rate. Candidate absence, misses, none, not sure and failures retain separate full-population counts. Variable option labels require item-aware audits.
-
-Normal all-draft builds retain `/recipes` as the fragment-preserving Bash redirect and emit no recipe details, index twin or listing. Explicit draft preview generates the static index through `[...index].astro` and marked draft details with visible draft notices in exports. Preview alone adds no global menu/footer entry. A published entry requires runnable examples, measured outcomes with ordinary source attribution and one whole-change review. Only that later disposition enables global navigation. Every other alias remains fixed.
-
-## Guides
-
-Guides teach one production lesson. Copy `templates/guide.md` to
-`src/guides/<slug>.md`; the template itself is outside the published catalog.
-The existing Astro Markdown renderer and `Base.astro` carry the lesson.
-Front matter declares `slug`, `title`, `blurb`, `goal`, an explicit `draft`
-boolean, and nonempty `prerequisites` and `limits` lists. Optional `card` and
-`cardAlt` use the existing social-card rules.
-
-Marketing supplies the lesson body and actual media. Set `video` to the real
-HTTPS video URL and `blog` to an actual HTTPS article URL or canonical
-`/blog/<slug>/` path. Published lessons require both; placeholder URLs are not
-publication evidence. Check external destinations during editorial review;
-offline builds validate their shape, and existing link checks resolve internal
-paths. Do not invent media or publish empty lessons to populate the index.
-
-Keep `draft: true` until the lesson, media and examples are reviewed. Drafts
-can omit media. They render only in development or a `THINKTHEN_DRAFTS=1` build,
-with a visible draft notice and no search mark, canonical link or Markdown twin.
-They never enter Guides lists, sitemap or llms exports, including in draft builds.
-A normal build emits no draft lesson page. The Guides landing remains useful
-through its Learn and Recipe links even when no lessons are published.
-
-Use the existing `<!-- example: page/name -->` and `<!-- file: path -->`
-directives for examples. They read saved files under `examples/` and share the
-existing replay and code checks; raw code fences remain refused. Attribute
-findings to public evidence. Models demonstrate compatibility, not rankings.
-Separate caller-owned preparation from proxy policy; never imply that routing,
-curation or fine-tuning services have shipped. Image lessons must follow the
-admitted function and route limits. The batching findings from experiment 0036
-inform later lessons; this template makes no new benchmark or accuracy claim.

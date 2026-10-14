@@ -2,6 +2,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { spawnSync } from 'node:child_process';
 
 export const REPLAY_FILE = 'REPLAY';
 
@@ -45,8 +46,10 @@ export function sampleFiles(examples, rel) {
   return path.join(examples, path.dirname(rel).replace(/\/more$/, ''), 'files');
 }
 // No key, address, backend or setting from the shell may reach a sample.
+// The JVM toolchain homes name only where a compiler sits, so they may.
+const TOOLCHAIN_HOMES = new Set(['THINKTHEN_JDK_HOME', 'THINKTHEN_KOTLIN_HOME', 'THINKTHEN_SCALA_HOME']);
 export function leakedVariables(env) {
-  return Object.keys(env).filter((n) => n.startsWith('THINKTHEN_') || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
+  return Object.keys(env).filter((n) => (n.startsWith('THINKTHEN_') && !TOOLCHAIN_HOMES.has(n)) || ['TYPESAFE_API_KEY', 'LIQUIDAI_API_KEY', 'LIQUID_API_KEY', 'OLLAMA_API_KEY'].includes(n));
 }
 
 // The library and SQL samples under examples/, outside each page's files/.
@@ -62,4 +65,15 @@ export function librarySamples(examples) {
   };
   walk(examples);
   return found.sort();
+}
+
+// Admit compiler commands through the shared four-build supervisor.
+// The supervisor retains the checkpoint barrier and owns child cleanup.
+export function compile(cmd, args, opts = {}) {
+  const lock = '/tmp/thinkthen-heavy.lock';
+  const helper = path.resolve(path.dirname(new URL(import.meta.url).pathname), '../../sdlc/scripts/build-admission.py');
+  const env = { ...process.env, ...opts.env, RUSTC_WRAPPER: '', CARGO_BUILD_JOBS: '2' };
+  return spawnSync('python3', [helper, '--lock', lock, '--', cmd, ...args], {
+    encoding: 'utf8', maxBuffer: 1 << 26, ...opts, env,
+  });
 }

@@ -1,6 +1,6 @@
 # Explicit files in libraries
 
-The [files and folders page](https://thinkthen.dev/learn/files/) runs all ten CLI and Python examples over the shared `specification/fixtures/files` corpus.
+The [files and folders page](https://thinkthen.dev/start/files/) runs all ten CLI and Python examples over the shared `specification/fixtures/files` corpus.
 
 Select paths explicitly. A text argument is always evidence; it never becomes a filename. All readers use the native engine's file parser. Reader options are `unit: "line"` (the default), `unit: "window", window: N` for a positive nonoverlapping line window, or `unit: "file"` for complete documents. Files follow operand order; real folder contents follow sorted relative paths. Unrepresentable UTF-8 source paths fail before content admission. Physical lines are one-based and inclusive, including skipped blank lines. Windows preserve internal LF/CRLF bytes; file units preserve the whole file.
 

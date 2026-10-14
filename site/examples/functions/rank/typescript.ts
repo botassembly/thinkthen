@@ -13,7 +13,7 @@ try {
   ];
   const byUrgency = (await tt.rank(
     question, inbox,
-  )).results;
-  const order = byUrgency.map((one) => one.index);
+  )).rankAnswer();
+  const order = byUrgency;
   assert.deepEqual(order, [1, 3, 2, 0]);
 } finally { tt.close(); }

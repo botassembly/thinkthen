@@ -18,10 +18,10 @@ try {
     try {
     const brokenIsRefund = (await engine.decide(
       question, broken,
-    )).results[0].value;
+    )).decideAnswer();
     const thanksIsRefund = (await engine.decide(
       question, thanks,
-    )).results[0].value;
+    )).decideAnswer();
     assert.equal(brokenIsRefund, true);
     assert.equal(thanksIsRefund, false);
     } finally { engine.close(); }

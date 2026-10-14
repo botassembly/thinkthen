@@ -9,7 +9,7 @@ blurb: "Jev is faster and cheaper, and potentially better. The big bet: software
 card: /og/jev-is-trained-to-decide.png
 cardAlt: "Jev is trained to decide. RLHF chat models please humans. RLVR reasoning models optimize benchmarks. RLCD trains Jev for programmatic use, with a calibrated probability of 0.84 over a threshold of 0.7. Faster and cheaper. Better at decisions is the bet."
 links:
-  - { href: "/how-tos/search-youtube-transcripts-by-meaning/", text: "Search YouTube transcripts by meaning" }
+  - { href: "/recipes/search-youtube-transcripts-by-meaning/", text: "Search YouTube transcripts by meaning" }
 ---
 
 People are excited about Jev because it is faster and cheaper, and potentially better. You can measure faster and cheaper today. Better is a bet.
@@ -68,6 +68,6 @@ Calibration is still a claim until you check it on your own cases. Label some re
 
 ## How I found these quotes
 
-I put this article together with ThinkThen. The how-to [Search YouTube transcripts by meaning](/how-tos/search-youtube-transcripts-by-meaning/) shows the search. ThinkThen found the lines from my talk about speed, cost and tool choice. It found Diogo's a16z line about programming against Jev. It pointed me to the Latent Space passage about intelligence per dollar. I found the training quotes and my line about confidence by reading the transcripts.
+I put this article together with ThinkThen. The recipe [Search YouTube transcripts by meaning](/recipes/search-youtube-transcripts-by-meaning/) shows the search. ThinkThen found the lines from my talk about speed, cost and tool choice. It found Diogo's a16z line about programming against Jev. It pointed me to the Latent Space passage about intelligence per dollar. I found the training quotes and my line about confidence by reading the transcripts.
 
 Words in brackets fix a caption error or fit a quote into my sentence. An ellipsis marks words I cut.

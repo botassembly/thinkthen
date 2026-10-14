@@ -56,7 +56,7 @@ export const GLOBAL_FLAGS = [
 ];
 
 export const SHARED_FLAGS = {
-  '--image': flag('--image FILE', 'an original JPEG or PNG file, and it may repeat', 'off', 'Attaches ordered images to decide, choose or score on an admitted image backend. Other functions refuse images. Captions may use --input, record framing and pointers. Cannot accompany media, unit or window controls.'),
+  '--image': flag('--image FILE', 'an original JPEG or PNG file, and it may repeat', 'off', 'Attaches ordered images to decide, choose or score on a backend that takes images. Other functions refuse images. Captions may use --input, record framing and pointers. Cannot accompany media, unit or window controls.'),
   '--csv': flag('--csv', 'nothing', 'off', 'Reads a comma-separated table with a required header row. Every cell is a string, and every result is JSON Lines.'),
   '--tsv': flag('--tsv', 'nothing', 'off', 'Reads a tab-separated table with a required header row. The CSV rules apply.'),
   '--image-media': flag('--image-media MIME', 'image/png or image/jpeg', 'infer from bytes', 'Declares the format of every repeated --image attachment. Requires --image; a mismatch refuses before sending.'),

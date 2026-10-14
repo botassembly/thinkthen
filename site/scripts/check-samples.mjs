@@ -64,12 +64,17 @@ const EXEMPT = [
   {
     name: 'a question key',
     why: 'A question key is 64 hex characters, and cache unused reads and prints one a line.',
-    test: (line, file) => file.startsWith('learn/caching/') && /^(unused )?[0-9a-f]{64}$/.test(line),
+    test: (line, file) => file.startsWith('start/caching/') && /^(unused )?[0-9a-f]{64}$/.test(line),
+  },
+  {
+    name: 'the release sample report',
+    why: 'The release ships this report in its no-key sample, and the recording answers only these exact bytes.',
+    test: (line, file) => file === 'start/files/report.txt',
   },
   {
     name: 'the replay miss',
     why: 'thinkthen prints a replay miss as one line, and the page quotes the key sentence exactly.',
-    test: (line, file) => file === 'reference/answer-cache/3-miss.out' && /^thinkthen: .*the replay folder holds no answer for question `[0-9a-f]{64}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent$/.test(line),
+    test: (line, file) => file === 'start/answer-cache/3-miss.out' && /^thinkthen: .*the replay folder holds no answer for question `[0-9a-f]{64}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent$/.test(line),
   },
   {
     name: 'the diff warning',
@@ -223,7 +228,7 @@ function main() {
     if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
   }
 
-  for (const folder of ['articles', 'guides']) {
+  for (const folder of ['articles']) {
     const dir = path.join(site, 'src', folder);
     if (!fs.existsSync(dir)) continue;
     for (const name of fs.readdirSync(dir).filter(n => n.endsWith('.md'))) {

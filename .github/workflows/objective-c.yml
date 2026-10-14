@@ -1,6 +1,11 @@
 name: Check Objective-C Foundation
 on:
   workflow_dispatch:
+    inputs:
+      website_examples:
+        description: Replay the ten Objective-C website examples
+        type: boolean
+        default: false
 permissions: {}
 jobs:
   foundation:
@@ -10,6 +15,7 @@ jobs:
     env:
       MACOSX_DEPLOYMENT_TARGET: "15.0"
       CARGO_PROFILE_DEV_DEBUG: "0"
+      CARGO_TARGET_DIR: ${{ github.workspace }}/native-source/target
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with:
@@ -31,7 +37,7 @@ jobs:
           cp -R libraries/objective-c/. target/foundation-package/
           cp native-source/libraries/c/include/thinkthen.h target/native-headers/
           printf 'module CThinkThen { header "thinkthen.h" export * }\n' > target/native-headers/module.modulemap
-          xcrun xcodebuild -create-xcframework -library native-source/libraries/c/target/debug/libthinkthen_c.a -headers target/native-headers -output target/foundation-package/CThinkThen.xcframework
+          xcrun xcodebuild -create-xcframework -library native-source/target/debug/libthinkthen_c.a -headers target/native-headers -output target/foundation-package/CThinkThen.xcframework
       - name: Check generation and installed Foundation behavior
         env:
           THINKTHEN_APPLE_PACKAGE: ${{ github.workspace }}/target/foundation-package
@@ -39,3 +45,13 @@ jobs:
         run: |
           python3 sdlc/generators/results/generate.py --target objc --check
           sh libraries/objective-c/check.sh
+      - name: Replay Objective-C website examples
+        if: ${{ inputs.website_examples && !cancelled() }}
+        env:
+          SITE_NATIVE_PACKAGE: ${{ github.workspace }}/target/website-c-package
+        run: |
+          mkdir -p target/website-c-package/include target/website-c-package/lib
+          cp native-source/libraries/c/include/thinkthen.h target/website-c-package/include/
+          cp native-source/target/debug/libthinkthen_c.dylib target/website-c-package/lib/libthinkthen.dylib
+          ln -s libthinkthen.dylib target/website-c-package/lib/libthinkthen.0.dylib
+          node site/scripts/smoke-bindings.mjs objective-c

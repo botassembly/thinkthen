@@ -1,0 +1,13 @@
+name: first_call
+publish_to: none
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+dependencies:
+  collection: ^1.19.0
+  thinkthen_dart:
+    path: thinkthen-dart
+hooks:
+  user_defines:
+    thinkthen_dart:
+      offline: true
+      asset_cache: native-assets/

@@ -47,9 +47,16 @@ documents/02-contract.txt 1 4
 {'contract': True, 'urgent': True}
 recognize
 documents/01-policy.txt 1 4
-[('Refund', 'person'), ('Customers', 'person'), ('Ada', 'person'), ('Acme', 'organization'), ('Billing', 'person')]
+Refund person
+Customers person
+Ada person
+Acme organization
+Billing person
 documents/02-contract.txt 1 4
-[('Support', 'person'), ('Acme', 'organization'), ('Ada', 'person'), ('An', 'person')]
+Support person
+Acme organization
+Ada person
+An person
 relate
 connected Refund policy
 Customers may request a refund within 30 days.

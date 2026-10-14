@@ -12,6 +12,6 @@ try {
   const parcel = "My parcel went to the wrong address.";
   const team = (await tt.choose(
     {choose: question, options: teams}, parcel,
-  )).results[0].value;
+  )).chooseAnswer();
   assert.equal(team, "shipping");
 } finally { tt.close(); }

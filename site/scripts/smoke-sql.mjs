@@ -9,7 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { readDuckDBVersions, nativeDuckDBTarget, duckDBArtifact } from './duckdb-inputs.mjs';
 import { spawnSync } from 'node:child_process';
-import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles } from './binding-samples.mjs';
+import { readReplayList, replayLine, fixtureLines, leakedVariables, sampleSurface, sampleFiles, compile } from './binding-samples.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const repo = path.resolve(site, '..');
@@ -59,7 +59,7 @@ const DATABASES = {
       if (!fs.existsSync(cli)) return { missing: 'the pinned SQLite 3.50.0 CLI that databases/sqlite/setup.sh builds' };
       if (run('sh', ['-c', 'command -v cargo']).status !== 0) return { missing: 'cargo' };
       const target = path.join(repo, 'target', 'site-sqlite');
-      const done = run('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
+      const done = compile('cargo', ['build', '--quiet', '--release', '--locked', '--offline'], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
       if (done.status !== 0) throw new Error(`cargo build failed in ${this.folder}\n${done.stdout}${done.stderr}`);
       const library = path.join(target, 'release', 'libthinkthen0.so');
       const env = { LD_LIBRARY_PATH: host };
@@ -83,7 +83,7 @@ const DATABASES = {
       const cmake = path.join(tools, 'venv/bin/cmake');
       for (const tool of ['cargo', cmake]) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
       const target = path.join(repo, 'target', 'site-duckdb');
-      const done = run('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, CARGO_TARGET_DIR: path.join(target, 'bridge') } });
+      const done = compile('sh', [path.join(repo, this.folder, 'cpp', 'build.sh')], { cwd: repo, env: { ...process.env, THINKTHEN_DUCKDB_VERSION: version, CARGO_TARGET_DIR: path.join(target, 'bridge') } });
       if (done.status === 77) return { missing: `the approved DuckDB ${version} build inputs` };
       if (done.status !== 0) throw new Error(`cpp/build.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
       if (run(cli, ['-noheader', '-list', '-c', 'SELECT platform FROM pragma_platform();']).stdout.trim() !== platform) throw new Error('DuckDB reports another platform');
@@ -111,7 +111,7 @@ const DATABASES = {
       for (const tool of ['cargo', 'psql']) if (run('sh', ['-c', `command -v ${tool}`]).status !== 0) return { missing: tool };
       if (run('cargo', ['pgrx', '--version']).stdout.trim() !== 'cargo-pgrx 0.17.0') return { missing: 'cargo-pgrx 0.17.0' };
       const target = path.join(repo, 'target', 'site-postgresql');
-      const done = run('bash', ['./pgrx-package-locked.sh', '--pg-config', pgConfig], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
+      const done = compile('bash', ['./pgrx-package-locked.sh', '--pg-config', pgConfig], { cwd: path.join(repo, this.folder), env: { ...process.env, CARGO_TARGET_DIR: target } });
       if (done.status !== 0) throw new Error(`pgrx-package-locked.sh failed in ${this.folder}\n${done.stdout}${done.stderr}`);
       // A private copy of the server with the extension installed, and one
       // cluster that each attempt copies.

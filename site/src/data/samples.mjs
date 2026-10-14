@@ -158,3 +158,11 @@ export function moreSamples(fn, see = {}, order = Object.keys(EXT)) {
       };
     });
 }
+
+// A surface page shows its full sections when the site replays a first call
+// or a function sample there. Otherwise it shows install, how a call looks,
+// and the package guide.
+export function hasSamples(surface, fns) {
+  if (surface === 'shell') return true;
+  return Boolean(firstCall(surface)) || fns.some((fn) => sample(fn, surface));
+}

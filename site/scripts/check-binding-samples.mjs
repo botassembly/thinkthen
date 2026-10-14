@@ -60,7 +60,7 @@ for (const surface of SURFACES) {
     // A wrapper name ends at a space or a semicolon, so a prefix such as co never matches cobol.
     const wrapper = new RegExp(`part_source_wrapper ${archive[1]}[ ;]`);
     const made = pack.includes(`pack "thinkthen-${archive[1]}-$V-$TARGET.tar.gz"`) || wrapper.test(pack);
-    if (!made) problems.push(`/install/${surface.slug}/: release-pack makes no archive named ${line}.`);
+    if (!made) problems.push(`${surface.slug}: release-pack makes no archive named ${line}.`);
   }
 }
 
@@ -72,7 +72,7 @@ for (const surface of SURFACES) {
   const pattern = new RegExp(`(^|[\\s"'/:])${escaped}($|[\\s"'\\[@:])`);
   // A release archive row names the C library, which the archive check covers.
   for (const [line] of surface.install.filter(([l]) => !l.endsWith('.tar.gz'))) {
-    if (!pattern.test(line)) problems.push(`/install/${surface.slug}/: the install line "${line}" does not name the package ${want}.`);
+    if (!pattern.test(line)) problems.push(`${surface.slug}: the install line "${line}" does not name the package ${want}.`);
   }
 }
 

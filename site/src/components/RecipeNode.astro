@@ -1,8 +1,9 @@
 ---
 import Code from './Code.astro';
-import { evidenceText, evidenceSource } from '../data/recipes.mjs';
+import { evidenceText, evidenceSource, gridRows, GRID_COLUMNS, EVIDENCE_LABEL } from '../data/recipes.mjs';
 const { node, recipe, evidence, artifact } = Astro.props;
 const entry = node.kind === 'evidence' ? evidence.get(node.id) : null;
+const rows = node.kind === 'evidence-grid' ? gridRows(node, evidence) : [];
 ---
 {node.kind === 'text' && <p>{node.text}</p>}
 {node.kind === 'heading' && <h2>{node.text}</h2>}
@@ -16,7 +17,15 @@ const entry = node.kind === 'evidence' ? evidence.get(node.id) : null;
   <table data-recipe-evidence={node.id} data-evidence-class={entry.evidenceClass}>
     <thead><tr><th>Evidence</th><th>Source</th></tr></thead>
     <tbody><tr><td>{evidenceText(entry)}</td><td>
-      <a href={evidenceSource(recipe,entry)}>{entry.evidenceClass === 'measured' ? 'Owning record' : 'Controlled fixture'}</a>
+      <a href={evidenceSource(recipe,entry)}>{EVIDENCE_LABEL[entry.evidenceClass]}</a>
     </td></tr></tbody>
+  </table>
+)}
+{rows.length > 0 && (
+  <table data-recipe-evidence-grid>
+    <thead><tr><th>Method</th><th>Cohort</th>{GRID_COLUMNS.map(([, label]) => <th>{label}</th>)}<th>Source</th></tr></thead>
+    <tbody>{rows.map((row) => (
+      <tr data-grid-row={`${row.method}-${row.cohort}`}><td>{row.method}</td><td>{row.cells[0].cohort}</td>{row.cells.map((c) => <td>{c.value}</td>)}<td><a href={row.cells[0].source}>Source</a></td></tr>
+    ))}</tbody>
   </table>
 )}

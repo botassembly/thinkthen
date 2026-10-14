@@ -12,7 +12,7 @@ import { backends } from '../src/lib/backends-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const spec = fs.readFileSync(path.join(site, '..', 'specification', 'settings.md'), 'utf8');
-const page = fs.readFileSync(path.join(site, 'dist', 'install', 'settings', 'index.html'), 'utf8');
+const page = fs.readFileSync(path.join(site, 'dist', 'start', 'settings', 'index.html'), 'utf8');
 const parsed = parseSettings(spec);
 const { precedence } = parsed;
 const rows = parsed.rows.filter((r) => !LEFT_OUT.has(r.name));
@@ -113,7 +113,7 @@ for (const file of walkHtml(path.join(site, 'dist'))) {
 
 // The Backends overview must show every built-in backend as
 // specification/backends.md holds it: name, address, key variables, model.
-const overview = fs.readFileSync(path.join(site, 'dist', 'install', 'backends', 'index.html'), 'utf8');
+const overview = fs.readFileSync(path.join(site, 'dist', 'models', 'index.html'), 'utf8');
 const shown = [...overview.matchAll(/<tr[^>]*data-backend="([^"]+)"[^>]*>([\s\S]*?)<\/tr>/g)];
 const builtIns = backends();
 if (shown.length !== builtIns.length) problems.push(`the Backends overview shows ${shown.length} backends and specification/backends.md holds ${builtIns.length}`);

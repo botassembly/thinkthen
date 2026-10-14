@@ -1,5 +1,5 @@
 ---
-// One page of the Beatles Bench section under Learn, in talk order.
+// The Beatles Bench page, with a side list of its slide sections in talk order.
 import SidePage from './SidePage.astro';
 import { PAGES, REPO } from '../data/beatles.mjs';
 import { slideCard } from '../data/cards.mjs';
@@ -8,4 +8,4 @@ const { page } = Astro.props;
 const card = slideCard(page.slug || 'beatles-bench');
 if (!card) throw new Error(`beatles: ${page.route} has no slide in slides.json`);
 ---
-<SidePage pages={PAGES} page={page} name="Beatles Bench pages" repo={page.link || REPO} image={card.image} imageAlt={card.alt}><slot /></SidePage>
+<SidePage pages={PAGES} page={page} name="Beatles Bench slides" repo={page.link || REPO} image={card.image} imageAlt={card.alt}><slot /></SidePage>

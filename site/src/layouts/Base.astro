@@ -3,8 +3,6 @@ import '../styles/site.css';
 import { NOINDEX, REPO } from '../data/catalog.mjs';
 import { DEFAULT_CARD, routeCard } from '../data/cards.mjs';
 import { ORGANIZATION_LD, PERSON_LD } from '../data/about.mjs';
-import { RECIPE_PAGES } from '../data/catalog.mjs';
-import { recipeSelection } from '../data/recipes.mjs';
 import SiteFooter from '../components/SiteFooter.astro';
 
 // `repo` is the one GitHub link a page carries, at its bottom. `image` and
@@ -54,13 +52,12 @@ const jsonLd = structured ? JSON.stringify(structured) : home && JSON.stringify(
   { '@context': 'https://schema.org', ...PERSON_LD },
 ]);
 const nav = [
-  ['/install/', 'Install'],
+  ['/start/', 'Start'],
   ['/functions/', 'Functions'],
-  ['/how-tos/', 'How-tos'],
-    ...(recipeSelection(RECIPE_PAGES).navigation ? [['/recipes/', 'Recipes']] : []),
-  ['/learn/', 'Learn'],
-  ['/guides/', 'Guides'],
-  ['/blog/', 'Blog'],
+  ['/models/', 'Models'],
+  ['/languages/', 'Languages'],
+  ['/databases/', 'Databases'],
+  ['/recipes/', 'Recipes'],
 ];
 ---
 <!DOCTYPE html>
@@ -97,13 +94,10 @@ const nav = [
 {!noindex && <link rel="alternate" type="text/markdown" href={mdHref}>}
 {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
 <script is:inline>
-  // The theme and the language choice are set before the page draws, so
-  // nothing flashes.
+  // The theme is set before the page draws, so nothing flashes.
   try {
     var t = localStorage.getItem('tt-theme');
     if (t) document.documentElement.setAttribute('data-theme', t);
-    var l = localStorage.getItem('tt-lang');
-    if (l) document.documentElement.setAttribute('data-lang', l);
   } catch (e) {}
 </script>
 </head>
@@ -163,44 +157,6 @@ const nav = [
       var next = lightNow() ? 'dark' : 'light';
       root.setAttribute('data-theme', next);
       try { localStorage.setItem('tt-theme', next); } catch (e) {}
-    });
-  });
-
-  // One language for the whole visit. Every tabbed block follows it.
-  function tabsIn(group) {
-    return Array.prototype.slice.call(group.querySelectorAll(':scope > .tabs button'));
-  }
-  // A group that has no tab for the chosen language falls back to the same
-  // family: Polars answers for Python, DuckDB for SQL.
-  function show(group, lang, family) {
-    var buttons = tabsIn(group);
-    var pick = null;
-    buttons.forEach(function (b) { if (!pick && b.dataset.lang === lang) pick = b.dataset.lang; });
-    if (!pick) buttons.forEach(function (b) { if (!pick && b.dataset.alias === family) pick = b.dataset.lang; });
-    if (!pick) pick = group.dataset.fallback || (buttons[0] && buttons[0].dataset.lang);
-    buttons.forEach(function (b) { b.setAttribute('aria-selected', String(b.dataset.lang === pick)); });
-    group.querySelectorAll(':scope > .cell').forEach(function (c) { c.hidden = c.dataset.lang !== pick; });
-  }
-  function showAll(lang, family) {
-    document.querySelectorAll('.tabbed').forEach(function (g) { show(g, lang, family); });
-  }
-  var current = 'Bash', family = 'Bash';
-  try {
-    current = localStorage.getItem('tt-lang') || 'Bash';
-    family = localStorage.getItem('tt-lang-family') || current;
-  } catch (e) {}
-  showAll(current, family);
-  document.querySelectorAll('.tabbed').forEach(function (group) {
-    tabsIn(group).forEach(function (b) {
-      b.addEventListener('click', function () {
-        current = b.dataset.lang;
-        family = b.dataset.alias || current;
-        try {
-          localStorage.setItem('tt-lang', current);
-          localStorage.setItem('tt-lang-family', family);
-        } catch (e) {}
-        showAll(current, family);
-      });
     });
   });
 

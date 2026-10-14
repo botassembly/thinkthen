@@ -39,9 +39,12 @@ for function, rows in [
     for row in rows:
         source = getattr(row, "source", None)
         if source is not None:
-            print(source.file, source.first_line, source.last_line)
+            print(
+                source.file, source.first_line,
+                source.last_line)
         if function == "recognize":
-            print([(entity.text, entity.kind) for entity in row.value.entities])
+            for entity in row.value.entities:
+                print(entity.text, entity.kind)
         elif function == "annotate":
             print(row.value)
         else:
@@ -49,10 +52,15 @@ for function, rows in [
         if function == "find":
             for candidate in row.candidates:
                 source = candidate.source
-                print(candidate.index, source.file, source.first_line, source.last_line, candidate.probability)
+                print(
+                    candidate.index, source.file,
+                    source.first_line, source.last_line,
+                    candidate.probability)
 print("relate")
 for edge in connections:
-    print(edge.relation, edge.source.name, edge.target.name, edge.probability)
+    print(
+        edge.relation, edge.source.name,
+        edge.target.name, edge.probability)
 windows = tt.read_files(
     ["documents/01-policy.txt", "documents/01-policy.txt"],
     unit="window", window=2)
@@ -60,4 +68,6 @@ window_refunds = engine.filter(
     "Does this line describe a refund?", windows).details
 print("windows")
 for row in window_refunds:
-    print(row.source.file, row.source.first_line, row.source.last_line, row.value)
+    print(
+        row.source.file, row.source.first_line,
+        row.source.last_line, row.value)
