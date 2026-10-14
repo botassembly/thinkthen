@@ -106,14 +106,7 @@ fn environment_engine_child() {
             .score(&score, "a note")
             .expect("the environment details");
         let other = &other.results()[0];
-        assert_eq!(
-            serde_json::from_str::<Value>(&one.to_scalar_json().expect("engine scalar JSON"))
-                .expect("engine JSON"),
-            serde_json::from_str::<Value>(
-                &other.to_scalar_json().expect("environment scalar JSON")
-            )
-            .expect("environment JSON"),
-        );
+        assert_eq!(comparable_score(one), comparable_score(other));
         assert_eq!(
             one.to_scalar_json().expect("engine scalar JSON"),
             other.to_scalar_json().expect("environment scalar JSON")
@@ -423,4 +416,25 @@ fn compare_observations<T: PartialEq + std::fmt::Debug>(
             "separate live answers have separate observations"
         );
     }
+}
+
+/// Compare both serialized paths while retaining each call's independent identities.
+fn comparable_score(result: &thinkthen::CompleteScore) -> Value {
+    let mut document: Value =
+        serde_json::from_str(&result.to_json().expect("complete JSON")).expect("complete document");
+    assert_eq!(document["answer_id"], json!(result.answer_id()));
+    assert_eq!(
+        document["meta"]["observations"],
+        json!(result.identity().observations())
+    );
+    // Separate live calls have distinct observation and derived answer identities.
+    document
+        .as_object_mut()
+        .expect("document")
+        .remove("answer_id");
+    document["meta"]
+        .as_object_mut()
+        .expect("metadata")
+        .remove("observations");
+    document
 }

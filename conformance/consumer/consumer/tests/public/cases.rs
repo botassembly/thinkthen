@@ -243,6 +243,7 @@ fn loaded(
             same("decide", &json!(answer.value()), bare)?;
             return detailed(
                 &scalar(&answer.results()[0].to_scalar_json().map_err(said)?)?,
+                &scalar(&answer.results()[0].to_json().map_err(said)?)?,
                 &success["answers"][0],
                 base,
             );
@@ -296,9 +297,9 @@ fn loaded(
 /// One judgment and its complete result, then twice through a cache for a counters case.
 fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
     let expected = &success["answers"][0];
-    let (typed, details) = atomic(engine, asked, text)?;
+    let (typed, details, complete) = atomic(engine, asked, text)?;
     same("bare", &details["value"], &expected["bare"])?;
-    detailed(&details, expected, base)?;
+    detailed(&details, &complete, expected, base)?;
     same("typed", &typed, &expected["bare"])?;
     let Some(counters) = success.get("counters") else {
         return Ok(());
@@ -463,14 +464,15 @@ fn scalar(written: &str) -> Checked<Value> {
     serde_json::from_str(written).map_err(|error| error.to_string())
 }
 
-/// Read the primitive and scalar detail projection from the same completed call.
-fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value)> {
-    let (value, written) = match asked.kind() {
+/// Read the primitive and both serialized views from the same completed call.
+fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Value, Value)> {
+    let (value, written, complete) = match asked.kind() {
         QuestionKind::Decide => {
             let call = engine.decide(asked, text).map_err(said)?;
             (
                 json!(call.value()),
                 call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
             )
         }
         QuestionKind::Score => {
@@ -478,6 +480,7 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             (
                 json!(call.value()),
                 call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
             )
         }
         QuestionKind::Choose => {
@@ -486,24 +489,27 @@ fn atomic(engine: &Engine, asked: &Question, text: &str) -> Checked<(Value, Valu
             (
                 json!(call.value().map(|team| team.label())),
                 call.results()[0].to_scalar_json().map_err(said)?,
+                call.results()[0].to_json().map_err(said)?,
             )
         }
         QuestionKind::Tag => match asked.clone().into_tag::<Mark>() {
             Ok(typed) => {
                 let call = engine.tag(&typed, text).map_err(said)?;
                 let written = call.results()[0].to_scalar_json().map_err(said)?;
-                (tags(call.into_value()), written)
+                let complete = call.results()[0].to_json().map_err(said)?;
+                (tags(call.into_value()), written, complete)
             }
             Err(_) => {
                 let typed = asked.clone().into_tag::<Word>().map_err(said)?;
                 let call = engine.tag(&typed, text).map_err(said)?;
                 let written = call.results()[0].to_scalar_json().map_err(said)?;
-                (tags(call.into_value()), written)
+                let complete = call.results()[0].to_json().map_err(said)?;
+                (tags(call.into_value()), written, complete)
             }
         },
         _ => return Err("one atomic question required".to_owned()),
     };
-    Ok((value, scalar(&written)?))
+    Ok((value, scalar(&written)?, scalar(&complete)?))
 }
 
 /// Typed tags as the shared cases spell them.

@@ -91,7 +91,7 @@ pub(crate) fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
     }
 }
 
-pub(crate) fn detailed(details: &Value, expected: &Value, base: &str) -> Checked {
+pub(crate) fn detailed(details: &Value, complete: &Value, expected: &Value, base: &str) -> Checked {
     let wanted = &expected["details"];
     let answer = &wanted["answer"];
     let actual = details.get("answer").ok_or("scalar answer is missing")?;
@@ -128,7 +128,14 @@ pub(crate) fn detailed(details: &Value, expected: &Value, base: &str) -> Checked
     keyed_requests(&requests, &wanted["requests"])?;
     let served = json!(format!("{base}/systemone"));
     same("url", meta.get("url").unwrap_or(&Value::Null), &served)?;
-    same("line url", meta.get("url").unwrap_or(&Value::Null), &served)
+    same(
+        "line url",
+        complete
+            .get("meta")
+            .and_then(|meta| meta.get("url"))
+            .unwrap_or(&Value::Null),
+        &served,
+    )
 }
 
 /// A row lists its own question keys, in order, out of the keys of the
