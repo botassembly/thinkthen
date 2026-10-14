@@ -617,12 +617,7 @@ impl Engine {
                     )?
                     .project(|mut rows| {
                         let result = rows.pop().map(|row| row.result).ok_or_else(wrong)?;
-                        let probability = result
-                            .value
-                            .entities()
-                            .iter()
-                            .map(|entity| Some(entity.strength()))
-                            .collect();
+                        let probability = result.probability();
                         Ok((result.value.clone(), vec![result], probability))
                     })
             },

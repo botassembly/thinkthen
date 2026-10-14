@@ -103,7 +103,7 @@ impl Engine {
         self.try_find_complete_with(question, units.into_iter().map(Ok), options)?
             .project(|result| {
                 let value = result.found.selected().cloned();
-                let probability = result.found.picked().map(|picked| picked.probability());
+                let probability = result.probability();
                 Ok((value, result, probability))
             })
     }
