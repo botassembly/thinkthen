@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"runtime"
 	"sync"
 )
@@ -23,7 +22,7 @@ type Client struct {
 }
 
 func NewClient(settings EngineSettings) (*Client, error) {
-	data, err := json.Marshal(settings)
+	data, err := transportMarshal(settings)
 	if err != nil {
 		return nil, err
 	}
@@ -51,13 +50,13 @@ func (c *Client) Close() {
 	}
 }
 
-type OwnedCall struct {
-	Packets  []OwnedSessionPacket
-	Terminal *OwnedSessionPacketTerminal
+type Call struct {
+	Packets  []SessionPacket
+	Terminal *SessionPacketTerminal
 }
 type SessionError struct {
-	Call   OwnedCall
-	Detail OwnedError
+	Call   Call
+	Detail FailureDetail
 }
 
 func (e *SessionError) Error() string { return e.Detail.Message().Value }
@@ -65,9 +64,9 @@ func sessionFailure(code C.int) error {
 	if code == 0 {
 		return nil
 	}
-	var facts json.RawMessage
+	var facts Facts
 	if borrowed := C.thinkthen_session_error_facts_json(); borrowed != nil {
-		facts = json.RawMessage(C.GoString(borrowed))
+		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
 	}
 	return &Error{Code: int(code), Kind: ErrorKind(code), Message: C.GoString(C.thinkthen_session_error_message()), Retryable: C.thinkthen_session_error_retryable() != 0, Facts: facts}
 }
@@ -80,36 +79,19 @@ func descriptor(value any) RequestItem {
 	}
 	return JSONItem(value)
 }
-func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input any, options *RequestOptions) (OwnedCall, error) {
-	var result OwnedCall
+func (c *Client) call(ctx context.Context, verb string, question RequestQuestion, input RequestInput, options *RequestOptions) (Call, error) {
+	var result Call
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	var source RequestInput
-	producer, feeding := input.(Producer)
+	source := input
+	feedInput, feeding := input.(FeedInput)
+	producer := feedInput.Producer
 	if feeding {
 		source = RequestInputFeed{Name: "records"}
-	} else if explicit, ok := input.(RequestInput); ok {
-		source = explicit
-	} else if files, ok := input.(RequestSource); ok {
-		source = RequestInputSource{Source: files}
-	} else {
-		values := []any{input}
-		rv := reflect.ValueOf(input)
-		if rv.IsValid() && (rv.Kind() == reflect.Slice || rv.Kind() == reflect.Array) {
-			values = make([]any, rv.Len())
-			for i := range values {
-				values[i] = rv.Index(i).Interface()
-			}
-		}
-		items := make([]RequestItem, len(values))
-		for i, v := range values {
-			items[i] = descriptor(v)
-		}
-		source = RequestInputRecords{Items: items}
 	}
 	if options == nil {
 		options = &RequestOptions{}
@@ -122,7 +104,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 		if i == 0 {
 			data = []byte(verb)
 		} else {
-			data, err = json.Marshal(value)
+			data, err = transportMarshal(value)
 		}
 		if err != nil {
 			return result, err
@@ -252,7 +234,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 			if err != nil {
 				return result, err
 			}
-			value, decodeErr := ownedDecode[OwnedSessionPacket](raw)
+			value, decodeErr := ownedDecode[SessionPacket](raw)
 			if decodeErr != nil {
 				return result, decodeErr
 			}
@@ -262,7 +244,7 @@ func (c *Client) call(ctx context.Context, verb string, question RequestQuestion
 				return result, packetKind.Err
 			}
 			if packetKind.Value == "terminal" {
-				terminal, decodeErr := ownedDecode[OwnedSessionPacketTerminal](raw)
+				terminal, decodeErr := ownedDecode[SessionPacketTerminal](raw)
 				result.Terminal = &terminal
 				err = decodeErr
 				if err != nil {

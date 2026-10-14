@@ -646,7 +646,10 @@
         "UsagePersistenceState",
         "OwnedPresence",
         "JSONValue",
-        "Producer"
+        "Producer",
+        "FeedInput",
+        "AnswerCardinalityError",
+        "Call"
       ],
       "representation_calls": [
         "NewClient",
@@ -658,7 +661,6 @@
         "String",
         "Boolean",
         "Value",
-        "MarshalJSON",
         "UnmarshalJSON",
         "Error",
         "KindUsage",
@@ -672,14 +674,17 @@
         "Null",
         "GoString",
         "JSONValue",
-        "Ptr"
+        "Ptr",
+        "TextInput",
+        "RecordsInput",
+        "TextRecordsInput"
       ],
       "function_containers": [
         "Client"
       ],
       "lifecycle_owners": [
         "Client",
-        "OwnedCall",
+        "Call",
         "OwnedSession"
       ],
       "representation_owners": [
@@ -689,7 +694,9 @@
         "UsageStatus",
         "Error",
         "ErrorKind",
-        "SessionError"
+        "SessionError",
+        "FeedInput",
+        "AnswerCardinalityError"
       ],
       "representation_embedded_members": {
         "ownedJSON": [
@@ -697,8 +704,14 @@
           "JSONValue",
           "String",
           "GoString",
-          "MarshalJSON",
           "UnmarshalJSON"
+        ]
+      },
+      "wrapper_members": {
+        "AnswerCardinalityError": [
+          "Function",
+          "Count",
+          "Call"
         ]
       }
     },

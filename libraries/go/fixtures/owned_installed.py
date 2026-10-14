@@ -11,6 +11,9 @@ from backend import Backend
 from children import child_env
 from usage import run_usage
 
+def admitted(command):
+    return [sys.executable, os.environ['THINKTHEN_BUILD_ADMISSION'], '--lock', os.environ.get('THINKTHEN_HEAVY_LOCK', '/tmp/thinkthen-heavy.lock'), '--', *command]
+
 module = Path(sys.argv[1]).resolve()
 plan_only = len(sys.argv) > 2 and sys.argv[2] == 'plan'
 surface_only = len(sys.argv) > 2 and sys.argv[2] == 'surface'
@@ -24,7 +27,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-owned-') as folder:
     (consumer / 'go.mod').write_text('module example.org/owned-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
     shutil.copy2(Path(__file__).parents[1] / 'examples/decide/main.go' if example_only else Path(__file__).with_name('owned_consumer.go'), consumer / 'main.go')
     env = child_env(home=str(home), GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(Path(__file__).resolve().parents[3]/'target/go/cache')), GOMODCACHE=str(home/'modcache'), CGO_ENABLED='1')
-    subprocess.run(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.'],cwd=consumer,env=env,check=True)
+    subprocess.run(admitted(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.']),cwd=consumer,env=env,check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
         stage = Path(os.environ['THINKTHEN_COVERAGE_STAGE']); stage.mkdir(parents=True, exist_ok=True)
         label = sys.argv[2] if len(sys.argv) > 2 else 'owned'
