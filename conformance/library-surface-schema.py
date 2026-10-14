@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+import tempfile
 
 
 def contracts(root, authority):
@@ -101,10 +102,18 @@ def generated_sources(root, target, request, result):
         outputs['plan_generated.zig'] = template.render(graph(result, ('completeplan',)))
         outputs['request_generated.zig'] = template.render(inputs)
     elif target == 'ada':
-        inputs = graph(request, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure'))
-        rendered = template.render(inputs)
-        outputs['thinkthen-requests.ads'] = rendered[0]
-        outputs['thinkthen_session_c.ads'] = template.header(root, generator.child_env(keep=('LANG', 'LC_ALL', 'TMPDIR')))
+        # Reuse the production generator, including its friendly schema projections.
+        # Redirect only output paths; neither the source tree nor its templates change.
+        original_path = template.output_path
+        with tempfile.TemporaryDirectory(prefix='library-surface-ada-') as folder:
+            temporary = Path(folder)
+            try:
+                template.output_path = lambda root, target, name: temporary / name
+                template.generate(root, generator.graph, generator.prepare,
+                                  generator.child_env(keep=('LANG', 'LC_ALL', 'TMPDIR')), False)
+                outputs.update({path.name: path.read_text() for path in temporary.glob('*.ads')})
+            finally:
+                template.output_path = original_path
     elif target == 'cobol':
         outputs.update(template.outputs(root, graph(request, ('Request', 'RequestSessionDescriptor'))))
     # R's generated Rust metadata has no host declaration syntax. Its NAMESPACE
