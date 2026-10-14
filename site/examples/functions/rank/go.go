@@ -34,7 +34,8 @@ func main() {
 		log.Fatal(err)
 	}
 	order := call.Value.([]any)
-	want := []any{json.Number("1"), json.Number("3"), json.Number("2"), json.Number("0")}
+	want := []any{json.Number("1"), json.Number("3"),
+		json.Number("2"), json.Number("0")}
 	if !slices.Equal(order, want) {
 		log.Fatal("expected the outage first")
 	}
@@ -44,7 +45,8 @@ func main() {
 		log.Fatal("expected aligned probabilities")
 	}
 	for i, probability := range probabilities {
-		if probability == nil || *probability != wantProbabilities[i] {
+		if probability == nil ||
+			*probability != wantProbabilities[i] {
 			log.Fatal("unexpected recorded probability")
 		}
 	}

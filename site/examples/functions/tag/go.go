@@ -43,7 +43,9 @@ func main() {
 		fittingLabels = append(fittingLabels, label.(string))
 	}
 	want := []string{"praise", "bug", "billing"}
-	if !slices.Equal(fittingLabels, want) || call.Probability != nil {
-		log.Fatal("expected all three labels with no scalar probability")
+	if !slices.Equal(fittingLabels, want) ||
+		call.Probability != nil {
+		log.Fatal(
+			"expected all three labels with no scalar probability")
 	}
 }

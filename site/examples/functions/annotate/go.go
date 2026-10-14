@@ -27,7 +27,12 @@ func main() {
 	}
 	rows := call.Value.([]any)
 	triage := rows[0].(map[string]any)
-	if len(rows) != 1 || len(triage) != 3 || triage["steps"] != true || triage["area"] != "login" || triage["impact"] != json.Number("1.98") || call.Probability != nil {
-		log.Fatal("expected steps, login and 1.98 with no scalar probability")
+	if len(rows) != 1 || len(triage) != 3 ||
+		triage["steps"] != true ||
+		triage["area"] != "login" ||
+		triage["impact"] != json.Number("1.98") ||
+		call.Probability != nil {
+		log.Fatal("expected steps, login and 1.98 " +
+			"with no scalar probability")
 	}
 }

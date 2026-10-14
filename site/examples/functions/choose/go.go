@@ -24,7 +24,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	team, probability := call.Value.(string), float64(call.Probability.(tt.ProbabilityScalar))
+	team, probability := call.Value.(string),
+		float64(call.Probability.(tt.ProbabilityScalar))
 	if team != "shipping" || probability != 1 {
 		log.Fatal("expected shipping with probability 1")
 	}
