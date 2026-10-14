@@ -36,10 +36,10 @@ struct UsageStatus {
     const UsagePersistenceState state;
     const std::optional<std::string> advice;
 };
-template<auto Reader> class AnswerCall : public Call {
+template<auto Project> class ResultCall : public Call {
 public:
-    explicit AnswerCall(Call&& call):Call(std::move(call)) {}
-    auto answer() { if(!input_closed()) finish(); return Reader(collect()); }
+    explicit ResultCall(Call&& call):Call(std::move(call)) {}
+    auto result() { if(!input_closed()) finish(); return Project(collect()); }
 };
 }
 #include "calls_generated.hpp"

@@ -9,8 +9,8 @@ int main(int argc,char** argv) {
     auto question=RequestQuestion(RequestQuestionDefinition().set_value(
         RequestDefinitionRecognizeDefinition().set_recognize(RecognizeQuestion().set_kinds({{"person",AuthoredDescription(std::string("A person's name."))}}))
         .set_threshold(AuthoredCut(0.5)).set_relation_threshold(AuthoredCut(0.5))));
-    auto input=RequestInput(RequestInputText().set_text(original.get<std::string>()));
+    auto input=RequestInputText().set_text(original.get<std::string>());
     tt::Client client(EngineSettings().set_replay(argv[3]));
-    auto answer=client.recognize(question,input).answer();
-    std::cout<<::tt::detail::serialize(tt::results::detail::encode(answer))<<'\n';
+    auto answer=client.recognize(question,input).result();
+    std::cout<<::tt::detail::serialize(tt::Data{{"value",tt::results::detail::encode(answer.value)},{"probability",tt::results::detail::encode(answer.probability)},{"results",tt::results::detail::encode(answer.results)},{"facts",tt::results::detail::encode(answer.facts)}})<<'\n';
 }

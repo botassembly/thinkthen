@@ -9,6 +9,6 @@ int main(int argc,char** argv) {
     auto question=RequestQuestion(RequestQuestionFile().set_path(argv[1]));
     auto input=RequestInput(RequestInputRecords().set_items({RequestItem().set_original(RequestOriginalJson().set_value(original))}));
     tt::Client client(EngineSettings().set_replay(argv[3]));
-    auto answer=client.filter(question,input).answer();
-    std::cout<<::tt::detail::serialize(tt::results::detail::encode(answer))<<'\n';
+    auto answer=client.filter(question,input).result();
+    std::cout<<::tt::detail::serialize(tt::Data{{"value",tt::results::detail::encode(answer.value)},{"probability",tt::results::detail::encode(answer.probability)},{"results",tt::results::detail::encode(answer.results)},{"facts",tt::results::detail::encode(answer.facts)}})<<'\n';
 }
