@@ -62,10 +62,12 @@ def main():
                         int(incremental))
                     assert got['code'] == ERRORS['usage'], got
                     assert len(got['completed']) == int(incremental), got
-                    assert got.get('stopped_at') == 2, got
                     if incremental:
+                        assert got.get('stopped_at') == 2, got
                         assert got['completed'][0]['index'] == 0, got
                         assert got['completed'][0]['input'] == 'Alpha.', got
+                    else:
+                        assert 'stopped_at' not in got and 'facts' not in got, got
 
             question = {'version': 1, 'questions': {'body': {
                 'decide': 'Fits?', 'on': '/body', 'item_schema': {'type': 'string'}}}}
