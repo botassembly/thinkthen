@@ -53,3 +53,4 @@ PM amendment, 2026-10-13. Remaining work. One generator developer owns `sdlc/gen
 ## Progress
 
 - 2026-10-13 started
+- 2026-10-13 next: Native semantic C views and JVM generator registration merged into the combined branch at 79c05234e with identical accepted source and passing ABI checks; finish remaining outputs through the checkpoint.
