@@ -13,14 +13,15 @@ procedure Sample is
      & "in Denver.";
 begin
    declare
-      Result : constant Recognize_Result :=
+      Names_Call : constant Recognize_Result :=
         Thinkthen.Inputs.Calls.Recognize (
      File_Question ("kinds.json"),
      Make_Input_text (Evidence));
       Names : Unbounded_String;
    begin
       declare
-            Spans : constant V.Value := V.Field_Value (Result.Value, "entities");
+            Spans : constant V.Value :=
+              V.Field_Value (Names_Call.Value, "entities");
          begin
             for I in 1 .. V.Length (Spans) loop
                declare

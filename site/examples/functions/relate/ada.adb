@@ -21,11 +21,11 @@ procedure Sample is
       Entity ("Kindle", "product")];
 begin
    declare
-      Result : constant Relate_Result :=
+      Links_Call : constant Relate_Result :=
         Thinkthen.Inputs.Calls.Relate (
      File_Question ("makes.json"),
      Entities_Input (Records));
-      Connections : constant V.Value := Result.Value;
+      Connections : constant V.Value := Links_Call.Value;
       Who_Makes : Unbounded_String;
    begin
       for I in 1 .. V.Length (Connections) loop

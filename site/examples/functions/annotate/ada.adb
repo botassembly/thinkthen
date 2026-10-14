@@ -12,11 +12,11 @@ procedure Sample is
      "Steps: click Log in. Nobody gets in.";
 begin
    declare
-      Result : constant Annotate_Result :=
+      Fields_Call : constant Annotate_Result :=
         Thinkthen.Inputs.Calls.Annotate (
      File_Question ("form.json"),
      Make_Input_text (Evidence));
-      Triage : constant V.Value := Result.Value;
+      Triage : constant V.Value := Fields_Call.Value;
    begin
       pragma Assert
         (V.As_Boolean (V.Field_Value (Triage, "steps")));

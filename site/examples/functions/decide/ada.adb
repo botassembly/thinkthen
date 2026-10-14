@@ -12,11 +12,11 @@ procedure Sample is
      "Please refund my order. It arrived broken.";
 begin
    declare
-      Result : constant Decide_Result :=
+      Refund_Judgment : constant Decide_Result :=
         Thinkthen.Inputs.Calls.Decide (
      Text_Question ("Does the customer ask for a refund?"),
      Make_Input_text (Evidence));
-      Is_Refund : constant V.Value := Result.Value;
+      Is_Refund : constant V.Value := Refund_Judgment.Value;
    begin
       pragma Assert
         (V.As_Boolean (Is_Refund));

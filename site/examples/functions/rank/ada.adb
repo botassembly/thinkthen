@@ -21,11 +21,11 @@ procedure Sample is
         "Please send the signed quote by 5 pm today")];
 begin
    declare
-      Result : constant Rank_Result :=
+      Order_Call : constant Rank_Result :=
         Thinkthen.Inputs.Calls.Rank (
      Text_Question ("Is this urgent?"),
      Records_Input (Records));
-      By_Urgency : constant Rank_List := Result.Value;
+      By_Urgency : constant Rank_List := Order_Call.Value;
    begin
       pragma Assert (By_Urgency = [1, 3, 2, 0]);
    end;
