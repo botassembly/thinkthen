@@ -143,6 +143,23 @@ class PackageText(unittest.TestCase):
             self.assertTrue(os.access(installed / 'configure', os.X_OK))
             self.assertEqual(installed, tree / 'installed/thinkthen')
 
+    def test_duckdb_replay_loads_the_installed_source_member(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch); packages = tree / 'packages'; packages.mkdir()
+            archive(packages / 'thinkthen-duckdb-0.2.0-x86_64-unknown-linux-gnu.tar.gz', {
+                'README.md': readmes.source('duckdb').read_bytes(),
+                'd4355d01c5/linux_amd64/thinkthen.duckdb_extension': b'preview',
+                'v1.5.6/linux_amd64/thinkthen.duckdb_extension': b'stable'})
+            work = tree / 'work'; work.mkdir()
+            def run(command, cwd, env, input, timeout):
+                if '-c' in command:
+                    return subprocess.CompletedProcess(command, 0, '069cc9f9b5\n', '')
+                self.assertIn('/v1.5.6/linux_amd64/thinkthen.duckdb_extension', input)
+                self.assertNotIn('/d4355d01c5/', input)
+                return subprocess.CompletedProcess(command, 0, '', '')
+            with patch.object(readmes, 'run_process', side_effect=run):
+                readmes.run_example('duckdb', packages, work)
+
     def test_all_usage_blocks_are_selected_in_order(self):
         with tempfile.TemporaryDirectory() as scratch:
             root = Path(scratch)
