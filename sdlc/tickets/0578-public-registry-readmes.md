@@ -5,6 +5,8 @@ Status: OPEN.
 Milestone: 0.2
 
 Depends on: 0574
+Depends on: 0581
+Depends on: 0582
 
 ## Outcome
 
@@ -42,3 +44,5 @@ PM amendment, 2026-10-13, from Ian through the marketing lead. Replace the routi
 PM amendment, 2026-10-13. Remaining work. Done: 25 public README sources and their metadata routing, and `sdlc/scripts/registry-readmes.py` wired into `sdlc/scripts/release-workflow` (e6dca4b3e) with self-tests. Merge 9a6408dcc and c17f91b4d from `ticket/0578-public-registry-readmes` into `ticket/0543-final`. Rulings: (1) The root `README.md` stays the docs team's README from `docs/0.2-refresh`. Revert the root replacement, and delete the "ThinkThen for the Command Line and PHP" page and `README-DEVELOPMENT.md`. Composer and Packagist render the root README, and the check validates only its opening paragraph and versions. (2) The shared pitch has one source: 0575 makes this ticket's `OPENING` paragraph the root README's first paragraph, and the check compares every page against it. (3) Point the root README's ADR 0055 link at the site's "Pay once" page, so no public page links `sdlc/`. Remaining work: rewrite every page example to use at least two functions over several records with the 0574 one-line typed answer; TypeScript, C, Zig and COBOL wait on 0574. Add an example replay mode to `registry-readmes.py` that replays each page's example against saved answers as `site/scripts/check-binding-samples.mjs` does, with a failing fixture page. Pages and site samples share recordings with 0575. Proof: `registry-readmes.py sources` and its self-test pass on the candidate, the ADR fixture fails, and every built package's text matches its approved source.
 
 PM amendment, 2026-10-14. Four rejects came from examples, references, lengths and replays drifting while the 0576 language lanes changed the public APIs. Those lanes have now merged everything except PostgreSQL. Restart from current `ticket/0543-final`: rewrite each package example and reference against the merged API, replay it against the installed package, and check length before review. Do PostgreSQL last, after its whole-library review. Collect every failing check in one run, and fix all of them before the next review.
+
+PM amendment, 2026-10-14. 0581 and 0582 change how every library and database returns values and details. Hold code example rewrites until they land, then rewrite each example against `result.value`, `result.probability` and `thinkthen_<function>_details`. Prose and openings continue now.

@@ -5,6 +5,8 @@ Status: OPEN.
 Milestone: 0.2
 
 Depends on: 0543 for landing and deploy only. Every other change starts now.
+Depends on: 0581
+Depends on: 0582
 
 Owner: the ThinkThen build team. The coordinator runs it as its own lane beside the 0.2 waves. It owns branch `docs/0.2-refresh` and its worktree `worktrees/thinkthen-docs`.
 
@@ -42,3 +44,5 @@ thinkthen.dev and every public text that ships with 0.2 sell one idea: put Jev-c
 ## Progress
 
 PM amendment, 2026-10-13. Remaining work. `docs/0.2-refresh` is at 126ea45b2, 30 commits behind main and about 400 behind `ticket/0543-final`. Steps: merge `origin/main` in `worktrees/thinkthen-docs`. Merge `origin/ticket/0543-final`. On `README.md` keep the docs branch version, put 0578's `OPENING` paragraph first, and drop 0578's root rewrite. Regenerate `site/recordings/thinkthen.jsonl` from the merged commit instead of hand-merging it, and merge `libraries/files.md` and `site/src/pages/install/index.astro` by hand. Remove the obsolete allow entries. Run `npm run build` and every language replay, with Objective-C on the M5, and push after each fix. Once 0574 merges, move every sample to the one-line typed answer; 0578's pages and 0577's DuckDB page reuse these samples and recordings. Run the fresh-reader test listed above. The coordinator merges `docs/0.2-refresh` into `ticket/0543-final` before the freeze, because the candidate's `check-binding-samples.mjs` checks site samples; that merge is a 0543 gate. Text changes Ian asks for after the freeze are text-only: rerun the README check, `sdlc/scripts/package`, the site build and the hosted rehearsal, not the full campaign. After Ian's go, main takes the candidate SHA and thinkthen.dev deploys from main.
+
+PM amendment, 2026-10-14. 0581 and 0582 change how every library and database returns values and details. Hold code example rewrites until they land, then rewrite each example against `result.value`, `result.probability` and `thinkthen_<function>_details`. Prose and openings continue now.
