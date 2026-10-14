@@ -399,7 +399,29 @@ def main():
                               b"/build/home/workspace/source.rs",
                               b"tt-canary-273", b"/build/home/home/private",
                               b"/build/home/Users/private", b"/build/home/tt-canary-273"):
-            private_zig = base / "private-zig"
+            for removed in ("CallProjection.swift", "CallResult.swift", None):
+            altered = base / ("swift-inventory-" + (removed or "unknown"))
+            shutil.copytree(base / "paired", altered)
+            swift_name = f"thinkthen-swift-{version}-{host}.tar.gz"
+            damaged = altered / swift_name
+            replacement = altered / "replacement.tar.gz"
+            with tarfile.open(damaged) as packed, tarfile.open(replacement, "w:gz") as output:
+                for member in packed:
+                    if removed and member.name == "./Sources/ThinkThen/" + removed:
+                        continue
+                    payload = packed.extractfile(member) if member.isfile() else None
+                    output.addfile(member, payload)
+                if removed is None:
+                    member = tarfile.TarInfo("./Sources/ThinkThen/Unknown.swift")
+                    member.size = 1
+                    output.addfile(member, io.BytesIO(b"x"))
+            replacement.replace(damaged)
+            damaged.with_name(damaged.name + ".sha256").write_text(
+                f"{hashlib.sha256(damaged.read_bytes()).hexdigest()}  {damaged.name}\n")
+            expect(run("sh", str(REPO / "sdlc/scripts/release-go-cpp-pair"), str(altered),
+                       "swift-zig"), "source members differ for " + swift_name)
+        print("release-archive: complete Swift source package passes; missing or unknown sources refuse", flush=True)
+        private_zig = base / "private-zig"
             shutil.copytree(base / "paired", private_zig, dirs_exist_ok=True)
             archive_path = next(private_zig.glob("thinkthen-zig-*.tar.gz"))
             replacement = private_zig / "private.tmp"
