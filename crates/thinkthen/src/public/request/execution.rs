@@ -459,25 +459,53 @@ where
 {
     let request = super::admit_native(function, definition)?;
     controls.eager_inputs = true;
-    execute(
+    intake(
         engine,
         &request,
+        records,
+        controls,
+        |engine, definition, rows, controls, context| {
+            let controls = match &context {
+                Some(context) => controls.context(context),
+                None => controls,
+            };
+            run(&engine, definition, rows, controls)
+        },
+    )
+}
+
+/// Snapshot caller originals once before shared eager or pulled validation.
+pub(super) fn intake<'a, I, T, R>(
+    engine: &Engine,
+    request: &AdmittedRequest,
+    records: I,
+    controls: CallOptions<'a>,
+    run: impl FnOnce(
+        Engine,
+        RequestDefinition,
+        Validated<'a, NativeRows<I::IntoIter, T>>,
+        CallOptions<'a>,
+        Option<String>,
+    ) -> Result<R, Error>,
+) -> Result<R, Error>
+where
+    I: IntoIterator<Item = Result<crate::RecordInput<T>, Error>>,
+    T: crate::InputEvidence,
+{
+    execute(
+        engine,
+        request,
         controls,
         false,
         |_| Ok(records.into_iter().map(snapshot_row::<T> as fn(_) -> _)),
         |Prepared {
              engine,
              definition,
-             mut controls,
+             controls,
              context,
              ..
          },
-         rows| {
-            if let Some(context) = &context {
-                controls = controls.context(context);
-            }
-            run(&engine, definition, rows, controls)
-        },
+         rows| { run(engine, definition, rows, controls, context) },
     )
 }
 

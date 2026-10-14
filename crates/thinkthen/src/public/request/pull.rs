@@ -1,5 +1,6 @@
 //! Borrowed native originals enter the admitted Request edge without a result reader.
 use super::{AdmittedRequest, RequestDefinition, RequestFunction as Function};
+use crate::public::complete::{choice, decision, records::filter, score, tags};
 use crate::{
     Batch, CallOptions, CompleteAnnotated, CompleteChoice, CompleteDecision, CompleteFilter,
     CompleteRecord, CompleteScore, CompleteTags, Engine, Error, InputEvidence, InputFunction,
@@ -34,24 +35,12 @@ where
     T: InputEvidence + 'a,
 {
     super::native_feed::header(request)?;
-    let rows = super::execution::execute(
+    let rows = super::execution::intake(
         engine,
         request,
+        records,
         controls,
-        false,
-        |_| {
-            Ok(records
-                .into_iter()
-                .map(|row| row.map(super::execution::snapshot)))
-        },
-        |super::execution::Prepared {
-             definition,
-             engine,
-             controls,
-             context,
-             ..
-         },
-         records| {
+        |engine, definition, records, controls, context| {
             dispatch(
                 &engine,
                 request.request.call.function(),
@@ -108,14 +97,14 @@ where
         ));
     }
     macro_rules! atomic {
-        ($kind:ident, $input:ident, $convert:ident, $q:expr) => {
+        ($kind:ident, $input:ident, $convert:path, $q:expr) => {
             Ok(RequestRows::$kind(engine.complete_stream(
                 InputFunction::$input,
                 $q,
                 records,
                 controls,
                 context,
-                crate::public::complete::$convert,
+                $convert,
             )?))
         };
     }
@@ -126,19 +115,14 @@ where
         (Function::Choose, RequestDefinition::Atomic(q)) => {
             atomic!(Choices, Choose, choice, question(q))
         }
-        (Function::Tag, RequestDefinition::Atomic(q)) => atomic!(Tags, Tag, tags, question(q)),
+        (Function::Tag, RequestDefinition::Atomic(q)) => {
+            atomic!(Tags, Tag, tags, question(q))
+        }
         (Function::Score, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
             atomic!(Scores, Score, score, q)
         }
         (Function::Filter, RequestDefinition::Atomic(LoadedQuestion::Question(q))) => {
-            Ok(RequestRows::Filtered(engine.complete_stream(
-                InputFunction::Filter,
-                q,
-                records,
-                controls,
-                context,
-                crate::public::complete::records::filter,
-            )?))
+            atomic!(Filtered, Filter, filter, q)
         }
         (Function::Choose, RequestDefinition::DynamicChoose(q)) => Ok(RequestRows::Choices(
             engine.dynamic_choose_stream(q, records, controls, context)?,
@@ -186,24 +170,12 @@ where
     T: InputEvidence + 'a,
 {
     let request = super::admit_native(Function::Annotate, questions.into())?;
-    super::execution::execute(
+    super::execution::intake(
         engine,
         &request,
+        records,
         controls,
-        false,
-        |_| {
-            Ok(records
-                .into_iter()
-                .map(|row| row.map(super::execution::snapshot)))
-        },
-        |super::execution::Prepared {
-             engine,
-             definition,
-             controls,
-             context,
-             ..
-         },
-         rows| {
+        |engine, definition, rows, controls, context| {
             let set = definition.annotation()?;
             engine.annotate_stream_project(
                 set,
@@ -231,24 +203,12 @@ where
     T: InputEvidence + 'a,
 {
     let request = super::admit_native(Function::from_input(function), question.into())?;
-    super::execution::execute(
+    super::execution::intake(
         engine,
         &request,
+        records,
         controls,
-        false,
-        |_| {
-            Ok(records
-                .into_iter()
-                .map(|row| row.map(super::execution::snapshot)))
-        },
-        |super::execution::Prepared {
-             engine,
-             definition,
-             controls,
-             context,
-             ..
-         },
-         rows| {
+        |engine, definition, rows, controls, context| {
             let q = definition.atomic()?;
             engine.complete_stream_project(
                 function,
