@@ -4,7 +4,7 @@ import json
 import tempfile
 from pathlib import Path
 from session_records import ROOT, template, generator
-from templates.c import Target, ident, normalized, nullable, container_key, variant_member
+from templates.c import Target, ident, normalized, nullable, container_key, variant_member, field as native_field
 
 
 def record_types(package, header):
@@ -39,7 +39,7 @@ class Reader:
         self.bridge, self.record = bridge, record
         self.prefix = 'Receipt'
         self.constants = template.abi_module(ROOT).header_abi(ROOT / 'libraries/c/include/thinkthen.h')['constants']
-        schema = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
+        schema = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text(encoding='utf-8'))
         self.definitions = generator.prepare(generator.graph(schema, ('completesessionPacket',)))
         self.target = Target(self.definitions)
         for key, source in self.definitions.items(): self.target.definition(key, source)
@@ -120,7 +120,7 @@ class Reader:
         if 'properties' not in source: return self.decode(source, value.value, key + '_value')
         result = {}
         for member, schema in source['properties'].items():
-            field = getattr(value, member + '_' if member in ('true', 'false') else member)
+            field = getattr(value, native_field(member).removeprefix('r#'))
             if member not in source.get('required', []) or nullable(schema, self.definitions):
                 if field.presence == 0: continue
                 if field.presence == 1: result[member] = None; continue

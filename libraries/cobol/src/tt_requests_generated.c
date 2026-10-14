@@ -9783,9 +9783,9 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFindResult *
         .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
         .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
     };
-    if(result.probability.count) result.probability.first=result.probability.data[0];
     result.value.scalar=1;
     result.probability.scalar=1;
+    if(result.probability.count) result.probability.first=result.probability.data[0];
     *out=result;
     return 0;
 }
@@ -9837,7 +9837,6 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRecognizeRes
         .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
         .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
     };
-    if(result.probability.count) result.probability.first=result.probability.data[0];
     if(result.value.scalar && result.probability.list_count==1) {
         result.probability.data=result.probability.lists[0].data;
         result.probability.count=result.probability.lists[0].count;
@@ -9845,6 +9844,7 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerRecognizeRes
     } result.probability.scalar=0;
     result.value.edges=table.edges;
     result.value.edge_count=table.edge_count;
+    if(result.probability.count) result.probability.first=result.probability.data[0];
     *out=result;
     return 0;
 }

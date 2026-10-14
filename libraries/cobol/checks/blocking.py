@@ -219,6 +219,15 @@ end program BLOCK_PLAN.
                 assert attempt.request_sha256.length == 64 and attempt.sdk_request_id
                 assert status.facts.call_id
                 assert record_type('thinkthen_cobol_AnswerCallId').from_address(status.facts.call_id).value.length == 64
+            if function in ('score', 'tag', 'annotate'):
+                assert not answer.probability.first.present and answer.probability.count == 0 and answer.probability.list_count == 0
+            if function == 'relate':
+                assert answer.probability.count == answer.value.count
+                number = record_type('thinkthen_cobol_AnswerNumber')
+                for index in range(answer.value.count):
+                    edge = Relation.from_address(answer.value.rows + index * ct.sizeof(Relation))
+                    probability = number.from_address(answer.probability.data + index * ct.sizeof(number))
+                    assert probability.present and probability.value == edge.probability
             if function == 'choose': assert Choice.from_address(answer.value.rows).value.text[:1] == b'a'
             if function == 'tag':
                 tags = Table.from_address(answer.value.rows); assert tags.count == 2
@@ -302,7 +311,7 @@ end program BLOCK_PLAN.
         fixture_backend = FixtureBackend(BACKEND_BINARY, child_env(home=work / 'recognition-home'))
         try:
             os.environ['THINKTHEN_API_KEY'] = 'sk-conformance-loopback'
-            cases = {case['id']: case for case in json.loads((ROOT / 'conformance/cases.json').read_text())['cases']}
+            cases = {case['id']: case for case in json.loads((ROOT / 'conformance/cases.json').read_text(encoding='utf-8'))['cases']}
             for identity, expected in [('01-decide-yes-captured', (True, .99)), ('06-choose-billing', ('billing', .7))]:
                 case = cases[identity]; function = case['verb']; evidence = case['exchanges'][0]['evidence']
                 settings = {'cache': False, 'batch': 1, 'model': 'jev-1.13.0', 'max_retries': 0, 'base_url': f'http://127.0.0.1:{fixture_backend.port}/case/library-call-result/v1'}
@@ -318,16 +327,17 @@ end program BLOCK_PLAN.
                 assert int(fixture_backend.read('count')) - before == 1, ('canonical-call-send-count', function)
                 bridge.TT_ANSWER_FREE(answer.owner); native.thinkthen_engine_free(engine)
                 engine = saved_engine
-            rank_case = next(case for case in json.loads((ROOT / 'conformance/named-inputs.json').read_text())['cases'] if case['id'] == 'rank-set-ordered-members')
+            rank_case = next(case for case in json.loads((ROOT / 'conformance/named-inputs.json').read_text(encoding='utf-8'))['cases'] if case['id'] == 'rank-set-ordered-members')
             given = rank_case['input']
-            settings = {'cache': False, 'batch': given['batch'], 'model': given['model'], 'max_retries': 0, 'base_url': f'http://127.0.0.1:{fixture_backend.port}/arm/full/capture/v1'}
+            settings = {'cache': False, 'batch': given['batch'], 'model': given['model'], 'max_retries': 0, 'base_url': f'http://127.0.0.1:{fixture_backend.port}/case/rank-set-ordered-members/capture/v1'}
             engine = native.thinkthen_engine_new_with(json.dumps(settings).encode()); assert engine
             before = int(fixture_backend.read('count'))
             code, answer, status = invoke('rank', given['records'], {'batch': given['batch'], 'context': given['shared_context']}, question_override=given['question'])
             assert code == 0 and answer.value.count == 3 and answer.results.len == 3, ('whole-set-rank', code)
             assert list((ct.c_uint64 * answer.value.count).from_address(answer.value.rows)) == [0, 1, 2]
             number = record_type('thinkthen_cobol_AnswerNumber')
-            assert [round(number.from_address(answer.probability.data + index * ct.sizeof(number)).value, 2) for index in range(answer.probability.count)] == [.7, .6, .99]
+            actual_probabilities = [round(number.from_address(answer.probability.data + index * ct.sizeof(number)).value, 2) for index in range(answer.probability.count)]
+            assert actual_probabilities == [.7, .6, .99], ('whole-set-rank-probabilities', actual_probabilities)
             receipts = reader.decode(contracts['rank']['receipt_payload'], answer.results, 'receipt')
             assert [row['question_name'] for row in receipts] == ['first', 'first', 'second']
             for row, expected in zip(receipts, rank_case['expect']['rank_members'], strict=True):
@@ -350,8 +360,10 @@ end program BLOCK_PLAN.
             receipt = reader.decode(contracts['recognize']['receipt_payload'], answer.results, 'receipt')[0]
             numbers = record_type('thinkthen_cobol_AnswerNumber')
             probability_list = record_type('thinkthen_cobol_AnswerProbabilityList').from_address(answer.probability.lists)
+            expected_probabilities = []
             for index, value in enumerate(expected['entities']):
                 selected = next(proposal for proposal in receipt['answer']['proposals'] if proposal['kept'] and proposal.get('selected', {}).get('start') == value['start'] and proposal.get('selected', {}).get('end') == value['end'] and proposal.get('kind') == value['kind'])
+                expected_probabilities.append(selected['span_probability'])
                 probability = numbers.from_address(probability_list.data + index * ct.sizeof(numbers))
                 assert probability.present and abs(probability.value - selected['span_probability']) < 1e-12
 
@@ -360,6 +372,11 @@ end program BLOCK_PLAN.
                 assert entity(row.source) == value['source'] and entity(row.target) == value['target']
                 assert row.relation.text[:row.relation.length].decode() == value['relation'] and abs(row.probability - value['probability']) < 1e-12
             bridge.TT_ANSWER_FREE(answer.owner)
+            engine = native.thinkthen_engine_new_with(json.dumps(settings).encode()); assert engine
+            code, answer, status = invoke('recognize', [fixture['text']], question_override=fixture['question'], input_override={'kind': 'text', 'text': fixture['text']})
+            assert code == 0 and answer.value.scalar == 1 and answer.probability.list_count == 0 and answer.probability.count == answer.value.count
+            assert answer.probability.first.present and abs(answer.probability.first.value - expected_probabilities[0]) < 1e-12
+            bridge.TT_ANSWER_FREE(answer.owner); native.thinkthen_engine_free(engine); engine = saved_engine
             engine = native.thinkthen_engine_new_with(json.dumps(settings).encode()); assert engine
             boundary_question = {key: value for key, value in fixture['question'].items() if key != 'relation_threshold'}
             boundary_question['recognize'] = {key: value for key, value in fixture['question']['recognize'].items() if key != 'relations'}
