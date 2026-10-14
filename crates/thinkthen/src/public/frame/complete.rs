@@ -33,6 +33,7 @@ pub(super) fn filter(
         };
         let originals = rows
             .iter()
+            .filter(|row| row.result().value())
             .map(|row| request::original(row.original()))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Series::new(texts.name().clone(), originals))

@@ -137,6 +137,11 @@ pub(super) fn value_column(
     let positions = request::positions(column)?;
     let mut values = Vec::new();
     for (row, probability) in rows.iter().zip(probabilities) {
+        if function == RequestFunction::Filter
+            && row.get("value").and_then(Value::as_bool) != Some(true)
+        {
+            continue;
+        }
         let value = match function {
             RequestFunction::Filter => row.get("input").cloned().unwrap_or(Value::Null),
             RequestFunction::Rank => {
@@ -189,15 +194,36 @@ pub(super) fn enrich<T>(
     column: &Series,
     build: impl FnOnce(&RequestValue) -> Result<T, Error>,
 ) -> Result<Call<T, RequestValue, Series>, Error> {
+    enrich_mode(call, function, column, false, build)
+}
+fn enrich_mode<T>(
+    call: Call<RequestValue>,
+    function: RequestFunction,
+    column: &Series,
+    all_filter: bool,
+    build: impl FnOnce(&RequestValue) -> Result<T, Error>,
+) -> Result<Call<T, RequestValue, Series>, Error> {
     call.project(|value| {
         let mut probabilities = probabilities(&value)?;
-        if !matches!(
-            function,
-            RequestFunction::Filter
-                | RequestFunction::Rank
-                | RequestFunction::Find
-                | RequestFunction::Relate
-        ) {
+        if !all_filter {
+            if let RequestValue::Filtered(rows) = &value {
+                probabilities = rows
+                    .iter()
+                    .zip(probabilities)
+                    .filter_map(|(row, probability)| row.result().value().then_some(probability))
+                    .collect();
+            }
+        }
+
+        if (all_filter && function == RequestFunction::Filter)
+            || !matches!(
+                function,
+                RequestFunction::Filter
+                    | RequestFunction::Rank
+                    | RequestFunction::Find
+                    | RequestFunction::Relate
+            )
+        {
             let mut source = probabilities.into_iter();
             probabilities = column
                 .is_not_null()
@@ -277,7 +303,7 @@ impl Engine {
             .into_iter()
             .map(|record| Ok(record.map_original(|original| original.question_input())));
         let call = request::execute_records(self, definition.clone(), function, options, rows)?;
-        enrich(call, function, column, |value| {
+        enrich_mode(call, function, column, true, |value| {
             let mut rows = documents(value)?;
             for row in &mut rows {
                 if let Some(at) = row
@@ -310,10 +336,7 @@ impl Engine {
             }
             if !matches!(
                 function,
-                RequestFunction::Filter
-                    | RequestFunction::Rank
-                    | RequestFunction::Find
-                    | RequestFunction::Relate
+                RequestFunction::Rank | RequestFunction::Find | RequestFunction::Relate
             ) {
                 let mut source = rows.into_iter();
                 rows = column

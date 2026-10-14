@@ -60,7 +60,7 @@ pub(super) fn execute_records(
         call,
         controls,
         RequestFeed::from_records("column", rows),
-        false,
+        true,
     )
 }
 
