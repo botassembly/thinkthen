@@ -79,6 +79,7 @@ test('Client report disabled usage when the environment selects no storage',asyn
 test('the ten Client functions retain generated values after close',async t=>{
   const backend=await startBackend(t);
   const {value}=await ask(backend,`
+    if('parse' in tt.Results || 'packet' in tt.Results)throw Error('public transport decoder');
     const client=new tt.Client({cache:false});
     const asks={
       decide:[{decide:'Is it urgent?'},'text'],
