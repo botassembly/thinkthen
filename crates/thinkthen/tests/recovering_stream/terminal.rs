@@ -150,7 +150,7 @@ fn lazy_recognition_schema_refusal_is_terminal_before_sending() {
         )
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Usage);
-    assert_eq!(error.stopped().at, Some(1));
+    assert_eq!(error.stopped().at(), Some(1));
     assert_eq!(pulls.get(), 1);
     assert!(rows.borrow().is_empty());
     assert_eq!(error.facts().unwrap().records(), 0);
