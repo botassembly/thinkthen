@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Answer, Engine, ErrorKind, Question};
+use thinkthen::{Engine, ErrorKind, Question};
 
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
 
@@ -60,6 +60,6 @@ fn the_largest_timeout_answers_and_retries() {
 
     let answer = engine.decide(&question, "a record").expect("answer");
 
-    assert_eq!(answer.into_value(), Answer::Yes);
+    assert_eq!(answer.into_value(), Some(true));
     assert_eq!(listener.count(), 2, "one 503, then the answer");
 }

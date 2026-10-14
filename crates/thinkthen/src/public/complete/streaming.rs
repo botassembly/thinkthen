@@ -115,6 +115,10 @@ impl Engine {
             records,
             Box::new(|_, original: &Original<T>| Ok(original.prepared.clone())),
             Box::new(move |stop, at, original, row| {
+                if original.is_none() {
+                    crate::public::bulk::judged(stop, &question, engine.backend(), at, row)?;
+                    return Err(Error::defect("a complete pulled row lost its original"));
+                }
                 let Original { held, .. } = original
                     .ok_or_else(|| Error::defect("a complete pulled row lost its original"))?;
                 let canonical = super::records::complete_row(

@@ -35,7 +35,7 @@ fn assert_usage_persistence(
     engine: &Engine,
     case: &str,
     argument: &str,
-    call: &thinkthen::Call<thinkthen::Answer>,
+    call: &thinkthen::DecisionCall,
     question: &thinkthen::Question,
 ) {
     let observed = call
@@ -200,7 +200,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
             ("THINKTHEN_BASE_URL", listener.base()),
         ],
     );
-    assert_eq!(seeded, "Yes sent 2 cached 0");
+    assert_eq!(seeded, "Some(true) sent 2 cached 0");
     assert_eq!(listener.count(), 3);
     assert_eq!(
         status(&home),
@@ -223,11 +223,11 @@ fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
     ];
     assert_eq!(
         in_child("usage-cached", &environment),
-        "Yes sent 1 cached 0"
+        "Some(true) sent 1 cached 0"
     );
     assert_eq!(
         in_child("usage-cached", &environment),
-        "Yes sent 0 cached 1"
+        "Some(true) sent 0 cached 1"
     );
     assert_eq!(listener.count(), 1);
     assert_eq!(
@@ -249,7 +249,7 @@ fn an_engine_built_by_hand_writes_no_usage() {
             (ARGUMENT, listener.base()),
         ],
     );
-    assert_eq!(built, "Yes sent 1 cached 0");
+    assert_eq!(built, "Some(true) sent 1 cached 0");
     assert_eq!(listener.count(), 1);
     assert!(!Folder::Usage.under(&home).exists());
 }
@@ -322,6 +322,6 @@ fn failed_finalization_preserves_a_good_answer_and_its_pending_facts() {
             (ARGUMENT, usage.to_str().expect("usage path")),
         ],
     );
-    assert_eq!(result, "Yes sent 1 cached 0");
+    assert_eq!(result, "Some(true) sent 1 cached 0");
     assert_eq!(listener.count(), 2);
 }
