@@ -14,8 +14,8 @@ public final class SampleInputs {
     public static Inputs.RequestQuestion score() { return Questions.score("Which?", List.of("Low.", "High.")); }
     public static Inputs.RequestQuestion find() { return Questions.find("Which?"); }
     public static Inputs.RequestInput units() { return new Inputs.RequestInputUnits().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("session-find")), new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("session-find-two")))); }
-    public static Inputs.RequestQuestion annotate() { return Questions.annotate(Map.of("check", new Inputs.AnnotateQuestionDecide().decide(new Inputs.AuthoredQuestionText("Is it?")))); }
-    public static Inputs.RequestQuestion recognize() { return Questions.recognize(Map.of("person", "A person's name.")); }
+    public static Inputs.RequestQuestion annotate() { return Questions.annotate(new Inputs.Ordered<Inputs.AnnotateQuestion>().entry("check", new Inputs.AnnotateQuestionDecide().decide(new Inputs.AuthoredQuestionText("Is it?")))); }
+    public static Inputs.RequestQuestion recognize() { return Questions.recognize(new Questions.Options().option("person", "A person's name.")); }
     public static Inputs.RequestQuestion relate() { return Questions.relate(List.of(new Inputs.AuthoredRelation().name("caused_by").source("alert").target("alert"))); }
     public static Inputs.RequestInput entities() { return new Inputs.RequestInputEntities().items(List.of(new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name", "First", "kind", "alert"))), new Inputs.RequestItem().original(new Inputs.RequestOriginalJson().value(Map.of("name", "Second", "kind", "alert"))))); }
 }

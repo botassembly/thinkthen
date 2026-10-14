@@ -154,7 +154,8 @@ def inputs(definitions):
         if source.get('type') == 'array':
             return 'List<? extends ' + target(source.get('items', {})) + '>'
         if source.get('type') == 'object':
-            return 'Map<String,? extends ' + target(source.get('additionalProperties', {})) + '>'
+            value_type = target(source.get('additionalProperties', {}))
+            return ('Map<String,? extends ' if value_type == 'Object' else 'Ordered<? extends ') + value_type + '>'
         if isinstance(source.get('type'), list):
             kinds = [kind for kind in source['type'] if kind != 'null']
             if len(kinds) == 1:
@@ -165,7 +166,12 @@ def inputs(definitions):
     lines = ['// Generated from the shared Rust Request schema. Do not edit.',
              'package thinkthen;', 'import java.util.*;',
              '/** Typed wire builders. Native code owns grammar and admission errors. */',
-             'public final class Inputs {', 'private Inputs() {}', 'public abstract static class Builder<T extends Builder<T>> extends Values.Builder<T> {}']
+             'public final class Inputs {', 'private Inputs() {}',
+             '/** Authored entries retain the order of calls; duplicate names are rejected. */',
+             'public static final class Ordered<T> {',
+             'private final Map<String,T> values = new LinkedHashMap<>();',
+             'public Ordered<T> entry(String name, T value) { if (values.containsKey(name)) throw new IllegalArgumentException("Duplicate authored name: " + name); values.put(name, value); return this; }',
+             'Object json() { return values; }', '}', 'public abstract static class Builder<T extends Builder<T>> extends Values.Builder<T> {}']
     trees = []
     readers = []
     for key, source in sorted(definitions.items()):
@@ -224,5 +230,5 @@ def inputs(definitions):
                       f'public {typ} {method}Null() {{ return put({quoted}, null); }}',
                       f'public {typ} omit{method[0].upper() + method[1:]}() {{ return omit({quoted}); }}']
         lines.append('}')
-    lines += readers + ['static Object tree(Object value) {', *trees, 'return value;', '}']
+    lines += readers + ['static Object tree(Object value) {', 'if (value instanceof Ordered<?> item) return item.json();', *trees, 'return value;', '}']
     return '\n'.join(lines + ['}']) + '\n'

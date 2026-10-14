@@ -33,7 +33,7 @@ if not package_jars: raise ValueError("installed JVM parity needs built JARs")
 classpath=os.pathsep.join(map(str,package_jars))
 compiler_env=child_env(JAVA_HOME=str(JDK),JAVACMD=str(JDK / "bin/java"),PATH=str(JDK / "bin")+":"+os.environ.get("PATH","/usr/bin:/bin"),JAVA_OPTS="-Xmx1g -XX:ActiveProcessorCount=2")
 if not os.environ.get('THINKTHEN_PARITY_PREPARED'):
-    subprocess.run([str(JDK / "bin/javac"),"-J-Xmx1g","--release","22","-cp",classpath,"-d",str(classes),str(HERE / "SessionCases.java"),str(HERE / "CaseBatch.java")],env=compiler_env,check=True)
+    subprocess.run([str(JDK / "bin/javac"),"-J-Xmx1g","--release","22","-cp",classpath,"-d",str(classes),str(HERE / "SessionCases.java"),str(HERE / "CaseBatch.java"),str(HERE / "FixtureJson.java")],env=compiler_env,check=True)
     subprocess.run([str(KOTLIN / "bin/kotlinc"),"-J-Xmx1g","-J-XX:ActiveProcessorCount=2","-jvm-target","22","-classpath",str(classes)+":"+classpath+":"+str(KOTLIN / "lib/kotlinx-coroutines-core-jvm.jar"),str(HERE / "SessionCases.kt"),"-d",str(classes)],env=compiler_env,check=True)
     subprocess.run([str(SCALA / "bin/scalac"),"-J-Xmx1g","-J-XX:ActiveProcessorCount=2","-classpath",str(classes)+":"+classpath,"-d",str(classes),str(HERE / "SessionCases.scala")],env=compiler_env,check=True)
 if os.environ.get('THINKTHEN_PARITY_PREPARE'):

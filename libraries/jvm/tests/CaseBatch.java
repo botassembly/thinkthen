@@ -49,7 +49,7 @@ public final class CaseBatch {
             var bytes=new java.io.ByteArrayOutputStream(); int next;
             while((next=System.in.read())!=-1 && next!='\n')bytes.write(next);
             if(next==-1 && bytes.size()==0)return true;
-            var data=Json.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
+            var data=FixtureJson.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
             environment(data);
             run.accept(data);
             System.out.println("case-complete");

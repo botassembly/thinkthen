@@ -10,20 +10,20 @@ import thinkthen.Results.*;
 public final class SessionCases {
     public static Object tree(Object value) { return Values.json(value); }
     public static Inputs.EngineSettings settings(Object value) { return Inputs.EngineSettings.fromJson(value); }
-    public static Object parse(String value) { return Json.parse(value); }
+    public static Object parse(String value) { return FixtureJson.parse(value); }
     public static String write(Object value) { return Json.write(value); }
     static Map<String,Object> map(Object value) { return value instanceof Map<?,?> ? Values.object(value) : Map.of(); }
     static List<?> list(Object value) { return value instanceof List<?> values ? values : List.of(); }
     static boolean yes(Map<String,Object> data,String key) { return Boolean.TRUE.equals(data.get(key)); }
     static String text(Map<String,Object> data,String key) { return data.get(key) instanceof String value ? value : ""; }
     public static Map<String,Object> frame(String[] args) throws Exception {
-        if(args.length > 1) return Json.parseObject(args[1]);
+        if(args.length > 1) return FixtureJson.parseObject(args[1]);
         var bytes = new java.io.ByteArrayOutputStream(); int next;
         while((next=System.in.read())!=-1 && next!='\n') bytes.write(next);
-        return Json.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
+        return FixtureJson.parseObject(bytes.toString(java.nio.charset.StandardCharsets.UTF_8));
     }
     public static Engine engine(Map<String,Object> data, Engine.Surface surface) {
-        return new Engine(EngineSettings.fromJson(Json.parse(text(data,"engine_settings"))),surface);
+        return new Engine(EngineSettings.fromJson(FixtureJson.parse(text(data,"engine_settings"))),surface);
     }
     public static RequestQuestion question(Map<String,Object> data) throws Exception {
         String reference=text(data,"reference");
@@ -176,7 +176,7 @@ public final class SessionCases {
             if(yes(data,"incremental")){
                 if(yes(data,"owned_jsonl")){
                     String path=(String)list(data.get("paths")).getFirst();long line=0;
-                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(Json.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor,packets))break;}}
+                    try(var reader=Files.newBufferedReader(CaseBatch.path(path))){String raw;while((raw=reader.readLine())!=null){line++;var descriptor=new RequestSessionDescriptor().item(RequestItem.fromJson(Map.of("original",original(FixtureJson.parse(raw),false)))).location(SessionSourceLocation.fromJson(Map.of("file",path,"first_line",line,"last_line",line)));if(!push(feed,descriptor,packets))break;}}
                 }else for(Object record:list(Values.object(Values.json(input)).get("items")))if(!push(feed,new RequestSessionDescriptor().item(RequestItem.fromJson(record)),packets))break;
             }
             feed.finish(null);

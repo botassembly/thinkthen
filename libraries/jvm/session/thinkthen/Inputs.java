@@ -5,6 +5,18 @@ import java.util.*;
 public final class Inputs {
     private Inputs() {
     }
+    /** Authored entries retain the order of calls; duplicate names are rejected. */
+    public static final class Ordered<T> {
+        private final Map<String,T> values = new LinkedHashMap<>();
+        public Ordered<T> entry(String name, T value) {
+            if (values.containsKey(name)) throw new IllegalArgumentException("Duplicate authored name: " + name);
+            values.put(name, value);
+            return this;
+        }
+        Object json() {
+            return values;
+        }
+    }
     public abstract static class Builder<T extends Builder<T>> extends Values.Builder<T> {
     }
     public sealed interface AnnotateQuestion permits AnnotateQuestionDecide,AnnotateQuestionChoose,
@@ -442,7 +454,7 @@ public final class Inputs {
         protected AuthoredInputDeclarationObject self() {
             return this;
         }
-        public AuthoredInputDeclarationObject properties(Map<String,? extends AuthoredInputProperty> value) {
+        public AuthoredInputDeclarationObject properties(Ordered<? extends AuthoredInputProperty> value) {
             return put("properties", value);
         }
         public AuthoredInputDeclarationObject propertiesNull() {
@@ -563,7 +575,7 @@ public final class Inputs {
         public AuthoredLabels(List<? extends String> value) {
             this.value = Values.freeze(value);
         }
-        public AuthoredLabels(Map<String,? extends AuthoredDescription> value) {
+        public AuthoredLabels(Ordered<? extends AuthoredDescription> value) {
             this.value = Values.freeze(value);
         }
         Object json() {
@@ -575,7 +587,7 @@ public final class Inputs {
         public AuthoredLevels(List<? extends String> value) {
             this.value = Values.freeze(value);
         }
-        public AuthoredLevels(Map<String,? extends AuthoredCriterion> value) {
+        public AuthoredLevels(Ordered<? extends AuthoredCriterion> value) {
             this.value = Values.freeze(value);
         }
         Object json() {
@@ -587,7 +599,7 @@ public final class Inputs {
         public AuthoredOptions(List<? extends String> value) {
             this.value = Values.freeze(value);
         }
-        public AuthoredOptions(Map<String,? extends AuthoredDescription> value) {
+        public AuthoredOptions(Ordered<? extends AuthoredDescription> value) {
             this.value = Values.freeze(value);
         }
         Object json() {
@@ -1221,7 +1233,7 @@ public final class Inputs {
         public RecognizeQuestion omitInstructions() {
             return omit("instructions");
         }
-        public RecognizeQuestion kinds(Map<String,? extends AuthoredDescription> value) {
+        public RecognizeQuestion kinds(Ordered<? extends AuthoredDescription> value) {
             return put("kinds", value);
         }
         public RecognizeQuestion kindsNull() {
@@ -1468,7 +1480,7 @@ public final class Inputs {
         public RequestDefinitionAnnotateDefinition omitProfile() {
             return omit("profile");
         }
-        public RequestDefinitionAnnotateDefinition questions(Map<String,? extends AnnotateQuestion> value) {
+        public RequestDefinitionAnnotateDefinition questions(Ordered<? extends AnnotateQuestion> value) {
             return put("questions", value);
         }
         public RequestDefinitionAnnotateDefinition questionsNull() {
@@ -3418,6 +3430,7 @@ public final class Inputs {
         return RequestReaderFailureProducer.fromJson(value);
     }
     static Object tree(Object value) {
+        if (value instanceof Ordered<?> item) return item.json();
         if (value instanceof AuthoredCriterion item) return item.json();
         if (value instanceof AuthoredCut item) return item.json();
         if (value instanceof AuthoredDescription item) return item.json();

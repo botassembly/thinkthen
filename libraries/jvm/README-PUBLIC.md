@@ -11,13 +11,12 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 ```java
 import thinkthen.Engine;
 import thinkthen.Inputs.*;
-import java.util.LinkedHashMap;
 public class RegistryExample {
     public static void main(String[] args) throws Exception {
-        var teams = new LinkedHashMap<String, AuthoredDescription>();
-        teams.put("billing", new AuthoredDescription("Invoices, fees, and refunds."));
-        teams.put("shipping", new AuthoredDescription("Parcels and delivery."));
-        teams.put("account", new AuthoredDescription("Logins and passwords."));
+        var teams = new Ordered<AuthoredDescription>();
+        teams.entry("billing", new AuthoredDescription("Invoices, fees, and refunds."));
+        teams.entry("shipping", new AuthoredDescription("Parcels and delivery."));
+        teams.entry("account", new AuthoredDescription("Logins and passwords."));
         var teamQuestion = new RequestQuestionDefinition().value(new RequestDefinitionAuthoredChoose()
             .choose(new AuthoredQuestionText("Which team owns this?")).options(new AuthoredOptions(teams)));
         try (var engine = new Engine(new EngineSettings())) {
