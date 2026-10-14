@@ -21,7 +21,7 @@ def restore(descriptor, value, json_text=False):
         return value
     mode, child = descriptor
     if mode == 'object':
-        fields, union, _ = MODEL.types[child]
+        fields, union, mapping = MODEL.types[child]
         if union:
             for field, shape in fields.items():
                 if value.get(field) is not None or value.get(field + '_present'):
@@ -33,7 +33,7 @@ def restore(descriptor, value, json_text=False):
             if shape[1] == 'json':
                 if value[field + '_present']:
                     result[field] = restore(shape[1], held, json_text)
-            elif held is not None or field in MODEL.required[child]:
+            elif held is not None or mapping or field in MODEL.required[child]:
                 result[field] = restore(shape[1], held, json_text)
         return result
     if mode == 'mapping':
