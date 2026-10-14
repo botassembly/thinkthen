@@ -4,6 +4,8 @@ Status: OPEN.
 
 Milestone: 0.3
 
+Reviews: revision a37ca83, accept
+
 ## Outcome
 
 Learn whether a writer that copies every part of an `.xlsx` or `.xlsm` file byte for byte, and rewrites only the chosen sheet and the few parts that must agree, adds answer columns without damaging real workbooks.
@@ -19,3 +21,8 @@ Learn whether a writer that copies every part of an `.xlsx` or `.xlsm` file byte
 - Decision it changes: whether spreadsheets stay in 0.3 or move to 0.4, and Ian's decision 7.
 - Machine: the Beelink.
 - Defers: the shipped writer goes to a 0.3 product ticket.
+
+## Progress
+
+- 2026-10-14 started
+- 2026-10-14 next: Await Ian opening the delivered workbooks in Excel for the web and reporting any repair prompt or missing values; local finding passed fresh review.
