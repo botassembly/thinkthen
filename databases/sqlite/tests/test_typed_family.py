@@ -242,7 +242,7 @@ for row,result in zip(rows,results):
     assert result['value']==[json.loads(row[1])],result
     assert row[2]==result['value'][0]['probability'],row
     assert {k:v for k,v in result.items() if k!='value'}=={k:v for k,v in results[0].items() if k!='value'},result
-assert len({(result['value'][0]['source_name'],result['value'][0]['target_name']) for result in results})==12,results
+assert len({(result['value'][0]['source']['name'],result['value'][0]['target']['name']) for result in results})==12,results
 say(edges=len(rows))
 ''',environment(backend))
     expect(got['edges'],12,'all directed edges retain one owning canonical record')
@@ -251,26 +251,31 @@ say(edges=len(rows))
 
 def test_whole_call_quota_failure_owns_no_invented_ordinal():
     backend=Backend()
-    got=child('''
+    for incremental in (0,1):
+        got=child('''
+from native_receipts import Read
+incremental=int(os.environ['INCREMENTAL'])
 items=json.dumps([{'text':'first'},{'text':'second'}])
-held=[]
-for incremental in (0,1):
-    db=connect()
-    db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':1,'max_requests':1})])
-    rows=db.execute('SELECT ordinal,value,error_kind,error_message,facts_requests_sent,facts_call_id,error_stopped_at FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND incremental=?',('Refund?',items,incremental)).fetchall()
-    assert len(rows)==1+incremental,rows
-    failure=rows[-1]
-    assert failure[0]==failure[6] and failure[0]!=0 and failure[1] is None and failure[2]=='usage',rows
-    assert '1' in failure[3] and 'request' in failure[3],failure
-    assert failure[4]==(1 if incremental else None),failure
-    if incremental:
-        assert rows[0][0]==0 and rows[0][1]==1 and rows[0][2] is None,rows
-        assert len(failure[5])==64 and rows[0][5]==failure[5],rows
-    else: assert failure[5] is None,failure
-    held.append(rows)
-say(rows=held)
-''',environment(backend))
-    expect(len(got['rows']),2,'eager refusal and incremental terminal preserve actual metadata')
+db=connect()
+quota={'max_requests_total':1} if incremental else {'max_requests':1}
+db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False,'batch':1,**quota})])
+rows=db.execute('SELECT ordinal,value,error_kind,error_message,facts_requests_sent,facts_call_id FROM thinkthen_decide_details WHERE request_question=? AND request_records=? AND incremental=?',('Refund?',items,incremental)).fetchall()
+assert len(rows)==1+incremental,rows
+failure=rows[-1]
+reader=Read(db,'decide','Refund?',{'records':json.loads(items),'incremental':bool(incremental)},None)
+errors=reader.rows('error')
+error=reader.object('error',errors[0]['error_receipt_index'])
+assert failure[0]==error.get('stopped',{}).get('at') and failure[0]!=0 and failure[1] is None and failure[2]=='usage',rows
+expected='the process send budget was spent before another request in this call' if incremental else 'this engine answers at most 1 records in one call'
+assert failure[3]==expected,failure
+assert failure[4]==(1 if incremental else None),failure
+if incremental:
+    assert rows[0][0]==0 and rows[0][1]==1 and rows[0][2] is None,rows
+    assert len(failure[5])==64 and rows[0][5]==failure[5],rows
+else: assert failure[5] is None,failure
+say(rows=rows)
+''',environment(backend,INCREMENTAL=str(incremental)))
+        expect(len(got['rows']),1+incremental,'eager refusal and incremental terminal preserve actual metadata')
     expect(backend.close(),1,'eager admission sends zero and incremental sends only its prefix')
 
 

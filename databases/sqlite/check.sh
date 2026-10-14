@@ -12,7 +12,12 @@ cd -- "$here"
 usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress|smoke) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
-[ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
+if [ "$profile" = routine ]; then
+    THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS-"$here/../../conformance/routine-ids.txt"}
+    export THINKTHEN_CONFORMANCE_IDS
+else
+    unset THINKTHEN_CONFORMANCE_IDS
+fi
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$here/../../sdlc/scripts/time-limit
 source=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
