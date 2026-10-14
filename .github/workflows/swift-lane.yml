@@ -64,7 +64,7 @@ jobs:
           mkdir "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64"
           tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-x86_64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/x64"
           tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
-          libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
+          sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
           sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
       - name: Check the installed Swift package
