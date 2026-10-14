@@ -53,7 +53,7 @@ jobs:
       reduced_ci_mode: disabled
       save_cache: false
   doc_test:
-    needs: release
+    needs: [inputs, release]
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
@@ -68,19 +68,20 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
         with:
-          name: thinkthen-v1.5.6-extension-linux_amd64
+          name: thinkthen-${{ needs.inputs.outputs.release }}-extension-linux_amd64
           path: community/build/downloaded
       - name: Run the community documentation generator
         working-directory: community
         env:
           GH_TOKEN: ${{ github.token }}
           THINKTHEN_CANDIDATE: ${{ github.sha }}
+          DUCKDB_RELEASE: ${{ needs.inputs.outputs.release }}
         run: |
           set -eu
           sudo apt-get update
           sudo apt-get install -y jq
           python3 -m pip install --break-system-packages 'yq==3.4.3' 'PyYAML==6.0.3'
-          curl --fail --location https://github.com/duckdb/duckdb/releases/download/v1.5.6/duckdb_cli-linux-amd64.zip -o duckdb.zip
+          curl --fail --location "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_RELEASE/duckdb_cli-linux-amd64.zip" -o duckdb.zip
           unzip duckdb.zip
           mkdir -p extensions/thinkthen
           sed "s/<reviewed-0.2-candidate-commit>/$THINKTHEN_CANDIDATE/g" ../source/sdlc/records/0577-description-draft.yml > extensions/thinkthen/description.yml
