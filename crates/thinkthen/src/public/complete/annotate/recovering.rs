@@ -120,6 +120,14 @@ impl Engine {
                 })
             }),
             Box::new(move |stop, at, original, row| {
+                if let Err(crate::engine::pipeline::Failed::Asker(error)) = &row
+                    && matches!(
+                        error.kind(),
+                        crate::ErrorKind::Usage | crate::ErrorKind::Local
+                    )
+                {
+                    return Err(error.clone().at_record(at));
+                }
                 let original = match original {
                     Some(original) => original,
                     None => {

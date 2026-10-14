@@ -314,3 +314,53 @@ fn full_and_cancelled_intake_do_not_convert_and_drop_does_not_join_held_provider
     assert!(release.wait());
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn cancelled_session_publishes_final_facts_only_after_held_attempt_settles() {
+    let release = Arc::new(Rendezvous::new(2));
+    let backend_release = Arc::clone(&release);
+    let (entered, arrived) = mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        entered.send(()).unwrap();
+        response(body).after_release(Arc::clone(&backend_release))
+    })
+    .unwrap();
+    let engine = api::fixed(listener.base(), "sk-settlement-recovery")
+        .no_cache()
+        .max_retries(0)
+        .batch(BatchSetting::Records(
+            std::num::NonZeroUsize::new(1).unwrap(),
+        ))
+        .build()
+        .unwrap();
+    let session = engine
+        .start_request_recovering_session(request(), Surface::Rust)
+        .unwrap();
+    push(&session, "first");
+    arrived.recv_timeout(Duration::from_secs(5)).unwrap();
+    session.cancel();
+    assert!(matches!(session.try_read(), RequestRecoveringRead::Pending));
+    assert_eq!(
+        session
+            .next_packet(RequestSessionWaitInterest::Result)
+            .unwrap_err()
+            .kind(),
+        ErrorKind::Cancelled
+    );
+    assert!(release.wait());
+    let packets = drain(&session);
+    let RequestRecoveringResult::Terminal(terminal) = packets.last().unwrap() else {
+        panic!("joined cancellation");
+    };
+    assert_eq!(
+        terminal.error.as_ref().unwrap().kind(),
+        ErrorKind::Cancelled
+    );
+    assert_eq!(terminal.facts.as_ref().unwrap().requests_sent(), 1);
+    assert_eq!(listener.count(), 1);
+    assert!(
+        !packets
+            .iter()
+            .any(|packet| matches!(packet, RequestRecoveringResult::Row(_)))
+    );
+}
