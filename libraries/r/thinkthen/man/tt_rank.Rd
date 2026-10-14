@@ -27,8 +27,7 @@ one typed row of class \code{thinkthen_RankResult} per ranked position, each
 with \code{$question}, \code{$meta}, \code{$answer_id}, \code{$members}
 for aggregate readings, and, when the reading provides it, the zero-based
 native \code{$index} of the record it places. \code{$answer} holds the
-typed answer view: a list of the placed records best first, each with its
-native \code{$index}. \code{$facts}
+typed answer view: a list of zero-based native record indexes best first. \code{$facts}
 holds the call's facts, including \code{requests_sent}. The carrier also
 carries \code{$positions} and \code{$length} beside those views.
 }
@@ -51,7 +50,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \dontrun{
 prioritized <- tt_rank("Which message most clearly asks for a refund?",
                        c("Please refund my order.", "When will it arrive?"))
-prioritized$answer[[1]]$index
+prioritized$answer[[1]]
 }
 }
 \seealso{

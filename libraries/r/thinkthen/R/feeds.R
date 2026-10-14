@@ -8,7 +8,8 @@ tt_feed <- function(next_item = NULL, name = "records", close = function() invis
   structure(list(header = header, next_item = next_item, close = close), class = "thinkthen_feed")
 }
 tt_record <- function(original, location = NULL, ...) {
-  descriptor <- list(item = c(list(original = .tt_selector(original, "thinkthen_input")), list(...)))
+  descriptor <- list(item = if (inherits(original, "thinkthen_item")) c(unclass(original), list(...))
+                     else c(list(original = .tt_selector(original, "thinkthen_input")), list(...)))
   if (!is.null(location)) descriptor$location <- location
   structure(descriptor, class = "thinkthen_record")
 }

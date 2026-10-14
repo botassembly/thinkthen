@@ -1422,6 +1422,23 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             "Place",
             &[("end", true, plain), ("start", true, plain)],
         ),
+        "completeplan" => object(
+            value,
+            "Plan",
+            &[
+                ("estimated_bytes", true, plain),
+                ("estimated_input_tokens", true, |value| {
+                    convert("completetokenBand", value)
+                }),
+                ("first_body_utf8", true, plain),
+                ("largest_request_bytes", true, plain),
+                ("largest_request_estimated_input_tokens", true, plain),
+                ("records", true, plain),
+                ("requests", true, plain),
+                ("token_estimate_method", true, plain),
+                ("upper_bound", true, plain),
+            ],
+        ),
         "completeprofileWarning" => object(
             value,
             "ProfileWarning",
@@ -2491,6 +2508,11 @@ pub(crate) fn convert(kind: &str, value: &Value) -> Crossed<Robj> {
             ],
         ),
         "completethreshold" => plain(value),
+        "completetokenBand" => object(
+            value,
+            "TokenBand",
+            &[("lower", true, plain), ("upper", true, plain)],
+        ),
         "completetokenUsage" => object(
             value,
             "TokenUsage",
@@ -2531,8 +2553,18 @@ pub(crate) fn request_answer(function: &str, rows: &Value) -> Crossed<Robj> {
                     .ok_or_else(|| crate::defect("native answer has no value"))?,
             )
         }),
-        "filter" => array(rows, |row| convert("completeAtomic_boolean", row)),
-        "rank" => array(rows, |row| convert("completeAtomic_NonZeroUsize", row)),
+        "filter" => array(rows, |row| {
+            plain(
+                row.get("input")
+                    .ok_or_else(|| crate::defect("native answer has no input"))?,
+            )
+        }),
+        "rank" => array(rows, |row| {
+            plain(
+                row.get("index")
+                    .ok_or_else(|| crate::defect("native answer has no index"))?,
+            )
+        }),
         "find" => convert("completeFind", rows),
         "annotate" => array(rows, |row| {
             convert(

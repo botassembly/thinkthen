@@ -176,3 +176,5 @@ Written covers this engine's current deltas, not later calls or other engines. O
 ## Typed questions and answers
 
 Use `tt_options()` for named request controls, `tt_recognize_question()` for recognition and `tt_relate_question()` for relation rules. Native admission validates their values. Each successful call exposes `$answer` beside its complete `$results` and `$facts`. Atomic columns retain missing positions; aggregate answers contain owned typed carriers. The [ten-function example](examples/native.R) runs from the installed package and replays saved answers during routine checks.
+
+Read a call’s `$answer` directly. Filter answers are lists of kept inputs; rank answers are lists of zero-based indexes. `tt_plan` exposes all native plan fields, including `first_body_utf8`, `largest_request_bytes`, `largest_request_estimated_input_tokens`, and `token_estimate_method`. Blocking calls and feeds share the native session; completion handles retain final facts after interruption.

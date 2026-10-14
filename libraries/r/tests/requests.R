@@ -39,6 +39,14 @@ plan <- tt_plan("Plan question?", c("first", "second"))
 check("native preview sends nothing", plan$records == 2 && backend_count() == arrivals)
 check("plan prints safely", identical(capture.output(print(plan)), "<complete carrier: content withheld>"))
 
+item <- tt_item("Item evidence", context = "Per-record reference", options = tt_options(threshold = 0.95))
+check("item printing withholds evidence", identical(capture.output(print(item)), "<complete carrier: content withheld>"))
+item_call <- tt_decide("Item question?", item)
+check("item controls reach native admission and judgment", is.null(item_call$answer[[1]]) &&
+      grepl("Per-record reference", tail(capture(), 1)[[1]], fixed = TRUE))
+check("native plan exposes largest request estimates and method", plan$largest_request_bytes > 0 &&
+      plan$largest_request_estimated_input_tokens > 0 && is.character(plan$token_estimate_method) &&
+      is.character(plan$first_body_utf8) && is.null(plan$first_body))
 questions <- list(
   decide = "Decide Q?",
   choose = list(choose = "Choose Q?", options = c("first", "second")),

@@ -208,3 +208,7 @@ pub(crate) fn request_event(text: &str) -> Crossed<Robj> {
         "thinkthen_complete",
     )
 }
+
+pub(crate) fn plan(value: &Value) -> Crossed<Robj> {
+    convert("completeplan", value)
+}

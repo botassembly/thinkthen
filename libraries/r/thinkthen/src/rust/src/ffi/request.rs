@@ -2,7 +2,7 @@
 use super::{Crossed, completion_of, deadline_of, interrupt_pending, text_of};
 use crate::calls;
 use extendr_api::prelude::*;
-use thinkthen::{AdmittedRequest, RequestEnvironment, RequestOutcome, RequestSession};
+use thinkthen::{AdmittedRequest, RequestEnvironment, RequestSession};
 mod inputs;
 
 #[extendr]
@@ -54,64 +54,32 @@ fn tt_request_native(request: Robj, deadline: Robj, completion: Robj) -> Crossed
         let milliseconds = value as i64;
         arguments.options.deadline_ms = Some(milliseconds);
     }
-    let admitted =
-        thinkthen::Request::for_function(request.admitted.request().call.function(), arguments)
-            .admit()
-            .map_err(|e| crate::carry(&e))?;
-    let function = admitted.request().call.function();
-    let column = request.column.clone();
-    let done = calls::call_owned(
-        &interrupt_pending,
-        completion_of(&completion)?,
+    let native =
+        thinkthen::Request::for_function(request.admitted.request().call.function(), arguments);
+    let function = native.call.function();
+    if interrupt_pending() {
+        return Err(crate::interrupted());
+    }
+    let handle = completion_of(&completion)?
+        .unwrap_or_else(|| std::sync::Arc::new(calls::Completion::new()));
+    let session = crate::engine()?
+        .request_session_with_surface(native, thinkthen::Surface::R)
+        .map_err(|e| crate::carry(&e))?;
+    handle.start(
+        session,
         request
             .column
             .as_ref()
             .map(|column| column.positions().to_vec()),
-        move |engine, controls, account| {
-            let started = account.start();
-            let outcome = engine.execute_request(
-                &admitted,
-                RequestEnvironment {
-                    controls: controls.surface(thinkthen::Surface::R),
-                    feed: None,
-                },
-            );
-            let outcome = match outcome {
-                Ok(outcome) => outcome,
-                Err(error) => {
-                    if let Some(facts) = error.facts() {
-                        account.include(started, facts)?;
-                    }
-                    return Err(crate::carry(&error));
-                }
-            };
-            match &outcome {
-                RequestOutcome::Complete(call) => account.include(started, call.facts())?,
-                RequestOutcome::Failed { error, .. } => {
-                    if let Some(facts) = error.facts() {
-                        account.include(started, facts)?;
-                    }
-                }
-            }
-            let value = match &outcome {
-                RequestOutcome::Complete(call) => call.value(),
-                RequestOutcome::Failed { completed, .. } => completed,
-            };
-            let view = column
-                .as_ref()
-                .map(|column| column.view(value).map_err(|e| crate::carry(&e)))
-                .transpose()?
-                .flatten();
-            let kind = match &outcome {
-                RequestOutcome::Complete(_) => "success",
-                RequestOutcome::Failed { error, .. } => error.kind().name(),
-            };
-            Ok(((crate::request::written(&outcome)?, view), kind))
-        },
-    )?;
-    let (text, view) = done.result?;
-    let value = crate::native_results::request_packet(&text, function)?;
-    let value = crate::request::view(value, view)?;
+    );
+    while !handle.drain()? {
+        if interrupt_pending() {
+            handle.cancel();
+            return Err(crate::interrupted());
+        }
+        handle.wait();
+    }
+    let value = handle.result(function, request.column.as_ref())?;
     match &request.column {
         Some(column) => crate::request::attach(column, value),
         None => Ok(value),

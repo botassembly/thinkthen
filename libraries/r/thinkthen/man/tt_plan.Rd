@@ -18,8 +18,9 @@ keeps the native defaults.}
 \value{
 A plan carrier of class \code{thinkthen_Plan} with \code{$records} and
 \code{$requests} counts, \code{$estimated_bytes}, \code{$estimated_input_tokens}
-(a list with \code{lower} and \code{upper} bounds), \code{$first_body} (the
-first request body the call would send), and \code{$upper_bound}, which is
+(a list with \code{lower} and \code{upper} bounds), \code{$first_body_utf8} (the
+first request body the call would send), \code{$largest_request_bytes},
+\code{$largest_request_estimated_input_tokens}, \code{$token_estimate_method}, and \code{$upper_bound}, which is
 \code{TRUE} when the request count is an upper bound because later requests
 depend on answers; the byte estimate counts only the prepared requests.
 }
