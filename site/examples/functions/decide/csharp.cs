@@ -10,4 +10,4 @@ var call = await engine.DecideAsync(
     new InputRequestQuestionText { Text = question },
     new InputRequestInputText { Text = broken });
 var isRefund = call.Decision();
-Trace.Assert(isRefund);
+Trace.Assert(isRefund == true);

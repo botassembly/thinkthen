@@ -20,5 +20,8 @@ int main() {
         RequestQuestionDefinition().set_value(which_labels),
         message);
     auto fitting_labels = call.answer();
+    std::vector<std::string> all_three{
+        "praise", "bug", "billing",
+    };
     assert(fitting_labels == all_three);
 }
