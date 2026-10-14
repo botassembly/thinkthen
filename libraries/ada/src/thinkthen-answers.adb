@@ -5804,11 +5804,12 @@ begin
                for J in 1 .. Length (Proposals) loop
                   declare
                      Proposal : constant Value := Element (Proposals, J);
-                     Selected : constant Value := Field_Value (Proposal, "selected");
+                     Selected : constant Value := (if Has_Field (Proposal, "selected") then Field_Value (Proposal, "selected") else Null_Item);
                   begin
                      if As_Boolean (Field_Value (Proposal, "kept")) and then Kind (Selected) /= Null_Value
                        and then Field_Value (Selected, "start") = Field_Value (Entity, "start")
                        and then Field_Value (Selected, "end") = Field_Value (Entity, "end")
+                       and then Has_Field (Proposal, "kind")
                        and then Field_Value (Proposal, "kind") = Field_Value (Entity, "kind") then
                         if Matched then raise Answer_Cardinality_Error with "duplicate selected span"; end if;
                         Result.Append (Number (Field_Value (Proposal, "span_probability")));
