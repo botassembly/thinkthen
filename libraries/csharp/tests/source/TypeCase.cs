@@ -15,7 +15,7 @@ try {
   foreach(string limitedVerb in new[]{"decide","recognize","relate"}) {
    var q=limitedVerb=="decide" ? (RequestQuestion)new RequestQuestionText {Text="Is it?"} : FixtureQuestions.Parse(limitedVerb=="recognize"?AuthoredQuestionKind.Recognize:AuthoredQuestionKind.Relate,limitedVerb=="recognize"?"{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person.\"}}}":"{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"linked\",\"source\":\"alert\",\"target\":\"alert\"}]}}");
    RequestInput input=limitedVerb=="relate"?new RequestInputRecords {Items=new[]{"A","B"}.Select(n=>new RequestItem {Original=new RequestOriginalJson {Value=JsonSerializer.SerializeToElement(new {name=n,kind="alert"})}}).ToArray()}:new RequestInputText {Text="zero-"+limitedVerb};
-   try {await (limitedVerb switch {"decide"=>engine.DecideAsync(q,input,new RequestOptions {DeadlineMs=0}),"recognize"=>engine.RecognizeAsync(q,input,new RequestOptions {DeadlineMs=0}),_=>engine.RelateAsync(q,input,new RequestOptions {DeadlineMs=0})});throw new Exception("zero admitted");}
+   try {_ = (limitedVerb switch {"decide"=>await engine.DecideAsync(q,(dynamic)input,new RequestOptions {DeadlineMs=0}),"recognize"=>await engine.RecognizeAsync(q,(dynamic)input,new RequestOptions {DeadlineMs=0}),_=>await engine.RelateAsync(q,(dynamic)input,new RequestOptions {DeadlineMs=0})});throw new Exception("zero admitted");}
    catch(Failure e) when(e.Kind==FailureKind.Deadline) {}
    catch(SessionFailure e) when(e.Failure.Error.Kind.Value=="deadline") {}
   }

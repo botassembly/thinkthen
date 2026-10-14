@@ -65,7 +65,7 @@ try:
     if status == 0:
         states = collections.Counter(str(s) for s in server.arrivals)
         required = {'café': 1, 'yes': 1, 'no': 1, 'unsure': 1, 'a\x00b': 1,
-                    'packed:first,second,third': 1, 'json-decide': 1,
+                    'packed:first,second,third': 1, 'json-decide': 1, 'authored-value': 3,
                     'choose': 1, 'tag': 1, 'score': 1,
                     'packed:filter-one,filter-two': 1, 'packed:rank-one,rank-two': 1,
                     '[{"id":"u001","evidence":"find-one"},{"id":"u002","evidence":"find-two"}]': 1,

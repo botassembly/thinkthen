@@ -5,4 +5,4 @@ var question = new RequestQuestionDefinition { Value = new RequestDefinitionAuth
     Tag = new AuthoredQuestionTextString { Value = "Which labels?" },
     Labels = new AuthoredLabelsList { Value = new AuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
 } };
-Console.WriteLine(string.Join(",", await engine.TagValueAsync(question, new RequestInputText { Text = "example" })));
+Console.WriteLine(string.Join(",", (await engine.TagAsync(question, new RequestInputText { Text = "example" })).Value));

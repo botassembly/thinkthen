@@ -7,5 +7,5 @@ var question = QuestionBuilders.Recognize(new RecognizeQuestion {
         new("person", new() { Value = new AuthoredDescriptionValueString { Value = "A person." } })
     }
 });
-var answer = (await engine.RecognizeAsync(question, new RequestInputText { Text = "John Smith" })).Recognize();
-Console.WriteLine(((RecognizeEntities)answer[0].Value).Entities[0].Text);
+var answer = (await engine.RecognizeAsync(question, new RequestInputText { Text = "John Smith" })).Value;
+Console.WriteLine(((RecognizeEntities)answer).Entities[0].Text);

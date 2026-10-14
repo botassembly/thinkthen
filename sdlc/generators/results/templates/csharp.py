@@ -561,105 +561,93 @@ public abstract class AuthoredDocument {
 
 
 def named_calls(functions):
-    """Generate public named operations over one shared session construction."""
-    lines = ['// Generated from canonical RequestFunction; do not edit.', '#nullable enable',
-             'using ThinkThen.Inputs;', 'using ThinkThen.Results;', 'using System.Text.Json;', 'namespace ThinkThen;',
-             'public sealed partial class Engine {']
-    for function in functions:
-        title = function.title()
-        lines += [f'public Task<OwnedCall> {title}Async(RequestQuestion question, RequestInput input,',
-                  'RequestOptions? options = null, CancellationToken cancellation = default) =>',
-                  f'ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, input, options), null, cancellation);',
-                  f'public Task<OwnedCall> {title}Async(RequestQuestion question, IAsyncEnumerable<RequestSessionDescriptor> feed,',
-                  'RequestOptions? options = null, CancellationToken cancellation = default) {',
-                  'ArgumentNullException.ThrowIfNull(feed);',
-                  f'return ExecuteSessionAsync(() => StartNamedSession({quote(function)}, question, FeedInput, options), feed, cancellation);',
-                  '}']
-    return '\n'.join(lines + ['}']) + '\n'
+    """The result graph emits named calls and their typed input overloads."""
+    return "// Generated from canonical RequestFunction; do not edit.\n"
 
 
 def answer_helpers(definitions):
-    """Read native normalized judgments without recomputing authored decisions."""
-    from host_answers import scalar_answers
-    def carriers(key, seen=()):
-        if key == 'completesessionJudgment': return []
-        if key in seen: return None
-        source = definitions[key]
-        for child, _ in source.get('variants', []):
-            result = carriers(child, seen + (key,))
-            if result is not None: return result
-        for field, value in source.get('properties', {}).items():
-            if isinstance(value, dict) and '$ref' in value:
-                result = carriers(value['$ref'].split('/')[-1], seen + (key,))
-                if result is not None: return [(key, field)] + result
-        return None
-    route = carriers('completesessionPacket')
-    if not route: raise ValueError('C# needs a normalized judgment carrier route')
-    lines = ['public sealed class AnswerCardinalityFailure : InvalidOperationException {',
-             'public OwnedCall Call { get; }',
-             'internal AnswerCardinalityFailure(string function, OwnedCall call) : base("Expected exactly one " + function + " judgment.") { Call = call; }', '}',
-             'public static class AnswerAccessors {',
-             'private static void Successful(OwnedCall call) {',
-             'ArgumentNullException.ThrowIfNull(call);',
-             'if (call.Terminal is null || call.Terminal.Kind != "terminal") throw new AnswerCardinalityFailure("terminal", call);',
-             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Null) throw new System.Text.Json.JsonException("Terminal failure must be an object.");',
-             'if (call.Terminal.Failure.State == ThinkThen.Results.PresenceState.Value) throw new SessionFailure(call.Terminal.Failure.Value, call);', '}']
-    methods = []
-    for function, kind, payload in scalar_answers(definitions):
-        variant = next(child for child, _ in definitions['completesessionJudgment']['variants']
-                       if definitions[child].get('x-request-function') == function)
-        typ, _ = conversion(payload, definitions)
-        if nullable(payload): typ += '?'
-        pattern = 'ThinkThen.Results.' + name(variant) + ' judgment'
-        for key, field in reversed(route):
-            pattern = 'ThinkThen.Results.' + name(key) + ' { ' + name(field) + ': ' + pattern + ' }'
-        value = 'judgment.Value'
-        if nullable(payload): value = 'judgment.Value.State == ThinkThen.Results.PresenceState.Null ? null : judgment.Value.Value'
-        method = name(kind)
-        methods.append((function, method, typ))
-        lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);',
-                  'var values = new List<' + typ + '>();',
-                  'foreach (var packet in call.Packets) if (packet is ' + pattern + ' && ((ThinkThen.Results.' + name(route[0][0]) + ')packet).Function.Value == ' + quote(function) + ') values.Add(' + value + ');',
-                  'if (values.Count != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
-                  'return values[0];', '}']
-    from host_answers import aggregate_answers, aggregate_projection
-    scalars = {function for function, _, _ in scalar_answers(definitions)}
-    for function, child, payload in aggregate_answers(definitions):
-        if function in scalars: continue
-        projected, projection = aggregate_projection(function, payload, definitions)
-        if projection:
-            item_type, _ = conversion(projected['items'], definitions)
-            typ = 'IReadOnlyList<' + item_type + '>'
-        else:
-            typ, _ = conversion(payload, definitions)
-        method = function.title()
-        methods.append((function, method, typ))
-        lines += ['public static ' + typ + ' ' + method + '(this OwnedCall call) {', 'Successful(call);']
-        if payload.get('type') == 'array':
-            item_type, _ = conversion(payload['items'], definitions)
-            lines += ['var values = new List<' + item_type + '>();',
-                      'foreach (var packet in call.Packets) {',
-                      'if (packet is ThinkThen.Results.' + name(child) + ' aggregate) values.AddRange(aggregate.Value);']
-            for row, _ in definitions['completesessionPacket']['variants']:
-                fields = definitions[row].get('properties', {})
-                if (fields.get('kind', {}).get('const') == 'row' and
-                    fields.get('function', {}).get('const') == function and fields.get('value') == payload['items']):
-                    lines += ['else if (packet is ThinkThen.Results.' + name(row) + ' row) values.Add(row.Value);']
-            result = 'values.AsReadOnly()'
-            if projection:
-                member = name(projection)
-                projected_value = 'value.' + member + '.Value'
-                if nullable(projected['items'], definitions):
-                    projected_value = 'value.' + member + '.State == ThinkThen.Results.PresenceState.Null ? System.Text.Json.JsonSerializer.SerializeToElement<object?>(null) : ' + projected_value
-                result = 'Array.AsReadOnly(values.Select(value => ' + projected_value + ').ToArray())'
-            lines += ['}', 'return ' + result + ';', '}']
-        else:
-            lines += ['var values = call.Packets.OfType<ThinkThen.Results.' + name(child) + '>().Select(packet => packet.Value).ToArray();',
-                      'if (values.Length != 1) throw new AnswerCardinalityFailure(' + quote(function) + ', call);',
-                      'return values[0];', '}']
-    lines += ['}', 'public sealed partial class Engine {']
-    for function, method, typ in methods:
-        lines += ['public async Task<' + typ + '> ' + function.title() + 'ValueAsync(RequestQuestion question, RequestInput input,',
-                  'RequestOptions? options = null, CancellationToken cancellation = default) =>',
-                  '(await ' + function.title() + 'Async(question, input, options, cancellation).ConfigureAwait(false)).' + method + '();']
-    return '\n'.join(lines + ['}']) + '\n'
+    """Project the canonical call metadata into the C# scalar/list idiom."""
+    from host_answers import call_results
+    lines = ['#nullable enable', 'using ThinkThen.Inputs;', 'using ThinkThen.Results;',
+             'using System.Text.Json;', 'namespace ThinkThen;',
+             'public sealed record CallResult<TValue, TProbability, TResults> : OwnedCall {',
+             'public TValue Value { get; }', 'public TProbability Probability { get; }',
+             'public TResults Results { get; }', 'public Facts Facts { get; }',
+             'internal CallResult(OwnedCall call, TValue value, TProbability probability, TResults results) : base(call.Packets, call.Terminal) {',
+             'Value = value; Probability = probability; Results = results;',
+             'Facts = call.Terminal.Facts.State == PresenceState.Value ? call.Terminal.Facts.Value : throw new JsonException("Successful call has no facts.");',
+             '}', '}', 'public sealed partial class Engine {']
+    for function, spec in call_results(definitions).items():
+        payload = spec['receipt_payload']
+        array = payload.get('type') == 'array'
+        receipt_type, _ = conversion(payload['items'] if array else payload, definitions)
+        results_type = 'IReadOnlyList<' + receipt_type + '>'
+        carrier = name(spec['carrier'])
+        projection = name(spec['value_projection'])
+        aggregate_value = spec['aggregate_value']
+        item_schema = aggregate_value['items'] if array else aggregate_value
+        item_type, _ = conversion(item_schema, definitions)
+        original_json = item_type == 'JsonElement'
+        if not original_json and nullable(item_schema, definitions): item_type += '?'
+        mode = spec['probability_mode']
+        probability_type = 'IReadOnlyList<double>' if mode == 'items' and function != 'rank' else 'double?'
+        per_input = spec['call_shape'] == 'input'
+        for scalar_input, input_type in [(True, 'RequestInputText'), (True, 'RequestInputJson'),
+                                       (False, 'RequestInputRecords'), (False, 'RequestInputSource'),
+                                       (False, 'RequestInputUnits'), (False, 'RequestInputEntities'),
+                                       (False, 'RequestInputFeed'), (False, 'IAsyncEnumerable<RequestSessionDescriptor>')]:
+            single = scalar_input and per_input
+            value_type = item_type if single or spec['call_shape'] == 'aggregate' else 'IReadOnlyList<' + item_type + '>'
+            odds_type = probability_type if single or spec['call_shape'] == 'aggregate' or mode == 'null' else 'IReadOnlyList<' + probability_type + '>'
+            result_type = 'CallResult<' + ', '.join((value_type, odds_type, results_type)) + '>'
+            feed = input_type.startswith('IAsyncEnumerable')
+            suffix = 'Scalar' if single else ''
+            argument = 'feed' if feed else 'input'
+            lines += ['public async Task<' + result_type + '> ' + function.title() + 'Async(RequestQuestion question, ' + input_type + ' ' + argument + ',',
+                      'RequestOptions? options = null, CancellationToken cancellation = default) {',
+                      *(['ArgumentNullException.ThrowIfNull(feed);'] if feed else []),
+                      'var call = await ExecuteSessionAsync(() => StartNamedSession(' + quote(function) + ', question, ' + ('FeedInput' if feed else 'input') + ', options), ' + ('feed' if feed else 'null') + ', cancellation).ConfigureAwait(false);',
+                      'return Project' + function.title() + suffix + '(call);', '}']
+        values_expr = 'row.' + projection
+        receipt_schema = definitions[(payload['items'] if array else payload)['$ref'].split('/')[-1]]
+        optional_projection = spec['value_projection'] not in receipt_schema.get('required', [])
+        if original_json and (optional_projection or nullable(item_schema, definitions)):
+            values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : JsonSerializer.SerializeToElement((string?)null)'
+        elif nullable(item_schema, definitions):
+            values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : (' + item_type + ')null'
+        elif optional_projection:
+            values_expr += '.Value'
+        values_decl = 'var values = results.Select(row => ' + values_expr + ').ToArray();'
+        if mode == 'null': probability_expr = '(double?)null'
+        elif mode == 'yes': probability_expr = '(double?)((AnswerYesNo)row.Answer).Probability'
+        elif mode == 'picked': probability_expr = 'row.Answer is ' + ('FindAnswer' if function == 'find' else 'AnswerChoice') + ' odds ? (double?)odds.Probabilities[odds.Pick] : null'
+        elif function == 'rank': probability_expr = '(double?)((AnswerYesNo)row.Answer).Probability'
+        elif function == 'relate': probability_expr = 'Array.AsReadOnly(row.Value.Select(edge => edge.Probability).ToArray())'
+        else: probability_expr = 'RecognitionProbabilities(row)'
+        single_aggregate = spec['call_shape'] == 'aggregate'
+        value_type = item_type if single_aggregate else 'IReadOnlyList<' + item_type + '>'
+        odds_type = probability_type if single_aggregate or mode == 'null' else 'IReadOnlyList<' + probability_type + '>'
+        result_type = 'CallResult<' + ', '.join((value_type, odds_type, results_type)) + '>'
+        lines += ['private static ' + result_type + ' Project' + function.title() + '(OwnedCall call) {',
+                  'var receipts = new List<' + receipt_type + '>();', 'foreach (var packet in call.Packets) {',
+                  'if (packet is ' + carrier + ' aggregate) ' + ('receipts.AddRange(aggregate.Value);' if array else 'receipts.Add(aggregate.Value);')]
+        for child, _ in definitions['completesessionPacket']['variants']:
+            fields = definitions[child].get('properties', {})
+            if array and fields.get('kind', {}).get('const') == 'row' and fields.get('function', {}).get('const') == function and fields.get('value') == payload['items']:
+                lines += ['else if (packet is ' + name(child) + ' row) receipts.Add(row.Value);']
+        lines += ['}', 'var results = receipts.AsReadOnly();', values_decl]
+        if single_aggregate: lines += ['if (results.Count != 1) throw new JsonException("Missing aggregate result.");']
+        odds = '(double?)null' if mode == 'null' else ('results.Select(row => ' + probability_expr + ').Single()' if single_aggregate else 'Array.AsReadOnly(results.Select(row => ' + probability_expr + ').ToArray())')
+        value = 'values.Single()' if single_aggregate else 'Array.AsReadOnly(values)'
+        lines += ['return new(call, ' + value + ', ' + odds + ', results);', '}']
+        if per_input:
+            scalar_type = 'CallResult<' + ', '.join((item_type, probability_type, results_type)) + '>'
+            lines += ['private static ' + scalar_type + ' Project' + function.title() + 'Scalar(OwnedCall call) {',
+                      'var result = Project' + function.title() + '(call);',
+                      'return new(call, result.Value.Single(), ' + ('result.Probability' if mode == 'null' else 'result.Probability.Single()') + ', result.Results);', '}']
+    lines += ['private static IReadOnlyList<double> RecognitionProbabilities(Recognition row) {',
+              'if (row.Value is RecognizeModeProposals boundary) return Array.AsReadOnly(boundary.Proposals.Select(proposal => proposal.Probability).ToArray());',
+              'var entities = ((RecognizeEntities)row.Value).Entities;',
+              'var answer = (RecognitionOddsRecognizeAnswer)row.Answer;',
+              'return Array.AsReadOnly(entities.Select(entity => answer.Proposals.Single(proposal => proposal.Kept && proposal.Selected.State == PresenceState.Value && proposal.Selected.Value.Start == entity.Start && proposal.Selected.Value.End == entity.End && proposal.Kind.State == PresenceState.Value && proposal.Kind.Value == entity.Kind).SpanProbability).ToArray());', '}', '}']
+    return '\n'.join(lines) + '\n'
