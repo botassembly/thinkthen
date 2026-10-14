@@ -6,10 +6,13 @@ def test_schema_keeps_answers_inputs_and_all_canonical_fields_separate():
     backend = Backend()
     got = child('''
 from native_receipts import TYPES
-names=('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate','details','details_images','rank_set')
+names=tuple(name+'_details' for name in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'))+('rank_set','recognize','relate')
 db=connect()
 assert not db.execute("SELECT name FROM pragma_function_list WHERE name LIKE 'thinkthen_%_complete'").fetchall()
-assert not db.execute("SELECT name FROM pragma_function_list WHERE name IN ('thinkthen_details','thinkthen_details_images') AND narg IN (2,3)").fetchall()
+assert not db.execute("SELECT name FROM pragma_function_list WHERE name IN ('thinkthen_details','thinkthen_try_details','thinkthen_details_images')").fetchall()
+for retired in ('thinkthen_details','thinkthen_try_details','thinkthen_details_images'):
+    assert 'no such function' in run(db,'SELECT '+retired+'(1,2,3,4)')
+    assert 'no such table' in run(db,'SELECT * FROM '+retired+'(1,2)')
 visible={}
 for name in names:
     schema=db.execute('SELECT name,hidden FROM pragma_table_xinfo(?)',('thinkthen_'+name,)).fetchall()
@@ -30,7 +33,8 @@ say(visible=visible)
     expect(got['visible']['rank_set'], ['key','rank','probability','question_name'], 'rank set answer shape')
     expect(got['visible']['recognize'], ['text','start','end','length','kind','strength'], 'recognition answer shape')
     expect(got['visible']['relate'], ['relation','source','target','probability','either'], 'relation answer shape')
-    expect(got['visible']['details'], ['value','confidence','answer_id','answer_model','requests_sent'], 'ordinary typed receipt')
+    for name in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate'):
+        expect(got['visible'][name+'_details'], ['ordinal','value','probability','result','failure','facts','observations'], 'typed details row')
     expect(backend.close(), 0, 'discovery and schema never send')
 
 
@@ -46,16 +50,16 @@ db.execute('SELECT thinkthen_configure(?)',(json.dumps({'cache':cache}),))
 args=('Is it red?','red door')
 answers=[];facts=[]
 for _ in range(2):
-    answers.append(run(db,'SELECT * FROM thinkthen_details(?,?)',args))
-    facts.append(run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_details(?,?) WHERE projection='facts'",args))
-    assert run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_details(?,?) WHERE projection='facts'",args)==facts[-1]
+    answers.append(run(db,'SELECT value FROM thinkthen_decide_details(?,?)',args))
+    facts.append(run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_decide_details(?,?) WHERE projection='facts'",args))
+    assert run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_decide_details(?,?) WHERE projection='facts'",args)==facts[-1]
 reader=Read(db,'details','Is it red?',{},None)
 reader.fields={'question':args[0],'text':args[1]}
 events=[reader.object('event',row['event_receipt_index']) for row in reader.rows('event')]
 assert events[0]['detail']['question']['text']=='Is it red?',events
 assert events[0]['inputs'][0]['input']=='red door',events
-other=run(db,"SELECT value FROM thinkthen_details('Different?','other input')")
-assert run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_details(?,?) WHERE projection='facts'",args)==facts[-1]
+other=run(db,"SELECT value FROM thinkthen_decide_details('Different?','other input')")
+assert run(db,"SELECT facts_call_id,facts_requests_sent,facts_cache_answers FROM thinkthen_decide_details(?,?) WHERE projection='facts'",args)==facts[-1]
 say(answers=answers,facts=facts,other=other)
 ''', environment(backend, CACHE='yes' if cached else 'no'))
         expect([rows[0][0] for rows in got['answers']], [1,1], 'fresh ordinary answers')
@@ -75,7 +79,8 @@ questions={"decide":'{"decide":"Is it red?","true":{"what":"red","examples":["re
  "score":'{"score":"How severe?","levels":["low","medium","high"]}'}
 answers={};receipts={}
 for verb,question in questions.items():
-    answers[verb]=run(db,'SELECT value,answer_id,answer_model,requests_sent FROM thinkthen_details(?,?)',(question,'red door'))
+    from native_receipts import ROOT_KIND
+    answers[verb]=run(db,'SELECT value,'+ROOT_KIND[verb]+'_answer_id,facts_requests_sent FROM thinkthen_'+verb+'_details(?,?)',(question,'red door'))
     reader=Read(db,'details',question,{},None);reader.fields={'question':question,'text':'red door'}
     detail=reader.rows('question_detail')[0]
     receipts[verb]=reader.object('question_detail',detail['question_detail_receipt_index'])
@@ -88,7 +93,8 @@ say(answers=answers,receipts=receipts)
 ''',environment(backend,'arm/full'))
     expect({name:rows[0][0] for name,rows in got['answers'].items()},
            {'decide':1,'choose':'billing','tag':'["billing","urgent","security"]','score':.15},'ordinary values retain native SQL types')
-    expect(all(len(rows[0][1])==64 and rows[0][2]=='jev-1.13.0' and rows[0][3]==1 for rows in got['answers'].values()),True,'native identities model and request counts')
+    expect(all(len(rows[0][1])==64 and rows[0][2]==1 for rows in got['answers'].values()),True,'native identities and request counts')
+    expect(all(receipt['model']=='jev-1.13.0' for receipt in got['receipts'].values()),True,'reported model')
     expect(backend.close(),4,'one evaluation for each default details call and no projection sends')
 
 
@@ -97,16 +103,16 @@ def test_output_predicates_do_not_change_call_identity_or_admit_extra_options():
     got = child('''
 db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false}',))
 args=('Fits?','red door')
-first=run(db,'SELECT * FROM thinkthen_decide(?,?)',args)
-identity=run(db,'SELECT facts_call_id FROM thinkthen_decide(?,?)',args)
-filtered=run(db,'SELECT value FROM thinkthen_decide(?,?) WHERE facts_requests_sent=0',args)
-kept=run(db,'SELECT value FROM thinkthen_decide(?,?) WHERE facts_requests_sent=1',args)
-again=run(db,"SELECT facts_call_id FROM thinkthen_decide(?,?) WHERE projection='facts' AND facts_requests_sent=1",args)
-schema=db.execute("SELECT cid,name FROM pragma_table_xinfo('thinkthen_decide') WHERE name='facts_call_id'").fetchone()
+first=run(db,'SELECT value,probability FROM thinkthen_decide_details(?,?)',args)
+identity=run(db,'SELECT facts_call_id FROM thinkthen_decide_details(?,?)',args)
+filtered=run(db,'SELECT value FROM thinkthen_decide_details(?,?) WHERE facts_requests_sent=0',args)
+kept=run(db,'SELECT value FROM thinkthen_decide_details(?,?) WHERE facts_requests_sent=1',args)
+again=run(db,"SELECT facts_call_id FROM thinkthen_decide_details(?,?) WHERE projection='facts' AND facts_requests_sent=1",args)
+schema=db.execute("SELECT cid,name FROM pragma_table_xinfo('thinkthen_decide_details') WHERE name='facts_call_id'").fetchone()
 # A positional operand in an output slot is a SQLite predicate, outside input admission.
-visible=2;count=schema[0]-visible+1
+visible=7;count=schema[0]-visible+1
 parameters=[None]*count;parameters[:2]=args;parameters[-1]='different-call-id'
-position=run(db,'SELECT value FROM thinkthen_decide('+','.join('?' for _ in parameters)+')',parameters)
+position=run(db,'SELECT value FROM thinkthen_decide_details('+','.join('?' for _ in parameters)+')',parameters)
 say(first=first,filtered=filtered,kept=kept,identity=identity,again=again,position=position)
 ''', environment(backend))
     expect(got['first'], [[1,.9]], 'compact default answer columns')
@@ -138,7 +144,7 @@ first=run(db,'SELECT file,records,facts_call_id FROM thinkthen_filter(?,?)',args
 before=path.stat().st_mtime_ns;path.write_text('Alpha.\\nBeta.\\n');os.utime(path,ns=(before+2000000000,before+2000000000))
 second=run(db,'SELECT file,records,facts_call_id FROM thinkthen_filter(?,?)',args)
 for i in range(8):
-    run(db,'SELECT value FROM thinkthen_decide(?,?)',('Fits?',str(i)))
+    run(db,'SELECT value FROM thinkthen_decide_details(?,?)',('Fits?',str(i)))
 old=run(db,'SELECT file,records,facts_call_id FROM thinkthen_filter(?,?)',args)
 say(first=first,second=second,old=old)
 ''',environment(backend))

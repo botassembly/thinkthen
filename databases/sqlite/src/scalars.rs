@@ -73,7 +73,7 @@ fn scalar_details(
 fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Failure> {
     if matches!(held, LoadedQuestion::Banded(_)) {
         return Err(Failure::usage(format!(
-            "{name} does not take a banded question; use thinkthen_decide or thinkthen_details"
+            "{name} does not take a banded question; use thinkthen_decide or thinkthen_decide_details"
         )));
     }
     if held.kind() == kind {

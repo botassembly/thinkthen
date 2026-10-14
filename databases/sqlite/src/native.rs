@@ -44,6 +44,7 @@ const FIELDS: &[&str] = &[
     "examples",
     "max_requests_total",
     "stage_context",
+    "image_text",
 ];
 
 #[derive(Debug)]
@@ -144,6 +145,20 @@ impl<T: Verb> Table for Native<T> {
                 projections: None,
             });
         }
+        if T::DETAILS
+            && (0..2).any(|at| {
+                mask & (1 << at) != 0
+                    && arguments
+                        .get(at)
+                        .is_some_and(|value| matches!(value, Value::Null))
+            })
+        {
+            return Ok(Scan {
+                rows: Arc::new(Vec::new()),
+                selected: None,
+                projections: None,
+            });
+        }
         let legacy_count = T::COLUMNS - T::FIRST_HIDDEN;
         let extra = arguments.get(legacy_count..).unwrap_or_default();
         let legacy = extra.iter().all(|value| matches!(value, Value::Null));
@@ -157,8 +172,11 @@ impl<T: Verb> Table for Native<T> {
         if T::DETAILS && !args.supplied("request_records") {
             for field in ["text", "body", "keyed_json", "paths", "query"] {
                 if let Some(value) = args.text(field)?
-                    && serde_json::from_str::<serde_json::Value>(&value)
-                        .is_ok_and(|value| value.is_array())
+                    && serde_json::from_str::<serde_json::Value>(&value).is_ok_and(|value| {
+                        value
+                            .as_array()
+                            .is_some_and(|rows| rows.iter().all(serde_json::Value::is_object))
+                    })
                 {
                     args = args.with_value("request_records", Value::Text(value));
                     args = args.with_value(field, Value::Null);
@@ -194,7 +212,7 @@ impl<T: Verb> Table for Native<T> {
         }
         let mut rows = receipt.projected(kind, Self::COLUMNS)?;
         if T::DETAILS && selection.is_none() {
-            rows = details::rows(&receipt)?;
+            rows = details::rows(&receipt, kind, Self::COLUMNS)?;
         }
         if selection.is_none() {
             if !T::DETAILS {
@@ -206,6 +224,10 @@ impl<T: Verb> Table for Native<T> {
                 rows.push(Cells::new());
             }
             overlay(&mut rows, &facts, &errors);
+            if T::DETAILS {
+                let detail = receipt.projected("question_detail", Self::COLUMNS)?;
+                overlay(&mut rows, &detail, &[]);
+            }
         }
         if selection.is_none() && !matches!(args.value("lookup_key"), ValueRef::Null) {
             rows.retain(|row| {

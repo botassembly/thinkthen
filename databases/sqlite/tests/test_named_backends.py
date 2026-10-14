@@ -14,7 +14,7 @@ def test_named_aliases_pair_each_provider_key_with_the_declared_path():
         settings = json.dumps({"backend":"local-"+row["name"],"cache":False})
         got = child(f'''db = connect()
 configured = run(db, "SELECT thinkthen_configure(?)", ({settings!r},))
-say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details(?, 'refund')", ({QUESTION!r},)))
+say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_decide_details(?, 'refund')", ({QUESTION!r},)))
 ''', env)
         detail = dict(zip(("value","model","url","error"),got["answer"][0]))
         expect(detail["value"], True, row["name"])
@@ -32,7 +32,7 @@ def test_canonical_builtin_replay_selects_url_model_path_and_form_without_sends(
         settings = json.dumps({"backend":row["name"],"cache":False,"replay":str(replay)})
         got = child(f'''db = connect()
 run(db, "SELECT thinkthen_configure(?)", ({settings!r},))
-say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details(?, 'refund')", ({QUESTION!r},)))
+say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_decide_details(?, 'refund')", ({QUESTION!r},)))
 ''', env)
         detail = dict(zip(("value","model","url","error"),got["answer"][0]))
         expect((detail["value"],detail["model"],detail["url"]), (True,row["model"],row["url"]), row["name"])
@@ -52,9 +52,9 @@ refused = [run(db, "SELECT thinkthen_configure(?)", (source,)) for source in (
 say(refused=refused,usage=run(db,"SELECT thinkthen_usage()"))
 input()
 os.environ['LOCAL_KEY'] = 'fake-later'
-one = run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')")
+one = run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_decide_details('attention?', 'refund')")
 os.environ['LOCAL_KEY'] = 'fake-first'
-two = run(connect(), "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')")
+two = run(connect(), "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_decide_details('attention?', 'refund')")
 late = run(db,"SELECT thinkthen_configure(?)", ('{"backend":"typesafe"}',))
 say(one=one,two=two,late=late)
 ''', env)
@@ -113,7 +113,7 @@ def test_selected_setup_profile_survives_model_override_and_explicit_profile_win
         source = json.dumps(settings)
         got = child(f'''db = connect()
 run(db,"SELECT thinkthen_configure(?)", ({source!r},))
-say(answer=run(db,"SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund') WHERE request_records=?", ({json.dumps([{'text':'refund'}])!r},)))
+say(answer=run(db,"SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_decide_details('attention?', 'refund') WHERE request_records=?", ({json.dumps([{'text':'refund'}])!r},)))
 ''',env)
         if explicit:
             expect(got["answer"][0][1],"override","model overrides selected setup")

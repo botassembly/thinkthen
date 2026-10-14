@@ -46,7 +46,10 @@ ROOT_KIND = dict(zip(('decide', 'choose', 'tag', 'score', 'filter', 'rank', 'fin
 
 class Read:
     def __init__(self, db, verb, question, inputs, settings):
-        self.db, self.verb = db, verb
+        if verb in ('details', 'details_images'):
+            parsed = json.loads(question) if question.lstrip().startswith('{') else {'decide':question}
+            verb = next(name for name in ROOT_KIND if name in parsed)
+        self.db, self.verb = db, verb + '_details'
         self.fields = {'request_question': question, 'settings': settings or '{}'}
         if isinstance(inputs, bytes):
             self.fields['text'] = inputs
@@ -164,13 +167,13 @@ def ordinary(db, question, text, settings=None):
 
 
 def ordinary_images(db, question, images, text=None, settings=None):
-    return ordinary_read(db, 'details_images', question, {'images': images, 'image_text': text}, settings)
+    return ordinary_read(db, 'details_images', question, {'text': images, 'image_text': text}, settings)
 
 
 def ordinary_read(db, verb, question, inputs, settings):
     reader = Read(db, verb, question, {}, settings)
     reader.fields = {'question': question, **inputs, 'settings': settings or '{}'}
-    sql = 'SELECT value FROM thinkthen_' + verb + ' WHERE ' + ' AND '.join(key + '=?' for key in reader.fields)
+    sql = 'SELECT value FROM thinkthen_' + reader.verb + ' WHERE ' + ' AND '.join(key + '=?' for key in reader.fields)
     db.execute(sql, list(reader.fields.values())).fetchall()
     details = reader.rows('question_detail')
     if not details:

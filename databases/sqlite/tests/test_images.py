@@ -109,7 +109,7 @@ bad = [run(db, sql, args) for sql, args in [
  ('SELECT thinkthen_images(?,?,?,?,?,?,?,?,?)', tuple(images[0] for _ in range(9))),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', b'private-image-evidence')),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', packed + b'x')),
- ('SELECT value FROM thinkthen_details_images(?, ?)', ('{"tag":"Which?","labels":["red"]}', packed)),
+ ('SELECT value FROM thinkthen_decide_details(?, ?)', ('{"tag":"Which?","labels":["red"]}', packed)),
  ('SELECT thinkthen_decide_images(?, ?, NULL, ?)', ('Is red visible?', packed, '{"model":"unadmitted"}')),
  ('SELECT thinkthen_tag(?, ?)', ('{"tag":"Which?","labels":["red"]}', images[0])),
  ('SELECT thinkthen_decide(?, ?)', ('Is red visible?', images[0]))]]
@@ -190,7 +190,7 @@ say(result=result)
 db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_retries":0}',))
 say(error=run(db,'SELECT thinkthen_decide_images(?,?)',('Is red visible?', packed)))
 ''', env)
-        expect(got['error'], 'thinkthen backend: the backend answered with status 503 (retryable: yes)', 'backend error is not NULL or a leaked body')
+        expect(got['error'], 'thinkthen backend: the backend answered with status 503; provider message: private-backend-body (retryable: yes)', 'backend error is not NULL or a leaked body')
         expect(backend.count(), 1, 'one failing image attempt')
 
 

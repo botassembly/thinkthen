@@ -56,15 +56,22 @@ details!(
 );
 details!(Relate, crate::tables::Relater, "thinkthen_relate_details");
 
-pub(super) fn rows(receipt: &Receipt) -> Result<Vec<Cells>, Failure> {
+pub(super) fn rows(receipt: &Receipt, kind: &str, columns: usize) -> Result<Vec<Cells>, Failure> {
     let rows = receipt
         .carrier
         .get("rows")
         .and_then(serde_json::Value::as_array)
         .ok_or_else(|| Failure::defect("a details receipt lost its rows"))?;
+    let projected = receipt.projected(kind, columns)?;
     rows.iter()
         .map(|row| {
-            let mut cells = Cells::new();
+            let mut cells = row
+                .get("result")
+                .and_then(serde_json::Value::as_u64)
+                .and_then(|index| usize::try_from(index).ok())
+                .and_then(|index| projected.get(index))
+                .cloned()
+                .unwrap_or_else(Cells::new);
             for (at, field) in [
                 "ordinal",
                 "value",

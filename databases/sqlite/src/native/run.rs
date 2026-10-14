@@ -34,6 +34,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         keys,
         ids,
         details,
+        recover,
         ..
     } = invocation;
     let shared = settings.context().map(str::to_owned);
@@ -41,7 +42,7 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
         let controls = shared
             .as_deref()
             .map_or(controls, |context| controls.context(context));
-        if details {
+        if details && recover {
             return sql_request::run_recovering(
                 engine,
                 &prepared,
@@ -60,6 +61,11 @@ pub(super) fn execute(db: *mut sqlite3, invocation: Invocation) -> Result<Receip
             Surface::Sqlite,
         ))
     })?;
+    let carrier = if details {
+        details_carrier(verb, carrier)?
+    } else {
+        carrier
+    };
     project(verb, carrier, keys, ids)
 }
 
@@ -88,6 +94,7 @@ fn project(
     if let Some(error) = native.get("error") {
         receipt.add("error", error)?;
     }
+    let call_facts = carrier.pointer("/native/facts").cloned();
     if let Some(rows) = carrier.get_mut("rows").and_then(Json::as_array_mut) {
         for row in rows {
             for (field, kind) in [
@@ -96,7 +103,11 @@ fn project(
                 ("facts", "facts"),
             ] {
                 if let Some(value) = row.get(field).filter(|value| !value.is_null()).cloned() {
-                    let index = receipt.add(kind, &value)?;
+                    let index = if field == "facts" && call_facts.as_ref() == Some(&value) {
+                        0
+                    } else {
+                        receipt.add(kind, &value)?
+                    };
                     if field == "result" {
                         receipt.add("record_order", &json!({"ordinal":row.get("ordinal"),"result_index":index,"completed":false}))?;
                     }
@@ -115,12 +126,14 @@ fn project(
     }
     let completed = carrier.get("completed");
     let value = native.get("value").or(completed);
-    let values = value.map_or(Vec::new(), |value| {
-        value
-            .as_array()
-            .cloned()
-            .unwrap_or_else(|| vec![value.clone()])
-    });
+    let values = value
+        .filter(|_| carrier.get("rows").is_none())
+        .map_or(Vec::new(), |value| {
+            value
+                .as_array()
+                .cloned()
+                .unwrap_or_else(|| vec![value.clone()])
+        });
     let ordinals = carrier.get("ordinals").and_then(Json::as_array);
     for (at, value) in values.iter().enumerate() {
         let actual = if matches!(verb, "details" | "details_images") {
@@ -162,6 +175,7 @@ pub(super) struct Invocation {
     keys: Vec<String>,
     ids: crate::tables::Ids,
     details: bool,
+    recover: bool,
 }
 
 pub(super) fn prepare(
@@ -220,6 +234,20 @@ pub(super) fn prepare(
     } else {
         prepared
     };
+    if details
+        && verb == "find"
+        && !args.supplied("request_records")
+        && let Some(text) = args.text("text")?
+    {
+        let units = serde_json::from_str::<Vec<String>>(&text)
+            .map_err(|_| Failure::usage("find units is a JSON array of text"))?;
+        inputs = complete_native::Inputs::parse_request(
+            &json!({"records":units.into_iter()
+            .map(|text| json!({"text":text})).collect::<Vec<_>>(),
+            "attempts":args.flag("attempts")?,"cancelled":args.flag("cancelled")?})
+            .to_string(),
+        )?;
+    }
     let options = input::options(args)?;
     let source_route = args.text("paths")?.is_some() || options.files_only;
     let native_source = if source_route {
@@ -251,6 +279,7 @@ pub(super) fn prepare(
         inputs,
         settings,
         details,
+        recover: args.supplied("request_records"),
         keys: input::keys(args)?,
         ids,
     })
@@ -333,4 +362,57 @@ fn admit(
             None => sql_request::request(prepared, options)?.admit()?,
         },
     })
+}
+
+fn details_carrier(verb: &str, mut carrier: Json) -> Result<Json, Failure> {
+    if carrier.get("rows").is_some() {
+        return Ok(carrier);
+    }
+    let facts = carrier
+        .pointer("/native/facts")
+        .cloned()
+        .unwrap_or(Json::Null);
+    let error = carrier.pointer("/native/error").cloned();
+    let observations = carrier.get("observations").cloned().unwrap_or(json!([]));
+    let encoded = carrier
+        .pointer("/native/value")
+        .or_else(|| carrier.get("completed"))
+        .cloned()
+        .unwrap_or(json!([]));
+    let results = encoded.as_array().cloned().unwrap_or_else(|| vec![encoded]);
+    let function = match verb {
+        "decide" => thinkthen::RequestFunction::Decide,
+        "choose" => thinkthen::RequestFunction::Choose,
+        "tag" => thinkthen::RequestFunction::Tag,
+        "score" => thinkthen::RequestFunction::Score,
+        "filter" => thinkthen::RequestFunction::Filter,
+        "rank" => thinkthen::RequestFunction::Rank,
+        "find" => thinkthen::RequestFunction::Find,
+        "annotate" => thinkthen::RequestFunction::Annotate,
+        "recognize" => thinkthen::RequestFunction::Recognize,
+        "relate" => thinkthen::RequestFunction::Relate,
+        _ => return Err(Failure::defect("unknown details function")),
+    };
+    let mut rows = results.into_iter().enumerate().map(|(at,result)| {
+        let (value,probability) = sql_request::project_value(function, &result);
+        json!({"ordinal":result.get("index").cloned().unwrap_or(json!(at)),"value":value,"probability":probability,
+            "result":result,"failure":null,"facts":facts,"observations":observations})
+    }).collect::<Vec<_>>();
+    if let Some(error) = error {
+        if matches!(
+            error.get("kind").and_then(Json::as_str),
+            Some("cancelled" | "deadline" | "defect")
+        ) {
+            let mut receipt = Receipt::default();
+            receipt.carrier = carrier;
+            legacy_error(&receipt)?;
+            return Err(Failure::defect("a hard error was not raised"));
+        }
+        rows.push(
+            json!({"ordinal":rows.len(),"value":null,"probability":null,"result":null,
+            "failure":error,"facts":facts,"observations":observations}),
+        );
+    }
+    carrier["rows"] = json!(rows);
+    Ok(carrier)
 }

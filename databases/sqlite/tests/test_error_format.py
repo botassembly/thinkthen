@@ -26,13 +26,8 @@ say(usage=usage, removed=removed, structured=structured, backend_error=backend_e
     expect(held["removed"],
            "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
            "plain removal")
-    failed = json.loads(held["structured"][0][0])
-    expect(failed["error"], {
-        "kind": "usage",
-        "message": "check the row's question and arguments, or raise the process request total when it is spent",
-        "retryable": False,
-    }, "structured try-details remains safe")
-    expect("private evidence" in json.dumps(failed), False, "private evidence stays out")
+    expect(held["structured"], "no such function: thinkthen_try_details", "retired recovery call is absent")
+    expect("private evidence" in held["structured"], False, "private evidence stays out")
     expect(held["backend_error"],
            "thinkthen backend: the backend answered with status 503 (retryable: yes)",
            "retryable backend")

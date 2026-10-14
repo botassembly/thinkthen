@@ -114,8 +114,7 @@ ORDER BY abbey_road.rank;
 | `thinkthen_choose(question, input[, settings])` | chosen label or SQL NULL |
 | `thinkthen_score(question, input[, settings])` | position on the named levels |
 | `thinkthen_tag(question, input[, settings])` | JSON array text of labels |
-| `thinkthen_details(question, input[, settings])` as a table | native answer, confidence, answer identity, model and request count; full typed receipt projections |
-| `thinkthen_try_details` as a scalar with the same slots | answered/failed recovery envelope |
+| `thinkthen_<function>_details` as a table | value, probability, typed result, failure, facts and observations for each row |
 | `thinkthen_find(question, units_json[, settings])` | selected index, value and probabilities as JSON text |
 | `thinkthen_annotate(questions, input[, settings])` | named judgments as JSON text |
 | `thinkthen_recognize(input, kinds[, settings])` | rows of names, offsets, kinds and strengths |
@@ -134,7 +133,7 @@ The optional settings slot is JSON text in the shared `thinkthen.settings/1` gra
 
 `thinkthen_configure` replaces the individual setters. Its closed object supports `backend`, `model`, `batch`, `cache`, `throttle`, `timeout`, `max_retries`, `max_request_bytes`, `max_requests`, `max_requests_total`, `profile`, `record` and `replay`. The whole object is checked before it replaces the previous selection, and the engine must not already have built. `thinkthen_usage()` does not build it; a plan does build the engine so configure before planning. `"backend":"typesafe"` selects a built-in or configured name. Its address and key variable come from Rust configuration. SQL accepts no address or key. Omit `backend` to retain environment selection. Configure validation reads the environment but retains no credentials. The first engine build captures them. Every connection then uses that process engine. A failed build allows a later configuration and build to recover. `max_requests_total` reserves each live attempt against the shared process count, including later packed requests and retries. Cache hits and plans send nothing.
 
-The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value, and order records with `thinkthen_rank`. A required NULL scalar operand returns SQL NULL; a required NULL table or set operand produces no rows. These calls return before inspecting other operands, reading files or sending. A NULL optional setting means the setting is omitted. Malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. `thinkthen_try_details` returns fixed safe advice for a recoverable row failure; cancellation and deadlines still raise errors.
+The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value, and order records with `thinkthen_rank`. A required NULL scalar operand returns SQL NULL; a required NULL table or set operand produces no rows. These calls return before inspecting other operands, reading files or sending. A NULL optional setting means the setting is omitted. Malformed types and settings raise `thinkthen usage` before a send. Ordinary errors read `thinkthen <kind>: <message> (retryable: yes|no)` with kinds `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`; removed calls keep plain migration messages. The details tables retain recoverable row failures and continue later rows; cancellation, deadlines and defects raise errors.
 
 `thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
@@ -179,7 +178,7 @@ Files use the caller's native filesystem permissions. The reader remains DIRECTO
 
 `thinkthen_image(bytes BLOB, mime TEXT)` returns a versioned tagged BLOB. `thinkthen_images(image, ...)` packs 1–8 values in authored order into another persistent tagged BLOB. Tags survive storage; every judgment revalidates them. MIME is exactly `image/png` or `image/jpeg`; the native reader/decoder validates original compressed pixels. Each question takes 1–8 images and at most 24 MiB of compressed bytes. Order and duplicates are preserved. Source file names stay outside model evidence and cache identity.
 
-`thinkthen_decide_images(question, images, text, settings)`, `thinkthen_choose_images`, `thinkthen_score_images` and `thinkthen_details_images` use the existing native image engine. The first three return their ordinary scalar value; `thinkthen_details_images` returns typed table rows with the same receipt projections as text details. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional. Typed image receipt projections retain the original evidence and source metadata.
+`thinkthen_decide_images(question, images, text, settings)`, `thinkthen_choose_images`, `thinkthen_score_images` use the existing native image engine. These calls return their ordinary scalar value. The function's details table accepts images inside a record and retains typed image receipts. Questions and settings use the existing text/JSON/question-file grammar. Choose options and score levels belong in question JSON or settings. Ancillary text is optional. Typed image receipt projections retain the original evidence and source metadata.
 
 NULL constructor operands return NULL. NULL question or collection returns NULL without sending; NULL ancillary text means absent text and NULL settings means defaults. A NULL member inside a collection, empty collection, invalid media/pixels/tag or exceeded limit is Usage before sending. Unsure decide/choose is NULL; failures remain errors. Arbitrary BLOB/bytea, text, paths, URLs and generic JSON never become images implicitly. Other functions retain their text input contract.
 
@@ -194,14 +193,15 @@ Settings take batch, context and deadline. Engine configuration supplies model/b
 
 ## Read typed answers and receipts
 
-Each of the ten ordinary names also has a table form: `thinkthen_decide`, `thinkthen_choose`, `thinkthen_tag`, `thinkthen_score`, `thinkthen_filter`, `thinkthen_rank`, `thinkthen_find`, `thinkthen_annotate`, `thinkthen_recognize` and `thinkthen_relate`. Existing scalar answer calls and existing table answer columns remain available. `thinkthen_details` and `thinkthen_details_images` are typed tables. The retired `_complete` functions are absent.
+Each of the ten functions has one `thinkthen_<function>_details` table. Plain calls retain their ordinary value. The retired `thinkthen_details`, `thinkthen_try_details`, `thinkthen_details_images`, `_complete` functions and record-list forms of plain calls are absent.
+
+Each details row exposes `ordinal, value, probability, result, failure, facts, observations`. Result, failure, facts and observation references select the named typed projections from the same evaluation. Decide and filter expose yes probability; choose and find expose the selected option's probability. Score, tag and annotate expose null probability. Rank exposes one row per ranked record with its rank and probability. Recognition retains probabilities for each span. Relate exposes one row per edge with its probability. Rank, find and relate consume the supplied records as one whole set. A failed aggregate returns one failure row.
 
 For one ordinary receipt:
 
 ```sql
-SELECT value, confidence, answer_id, answer_model, requests_sent,
-       question_detail_usage_index, facts_call_id
-FROM thinkthen_details('Does this ask for a refund?', 'Refund me.');
+SELECT ordinal, value, probability, decision_answer_id, facts_requests_sent
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.');
 ```
 
 For an ordered collection, use named inputs:
@@ -209,7 +209,7 @@ For an ordered collection, use named inputs:
 ```sql
 SELECT decision_index, decision_value, decision_value_type,
        decision_answer_id, facts_requests_sent, error_kind
-FROM thinkthen_decide
+FROM thinkthen_decide_details
 WHERE request_question = '{"decide":"Does this ask for a refund?"}'
   AND request_records = '[{"text":"Refund me."},{"text":"Track my parcel."}]'
   AND batch = 2 AND attempts = 1;
@@ -223,18 +223,18 @@ Use `request_paths` instead of `request_records` for an ordered JSON path array.
 
 Exactly one collection is admitted before question resolution. Invalid known inputs refuse before a send; SQLite rejects unknown SQL parameter names. `incremental = 1` permits native prefix retention for decide, choose, tag, score, filter and annotate. Other functions admit their full input set before sending. `cancelled = 1` pre-cancels. `attempts = 1` retains native attempt facts. Required NULL legacy operands return no rows before inspecting partners; NULL optional settings use defaults.
 
-Default table queries return ordinary answer columns plus explicitly selected facts/error columns. All receipt outputs are hidden, so `SELECT *` keeps each ordinary answer shape. Inspect the schema with `pragma_table_xinfo('thinkthen_decide')`. True input columns appear before hidden receipt outputs. Extra positional arguments that reach receipt output positions are ordinary SQLite data predicates; they do not change the admitted call or its identity.
+Default details queries return the seven visible columns. Nested receipt outputs remain hidden. Inspect the schema with `pragma_table_xinfo('thinkthen_decide_details')`. True input columns appear before hidden receipt outputs. Extra positional arguments that reach receipt output positions are ordinary SQLite data predicates; they do not change the admitted call or its identity.
 
 Select `projection` to read a nested receipt collection from the same retained evaluation:
 
 ```sql
 SELECT question_detail_model, question_detail_requests_sent,
        question_detail_question_index, question_detail_usage_index
-FROM thinkthen_details('Does this ask for a refund?', 'Refund me.')
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.')
 WHERE projection = 'question_detail';
 
 SELECT usage_input_tokens, usage_output_tokens
-FROM thinkthen_details('Does this ask for a refund?', 'Refund me.')
+FROM thinkthen_decide_details('Does this ask for a refund?', 'Refund me.')
 WHERE projection = 'usage';
 ```
 
@@ -242,13 +242,13 @@ Caller-facing projections include facts, error, question_detail, question, usage
 
 Each projection has its own `<projection>_receipt_index`. Object references use `<field>_index`; arrays and maps use `<field>_first_index` and `<field>_count` into the named child projection. `<field>_present` distinguishes omission from explicit null. Open answer DATA adds `<field>_type`; its primitive values are native SQL values and its arrays/objects are JSON collection data. Unsigned counts above SQLite's signed integer range use exact decimal text. Every canonical receipt field remains accessible, including probabilities, authored questions, input sources, attempts, pricing, diagnostic facts and failure stops.
 
-Projection reads reuse the connection's retained evaluation and send nothing extra. Ordinary details/details_images default invocations preserve their fresh-call behavior, with the engine's own cache/record/replay counters. Following projection reads see that retained invocation. Different arguments select different retained receipts; changed question/source files invalidate their result. The connection retains eight most recently used results and releases them at close. Output predicates only filter projected host data and do not change call identity. Failure projections contain canonical safe errors, final facts and completed prefixes; facts are absent when admission failed before a call started. SQL interruption and ordinary errors keep their host behavior.
+Projection reads reuse the connection's retained evaluation and send nothing extra. Default details invocations preserve their fresh-call behavior, with the engine's own cache/record/replay counters. Following projection reads see that retained invocation. Different arguments select different retained receipts; changed question/source files invalidate their result. The connection retains eight most recently used results and releases them at close. Output predicates only filter projected host data and do not change call identity. Failure projections contain canonical safe errors, final facts and completed prefixes; facts are absent when admission failed before a call started. SQL interruption and ordinary errors keep their host behavior.
 
 For tagged stored images:
 
 ```sql
-SELECT value, answer_id, facts_requests_sent
-FROM thinkthen_details_images(
+SELECT value, decision_answer_id, facts_requests_sent
+FROM thinkthen_decide_details(
   'Is red visible?', (SELECT thinkthen_images(image) FROM photos));
 ```
 
