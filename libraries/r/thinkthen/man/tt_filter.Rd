@@ -22,12 +22,12 @@ evidence for this call.}
 }
 \value{
 A complete call carrier of class \code{thinkthen_Call}. \code{$results} holds
-one typed row of class \code{thinkthen_FilterResult} per record, each with
+one selected typed row of class \code{thinkthen_FilterResult} per kept record, each with
 \code{$value} (\code{TRUE} when the record reaches the mark),
 \code{$question}, \code{$meta}, and \code{$answer_id}, and, when the reading
 provides them, the zero-based native \code{$index} and \code{$input}.
 \code{$answer} holds the typed answer view: a list of the
-rows that reach the mark, each retaining its fields. \code{$facts} holds the
+inputs that reach the mark. \code{$facts} holds the
 call's facts, including \code{requests_sent}. The carrier also carries
 \code{$positions} and \code{$length} beside those views. A feed
 input returns a carrier with \code{$results} and \code{$facts} only,
@@ -52,7 +52,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \examples{
 \dontrun{
 kept <- tt_filter("Is this a complaint?", c("first", "second"))
-kept$answer[[1]]$input
+kept$answer[[1]]
 }
 }
 \seealso{

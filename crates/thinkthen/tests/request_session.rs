@@ -10,6 +10,8 @@ use thinkthen::*;
 mod framing;
 #[path = "request_session/push.rs"]
 mod push;
+#[path = "request_session/recognize.rs"]
+mod recognize;
 #[path = "request_session/wait.rs"]
 mod wait;
 

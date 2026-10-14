@@ -1,11 +1,7 @@
 //! The R surface's Rust half over the `thinkthen` public API (ticket 0108).
 //!
-//! The R half composes each question as the question file's JSON and hands
-//! it here with the caller's texts. This half runs one engine call on a
-//! fresh worker thread, waits on R's main thread with R's interrupt check
-//! every 50 ms, and builds R values from the plain data the worker returns.
-//! It holds no rule, retry, or request of its own.
-//!
+//! R supplies authored values; the shared request session owns execution and cancellation.
+//! Native conversion runs on the R main thread.
 pub mod ffi;
 
 mod calls;
