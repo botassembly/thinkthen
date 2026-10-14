@@ -8,18 +8,18 @@ Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Je
 
 ```python
 import thinkthen as tt
-refund_question = "Does the customer ask for a refund?"
-route = "Which team owns this?"
+refund = "Does the customer ask for a refund?"
+who = "Which team owns this?"
 refunds = [
     ("Please refund my order. It arrived broken.", True),
     ("Thanks for the quick help yesterday!", False),
     ("I want to send this back.", True),
 ]
-messages = [
-    ("Please refund the extra fee on my invoice.", "billing"),
-    ("My parcel went to the wrong address.", "shipping"),
-    ("I cannot reset my password.", "account"),
-]
+messages = {
+    "Please refund the extra fee on my invoice.": "billing",
+    "My parcel went to the wrong address.": "shipping",
+    "I cannot reset my password.": "account",
+}
 teams = {
     "billing": "Invoices, fees, and refunds.",
     "shipping": "Parcels and delivery.",
@@ -27,10 +27,10 @@ teams = {
 }
 with tt.Engine() as engine:
     for text, expected in refunds:
-        is_refund = engine.decide(refund_question, text).value
+        is_refund = engine.decide(refund, text).value
         assert is_refund is expected
-    for text, expected in messages:
-        team = engine.choose(route, text, options=teams).value
+    for text, expected in messages.items():
+        team = engine.choose(who, text, options=teams).value
         assert team == expected
 ```
 

@@ -5,22 +5,32 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 ```python
 import thinkthen as tt
 
-with tt.Engine(cache=False) as engine:
-    refund = engine.decide("Does this ask for a refund?", "Please refund the charge.")
-    print(refund.value, refund.probability)
-    print(refund.results[0].answer_id, refund.facts.requests_sent)
+question = "Does the customer ask for a refund?"
+message = "Please refund my order. It arrived broken."
+with tt.Engine() as engine:
+    refund = engine.decide(question, message)
+    assert refund.value is True
+    assert refund.probability > 0.5
+    assert len(refund.results) == 1
+    assert refund.facts is not None
 ```
 
 `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find` and `annotate` take a question followed by their input. `recognize` and `relate` take their input first and an optional authored question second. Pass `options`, `levels` or `labels` beside question text, or pass an authored question dictionary, a path object or `QuestionSource(name="name")`. Plain strings remain question text for atomic calls. Enum, Literal and the optional Pydantic authoring forms convert to the same native declaration.
 
-`Result.value` presents the ordinary answer. `Result.probability` presents its probability when the function supplies one. Filter returns the selected inputs, rank returns their original indices and find returns the selected input or `None`. `Result.results` retains the typed rows with their probabilities, sources, image facts, identifiers and model provenance. `Result.facts` contains the call's final counts. Printing withholds content; equality and pickling preserve absence, null, false, wide integers and permitted extension fields. Embedded failures remain typed failures and cannot become false answers.
+`Result.value` presents the ordinary answer. `Result.probability` presents its probability when the function supplies one. Filter returns the selected inputs, rank returns their original indices and find returns the selected input or `None`. `Result.results` retains the typed rows with their probabilities, sources, image facts, identifiers and model provenance. `Result.facts` contains the call's final counts. Printing the result withholds its content. A failed call raises a typed error and never supplies a false answer.
 
 ```python
-selection = tt.read_files(["notes.txt"], unit="line")
-with tt.Engine(cache=False) as engine:
-    kept = engine.filter("Does this ask for a refund?", selection)
+import thinkthen as tt
+
+selection = tt.read_files("documents", unit="line")
+question = "Does this line describe a refund?"
+with tt.Engine(model="local-1") as engine:
+    kept = engine.filter(question, selection)
     for row in kept.results:
-        print(row.source.file, row.source.first_line, row.source.last_line)
+        print(
+            row.source.file, row.source.first_line,
+            row.source.last_line,
+        )
 ```
 
 `Files` also supports `jsonl=True` and `media="image"`. `Item` supplies explicit JSON values, per-record context, candidate descriptions and ordered `Image(media="image/png", data=bytes)` attachments. An omitted context stays absent; explicit JSON null remains null. Native declarations decide which contexts and options are admitted. Files and items use the same ten functions.
@@ -38,19 +48,5 @@ refund = series.tt.decide("Does this ask for a refund?", engine=engine)
 ```
 
 All ten namespace methods retain original row positions and null masks. Filter returns selected original rows. Rank, find and relate issue one whole-set call. Polars presents ordinary answers as typed columns, including nested lists and structs. Columns retain Object values when a typed representation would change a value or add an absent member. Detailed results retain the native result objects. `on=` selects DataFrame input columns for the ordinary engine methods; annotation adds named typed columns and failures, while recognition preserves its documented dataframe presentation. Async calls share this conversion. The package imports neither dataframe library by default. Pydantic support is available through `thinkthen[pydantic]`.
-
-## Replace old calls
-
-| Previous call | Current call |
-| --- | --- |
-| `tt.decide(q)(rows)` and `Judge` | `tt.decide(q, rows)` |
-| `engine.complete.decide(q, rows)` | `engine.decide(q, rows)` |
-| `tt.details(q, row)` | `tt.decide(q, row, details=True)` |
-| `thinkthen.complete.Item` and `Image` | `tt.Item` and `tt.Image` |
-| `complete.Files` | `tt.Files` or `tt.read_files` |
-| Complete dataframe engine/accessor | Ordinary engine or `series.tt` |
-| Legacy batch methods | `engine.iterate(function, question, rows)` |
-| `ask_model`, `task_model`, `relation_model`, `context_fields`, `item_schema`, `context_schema`, `options_schema` through extra keywords | Use an authored question declaration and the explicit `model`, `field` and `context_field` controls; unknown keywords raise `TypeError` |
-| Judge preview | `engine.plan(function, question, rows)` |
 
 Build a wheel with `sh build-wheel.sh`. `check.sh` installs a wheel outside the source package and runs routine behavior and shared cases; `THINKTHEN_ARTIFACT` selects an existing wheel. `THINKTHEN_TEST_PROFILE=full` selects the entire shared inventory at a candidate. Windows and Apple package qualification run at the candidate.
