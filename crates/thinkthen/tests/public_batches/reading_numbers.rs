@@ -36,29 +36,58 @@ fn reported_confidence_and_wire_score_do_not_replace_public_numbers() {
         else {
             panic!("unbanded question");
         };
-        let call = engine.details(&asked, "fixture evidence").expect("details");
-        let details = call.value();
+        let (json, actual, supplied_confidence, probabilities, raw_level, requests_sent) =
+            match &expected {
+                Judgment::Score(_) => {
+                    let call = engine.score(&asked, "fixture evidence").expect("score");
+                    let result = &call.results()[0];
+                    (
+                        serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
+                            .expect("JSON"),
+                        Judgment::Score(*call.value()),
+                        result.confidence(),
+                        result.probabilities(),
+                        result.raw_level().map(str::to_owned),
+                        call.facts().requests_sent(),
+                    )
+                }
+                Judgment::Choice(_) => {
+                    let call = crate::api::choose(
+                        &engine,
+                        &asked,
+                        crate::api::plain_records(["fixture evidence"]).map(Result::unwrap),
+                        CallOptions::new(),
+                    )
+                    .expect("choose");
+                    let result = call.value()[0].result();
+                    (
+                        serde_json::from_str::<serde_json::Value>(&result.to_json().expect("JSON"))
+                            .expect("JSON"),
+                        Judgment::Choice(result.value().map(str::to_owned)),
+                        result.confidence(),
+                        result.probabilities(),
+                        None,
+                        call.facts().requests_sent(),
+                    )
+                }
+                _ => panic!("score or choice fixture"),
+            };
+        assert_eq!(actual, expected, "0402 weighted value or choice cut");
         assert_eq!(
-            details.value(),
-            &expected,
-            "0402 weighted value or choice cut"
-        );
-        assert_eq!(
-            details.confidence(),
+            supplied_confidence,
             Some(confidence),
             "0402 vendor confidence"
         );
-        let json: serde_json::Value = serde_json::from_str(&details.to_json()).expect("JSON");
         assert_eq!(
             json["answer"]["confidence"], confidence,
             "0402 serialized confidence"
         );
         assert_eq!(listener.count(), 1, "0402 one counted request");
-        assert_eq!(call.facts().requests_sent(), 1);
-        assert_eq!(details.requests().len(), 1);
+        assert_eq!(requests_sent, 1);
+        assert_eq!(json["meta"]["requests"].as_array().unwrap().len(), 1);
         if let Judgment::Score(_) = expected {
-            assert_eq!(details.nearest(), Some("Work is blocked."));
-            let Probabilities::Named(probabilities) = details.probabilities() else {
+            assert_eq!(raw_level.as_deref(), Some("Work is blocked."));
+            let Probabilities::Named(probabilities) = probabilities else {
                 panic!("score distribution");
             };
             assert_eq!(
@@ -103,17 +132,17 @@ fn typed_band_endpoints_match_the_illustrative_trust_rows() {
                 .expect("question")
                 .band(low, high)
                 .expect("band");
-            let call = engine.details(&asked, "fixture evidence").expect("details");
+            let call = engine.decide(&asked, "fixture evidence").expect("decide");
             assert_eq!(
-                call.value().value(),
-                &Judgment::Decision(expected),
+                call.results()[0].value(),
+                expected,
                 "0402 band boundary p={probability} under {low}:{high}"
             );
             assert_eq!(
-                call.value().probabilities(),
-                &Probabilities::YesNo { yes: probability }
+                call.results()[0].probabilities(),
+                Probabilities::YesNo { yes: probability }
             );
-            assert_eq!(call.value().confidence(), None);
+            assert_eq!(call.results()[0].confidence(), None);
             assert_eq!(listener.count(), 1);
         }
     }

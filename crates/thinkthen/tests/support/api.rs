@@ -328,6 +328,12 @@ pull_rows!(pull_choices, Choose, choice_rows, thinkthen::CompleteChoice);
 pull_rows!(pull_tags, Tag, tag_rows, thinkthen::CompleteTags);
 pull_rows!(pull_scores, Score, score_rows, thinkthen::CompleteScore);
 pull_rows!(pull_filters, Filter, filter_rows, thinkthen::CompleteFilter);
+pull_rows!(
+    pull_annotations,
+    Annotate,
+    annotation_rows,
+    thinkthen::CompleteAnnotated
+);
 
 type RowsCall<T, R> = thinkthen::Call<Vec<thinkthen::CompleteRecord<T, R>>>;
 

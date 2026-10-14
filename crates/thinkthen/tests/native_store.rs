@@ -150,7 +150,7 @@ fn old_store_refuses_every_mode_without_sends_or_file_changes() {
         .build()
         .unwrap();
         let error = engine
-            .details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+            .decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
             .unwrap_err();
         assert_eq!(error.kind(), ErrorKind::Local);
         assert_eq!(
@@ -250,9 +250,12 @@ fn overlapping_sets_cache_each_question_and_replay_original_observed_counts_with
     assert_eq!(listener.count(), 3);
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
     for (record, (observations, count)) in identities {
-        let detail = replay.details(&question, &record).unwrap();
-        assert_eq!(detail.value().observations(), observations);
-        assert_eq!(detail.value().question_sources()[0].batch_size(), count);
+        let detail = replay.decide(&question, &record).unwrap();
+        assert_eq!(detail.results()[0].identity().observations(), observations);
+        assert_eq!(
+            detail.results()[0].identity().question_sources()[0].batch_size(),
+            count
+        );
     }
     assert_eq!(listener.count(), 3);
     drop(replay);
@@ -267,7 +270,7 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
             let listener = Listener::answering(|_| Canned::ok(REPLY)).unwrap();
             let place = folder();
             let seed = build(&listener).record(&place).unwrap().build().unwrap();
-            seed.details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+            seed.decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
                 .unwrap();
             drop(seed);
             let _ = listener.requests();
@@ -291,7 +294,7 @@ fn malformed_unrelated_stored_answers_refuse_even_refresh_and_record_before_send
             .build()
             .unwrap();
             let error = engine
-                .details(&Question::decide("Other?").unwrap().cut(), "Unrelated.")
+                .decide(&Question::decide("Other?").unwrap().cut(), "Unrelated.")
                 .unwrap_err();
             assert_eq!(error.kind(), ErrorKind::Local);
             assert!(!format!("{error:?} {error}").contains("PRIVATE_DAMAGED"));
