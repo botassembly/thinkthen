@@ -14,9 +14,9 @@ def test_named_aliases_pair_each_provider_key_with_the_declared_path():
         settings = json.dumps({"backend":"local-"+row["name"],"cache":False})
         got = child(f'''db = connect()
 configured = run(db, "SELECT thinkthen_configure(?)", ({settings!r},))
-say(answer=run(db, "SELECT thinkthen_details(?, 'refund')", ({QUESTION!r},)))
+say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details(?, 'refund')", ({QUESTION!r},)))
 ''', env)
-        detail = json.loads(got["answer"][0][0])
+        detail = dict(zip(("value","model","url","error"),got["answer"][0]))
         expect(detail["value"], True, row["name"])
         assert marker not in json.dumps(got)
         assert_sent(backend, {**row,"form":"both" if row["form"] == "both" else "authored"}, marker)
@@ -32,10 +32,10 @@ def test_canonical_builtin_replay_selects_url_model_path_and_form_without_sends(
         settings = json.dumps({"backend":row["name"],"cache":False,"replay":str(replay)})
         got = child(f'''db = connect()
 run(db, "SELECT thinkthen_configure(?)", ({settings!r},))
-say(answer=run(db, "SELECT thinkthen_details(?, 'refund')", ({QUESTION!r},)))
+say(answer=run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details(?, 'refund')", ({QUESTION!r},)))
 ''', env)
-        detail = json.loads(got["answer"][0][0])
-        expect((detail["value"],detail["meta"]["model"],detail["meta"]["url"]), (True,row["model"],row["url"]), row["name"])
+        detail = dict(zip(("value","model","url","error"),got["answer"][0]))
+        expect((detail["value"],detail["model"],detail["url"]), (True,row["model"],row["url"]), row["name"])
         expect(backend.count(), 0, "canonical replay has no transport")
     backend.close()
 
@@ -52,9 +52,9 @@ refused = [run(db, "SELECT thinkthen_configure(?)", (source,)) for source in (
 say(refused=refused,usage=run(db,"SELECT thinkthen_usage()"))
 input()
 os.environ['LOCAL_KEY'] = 'fake-later'
-one = run(db, "SELECT thinkthen_details('attention?', 'refund')")
+one = run(db, "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')")
 os.environ['LOCAL_KEY'] = 'fake-first'
-two = run(connect(), "SELECT thinkthen_details('attention?', 'refund')")
+two = run(connect(), "SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')")
 late = run(db,"SELECT thinkthen_configure(?)", ('{"backend":"typesafe"}',))
 say(one=one,two=two,late=late)
 ''', env)
@@ -62,7 +62,7 @@ say(one=one,two=two,late=late)
     expect(backend.count(), 0, "usage and refused configuration build no engine")
     process.send()
     got = process.result()
-    expect([json.loads(got[name][0][0])["meta"]["model"] for name in ("one","two")], ["retained","retained"], "process configuration")
+    expect([got[name][0][1] for name in ("one","two")], ["retained","retained"], "process configuration")
     assert "this process already built its engine" in got["late"]
     expect(backend.snapshot("bearers"), {"markers":{"first":0,"later":2,"unnamed":0},"absent":0,"unknown":0,"overflow":False}, "first build captures once across connections")
     backend.close()
@@ -113,12 +113,12 @@ def test_selected_setup_profile_survives_model_override_and_explicit_profile_win
         source = json.dumps(settings)
         got = child(f'''db = connect()
 run(db,"SELECT thinkthen_configure(?)", ({source!r},))
-say(answer=run(db,"SELECT thinkthen_details('attention?', 'refund')"))
+say(answer=run(db,"SELECT value,question_detail_model,question_detail_url,error_message FROM thinkthen_details('attention?', 'refund')"))
 ''',env)
         if explicit:
-            expect(json.loads(got["answer"][0][0])["meta"]["model"],"override","model overrides selected setup")
+            expect(got["answer"][0][1],"override","model overrides selected setup")
         else:
-            assert "profile small" in got["answer"]
+            assert "profile small" in got["answer"][0][3]
         expect(backend.count(),int(explicit),"setup profile and explicit override")
     backend.close()
 

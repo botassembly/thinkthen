@@ -2,7 +2,7 @@
 //! connection-owned packed answer slots.
 
 use std::collections::{HashMap, HashSet, VecDeque};
-use std::ffi::{CStr, c_int};
+use std::ffi::CStr;
 use std::sync::Arc;
 
 use rusqlite::ffi::sqlite3;
@@ -40,6 +40,7 @@ struct Slot {
 #[derive(Debug, Default)]
 pub(crate) struct Store {
     slots: VecDeque<Slot>,
+    pub(crate) receipts: crate::native::Cache,
 }
 
 impl Store {
@@ -224,7 +225,7 @@ fn answer_columns(
 
 fn scan(
     db: *mut sqlite3,
-    mask: c_int,
+    mask: u64,
     filters: &Filters<'_>,
     store: &std::sync::Mutex<Store>,
     kind: &'static str,
@@ -279,9 +280,7 @@ fn scan(
     let packed_text = string(packed, "the keyed records")?;
     string(settings, "the settings")?;
     let controls = call_settings(ValueRef::Text(settings))?;
-    let rows = if kind == "thinkthen_rank_set" {
-        crate::rank_set::ranked(db, &question_text, &packed_text, ValueRef::Text(settings))?
-    } else if verb == For::Rank {
+    let rows = if verb == For::Rank {
         ranked(db, &question_text, &packed_text, controls)?
     } else {
         answered(db, &question_text, &packed_text, controls, kind, verb)?
@@ -452,7 +451,7 @@ macro_rules! many {
             }
             fn scan(
                 db: *mut sqlite3,
-                mask: c_int,
+                mask: u64,
                 filters: &Filters<'_>,
                 store: &std::sync::Mutex<Store>,
             ) -> Result<Scan, Failure> {
@@ -467,4 +466,4 @@ many!(ChooseMany, "thinkthen_choose_many", c"CREATE TABLE x(key TEXT, value TEXT
 many!(ScoreMany, "thinkthen_score_many", c"CREATE TABLE x(key TEXT, value REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Score);
 many!(TagMany, "thinkthen_tag_many", c"CREATE TABLE x(key TEXT, value TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Tag);
 many!(Rank, "thinkthen_rank", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank);
-many!(RankSetTable, "thinkthen_rank_set", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question_name TEXT, facts TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank, 5);
+many!(RankSetTable, "thinkthen_rank_set", c"CREATE TABLE x(key TEXT, rank INTEGER, probability REAL, question_name TEXT, question HIDDEN, keyed_json HIDDEN, settings HIDDEN, lookup_key HIDDEN)", For::Rank, 4);

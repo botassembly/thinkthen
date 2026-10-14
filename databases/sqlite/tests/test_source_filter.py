@@ -12,8 +12,7 @@ paths=json.dumps([str(b),str(a),str(b)])
 db=connect();db.execute('SELECT thinkthen_configure(?)',[json.dumps({'cache':False})])
 sql='SELECT file,first_line,last_line,ordinal,value,probability,requests_sent,records,call_id,answer_id FROM thinkthen_filter(?,?) WHERE files_only=1 AND batch=2'
 source=run(db,sql,('Fits?',paths))
-feed=json.loads(db.execute('SELECT thinkthen_filter_complete(?,?,?)',
-    ['Fits?',json.dumps({'files':{'paths':[str(b),str(a),str(b)]}}),json.dumps({'batch':2})]).fetchone()[0])
+feed=complete(db, 'filter', *['Fits?', json.dumps({'files': {'paths': [str(b), str(a), str(b)]}}), json.dumps({'batch': 2})])
 assert 'error' not in feed['native'],feed
 say(source=source,files=[str(b),str(a)],feed_rows=len(feed['native']['value']),
     feed_ordinals=feed['ordinals'],feed_records=feed['native']['facts']['records'],

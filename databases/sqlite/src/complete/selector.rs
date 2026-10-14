@@ -4,7 +4,7 @@ use thinkthen::{
     RequestQuestion,
 };
 
-pub(super) fn admit(verb: &str, source: &str) -> Result<Option<AdmittedRequest>, Error> {
+pub(crate) fn admit(verb: &str, source: &str) -> Result<Option<AdmittedRequest>, Error> {
     if !source.starts_with('@') {
         return Ok(None);
     }

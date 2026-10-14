@@ -45,7 +45,7 @@ pub(crate) trait Table {
     /// The default scan copies only the few scalar hidden arguments.
     fn scan(
         db: *mut sqlite3,
-        mask: c_int,
+        mask: u64,
         filters: &Filters<'_>,
         _: &Mutex<Store>,
     ) -> Result<Scan, Failure> {
@@ -97,7 +97,7 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
     if bound.iter().take(T::REQUIRED).any(Option::is_none) {
         return Ok(false);
     }
-    let (mut mask, mut place): (c_int, c_int) = (0, 0);
+    let (mut mask, mut place): (u64, c_int) = (0, 0);
     for (column, at) in bound.iter().enumerate() {
         if let Some((at, visible_lookup)) = at {
             place += 1;
@@ -107,14 +107,14 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
             usage.set_omit(!visible_lookup);
         }
     }
-    info.set_idx_num(mask);
+    info.set_idx_str(&mask.to_string());
     info.set_estimated_cost(100.0);
     Ok(true)
 }
 
 /// The argument values `plan` bound, with NULL for an argument not given.
 pub(crate) fn arguments<T: Table + ?Sized>(
-    mask: c_int,
+    mask: u64,
     filters: &Filters<'_>,
 ) -> Result<Vec<Value>, Failure> {
     let mut given = 0;

@@ -17,6 +17,7 @@ use rusqlite::vtab::{
 };
 
 use crate::many::{ChooseMany, DecideMany, Rank, RankSetTable, ScoreMany, Store, TagMany};
+use crate::native::{self, Native};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{Registration, budget, guard, scalars};
 
@@ -177,21 +178,21 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         c"thinkthen_filter",
         &FILTER,
         Some(Arc::clone(&store)),
-        crate::source_filter::Filter::ARGUMENTS,
+        Native::<crate::source_filter::Filter>::ARGUMENTS,
         "Filter file evidence into typed file, location, answer and owning call columns.",
     )?;
     connection.create_module(
         c"thinkthen_recognize",
         &RECOGNIZE,
         Some(Arc::clone(&store)),
-        Recognizer::ARGUMENTS,
+        Native::<Recognizer>::ARGUMENTS,
         "Find named entities in text and return their kinds and locations.",
     )?;
     connection.create_module(
         c"thinkthen_relate",
         &RELATE,
         Some(Arc::clone(&store)),
-        Relater::ARGUMENTS,
+        Native::<Relater>::ARGUMENTS,
         "Find relations between the supplied entities and return relation rows.",
     )?;
     connection.create_module(
@@ -226,16 +227,17 @@ fn init(connection: Connection, mode: Registration) -> rusqlite::Result<bool> {
         c"thinkthen_rank",
         &RANK,
         Some(Arc::clone(&store)),
-        Rank::ARGUMENTS,
+        Native::<Rank>::ARGUMENTS,
         "Rank keyed records by their judgments.",
     )?;
     connection.create_module(
         c"thinkthen_rank_set",
         &RANK_SET,
-        Some(store),
-        RankSetTable::ARGUMENTS,
+        Some(Arc::clone(&store)),
+        Native::<RankSetTable>::ARGUMENTS,
         "Rank keyed records across an ordered question set.",
     )?;
+    register_native(&connection, &store)?;
     connection.finish()?;
     pin();
     Ok(false)
@@ -301,15 +303,54 @@ unsafe fn load(
     }
 }
 
-const FILTER: Module<'static, Tab<crate::source_filter::Filter>> = Module::eponymous_only_module();
-const RECOGNIZE: Module<'static, Tab<Recognizer>> = Module::eponymous_only_module();
-const RELATE: Module<'static, Tab<Relater>> = Module::eponymous_only_module();
+fn register_native(
+    connection: &crate::catalog::Catalog<'_>,
+    store: &Arc<Tables>,
+) -> rusqlite::Result<()> {
+    macro_rules! register {
+        ($name:literal, $kind:ty, $module:ident) => {
+            connection.create_module(
+                $name,
+                &$module,
+                Some(Arc::clone(store)),
+                Native::<$kind>::ARGUMENTS,
+                "Read native answers or named typed receipt projections.",
+            )?;
+        };
+    }
+    register!(c"thinkthen_decide", native::Decide, DECIDE);
+    register!(c"thinkthen_choose", native::Choose, CHOOSE);
+    register!(c"thinkthen_tag", native::Tag, TAG);
+    register!(c"thinkthen_score", native::Score, SCORE);
+    register!(c"thinkthen_find", native::Find, FIND);
+    register!(c"thinkthen_annotate", native::Annotate, ANNOTATE);
+    register!(c"thinkthen_details", native::Details, DETAILS);
+    register!(
+        c"thinkthen_details_images",
+        native::DetailsImages,
+        DETAILS_IMAGES
+    );
+    Ok(())
+}
+const DECIDE: Module<'static, Tab<Native<native::Decide>>> = Module::eponymous_only_module();
+const CHOOSE: Module<'static, Tab<Native<native::Choose>>> = Module::eponymous_only_module();
+const TAG: Module<'static, Tab<Native<native::Tag>>> = Module::eponymous_only_module();
+const SCORE: Module<'static, Tab<Native<native::Score>>> = Module::eponymous_only_module();
+const FIND: Module<'static, Tab<Native<native::Find>>> = Module::eponymous_only_module();
+const ANNOTATE: Module<'static, Tab<Native<native::Annotate>>> = Module::eponymous_only_module();
+const DETAILS_IMAGES: Module<'static, Tab<Native<native::DetailsImages>>> =
+    Module::eponymous_only_module();
+const DETAILS: Module<'static, Tab<Native<native::Details>>> = Module::eponymous_only_module();
+const FILTER: Module<'static, Tab<Native<crate::source_filter::Filter>>> =
+    Module::eponymous_only_module();
+const RECOGNIZE: Module<'static, Tab<Native<Recognizer>>> = Module::eponymous_only_module();
+const RELATE: Module<'static, Tab<Native<Relater>>> = Module::eponymous_only_module();
 const DECIDE_MANY: Module<'static, Tab<DecideMany>> = Module::eponymous_only_module();
 const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_module();
 const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
 const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
-const RANK: Module<'static, Tab<Rank>> = Module::eponymous_only_module();
-const RANK_SET: Module<'static, Tab<RankSetTable>> = Module::eponymous_only_module();
+const RANK: Module<'static, Tab<Native<Rank>>> = Module::eponymous_only_module();
+const RANK_SET: Module<'static, Tab<Native<RankSetTable>>> = Module::eponymous_only_module();
 
 /// Table registration state owned by one connection, beside its shared rows.
 #[derive(Debug)]
@@ -394,9 +435,12 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     fn filter(
         &mut self,
         mask: c_int,
-        _: Option<&str>,
+        selection: Option<&str>,
         filters: &Filters<'_>,
     ) -> rusqlite::Result<()> {
+        let mask = selection
+            .map_or(Ok(mask as u64), str::parse::<u64>)
+            .map_err(|_| rusqlite::Error::InvalidQuery)?;
         let db = self.db;
         let scan = guard(T::NAME, || T::scan(db, mask, filters, &self.store))?;
         self.rows = scan.rows;

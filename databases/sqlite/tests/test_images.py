@@ -75,7 +75,7 @@ say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?, NULL)', 
         expect(replay['native']['facts']['requests_sent'], 0, 'strict replay sends nothing')
         invalid = child(STORED.replace('images.sqlite', 'complete-invalid.sqlite') + '''
 say(nulls=[run(db, 'SELECT thinkthen_decide_complete(?, ?, ?)', args) for args in [(None,b'bad','bad'),('@unread-question.json',None,'bad')]],
- bad=[json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', value)).fetchone()[0])['native']['error']['kind'] for value in [b'bad', packed+b'x']])
+ bad=[complete(db, 'decide', *('Is red visible?', value))['native']['error']['kind'] for value in [b'bad', packed+b'x']])
 ''', env)
         expect(invalid['nulls'], [[[None]], [[None]]], 'NULL ignores malformed partners')
         expect(invalid['bad'], ['usage', 'usage'], 'bad tagged collections refuse')
@@ -84,7 +84,7 @@ say(nulls=[run(db, 'SELECT thinkthen_decide_complete(?, ?, ?)', args) for args i
         backend.reply = b'{"error":"private-backend-body"}'
         failed = child(STORED.replace('images.sqlite', 'complete-failed.sqlite') + '''
 db.execute('SELECT thinkthen_configure(?)', ('{"model":"d1","cache":false,"max_retries":0}',))
-say(value=json.loads(db.execute('SELECT thinkthen_decide_complete(?, ?)', ('Is red visible?', packed)).fetchone()[0]))
+say(value=complete(db, 'decide', *('Is red visible?', packed)))
 ''', env)['value']
         expect(failed['native']['error']['kind'], 'backend', 'backend failure keeps its complete kind')
         assert 'private-backend-body' not in json.dumps(failed)

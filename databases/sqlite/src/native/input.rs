@@ -1,0 +1,214 @@
+//! Named typed fields compose native collection data before shared admission.
+use super::Arguments;
+use crate::{Failure, complete_native, named, question};
+use rusqlite::types::ValueRef;
+
+pub(super) fn identity(verb: &str, args: &Arguments) -> Result<String, Failure> {
+    let mut parts = vec![verb.to_owned()];
+    for (name, value) in args.names.iter().zip(&args.values) {
+        if name != "projection" {
+            parts.push(format!("{name}:{value:?}"));
+        }
+    }
+    if inputs(args).is_ok()
+        && let Ok(source) = source(args)
+    {
+        if let Some(stamp) = question::stamp(source.as_bytes()) {
+            parts.push(format!("{stamp:?}"));
+        }
+        if let Some(name) = source.strip_prefix("@@")
+            && let Ok(reference) = thinkthen::QuestionFileReference::named(name)
+            && let Ok(metadata) = std::fs::metadata(reference.path())
+        {
+            parts.push(format!(
+                "{:?}:{:?}:{}",
+                reference.path(),
+                metadata.modified(),
+                metadata.len()
+            ));
+        }
+    }
+    Ok(parts.join("\0"))
+}
+
+pub(super) fn source(args: &Arguments) -> Result<String, Failure> {
+    for name in ["request_question", "question"] {
+        if let Some(source) = args.text(name)? {
+            return Ok(source);
+        }
+    }
+    if let Some(source) = args.text("kinds")? {
+        if source.starts_with('{') || source.starts_with('@') {
+            return Ok(source);
+        }
+        let kinds = source.split(',').map(str::trim).collect::<Vec<_>>();
+        return Ok(serde_json::json!({"recognize":{"kinds":kinds}}).to_string());
+    }
+    if args.names.iter().any(|name| name == "body") {
+        return Ok("{}".into());
+    }
+    Err(Failure::usage("the native table needs a question"))
+}
+
+pub(super) fn settings(args: &Arguments) -> Result<thinkthen::Settings, Failure> {
+    let source = args.text("settings")?.unwrap_or_else(|| "{}".into());
+    let values = [
+        "model",
+        "context",
+        "batch",
+        "deadline_ms",
+        "threshold",
+        "true_reading",
+        "false_reading",
+        "options",
+        "levels",
+        "labels",
+        "none",
+    ]
+    .map(|name| args.value(name));
+    let settings = named::settings(source.as_bytes(), &values)?;
+    question::call_settings(ValueRef::Text(&settings))
+}
+
+pub(super) fn inputs(args: &Arguments) -> Result<complete_native::Inputs, Failure> {
+    let image = match args.value("images") {
+        ValueRef::Null => args.value("text"),
+        value => value,
+    };
+    if let ValueRef::Blob(bytes) = image {
+        let mut inputs = complete_native::Inputs::from_record(crate::images::complete_record(
+            bytes,
+            args.text("image_text")?,
+        )?);
+        inputs.attempts = args.flag("attempts")?;
+        inputs.incremental = args.flag("incremental")?;
+        inputs.cancelled = args.flag("cancelled")?;
+        return Ok(inputs);
+    }
+    let records = args.text("records")?;
+    let paths = args.text("request_paths")?;
+    let mut fields = Vec::new();
+    if let Some(records) = records {
+        fields.push(format!("\"records\":{records}"));
+    }
+    if let Some(paths) = paths {
+        let mut file = vec![format!("\"paths\":{paths}")];
+        let mut reading = Vec::new();
+        text_field(args, "request_unit", "unit", &mut reading)?;
+        integer_field(args, "request_window", "window", &mut reading)?;
+        let mut options = vec![format!("\"reading\":{{{}}}", reading.join(","))];
+        text_field(args, "request_media", "media", &mut options)?;
+        file.push(format!("\"options\":{{{}}}", options.join(",")));
+        text_field(args, "request_format", "format", &mut file)?;
+        fields.push(format!("\"files\":{{{}}}", file.join(",")));
+    }
+    if fields.is_empty() {
+        let text = args.text("text")?.or(args.text("body")?);
+        let records = if let Some(text) = text {
+            serde_json::json!([{"text":text}]).to_string()
+        } else if let Some(keyed) = args.text("keyed_json")? {
+            let rows = crate::many::keyed(&keyed)?
+                .into_iter()
+                .map(|(_, text)| serde_json::json!({"text":text}))
+                .collect::<Vec<_>>();
+            serde_json::Value::Array(rows).to_string()
+        } else if let Some(paths) = args.text("paths")? {
+            fields.push(format!("\"files\":{{\"paths\":{paths}}}"));
+            String::new()
+        } else {
+            return Err(Failure::usage("supply native records, text or file paths"));
+        };
+        if fields.is_empty() {
+            fields.push(format!("\"records\":{records}"));
+        }
+    }
+    let mut reading = Vec::new();
+    for (name, field) in [
+        ("record_fields", "fields"),
+        ("record_context_field", "context"),
+        ("record_options_field", "options"),
+        ("record_seed_spans_field", "seed_spans"),
+        ("record_examples_field", "examples"),
+    ] {
+        if name == "record_fields" {
+            if let Some(value) = args.text(name)? {
+                reading.push(format!("\"{field}\":{value}"));
+            }
+        } else {
+            text_field(args, name, field, &mut reading)?;
+        }
+    }
+    if !reading.is_empty() {
+        fields.push(format!("\"reading\":{{{}}}", reading.join(",")));
+    }
+    for name in ["incremental", "attempts", "cancelled"] {
+        fields.push(format!("\"{name}\":{}", args.flag(name)?));
+    }
+    complete_native::Inputs::parse_request(&format!("{{{}}}", fields.join(",")))
+        .map_err(Failure::from)
+}
+
+fn text_field(
+    args: &Arguments,
+    name: &str,
+    field: &str,
+    output: &mut Vec<String>,
+) -> Result<(), Failure> {
+    if let Some(value) = args.text(name)? {
+        output.push(format!("\"{field}\":{}", serde_json::json!(value)));
+    }
+    Ok(())
+}
+fn integer_field(
+    args: &Arguments,
+    name: &str,
+    field: &str,
+    output: &mut Vec<String>,
+) -> Result<(), Failure> {
+    if let Some(value) = args.number(name)? {
+        output.push(format!("\"{field}\":{value}"));
+    }
+    Ok(())
+}
+
+pub(super) fn options(args: &Arguments) -> Result<thinkthen::RequestOptions, Failure> {
+    let mut fields = Vec::new();
+    text_field(args, "mode", "mode", &mut fields)?;
+    for name in ["snippet_pieces", "top", "max_requests_total"] {
+        integer_field(args, name, name, &mut fields)?;
+    }
+    for name in ["seed_spans", "examples", "stage_context"] {
+        if let Some(value) = args.text(name)? {
+            fields.push(format!("\"{name}\":{value}"));
+        }
+    }
+    match args.value("relation_threshold") {
+        ValueRef::Null => (),
+        ValueRef::Real(value) => fields.push(format!("\"relation_threshold\":{value}")),
+        ValueRef::Integer(value) => fields.push(format!("\"relation_threshold\":{value}")),
+        value => {
+            if let Some(value) = question::text(value, "relation_threshold")? {
+                fields.push(format!(
+                    "\"relation_threshold\":{}",
+                    serde_json::json!(value)
+                ));
+            }
+        }
+    }
+    fields.push(format!(
+        "\"files_only\":{}",
+        args.flag("request_files_only")?
+    ));
+    fields.push(format!("\"attempts\":{}", args.flag("attempts")?));
+    serde_json::from_str(&format!("{{{}}}", fields.join(",")))
+        .map_err(|error| Failure::usage(format!("invalid named request options: {error}")))
+}
+
+pub(super) fn keys(args: &Arguments) -> Result<Vec<String>, Failure> {
+    args.text("keyed_json")?
+        .map(|source| {
+            crate::many::keyed(&source).map(|rows| rows.into_iter().map(|(key, _)| key).collect())
+        })
+        .transpose()
+        .map(Option::unwrap_or_default)
+}

@@ -418,7 +418,7 @@ def main():
     parser.add_argument('--schema', type=Path, default=SCHEMA)
     parser.add_argument('--output', type=Path, default=OUTPUT)
     parser.add_argument('--inputs', action='store_true')
-    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift', 'postgresql'), default='csharp')
+    parser.add_argument('--target', choices=('csharp', 'cobol', 'c', 'r', 'zig', 'python', 'jvm', 'ruby', 'typescript', 'go', 'php', 'cpp', 'dart', 'ada', 'objc', 'swift', 'postgresql', 'sqlite'), default='csharp')
     parser.add_argument('--bridge', action='store_true')
     parser.add_argument('--operations', action='store_true')
     args = parser.parse_args()
@@ -448,6 +448,13 @@ def main():
         if failures:
             print('generation failed: ' + ', '.join(failures), file=sys.stderr)
         return int(bool(failures))
+    if args.target == 'sqlite':
+        if args.inputs or args.bridge or args.operations:
+            parser.error('SQLite emits receipt projections in one producer invocation')
+        command = [sys.executable, str(Path(__file__).parent / 'templates/sqlite.py')]
+        if args.check:
+            command.append('--check')
+        return subprocess.run(command, env=child_env(keep=(*CARGO, 'LANG', 'LC_ALL', 'TMPDIR'))).returncode
     if args.target == 'postgresql':
         if args.inputs or args.bridge or args.operations:
             parser.error('PostgreSQL emits results and functions in one producer invocation')

@@ -26,7 +26,7 @@ pub fn run(
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
             .push(
-                crate::complete_native::observations::event(&event)
+                observation(&event, request.request().call.function())
                     .unwrap_or_else(|error| crate::complete_native::failure(&error)),
             );
     };
@@ -80,6 +80,24 @@ pub fn run(
         .into_inner()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
     crate::complete_native::carrier(native, Value::Array(events))
+}
+
+fn observation(
+    event: &RecordObservation<'_>,
+    function: thinkthen::RequestFunction,
+) -> Result<Value, Error> {
+    let mut value = crate::complete_native::observations::event(event)?;
+    if matches!(event, RecordObservation::Question { .. }) {
+        let packet = thinkthen::RequestSessionResult::Observation {
+            function,
+            value: event.to_owned(),
+        };
+        let native: Value = serde_json::from_str(&packet.to_json()?).map_err(|_| defect())?;
+        if let Some(detail) = native.pointer("/value/detail") {
+            crate::complete_native::put(&mut value, "detail", detail.clone())?;
+        }
+    }
+    Ok(value)
 }
 
 pub fn definition(prepared: &Prepared) -> RequestDefinition {

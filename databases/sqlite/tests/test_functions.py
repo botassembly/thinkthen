@@ -30,7 +30,7 @@ assert ('thinkthen_functions', 0) in scalars
 for name, row in tables.items():
         hidden = connection.execute('SELECT count(*) FROM pragma_table_xinfo(?) WHERE hidden=1', (name,)).fetchone()[0]
         assert row['max_arity'] == hidden, (name, row, hidden)
-        assert 0 < row['min_arity'] <= row['max_arity']
+        assert 0 <= row['min_arity'] <= row['max_arity']
 assert json.loads(connection.execute('SELECT thinkthen_functions()').fetchone()[0]) == catalog
 connection.execute('CREATE VIEW discovery AS SELECT thinkthen_functions()')
 assert run(connection, 'SELECT * FROM discovery') == 'unsafe use of thinkthen_functions()'

@@ -132,7 +132,7 @@ def test_shared_settings_corpus() -> None:
                     packed = json.dumps({str(at): value for at, value in enumerate(step["records"])})
                     sql = "SELECT count(*) FROM thinkthen_decide_many('Is this a refund?', '" + packed.replace("'", "''") + "')"
                 elif "model" in step:
-                    sql = f"SELECT json_extract(thinkthen_details('Is this a refund?', '{step['text']}'), '$.meta.model')"
+                    sql = f"SELECT question_detail_model FROM thinkthen_details('Is this a refund?', '{step['text']}')"
                 else:
                     sql = f"SELECT thinkthen_decide('Is this a refund?', '{step['text']}')"
                 result = child(f"db = connect()\n"
@@ -170,7 +170,7 @@ invalid = [run(db, "SELECT thinkthen_configure(?)", (text,)) for text in
            ('{"batch":0}', '{"throttle":33}', '{"unknwon":1}', '{"batch":1,"batch":2}',
             '{"base_url":"http://"}', '{"max_estimated_input_tokens_total":1}',
             '{"usd_per_million_input":"0"}')]
-answer = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
+answer = run(db, "SELECT question_detail_model FROM thinkthen_details('Is it red?', 'a red door')")
 after = run(db, "SELECT thinkthen_configure('{}')")
 say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
 """, environment(backend))
@@ -181,7 +181,7 @@ say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
     expect(held["invalid"][-2],
            "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total (retryable: no)", "unimplemented host cap")
     expect(held["valid"], [['{"batch":1,"throttle":8,"model":"judge-b"}']], "the selected object")
-    expect(json.loads(held["answer"][0][0])["meta"]["model"], "judge-b", "prior selection survived")
+    expect(held["answer"][0][0], "judge-b", "prior selection survived")
     expect(held["after"], AFTER_BUILD, "late configuration")
     expect(backend.close(), 1, "only the valid call sent")
 
@@ -193,12 +193,12 @@ def test_zero_total_refuses_without_replacing_valid_configuration() -> None:
 db = connect()
 valid = run(db, "SELECT thinkthen_configure(?)", ('{"model":"judge-b","max_requests_total":null}',))
 zero = run(db, "SELECT thinkthen_configure(?)", ('{"max_requests_total":0}',))
-details = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
+details = run(db, "SELECT question_detail_model FROM thinkthen_details('Is it red?', 'a red door')")
 say(valid=valid, zero=zero, details=details)
 """, environment(backend))
     expect(held["valid"], [['{"model":"judge-b","max_requests_total":null}']], "null resets the total")
     expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more (retryable: no)", "zero refused")
-    expect(json.loads(held["details"][0][0])["meta"]["model"], "judge-b", "prior model survived")
+    expect(held["details"][0][0], "judge-b", "prior model survived")
     expect(backend.close(), 1, "only the valid configuration sent")
 
 
