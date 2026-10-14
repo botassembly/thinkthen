@@ -5,19 +5,22 @@ The development `thinkthen_dart` package provides one typed asynchronous caller.
 ```dart
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
-final engine = Engine.open();
-try {
-  final refundDecision = await engine.decide(
-    QuestionText(text: 'Does this ask for a refund?'),
-    InputText(text: 'Refund me please.'),
-  );
-  print(refundDecision.decideAnswer());
-} finally {
-  engine.close();
+Future<void> main() async {
+  final engine = Engine.open();
+  try {
+    final refund = await engine.decide(
+      QuestionText(text: 'Does the customer ask for a refund?'),
+      InputText(text: 'Please refund my order. It arrived broken.'),
+    );
+    final isRefund = refund.value;
+    final probability = refund.probability;
+    assert(isRefund == true);
+    assert(probability is ScalarProbability);
+  } finally { engine.close(); }
 }
 ```
 
-The ten named methods return `Future<OwnedCall>`. Generated classes retain typed answers, observations, row metadata and terminal facts. `Presence` distinguishes absence from present null. `rankAnswer()` returns input indexes in rank order as `List<BigInt>`; `filterAnswer()` returns accepted original values. Wide counters and caller integers remain exact `BigInt`; unknown output fields and arbitrary authored JSON remain present. Rust admits requests and owns file reading, image admission, cache identity, recording and replay. Use generated `InputSource` for files, `ImageFile` for image files, and `imageBytes` for `Uint8List` attachments.
+The ten named methods return typed `Future<CallResult<V, R>>` objects with `value`, `probability`, `results` and `facts`. `probability` is null or a closed numeric carrier: `ScalarProbability.value` is a double, `ListProbability.value` is a list of nullable doubles and `GroupProbability.value` is a list of those lists. Generated classes retain typed answers, observations, row metadata and terminal facts. `Presence` distinguishes absence from present null. Rank's `value` returns input indexes in rank order as `List<BigInt>`; Filter's `value` returns accepted original values. Wide counters and caller integers remain exact `BigInt`; unknown output fields and arbitrary authored JSON remain present. Rust admits requests and owns file reading, image admission, cache identity, recording and replay. Use generated `InputSource` for files, `ImageFile` for image files, and `imageBytes` for `Uint8List` attachments.
 
 `CallFailure` carries a generated error kind, retryability and owned typed facts. Terminal failures retain the owned call and its completed rows. An unresolved answer stays separate from a failed call. Reader failures use generated failure values; native diagnostics do not expose host exception text.
 

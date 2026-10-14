@@ -15,11 +15,25 @@ Add `--maven` to consume the assembled versioned Maven files in that installed c
 The ten functions share one typed API in each language. The recommended calls accept generated `Inputs.RequestQuestion`, `Inputs.RequestInput`, `Inputs.RequestOptions` and `Inputs.EngineSettings` builders. The shared Request schema supplies question selectors, authored definitions, sources, images, records and controls. Native code supplies defaults and rejects invalid grammar. Setting a member to null preserves explicit null; `omitMember()` removes it. Ordered lists and originals retain their values. Java and Kotlin use their ordinary lists and maps for original JSON data; Scala converts typed list arguments with `asJava`, for every nested original value. Kotlin and Scala return their own call results with native collections and nullable or optional scalar answers. Calls and engine settings accept only generated input carriers; arbitrary original JSON still accepts ordinary language values.
 
 ```java
-try (var engine = new thinkthen.Engine(new thinkthen.Inputs.EngineSettings())) {
-    var call = engine.decide(
-        new thinkthen.Inputs.RequestQuestionText().text("Does the writer ask for a refund?"),
-        new thinkthen.Inputs.RequestInputText().text("Please refund my order."));
-    var answer = call.join().decide();
+import thinkthen.Engine;
+import thinkthen.Inputs.RequestInputText;
+import thinkthen.Inputs.RequestQuestionText;
+
+public class DeveloperExample {
+    public static void main(String[] args) {
+        var question = new RequestQuestionText()
+            .text("Does the customer ask for a refund?");
+        var broken = new RequestInputText().text(
+            "Please refund my order. It arrived broken.");
+
+        try (var tt = new Engine()) {
+            var refund = tt.decide(question, broken).join();
+            var isRefund = refund.value();
+            var probability = refund.probability();
+            assert probability != null;
+            assert Boolean.TRUE.equals(isRefund);
+        }
+    }
 }
 ```
 
@@ -27,7 +41,7 @@ The shipped `examples/` sources call all ten functions with typed questions and 
 
 Run `sh libraries/jvm/check.sh` for the focused stable installed consumers. It builds the package through the ordinary builder and checks all three languages with counted loopback requests. `THINKTHEN_JVM_NATIVE` supplies an existing matching native library; otherwise the check builds the C library offline. `THINKTHEN_ARTIFACT` selects an already built stable archive. `THINKTHEN_TEST_PROFILE=full` additionally runs every required shared case through the installed named Java, Kotlin and Scala calls; `THINKTHEN_PORTABLE_BATCH=1` also selects them. This full campaign belongs to the release suite. For a focused development check, run `python3 libraries/jvm/tests/public_types.py --jars /absolute/built/jars --out /absolute/scratch --case CASE_ID`; selectors name existing shared cases and report only that subset. Final platform and distribution qualification remain required.
 
-Kotlin suspend functions and Scala Future handles return their own `OwnedCall` wrappers. Their answer methods return Kotlin lists and nullable answers or Scala lists and `Option` answers. Detailed `Results` getters and `Presence` retain omission, explicit null and values. Rank returns original zero-based indexes; filter returns original inputs, including explicit JSON null. `Questions` builds small authored questions and ordered description options. Native packet and error views are copied into independent values before their owners are freed. Both facades offer `plan`, `execute`, caller-owned sessions and explicit cancellation.
+The ten Java futures, Kotlin suspend functions and Scala Future handles return typed `CallResult` objects with `value`, `probability`, `results` and `facts`. Kotlin uses properties and ordinary lists; Scala uses properties, ordinary lists and `Option` for missing scalar answers. Java uses getters and nullable `BigDecimal` probabilities. Record inputs retain input order. Detailed `Results` getters and `Presence` retain omission, explicit null and values. Rank returns original zero-based indexes; filter returns original inputs, including explicit JSON null. `Questions` builds small authored questions and ordered description options. Native packet and error views are copied into independent values before their owners are freed. Both facades offer `plan`, `execute`, caller-owned sessions and explicit cancellation.
 
 Java, Kotlin and Scala provide `startSession(Inputs.Request)` for caller-owned feeds. One executor per engine handles blocking native work and remains alive until its last owned session closes. `push` waits for native input room on a platform worker. `nextPacket` blocks for one owned packet; `nextPacket(true)` drains final facts after cancellation. `tryRead` separates a pending read from explicit end. `waitReady` observes readiness without consuming a packet, using bounded native waits on the same worker until readiness or cancellation. Scala feed execution accepts an ordinary Scala iterable. `finish` closes intake or records a typed reader failure. `close` cancels and releases the owner after outstanding native calls return. `execute(request, feed)` transfers descriptors while the reader drains packets.
 

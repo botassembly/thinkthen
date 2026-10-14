@@ -7,14 +7,13 @@ $client = new Client();
 $kinds = ['person', 'product', 'place'];
 $text = 'Sam Patel says his Kindle arrived broken '
     . 'in Denver.';
-$ask = [
-    'version' => 1,
-    'recognize' => [
-        'kinds' => array_fill_keys($kinds, null),
-    ],
-];
+$ask = new ThinkThen\Inputs\RecognizeQuestion(
+    new ThinkThen\Inputs\RecognitionSpec(
+        kinds: array_fill_keys($kinds, null),
+    ),
+);
 $facts = $client->recognize($ask, $text)
-    ->recognizeAnswer()[0]->value;
+    ->value;
 $names = array_map(
     fn ($one) => [$one->text, $one->kind],
     $facts->entities,

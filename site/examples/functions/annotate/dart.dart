@@ -6,7 +6,9 @@ Future<void> main() async {
   final call = await engine.annotate(
     QuestionFile(path: 'form.json'),
     InputRecords(
-      items: [Item(original: Presence.present(OriginalText(text: report)))],
+      items: [Item(original: Presence.present(
+          OriginalText(text: report),
+        ))],
     ),
   );
   final triage = (call.value as List).single;

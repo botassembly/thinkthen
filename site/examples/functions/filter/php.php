@@ -12,6 +12,6 @@ $reviews = [
     'The strap snapped on day two.',
 ];
 $complaints = $client->filter($question, $reviews)
-    ->filterAnswer();
+    ->value;
 assert($complaints === [$reviews[1], $reviews[3]]);
 $client->close();

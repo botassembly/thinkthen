@@ -15,13 +15,17 @@ Future<void> main() async {
     InputRecords(
       items: [
         for (final review in reviews)
-          Item(original: Presence.present(OriginalText(text: review))),
+          Item(original: Presence.present(
+            OriginalText(text: review),
+          )),
       ],
     ),
   );
   final complaints = call.value;
   assert(
-    const ListEquality<Object?>().equals(complaints, [reviews[1], reviews[3]]),
+    const ListEquality<Object?>().equals(
+      complaints, [reviews[1], reviews[3]],
+    ),
   );
   engine.close();
 }

@@ -14,7 +14,9 @@ Future<void> main() async {
     InputUnits(
       items: [
         for (final line in policy)
-          Item(original: Presence.present(OriginalText(text: line))),
+          Item(original: Presence.present(
+            OriginalText(text: line),
+          )),
       ],
     ),
   );

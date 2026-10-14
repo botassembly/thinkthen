@@ -16,7 +16,9 @@ Future<void> main() async {
     InputRecords(
       items: [
         for (final message in inbox)
-          Item(original: Presence.present(OriginalText(text: message))),
+          Item(original: Presence.present(
+            OriginalText(text: message),
+          )),
       ],
     ),
   );
@@ -27,6 +29,9 @@ Future<void> main() async {
     BigInt.from(2),
     BigInt.from(0),
   ];
-  assert(const ListEquality<Object?>().equals(byUrgency, expected));
+  assert(
+    const ListEquality<Object?>()
+        .equals(byUrgency, expected),
+  );
   engine.close();
 }

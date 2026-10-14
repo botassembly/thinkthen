@@ -5,9 +5,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 ```sh
 composer require botassembly/thinkthen
 ```
-
 Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
-
 ```php
 <?php
 require 'vendor/autoload.php';
@@ -20,15 +18,19 @@ $teams = ['billing' => 'Invoices, fees, and refunds.',
 $client = new ThinkThen\Client();
 try {
     foreach ($refunds as $text) {
-        $refund = $client->decide('Does the customer ask for a refund?', $text)->decideAnswer();
-        echo json_encode($refund), "\n";
+        $refund = $client->decide('Does the customer ask for a refund?', $text);
+        $isRefund = $refund->value; $refundProbability = $refund->probability;
+        assert(is_bool($isRefund) && is_float($refundProbability));
     }
     foreach ($messages as $text) {
-        $team = $client->choose(['choose' => 'Which team owns this?', 'options' => $teams], $text)->chooseAnswer();
-        echo $team, "\n";
+        $team = $client->choose(new ThinkThen\Inputs\ChooseQuestion(choose: 'Which team owns this?', options: $teams), $text);
+        $owner = $team->value; $ownerProbability = $team->probability;
+        assert(in_array($owner, array_keys($teams), true));
     }
 } finally { $client->close(); }
 ```
+
+`value` is the answer and `probability` gives its odds. `results` keeps each record and `facts` keeps call observations. Not sure is null.
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

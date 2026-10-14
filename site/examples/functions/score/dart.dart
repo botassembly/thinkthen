@@ -9,7 +9,9 @@ Future<void> main() async {
       'and customers cannot pay.\n';
   final call = await engine.score(
     DefinedQuestion(
-      value: Definition.read({'score': question, 'levels': levels}),
+      value: Definition.read(
+        {'score': question, 'levels': levels},
+      ),
     ),
     InputText(text: outage),
   );
