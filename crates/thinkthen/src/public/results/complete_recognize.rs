@@ -46,13 +46,6 @@ impl CompleteRecognized {
     pub const fn source_value(&self) -> Option<&super::SourceRecognition> {
         self.source_value.as_ref()
     }
-    pub(crate) fn serialize_input<S: Serializer, T: Serialize>(
-        &self,
-        input: Option<&T>,
-        serializer: S,
-    ) -> Result<S::Ok, S::Error> {
-        self.serialize_occurrence(input, None, serializer)
-    }
     pub(crate) fn serialize_occurrence<S: Serializer, T: Serialize>(
         &self,
         input: Option<&T>,
@@ -114,7 +107,7 @@ impl fmt::Debug for CompleteRecognized {
 
 impl Serialize for CompleteRecognized {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        self.serialize_input::<S, ()>(None, serializer)
+        self.serialize_occurrence::<S, ()>(None, None, serializer)
     }
 }
 
