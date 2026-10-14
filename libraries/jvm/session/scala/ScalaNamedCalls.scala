@@ -147,11 +147,11 @@ new CallResult(native, native.value().asScala.toList.map(item0 => item0), None, 
 }
 final def score(question: Inputs.RequestQuestion, input: Inputs.RequestInputFeed): Call[CallResult[List[java.math.BigDecimal],Option[Nothing],Results.AtomicDouble]] = score(question, input, None)
 final def score(question: Inputs.RequestQuestion, input: Inputs.RequestInputFeed, options: Inputs.RequestOptions): Call[CallResult[List[java.math.BigDecimal],Option[Nothing],Results.AtomicDouble]] = score(question, input, Some(options))
-final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions]): Call[CallResult[List[Option[Any]],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = run(namedEngine.filter(question, input, options.orNull)) { native =>
-new CallResult(native, native.value().asScala.toList.map(item0 => Option(item0)), native.probability().asScala.toList.map(item0 => Option(item0)), native.results().asScala.toList, native.facts())
+final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions]): Call[CallResult[List[Any],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = run(namedEngine.filter(question, input, options.orNull)) { native =>
+new CallResult(native, native.value().asScala.toList.map(item0 => item0), native.probability().asScala.toList.map(item0 => Option(item0)), native.results().asScala.toList, native.facts())
 }
-final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call[CallResult[List[Option[Any]],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = filter(question, input, None)
-final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call[CallResult[List[Option[Any]],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = filter(question, input, Some(options))
+final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput): Call[CallResult[List[Any],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = filter(question, input, None)
+final def filter(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Inputs.RequestOptions): Call[CallResult[List[Any],List[Option[java.math.BigDecimal]],Results.AtomicBoolean]] = filter(question, input, Some(options))
 final def rank(question: Inputs.RequestQuestion, input: Inputs.RequestInput, options: Option[Inputs.RequestOptions]): Call[CallResult[List[java.math.BigInteger],List[Option[java.math.BigDecimal]],Results.AtomicNonZeroUsize]] = run(namedEngine.rank(question, input, options.orNull)) { native =>
 new CallResult(native, native.value().asScala.toList.map(item0 => item0), native.probability().asScala.toList.map(item0 => Option(item0)), native.results().asScala.toList, native.facts())
 }

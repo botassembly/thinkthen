@@ -94,7 +94,9 @@ def answers(definitions):
         elif function == 'rank': odds_expr = 'row.answer() instanceof AnswerYesNo odds ? odds.probability() : null'
         elif function == 'relate': odds_expr = 'row.value().stream().map(RelatedEntityEdge::probability).toList()'
         else: odds_expr = 'recognitionProbabilities(row)'
-        if function == 'find': odds_expr = f'optional(row.index()) == null ? null : ({odds_expr})'
+        if spec.get('selection_path'):
+            selected = member(spec['selection_path'][-1])
+            odds_expr = f'optional(row.{selected}()) == null ? null : ({odds_expr})'
         if spec.get('resolution'):
             odds_expr = f'resolved(call, {json.dumps(function)}, optional(row.index())) ? ({odds_expr}) : null'
 
@@ -203,6 +205,8 @@ def facade_calls(definitions, language, results):
             schema = spec['aggregate_value']
             if spec['receipt_payload'].get('type') == 'array': schema = schema['items']
             value_nil = nullable(schema, results) or v == 'Object' or v == 'List<Object>'
+            if language == 'scala' and spec['call_shape'] == 'collection' and schema is True:
+                value_nil = False
             odds_nil = spec['probability_mode'] != 'null'
             hv, hp, hr = host_type(v, value_nil), host_type(p, odds_nil), 'Results.' + r
             result = f'CallResult<{hv},{hp},{hr}>' if language == 'kotlin' else f'CallResult[{hv},{hp},{hr}]'

@@ -18,7 +18,6 @@ suspend fun main() = KotlinEngine().use { tt ->
             RequestItem().original(
                 RequestOriginalText().text(text))
         })
-    val refundDeadline = tt.find(question, records).find()
-        .value().value()
+    val refundDeadline = tt.find(question, records).value
     check(refundDeadline == policy[1])
 }

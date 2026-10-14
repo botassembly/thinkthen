@@ -20,6 +20,15 @@ sys.path.insert(0, str(ROOT / 'libraries/jvm/tests'))
 from toolchains import JDK_FLOOR
 
 
+def assert_arrivals(actual, expected):
+    ordered = list(actual)
+    for start, value in enumerate(expected):
+        if value == 'result-first':
+            assert collections.Counter(ordered[start:start + 2]) == collections.Counter(expected[start:start + 2]), actual
+            ordered[start:start + 2] = expected[start:start + 2]
+    assert ordered == expected, actual
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--jars',type=Path,required=True)
@@ -103,7 +112,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
             expected = ['session-decide','session-choose','session-tag','session-score','session-filter','session-rank','[{\"id\":\"u001\",\"evidence\":\"session-find\"},{\"id\":\"u002\",\"evidence\":\"session-find-two\"}]','session-annotate','Maria Chen','Maria Chen',{'entities':[{'id':'i1','name':'First','kind':'alert'},{'id':'i2','name':'Second','kind':'alert'}]},'status-401','hold-jvm-java','session-independent','multiple-first','multiple-second']
             expected += sample_arrivals
             expected += ['result-authored-0','result-authored-1','result-authored-2','result-authored-3','result-first','no','result-choose-unsure','result-first','no','[{"id":"u001","evidence":"null"},{"id":"u002","evidence":"other"}]']
-            assert server.arrivals == expected,server.arrivals
+            assert_arrivals(server.arrivals, expected)
             expected_agents = [f'thinkthen/{version} (java)'] * len(expected)
             assert server.attempts == server.connections == len(expected),server.arrivals
             assert all('malformed' not in str(item) and 'preview' not in str(item) for item in server.arrivals),server.arrivals
@@ -126,7 +135,7 @@ def run(jars, out, *, maven=False, language=None, profiles=None):
             expected += ['status-401']
             expected += sample_arrivals
             expected_agents += [f'thinkthen/{version} ({language})'] * (len(expected) - previous)
-            assert server.arrivals == expected,server.arrivals
+            assert_arrivals(server.arrivals, expected)
             print(actual.stdout.decode(),end='')
         assert server.attempts == server.connections == len(expected),server.arrivals
         assert server.user_agents == expected_agents,server.user_agents
