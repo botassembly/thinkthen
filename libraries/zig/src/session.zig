@@ -127,8 +127,8 @@ pub const Session = struct {
         }
     }
 };
-pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: anytype) !Session {
-    const request = try tt.Request.init(engine.allocator, @tagName(function), arguments.question, tt.calls.nativeInput(arguments.input), arguments.options);
+pub fn startNamed(engine: *tt.Engine, function: tt.inputs.RequestFunction, arguments: struct { question: tt.inputs.RequestQuestion, input: tt.inputs.RequestInput, options: ?tt.inputs.RequestOptions = null }) !Session {
+    const request = try tt.Request.init(engine.allocator, @tagName(function), arguments.question, arguments.input, arguments.options);
     defer request.deinit();
     return request.start(engine);
 }

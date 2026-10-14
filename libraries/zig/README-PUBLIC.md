@@ -9,7 +9,8 @@ tar -xzf thinkthen-zig-0.2.0-TARGET.tar.gz
 Replace `TARGET` with your platform. Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
 
 ```zig
-const std = @import("std"); const tt = @import("thinkthen");
+const std = @import("std");
+const tt = @import("thinkthen");
 pub fn main() !void {
     const allocator = std.heap.page_allocator;
     var engine = switch (try tt.Engine.init(allocator)) {
@@ -17,19 +18,21 @@ pub fn main() !void {
         .failed => |failure| { defer tt.releaseFailure(allocator, failure); return error.EngineBuild; },
     };
     defer engine.deinit();
-    const teams = tt.inputs.AuthoredOptions{ .object = .{ .entries = &.{
-        .{ .key = "billing", .value = .{ .string = "Invoices, fees, and refunds." } },
-        .{ .key = "shipping", .value = .{ .string = "Parcels and delivery." } },
-        .{ .key = "account", .value = .{ .string = "Logins and passwords." } },
-    } } };
-    for ([_][]const u8{ "Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back." }) |text| {
-        var call = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = "Does the customer ask for a refund?" } }, .input = .{ .text = .{ .text = text } } }); defer call.deinit();
-        const refund = try call.value(); std.debug.print("{any}\n", .{refund});
+    var refund: ?bool = null;
+    var records: u64 = 0;
+    for ([_][]const u8{ "Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back." }, 0..) |text, index| {
+        var call = switch (try tt.calls.decide(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
+            .question = .{ .text = .{ .text = "Does the customer ask for a refund?" } },
+            .input = .{ .text = text },
+        })) {
+            .ok => |value| value,
+            .failed => |failure| { defer tt.releaseFailure(allocator, failure); return error.CallFailed; },
+        };
+        defer call.deinit();
+        if (index == 0) refund = if (call.value) |value| value.boolean else null;
+        records += call.facts.?.records;
     }
-    for ([_][]const u8{ "Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password." }) |text| {
-        var call = try tt.calls.choose(&engine, .{ .question = .{ .definition = .{ .value = .{ .Authored_choose = .{ .choose = .{ .string = "Which team owns this?" }, .options = teams } } } }, .input = .{ .text = .{ .text = text } } }); defer call.deinit();
-        const team = try call.value(); std.debug.print("{s}\n", .{team orelse "not sure"});
-    }
+    std.debug.print("refund={any} records={d}\n", .{ refund, records });
 }
 ```
 

@@ -22,18 +22,8 @@ pub fn CallResult(comptime V: type, comptime P: type, comptime R: type) type {
 pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFunction, arguments: anytype) !tt.Result(values.NamedCallResult(function, @TypeOf(arguments.input))) {
     const Input = @TypeOf(arguments.input);
     const arguments_typed: tt.calls.Arguments(Input) = arguments;
-    var session = tt.session.startNamed(engine, function, arguments_typed) catch |err| {
-        return switch (err) {
-            error.Usage, error.Backend, error.Deadline, error.Local, error.Cancelled, error.Defect => .{ .failed = try tt.capture(engine.allocator, engine, @intFromEnum(switch (err) {
-                error.Usage => tt.FailureKind.usage,
-                error.Backend => tt.FailureKind.backend,
-                error.Deadline => tt.FailureKind.deadline,
-                error.Local => tt.FailureKind.local,
-                error.Cancelled => tt.FailureKind.cancelled,
-                else => tt.FailureKind.defect,
-            })) },
-            else => return err,
-        };
+    var session = tt.session.startNamed(engine, function, .{ .question = arguments_typed.question, .input = tt.calls.nativeInput(arguments_typed.input), .options = arguments_typed.options }) catch |err| {
+        return .{ .failed = try tt.captureSession(engine.allocator, err) };
     };
     defer session.deinit();
     try session.finish();
@@ -83,14 +73,14 @@ pub fn completeNamed(engine: *tt.Engine, comptime function: tt.inputs.RequestFun
             if (try values.callRowReceipts(function, packet.value(), a)) |rows| try receipts.appendSlice(a, rows);
         }
     }
-    const V = values.callValueType(function);
+    const V = values.callPublicValueType(function);
     const P = values.callProbabilityType(function);
     const list = comptime values.callList(function, Input);
     if (!list and receipts.items.len != 1) return error.Cardinality;
     const result_values = try a.alloc(V, receipts.items.len);
     const probabilities = try a.alloc(P, receipts.items.len);
     for (receipts.items, result_values, probabilities, 0..) |receipt, *value, *probability, i| {
-        value.* = try values.callValue(function, receipt);
+        value.* = try values.callPublicValue(function, receipt, i, native);
         probability.* = try values.callProbability(function, receipt, i, native, a);
     }
     return .{ .ok = .{ .value = if (list) result_values else result_values[0], .probability = if (list) probabilities else probabilities[0], .results = receipts.items, .facts = facts, .arena = arena, .packets = packets.items } };

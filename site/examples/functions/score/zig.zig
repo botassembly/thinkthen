@@ -26,7 +26,7 @@ pub fn main() !void {
             .levels = .{ .array = &levels },
         },
     };
-    var call = switch (try tt.calls.score(&engine, .{
+    var call = switch (try tt.calls.score(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{
             .definition = .{ .value = how_urgent },
         },

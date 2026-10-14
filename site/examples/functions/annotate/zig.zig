@@ -14,7 +14,7 @@ pub fn main() !void {
 
     const form = "form.json";
     const report = "Steps: click Log in. Nobody gets in.";
-    var call = switch (try tt.calls.annotate(&engine, .{
+    var call = switch (try tt.calls.annotate(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .file = .{ .path = form } },
         .input = tt.inputs.RequestInputText{ .text = report },
     })) {

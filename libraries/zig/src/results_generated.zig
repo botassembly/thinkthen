@@ -5780,7 +5780,34 @@ pub fn callList(comptime function: anytype, comptime Input: type) bool {
     @compileError("unknown named function");
 }
 pub fn NamedCallResult(comptime function: anytype, comptime Input: type) type {
-    const V = callValueType(function);
+    const V = callPublicValueType(function);
     const P = callProbabilityType(function);
     return @import("blocking.zig").CallResult(if (callList(function, Input)) []const V else V, if (callList(function, Input)) []const P else P, callReceiptType(function));
+}
+
+pub fn callPublicValueType(comptime function: anytype) type {
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) return SessionRecognition;
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) return []const SessionRelationEdge;
+    return callValueType(function);
+}
+pub fn callPublicValue(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket) !callPublicValueType(function) {
+    if (comptime std.mem.eql(u8, @tagName(function), "recognize")) {
+        const index = receipt.index.optional() orelse ordinal;
+        for (packets) |packet| {
+            if (packet.* != .observation or packet.observation.value != .row) continue;
+            const row = packet.observation.value.row;
+            if (row.index == index and row.value == .recognized) return row.value.recognized.value;
+        }
+        return error.MissingAnswer;
+    }
+    if (comptime std.mem.eql(u8, @tagName(function), "relate")) {
+        const index = receipt.index.optional() orelse ordinal;
+        for (packets) |packet| {
+            if (packet.* != .observation or packet.observation.value != .row) continue;
+            const row = packet.observation.value.row;
+            if (row.index == index and row.value == .relations) return row.value.relations.value;
+        }
+        return error.MissingAnswer;
+    }
+    return callValue(function, receipt);
 }

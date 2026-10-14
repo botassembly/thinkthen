@@ -28,7 +28,7 @@ pub fn main() !void {
             .value = .{ .object = fields },
         } } };
     }
-    var call = switch (try tt.calls.relate(&engine, .{
+    var call = switch (try tt.calls.relate(&engine, tt.calls.Arguments(tt.inputs.RequestInputEntities){
         .question = .{ .file = .{ .path = relations } },
         .input = tt.inputs.RequestInputEntities{ .items = &entities },
     })) {

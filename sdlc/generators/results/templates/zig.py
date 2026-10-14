@@ -248,7 +248,7 @@ def render_results(definitions):
         readers.append('pub fn read' + typ + '(a: std.mem.Allocator, v: c.' + ident(key) + ') anyerror!' + typ + ' {\n' + '\n'.join(body) + '\n}')
     aliases = ['Presence', 'Map', 'Number', 'Value', *(result_name(key) for key in emitted)]
     types = '\npub const Types = struct {\n' + '\n'.join('    pub const ' + typ + ' = @import("results_generated.zig").' + typ + ';' for typ in sorted(set(aliases))) + '\n};\n'
-    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions) + public_call_types(definitions)
+    return RESULT_SUPPORT + '\n\n'.join(declarations + readers) + types + answer_helpers(definitions) + call_helpers(definitions) + public_call_types(definitions) + public_value_helpers(definitions)
 
 
 RESULT_SUPPORT = '''// Generated owned values from the canonical native packet graph; do not edit.
@@ -504,6 +504,50 @@ def public_call_types(definitions):
         lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {expression};']
     lines += ['    @compileError("unknown named function");', '}',
               'pub fn NamedCallResult(comptime function: anytype, comptime Input: type) type {',
-              '    const V = callValueType(function);', '    const P = callProbabilityType(function);',
+              '    const V = callPublicValueType(function);', '    const P = callProbabilityType(function);',
               '    return @import("blocking.zig").CallResult(if (callList(function, Input)) []const V else V, if (callList(function, Input)) []const P else P, callReceiptType(function));', '}']
     return '\n'.join(lines) + '\n'
+
+
+def public_value_helpers(definitions):
+    """Use normalized native rows where they remove endpoint and mode wrappers."""
+    from host_answers import call_results, named_object_fields
+    from c import variant_member
+    def resolve(schema):
+        return definitions[schema['$ref'].split('/')[-1]] if isinstance(schema, dict) and '$ref' in schema else schema if isinstance(schema, dict) else {}
+    normalized = {}
+    for function, rule in call_results(definitions).items():
+        if rule['value_projection'] != 'value':
+            continue
+        receipt = resolve(rule['receipt_payload'].get('items', rule['receipt_payload']))
+        source = resolve(receipt['properties']['value'])
+        for child, _ in definitions['completesessionObservedRow']['variants']:
+            payload = definitions[child]['properties']['value']
+            target = resolve(payload)
+            if source.get('type') == target.get('type') == 'array':
+                original, projected = resolve(source['items']), resolve(target['items'])
+                matches = bool(named_object_fields(original, definitions)) and original.get('properties', {}).keys() == projected.get('properties', {}).keys()
+            elif 'variants' in source and 'properties' in target:
+                fields = {key: value for variant, _ in source['variants'] for key, value in definitions[variant]['properties'].items() if key != 'mode'}
+                matches = bool(fields) and fields.keys() <= target['properties'].keys() and sum(target['properties'][key] == value for key, value in fields.items()) >= 2
+            else:
+                matches = False
+            if matches:
+                typ = '[]const ' + name(target['items']['$ref'].split('/')[-1]) if target.get('type') == 'array' else name(payload['$ref'].split('/')[-1])
+                normalized[function] = (variant_member('completesessionObservedRow', child), typ)
+                break
+    lines = ['\npub fn callPublicValueType(comptime function: anytype) type {']
+    for function, (_, typ) in normalized.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) return {typ};']
+    lines += ['    return callValueType(function);', '}',
+              'pub fn callPublicValue(comptime function: anytype, receipt: callReceiptType(function), ordinal: usize, packets: []const *const SessionPacket) !callPublicValueType(function) {']
+    for function, (tag, _) in normalized.items():
+        lines += [f'    if (comptime std.mem.eql(u8, @tagName(function), "{function}")) {{',
+                  '        const index = receipt.index.optional() orelse ordinal;',
+                  '        for (packets) |packet| {',
+                  '            if (packet.* != .observation or packet.observation.value != .row) continue;',
+                  '            const row = packet.observation.value.row;',
+                  f'            if (row.index == index and row.value == .{tag}) return row.value.{tag}.value;',
+                  '        }', '        return error.MissingAnswer;', '    }']
+    lines += ['    return callValue(function, receipt);', '}', '']
+    return '\n'.join(lines)

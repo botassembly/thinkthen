@@ -10,7 +10,7 @@ pub fn main() !void {
         },
     };
     defer engine.deinit();
-    var call = switch (try tt.calls.decide(&engine, .{
+    var call = switch (try tt.calls.decide(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .text = .{ .text = "Is this a complaint?" } },
         .input = tt.inputs.RequestInputText{ .text = "I demand a refund today" },
     })) {
@@ -21,7 +21,7 @@ pub fn main() !void {
         },
     };
     defer call.deinit();
-    const answer = call.value;
+    const answer: ?bool = if (call.value) |value| value.boolean else null;
     std.debug.print("answer={any}\n", .{answer});
     if (call.facts) |facts| std.debug.print("records={d} requests={d}\n", .{ facts.records, facts.requests_sent });
 }

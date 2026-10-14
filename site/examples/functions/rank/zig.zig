@@ -27,7 +27,7 @@ pub fn main() !void {
             .original = .{ .text = .{ .text = text } },
         };
     }
-    var call = switch (try tt.calls.rank(&engine, .{
+    var call = switch (try tt.calls.rank(&engine, tt.calls.Arguments(tt.inputs.RequestInputRecords){
         .question = .{ .text = .{ .text = question } },
         .input = tt.inputs.RequestInputRecords{ .items = &records },
     })) {

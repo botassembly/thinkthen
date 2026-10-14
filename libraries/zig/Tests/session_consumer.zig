@@ -142,10 +142,26 @@ fn writeCall(answer: anytype, a: std.mem.Allocator, contract: bool) !void {
     _ = a;
     var out = std.fs.File.stdout().writer(&.{});
     try out.interface.writeAll("{\"packets\":[");
+    var receipt_at: usize = 0;
     for (answer.packets, 0..) |packet, i| {
         if (i > 0) try out.interface.writeAll(",");
+        var projected = packet.value().*;
+        switch (projected) {
+            inline else => |*payload| {
+                const T = @TypeOf(payload.*);
+                if (comptime @hasField(T, "function") and @hasField(T, "value")) {
+                    if (comptime @TypeOf(payload.value) == @TypeOf(answer.results)) {
+                        payload.value = answer.results;
+                    } else if (comptime @TypeOf(payload.value) == @typeInfo(@TypeOf(answer.results)).pointer.child) {
+                        payload.value = answer.results[receipt_at];
+                        receipt_at += 1;
+                    }
+                }
+            },
+        }
+        if (projected == .terminal) projected.terminal.facts = if (answer.facts) |facts| .{ .value = facts.* } else .missing;
         var writer: std.json.Stringify = .{ .writer = &out.interface };
-        try request_fixture.writeNative(packet.value().*, &writer);
+        try request_fixture.writeNative(projected, &writer);
     }
     if (contract) {
         try out.interface.writeAll("],\"call_result\":");

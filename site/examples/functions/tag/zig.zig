@@ -27,7 +27,7 @@ pub fn main() !void {
             .labels = .{ .array = &labels },
         },
     };
-    var call = switch (try tt.calls.tag(&engine, .{
+    var call = switch (try tt.calls.tag(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{
             .definition = .{ .value = which_labels },
         },

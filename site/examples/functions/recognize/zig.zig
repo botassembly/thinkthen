@@ -15,7 +15,7 @@ pub fn main() !void {
     const kinds = "kinds.json";
     const text = "Sam Patel says his Kindle " ++
         "arrived broken in Denver.";
-    var call = switch (try tt.calls.recognize(&engine, .{
+    var call = switch (try tt.calls.recognize(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .file = .{ .path = kinds } },
         .input = tt.inputs.RequestInputText{ .text = text },
     })) {
@@ -30,7 +30,7 @@ pub fn main() !void {
     const facts = call.value;
     var names: std.ArrayList(u8) = .empty;
     defer names.deinit(allocator);
-    for (facts.entities.entities) |one| {
+    for (facts.entities) |one| {
         try names.print(allocator, "{s} ({s}). ", .{
             one.text, one.kind,
         });

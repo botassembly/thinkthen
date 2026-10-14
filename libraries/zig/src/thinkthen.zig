@@ -79,7 +79,15 @@ pub const Engine = struct {
 };
 
 pub fn capture(allocator: std.mem.Allocator, engine: ?*Engine, code: c_int) !Failure {
-    const raw = c.thinkthen_error_view(if (engine) |value| @ptrCast(value.handle) else null);
+    return captureView(allocator, c.thinkthen_error_view(if (engine) |value| @ptrCast(value.handle) else null), code);
+}
+pub fn captureSession(allocator: std.mem.Allocator, err: anyerror) !Failure {
+    inline for (std.meta.fields(FailureKind)) |kind| {
+        if (std.ascii.eqlIgnoreCase(@errorName(err), kind.name)) return captureView(allocator, c.thinkthen_session_error_view(), kind.value);
+    }
+    return err;
+}
+fn captureView(allocator: std.mem.Allocator, raw: anytype, code: c_int) !Failure {
     if (raw == null) return error.Defect;
     const view = raw[0];
     var arena = std.heap.ArenaAllocator.init(allocator);

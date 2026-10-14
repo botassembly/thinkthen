@@ -15,7 +15,7 @@ pub fn main() !void {
     const question = "Does the customer ask for a refund?";
     const broken =
         "Please refund my order. It arrived broken.";
-    var call = switch (try tt.calls.decide(&engine, .{
+    var call = switch (try tt.calls.decide(&engine, tt.calls.Arguments(tt.inputs.RequestInputText){
         .question = .{ .text = .{ .text = question } },
         .input = tt.inputs.RequestInputText{ .text = broken },
     })) {
