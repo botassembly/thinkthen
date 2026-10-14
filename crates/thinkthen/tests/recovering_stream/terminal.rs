@@ -2,6 +2,11 @@ use super::*;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use thinkthen::{Recognize, RecordObservation};
 
+#[expect(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "the loopback fixture answers the actual recognition request"
+)]
 fn recognition_response(body: &[u8]) -> Canned {
     let body: Value = serde_json::from_slice(body).unwrap();
     let answers = body["questions"]
@@ -28,6 +33,10 @@ fn recognition_response(body: &[u8]) -> Canned {
     Canned::ok(&json!({"model":"fixed","answers":answers}).to_string())
 }
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "the fixture request must admit before caller behavior runs"
+)]
 fn feed_request(
     function: RequestFunction,
     definition: thinkthen::RequestDefinition,
