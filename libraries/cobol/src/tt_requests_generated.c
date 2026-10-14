@@ -9778,13 +9778,13 @@ const thinkthen_cobol_RequestOptions *options,thinkthen_cobol_AnswerFindResult *
         },.facts_present=status_out->facts_present,.facts=status_out->facts
     };
     result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);
-    result.value.scalar=0;
     if(table.count) result.value.first=result.value.rows[0];
     result.probability=(thinkthen_cobol_AnswerProbability){
         .scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,
         .lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count
     };
     if(result.probability.count) result.probability.first=result.probability.data[0];
+    result.value.scalar=1;
     result.probability.scalar=1;
     *out=result;
     return 0;

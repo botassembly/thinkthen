@@ -72,12 +72,12 @@ def render(native_facts, root, definitions):
             source += 'for(size_t i=0;i<table.count;i++) ((thinkthen_cobol_AnswerDecision *)table.rows)[i].present=i<table.owner->probability_count && table.owner->probabilities[i].present;\n'
         source += typ + ' result={.owner=table.owner,.value={.rows=table.rows,.count=table.count},.results={table.owner->receipts,table.owner->receipt_count},.facts_present=status_out->facts_present,.facts=status_out->facts};\n'
         source += 'result.value.scalar=input && (input->kind==THINKTHEN_COBOL_REQUESTINPUTTEXT_KIND || input->kind==THINKTHEN_COBOL_REQUESTINPUTJSON_KIND);\n'
-        if function in ('filter', 'rank', 'find', 'relate'):
+        if function in ('filter', 'rank', 'relate'):
             source += 'result.value.scalar=0;\n'
         source += 'if(table.count) result.value.first=result.value.rows[0];\n'
         source += 'result.probability=(thinkthen_cobol_AnswerProbability){.scalar=result.value.scalar,.data=table.owner->probabilities,.count=table.owner->probability_count,.lists=table.owner->probability_lists,.list_count=table.owner->probability_list_count};\nif(result.probability.count) result.probability.first=result.probability.data[0];\n'
         if function == 'find':
-            source += 'result.probability.scalar=1;\n'
+            source += 'result.value.scalar=1; result.probability.scalar=1;\n'
         if function == 'recognize':
             source += 'if(result.value.scalar && result.probability.list_count==1) {result.probability.data=result.probability.lists[0].data; result.probability.count=result.probability.lists[0].count; result.probability.list_count=0;} result.probability.scalar=0;\n'
             source += 'result.value.edges=table.edges; result.value.edge_count=table.edge_count;\n'

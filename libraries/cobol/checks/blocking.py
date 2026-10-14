@@ -201,12 +201,17 @@ end program BLOCK_PLAN.
         finally:
             if answer.owner: bridge.TT_ANSWER_FREE(answer.owner)
             if status.owner and status.owner != answer.owner: bridge.TT_ANSWER_FREE(status.owner)
+        from templates.host_answers import call_results
+        contracts = call_results(reader.definitions)
         for function in questions:
             code, answer, status = invoke(function, options={'attempts': True})
             assert code == 0, (function, code, bytes(status.message.text[:status.message.length]))
             assert answer.owner and answer.value.count, (function, answer.value.count)
             assert answer.facts_present and (answer.facts.requests_sent + answer.facts.cache_answers) > 0, function
             assert answer.results.len > 0, function
+            payload = contracts[function]['receipt_payload']
+            decoded = reader.decode(payload, answer.results if payload.get('type') == 'array' else answer.results.data, 'receipt')
+            assert decoded and (decoded[0] if isinstance(decoded, list) else decoded)['schema'] == 'thinkthen.result/2', ('owned-receipts', function)
             if function == 'decide':
                 assert value_json(Decision.from_address(answer.value.rows).value) is True
                 assert status.facts.attempts.presence == 2 and status.facts.attempts.value.len == 1
@@ -230,12 +235,23 @@ end program BLOCK_PLAN.
                 assert bridge.TT_VALUE_TEXT(value, output, ct.byref(length)) == 0
                 assert output.raw[:length.value] == b'yes'
             bridge.TT_ANSWER_FREE(answer.owner)
+        originals = [None, False, {'message': 'yes', 'extra': [False, None]}, ['yes', False]]
+        code, answer, status = invoke('filter', originals)
+        assert code == 0 and answer.value.count == len(originals) and answer.probability.count == len(originals), ('filter-originals', code)
+        assert [value_json(ct.c_void_p.from_address(answer.value.rows + index * ct.sizeof(ct.c_void_p)).value) for index in range(answer.value.count)] == originals
+        bridge.TT_ANSWER_FREE(answer.owner)
+        for original in (None, False):
+            code, answer, status = invoke('find', input_override={'kind': 'units', 'items': [{'original': {'kind': 'json', 'value': original}}, {'original': {'kind': 'text', 'text': 'second'}}]})
+            assert code == 0 and answer.value.scalar == 1 and answer.value.first.present and answer.value.first.index == 0, ('find-original', original, code)
+            assert value_json(answer.value.first.original) == original
+            assert answer.probability.scalar and answer.probability.first.present and abs(answer.probability.first.value - .9) < 1e-12
+            bridge.TT_ANSWER_FREE(answer.owner)
         for original, present, value in [('no', 1, 0), ('unsure', 0, 0)]:
             code, answer, status = invoke('decide', [original], {'threshold': '0.4:0.6'} if original == 'unsure' else {}); assert code == 0
             row = Decision.from_address(answer.value.rows); assert (row.present, value_json(row.value) if row.present else None) == (present, bool(value) if present else None)
             assert answer.probability.count == 1 and bool(answer.probability.first.present) == bool(present)
             bridge.TT_ANSWER_FREE(answer.owner)
-        for authored in (None, False, {'decision': [None, False, {'label': 'accepted'}]}, [False, None, 'yes']):
+        for authored in (None, {'decision': [None, False, {'label': 'accepted'}]}, [False, None, 'yes']):
             code, answer, status = invoke('decide', ['yes'], question_override={'decide': 'Authored?', 'true': authored}, input_override={'kind': 'text', 'text': 'yes'})
             assert code == 0 and answer.value.first.present == 1, ('authored-decide', authored, code)
             assert value_json(answer.value.first.value) == authored, ('authored-decide-value', authored)

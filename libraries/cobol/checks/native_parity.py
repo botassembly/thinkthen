@@ -52,13 +52,13 @@ linkage section.
 01 engine usage pointer.
 01 question usage pointer.
 01 input-record usage pointer.
-01 options usage pointer.
+01 option-record usage pointer.
 01 answer usage pointer.
 01 status-record usage pointer.
-procedure division using engine question input-record options answer status-record.
+procedure division using engine question input-record option-record answer status-record.
  set address of tt-n-cobol-Answer{verb.title()}Result to answer
  set address of tt-n-cobol-AnswerStatus to status-record
- call "TT_{verb.upper()}" using by value engine question input-record options
+ call "TT_{verb.upper()}" using by value engine question input-record option-record
     by reference tt-n-cobol-Answer{verb.title()}Result tt-n-cobol-AnswerStatus
     returning return-code
  goback.
@@ -101,7 +101,11 @@ end program COBOL_PUSH.
         command = [sys.executable,str(ROOT / 'libraries/cobol/checks/session_consumer.py'),str(given),shared.shared.compact(settings)]
         child = dict(env, TT_SESSION_BRIDGE=str(bridge), TT_SESSION_NATIVE=str(native), TT_SESSION_PACKAGE=str(installed))
         if not step.get('held_cancel'):
-            return subprocess.run(command,cwd=home,env=child,capture_output=True,text=True,timeout=30)
+            before = int(backend.read('count')) if fixture.get('call_result_contract') else None
+            result = subprocess.run(command,cwd=home,env=child,capture_output=True,text=True,timeout=30)
+            if before is not None:
+                assert int(backend.read('count')) - before == 1, 'canonical COBOL call must send once'
+            return result
         process = subprocess.Popen(command,cwd=home,env=child,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         try:
             assert backend.read('wait 1') == 'wait 1'
