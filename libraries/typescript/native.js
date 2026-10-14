@@ -1,6 +1,6 @@
 'use strict';
 const addon=require('./loader.js');
-const {answer:readAnswer,plan:readPlan,...Results}=require('./results_generated.js');
+const {answer:readAnswer,plan:readPlan,parse:readJson,packet:readPacket,...Results}=require('./results_generated.js');
 class ClientError extends Error {
   constructor(kind,message,retryable=false) {super(message);this.name='ClientError';this.kind=kind;this.retryable=retryable;}
 }
@@ -52,6 +52,8 @@ class Client {
   }
   static files(paths,reading={unit:'line'},media='text',framing){return Object.freeze({[sourceTag]:{paths,reading,media,...(framing===undefined?{}:{framing})}});}
   static item(value,fields={}) {return Object.freeze({[itemTag]:{...(value===undefined?{}:{original:original(value)}),...fields}});}
+  static recognizeQuestion(kinds,options={}){return Object.freeze({version:1,recognize:{...options,kinds}});}
+  static relateQuestion(relations,options={}){return Object.freeze({version:1,relate:{...options,relations}});}
   static questionFile(path){return Object.freeze({[questionTag]:{kind:'file',path}});}
   static questionName(name){return Object.freeze({[questionTag]:{kind:'name',name}});}
   static questionReference(reference){return Object.freeze({[questionTag]:{kind:'reference',reference}});}
@@ -62,7 +64,7 @@ class Client {
     if(signal?.aborted) throw new ClientError('cancelled','the call was cancelled');
     if(iterable(input)) throw new ClientError('usage','plan reads a complete input, not an iterator');
     dump(verb);if(typeof verb!=='string')throw new ClientError('usage','invalid canonical request');
-    return readPlan(Results.parse(crossing(()=>addon.requestPlan(this.#engine,verb,requestValues(question,input),dump(options)))));
+    return readPlan(readJson(crossing(()=>addon.requestPlan(this.#engine,verb,requestValues(question,input),dump(options)))));
   }
   start(verb,question,input,controls={}) {
     if(this.#closed) throw new ClientError('usage','client is closed');
@@ -109,7 +111,7 @@ class Operation {
         const text=crossing(()=>this.#native.poll());
         if(text==='end'){this.#done=true;this.close();return {done:true,value:undefined};}
         if(text) {
-          const packet=Results.packet(Results.parse(text));this.#packets.push(packet);
+          const packet=readPacket(readJson(text));this.#packets.push(packet);
           if(packet.kind==='terminal') {
             this.terminal=packet;this.#done=true;this.close();
             if(packet.has('failure')) {
