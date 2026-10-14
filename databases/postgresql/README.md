@@ -270,4 +270,6 @@ Reading controls include ordered question options, levels and labels, typed cont
 
 Rank returns zero-based original indexes. Filter returns original authored values as `jsonb`; rejected records have a NULL `value` while their reading remains available. Read their plain arrays with `array_agg(value)` and `FILTER (WHERE value IS NOT NULL)`. Order rank's array by `(result).value` to retain ranking order.
 
+For filter, `files_only => true` returns the first selected record from each physical file in input order. Each record needs a `thinkthen_source` location. Every record still contributes to the call's final facts. The default rejects any missing location before sending; incremental reading retains an already completed prefix.
+
 `thinkthen_plan(question, records, reading)` returns record and request counts, byte estimates and token bounds without sending. Its typed `result` includes the complete canonical plan and prepared first body. Questions retain privileged and confined file references. Evidence and image files must be read by the client. Attach their explicit location with a `thinkthen_source` composite; PostgreSQL never opens an evidence path. Cache, replay, recording and engine settings retain their session scopes and privileges.
