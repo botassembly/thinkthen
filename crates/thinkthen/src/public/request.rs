@@ -23,10 +23,12 @@ pub use pull::RequestRows;
 mod recovered;
 mod recovering;
 mod recovering_session;
-pub use recovering_session::{RequestRecoveringSession, RequestRecoveringRead, RequestRecoveringResult};
+pub use recovering_session::{
+    RequestRecoveringRead, RequestRecoveringResult, RequestRecoveringSession,
+};
 mod result;
 pub use recovered::RequestRecoveredRow;
-pub(in crate::public) use recovered::{fatal as is_recovery_fatal, row as recovery_row};
+pub(in crate::public) use recovered::row as recovery_row;
 mod source;
 pub use source::RequestSourceReader;
 mod session;

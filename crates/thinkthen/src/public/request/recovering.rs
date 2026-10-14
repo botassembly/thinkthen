@@ -74,7 +74,7 @@ impl Engine {
                     cause: None,
                 }]
             })),
-            Ok(RequestOutcome::Failed { error, .. }) | Err(error) => aggregate_failure(self, error),
+            Ok(RequestOutcome::Failed { error, .. }) | Err(error) => aggregate_failure(error),
         }
     }
 }
@@ -111,30 +111,19 @@ fn dispatch(
     }
 }
 
-fn aggregate_failure(
-    engine: &Engine,
-    error: Error,
-) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
+fn aggregate_failure(error: Error) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
     if super::recovered::fatal(&error) {
         return Err(error);
     }
-    if let Some(facts) = error.facts().cloned() {
-        return Ok(Call::new(
+    match error.facts().cloned() {
+        Some(facts) => Ok(Call::new(
             vec![RequestRecoveredRow {
                 ordinal: 0,
                 outcome: Err(error.normalize_recovery_budget()),
                 cause: None,
             }],
             facts,
-        ));
+        )),
+        None => Err(error),
     }
-    let stop =
-        crate::public::options::Stop::begin(crate::CallOptions::new())?.with_prices(engine.prices);
-    stop.run_call(0, |_| {
-        Ok(vec![RequestRecoveredRow {
-            ordinal: 0,
-            outcome: Err(error.normalize_recovery_budget()),
-            cause: None,
-        }])
-    })
 }
