@@ -98,7 +98,7 @@ initial = db.execute("PRAGMA trusted_schema").fetchone()[0]
 db.execute("PRAGMA trusted_schema=ON")
 rows = db.execute("SELECT name, narg, flags FROM pragma_function_list WHERE name LIKE 'thinkthen%'").fetchall()
 judgments = {'thinkthen_decide', 'thinkthen_choose', 'thinkthen_score', 'thinkthen_tag', 'thinkthen_annotate',
-             'thinkthen_details', 'thinkthen_try_details', 'thinkthen_find', 'thinkthen_relations', 'thinkthen_plan'}
+             'thinkthen_find', 'thinkthen_relations', 'thinkthen_plan'}
 calls = {'configure': "thinkthen_configure('{}')", 'budget': 'thinkthen_budget_ms(0)', 'usage': 'thinkthen_usage()',
          'removed': 'thinkthen_warm()', 'positional': "thinkthen_decide('Is it red?', 'red', 0, '')"}
 refusals = {}

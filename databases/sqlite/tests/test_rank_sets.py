@@ -7,7 +7,7 @@ from helper import Backend, child, environment, expect, main
 from conditional_backend import ConditionalBackend
 from rank_backend import EXPECTED, ONE, RECORDS, SET, RankBackend
 
-QUERY = 'SELECT key, rank, probability, question_name, facts FROM thinkthen_rank_set(?, ?, ?)'
+QUERY = 'SELECT key, rank, probability, question_name, facts_records, facts_requests_sent, facts_cache_answers FROM thinkthen_rank_set(?, ?, ?)'
 
 
 def invoke(backend, calls, **config):
@@ -26,7 +26,7 @@ def test_turns_keep_duplicate_keys_names_facts_and_limit():
                                ('top', QUERY + ' LIMIT 3', (SET, RECORDS, '{"batch":1}'))])
         expect([row[:4] for row in got['rows']], EXPECTED, 'independent merged order')
         expect([row[:4] for row in got['top']], EXPECTED[:3], 'LIMIT after merging')
-        facts = [json.loads(row[4]) for row in got['rows']]
+        facts = [dict(zip(('records','requests_sent','cache_answers'), row[4:])) for row in got['rows']]
         expect(all(fact == facts[0] for fact in facts), True, 'same combined call facts')
         expect(facts[0]['records'], 4, 'original records, not eight member judgments')
         expect(facts[0]['requests_sent'], backend.count(), 'same call sends')
@@ -52,7 +52,7 @@ def test_plain_and_one_member_have_equal_wire_and_per_member_zero_send_replay():
                         replay=folder, keyless=True)
         expect([row[:4] for row in replay['rows']], EXPECTED, 'per-member strict replay')
         expect(backend.count(), before, 'replay sends zero')
-        facts = json.loads(replay['rows'][0][4])
+        facts = dict(zip(('records','requests_sent','cache_answers'), replay['rows'][0][4:]))
         expect((facts['records'], facts['requests_sent'], facts['cache_answers']), (4, 0, 0), 'replayed combined facts')
         reordered = '{"version":1,"questions":{"renamed":{"decide":"Second?"},"last":{"decide":"First?"}}}'
         renamed = invoke(backend, [('rows', QUERY, (reordered, RECORDS, '{"batch":1}'))], replay=folder, keyless=True)
@@ -125,10 +125,10 @@ def test_set_ties_keep_host_input_order_and_public_types():
     try:
         got = child('db=connect()\nsay(rows=run(db,' + repr(QUERY) + ','
                     + repr((SET, '{"z":"one","a":"two","m":"three"}', '{"batch":"max"}')) + '),'
-                    + 'types=run(db,"SELECT typeof(key),typeof(rank),typeof(probability),typeof(question_name),typeof(facts) FROM thinkthen_rank_set(?,?,?) LIMIT 1",'
+                    + 'types=run(db,"SELECT typeof(key),typeof(rank),typeof(probability),typeof(question_name),typeof(facts_records),typeof(facts_requests_sent),typeof(facts_cache_answers) FROM thinkthen_rank_set(?,?,?) LIMIT 1",'
                     + repr((SET, '{"z":"one","a":"two","m":"three"}', '{"batch":"max"}')) + '))', environment(backend))
         expect([row[:4] for row in got['rows']], [['z',1,.9,'first'],['a',2,.9,'first'],['m',3,.9,'first']], 'stable set ties')
-        expect(got['types'], [['text','integer','real','text','text']], 'public SQL types')
+        expect(got['types'], [['text','integer','real','text','integer','integer','integer']], 'public SQL types')
         expect(backend.count(), 1, 'one shared packed call')
     finally:
         backend.close()

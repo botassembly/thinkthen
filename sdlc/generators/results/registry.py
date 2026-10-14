@@ -15,6 +15,7 @@ def group(target, mode, base, *names):
 
 
 OUTPUTS = (
+    *group('sqlite', 'results', 'databases/sqlite/src/', 'receipt_generated.rs'),
     *group('postgresql', 'results', 'databases/postgresql/src/native/',
            'results_generated.rs', 'functions_generated.rs'),
     *group('c', 'results', 'libraries/c/src/session/', 'views_generated.rs'),

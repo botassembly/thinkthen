@@ -1,3 +1,4 @@
+//! Stays: This crate boundary owns SQLite registration policy and native failure translation.
 //! The SQLite surface of thinkthen: eight judgment functions, four engine
 //! settings, and two table-valued functions over the public Rust API.
 //!
@@ -27,8 +28,10 @@ mod files;
 mod images;
 mod many;
 mod named;
+mod native;
 mod question;
-mod rank_set;
+mod receipt;
+mod receipt_generated;
 mod recognize_document;
 mod request;
 mod scalars;
@@ -84,19 +87,11 @@ impl Failure {
     pub(crate) fn defect(message: impl Into<String>) -> Self {
         Self::of(ErrorKind::Defect, message)
     }
+}
 
-    pub(crate) fn value(&self) -> Option<serde_json::Value> {
-        let message = match self.kind {
-            ErrorKind::Usage => {
-                "check the row's question and arguments, or raise the process request total when it is spent"
-            }
-            ErrorKind::Local => "check the named file and its permissions",
-            ErrorKind::Backend => "the backend did not answer; retry if allowed",
-            ErrorKind::Cancelled | ErrorKind::Deadline | ErrorKind::Defect => return None,
-        };
-        Some(
-            serde_json::json!({"status":"failed","error":{"kind":self.kind.name(),"message":message,"retryable":self.retryable}}),
-        )
+impl From<Failure> for thinkthen::Error {
+    fn from(failure: Failure) -> Self {
+        Self::new(failure.kind, failure.message)
     }
 }
 

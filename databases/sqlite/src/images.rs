@@ -259,9 +259,6 @@ fn judged(context: &Context<'_>, verb: Option<thinkthen::For>) -> Result<Value, 
                 .next()
                 .ok_or_else(|| Failure::defect("image details returned no record"))
         })?;
-    if verb.is_none() {
-        return Ok(Value::Text(details.json));
-    }
     Ok(match &details.value {
         Judgment::Decision(thinkthen::Answer::Yes) => Value::Integer(1),
         Judgment::Decision(thinkthen::Answer::No) => Value::Integer(0),
@@ -312,7 +309,6 @@ pub(crate) fn register(connection: &Catalog<'_>, flags: FunctionFlags) -> rusqli
         ("thinkthen_decide_images", Some(thinkthen::For::Decide)),
         ("thinkthen_choose_images", Some(thinkthen::For::Choose)),
         ("thinkthen_score_images", Some(thinkthen::For::Score)),
-        ("thinkthen_details_images", None),
     ] {
         connection.create_scalar_function(
             name,
