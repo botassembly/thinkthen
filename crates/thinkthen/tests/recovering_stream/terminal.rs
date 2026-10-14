@@ -216,3 +216,51 @@ fn recovery_record_limit_stops_the_second_record_before_another_send() {
         assert!(!format!("{error:?}").contains("sk-limit-recovery"));
     }
 }
+
+#[test]
+fn saved_dynamic_choice_recovers_an_empty_feed_without_sending() {
+    let path = std::path::PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
+        .join(format!("recovering-dynamic-{}.json", std::process::id()));
+    std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+    std::fs::write(&path, r#"{"choose":"Which?"}"#).unwrap();
+    let listener = Listener::answering(response).unwrap();
+    let engine = api::loopback(listener.base(), "sk-empty-dynamic");
+    for eager in [false, true] {
+        let request = Request::for_function(
+            RequestFunction::Choose,
+            RequestArguments {
+                question: RequestQuestion::Reference {
+                    reference: format!("@{}", path.display()),
+                },
+                input: RequestInput::Feed {
+                    name: "records".into(),
+                    framing: RequestFraming::Document,
+                    reading: ReaderOptions::default(),
+                    images: vec![],
+                },
+                options: RequestOptions::default(),
+            },
+        )
+        .admit()
+        .unwrap();
+        let feed = RequestFeed::from_records("records", std::iter::empty());
+        let feed = if eager { feed.eager() } else { feed };
+        let rows = RefCell::new(Vec::new());
+        let call = engine
+            .execute_request_recovering_sink(
+                &request,
+                RequestEnvironment {
+                    controls: api::dynamic_one(),
+                    feed: Some(feed),
+                },
+                &|row| rows.borrow_mut().push(row),
+            )
+            .unwrap();
+        assert!(rows.borrow().is_empty());
+        assert_eq!(call.facts().records(), 0);
+        assert_eq!(call.facts().requests_sent(), 0);
+        assert_eq!(listener.count(), 0);
+        assert!(!format!("{call:?}").contains("sk-empty-dynamic"));
+    }
+    std::fs::remove_file(path).unwrap();
+}
