@@ -10,5 +10,5 @@ ThinkThen::Client.open do |client|
     "Please send the signed quote by 5 pm today"
   ]
   by_urgency = client.rank(question, inbox).value
-  raise unless by_urgency.map(&:index) == [1, 3, 2, 0]
+  raise unless by_urgency == [1, 3, 2, 0]
 end
