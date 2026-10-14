@@ -122,6 +122,31 @@ int main(int argc, const char *argv[]) {
         if (retained || explicitPackets) {
             NSArray<TTSessionPacket *> *values = retained ? retained.packets : explicitPackets;
             typed(values, retained ? retained.terminal : explicitTerminal);
+            if (blocking && retained && [verb isEqual:@"annotate"] && retained.terminal.failure.state != TTPresenceValue) {
+                require(failure == nil && error == nil);
+                TTPresence<NSArray<TTAnnotation *> *> *answer = [retained annotateAnswer:&error];
+                require(answer.state == TTPresenceValue && error == nil);
+                NSMutableArray *rows = [NSMutableArray array];
+                for (TTSessionPacket *packet in values) if ([packet isKindOfClass:TTSessionPacketAnnotateRow.class]) [rows addObject:((TTSessionPacketAnnotateRow *)packet).value.value];
+                require(answer.value.count == rows.count);
+                for (NSUInteger index = 0; index < rows.count; index++) {
+                    TTAnnotation *row = rows[index], *projected = answer.value[index];
+                    require(projected.input.state == row.input.state);
+                    require([projected.rawFields[@"input"] isEqual:row.rawFields[@"input"]]);
+                    require(projected.value.value.count == row.value.value.count);
+                    for (NSString *key in row.value.value) {
+                        TTAnnotatedField *field = row.value.value[key], *copy = projected.value.value[key];
+                        require([copy.kind isEqual:field.kind]);
+                        if ([field.value isKindOfClass:TTFailed.class]) {
+                            TTFailure *failed = ((TTFailed *)field.value).failed.value;
+                            TTFailure *copied = ((TTFailed *)copy.value).failed.value;
+                            require([copied.kind.value isEqual:failed.kind.value]);
+                            require(copied.cause.state == failed.cause.state);
+                            if (failed.cause.state == TTPresenceValue) require([copied.cause.value isEqual:failed.cause.value]);
+                        } else require([copy.value isEqual:field.value]);
+                    }
+                }
+            }
             if (retained && [verb isEqual:@"rank"] && !failure) {
                 NSArray<NSNumber *> *answer = [retained rankAnswer:&error];
                 require(answer != nil && error == nil);

@@ -112,6 +112,10 @@ Reviews: revision ec08393, accept
 
 Reviews: revision 02621bc, accept
 
+Reviews: revision 9105d64, accept
+
+Reviews: revision ad2c361, accept
+
 ## Outcome
 
 Every language library, database extension and the MCP server feels native to a senior developer on that platform and grades B or better on the library rubric below. The public API of each exposes no transport JSON, no schema-path names and no raw C layouts.
@@ -185,3 +189,4 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
 - 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.
 - 2026-10-14 next: Merged the accepted B+ PostgreSQL typed family at d6145fa84 with obsolete exports removed, unchanged accepted source, 225 retained parity passes and focused rebuilt native checks passing; continue remaining libraries and the candidate ceiling reconciliation.
+- 2026-10-14 next: Merged the freshly accepted Objective-C library at 038586e17 with unchanged reviewed source, passing source gates and retained exact-revision Mac installed checks; finish remaining library reviews and shared candidate proof.
