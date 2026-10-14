@@ -16,7 +16,7 @@ With a cache or recording folder, a lazy frame collected again sends nothing, an
 
 Build that engine with `max_request_bytes`, `max_requests_total`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
-A file-backed Rust `Question` keeps its saved calibration profile when the engine asks a scalar or Series question. Read `Engine::details` for the pinned question digest and an optional mismatch warning. A profiled question cannot be inserted as a member of an annotate frame's `QuestionSet`; the builder refuses it before sending.
+A file-backed Rust `Question` keeps its saved calibration profile when the engine asks a scalar or Series question. Read `record.result().meta()` on a returned native record for the pinned question digest and an optional mismatch warning. A profiled question cannot be inserted as a member of an annotate frame's `QuestionSet`; the builder refuses it before sending.
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine.
 
