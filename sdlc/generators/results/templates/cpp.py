@@ -93,7 +93,7 @@ def render(definitions,version):
             lines += [cache_field(t, 'value'), f'public: const {t}& value() const;']
             bodies += [cache_body(n, t, 'value', f'detail::decode<{t}>(value_)')]
         lines += ['};']
-    return usage((ROOT / 'libraries/c/include/thinkthen.h').read_text()) + '\n'.join(lines+bodies+['}'])+'\n' + answer_helpers(definitions) + native_values(definitions)
+    return usage((ROOT / 'libraries/c/include/thinkthen.h').read_text()) + '\n'.join(lines+bodies+['}'])+'\n' + result_helpers(definitions) + native_values(definitions)
 
 def input_render(definitions):
     lines=['// Generated from request.schema.json; do not edit.','#pragma once','#include "result_value.hpp"','namespace tt::inputs {','using results::Node;']
@@ -152,9 +152,19 @@ def named_calls(functions, native_functions):
     from host_answers import usage_operations
     lines = ['// Generated from RequestFunction and the compiler-derived ABI; do not edit.', '#pragma once',
              'namespace tt {', 'template<class Owner> class NamedCalls {', 'public:']
+    from host_answers import call_results, scalar_input_selectors
+    from generate import SCHEMA, graph, prepare
+    descriptors = call_results(prepare(graph(json.loads(SCHEMA.read_text()), ROOTS)))
+    from generate import ROOT
+    requests = prepare(graph(json.loads((ROOT / 'specification/request.schema.json').read_text()), ('RequestInput',)))
+    singles = set(scalar_input_selectors(requests))
     for function in functions:
-        lines += [f'AnswerCall<results::read_{function}> {function}(const inputs::RequestQuestion& question, const inputs::RequestInput& input, const inputs::RequestOptions& options={{}}) const {{',
-                  f'return AnswerCall<results::read_{function}>(static_cast<const Owner*>(this)->start({json.dumps(function)}, question, input, options));', '}']
+        scalar = descriptors[function]['call_shape'] == 'input'
+        input_types = [(name(child), child in singles) for child, _ in requests['RequestInput']['variants']] if scalar else [('RequestInput', False)]
+        for input_type, single in input_types:
+            project = f'results::detail::project_{function}' + ('<'+str(single).lower()+'>' if scalar else '')
+            lines += [f'ResultCall<{project}> {function}(const inputs::RequestQuestion& question, const inputs::{input_type}& input, const inputs::RequestOptions& options={{}}) const {{',
+                      f'return ResultCall<{project}>(static_cast<const Owner*>(this)->start({json.dumps(function)}, question, input, options));', '}']
     if 'thinkthen_request_plan_named_value' in native_functions:
         lines += ['results::Plan plan(const inputs::RequestCall& call) const {',
                   'return static_cast<const Owner*>(this)->plan_impl(call);', '}']
@@ -164,77 +174,17 @@ def named_calls(functions, native_functions):
     return '\n'.join(lines + ['};', '}']) + '\n'
 
 
-def answer_helpers(definitions):
-    from host_answers import aggregate_answers, aggregate_projection, judgment_route, scalar_answers
-    scalars = scalar_answers(definitions)
-    scalar_names = {function for function, _, _ in scalars}
-    path, guards = judgment_route(definitions)
-    def access(parts):
-        return '::tt::results::detail::document(packet)' + ''.join('.at(' + json.dumps(part) + ')' for part in parts)
-    lines = ['namespace tt {',
-             'class Failure : public std::runtime_error { public:',
-             'NativeFailureKind kind;', 'bool retryable=false;',
-             'std::optional<results::ImmediateFacts> facts;', 'std::optional<results::CallError> failure;',
-             'std::optional<results::SessionPacketTerminal> terminal;', 'std::vector<results::SessionPacket> packets;',
-             'Failure(int code, const std::string& message);',
-             'Failure(const char* message, const std::vector<results::SessionPacket>& values);',
-             'explicit Failure(results::SessionPacketTerminal value);', '};', '}', 'namespace tt::results {',
-             'inline void successful_answer(const std::vector<SessionPacket>& packets) {',
-             'size_t terminals=0;',
-             'for(const auto& packet:packets) if(literal(::tt::results::detail::document(packet), "kind", "terminal")) {',
-             '++terminals;',
-             'if(::tt::results::detail::document(packet).contains("failure")) throw ::tt::Failure("terminal contains a failure",packets);', '}',
-             'if(terminals!=1 || packets.empty() || !literal(::tt::results::detail::document(packets.back()),"kind","terminal")) throw ::tt::Failure("expected one final successful terminal",packets);', '}']
-    for function, kind, payload in scalars:
-        nullable = isinstance(payload.get('type'), list) and 'null' in payload['type']
-        raw = {**payload, 'type': next(k for k in payload['type'] if k != 'null')} if nullable else payload
-        value_type = typ(raw)
-        answer_type = f'std::optional<{value_type}>' if nullable else value_type
-        guard = ' && '.join(f'literal({access(parts[:-1])}, {json.dumps(parts[-1])}, {json.dumps(value)})' for parts, value in guards)
-        lines += [f'inline {answer_type} read_{function}(const std::vector<SessionPacket>& packets) {{',
-                  'successful_answer(packets);', f'std::optional<{answer_type}> answer;',
-                  f'for(const auto& packet:packets) if({guard}) {{',
-                  f'const auto& judgment={access(path)};',
-                  f'if(!literal(judgment,"kind",{json.dumps(kind)})) continue;',
-                  'if(answer) throw ::tt::Failure("multiple matching judgments",packets);']
-        expression = f'detail::decode<{value_type}>(judgment.at("value"))'
-        if nullable:
-            expression = f'judgment.at("value").is_null() ? {answer_type}{{}} : {answer_type}({expression})'
-        lines += [f'answer.emplace({expression});', '}',
-                  'if(!answer) throw ::tt::Failure("no matching judgment",packets);', 'return std::move(*answer);', '}']
-    for function, aggregate, payload in aggregate_answers(definitions):
-        if function in scalar_names: continue
-        projected, member = aggregate_projection(function, payload, definitions)
-        if member:
-            value_type = typ(projected['items'])
-            lines += [f'inline std::vector<{value_type}> read_{function}(const std::vector<SessionPacket>& packets) {{',
-                      'successful_answer(packets);', f'std::vector<{value_type}> answer;',
-                      f'for(const auto& packet:packets) {{ if(literal(::tt::results::detail::document(packet),"function",{json.dumps(function)})) {{',
-                      'const auto& value=::tt::results::detail::document(packet).at("value");',
-                      f'if(literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<{value_type}>(value.at({json.dumps(member)})));',
-                      f'else if(literal(::tt::results::detail::document(packet),"kind","aggregate")) {{ if(!answer.empty()) continue; for(const auto& row:value) answer.push_back(detail::decode<{value_type}>(row.at({json.dumps(member)}))); }}',
-                      '}}', 'return answer;', '}']
-            continue
-        rows = [(key, value['properties']['value']) for key, value in definitions.items()
-                if value.get('properties', {}).get('function', {}).get('const') == function
-                and value.get('properties', {}).get('kind', {}).get('const') == 'row']
-        if rows:
-            row, payload = rows[0]
-            value_type = typ(payload)
-            lines += [f'inline std::vector<{value_type}> read_{function}(const std::vector<SessionPacket>& packets) {{',
-                      'successful_answer(packets);', f'std::vector<{value_type}> answer;',
-                      f'for(const auto& packet:packets) if(auto row=packet.as_{name(row)}()) answer.push_back(*row->value().value);',
-                      'return answer;', '}']
-        else:
-            value_type = typ(payload)
-            lines += [f'inline {value_type} read_{function}(const std::vector<SessionPacket>& packets) {{',
-                      'successful_answer(packets);', f'std::optional<{value_type}> answer;',
-                      f'for(const auto& packet:packets) if(auto aggregate=packet.as_{name(aggregate)}()) {{',
-                      'if(answer) throw ::tt::Failure("multiple matching aggregates",packets);',
-                      'answer.emplace(*aggregate->value().value);', '}',
-                      'if(!answer) throw ::tt::Failure("no matching aggregate",packets);',
-                      'return std::move(*answer);', '}']
-    return '\n'.join(lines + ['}']).replace('literal(', 'detail::literal(') + '\n'
+def result_helpers(definitions):
+    from cpp_results import render
+    failure = '\n'.join(['namespace tt {',
+        'class Failure : public std::runtime_error { public:',
+        'NativeFailureKind kind; bool retryable=false;',
+        'std::optional<results::ImmediateFacts> facts; std::optional<results::CallError> failure;',
+        'std::optional<results::SessionPacketTerminal> terminal; std::vector<results::SessionPacket> packets;',
+        'Failure(int code, const std::string& message);',
+        'Failure(const char* message, const std::vector<results::SessionPacket>& values);',
+        'explicit Failure(results::SessionPacketTerminal value);', '};', '}']) + '\n'
+    return failure + render(definitions, typ, name)
 
 
 def native_values(definitions):

@@ -68,6 +68,10 @@ template<class T> struct Decoder {
         else return value.is_object();
     }
 };
+template<class T> struct Decoder<std::optional<T>> {
+    static std::optional<T> read(const Data& value) { return value.is_null() ? std::nullopt : std::optional<T>(Decoder<T>::read(value)); }
+    static bool matches(const Data& value) { return value.is_null() || Decoder<T>::matches(value); }
+};
 template<class T> struct Decoder<std::vector<T>> {
     static std::vector<T> read(const Data& value) {
         std::vector<T> result; for(const auto& item:value) result.push_back(Decoder<T>::read(item)); return result;

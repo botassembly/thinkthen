@@ -70,13 +70,54 @@ int main(int argc,char** argv) {
         if(opts.contains("none")) options.set_none(opts.at("none").get<bool>());
         if(opts.contains("context")) options.set_context(text(opts.at("context")));
         auto verb=text(v.at("verb"));
+        const auto& data=::tt::results::detail::document(in);
         auto start=[&]() -> Call {
-#define NAMED(name) if(verb==#name) return client.name(q,in,options);
-            NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
-            NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
+#define SHAPED(name,type) return client.name(q,::tt::results::detail::Loader::input<type>(data),options);
+#define NAMED(name) if(verb==#name) { \
+    auto kind=data.at("kind").get<std::string>(); \
+    if(kind=="records") { SHAPED(name,RequestInputRecords) } \
+    if(kind=="source") { SHAPED(name,RequestInputSource) } \
+    if(kind=="units") { SHAPED(name,RequestInputUnits) } \
+    if(kind=="entities") { SHAPED(name,RequestInputEntities) } \
+    if(kind=="feed") { SHAPED(name,RequestInputFeed) } \
+    throw std::invalid_argument("unknown fixture input"); }
+            NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score)
+            NAMED(annotate) NAMED(recognize)
+            if(verb=="filter") return client.filter(q,in,options);
+            if(verb=="rank") return client.rank(q,in,options);
+            if(verb=="find") return client.find(q,in,options);
+            if(verb=="relate") return client.relate(q,in,options);
+#undef SHAPED
 #undef NAMED
             throw std::invalid_argument("unknown fixture function");
         };
+        if(v.contains("call_result_contract") && v.at("call_result_contract").get<bool>()) {
+            const auto& original=data.at("items").at(0).at("original");
+            auto emit=[&](auto call) {
+                Data::Array packets;
+                auto result=[&] {
+                    auto owned=std::move(call); owned.finish();
+                    if(verb=="decide") owned.collect();
+                    auto result=owned.result(); auto repeated=owned.result();
+                    auto copied=owned.collect(); auto collected=owned.collect();
+                    if(::tt::results::detail::encode(result.value)!=::tt::results::detail::encode(repeated.value) ||
+                       ::tt::results::detail::encode(result.probability)!=::tt::results::detail::encode(repeated.probability) ||
+                       ::tt::results::detail::encode(copied)!=::tt::results::detail::encode(collected) ||
+                       *result.facts.requests_sent().value!=1) throw std::logic_error("result cache changed the completed call");
+                    for(const auto& packet:copied) packets.push_back(::tt::results::detail::document(packet));
+                    client.close(); return result;
+                }(); // The operation and native session are destroyed before these fields are read.
+                auto fields=Data{{"value",::tt::results::detail::encode(result.value)},{"probability",::tt::results::detail::encode(result.probability)},{"results",::tt::results::detail::encode(result.results)},{"facts",::tt::results::detail::encode(result.facts)}};
+                std::cout<<::tt::detail::serialize(Data{{"packets",packets},{"call_result",fields}})<<'\n';
+            };
+#define CONTRACT(name) if(verb==#name) { \
+    if(text(original.at("kind"))=="text") emit(client.name(q,RequestInputText().set_text(text(original.at("text"))),options)); \
+    else emit(client.name(q,RequestInputJson().set_value(original.at("value")),options)); \
+    return 0; }
+            CONTRACT(decide) CONTRACT(choose)
+#undef CONTRACT
+            throw std::invalid_argument("unsupported result contract fixture");
+        }
         auto call=start();
         if(v.at("cancel").get<bool>()) {
             call.cancel();

@@ -31,9 +31,25 @@ static RequestInput evidence(const std::string& verb,const Data& original) {
     return RequestInputText().set_text(original.get<std::string>());
 }
 static Call named(Client& client,const std::string& verb,const RequestQuestion& question,const RequestInput& input) {
-#define NAMED(name) if(verb==#name) return client.name(question,input);
-    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
-    NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
+    const auto& data=::tt::results::detail::document(input);
+#define SHAPED(name,type) return client.name(question,::tt::results::detail::Loader::input<type>(data));
+#define NAMED(name) if(verb==#name) { \
+    const auto kind=data.at("kind").get<std::string>(); \
+    if(kind=="text") { SHAPED(name,RequestInputText) } \
+    if(kind=="json") { SHAPED(name,RequestInputJson) } \
+    if(kind=="records") { SHAPED(name,RequestInputRecords) } \
+    if(kind=="source") { SHAPED(name,RequestInputSource) } \
+    if(kind=="units") { SHAPED(name,RequestInputUnits) } \
+    if(kind=="entities") { SHAPED(name,RequestInputEntities) } \
+    if(kind=="feed") { SHAPED(name,RequestInputFeed) } \
+    throw std::invalid_argument("unknown fixture input"); }
+    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score)
+    NAMED(annotate) NAMED(recognize)
+    if(verb=="filter") return client.filter(question,input);
+    if(verb=="rank") return client.rank(question,input);
+    if(verb=="find") return client.find(question,input);
+    if(verb=="relate") return client.relate(question,input);
+#undef SHAPED
 #undef NAMED
     throw std::invalid_argument("unknown fixture function");
 }
@@ -189,26 +205,46 @@ int main(int argc,char** argv) {
             if(std::locale()!=originalLocale || originalNumeric!=std::setlocale(LC_NUMERIC,nullptr)) return 44;
             return answered && packets.back().as_SessionPacketTerminal() ? 0:43;
         }
-        if(verb=="cardinality-zero" || verb=="cardinality-many") {
-            auto input=verb=="cardinality-zero" ? RequestInput(RequestInputFeed().set_name("empty")) : RequestInput(RequestInputRecords().set_items({item(Data("first")),item(Data("second"))}));
-            auto call=client.decide(RequestQuestionText().set_text("Is it?"),input);
-            try { call.answer(); return 48; }
-            catch(const ::tt::Failure& error) {
-                if(error.packets.empty() || !error.packets.back().as_SessionPacketTerminal()) return 49;
-                const bool empty=verb=="cardinality-zero";
-                if(std::string(error.what())!=(empty ? "no matching judgment":"multiple matching judgments")) return 50;
-                size_t judgments=0;
-                for(const auto& packet:error.packets) {
-                    const auto& value=::tt::results::detail::document(packet);
-                    if(value.at("kind").get<std::string>()=="observation" && value.at("value").at("kind").get<std::string>()=="row" && value.at("value").at("value").at("kind").get<std::string>()=="judgment") ++judgments;
-                }
-                if(judgments!=(empty ? 0u:2u)) return 51;
-                std::cout<<"cardinality-pass judgments="<<judgments<<'\n'; return 0;
+        if(verb=="result-rank" || verb=="result-find" || verb=="result-recognize") {
+            auto original=read(argv[3]); auto question=RequestQuestionFile().set_path(argv[2]);
+            auto emit=[&](auto call) {
+                client.close(); auto result=call.result(); call.close();
+                std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(result.value)},{"probability",::tt::results::detail::encode(result.probability)},{"results",::tt::results::detail::encode(result.results)},{"facts",::tt::results::detail::encode(result.facts)}})<<'\n';
+            };
+            if(verb=="result-recognize") emit(client.recognize(question,RequestInputText().set_text(original.get<std::string>())));
+            else {
+                std::vector<RequestItem> items; for(const auto& value:original) items.push_back(item(value));
+                if(verb=="result-rank") emit(client.rank(question,RequestInputRecords().set_items(items)));
+                else emit(client.find(question,RequestInputUnits().set_items(items)));
             }
+            return 0;
+        }
+        if(verb=="result-decide") {
+            auto original=read(argv[3]);
+            std::vector<RequestItem> items;
+            if(original.is_array()) for(const auto& value:original) items.push_back(item(value));
+            auto emit=[&](auto call) {
+                client.close(); auto result=call.result(); call.close(); auto moved=std::move(result);
+                std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(moved.value)},{"probability",::tt::results::detail::encode(moved.probability)},{"results",::tt::results::detail::encode(moved.results)},{"facts",::tt::results::detail::encode(moved.facts)}})<<'\n';
+            };
+            auto question=RequestQuestionFile().set_path(argv[2]);
+            if(original.is_array()) emit(client.decide(question,RequestInputRecords().set_items(items)));
+            else emit(client.decide(question,RequestInputText().set_text(original.get<std::string>())));
+            return 0;
+        }
+        if(verb=="cardinality-zero" || verb=="cardinality-many") {
+            auto question=RequestQuestionText().set_text("Is it?");
+            auto call=verb=="cardinality-zero" ? client.decide(question,RequestInputFeed().set_name("empty")) : client.decide(question,RequestInputRecords().set_items({item(Data("first")),item(Data("second"))}));
+            auto result=call.result();
+            auto values=result.value;
+            auto probabilities=result.probability;
+            const size_t count=verb=="cardinality-zero" ? 0:2;
+            if(values.size()!=count || probabilities.size()!=count || result.results.size()!=count) return 48;
+            std::cout<<"cardinality-pass judgments="<<count<<'\n'; return 0;
         }
         if(verb=="failure") {
             auto call=client.decide(RequestQuestionText().set_text("Is it?"),RequestInputText().set_text("backend-failure")); call.finish();
-            try { call.answer(); return 15; }
+            try { call.result(); return 15; }
             catch(const ::tt::Failure& error) {
                 if(!error.failure || error.failure->error().value->kind().value->value()!="backend" || error.failure->error().value->retryable().value.value()) return 16;
                 if(error.failure->facts().state!=results::PresenceState::value || *error.failure->facts().value->requests_sent().value!=1) return 17;

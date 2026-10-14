@@ -10,6 +10,6 @@ int main() {
     auto broken = RequestInputText().set_text(
         "Please refund my order. It arrived broken.");
     auto call = client.decide(question, broken);
-    auto is_refund = call.answer().value_or(false);
+    auto is_refund = call.result().value.get<bool>();
     assert(is_refund);
 }

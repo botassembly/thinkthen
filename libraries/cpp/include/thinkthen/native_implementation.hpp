@@ -28,6 +28,7 @@ struct PacketDeleter { void operator()(thinkthen_session_result* p) const noexce
 struct Call::State {
     std::unique_ptr<thinkthen_session,detail::SessionDeleter> session;
     bool closed=false;
+    std::optional<std::vector<results::SessionPacket>> packets;
     explicit State(thinkthen_session* raw):session(raw) {}
 };
 struct Client::State {
@@ -74,11 +75,14 @@ void Call::wait(bool input) {
     uint32_t ready=0;
     detail::check(thinkthen_session_wait(state_->session.get(),input ? THINKTHEN_SESSION_WAIT_INPUT_V1 : THINKTHEN_SESSION_WAIT_SETTLEMENT_V1,UINT32_MAX,&ready));
 }
-std::vector<results::SessionPacket> Call::collect() {
+const std::vector<results::SessionPacket>& Call::completed() {
+    if(!state_) throw std::logic_error("C++ call is closed");
+    if(state_->packets) return *state_->packets;
     std::vector<results::SessionPacket> values;
-    try { for(;;) { auto next=read(true,true); if(next.state==PollState::end) return values; if(next.packet) values.push_back(std::move(*next.packet)); } }
+    try { for(;;) { auto next=read(true,true); if(next.state==PollState::end) { state_->packets.emplace(std::move(values)); return *state_->packets; } if(next.packet) values.push_back(std::move(*next.packet)); } }
     catch(::tt::Failure& error) { error.packets=std::move(values); throw; }
 }
+std::vector<results::SessionPacket> Call::collect() { return completed(); }
 Client::Client():state_(std::make_unique<State>()) {}
 Client::Client(const inputs::EngineSettings& settings):state_(std::make_unique<State>(::tt::detail::serialize(::tt::results::detail::document(settings)).c_str())) {}
 Client::Client(Client&&) noexcept=default;

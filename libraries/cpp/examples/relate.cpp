@@ -15,6 +15,6 @@ int main(int argc,char** argv) {
     for(const auto& value:original) items.push_back(RequestItem().set_original(RequestOriginalJson().set_value(value)));
     auto input=RequestInput(RequestInputEntities().set_items(items));
     tt::Client client(EngineSettings().set_replay(argv[3]));
-    auto answer=client.relate(question,input).answer();
-    std::cout<<::tt::detail::serialize(tt::results::detail::encode(answer))<<'\n';
+    auto answer=client.relate(question,input).result();
+    std::cout<<::tt::detail::serialize(tt::Data{{"value",tt::results::detail::encode(answer.value)},{"probability",tt::results::detail::encode(answer.probability)},{"results",tt::results::detail::encode(answer.results)},{"facts",tt::results::detail::encode(answer.facts)}})<<'\n';
 }

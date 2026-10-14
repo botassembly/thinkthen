@@ -8656,144 +8656,433 @@ namespace tt {
     };
 }
 namespace tt::results {
-    inline void successful_answer(const std::vector<SessionPacket>& packets) {
-        size_t terminals=0;
-        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
-        "kind", "terminal")) {
-            ++terminals;
-            if(::tt::results::detail::document(packet).contains("failure")) throw ::tt::Failure("terminal contains a failure",
+    template<class V,class P,class R> struct CallResult {
+        V value;
+        P probability;
+        std::vector<R> results;
+        Facts facts;
+    };
+    namespace detail {
+        inline std::vector<std::optional<double>> recognition_probability(const Data& row) {
+            std::vector<std::optional<double>> odds;
+            const auto& value=row.at("value");
+            if(value.contains("proposals")) {
+                for(const auto& proposal:value.at("proposals")) odds.emplace_back(proposal.at("probability").get<double>());
+                return odds;
+            }
+            for(const auto& entity:value.at("entities")) {
+                std::optional<double> probability;
+                for(const auto& proposal:row.at("answer").at("proposals")) {
+                    if(!proposal.at("kept").get<bool>() || !proposal.contains("kind") || !proposal.contains("selected")) continue;
+                    const auto& bounds=proposal.at("selected");
+                    if(bounds.at("start")==entity.at("start") && bounds.at("end")==entity.at("end") && proposal.at("kind")==entity.at("kind")) {
+                        if(probability) throw std::invalid_argument("multiple kept recognition proposals");
+                        probability=proposal.at("span_probability").get<double>();
+                    }
+                }
+                odds.push_back(probability);
+            }
+            return odds;
+        }
+        inline void successful_result(const std::vector<SessionPacket>& packets) {
+            size_t terminals=0;
+            for(const auto& packet:packets) if(literal(document(packet),"kind","terminal")) {
+                ++terminals;
+                if(document(packet).contains("failure")) throw ::tt::Failure("terminal contains a failure",
+                packets);
+            }
+            if(terminals!=1 || packets.empty() || !literal(document(packets.back()),"kind","terminal") || !document(packets.back()).contains("facts")) throw ::tt::Failure("expected one final successful terminal with facts",
             packets);
         }
-        if(terminals!=1 || packets.empty() || !detail::literal(::tt::results::detail::document(packets.back()),
-        "kind","terminal")) throw ::tt::Failure("expected one final successful terminal",packets);
     }
-    inline std::optional<bool> read_decide(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<std::optional<bool>> answer;
-        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
-        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
-        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
-        "kind", "judgment")) {
-            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
-            if(!detail::literal(judgment,"kind","decision")) continue;
-            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
-            answer.emplace(judgment.at("value").is_null() ? std::optional<bool>{
-            } : std::optional<bool>(detail::decode<bool>(judgment.at("value"))));
-        }
-        if(!answer) throw ::tt::Failure("no matching judgment",packets);
-        return std::move(*answer);
-    }
-    inline std::optional<std::string> read_choose(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<std::optional<std::string>> answer;
-        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
-        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
-        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
-        "kind", "judgment")) {
-            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
-            if(!detail::literal(judgment,"kind","choice")) continue;
-            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
-            answer.emplace(judgment.at("value").is_null() ? std::optional<std::string>{
-            } : std::optional<std::string>(detail::decode<std::string>(judgment.at("value"))));
-        }
-        if(!answer) throw ::tt::Failure("no matching judgment",packets);
-        return std::move(*answer);
-    }
-    inline double read_score(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<double> answer;
-        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
-        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
-        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
-        "kind", "judgment")) {
-            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
-            if(!detail::literal(judgment,"kind","score")) continue;
-            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
-            answer.emplace(detail::decode<double>(judgment.at("value")));
-        }
-        if(!answer) throw ::tt::Failure("no matching judgment",packets);
-        return std::move(*answer);
-    }
-    inline std::vector<std::string> read_tag(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<std::vector<std::string>> answer;
-        for(const auto& packet:packets) if(detail::literal(::tt::results::detail::document(packet),
-        "kind", "observation") && detail::literal(::tt::results::detail::document(packet).at("value"),
-        "kind", "row") && detail::literal(::tt::results::detail::document(packet).at("value").at("value"),
-        "kind", "judgment")) {
-            const auto& judgment=::tt::results::detail::document(packet).at("value").at("value").at("value");
-            if(!detail::literal(judgment,"kind","tags")) continue;
-            if(answer) throw ::tt::Failure("multiple matching judgments",packets);
-            answer.emplace(detail::decode<std::vector<std::string>>(judgment.at("value")));
-        }
-        if(!answer) throw ::tt::Failure("no matching judgment",packets);
-        return std::move(*answer);
-    }
-    inline std::vector<Data> read_filter(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::vector<Data> answer;
-        for(const auto& packet:packets) {
-            if(detail::literal(::tt::results::detail::document(packet),"function","filter")) {
-                const auto& value=::tt::results::detail::document(packet).at("value");
-                if(detail::literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<Data>(value.at("input")));
-                else if(detail::literal(::tt::results::detail::document(packet),"kind","aggregate")) {
-                    if(!answer.empty()) continue;
-                    for(const auto& row:value) answer.push_back(detail::decode<Data>(row.at("input")));
+    template<bool Single>
+    using DecideResult = CallResult<std::conditional_t<Single,Data,std::vector<Data>>,std::conditional_t<Single,
+    std::optional<double>,std::vector<std::optional<double>>>,AtomicDecideValue>;
+    namespace detail {
+        template<bool Single>
+        inline DecideResult<Single> project_decide(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicDecideValue>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketDecideAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicDecideValue> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketDecideRow()) records.push_back(*row->value().value);
+            std::vector<Data> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<Data>(row.at("value")));
+                bool resolved=true;
+                size_t matched=0;
+                resolved=false;
+                for(const auto& packet:packets) {
+                    const auto& observation=detail::document(packet);
+                    if(detail::literal(observation,"kind","observation") && detail::literal(observation.at("value"),
+                    "kind","row") && detail::literal(observation.at("value").at("value"),"kind","judgment") && detail::literal(observation.at("value").at("value").at("value"),
+                    "kind","decision") && observation.at("value").at("index")==(row.contains("index") ? row.at("index") : Data(uint64_t(i)))) {
+                        ++matched;
+                        resolved=!observation.at("value").at("value").at("value").at("value").is_null();
+                    }
                 }
+                if(matched!=1) throw ::tt::Failure("expected one matching judgment per input",packets);
+                std::optional<double> odds;
+                if(resolved) odds=row.at("answer").at("probability").get<double>();
+                probabilities.push_back(odds);
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::move(probabilities.front()),std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::move(probabilities),std::move(records),std::move(facts)
+                };
             }
         }
-        return answer;
     }
-    inline std::vector<uint64_t> read_rank(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::vector<uint64_t> answer;
-        for(const auto& packet:packets) {
-            if(detail::literal(::tt::results::detail::document(packet),"function","rank")) {
-                const auto& value=::tt::results::detail::document(packet).at("value");
-                if(detail::literal(::tt::results::detail::document(packet),"kind","row")) answer.push_back(detail::decode<uint64_t>(value.at("index")));
-                else if(detail::literal(::tt::results::detail::document(packet),"kind","aggregate")) {
-                    if(!answer.empty()) continue;
-                    for(const auto& row:value) answer.push_back(detail::decode<uint64_t>(row.at("index")));
+    template<bool Single>
+    using ChooseResult = CallResult<std::conditional_t<Single,std::optional<std::string>,std::vector<std::optional<std::string>>>,
+    std::conditional_t<Single,std::optional<double>,std::vector<std::optional<double>>>,AtomicNullableString>;
+    namespace detail {
+        template<bool Single>
+        inline ChooseResult<Single> project_choose(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicNullableString>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketChooseAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicNullableString> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketChooseRow()) records.push_back(*row->value().value);
+            std::vector<std::optional<std::string>> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<std::optional<std::string>>(row.at("value")));
+                bool resolved=true;
+                size_t matched=0;
+                resolved=false;
+                for(const auto& packet:packets) {
+                    const auto& observation=detail::document(packet);
+                    if(detail::literal(observation,"kind","observation") && detail::literal(observation.at("value"),
+                    "kind","row") && detail::literal(observation.at("value").at("value"),"kind","judgment") && detail::literal(observation.at("value").at("value").at("value"),
+                    "kind","choice") && observation.at("value").at("index")==(row.contains("index") ? row.at("index") : Data(uint64_t(i)))) {
+                        ++matched;
+                        resolved=!observation.at("value").at("value").at("value").at("value").is_null();
+                    }
                 }
+                if(matched!=1) throw ::tt::Failure("expected one matching judgment per input",packets);
+                std::optional<double> odds;
+                if(resolved) odds=row.at("answer").at("probabilities").at(row.at("answer").at("pick").get<std::string>()).get<double>();
+                probabilities.push_back(odds);
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::move(probabilities.front()),std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::move(probabilities),std::move(records),std::move(facts)
+                };
             }
         }
-        return answer;
     }
-    inline Find read_find(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<Find> answer;
-        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketFindAggregate()) {
-            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
-            answer.emplace(*aggregate->value().value);
+    template<bool Single>
+    using TagResult = CallResult<std::conditional_t<Single,std::vector<std::string>,std::vector<std::vector<std::string>>>,
+    std::optional<double>,AtomicArrayOfString>;
+    namespace detail {
+        template<bool Single>
+        inline TagResult<Single> project_tag(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicArrayOfString>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketTagAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicArrayOfString> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketTagRow()) records.push_back(*row->value().value);
+            std::vector<std::vector<std::string>> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<std::vector<std::string>>(row.at("value")));
+                probabilities.emplace_back();
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            }
         }
-        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
-        return std::move(*answer);
     }
-    inline std::vector<Annotation> read_annotate(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::vector<Annotation> answer;
-        for(const auto& packet:packets) if(auto row=packet.as_SessionPacketAnnotateRow()) answer.push_back(*row->value().value);
-        return answer;
-    }
-    inline std::vector<Recognition> read_recognize(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<std::vector<Recognition>> answer;
-        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRecognizeAggregate()) {
-            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
-            answer.emplace(*aggregate->value().value);
+    template<bool Single>
+    using ScoreResult = CallResult<std::conditional_t<Single,double,std::vector<double>>,std::optional<double>,
+    AtomicDouble>;
+    namespace detail {
+        template<bool Single>
+        inline ScoreResult<Single> project_score(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicDouble>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketScoreAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicDouble> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketScoreRow()) records.push_back(*row->value().value);
+            std::vector<double> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<double>(row.at("value")));
+                probabilities.emplace_back();
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            }
         }
-        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
-        return std::move(*answer);
     }
-    inline Relation read_relate(const std::vector<SessionPacket>& packets) {
-        successful_answer(packets);
-        std::optional<Relation> answer;
-        for(const auto& packet:packets) if(auto aggregate=packet.as_SessionPacketRelateAggregate()) {
-            if(answer) throw ::tt::Failure("multiple matching aggregates",packets);
-            answer.emplace(*aggregate->value().value);
+    using FilterResult = CallResult<std::vector<Data>,std::vector<std::optional<double>>,AtomicBoolean>;
+    namespace detail {
+        inline FilterResult project_filter(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicBoolean>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketFilterAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicBoolean> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketFilterRow()) records.push_back(*row->value().value);
+            std::vector<Data> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<Data>(row.at("input")));
+                bool resolved=true;
+                std::optional<double> odds;
+                if(resolved) odds=row.at("answer").at("probability").get<double>();
+                probabilities.push_back(odds);
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            return {
+                std::move(values),std::move(probabilities),std::move(records),std::move(facts)
+            };
         }
-        if(!answer) throw ::tt::Failure("no matching aggregate",packets);
-        return std::move(*answer);
+    }
+    using RankResult = CallResult<std::vector<uint64_t>,std::vector<std::optional<double>>,AtomicNonZeroUsize>;
+    namespace detail {
+        inline RankResult project_rank(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<AtomicNonZeroUsize>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketRankAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<AtomicNonZeroUsize> records;
+            if(aggregate) records=std::move(*aggregate);
+            else throw ::tt::Failure("no matching aggregate",packets);
+            std::vector<uint64_t> values;
+            std::vector<std::vector<std::optional<double>>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<uint64_t>(row.at("index")));
+                bool resolved=true;
+                std::optional<double> odds;
+                if(resolved && row.at("answer").contains("probability")) odds=row.at("answer").at("probability").get<double>();
+                probabilities.push_back({
+                    odds
+                });
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            std::vector<std::optional<double>> odds;
+            for(auto& item:probabilities) odds.push_back(item.front());
+            return {
+                std::move(values),std::move(odds),std::move(records),std::move(facts)
+            };
+        }
+    }
+    using FindResult = CallResult<Data,std::optional<double>,Find>;
+    namespace detail {
+        inline FindResult project_find(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<Find> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketFindAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<Find> records;
+            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
+            records.push_back(std::move(*aggregate));
+            std::vector<Data> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<Data>(row.at("value")));
+                bool resolved=true;
+                resolved=!row.at("index").is_null();
+                std::optional<double> odds;
+                if(resolved) odds=row.at("answer").at("probabilities").at(row.at("answer").at("pick").get<std::string>()).get<double>();
+                probabilities.push_back(odds);
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if(values.size()!=1) throw ::tt::Failure("expected one whole-set result",packets);
+            return {
+                std::move(values.front()),std::move(probabilities.front()),std::move(records),std::move(facts)
+            };
+        }
+    }
+    template<bool Single>
+    using AnnotateResult = CallResult<std::conditional_t<Single,std::vector<std::pair<std::string,
+    AnnotatedField>>,std::vector<std::vector<std::pair<std::string, AnnotatedField>>>>,std::optional<double>,
+    Annotation>;
+    namespace detail {
+        template<bool Single>
+        inline AnnotateResult<Single> project_annotate(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<Annotation>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketAnnotateAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<Annotation> records;
+            if(aggregate) records=std::move(*aggregate);
+            else for(const auto& packet:packets) if(auto row=packet.as_SessionPacketAnnotateRow()) records.push_back(*row->value().value);
+            std::vector<std::vector<std::pair<std::string, AnnotatedField>>> values;
+            std::vector<std::optional<double>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<std::vector<std::pair<std::string, AnnotatedField>>>(row.at("value")));
+                probabilities.emplace_back();
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::optional<double>{
+                    },std::move(records),std::move(facts)
+                };
+            }
+        }
+    }
+    template<bool Single>
+    using RecognizeResult = CallResult<std::conditional_t<Single,std::variant<std::vector<Entity>,
+    std::vector<BoundaryProposal>>,std::vector<std::variant<std::vector<Entity>,std::vector<BoundaryProposal>>>>,
+    std::conditional_t<Single,std::vector<std::optional<double>>,std::vector<std::vector<std::optional<double>>>>,
+    Recognition>;
+    namespace detail {
+        template<bool Single>
+        inline RecognizeResult<Single> project_recognize(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<std::vector<Recognition>> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketRecognizeAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<Recognition> records;
+            if(aggregate) records=std::move(*aggregate);
+            else throw ::tt::Failure("no matching aggregate",packets);
+            std::vector<std::variant<std::vector<Entity>,std::vector<BoundaryProposal>>> values;
+            std::vector<std::vector<std::optional<double>>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(row.at("value").contains("entities") ? std::variant<std::vector<Entity>,std::vector<BoundaryProposal>>(detail::decode<std::vector<Entity>>(row.at("value").at("entities"))) : std::variant<std::vector<Entity>,
+                std::vector<BoundaryProposal>>(detail::decode<std::vector<BoundaryProposal>>(row.at("value").at("proposals"))));
+                probabilities.push_back(detail::recognition_probability(row));
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if constexpr(Single) {
+                if(values.size()!=1) throw ::tt::Failure("expected one scalar result",packets);
+                return {
+                    std::move(values.front()),std::move(probabilities.front()),std::move(records),std::move(facts)
+                };
+            } else {
+                return {
+                    std::move(values),std::move(probabilities),std::move(records),std::move(facts)
+                };
+            }
+        }
+    }
+    using RelateResult = CallResult<std::vector<RelatedEntityEdge>,std::vector<std::optional<double>>,
+    Relation>;
+    namespace detail {
+        inline RelateResult project_relate(const std::vector<SessionPacket>& packets) {
+            detail::successful_result(packets);
+            std::optional<Relation> aggregate;
+            for(const auto& packet:packets) if(auto carrier=packet.as_SessionPacketRelateAggregate()) {
+                if(aggregate) throw ::tt::Failure("multiple matching aggregates",packets);
+                aggregate.emplace(*carrier->value().value);
+            }
+            std::vector<Relation> records;
+            if(!aggregate) throw ::tt::Failure("no matching aggregate",packets);
+            records.push_back(std::move(*aggregate));
+            std::vector<std::vector<RelatedEntityEdge>> values;
+            std::vector<std::vector<std::optional<double>>> probabilities;
+            for(size_t i=0;
+            i<records.size();
+            ++i) {
+                const auto& row=detail::document(records[i]);
+                values.push_back(detail::decode<std::vector<RelatedEntityEdge>>(row.at("value")));
+                std::vector<std::optional<double>> odds;
+                for(const auto& edge:row.at("value")) odds.emplace_back(edge.at("probability").get<double>());
+                probabilities.push_back(std::move(odds));
+            }
+            auto facts=detail::decode<Facts>(detail::document(packets.back()).at("facts"));
+            if(values.size()!=1) throw ::tt::Failure("expected one whole-set result",packets);
+            return {
+                std::move(values.front()),std::move(probabilities.front()),std::move(records),std::move(facts)
+            };
+        }
     }
 }
 #ifdef THINKTHEN_CPP_IMPLEMENTATION

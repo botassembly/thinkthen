@@ -9,12 +9,11 @@ int main() {
     auto report = RequestInputText().set_text(
         "Steps: click Log in. Nobody gets in.");
     auto call = client.annotate(form, report);
-    auto annotations = call.answer();
+    auto annotations = call.result().value;
     bool steps = false;
     std::string area;
     double impact = 0;
-    auto fields = annotations.at(0).value().value;
-    for (const auto& [name, field] : fields->value()) {
+    for (const auto& [name, field] : annotations) {
         if (name == "steps") {
             steps = std::get<bool>(field.value());
         } else if (name == "area") {

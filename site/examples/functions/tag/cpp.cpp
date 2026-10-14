@@ -16,7 +16,7 @@ int main() {
     auto call = client.tag(
         which_labels,
         message);
-    auto fitting_labels = call.answer();
+    auto fitting_labels = call.result().value;
     std::vector<std::string> all_three{
         "praise", "bug", "billing",
     };

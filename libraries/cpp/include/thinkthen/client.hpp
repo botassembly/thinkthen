@@ -15,6 +15,8 @@ class Call {
     friend class Client;
     bool admit(const inputs::RequestSessionDescriptor& item,bool blocking);
     Poll read(bool blocking,bool settlement);
+protected:
+    const std::vector<results::SessionPacket>& completed();
 public:
     Call(Call&&) noexcept;
     Call& operator=(Call&&) noexcept;
@@ -36,10 +38,11 @@ struct UsageStatus {
     const UsagePersistenceState state;
     const std::optional<std::string> advice;
 };
-template<auto Reader> class AnswerCall : public Call {
+template<auto Project> class ResultCall : public Call {
 public:
-    explicit AnswerCall(Call&& call):Call(std::move(call)) {}
-    auto answer() { if(!input_closed()) finish(); return Reader(collect()); }
+    explicit ResultCall(Call&& call):Call(std::move(call)) {}
+    std::vector<results::SessionPacket> collect() { return Call::collect(); }
+    auto result() { if(!input_closed()) finish(); return Project(completed()); }
 };
 }
 #include "calls_generated.hpp"

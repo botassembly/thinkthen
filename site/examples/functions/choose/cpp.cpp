@@ -13,6 +13,6 @@ int main() {
     auto call = client.choose(
         which_team,
         parcel);
-    auto team = call.answer().value_or("");
+    auto team = call.result().value.value_or("");
     assert(team == "shipping");
 }

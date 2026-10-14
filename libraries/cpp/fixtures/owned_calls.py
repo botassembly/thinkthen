@@ -51,7 +51,7 @@ try:
         source = prefix / 'share/thinkthen-cpp/examples' / (verb + '.cpp')
         assert source.is_file(), 'CPP_EXAMPLE_MISSING ' + verb
         authored = source.read_text()
-        assert '.answer()' in authored and not any(old in authored for old in ('.collect(', 'as_SessionPacket', 'from_document(')), 'CPP_EXAMPLE_STALE ' + verb
+        assert '.result()' in authored and not any(old in authored for old in ('.collect(', 'as_SessionPacket', 'from_document(')), 'CPP_EXAMPLE_STALE ' + verb
         case = next(case for case in cases if case['verb'] == verb)
         question = dict(case.get('question', case.get('question_set', {})))
         original = case.get('text', case['exchanges'][0]['evidence'])
@@ -84,7 +84,17 @@ try:
         sampled = subprocess.run([example, qpath, ipath, scratch / 'recorded'], env=env, capture_output=True, text=True, timeout=20)
         assert sampled.returncode == 0, (verb, sampled.returncode, sampled.stdout, sampled.stderr)
         assert sampled.stderr == '', (verb, sampled.stderr)
-        sampled_value = json.loads(sampled.stdout)
+        sampled_result = json.loads(sampled.stdout)
+        assert sampled_result.keys() == {'value', 'probability', 'results', 'facts'}, sampled_result
+        assert sampled_result['facts']['requests_sent'] >= 0, sampled_result
+        assert sampled_result['results'], sampled_result
+        sampled_value = sampled_result['value']
+        if verb == 'decide':
+            assert sampled_value is True and sampled_result['probability'] == 0.9, sampled_result
+        elif verb == 'choose':
+            assert sampled_result['probability'] == 0.9, sampled_result
+        elif verb in ('tag', 'score', 'annotate'):
+            assert sampled_result['probability'] is None, sampled_result
         if verb in ('decide', 'choose', 'tag', 'score'):
             judgments = [p['value']['value']['value'] for p in packets
                          if p['kind'] == 'observation' and p['value']['kind'] == 'row'
@@ -94,8 +104,17 @@ try:
             assert sampled_value == [original], (verb, sampled_value)
         elif verb == 'rank':
             assert sampled_value == [0], (verb, sampled_value)
-        elif verb in ('annotate', 'recognize'):
-            assert len(sampled_value) == 1 and sampled_value[0]['input'] == original, (verb, sampled_value)
+        elif verb == 'recognize':
+            recognition = next(packet['value'][0] for packet in packets if packet['kind'] == 'aggregate')
+            assert sampled_value == recognition['value']['entities'], sampled_value
+            assert len(sampled_result['probability']) == len(sampled_value), sampled_result
+            for entity, probability in zip(sampled_value, sampled_result['probability'], strict=True):
+                proposal = next(p for p in recognition['answer']['proposals'] if p['kept'] and p.get('kind') == entity['kind'] and p.get('selected', {}).get('start') == entity['start'] and p.get('selected', {}).get('end') == entity['end'])
+                assert probability == proposal['span_probability'], (probability, proposal)
+        elif verb == 'annotate':
+            assert isinstance(sampled_value, dict), sampled_value
+        elif verb == 'relate':
+            assert sampled_result['probability'] == [edge['probability'] for edge in sampled_value], sampled_result
         print('CPP_INSTALLED_EXAMPLE_PASS', verb)
 
     assert len(server.requests) == 11, len(server.requests)
@@ -137,6 +156,63 @@ try:
             assert wire['state'] == 'Each question quotes the text it asks about.' and len(wire['questions']) == 2, wire
             assert [question['instructions'] for question in wire['questions'].values()] == ['The text is "first". Is it?', 'The text is "second". Is it?'], wire
         print('CPP_INSTALLED_CARDINALITY_PASS', mode)
+    for original, yes, no, expected, odds in (
+        ('yes', None, 'kept', None, 0.9),
+        ('no', 'kept', None, None, 0.1),
+        ('unsure', None, False, None, None),
+        ('no', True, False, False, 0.1),
+        ('yes', {'wide': 18446744073709551615, 'false': False}, None, {'wide': 18446744073709551615, 'false': False}, 0.9),
+        ('yes', [None, False, {'x': 7}], None, [None, False, {'x': 7}], 0.9),
+        (['yes', 'no', 'unsure'], {'yes': True}, False, [{'yes': True}, False, None], [0.9, 0.1, None]),
+        (['yes'], None, False, [None], [0.9]),
+    ):
+        qpath=scratch / 'result-question.json'; ipath=scratch / 'result-input.json'
+        definition={'decide':'Is it?', 'threshold':'0.2:0.8'}
+        if not isinstance(yes, bool): definition['true']=yes
+        if not isinstance(no, bool): definition['false']=no
+        qpath.write_text(json.dumps(definition))
+        ipath.write_text(json.dumps(original))
+        result=subprocess.run([binary,'result-decide',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+        assert result.returncode==0, (result.stdout,result.stderr)
+        value=json.loads(result.stdout)
+        assert value['value']==expected and value['probability']==odds, value
+        assert len(value['results'])==(len(original) if isinstance(original,list) else 1), value
+        assert value['facts']['requests_sent']>=0, value
+    print('CPP_INSTALLED_AUTHORED_RESULT_PASS null false object list wide_integer input_order ownership')
+    for definition in ({'version':1,'questions': {'one': {'decide': 'Is it?'}, 'two': {'decide': 'Is it still?'}}},
+                       {'score':'How is it?', 'levels':['low','high']}):
+        qpath=scratch / 'whole-set-question.json'; ipath=scratch / 'whole-set-input.json'
+        qpath.write_text(json.dumps(definition)); ipath.write_text(json.dumps(['yes','no','unsure']))
+        result=subprocess.run([binary,'result-rank',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+        assert result.returncode==0, (result.stdout,result.stderr)
+        ranked=json.loads(result.stdout)
+        assert sorted(ranked['value'])==[0,1,2] and len(ranked['results'])==3, ranked
+        assert ranked['value']==[row['index'] for row in ranked['results']], ranked
+        assert ranked['probability']==[row['answer'].get('probability') for row in ranked['results']], ranked
+    print('CPP_INSTALLED_WHOLE_SET_RANK_PASS question_set score nullable_probabilities')
+    qpath.write_text(json.dumps({'find':'Which one?'})); ipath.write_text(json.dumps([None,'no']))
+    result=subprocess.run([binary,'result-find',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode==0, (result.stdout,result.stderr)
+    found=json.loads(result.stdout)
+    assert found['value'] is None and found['results'][0]['index']==0 and found['probability']==0.9, found
+    print('CPP_INSTALLED_NULL_FIND_PASS selected_null_retains_probability')
+    qpath.write_text(json.dumps({'version':1,'recognize': {'mode':'boundary_only'}, 'threshold':0.0001})); ipath.write_text(json.dumps('Ada arrived.'))
+    result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode==0, (result.stdout,result.stderr)
+    boundaries=json.loads(result.stdout)
+    assert boundaries['value'] and boundaries['probability']==[item['probability'] for item in boundaries['value']], boundaries
+    print('CPP_INSTALLED_BOUNDARY_RESULT_PASS proposal_probability')
+    qpath.write_text(json.dumps({'version':1,'recognize': {'kinds':{'person':"A person's name."}}, 'threshold':0.0001}))
+    result=subprocess.run([binary,'result-recognize',qpath,ipath],env=env,capture_output=True,text=True,timeout=5)
+    assert result.returncode==0, (result.stdout,result.stderr)
+    recognized=json.loads(result.stdout)
+    assert recognized['value'] and len(recognized['probability'])==len(recognized['value']), recognized
+    assert any(probability!=entity['strength'] for probability,entity in zip(recognized['probability'],recognized['value'],strict=True)), recognized
+    proposals=recognized['results'][0]['answer']['proposals']
+    for entity, probability in zip(recognized['value'],recognized['probability'],strict=True):
+        proposal=next(p for p in proposals if p['kept'] and p.get('kind')==entity['kind'] and p.get('selected',{}).get('start')==entity['start'] and p.get('selected',{}).get('end')==entity['end'])
+        assert probability==proposal['span_probability'], (probability,proposal)
+    print('CPP_INSTALLED_RECOGNITION_ODDS_PASS kept_span_probability differs_from_strength')
     source = scratch / 'physical.txt'
     source.write_text('yes\n\nno\n')
     result = subprocess.run([binary,'files',scratch / 'decide-question.json',source],env=env,capture_output=True,text=True,timeout=5)
