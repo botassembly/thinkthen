@@ -891,8 +891,8 @@ fn relation_records_keep_generated_member_question_text_and_whole_set_probabilit
     let relations = answer
         .struct_()
         .expect("answer Struct")
-        .field_by_name("relations")
-        .expect("relations");
+        .field_by_name("questions")
+        .expect("relation questions");
     let members = relations
         .list()
         .expect("members List")
