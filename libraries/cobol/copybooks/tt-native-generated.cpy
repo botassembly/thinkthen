@@ -3600,7 +3600,6 @@
  02 v-m-context usage pointer.
  02 v-m-context-field usage pointer.
  02 v-m-deadline-ms usage pointer.
- 02 v-m-details usage pointer.
  02 v-m-examples usage pointer.
  02 v-m-examples-field usage pointer.
  02 v-m-field usage pointer.
@@ -4143,8 +4142,6 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsDeadlineMs based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-RequestOptionsDetails based.
- 02 v-value usage binary-double unsigned.
 01 tt-n-cobol-RequestOptionsExamples based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.

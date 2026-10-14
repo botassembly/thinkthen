@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+import time
 
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
@@ -80,6 +81,30 @@ def main():
                 if mode == 'poll': assert server.attempts == before + 3, 'poll generator request count'
                 if mode == 'zero': assert server.attempts == before, 'rejected input sent a request'
                 print(result.stdout.decode(), end='')
+            process = subprocess.Popen(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
+                str(work / 'consumer.php'), 'wait-event'], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+            try:
+                assert process.stdout.readline() == b'PHP_WAIT_ENTER\n'
+                arrived = work / 'barrier/arrived-hold-php-event'
+                deadline = time.monotonic() + 2
+                while not arrived.exists() and time.monotonic() < deadline:
+                    time.sleep(.01)
+                assert arrived.exists(), 'native event wait never dispatched the held request'
+                try:
+                    output, errors = process.communicate(timeout=.15)
+                except subprocess.TimeoutExpired:
+                    pass
+                else:
+                    raise AssertionError(('native event wait returned before packet readiness', output, errors))
+                (work / 'barrier/release-hold-php-event').touch()
+                output, errors = process.communicate(timeout=2)
+                assert process.returncode == 0, (output, errors)
+                assert b'PHP_SESSION_PASS wait-event' in output, output
+                print(output.decode(), end='')
+            finally:
+                (work / 'barrier/release-hold-php-event').touch()
+                if process.poll() is None:
+                    process.kill(); process.communicate()
             env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),

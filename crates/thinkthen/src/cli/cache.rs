@@ -158,6 +158,7 @@ fn duration(text: &str) -> Result<Duration, Failure> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the duration parser protects exact count and unit boundaries before cache operations.
     use std::time::Duration;
 
     use super::duration;

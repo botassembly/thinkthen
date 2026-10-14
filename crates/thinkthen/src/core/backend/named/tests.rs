@@ -1,3 +1,4 @@
+//! Stays: endpoint parsing and credential-host isolation need exhaustive closed-grammar and secrecy tables.
 //! The tier walk and the host rule, as edge tables.
 
 use super::{Named, Tier, choose, find};

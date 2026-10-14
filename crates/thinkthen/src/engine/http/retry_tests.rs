@@ -1,3 +1,4 @@
+//! Stays: transport retry timing, cancellation and address diagnostics need direct fault and secrecy checks.
 //! The longest retry wait, on a loopback backend (ticket 0367).
 
 use std::io::{Read as _, Write as _};

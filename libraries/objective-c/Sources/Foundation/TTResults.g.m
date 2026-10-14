@@ -6161,13 +6161,6 @@ TTSourceUnit const TTSourceUnitFile = @"file";
     if (value) self.requestFields[@"deadline_ms"] = value;
     else [self.requestFields removeObjectForKey:@"deadline_ms"];
 }
-- (NSNumber *)details {
-    return self.requestFields[@"details"];
-}
-- (void)setDetails:(NSNumber *)value {
-    if (value) self.requestFields[@"details"] = value;
-    else [self.requestFields removeObjectForKey:@"details"];
-}
 - (NSArray *)examples {
     return self.requestFields[@"examples"];
 }

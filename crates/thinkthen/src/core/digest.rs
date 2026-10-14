@@ -150,6 +150,7 @@ impl Serialize for Described<'_> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: canonical hash framing and published vectors need direct identity checks across all question components.
     use super::{Canonical, question_sha256, question_sha256_with_profile};
     use crate::core::ProfileName;
     use crate::core::question::{Labels, Question};

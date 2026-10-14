@@ -216,6 +216,7 @@ fn variable_name(text: &str) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: configuration parsing and permission refusals must withhold values and obey platform ownership rules.
     use super::super::Config;
 
     #[test]

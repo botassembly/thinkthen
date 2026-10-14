@@ -1141,13 +1141,20 @@ def rust_char_end(text: str, quote: int) -> int | None:
     return place + 1 if place < len(text) and text[place] == "'" else None
 
 
-def rust_tokens(text: str, literals: bool = False) -> list[str]:
+def rust_tokens(text: str, literals: bool = False, offsets: list[int] | None = None,
+                docs: list[tuple[int, str]] | None = None) -> list[str]:
     """Skip comments and literals, retaining literal tokens only for attributes."""
     tokens = []
     place = 0
+    def emit(token: str, offset: int) -> None:
+        tokens.append(token)
+        if offsets is not None:
+            offsets.append(offset)
     while place < len(text):
         if text.startswith("//", place):
             end = text.find("\n", place + 2)
+            if docs is not None and text.startswith("//!", place):
+                docs.append((place, text[place:len(text) if end < 0 else end]))
             place = len(text) if end < 0 else end + 1
             continue
         if text.startswith("/*", place):
@@ -1171,7 +1178,7 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
             end = text.find('"' + hashes, place)
             place = len(text) if end < 0 else end + len(hashes) + 1
             if literals:
-                tokens.append(text[start:place])
+                emit(text[start:place], start)
             continue
         prefix = 1 if text.startswith(("b\"", "c\"", "b'"), place) else 0
         quote = text[place + prefix] if place + prefix < len(text) else ""
@@ -1186,7 +1193,7 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
                 else:
                     end += 1
             if literals:
-                tokens.append(text[place:end])
+                emit(text[place:end], place)
             place = end
             continue
         if quote == "'":
@@ -1201,15 +1208,15 @@ def rust_tokens(text: str, literals: bool = False) -> list[str]:
             end = place + 1
             while end < len(text) and (text[end].isalnum() or text[end] == "_"):
                 end += 1
-            tokens.append(text[place:end])
+            emit(text[place:end], place)
             place = end
             continue
         if text.startswith("::", place):
-            tokens.append("::")
+            emit("::", place)
             place += 2
             continue
         if not text[place].isspace():
-            tokens.append(text[place])
+            emit(text[place], place)
         place += 1
     return tokens
 
@@ -2693,6 +2700,8 @@ def main() -> int:
     check_doors()
     check_facade()
     check_sources()
+    from unit_rationale import check_unit_rationale
+    check_unit_rationale(REPO, rust_tokens, fail)
     check_seam()
     check_interface_names()
     check_license_grammar()

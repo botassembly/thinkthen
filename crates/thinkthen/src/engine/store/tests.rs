@@ -1,3 +1,4 @@
+//! Stays: cache locking, private creation permissions and corruption/conflict handling need direct durability faults.
 //! The store's edge table, by ADR 0111 slice 2.
 
 use std::fs;

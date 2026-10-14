@@ -1,3 +1,4 @@
+//! Stays: saved question parsing and resolution need direct closed-grammar, conflict and secrecy checks.
 //! The precedence rule, over a file, over a command line, and over both.
 
 use proptest::prelude::Strategy;

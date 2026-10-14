@@ -5,12 +5,26 @@ from native import JSON_KINDS
 
 
 def name(key):
+    key = {'EngineSettings_max_estimated_input_tokens_total': 'OptionalTotal',
+           'EngineSettings_max_requests': 'OptionalCount'}.get(key, key)
     key = key.replace('RequestOptions', 'CallOptions', 1) if key.startswith('RequestOptions') else key
     key = key.replace('RequestThreshold', 'CallThreshold', 1) if key.startswith('RequestThreshold') else key
     key = key.replace('RequestQuestion', 'QuestionSelector', 1) if key.startswith('RequestQuestion') else key.removeprefix('Request')
     key = key.removeprefix('Authored_')
     words = re.findall(r'[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[0-9]+', key)
     return 'thinkthen_request_' + '_'.join(word.lower() for word in words) + '_v1'
+
+
+def union_member(parent, target, siblings=()):
+    """Use the canonical alternative title for a public C payload field."""
+    member = name(target).removeprefix("thinkthen_request_").removesuffix("_v1")
+    prefix = name(parent).removeprefix("thinkthen_request_").removesuffix("_v1")
+    short = member.removeprefix(prefix + "_")
+    if sum(name(item).removeprefix("thinkthen_request_").removesuffix("_v1").removeprefix(prefix + "_") == short for item in siblings) > 1:
+        short = prefix.rsplit("_", 1)[-1] + "_" + short if member.startswith(prefix + "_") else member
+    if short in {"unsigned", "signed", "char", "int", "float", "double", "long", "short", "void", "bool", "class", "struct", "union", "enum"}:
+        short += "_value"
+    return short
 
 
 def quoted(value):
@@ -172,10 +186,14 @@ def render(definitions, metadata=None):
             union = typ.removesuffix('_v1') + '_data_v1'
             arms = []
             body = ['match input.kind {']
-            for index, alternative in enumerate(alternatives, 1):
-                target = child(alternative, key + '_arm_' + str(index))
-                arm = 'arm_' + str(index)
-                symbol = typ.removesuffix('_v1').upper() + '_ARM_' + str(index) + '_V1'
+            targets = [child(alternative, key + "_arm_" + str(index)) for index, alternative in enumerate(alternatives, 1)]
+            for index, target in enumerate(targets, 1):
+                arm = union_member(key, target, targets)
+                if any(line.startswith('    pub ' + arm + ':') for line in arms):
+                    raise ValueError('duplicate canonical request union field: ' + key + '.' + arm)
+                if metadata is not None:
+                    metadata.setdefault('arms', {})[(key, index)] = arm
+                symbol = typ.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
                 declarations.append('pub const ' + symbol + ': u32 = ' + str(index) + ';')
                 arms.append('    pub ' + arm + ': *const ' + name(target) + ',')
                 body.append(symbol + ' => ' + read(target, 'input.data.' + arm) + ',')

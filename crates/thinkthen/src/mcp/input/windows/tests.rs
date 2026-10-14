@@ -1,3 +1,4 @@
+//! Stays: blocked pipe ownership and cancellation joins need direct platform I/O fault checks.
 //! Real owned subprocess pipes; these tests require a Windows runner.
 use super::{PipeInput, PipeOutput};
 use crate::CancelToken;

@@ -1,3 +1,4 @@
+//! Stays: statistical arithmetic and byte-preserving splices need direct deterministic vectors and boundary checks.
 //! Hand-checked values from the prototype's own tests, and the cases its review planted.
 
 use super::answer::{self, Identity, Rule, Shown};

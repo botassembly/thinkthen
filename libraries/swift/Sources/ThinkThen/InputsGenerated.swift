@@ -2519,7 +2519,6 @@ public struct Options: ValueRepresentable {
   public let `context`: Presence<String>
   public let `contextField`: Presence<String>
   public let `deadlineMs`: Presence<Int64>
-  public let `details`: Presence<Bool>
   public let `examples`: Presence<[RecognitionExample]>
   public let `examplesField`: Presence<String>
   public let `field`: Presence<[String]>
@@ -2540,7 +2539,7 @@ public struct Options: ValueRepresentable {
     extensions: [String: DataValue] = [:], `attempts`: Presence<Bool> = .absent,
     `batch`: Presence<Batch> = .absent, `context`: Presence<String> = .absent,
     `contextField`: Presence<String> = .absent, `deadlineMs`: Presence<Int64> = .absent,
-    `details`: Presence<Bool> = .absent, `examples`: Presence<[RecognitionExample]> = .absent,
+    `examples`: Presence<[RecognitionExample]> = .absent,
     `examplesField`: Presence<String> = .absent, `field`: Presence<[String]> = .absent,
     `filesOnly`: Presence<Bool> = .absent, `maxRequestsTotal`: Presence<UInt64> = .absent,
     `mode`: Presence<RecognitionMode> = .absent, `model`: Presence<String> = .absent,
@@ -2557,7 +2556,6 @@ public struct Options: ValueRepresentable {
     self.`context` = `context`
     self.`contextField` = `contextField`
     self.`deadlineMs` = `deadlineMs`
-    self.`details` = `details`
     self.`examples` = `examples`
     self.`examplesField` = `examplesField`
     self.`field` = `field`
@@ -2578,10 +2576,10 @@ public struct Options: ValueRepresentable {
   static func read(_ json: DataValue) throws -> Options {
     let object = try jsonObject(json)
     let known: Set<String> = [
-      "attempts", "batch", "context", "context_field", "deadline_ms", "details", "examples",
-      "examples_field", "field", "files_only", "max_requests_total", "mode", "model", "none",
-      "options_field", "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces",
-      "stage_context", "threshold", "top",
+      "attempts", "batch", "context", "context_field", "deadline_ms", "examples", "examples_field",
+      "field", "files_only", "max_requests_total", "mode", "model", "none", "options_field",
+      "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces", "stage_context",
+      "threshold", "top",
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
@@ -2590,7 +2588,6 @@ public struct Options: ValueRepresentable {
       context: try readPresence(object, "context", String.self),
       contextField: try readPresence(object, "context_field", String.self),
       deadlineMs: try readPresence(object, "deadline_ms", Int64.self),
-      details: try readPresence(object, "details", Bool.self),
       examples: try readPresence(object, "examples", [RecognitionExample].self),
       examplesField: try readPresence(object, "examples_field", String.self),
       field: try readPresence(object, "field", [String].self),
@@ -2613,10 +2610,10 @@ public struct Options: ValueRepresentable {
   var json: DataValue {
     if let _sourceJSON { return _sourceJSON }
     let known: Set<String> = [
-      "attempts", "batch", "context", "context_field", "deadline_ms", "details", "examples",
-      "examples_field", "field", "files_only", "max_requests_total", "mode", "model", "none",
-      "options_field", "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces",
-      "stage_context", "threshold", "top",
+      "attempts", "batch", "context", "context_field", "deadline_ms", "examples", "examples_field",
+      "field", "files_only", "max_requests_total", "mode", "model", "none", "options_field",
+      "relation_threshold", "seed_spans", "seed_spans_field", "snippet_pieces", "stage_context",
+      "threshold", "top",
     ]
     var object = extensions.filter { !known.contains($0.key) }
     writePresence(`attempts`, "attempts", &object)
@@ -2624,7 +2621,6 @@ public struct Options: ValueRepresentable {
     writePresence(`context`, "context", &object)
     writePresence(`contextField`, "context_field", &object)
     writePresence(`deadlineMs`, "deadline_ms", &object)
-    writePresence(`details`, "details", &object)
     writePresence(`examples`, "examples", &object)
     writePresence(`examplesField`, "examples_field", &object)
     writePresence(`field`, "field", &object)

@@ -1,3 +1,4 @@
+//! Stays: saved-response parser and fault tables exercise private command preparation without provider calls.
 //! Planted bad cases that the shared-case validator must refuse.
 
 use super::{CASES, validate};

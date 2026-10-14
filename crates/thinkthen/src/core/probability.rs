@@ -52,6 +52,7 @@ impl From<Probability> for f64 {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: probability admission requires exact finite and inclusive endpoint checks.
     use super::{Probability, ProbabilityError};
 
     #[test]

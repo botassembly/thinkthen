@@ -1,3 +1,4 @@
+//! Stays: saved question-set parsing must retain order and reject invalid or conflicting definitions.
 use super::{QuestionSet, QuestionSetError};
 use proptest::prelude::*;
 

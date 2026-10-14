@@ -3236,18 +3236,6 @@ if not Item.Data.T_deadline_ms.Present then raise Constraint_Error with "missing
 return Native.Wrap (Item.Data.T_deadline_ms.Value);
 end Get_Deadline_Ms;
 function Has_Deadline_Ms (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_deadline_ms.Present);
-function With_Details (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Boolean_Value) return Thinkthen.Inputs.Options is
-Result : Thinkthen.Inputs.Options := Item;
-begin
-Result.Data.T_details := (Present => True, Value => Native.Unwrap (Field));
-return Result;
-end With_Details;
-function Get_Details (Item : Thinkthen.Inputs.Options) return Thinkthen.Inputs.Boolean_Value is
-begin
-if not Item.Data.T_details.Present then raise Constraint_Error with "missing input field"; end if;
-return Native.Wrap (Item.Data.T_details.Value);
-end Get_Details;
-function Has_Details (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_details.Present);
 function With_Examples (Item : Thinkthen.Inputs.Options; Field : Thinkthen.Inputs.Recognition_Example_List) return Thinkthen.Inputs.Options is
 Result : Thinkthen.Inputs.Options := Item;
 begin

@@ -180,6 +180,7 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: exception class mapping and panic recovery need direct interpreter-boundary fault injection.
     use pyo3::prelude::*;
 
     use super::{KINDS, class_of, guard, raise};

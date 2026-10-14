@@ -1,6 +1,7 @@
 """Family fixture framing and projection into the retained shared assertions."""
 import base64
 import json
+import re
 from pathlib import Path
 from question_files import question_selector
 
@@ -204,6 +205,20 @@ def assert_required(packet,row,value,bodies,root):
             assert original['original']==path.read_text()
             assert location['first_line']==1 and location['last_line']==len(path.read_text().splitlines())
 
+def selected_case_ids(selector):
+    """Read the existing file, comma-list or single-ID selector grammar."""
+    if ',' in selector:
+        values = selector.split(',')
+    elif Path(selector).is_file():
+        values = [line.strip() for line in Path(selector).read_text().splitlines()
+                  if line.strip() and not line.lstrip().startswith('#')]
+    else:
+        values = [selector]
+    if not values or any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.:-]*', value) for value in values):
+        raise ValueError('malformed or empty case selector')
+    return set(values)
+
+
 def run(consumer, command, root, extra_env=None, settings_names=None, rust_manifest=None, typescript_compiler=None):
     import os, subprocess, sys, tempfile, sqlite3
     backend_path = Path(os.environ.get('CARGO_TARGET_DIR', str(root/'target')))/'debug/conformance-backend'
@@ -215,7 +230,7 @@ def run(consumer, command, root, extra_env=None, settings_names=None, rust_manif
     rows=list(parity.required_cases(parity.inventory(),consumer).values())
     selected=os.environ.get('THINKTHEN_CONFORMANCE_IDS')
     if selected:
-        ids=selected.split(',') if ',' in selected else Path(selected).read_text().splitlines() if Path(selected).is_file() else [selected]
+        ids=selected_case_ids(selected)
         rows=[r for r in rows if r['id'] in ids]
     # The static consumers compile their actual public accessors before executing cells.
     source=Path(command[-1])

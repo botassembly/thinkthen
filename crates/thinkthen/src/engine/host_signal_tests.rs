@@ -1,3 +1,4 @@
+//! Stays: host signal handlers and worker masks must survive sends and recording I/O.
 //! Host signal proofs: a host signal never fails a call on an engine worker.
 //! The file-size proofs run in a child of this binary that skips command
 //! setup, the way an embedding host would call the engine.

@@ -1,3 +1,4 @@
+//! Stays: endpoint parsing and credential-host isolation need exhaustive closed-grammar and secrecy tables.
 //! The address rule and the model rule, as edge tables.
 
 use super::{Backend, BackendError};

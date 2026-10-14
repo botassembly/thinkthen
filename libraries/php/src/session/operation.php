@@ -66,7 +66,9 @@ final class Operation
         if ($this->session === null) throw new UsageFailure('operation is closed');
         $ready = $this->ffi->new('uint32_t');
         $interest = $this->producer !== null ? \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_INPUT_V1 : \ThinkThen\Internal\Session\THINKTHEN_SESSION_WAIT_SETTLEMENT_V1;
-        $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, 50, \FFI::addr($ready)));
+        // Tokens and async signals need the VM to observe host cancellation.
+        $cooperative = $this->token !== null || (function_exists('pcntl_async_signals') && pcntl_async_signals());
+        $this->check($this->ffi->thinkthen_session_wait($this->session, $interest, $cooperative ? 50 : 0xffffffff, \FFI::addr($ready)));
     }
     public function result(): \ThinkThen\Results\Completed
     {

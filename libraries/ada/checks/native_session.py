@@ -80,7 +80,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-ada-session-') as temporary:
     # Admission, cancellation and execution failures add no host-side semantic rules.
     key = 'RequestCall'
     def request(question, original):
-        return construct(key, definitions[key], {'function':'decide', 'question':question, 'input':original, 'options':{'details':True}})
+        return construct(key, definitions[key], {'function':'decide', 'question':question, 'input':original, 'options':{}})
     failure = request({'kind':'text','text':'Does it pass?'}, {'kind':'text','text':'failure-one'})
     feed = request({'kind':'text','text':'Does it pass?'}, {'kind':'feed','name':'owned'})
     invalid = request({'kind':'text','text':''}, {'kind':'text','text':'invalid'})

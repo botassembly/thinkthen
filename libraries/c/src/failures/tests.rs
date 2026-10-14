@@ -1,3 +1,4 @@
+//! Stays: private diagnostic slots must preserve error kinds and thread-local secrecy.
 //! The native C interface's error and hook boundaries.
 
 use super::{DEFECT, Failure, Held, USAGE, built, guard, lock};

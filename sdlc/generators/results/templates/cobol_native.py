@@ -48,7 +48,7 @@ def render(definitions, old_nodes):
             body = ['out->kind=(uint32_t)p->kind;', 'switch(p->kind) {']
             for index, alternative in enumerate(alternatives, 1):
                 call = child(alternative, native + '_arm_' + str(index), old + '_arm_' + str(index))
-                body.append(f'case {index}: out->data.arm_{index}={call}(a,p->value); break;')
+                body.append(f'case {index}: out->data.{metadata['arms'][(native, index)]}={call}(a,p->value); break;')
             body += ['default: a->code=THINKTHEN_COBOL_REPRESENTATION; break;', '}']
         elif source.get('type') == 'array':
             call = child(source.get('items', {}), native + '_item', old + '_item')

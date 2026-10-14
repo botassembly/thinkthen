@@ -438,6 +438,7 @@
         "Completed": [
           "initialize",
           "facts",
+          "probability",
           "inspect"
         ]
       },
@@ -957,7 +958,6 @@
         "OwnedPresence",
         "Producer",
         "FeedInput",
-        "AnswerCardinalityError",
         "Call"
       ],
       "representation_calls": [
@@ -1002,8 +1002,7 @@
         "Error",
         "ErrorKind",
         "SessionError",
-        "FeedInput",
-        "AnswerCardinalityError"
+        "FeedInput"
       ],
       "representation_embedded_members": {
         "ownedJSON": [
@@ -1014,10 +1013,11 @@
         ]
       },
       "wrapper_members": {
-        "AnswerCardinalityError": [
-          "Function",
-          "Count",
-          "Call"
+        "Call": [
+          "Value",
+          "Probability",
+          "Results",
+          "Facts"
         ]
       }
     },

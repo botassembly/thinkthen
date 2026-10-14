@@ -124,6 +124,7 @@ impl Plan {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: private plan construction must preserve question order and reject an empty question set.
     use super::{EmptyPlanError, Plan};
     use crate::core::question::Question;
     use crate::core::text::{Evidence, ModelName, QuestionText};

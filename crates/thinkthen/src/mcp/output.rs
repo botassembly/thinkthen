@@ -145,6 +145,7 @@ pub(super) fn native_error(error: &crate::Error) -> crate::CompleteError<'_> {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: short writes, interrupts and frame byte ceilings need direct output fault checks.
     use super::Output;
     use std::io::{self, Write};
     use std::sync::{

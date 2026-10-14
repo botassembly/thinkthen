@@ -323,6 +323,7 @@ pub(crate) const fn valid_deadline_ms(value: i64) -> bool {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: closed settings grammar and cross-field conflicts need direct parser boundaries.
     use super::{For, Settings, SettingsError};
     use crate::core::{Json, Setting, Threshold, Typed, Verb, resolve};
     use std::num::NonZeroUsize;

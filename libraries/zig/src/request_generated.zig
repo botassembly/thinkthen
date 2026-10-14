@@ -1042,8 +1042,6 @@ pub const RequestOptions = struct {
 
     deadline_ms: ?i64 = null,
 
-    details: ?bool = null,
-
     examples: ?[]const RecognitionExample = null,
 
     examples_field: ?[]const u8 = null,

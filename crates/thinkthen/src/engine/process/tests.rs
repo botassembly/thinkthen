@@ -1,3 +1,4 @@
+//! Stays: fork ownership and concurrent publication require direct private process-state checks.
 //! The rebuild rule for process-owned state, as an edge-case table and one
 //! race. A forked child is the same memory under another process ID, so each
 //! row publishes state as one process and then calls as another.

@@ -7,7 +7,9 @@ def call_results(definitions):
 
     Scalar values come from normalized judgments; collections come from the
     aggregate packet. A caller's input shape chooses between them, even for a
-    one-element list. Probability describes the yes odds or the picked odds,
+    one-element list. call_shape distinguishes collection, whole aggregate and
+    input cardinality independently of the shape inside an answer.
+    Probability describes the yes odds or the picked odds,
     never confidence. Item probabilities stay with rank/recognize/relate items.
     Null values remain present, including unresolved scalar judgments.
     """
@@ -15,7 +17,8 @@ def call_results(definitions):
                for function, kind, payload in scalar_answers(definitions)}
     result = {}
     for function, carrier, payload in aggregate_answers(definitions):
-        projection = {'filter': 'input', 'rank': 'index'}.get(function, 'value')
+        _, projection = aggregate_projection(function, payload, definitions)
+        projection = projection or 'value'
         receipt_schema = payload.get('items', payload)
         receipt = definitions[receipt_schema['$ref'].split('/')[-1]]
         value = receipt['properties'][projection]
@@ -30,6 +33,8 @@ def call_results(definitions):
             'receipt_payload': payload,
             'aggregate_value': value,
             'value_projection': projection,
+            'call_shape': ('collection' if projection != 'value' else
+                           'aggregate' if payload.get('type') != 'array' else 'input'),
             'scalar_kind': scalar[0] if scalar else None,
             'scalar_value': scalar[1] if scalar else None,
             'probability_mode': mode,
@@ -95,6 +100,31 @@ def named_object_fields(source, definitions):
         return 'name' in value.get('required', []) and field.get('type') in ('string', ['string'])
     return [key for key, value in source.get('properties', {}).items()
             if isinstance(value, dict) and named(value)]
+
+
+def scalar_input_selectors(definitions):
+    """Return the canonical single-input alternatives, independent of names in feeds."""
+    selectors = {'text': 'text', 'json': 'value'}
+    found = {}
+    for child, _ in definitions['RequestInput'].get('variants', []):
+        source = definitions[child]
+        fields = source.get('properties', {})
+        kind = fields.get('kind', {}).get('const')
+        if kind not in selectors:
+            continue
+        member = selectors[kind]
+        if member not in source.get('required', []) or member not in fields:
+            raise ValueError('single input selector needs its canonical payload')
+        if kind == 'text' and fields[member].get('type') != 'string':
+            raise ValueError('literal text selector needs a text payload')
+        if kind == 'json' and any(key in fields[member] for key in ('type', '$ref', 'oneOf', 'anyOf')):
+            raise ValueError('authored JSON selector needs an unrestricted payload')
+        if kind in found:
+            raise ValueError('canonical single input selector is duplicated')
+        found[kind] = child
+    if found.keys() != selectors.keys():
+        raise ValueError('canonical single input selectors are missing')
+    return list(found.values())
 
 
 def usage_operations(functions):

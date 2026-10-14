@@ -166,6 +166,7 @@ pub(crate) fn version_line(version: &str) -> String {
 
 #[cfg(test)]
 mod tests {
+    //! Stays: the private version-line assembly fixes the name/version contract before command formatting.
     use super::version_line;
 
     #[test]

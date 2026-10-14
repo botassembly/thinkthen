@@ -1,3 +1,4 @@
+//! Stays: statistical arithmetic and byte-preserving splices need direct deterministic vectors and boundary checks.
 //! Ticket 0165's edge rows: what one record's names or edges do between two sides.
 
 use super::{Row, Side, diff};

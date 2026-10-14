@@ -1,3 +1,4 @@
+//! Stays: native handle cancellation and foreign pointer ownership need direct concurrency checks.
 //! Session diagnostics remain independent from the engine constructor's slot.
 use super::{
     thinkthen_session_error_facts_json as facts, thinkthen_session_error_message as message,

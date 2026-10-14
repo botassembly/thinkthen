@@ -1,3 +1,4 @@
+//! Stays: provider envelope parser, exact request bytes and credential guards need direct secrecy and boundary tables.
 use super::{join, parts, split, stored, validate_exchange};
 use crate::core::adapters::{ApiType, built_in::DecodeError};
 use crate::core::{Evidence, Json, Labels, ModelName, Plan, Question, QuestionText};

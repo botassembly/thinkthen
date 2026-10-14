@@ -4,6 +4,7 @@ import json,os,sys,subprocess,tempfile,sqlite3
 from pathlib import Path
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[4] / "conformance/children"))
 from children import child_env, read_process_line
+from native_fixture import selected_case_ids
 ROOT=Path(__file__).resolve().parents[4]
 BACKEND=Path(os.environ.get('THINKTHEN_BACKEND_BIN',os.environ.get('THINKTHEN_BACKEND',
     str(Path(os.environ.get('CARGO_TARGET_DIR',ROOT/'target'))/'debug/conformance-backend'))))
@@ -83,17 +84,35 @@ def execute(consumer,frame,env,home,backend):
 
 def main():
     consumer=sys.argv[1]
+    selected=os.environ.get('THINKTHEN_CONFORMANCE_IDS')
+    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
+    named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
+    contract=inventory.inventory()
+    rows=list(inventory.required_cases(contract,consumer).values())
+    try:
+        if os.environ.get('THINKTHEN_TEST_PROFILE')=='full' and (selected is not None or len(sys.argv)>2):
+            raise ValueError('full SQL parity refuses a case selector')
+        if selected is not None:
+            if len(sys.argv)>2:
+                raise ValueError('conflicting SQL case selectors')
+            ids=selected_case_ids(selected)
+            known=set(cases)|set(named)|{row['id'] for row in contract['required_cases']}
+            if ids-known:
+                raise ValueError('unknown SQL case selector: '+','.join(sorted(ids-known)))
+            rows=[row for row in rows if row['id'] in ids]
+        elif len(sys.argv)>2:
+            if len(sys.argv)!=3:
+                raise ValueError('unsupported SQL selector arguments')
+            rows=[row for row in rows if row['id']==sys.argv[2]]
+        if not rows:
+            raise ValueError('SQL case selector matches no required cases')
+    except (ValueError,OSError) as error:
+        print('SQL selector: '+str(error),file=sys.stderr)
+        return 2
     host=None
     if consumer=="postgresql":
         from postgresql_host import PostgresqlHost
         host=PostgresqlHost()
-    rows=list(inventory.required_cases(inventory.inventory(),consumer).values())
-    if len(sys.argv)>2:rows=[r for r in rows if r['id']==sys.argv[2]]
-    if not rows:
-        print(f'{consumer} complete SQL: FAIL required cases did not run',file=sys.stderr)
-        return True
-    cases={r['id']:r for r in json.loads((ROOT/'conformance/cases.json').read_text())['cases']}
-    named={r['id']:r for r in json.loads((ROOT/'conformance/named-inputs.json').read_text())['cases']}
     failed=0
     for row in rows:
         failure=None
