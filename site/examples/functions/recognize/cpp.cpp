@@ -13,15 +13,11 @@ int main() {
         "Sam Patel says his Kindle arrived broken "
         "in Denver.");
     auto call = client.recognize(kinds, text);
-    auto rows = call.answer();
+    auto found = call.result().value;
     std::vector<std::string> names;
-    for (const auto& row : rows) {
-        auto facts =
-            row.value().value->as_RecognizeEntities();
-        for (const auto& one : *facts->entities().value) {
-            names.push_back(*one.text().value + " (" +
-                *one.kind().value + ")");
-        }
+    for (const auto& one : std::get<std::vector<tt::results::Entity>>(found)) {
+        names.push_back(*one.text().value + " (" +
+            *one.kind().value + ")");
     }
     std::vector<std::string> expected{
         "Sam Patel (person)",

@@ -24,7 +24,7 @@ int main() {
     }
     auto call = client.rank(
         question, RequestInputRecords().set_items(records));
-    auto order = call.answer();
+    auto order = call.result().value;
     std::vector<uint64_t> by_urgency{1, 3, 2, 0};
     assert(order == by_urgency);
 }

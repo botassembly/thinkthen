@@ -22,7 +22,7 @@ int main() {
     }
     auto call = client.filter(
         question, RequestInputRecords().set_items(records));
-    auto kept = call.answer();
+    auto kept = call.result().value;
     std::vector<std::string> complaints;
     for (const auto& text : kept) {
         complaints.push_back(text.get<std::string>());

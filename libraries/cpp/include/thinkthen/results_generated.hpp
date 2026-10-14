@@ -8663,9 +8663,6 @@ namespace tt::results {
         Facts facts;
     };
     namespace detail {
-        inline bool single_input(const Data& input) {
-            return detail::literal(input,"kind","text") || detail::literal(input,"kind","json");
-        }
         inline std::vector<std::optional<double>> recognition_probability(const Data& row) {
             std::vector<std::optional<double>> odds;
             const auto& value=row.at("value");

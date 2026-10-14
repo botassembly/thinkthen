@@ -152,12 +152,15 @@ def named_calls(functions, native_functions):
     from host_answers import usage_operations
     lines = ['// Generated from RequestFunction and the compiler-derived ABI; do not edit.', '#pragma once',
              'namespace tt {', 'template<class Owner> class NamedCalls {', 'public:']
-    from host_answers import call_results
+    from host_answers import call_results, scalar_input_selectors
     from generate import SCHEMA, graph, prepare
     descriptors = call_results(prepare(graph(json.loads(SCHEMA.read_text()), ROOTS)))
+    from generate import ROOT
+    requests = prepare(graph(json.loads((ROOT / 'specification/request.schema.json').read_text()), ('RequestInput',)))
+    singles = set(scalar_input_selectors(requests))
     for function in functions:
         scalar = descriptors[function]['call_shape'] == 'input'
-        input_types = [('RequestInput', False)] + ([('RequestInputText', True), ('RequestInputJson', True)] if scalar else [])
+        input_types = [(name(child), child in singles) for child, _ in requests['RequestInput']['variants']] if scalar else [('RequestInput', False)]
         for input_type, single in input_types:
             project = f'results::detail::project_{function}' + ('<'+str(single).lower()+'>' if scalar else '')
             lines += [f'ResultCall<{project}> {function}(const inputs::RequestQuestion& question, const inputs::{input_type}& input, const inputs::RequestOptions& options={{}}) const {{',

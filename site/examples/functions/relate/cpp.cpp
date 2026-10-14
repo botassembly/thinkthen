@@ -23,17 +23,11 @@ int main() {
     auto call = client.relate(
         relations,
         RequestInputEntities().set_items(entities));
-    auto found = call.answer();
+    auto found = call.result().value;
     std::vector<std::string> who_makes;
-    for (const auto& edge : *found.value().value) {
-        auto company = edge.source().value->
-            as_RelationEndpointRelatedEntity();
-        auto product = edge.target().value->
-            as_RelationEndpointRelatedEntity();
+    for (const auto& edge : found) {
         who_makes.push_back(
-            *company->name().value +
-            " makes " +
-            *product->name().value);
+            edge.source_name() + " makes " + edge.target_name());
     }
     std::vector<std::string> expected{
         "Apple makes iPhone",

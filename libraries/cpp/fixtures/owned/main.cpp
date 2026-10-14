@@ -31,9 +31,25 @@ static RequestInput evidence(const std::string& verb,const Data& original) {
     return RequestInputText().set_text(original.get<std::string>());
 }
 static Call named(Client& client,const std::string& verb,const RequestQuestion& question,const RequestInput& input) {
-#define NAMED(name) if(verb==#name) return client.name(question,input);
-    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
-    NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
+    const auto& data=::tt::results::detail::document(input);
+#define SHAPED(name,type) return client.name(question,::tt::results::detail::Loader::input<type>(data));
+#define NAMED(name) if(verb==#name) { \
+    const auto kind=data.at("kind").get<std::string>(); \
+    if(kind=="text") { SHAPED(name,RequestInputText) } \
+    if(kind=="json") { SHAPED(name,RequestInputJson) } \
+    if(kind=="records") { SHAPED(name,RequestInputRecords) } \
+    if(kind=="source") { SHAPED(name,RequestInputSource) } \
+    if(kind=="units") { SHAPED(name,RequestInputUnits) } \
+    if(kind=="entities") { SHAPED(name,RequestInputEntities) } \
+    if(kind=="feed") { SHAPED(name,RequestInputFeed) } \
+    throw std::invalid_argument("unknown fixture input"); }
+    NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score)
+    NAMED(annotate) NAMED(recognize)
+    if(verb=="filter") return client.filter(question,input);
+    if(verb=="rank") return client.rank(question,input);
+    if(verb=="find") return client.find(question,input);
+    if(verb=="relate") return client.relate(question,input);
+#undef SHAPED
 #undef NAMED
     throw std::invalid_argument("unknown fixture function");
 }
@@ -193,19 +209,18 @@ int main(int argc,char** argv) {
             auto original=read(argv[3]);
             std::vector<RequestItem> items;
             if(original.is_array()) for(const auto& value:original) items.push_back(item(value));
-            auto input=original.is_array() ? RequestInput(RequestInputRecords().set_items(items)) : RequestInput(RequestInputText().set_text(original.get<std::string>()));
             auto emit=[&](auto call) {
                 client.close(); auto result=call.result(); call.close(); auto moved=std::move(result);
                 std::cout<<::tt::detail::serialize(Data{{"value",::tt::results::detail::encode(moved.value)},{"probability",::tt::results::detail::encode(moved.probability)},{"results",::tt::results::detail::encode(moved.results)},{"facts",::tt::results::detail::encode(moved.facts)}})<<'\n';
             };
             auto question=RequestQuestionFile().set_path(argv[2]);
-            if(original.is_array()) emit(client.decide(question,input));
+            if(original.is_array()) emit(client.decide(question,RequestInputRecords().set_items(items)));
             else emit(client.decide(question,RequestInputText().set_text(original.get<std::string>())));
             return 0;
         }
         if(verb=="cardinality-zero" || verb=="cardinality-many") {
-            auto input=verb=="cardinality-zero" ? RequestInput(RequestInputFeed().set_name("empty")) : RequestInput(RequestInputRecords().set_items({item(Data("first")),item(Data("second"))}));
-            auto call=client.decide(RequestQuestionText().set_text("Is it?"),input);
+            auto question=RequestQuestionText().set_text("Is it?");
+            auto call=verb=="cardinality-zero" ? client.decide(question,RequestInputFeed().set_name("empty")) : client.decide(question,RequestInputRecords().set_items({item(Data("first")),item(Data("second"))}));
             auto result=call.result();
             auto values=result.value;
             auto probabilities=result.probability;

@@ -37,9 +37,12 @@ struct UsageStatus {
     const std::optional<std::string> advice;
 };
 template<auto Project> class ResultCall : public Call {
+    std::optional<std::vector<results::SessionPacket>> packets_;
+    const auto& completed() { if(!packets_) packets_=Call::collect(); return *packets_; }
 public:
     explicit ResultCall(Call&& call):Call(std::move(call)) {}
-    auto result() { if(!input_closed()) finish(); return Project(collect()); }
+    std::vector<results::SessionPacket> collect() { return completed(); }
+    auto result() { if(!input_closed()) finish(); return Project(completed()); }
 };
 }
 #include "calls_generated.hpp"

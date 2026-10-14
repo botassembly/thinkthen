@@ -1,6 +1,6 @@
 """Generate owned C++ call projections from the shared result descriptors."""
 import json
-from host_answers import call_results, scalar_input_selectors
+from host_answers import call_results
 
 
 def leaf(schema, definitions, typ):
@@ -14,15 +14,10 @@ def leaf(schema, definitions, typ):
 
 
 def render(definitions, typ, name):
-    from generate import ROOT, graph, prepare
-    requests = prepare(graph(json.loads((ROOT / 'specification/request.schema.json').read_text()), ('RequestInput',)))
-    selectors = scalar_input_selectors(requests)
-    single = ' || '.join('detail::literal(input,"kind",' + json.dumps(requests[k]['properties']['kind']['const']) + ')' for k in selectors)
     lines = ['namespace tt::results {',
              'template<class V,class P,class R> struct CallResult {',
              'V value; P probability; std::vector<R> results; Facts facts;', '};',
              'namespace detail {',
-             'inline bool single_input(const Data& input) { return ' + single + '; }',
              'inline std::vector<std::optional<double>> recognition_probability(const Data& row) {',
              'std::vector<std::optional<double>> odds; const auto& value=row.at("value");',
              'if(value.contains("proposals")) { for(const auto& proposal:value.at("proposals")) odds.emplace_back(proposal.at("probability").get<double>()); return odds; }',

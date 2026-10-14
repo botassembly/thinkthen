@@ -22,7 +22,7 @@ int main() {
     }
     auto call = client.find(
         question, RequestInputRecords().set_items(records));
-    auto found = call.answer();
-    auto refund_deadline = *found.value().value;
+    auto found = call.result().value;
+    auto refund_deadline = found.get<std::string>();
     assert(refund_deadline == policy[1]);
 }

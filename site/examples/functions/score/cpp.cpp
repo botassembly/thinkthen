@@ -14,6 +14,6 @@ int main() {
     auto call = client.score(
         how_urgent,
         outage);
-    auto urgency = call.answer();
+    auto urgency = call.result().value;
     assert(urgency == 2.0);
 }
