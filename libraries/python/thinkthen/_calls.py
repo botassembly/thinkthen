@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Iterator, Mapping
 from dataclasses import dataclass
+import os
 import sys
 from typing import Generic, TypeVar
 from . import _thinkthen as native
@@ -22,6 +23,37 @@ def _json(value):
     if isinstance(value, (tuple, list)):
         return [_json(item) for item in value]
     return value
+
+
+def _original(value, text=False):
+    return {'kind': 'text', 'text': value} if text else {'kind': 'json', 'value': _json(value)}
+
+
+def _item(value, verb):
+    if isinstance(value, c.Item):
+        import base64
+        descriptor = {'images': [{'kind': 'bytes', 'media': image.media, 'bytes': base64.b64encode(image.data).decode('ascii')} for image in value.images]}
+        if not value.image_only: descriptor['original'] = _original(value.value, value.text)
+        if value.context is not c.ABSENT: descriptor['context'] = value.context
+        if value.options is not c.ABSENT:
+            descriptor['options'] = [dict(name=name, **({} if description is c.ABSENT else {'description': description})) for name, description in value.options]
+        return descriptor
+    if verb == 'relate':
+        if isinstance(value, tuple): value = dict(zip(('name', 'kind'), value, strict=True))
+        elif isinstance(value, native._NativeResult): value = {'name': value.text, 'kind': value.kind}
+    return {'original': _original(value, isinstance(value, str))}
+
+
+def _input(value, verb):
+    if isinstance(value, (c.Files, FileSelection)):
+        reading = {'unit': value.unit}
+        if value.window is not None and value.window is not c.ABSENT: reading['window'] = value.window
+        source = {'paths': [os.fspath(path) for path in value.paths], 'reading': reading, 'media': getattr(value, 'media', 'text')}
+        if getattr(value, 'jsonl', False): source['framing'] = 'jsonl'
+        return {'kind': 'source', 'source': source}
+    if isinstance(value, c.Records): value = value.items
+    values = value if isinstance(value, (list, tuple)) else (value,)
+    return {'kind': 'records', 'items': [_item(item, verb) for item in values]}
 
 
 def _question(verb, question, controls, frame=False):
