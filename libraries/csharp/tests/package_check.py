@@ -127,6 +127,32 @@ def abi_check(header, package):
     print(f'C# C ABI: {len(actual["records"])} actual layouts, {len(actual["constants"])} represented constants, {len(actual["functions"])} reflected imports match')
 
 
+
+def transport_privacy(package):
+    """An external subclass cannot reach decoder JSON through protected members."""
+    from children import child_env
+    from toolchains import dotnet
+    with tempfile.TemporaryDirectory(prefix='thinkthen-csharp-privacy-') as folder:
+        scratch = Path(folder)
+        with zipfile.ZipFile(package) as bundle:
+            (scratch / 'ThinkThen.dll').write_bytes(bundle.read('lib/net8.0/ThinkThen.dll'))
+        (scratch / 'Probe.csproj').write_text('<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup><ItemGroup><Reference Include="ThinkThen"><HintPath>ThinkThen.dll</HintPath></Reference></ItemGroup></Project>')
+        config = scratch / 'NuGet.Config'
+        config.write_text('<configuration><packageSources><clear /></packageSources></configuration>')
+        env = child_env(DOTNET_CLI_HOME=str(scratch / 'home'), NUGET_PACKAGES=str(scratch / 'nuget'),
+                        DOTNET_CLI_TELEMETRY_OPTOUT='1', DOTNET_SKIP_FIRST_TIME_EXPERIENCE='1', DOTNET_NOLOGO='1')
+        probes = {
+            'object': 'class Probe : ResultObject { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => RequiredElement("call_id"); }',
+            'union': 'class Probe : Answer { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => RequiredElement("kind"); }',
+            'primitive': 'class Probe : Threshold { public Probe(JsonElement value) : base(value) {} public JsonElement Raw => Document; }',
+        }
+        for kind, probe in probes.items():
+            (scratch / 'Probe.cs').write_text('using System.Text.Json; using ThinkThen.Results; ' + probe)
+            result = subprocess.run([str(dotnet()), 'build', str(scratch / 'Probe.csproj'), '--configfile', str(config), '-v', 'quiet', '-m:1'], env=env, capture_output=True, text=True)
+            assert result.returncode != 0 and ('CS0122' in result.stdout or 'CS1729' in result.stdout), 'external subclass exposes decoder transport: ' + kind
+    print('C# external subclass decoder privacy PASS')
+
+
 def abi_plants(header):
     """Compile changed real declarations; the same package checker must refuse them."""
     from children import child_env
@@ -255,6 +281,8 @@ def main():
     print("C# local packages: source members, hash receipt, header version, managed secrecy and planted negatives PASS")
 
     abi_check(HEADER, NUPKG)
+
+    transport_privacy(NUPKG)
 
     abi_plants(HEADER)
 

@@ -166,14 +166,14 @@ public readonly struct Presence<T>
 public abstract class ResultObject
 {
     private readonly JsonElement document;
-    protected ResultObject(JsonElement document) { this.document = document.Clone(); }
-    protected JsonElement RequiredElement(string name) => document.GetProperty(name);
-    protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
+    private protected ResultObject(JsonElement document) { this.document = document.Clone(); }
+    private protected JsonElement RequiredElement(string name) => document.GetProperty(name);
+    private protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
         if (!document.TryGetProperty(name, out var member)) return default;
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
-    protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
+    private protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
     {
         var member = RequiredElement(name);
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
@@ -246,8 +246,8 @@ def render(definitions):
 def render_primitive_union(kind, variants, definitions, schemas):
     chunks = [f'public abstract class {kind}\n{{\n'
               '    private readonly JsonElement document;\n'
-              f'    protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
-              '    protected JsonElement Document => document;\n'
+              f'    private protected {kind}(JsonElement document) {{ this.document = document.Clone(); }}\n'
+              '    private protected JsonElement Document => document;\n'
               '    internal JsonElement ToJson() => document.Clone();\n'
               '    internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions { MaxDepth = int.MaxValue })!;\n'
               '    internal string ToJsonString() => document.GetRawText();\n'
@@ -285,7 +285,7 @@ def kind_test(schema, definitions, expression):
 
 def render_union(kind, variants, definitions):
     chunks = [f'public abstract class {kind} : ResultObject\n{{\n'
-              f'    protected {kind}(JsonElement document) : base(document) {{ }}\n'
+              f'    private protected {kind}(JsonElement document) : base(document) {{ }}\n'
               f'    internal static {kind} Read(JsonElement document)\n    {{\n'
               f'        {kind}? result = null;\n']
     for variant, (mode, member, value) in variants:

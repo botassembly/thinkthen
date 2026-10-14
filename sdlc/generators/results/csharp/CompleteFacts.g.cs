@@ -28,16 +28,16 @@ public readonly struct Presence<T>
 public abstract class ResultObject
 {
     private readonly JsonElement document;
-    protected ResultObject(JsonElement document) {
+    private protected ResultObject(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement RequiredElement(string name) => document.GetProperty(name);
-    protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
+    private protected JsonElement RequiredElement(string name) => document.GetProperty(name);
+    private protected Presence<T> Optional<T>(string name, Func<JsonElement, T> read)
     {
         if (!document.TryGetProperty(name, out var member)) return default;
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
     }
-    protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
+    private protected Presence<T> RequiredNullable<T>(string name, Func<JsonElement, T> read)
     {
         var member = RequiredElement(name);
         return member.ValueKind == JsonValueKind.Null ? Presence<T>.Null : Presence<T>.Present(read(member));
@@ -72,7 +72,7 @@ public sealed class Annotation : ResultObject
 }
 public abstract class AnnotationMember : ResultObject
 {
-    protected AnnotationMember(JsonElement document) : base(document) {
+    private protected AnnotationMember(JsonElement document) : base(document) {
     }
     internal static AnnotationMember Read(JsonElement document)
     {
@@ -121,7 +121,7 @@ public sealed class AnnotationMemberFailureId : AnnotationMember
 }
 public abstract class AnnotationValue : ResultObject
 {
-    protected AnnotationValue(JsonElement document) : base(document) {
+    private protected AnnotationValue(JsonElement document) : base(document) {
     }
     internal static AnnotationValue Read(JsonElement document)
     {
@@ -331,10 +331,10 @@ public sealed class Attempt : ResultObject
 public abstract class Batch
 {
     private readonly JsonElement document;
-    protected Batch(JsonElement document) {
+    private protected Batch(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement Document => document;
+    private protected JsonElement Document => document;
     internal JsonElement ToJson() => document.Clone();
     internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
         MaxDepth = int.MaxValue
@@ -409,7 +409,7 @@ public sealed class Error : ResultObject
 }
 public abstract class EstimatedInputDenial : ResultObject
 {
-    protected EstimatedInputDenial(JsonElement document) : base(document) {
+    private protected EstimatedInputDenial(JsonElement document) : base(document) {
     }
     internal static EstimatedInputDenial Read(JsonElement document)
     {
@@ -521,7 +521,7 @@ public readonly record struct ImageMedia(string Value)
 }
 public abstract class InputDeclaration : ResultObject
 {
-    protected InputDeclaration(JsonElement document) : base(document) {
+    private protected InputDeclaration(JsonElement document) : base(document) {
     }
     internal static InputDeclaration Read(JsonElement document)
     {
@@ -558,7 +558,7 @@ public sealed class InputDeclarationStringRoot : InputDeclaration
 }
 public abstract class InputPropertyType : ResultObject
 {
-    protected InputPropertyType(JsonElement document) : base(document) {
+    private protected InputPropertyType(JsonElement document) : base(document) {
     }
     internal static InputPropertyType Read(JsonElement document)
     {
@@ -661,7 +661,7 @@ public readonly record struct ObjectType(string Value)
 }
 public abstract class Observation : ResultObject
 {
-    protected Observation(JsonElement document) : base(document) {
+    private protected Observation(JsonElement document) : base(document) {
     }
     internal static Observation Read(JsonElement document)
     {
@@ -792,7 +792,7 @@ public readonly record struct RecognitionMode(string Value)
 }
 public abstract class RecognitionOdds : ResultObject
 {
-    protected RecognitionOdds(JsonElement document) : base(document) {
+    private protected RecognitionOdds(JsonElement document) : base(document) {
     }
     internal static RecognitionOdds Read(JsonElement document)
     {
@@ -877,7 +877,7 @@ public readonly record struct RelationDirection(string Value)
 }
 public abstract class RelationEndpoint : ResultObject
 {
-    protected RelationEndpoint(JsonElement document) : base(document) {
+    private protected RelationEndpoint(JsonElement document) : base(document) {
     }
     internal static RelationEndpoint Read(JsonElement document)
     {
@@ -923,7 +923,7 @@ public sealed class RelationEndpointSource : RelationEndpoint
 }
 public abstract class RelationMember : ResultObject
 {
-    protected RelationMember(JsonElement document) : base(document) {
+    private protected RelationMember(JsonElement document) : base(document) {
     }
     internal static RelationMember Read(JsonElement document)
     {
@@ -1005,7 +1005,7 @@ public readonly record struct RequestFunction(string Value)
 }
 public abstract class SendBudgetDenial : ResultObject
 {
-    protected SendBudgetDenial(JsonElement document) : base(document) {
+    private protected SendBudgetDenial(JsonElement document) : base(document) {
     }
     internal static SendBudgetDenial Read(JsonElement document)
     {
@@ -1105,10 +1105,10 @@ public readonly record struct Version(string Value)
 public abstract class AnnotatedField
 {
     private readonly JsonElement document;
-    protected AnnotatedField(JsonElement document) {
+    private protected AnnotatedField(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement Document => document;
+    private protected JsonElement Document => document;
     internal JsonElement ToJson() => document.Clone();
     internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
         MaxDepth = int.MaxValue
@@ -1164,7 +1164,7 @@ public sealed class AnnotatedFieldObject : AnnotatedField
 }
 public abstract class Answer : ResultObject
 {
-    protected Answer(JsonElement document) : base(document) {
+    private protected Answer(JsonElement document) : base(document) {
     }
     internal static Answer Read(JsonElement document)
     {
@@ -1239,10 +1239,10 @@ public readonly record struct AttemptOutcome(string Value)
 public abstract class BatchSetting
 {
     private readonly JsonElement document;
-    protected BatchSetting(JsonElement document) {
+    private protected BatchSetting(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement Document => document;
+    private protected JsonElement Document => document;
     internal JsonElement ToJson() => document.Clone();
     internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
         MaxDepth = int.MaxValue
@@ -1421,7 +1421,7 @@ public sealed class ProfileWarning : ResultObject
 }
 public abstract class QuestionDocument : ResultObject
 {
-    protected QuestionDocument(JsonElement document) : base(document) {
+    private protected QuestionDocument(JsonElement document) : base(document) {
     }
     internal static QuestionDocument Read(JsonElement document)
     {
@@ -1532,7 +1532,7 @@ public sealed class QuestionDocumentTag : QuestionDocument
 }
 public abstract class Recognize : ResultObject
 {
-    protected Recognize(JsonElement document) : base(document) {
+    private protected Recognize(JsonElement document) : base(document) {
     }
     internal static Recognize Read(JsonElement document)
     {
@@ -1690,7 +1690,7 @@ public sealed class SessionInputSource : ResultObject
 }
 public abstract class SessionJudgment : ResultObject
 {
-    protected SessionJudgment(JsonElement document) : base(document) {
+    private protected SessionJudgment(JsonElement document) : base(document) {
     }
     internal static SessionJudgment Read(JsonElement document)
     {
@@ -1755,7 +1755,7 @@ public sealed class SessionNamedProbability : ResultObject
 }
 public abstract class SessionObservation : ResultObject
 {
-    protected SessionObservation(JsonElement document) : base(document) {
+    private protected SessionObservation(JsonElement document) : base(document) {
     }
     internal static SessionObservation Read(JsonElement document)
     {
@@ -1794,7 +1794,7 @@ public sealed class SessionObservationRow : SessionObservation
 }
 public abstract class SessionObservedRow : ResultObject
 {
-    protected SessionObservedRow(JsonElement document) : base(document) {
+    private protected SessionObservedRow(JsonElement document) : base(document) {
     }
     internal static SessionObservedRow Read(JsonElement document)
     {
@@ -1864,7 +1864,7 @@ public sealed class SessionObservedRowRelations : SessionObservedRow
 }
 public abstract class SessionPacket : ResultObject
 {
-    protected SessionPacket(JsonElement document) : base(document) {
+    private protected SessionPacket(JsonElement document) : base(document) {
     }
     internal static SessionPacket Read(JsonElement document)
     {
@@ -2124,7 +2124,7 @@ public sealed class SessionPacketTerminal : SessionPacket
 }
 public abstract class SessionProbabilities : ResultObject
 {
-    protected SessionProbabilities(JsonElement document) : base(document) {
+    private protected SessionProbabilities(JsonElement document) : base(document) {
     }
     internal static SessionProbabilities Read(JsonElement document)
     {
@@ -2225,10 +2225,10 @@ public sealed class SourceRelationEndpoint : ResultObject
 public abstract class Threshold
 {
     private readonly JsonElement document;
-    protected Threshold(JsonElement document) {
+    private protected Threshold(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement Document => document;
+    private protected JsonElement Document => document;
     internal JsonElement ToJson() => document.Clone();
     internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
         MaxDepth = int.MaxValue
@@ -2270,10 +2270,10 @@ public sealed class TokenUsage : ResultObject
 public abstract class Value
 {
     private readonly JsonElement document;
-    protected Value(JsonElement document) {
+    private protected Value(JsonElement document) {
         this.document = document.Clone();
     }
-    protected JsonElement Document => document;
+    private protected JsonElement Document => document;
     internal JsonElement ToJson() => document.Clone();
     internal JsonNode ToPlain() => JsonNode.Parse(document.GetRawText(), documentOptions: new JsonDocumentOptions {
         MaxDepth = int.MaxValue
