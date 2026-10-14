@@ -255,7 +255,49 @@ FUNCTION_NAMES = '(' + '|'.join(variant['const'] for variant in json.loads(
     (REPO / 'specification/request.schema.json').read_text())['$defs']['RequestFunction']['oneOf']) + ')'
 DATABASE_HELPERS = {'sqlite': set(), 'postgresql': {'thinkthen_record'},
                     'duckdb': {'thinkthen_record', 'thinkthen_location'}}
-FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES + r'(?:Answer(?:Async)?|ValueAsync|_Answer|_details)?(?![\w])'
+FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?' + FUNCTION_NAMES
+
+
+def host_functions(code, family):
+    # Canonical C requests and COBOL CALL operands carry function names in strings.
+    # Shell commands use words rather than host invocation syntax.
+    if family in ('command', 'packagist'):
+        return {name.lower() for name in re.findall(FUNCTION + r'(?![\w])', code, re.I)}
+    comments = r'//[^\n]*|/\*[\s\S]*?\*/'
+    if family in ('python', 'ruby', 'r', 'php'):
+        comments += r'|\#[^\n]*'
+    if family == 'ada':
+        comments = r'--[^\n]*'
+    if family == 'cobol':
+        comments = r'\*>[^\n]*'
+    # Mask literals before seeking calls, including triple and verbatim strings.
+    literals = r'"""[\s\S]*?"""|\'\'\'[\s\S]*?\'\'\'|@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|\'(?:\\.|[^\'\\])*\'|`[^`]*`'
+    functions = set()
+    if family == 'cobol':
+        # Match CALL operands before masking other literals, including DISPLAY text.
+        operands = r'\bCALL\s+["\'](?:thinkthen_|tt_)' + FUNCTION_NAMES + r'["\'](?=\s+USING\b)'
+        def mask_cobol(token):
+            if token.lastindex:
+                functions.add(token[1].lower())
+            return ' '
+        re.sub(operands + '|' + comments + '|' + literals, mask_cobol, code, flags=re.I)
+        return functions
+    def mask(token):
+        if family == 'c' and token[0].startswith('"'):
+            try:
+                request = json.loads(json.loads(token[0]))
+                function = request['call']['function']
+                if re.fullmatch(FUNCTION_NAMES, function):
+                    functions.add(function)
+            except (ValueError, TypeError, KeyError):
+                pass
+        return ' '
+    code = re.sub(literals + '|' + comments, mask, code)
+    suffix = 'Async' if family == 'csharp' else ''
+    # Rust turbofish and typed host arguments remain part of the same named call.
+    generic = r'(?:\s*(?:::)?\s*<[\w\s.:,<>\[\]&?]+>)?' if family in ('crate', 'cpp', 'typescript', 'csharp') else ''
+    invocation = r'\s*:' if family == 'objective-c' else generic + r'\s*\('
+    return functions | {name.lower() for name in re.findall(FUNCTION + suffix + invocation, code, re.I)}
 
 
 def database_functions(code, family):
@@ -303,7 +345,7 @@ def examples(family, root=REPO):
     for block in blocks:
         code = block.group(1) + '\n'
         calls = (database_functions(code, family) if family in ('sqlite', 'postgresql', 'duckdb')
-                 else {name.lower() for name in re.findall(FUNCTION, code, re.I)})
+                 else host_functions(code, family))
         # Installation belongs to package assembly, not offline sample replay.
         if not calls and re.fullmatch(
                 r'(?:(?:install\.packages\([^\n]*\)|CREATE EXTENSION thinkthen;|'
