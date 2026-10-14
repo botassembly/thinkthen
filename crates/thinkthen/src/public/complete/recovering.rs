@@ -164,7 +164,7 @@ pub(super) fn run<A: Asker, H>(
     rejected: Vec<RequestRecoveredRow>,
     mut project: impl FnMut(usize, H, pipeline::Row<A>) -> Result<RequestRecoveredRow, Error>,
 ) -> Result<Call<Vec<RequestRecoveredRow>>, Error> {
-    stop.run_call(admitted.len() + rejected.len(), |cancel| {
+    stop.run_call(0, |cancel| {
         let (held, inputs): (Vec<_>, Vec<_>) = admitted
             .into_iter()
             .map(|(ordinal, held, prepared)| ((ordinal, held), prepared))
@@ -179,7 +179,10 @@ pub(super) fn run<A: Asker, H>(
             };
             let outcome = project(ordinal, original, row);
             match outcome {
-                Ok(row) => output.push(row),
+                Ok(row) => {
+                    output.push(row);
+                    cancel.finished_records(1);
+                }
                 Err(error) => {
                     fatal = Some(error);
                     return Flow::Stop;
