@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 flutter pub add thinkthen_flutter
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```dart
 import 'package:thinkthen_flutter/thinkthen_flutter.dart';
@@ -30,15 +30,6 @@ Future<void> main() async {
     }
   } finally { engine.close(); }
 }
-```
-
-```text
-true
-false
-true
-billing
-shipping
-account
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

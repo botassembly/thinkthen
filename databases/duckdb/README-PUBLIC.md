@@ -9,7 +9,7 @@ INSTALL thinkthen FROM community;
 LOAD thinkthen;
 ```
 
-Set your hosted backend key before starting DuckDB: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key before starting DuckDB: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```sql
 WITH refunds(body) AS (VALUES

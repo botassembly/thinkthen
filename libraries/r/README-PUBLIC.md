@@ -6,16 +6,16 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 install.packages("thinkthen", repos = c("https://botassembly.r-universe.dev", "https://cloud.r-project.org"))
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```r
 library(thinkthen)
-refunds <- c("Please refund my order. It arrived broken.",
-             "Thanks for the quick help yesterday!", "I want to send this back.")
-messages <- c("Please refund the extra fee on my invoice.",
-              "My parcel went to the wrong address.", "I cannot reset my password.")
-teams <- list(billing = "Invoices, fees, and refunds.",
-              shipping = "Parcels and delivery.", account = "Logins and passwords.")
+refunds <- c("Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!",
+             "I want to send this back.")
+messages <- c("Please refund the extra fee on my invoice.", "My parcel went to the wrong address.",
+              "I cannot reset my password.")
+teams <- list(billing = "Invoices, fees, and refunds.", shipping = "Parcels and delivery.",
+              account = "Logins and passwords.")
 for (text in refunds) {
   refund <- tt_decide("Does the customer ask for a refund?", text)$answer
   print(refund)
@@ -34,7 +34,6 @@ for (text in messages) {
 [1] "shipping"
 [1] "account"
 ```
-
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 
 [Backend setup](https://thinkthen.dev/install/backends/) · [ThinkThen documentation](https://thinkthen.dev)

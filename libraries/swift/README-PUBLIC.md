@@ -8,7 +8,7 @@ tar -xzf thinkthen-swift-0.2.0-TARGET.tar.gz
 
 Replace `TARGET` with the platform name on your downloaded release archive.
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```swift
 import ThinkThen
@@ -22,27 +22,16 @@ import ThinkThen
             .init("account", .alternative0("Logins and passwords."))])
         let teamQuestion = InputRequestQuestion.definition(InputRequestQuestionDefinition(value:
             .alternative1(InputRequestDefinitionAuthoredChoose(choose: .alternative0("Which team owns this?"), options: .value(.alternative1(teams))))))
-        for text in ["Please refund my order. It arrived broken.",
-                     "Thanks for the quick help yesterday!", "I want to send this back."] {
+        for text in ["Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."] {
             let refund = try await client.decideAnswer(.text("Does the customer ask for a refund?"), input: .text(text))
             print(refund.map { $0 ? "true" : "false" } ?? "not sure")
         }
-        for text in ["Please refund the extra fee on my invoice.",
-                     "My parcel went to the wrong address.", "I cannot reset my password."] {
+        for text in ["Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."] {
             let team = try await client.chooseAnswer(teamQuestion, input: .text(text))
             print(team ?? "not sure")
         }
     }
 }
-```
-
-```text
-true
-false
-true
-billing
-shipping
-account
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

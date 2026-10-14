@@ -85,7 +85,7 @@ Names and positions appear in `pragma_table_xinfo('thinkthen_decide_many')` and 
 ```sql
 SELECT file, first_line, last_line, ordinal, value, probability,
        call_id, requests_sent, cache_answers
-FROM thinkthen_filter('Is this a contract?', '["contract.txt"]')
+FROM thinkthen_filter('Is this a contract?', '["contract.txt"]') AS selected_contracts
 WHERE unit = 'file' AND files_only = 1 AND batch = 16;
 ```
 

@@ -240,7 +240,7 @@ SAMPLES = {
 }
 
 
-FUNCTION = r'(?:thinkthen_|tt_)?(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)(?:Answer|ValueAsync|_Answer)?'
+FUNCTION = r'(?<![\w])(?:thinkthen_|tt_)?(decide|choose|tag|score|filter|rank|find|annotate|recognize|relate)(?:Answer(?:Async)?|ValueAsync|_Answer)?(?![\w])'
 
 
 def examples(family, root=REPO):
@@ -262,7 +262,7 @@ def examples(family, root=REPO):
         samples.append((filename, code, output.group(1) + '\n' if output else None))
     if not samples:
         raise Refusal('missing-example: ' + family)
-    if family != 'command' and len(functions) < 2:
+    if len(functions) < 2:
         raise Refusal('example-needs-two-functions: ' + family)
     return samples
 
@@ -407,7 +407,8 @@ def run_example(family, packages, work, root=REPO, selected=None, sample_index=0
 
     if family == 'command':
         sample_archive = packages / 'thinkthen-first-run.tar.gz'
-        for name, data in members(sample_archive.read_bytes()).items():
+        fixture = members(sample_archive.read_bytes()) if 'thinkthen-first-run' in code else {}
+        for name, data in fixture.items():
             path = work / name
             if Path(name).is_absolute() or '..' in Path(name).parts:
                 raise Refusal('unsafe-example-package-member')

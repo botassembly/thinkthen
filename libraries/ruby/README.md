@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 gem install thinkthen
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```ruby
 require "thinkthen"
@@ -29,14 +29,7 @@ ThinkThen::Client.open do |client|
 end
 ```
 
-```text
-true
-false
-true
-billing
-shipping
-account
-```
+
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

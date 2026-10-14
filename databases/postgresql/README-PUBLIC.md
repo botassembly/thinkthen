@@ -8,7 +8,7 @@ Download and unpack the release archive for your platform. Install the extension
 CREATE EXTENSION thinkthen;
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`. An administrator must grant the application role access to the ThinkThen functions.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models. An administrator must grant the application role access to the ThinkThen functions.
 
 ```sql
 WITH refunds(body) AS (VALUES

@@ -142,6 +142,22 @@ class PackageText(unittest.TestCase):
             self.assertIn('tt_decide(', samples[0][1])
             self.assertIn('tt_choose(', samples[1][1])
 
+    def test_replay_refuses_a_broken_earlier_usage_block(self):
+        with tempfile.TemporaryDirectory() as scratch:
+            tree = Path(scratch)
+            root = tree / 'root'; (root / 'site/recordings').mkdir(parents=True)
+            shutil.copyfile(readmes.REPO / 'rust-toolchain.toml', root / 'rust-toolchain.toml')
+            shutil.copyfile(readmes.REPO / 'site/recordings/thinkthen.jsonl', root / 'site/recordings/thinkthen.jsonl')
+            (root / 'README.md').write_text('```sh\nthinkthen decide fail\n```\n'
+                                          '```sh\nthinkthen choose pass\n```\n')
+            packages = tree / 'packages'; packages.mkdir()
+            package = packages / ('thinkthen-' + readmes.version() + '-x86_64-unknown-linux-musl.tar.gz')
+            archive(package, {'README.md': readmes.source('command').read_bytes(),
+                              'thinkthen': b'#!/bin/sh\n[ "$2" != fail ] || exit 77\nprintf "fixture\\n"\n'})
+            with patch.object(readmes, 'published_families', return_value=('command',)):
+                with self.assertRaisesRegex(readmes.Refusal, 'example-did-not-run: command'):
+                    readmes.check_examples(packages, root)
+
     def test_root_body_refuses_internal_references_and_long_pages(self):
         for family in ('command', 'packagist'):
             with tempfile.TemporaryDirectory() as scratch:
@@ -232,7 +248,7 @@ class PackageText(unittest.TestCase):
         with tempfile.TemporaryDirectory() as scratch:
             with self.assertRaisesRegex(readmes.Refusal, 'missing-or-ambiguous-example-package: command') as error:
                 readmes.check_examples(Path(scratch))
-            self.assertIn('example-needs-two-functions: typescript', str(error.exception))
+            self.assertIn('missing-or-ambiguous-example-package: typescript', str(error.exception))
             self.assertIn('missing-or-ambiguous-example-package: duckdb', str(error.exception))
 
     @unittest.skipUnless(sys.platform in ('linux', 'darwin'), 'compiler replay requires POSIX process groups')

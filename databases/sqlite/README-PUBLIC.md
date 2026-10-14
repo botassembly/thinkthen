@@ -8,7 +8,7 @@ Download and unpack the release archive for your platform. Enable extension load
 .load ./libthinkthen0
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```sql
 WITH refunds(body) AS (VALUES

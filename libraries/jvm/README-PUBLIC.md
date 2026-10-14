@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 implementation("io.github.botassembly:thinkthen-jvm:0.2.0")
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```java
 import thinkthen.Engine;
@@ -21,28 +21,17 @@ public class RegistryExample {
         var teamQuestion = new RequestQuestionDefinition().value(new RequestDefinitionAuthoredChoose()
             .choose(new AuthoredQuestionText("Which team owns this?")).options(new AuthoredOptions(teams)));
         try (var engine = new Engine(new EngineSettings())) {
-            for (var text : new String[]{"Please refund my order. It arrived broken.",
-                 "Thanks for the quick help yesterday!", "I want to send this back."}) {
+            for (var text : new String[]{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."}) {
                 var refund = engine.decide(new RequestQuestionText().text("Does the customer ask for a refund?"), new RequestInputText().text(text)).join().decide();
                 System.out.println(refund);
             }
-            for (var text : new String[]{"Please refund the extra fee on my invoice.",
-                 "My parcel went to the wrong address.", "I cannot reset my password."}) {
+            for (var text : new String[]{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."}) {
                 var team = engine.choose(teamQuestion, new RequestInputText().text(text)).join().choose();
                 System.out.println(team);
             }
         }
     }
 }
-```
-
-```text
-true
-false
-true
-billing
-shipping
-account
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

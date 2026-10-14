@@ -6,48 +6,30 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 go get github.com/botassembly/thinkthen/libraries/go@v0.2.0
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```go
 package main
-import (
-    "context"
-    "encoding/json"
-    "log"
-    "os"
-    tt "github.com/botassembly/thinkthen/libraries/go"
-)
+import ("context"; "encoding/json"; "log"; "os"; tt "github.com/botassembly/thinkthen/libraries/go")
 func main() {
-    client, err := tt.NewClient(tt.EngineSettings{})
-    if err != nil { log.Fatal(err) }
+    client, err := tt.NewClient(tt.EngineSettings{}); if err != nil { log.Fatal(err) }
     defer client.Close()
     teams := tt.AuthoredOptionsObject{{Key: "billing", Value: tt.AuthoredDescriptionString("Invoices, fees, and refunds.")},
         {Key: "shipping", Value: tt.AuthoredDescriptionString("Parcels and delivery.")},
         {Key: "account", Value: tt.AuthoredDescriptionString("Logins and passwords.")}}
     teamQuestion := tt.DefinedQuestion(tt.RequestDefinitionAuthoredChoose{
         Choose: tt.AuthoredQuestionTextString("Which team owns this?"), Options: tt.Ptr[tt.AuthoredOptions](teams)})
-    for _, text := range []string{"Please refund my order. It arrived broken.",
-        "Thanks for the quick help yesterday!", "I want to send this back."} {
+    for _, text := range []string{"Please refund my order. It arrived broken.", "Thanks for the quick help yesterday!", "I want to send this back."} {
         refund, err := client.DecideAnswer(context.Background(), tt.TextQuestion("Does the customer ask for a refund?"), text, nil)
         if err != nil { log.Fatal(err) }
         if err := json.NewEncoder(os.Stdout).Encode(refund); err != nil { log.Fatal(err) }
     }
-    for _, text := range []string{"Please refund the extra fee on my invoice.",
-        "My parcel went to the wrong address.", "I cannot reset my password."} {
+    for _, text := range []string{"Please refund the extra fee on my invoice.", "My parcel went to the wrong address.", "I cannot reset my password."} {
         team, err := client.ChooseAnswer(context.Background(), teamQuestion, text, nil)
         if err != nil { log.Fatal(err) }
         if err := json.NewEncoder(os.Stdout).Encode(team); err != nil { log.Fatal(err) }
     }
 }
-```
-
-```text
-true
-false
-true
-"billing"
-"shipping"
-"account"
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.

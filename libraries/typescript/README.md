@@ -6,15 +6,23 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 npm install thinkthen
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```typescript
 import {Client} from 'thinkthen';
-
+const refunds = ['Please refund my order. It arrived broken.', 'Thanks for the quick help yesterday!', 'I want to send this back.'];
+const messages = ['Please refund the extra fee on my invoice.', 'My parcel went to the wrong address.', 'I cannot reset my password.'];
+const teams = {billing: 'Invoices, fees, and refunds.', shipping: 'Parcels and delivery.', account: 'Logins and passwords.'};
 const client = new Client();
 try {
-  const call = await client.decide('Does this ask for a refund?', 'Please refund my order.');
-  for (const answer of call.results) console.log(answer.value);
+  for (const text of refunds) {
+    const refund = await client.decideAnswer('Does the customer ask for a refund?', text);
+    console.log(refund);
+  }
+  for (const text of messages) {
+    const team = await client.chooseAnswer({choose: 'Which team owns this?', options: teams}, text);
+    console.log(team);
+  }
 } finally { client.close(); }
 ```
 

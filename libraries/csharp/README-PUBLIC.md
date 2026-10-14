@@ -6,7 +6,7 @@ ThinkThen is ten functions on top of Jev, TypeSafe's decision model, or any mode
 dotnet add package Botassembly.ThinkThen
 ```
 
-Set your hosted backend key: `export THINKTHEN_API_KEY=...`.
+Set your hosted backend key: `export THINKTHEN_API_KEY=...`. Backends include Jev, SystemOne, OpenAI and local models.
 
 ```csharp
 using ThinkThen;
@@ -30,15 +30,6 @@ foreach (var text in new[]{"Please refund the extra fee on my invoice.",
     var team = await engine.ChooseValueAsync(teamQuestion, new InputRequestInputText { Text = text });
     Console.WriteLine(team ?? "not sure");
 }
-```
-
-```text
-true
-false
-true
-billing
-shipping
-account
 ```
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
