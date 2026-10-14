@@ -34,7 +34,7 @@ TREE = ("sdlc/scripts/package-inventory.py", ".github/workflows/release.yml", "c
         "libraries/dart/lib/thinkthen_dart.dart")
 
 
-TREE += ('sdlc/scripts/registry-readmes.py', 'README.md', 'libraries/go/README.md',
+TREE += ('sdlc/scripts/registry-readmes.py', 'specification/request.schema.json', 'README.md', 'libraries/go/README.md',
          'libraries/csharp/README-PUBLIC.md', 'libraries/jvm/README-PUBLIC.md', 'libraries/dart/README-PUBLIC.md')
 
 
@@ -334,7 +334,8 @@ def apple_package_cases():
                 destination = root / name
                 destination.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copyfile(REPO / name, destination)
-        for name in ('README.md', 'crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
+        for name in ('README.md', 'specification/request.schema.json',
+                     'crates/thinkthen/Cargo.toml', 'libraries/c/include/thinkthen.h',
                      'sdlc/scripts/release-pack', 'sdlc/scripts/scratch.sh', 'sdlc/scripts/registry-readmes.py'):
             destination = root / name
             destination.parent.mkdir(parents=True, exist_ok=True)

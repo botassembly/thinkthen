@@ -7,6 +7,7 @@ import tempfile
 import unittest
 
 from conformance import parity
+from conformance.children.children import child_env
 
 
 class StressSelection(unittest.TestCase):
@@ -15,9 +16,11 @@ class StressSelection(unittest.TestCase):
                     'databases/sqlite', 'databases/duckdb', 'databases/postgresql'}
         with tempfile.TemporaryDirectory(prefix='thinkthen-stress-selection-') as folder:
             root = Path(folder)
+            subprocess.run(['git', 'init', '-q', str(root)],
+                           env=child_env(home=root / 'home', PATH=os.defpath), check=True)
             scripts = root / 'sdlc/scripts'
             scripts.mkdir(parents=True)
-            for name in ('surfaces', 'verdict.sh', 'full-compiler'):
+            for name in ('surfaces', 'verdict.sh', 'full-compiler', 'feature-inventory.py'):
                 shutil.copyfile(parity.ROOT / 'sdlc/scripts' / name, scripts / name)
             shutil.copyfile(parity.ROOT / 'sdlc/surfaces.txt', root / 'sdlc/surfaces.txt')
             (scripts / 'heavy-lock').write_text('')
@@ -42,6 +45,7 @@ class StressSelection(unittest.TestCase):
                     f'echo {surface} >> "$FIXTURE_ROOT/calls"\n'
                     f'[ "$FAILED_SURFACE" != {surface} ] || exit 77\n')
                 if state == 'feature':
+                    shutil.copyfile(parity.ROOT / surface / 'README.md', library / 'README.md')
                     continue
                 original = parity.ROOT / surface
                 for manifest in original.rglob('*'):
