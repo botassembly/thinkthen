@@ -12,6 +12,8 @@ Reviews: revision 149aa23, reject
 
 Reviews: revision 65a4d09, reject
 
+Reviews: revision e9274bd, reject
+
 ## Outcome
 
 Each package registry page that ships with 0.2 shows a short README written for a stranger: what ThinkThen is, one example in that language, what it costs, and how to install it. No registry page names an ADR, a ticket, an `sdlc/` path, an internal crate or a stale version. A release check fails the release if one does.
