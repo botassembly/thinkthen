@@ -1,8 +1,10 @@
 # 0586: Experiment: split each question into wording, evidence and context
 
-Status: OPEN.
+Status: COMPLETE.
 
 Milestone: 0.3
+
+Reviews: revision 0e46dc2, accept
 
 ## Outcome
 
@@ -19,3 +21,7 @@ Learn, for each of the ten functions, whether the engine can name the wording, e
 - Decision it changes: PRD 01's rule that an unsplit part stays empty and serves only `exact` reuse.
 - Machine: the Beelink.
 - Defers: the real split goes into the 0.3 database ticket.
+
+## Progress
+
+- 2026-10-14 started
