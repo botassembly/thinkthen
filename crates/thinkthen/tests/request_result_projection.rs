@@ -57,12 +57,22 @@ fn annotation_primitive_null_and_failed_members_retain_values() {
     let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"choice","probabilities":{"wrong":1}},"q3":{"type":"noul","noul":0.5}}}"#)).unwrap();
     let engine = engine(&listener);
     let set = QuestionSet::from_json(r#"{"version":1,"questions":{"good":{"decide":"Good?","true":{"authored":"structured"}},"failed":{"decide":"Fails?"},"unsure":{"decide":"Sure?","threshold":"0.1:0.9"}}}"#).unwrap();
-    let native = engine
+    let native_call = engine
         .annotate_with(&set, ["Original."], CallOptions::new())
-        .next()
-        .unwrap()
-        .unwrap()
-        .value_json();
+        .unwrap();
+    let values = &native_call.value()[0];
+    assert_eq!(
+        values.iter().map(NamedAnnotation::name).collect::<Vec<_>>(),
+        ["good", "failed", "unsure"]
+    );
+    assert_eq!(values[0].value(), &Annotated::Decision(Answer::Yes));
+    let Annotated::Failed(failure) = values[1].value() else {
+        panic!("failed member");
+    };
+    assert_eq!(failure.kind(), ErrorKind::Backend);
+    assert_eq!(failure.cause(), FailureCause::WrongKind);
+    assert_eq!(values[2].value(), &Annotated::Decision(Answer::Unsure));
+    let native = native_call.results()[0].result().value_json().unwrap();
     let complete = crate::api::annotate(
         &engine,
         &set,

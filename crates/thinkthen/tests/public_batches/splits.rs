@@ -31,7 +31,12 @@ fn named_groups_pack_two_rows_and_keep_ordered_observations() {
         )),
         RecordObservation::Row { .. } => {}
     };
-    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed().observe(&observe));
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(["alpha", "beta"]),
+        packed().observe(&observe),
+    );
     let values = rows.by_ref().collect::<Result<Vec<_>, _>>().expect("rows");
     assert_eq!(values.len(), 2);
     let requests = listener.requests();
@@ -81,6 +86,7 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
     )
     .expect("set");
     let seen = Mutex::new(Vec::new());
+    let completed = Mutex::new(Vec::new());
     let observe = |event: RecordObservation<'_>| match event {
         RecordObservation::Question {
             index,
@@ -92,7 +98,23 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
             member.expect("name").to_owned(),
             detail.failure().is_some(),
         )),
-        RecordObservation::Row { index, .. } => {
+        RecordObservation::Row { index, value } => {
+            let ObservedRow::Annotated(values) = value else {
+                panic!("annotation row");
+            };
+            assert_eq!(
+                values
+                    .iter()
+                    .map(thinkthen::NamedAnnotation::name)
+                    .collect::<Vec<_>>(),
+                ["a", "b"]
+            );
+            assert!(matches!(values[0].value(), thinkthen::Annotated::Failed(_)));
+            assert_eq!(
+                values[1].value(),
+                &thinkthen::Annotated::Decision(Answer::Yes)
+            );
+            completed.lock().expect("completed rows").push(index);
             seen.lock()
                 .expect("events")
                 .push((index, "row".to_owned(), false))
@@ -103,17 +125,14 @@ fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
         r#"{"a":"a2","b":"b2"}"#,
         r#"{"a":"a3","b":"b3"}"#,
     ];
-    let mut rows = engine.annotate_with(&set, records, CallOptions::new().observe(&observe));
-    let first = rows.next().expect("row one").expect("usable sibling");
-    assert_eq!(first.input(), &records[0]);
-    let error = rows
-        .next()
-        .expect("row two stop")
-        .expect_err("no usable sibling");
+    let error = engine
+        .annotate_with(&set, records, CallOptions::new().observe(&observe))
+        .expect_err("no usable sibling after the valid prefix");
     assert_eq!(error.kind(), ErrorKind::Backend);
-    assert!(rows.next().is_none());
+    assert_eq!(*completed.lock().expect("completed rows"), [0]);
     assert_eq!(
-        rows.facts()
+        error
+            .facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
         Some((1, 1))
     );
@@ -162,7 +181,12 @@ fn a_halved_request_keeps_one_question_key_per_member() {
             ));
         }
     };
-    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed().observe(&observe));
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(["alpha", "beta"]),
+        packed().observe(&observe),
+    );
     assert_eq!(
         rows.by_ref()
             .collect::<Result<Vec<_>, _>>()
@@ -240,7 +264,12 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
         r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
-    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed());
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(["alpha", "beta"]),
+        packed(),
+    );
     assert_eq!(
         rows.by_ref()
             .collect::<Result<Vec<_>, _>>()
@@ -275,7 +304,12 @@ fn compatible_profile_group_still_packs_multiple_rows() {
         r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
     )
     .expect("set");
-    let mut rows = engine.annotate(&set, ["alpha", "beta"]);
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(["alpha", "beta"]),
+        CallOptions::new(),
+    );
     assert_eq!(
         rows.by_ref()
             .collect::<Result<Vec<_>, _>>()
@@ -302,7 +336,12 @@ fn a_later_profile_group_refuses_before_any_request() {
     let set = QuestionSet::from_json(
         r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/a"},"second":{"decide":"Second?","on":"/b"}}}"#,
     ).expect("set");
-    let mut rows = engine.annotate(&set, [r#"{"a":"x","b":"long"}"#]);
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records([r#"{"a":"x","b":"long"}"#]),
+        CallOptions::new(),
+    );
     assert_eq!(
         rows.next().expect("refusal").expect_err("profile").kind(),
         ErrorKind::Usage

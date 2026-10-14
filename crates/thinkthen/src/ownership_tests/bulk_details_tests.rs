@@ -175,8 +175,8 @@ fn fallible_input_keeps_packed_detail_and_grouped_annotation_request_bytes() {
         let original_len = if annotation {
             engine
                 .annotate_with(&set, records, options)
-                .collect::<Result<Vec<_>, _>>()
-                .expect("old annotation")
+                .expect("annotation")
+                .value()
                 .len()
         } else {
             engine

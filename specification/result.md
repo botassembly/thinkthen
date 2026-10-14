@@ -145,6 +145,14 @@ Pending equal questions can coalesce and repeat their attributed shares. A repea
 
 Adoption updates generated schema, all ten detailed variants in the shared corpus, strict full-result decoders and examples together. Existing recordings remain historical fixtures until 0444 converts them in one controlled update; result/2 cannot be claimed by changing a schema label alone. The changelog distinguishes this target from behavior already built.
 
+## One library result per call
+
+Every library except C returns one object with `value`, `probability`, `results` and `facts`. `value` is the language's plain answer. One input has one answer; a list keeps answers in input order. An unresolved answer is null or none. Rank returns original indexes, filter returns selected originals, and find returns the selected unit or null. `results` retains complete canonical records, including all distributions, provenance and physical source fields. `facts` describes the invocation after its workers finish.
+
+Decide and filter expose the yes probability. Choose and find expose the selected item's probability, or null when no item is selected. Score, tag and annotate have no scalar probability; their distributions remain in `results`. Rank and relate align probabilities with their returned items. Recognition uses each kept proposal's span probability matched to the selected bounds and kind; boundary-only recognition uses each selected proposal's probability. Entity strength remains a separate record field.
+
+Rust represents this contract with `Call<T, R, P>` and function-specific aliases. Scalar probabilities are `Option<f64>`; list probabilities are ordered optional numbers. Rust filter and annotate collect their existing streams into one call. The CLI `--details` view and the C/native packet layer retain their own existing output contracts. Library calls have no details switch or separate details call.
+
 ## Landed result/1 behavior
 
 The sections below describe the existing views, shapes and examples. Result/2 above supersedes them only as its owning implementation tickets adopt it.

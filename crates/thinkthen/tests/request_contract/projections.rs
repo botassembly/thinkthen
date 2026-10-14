@@ -33,19 +33,19 @@ fn engine_filter_keeps_originals_in_order_and_counts_rejected_records() {
             .unwrap()
             .cut_at(threshold)
             .unwrap();
-        let mut kept = engine
+        let kept = engine
             .filter(&question, originals.iter().map(String::as_str))
             .unwrap();
         if threshold == 0.5 {
-            for original in &originals {
-                assert!(std::ptr::eq(
-                    kept.next().unwrap().unwrap(),
-                    original.as_str()
-                ));
+            assert_eq!(kept.value().len(), originals.len());
+            for (actual, original) in kept.value().iter().zip(&originals) {
+                assert!(std::ptr::eq(*actual, original.as_str()));
             }
+        } else {
+            assert!(kept.value().is_empty());
         }
-        assert!(kept.next().is_none());
-        let facts = kept.facts().unwrap();
+        assert_eq!(kept.results().len(), 2);
+        let facts = kept.facts();
         assert_eq!(facts.records(), 2);
         assert!(facts.call_id().is_some());
         assert_eq!(facts.requests_sent(), 1);

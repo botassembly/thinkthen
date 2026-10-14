@@ -88,6 +88,15 @@ impl<T> CompleteFound<T> {
         self.found.selected()
     }
 
+    /// The selected original unit's probability; selecting none has no probability.
+    #[must_use]
+    pub fn probability(&self) -> Option<f64> {
+        let FindSelection::Unit(index) = self.selection() else {
+            return None;
+        };
+        self.candidates().get(index).map(Candidate::probability)
+    }
+
     /// Every original candidate, followed by the optional synthetic none.
     #[must_use]
     pub fn candidates(&self) -> &[Candidate<T>] {

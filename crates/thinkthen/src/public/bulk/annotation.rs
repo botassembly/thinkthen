@@ -3,12 +3,12 @@
 //! and groups pack together, and each row gathers its questions back.
 
 use super::Values;
+use crate::CompleteRecord;
 use crate::core::{self, pack, pack::Ask, quoted_plan};
 use crate::engine::facade::{self, Annotation, GroupAnswer, QuestionAnswer};
 use crate::engine::pipeline::{Answered, Asker};
-use crate::public::annotated::AnnotatedRecord;
+use crate::public::annotated::NamedAnnotation;
 use crate::public::asking::Text;
-use crate::public::batch::Batch;
 use crate::public::engine::{Engine, Evidence, evidence};
 use crate::public::error::Error;
 use crate::public::options::CallOptions;
@@ -226,7 +226,7 @@ impl Engine {
         &'a self,
         questions: &'a QuestionSet,
         records: I,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
+    ) -> Result<crate::AnnotationCall<I::Item>, Error>
     where
         I: IntoIterator + 'a,
         I::Item: Evidence,
@@ -240,22 +240,46 @@ impl Engine {
         questions: &'a QuestionSet,
         records: I,
         options: CallOptions<'a>,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
+    ) -> Result<crate::AnnotationCall<I::Item>, Error>
     where
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
         let mut options = options;
         options.legacy_annotation = true;
-        Batch::of(crate::public::request::pull::annotation(
+        crate::public::request::pull::annotation(
             self,
             questions.clone(),
             records
                 .into_iter()
                 .map(|row| Ok(crate::public::record_input::plain(row))),
             options,
-            |original, _, result| AnnotatedRecord::complete(original, result).map(Some),
-        ))
+            |original, ordinal, result| {
+                Ok(Some(CompleteRecord {
+                    original,
+                    ordinal,
+                    result,
+                }))
+            },
+        )?
+        .into_call()?
+        .project(|rows| {
+            let values = rows
+                .iter()
+                .map(|row| {
+                    row.result
+                        .canonical
+                        .compatibility
+                        .value()
+                        .clone()
+                        .into_values()
+                        .into_iter()
+                        .map(|(name, value)| NamedAnnotation::of(name, value))
+                        .collect()
+                })
+                .collect();
+            Ok((values, rows, None::<f64>))
+        })
     }
 }
 

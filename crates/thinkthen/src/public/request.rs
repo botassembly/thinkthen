@@ -20,7 +20,15 @@ mod options;
 mod preview;
 pub(crate) mod pull;
 pub use pull::RequestRows;
+mod recovered;
+mod recovering;
+mod recovering_session;
+pub use recovering_session::{
+    RequestRecoveringRead, RequestRecoveringResult, RequestRecoveringSession,
+};
 mod result;
+pub use recovered::RequestRecoveredRow;
+pub(in crate::public) use recovered::row as recovery_row;
 mod source;
 pub use source::RequestSourceReader;
 mod session;
@@ -302,7 +310,6 @@ impl RequestFunction {
             "none" => self == Self::Find,
             "top" => self == Self::Rank,
             "files_only" => self == Self::Filter,
-            "details" => matches!(self, Self::Decide | Self::Choose | Self::Tag | Self::Score),
             _ => true,
         }
     }

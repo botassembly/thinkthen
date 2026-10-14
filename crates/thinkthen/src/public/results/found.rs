@@ -138,3 +138,11 @@ impl fmt::Debug for Picked<'_> {
             .finish_non_exhaustive()
     }
 }
+
+impl Picked<'_> {
+    /// The selected unit's probability.
+    #[must_use]
+    pub const fn probability(&self) -> f64 {
+        self.probability
+    }
+}

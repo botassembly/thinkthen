@@ -1,14 +1,17 @@
 //! One bounded answered batch member, retained only until its ordered row leaves.
 
+//! Stays: The retained private scalar projection must preserve original serialization, probabilities and batch metadata without changing canonical result identity.
 use std::fmt;
 
-use crate::core::{self, BatchWarning, ProfileWarning};
-use crate::engine::facade;
+use crate::core::{self, BatchWarning};
+#[cfg(test)]
 use crate::public::error::Error;
 use crate::public::question::Question;
-use crate::result_json::Run;
 
-use super::{Details, Written, complete, judgment, usage};
+use super::Details;
+#[cfg(test)]
+use super::{Written, complete, judgment, usage};
+#[cfg(test)]
 use serde::Serialize;
 
 pub(crate) fn batch_warning(question: &Question, setting: core::Setting) -> Option<BatchWarning> {
@@ -47,18 +50,6 @@ impl fmt::Debug for Details {
     }
 }
 
-pub(crate) struct Member {
-    judged: facade::Judgment,
-    requests: Vec<String>,
-}
-
-impl Member {
-    /// One pipeline answer's receipt: its judgment and question keys.
-    pub(crate) fn new(judged: facade::Judgment, requests: Vec<String>) -> Self {
-        Self { judged, requests }
-    }
-}
-
 impl Details {
     /// The same detailed result as a scalar SQL value, without a record input.
     #[doc(hidden)]
@@ -66,41 +57,9 @@ impl Details {
     pub fn to_scalar_json(&self) -> String {
         self.scalar_json.as_ref().unwrap_or(&self.json).text()
     }
-
-    pub(crate) fn of_native_member(
-        member: Member,
-        question: &Question,
-        backend: &core::Backend,
-        profile: Option<&core::BackendProfile>,
-        setting: core::Setting,
-        context_sha256: Option<&str>,
-    ) -> Result<Self, Error> {
-        let run = Run {
-            backend,
-            tuned_for: question.profile.as_ref(),
-            warning: ProfileWarning::between(
-                question.profile.as_ref(),
-                profile.map(core::BackendProfile::name),
-            ),
-            batch_setting: Some(setting.into()),
-            batch_warning: batch_warning(question, setting),
-            context_sha256: context_sha256.map(str::to_owned),
-        };
-        let function =
-            crate::RequestFunction::for_definition(&question.clone().into()).input_function();
-        let canonical = crate::result_json::complete::atomic(
-            run,
-            &member.judged,
-            crate::public::complete::spec(function, question, member.judged.value.clone(), 0),
-            member.requests,
-            None,
-            None,
-        )
-        .map_err(|_| Error::defect("a complete result could not be constructed"))?;
-        Self::of_complete::<()>(&canonical, None)
-    }
 }
 
+#[cfg(test)]
 impl Details {
     pub(in crate::public) fn of_complete<T: Serialize>(
         canonical: &core::CompleteAtomic,

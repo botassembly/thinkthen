@@ -51,9 +51,9 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    AnnotatedRecord, Answer, BatchSetting, CallOptions, CancelToken, Counters, Description, Engine,
-    EngineBuilder, Error, ErrorKind, Found, Judgment, ObservedRow, Question, QuestionSet,
-    QuestionSetBuilder, Ranked, RecordObservation, Row,
+    Answer, BatchSetting, CallOptions, CancelToken, CompleteAnnotated, CompleteRank,
+    CompleteRecord, Counters, Description, Engine, EngineBuilder, Error, ErrorKind, Found,
+    Judgment, ObservedRow, Question, QuestionSet, QuestionSetBuilder, RecordObservation, Row,
 };
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
@@ -103,9 +103,9 @@ const _: () = {
     shared::<Error>();
     shared::<thinkthen::Details>();
     shared::<Row<String, Answer>>();
-    shared::<Ranked<String>>();
+    shared::<CompleteRecord<String, CompleteRank>>();
     shared::<Found<String>>();
-    shared::<AnnotatedRecord<String>>();
+    shared::<CompleteRecord<String, CompleteAnnotated>>();
     shared::<thinkthen::Recognize>();
     shared::<thinkthen::Relate>();
 };
@@ -337,44 +337,62 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
         },
     );
     assert_eq!(by_slice, by_cursor);
-    let by_slice = keyed(engine.annotate(&set, texts), |row| {
-        (row.input().to_string(), row.values().to_vec())
-    });
-    let by_cursor = keyed(engine.annotate(&set, cursor(&texts)), |row| {
-        (row.input().clone(), row.values().to_vec())
-    });
+    let by_slice = keyed(
+        crate::api::pull_annotations(
+            &engine,
+            &set,
+            crate::api::plain_records(texts),
+            CallOptions::new(),
+        ),
+        |row| {
+            (
+                row.original().to_string(),
+                row.result().value_json().expect("values"),
+            )
+        },
+    );
+    let by_cursor = keyed(
+        crate::api::pull_annotations(
+            &engine,
+            &set,
+            crate::api::plain_records(cursor(&texts)),
+            CallOptions::new(),
+        ),
+        |row| {
+            (
+                row.original().clone(),
+                row.result().value_json().expect("values"),
+            )
+        },
+    );
     assert_eq!(by_slice, by_cursor);
 
     // Equal probabilities keep input order in a ranking, on both paths.
     let ranked = Question::rank("Which asks for a refund?").expect("rank");
-    let by_slice: Vec<String> = engine
-        .rank(&ranked, texts)
-        .expect("rank")
-        .into_value()
-        .into_iter()
-        .map(|row| row.into_input().to_owned())
+    let slice_call = engine.rank(&ranked, texts).expect("rank");
+    assert_eq!(*slice_call.value(), (0..texts.len()).collect::<Vec<_>>());
+    let by_slice: Vec<String> = slice_call
+        .results()
+        .iter()
+        .map(|row| row.original().to_string())
         .collect();
     assert_eq!(by_slice, texts.map(str::to_owned));
     let by_cursor = engine.rank(&ranked, cursor(&texts)).expect("rank");
+    assert_eq!(by_cursor.value(), slice_call.value());
     assert_eq!(
         by_slice,
         by_cursor
-            .into_value()
-            .into_iter()
-            .map(Ranked::into_input)
+            .results()
+            .iter()
+            .map(|row| row.original().clone())
             .collect::<Vec<_>>()
     );
     let found = Question::find("Which asks for a refund?").expect("find");
-    let by_slice = engine
-        .find(&found, texts)
-        .expect("find")
-        .into_value()
-        .into_selected();
+    let by_slice = engine.find(&found, texts).expect("find").into_value();
     let by_cursor = engine
         .find(&found, cursor(&texts))
         .expect("find")
-        .into_value()
-        .into_selected();
+        .into_value();
     assert_eq!(by_slice.map(str::to_owned), by_cursor);
 }
 

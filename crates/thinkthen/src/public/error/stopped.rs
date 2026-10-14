@@ -64,6 +64,12 @@ impl Stopped {
         self.retryable
     }
 
+    pub(super) const fn recovery_budget(mut self) -> Self {
+        self.cause = StopCause::Usage;
+        self.retryable = false;
+        self
+    }
+
     pub(super) const fn of_kind(kind: ErrorKind) -> Self {
         let cause = match kind {
             ErrorKind::Usage => StopCause::Usage,

@@ -69,6 +69,7 @@ pub(super) fn execute(
 mod inflight;
 pub(crate) mod ordered;
 mod records;
+mod recovering;
 mod streaming;
 
 mod preview;

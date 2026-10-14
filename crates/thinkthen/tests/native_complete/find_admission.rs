@@ -223,6 +223,7 @@ fn typed_relations_leave_the_tail_after_the_256th_entity_unread() {
 
 #[test]
 fn find_snapshots_each_caller_evidence_once_and_restores_originals() {
+    #[derive(Clone)]
     struct Once<'a> {
         calls: &'a AtomicUsize,
         text: &'static str,
@@ -258,7 +259,7 @@ fn find_snapshots_each_caller_evidence_once_and_restores_originals() {
             CallOptions::new(),
         )
         .unwrap();
-    assert_eq!(call.value().selected().unwrap().text, "second");
+    assert_eq!(call.value().as_ref().unwrap().text, "second");
     assert_eq!(first.load(Ordering::Relaxed), 1);
     assert_eq!(second.load(Ordering::Relaxed), 1);
     let refused = AtomicUsize::new(0);

@@ -79,23 +79,23 @@ fn described() -> Result<(), Error> {
         r#"
 fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let (q, b, texts) = (yes_no(), banded(), vec!["a".to_owned(), "b".to_owned()]);
-    let _: Call<Answer> = e.decide(&q, "text")?;
-    let _: Call<Answer> = e.decide_with(&b, "text", o)?;
-    let _: Call<Option<Desk>> = e.choose(&desk(), "text")?;
-    let _: Call<Option<Desk>> = e.choose_with(&desk(), "text", o)?;
-    let _: Call<f64> = e.score(&Question::score("how urgent").unwrap().level("low", None)?.level("high", None)?.build()?, "t")?;
-    let _: Call<Vec<Desk>> = e.tag(&desks(), "text")?;
-    let _: Call<Vec<Desk>> = e.tag_with(&desks(), "text", o)?;
-    let _: Call<Vec<Ranked<&str>>> = e.rank(&Question::rank("most urgent")?, ["a", "b"])?;
-    let _: Call<Found<String>> = e.find_with(&Question::find("the refund")?, texts.clone(), o)?;
+    let _: Call<Option<bool>, Vec<CompleteDecision>> = e.decide(&q, "text")?;
+    let _: Call<Option<bool>, Vec<CompleteDecision>> = e.decide_with(&b, "text", o)?;
+    let _: Call<Option<Desk>, Vec<CompleteChoice>> = e.choose(&desk(), "text")?;
+    let _: Call<Option<Desk>, Vec<CompleteChoice>> = e.choose_with(&desk(), "text", o)?;
+    let _: Call<f64, Vec<CompleteScore>> = e.score(&Question::score("how urgent").unwrap().level("low", None)?.level("high", None)?.build()?, "t")?;
+    let _: Call<Vec<Desk>, Vec<CompleteTags>> = e.tag(&desks(), "text")?;
+    let _: Call<Vec<Desk>, Vec<CompleteTags>> = e.tag_with(&desks(), "text", o)?;
+    let _: Call<Vec<usize>, Vec<CompleteRecord<&str,CompleteRank>>,Vec<Option<f64>>> = e.rank(&Question::rank("most urgent")?, ["a", "b"])?;
+    let _: Call<Option<String>,CompleteFound<String>> = e.find_with(&Question::find("the refund")?, texts.clone(), o)?;
     let set = QuestionSet::builder().question("refund", q.clone())?.banded("b", b.clone())?
         .choose("desk", desk())?.tag("desks", desks())?.build()?;
-    let _: Vec<Result<AnnotatedRecord<&str>, Error>> = e.annotate(&set, ["a"]).collect();
+    let call = e.annotate(&set, ["a"])?;
+    let _: &Vec<Vec<NamedAnnotation>> = call.value();
     let rec = Recognize::builder().kind(Kind::new("drug", Some(Description::text("a medicine")?))?)?.build()?;
-    let _: Call<Recognized> = e.recognize_with(&rec, "text", o)?;
+    let _: Call<Recognized,Vec<CompleteRecognized>,Vec<Option<f64>>> = e.recognize_with(&rec, "text", o)?;
     let rel = Relate::builder().relation(RelationRule::one_way("treats", "drug", "disease")?)?.build()?;
-    let _: Call<Vec<Edge>> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
-    let _: Call<Details> = e.details(&desk(), "text")?;
+    let _: Call<Vec<Edge>,Vec<CompleteRelated>,Vec<Option<f64>>> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
     let _: Counters = e.usage();
     Ok(())
 }

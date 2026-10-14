@@ -1,4 +1,5 @@
 //! Legacy document projection retains the caller original inside native execution.
+//! Stays: Private complete-call primitives retain borrowed originals and snapshot evidence once; these ownership and lifetime cases cover the internal boundary directly.
 use crate::ownership_tests::engine;
 use crate::public::engine::Sealed as _;
 use crate::{Answer, CallOptions, ErrorKind, Question};

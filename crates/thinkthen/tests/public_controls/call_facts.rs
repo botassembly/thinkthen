@@ -188,9 +188,13 @@ fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_re
         .expect("engine");
     let rows = vec!["First.".to_owned(), "Second.".to_owned()];
     let setting = BatchSetting::Records(std::num::NonZeroUsize::new(1).expect("one"));
-    let call = engine
-        .details_many_recoverable_with(&question(), &rows, CallOptions::new().batch(setting))
-        .expect("two complete replies");
+    let call = crate::api::recover_decisions(
+        &engine,
+        &question(),
+        &rows,
+        CallOptions::new().batch(setting),
+    )
+    .expect("two complete replies");
     assert_eq!(call.facts().requests_sent(), 2);
     assert_eq!(call.facts().input_tokens(), None);
     assert_eq!(call.facts().estimated_cost_usd(), None);
@@ -212,7 +216,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         .expect("engine");
     let asked = question();
     let sent = engine.decide(&asked, "Refund me.").expect("live answer");
-    assert_eq!(*sent.value(), Answer::Yes);
+    assert_eq!(*sent.value(), Some(true));
     assert_eq!(
         (sent.facts().records(), sent.facts().requests_sent()),
         (1, 1)
@@ -222,7 +226,7 @@ fn counters_and_cache_answers_match_the_real_attempts() {
         (Some(3), Some(1))
     );
     let cached = engine.decide(&asked, "Refund me.").expect("cached answer");
-    assert_eq!(*cached.value(), Answer::Yes);
+    assert_eq!(*cached.value(), Some(true));
     assert_eq!(
         (
             cached.facts().records(),
@@ -411,7 +415,7 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
             .decide(&question(), "gamma")
             .expect("next call")
             .value(),
-        Answer::Yes
+        Some(true)
     );
 }
 

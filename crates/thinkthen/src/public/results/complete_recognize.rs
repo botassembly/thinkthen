@@ -14,6 +14,31 @@ pub struct CompleteRecognized {
 }
 
 impl CompleteRecognized {
+    /// Per-item probabilities in the same order as the plain answer.
+    #[must_use]
+    pub fn probability(&self) -> Vec<Option<f64>> {
+        if let Some(proposals) = self.value.proposals() {
+            return proposals
+                .iter()
+                .map(|proposal| Some(proposal.probability()))
+                .collect();
+        }
+        self.value
+            .entities()
+            .iter()
+            .map(|entity| {
+                self.probabilities()
+                    .judged_proposals()
+                    .find_map(|proposal| {
+                        (proposal.kept()
+                            && proposal.selected() == Some(entity.start()..entity.end())
+                            && proposal.kind() == Some(entity.kind()))
+                        .then_some(proposal.span_probability())
+                    })
+            })
+            .collect()
+    }
+
     /// The actual resolved aggregate question and separate thresholds.
     #[must_use]
     pub fn question(&self) -> super::RecognitionReading<'_> {

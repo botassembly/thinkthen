@@ -6,7 +6,7 @@ fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_a
     let place = folder();
     let question = Question::decide("Refund?").unwrap().cut();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
-    let live = engine.details(&question, "Refund me.").unwrap();
+    let live = engine.decide(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 1);
     drop(engine);
     let database = place.join("thinkthen.sqlite");
@@ -21,15 +21,18 @@ fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_a
     let original = std::fs::read(&database).unwrap();
     let modified = std::fs::metadata(&database).unwrap().modified().unwrap();
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
-    let historical = replay.details(&question, "Refund me.").unwrap();
-    assert_eq!(historical.value().value(), live.value().value());
+    let historical = replay.decide(&question, "Refund me.").unwrap();
+    assert_eq!(historical.value(), live.value());
     assert_eq!(
-        historical.value().observations(),
-        live.value().observations()
+        historical.results()[0].identity().observations(),
+        live.results()[0].identity().observations()
     );
-    assert_eq!(historical.value().requests(), live.value().requests());
     assert_eq!(
-        historical.value().question_sources()[0].origin(),
+        historical.results()[0].meta().requests(),
+        live.results()[0].meta().requests()
+    );
+    assert_eq!(
+        historical.results()[0].identity().question_sources()[0].origin(),
         Origin::Replay
     );
     assert_eq!(listener.count(), 1);
@@ -40,11 +43,20 @@ fn valid_v2_without_lookup_index_replays_unchanged_and_writer_indexes_retained_a
     );
     drop(replay);
     let writer = build(&listener).cache_at(&place).unwrap().build().unwrap();
-    let held = writer.details(&question, "Refund me.").unwrap();
-    assert_eq!(held.value().value(), live.value().value());
-    assert_eq!(held.value().observations(), live.value().observations());
-    assert_eq!(held.value().requests(), live.value().requests());
-    assert_eq!(held.value().question_sources()[0].origin(), Origin::Cache);
+    let held = writer.decide(&question, "Refund me.").unwrap();
+    assert_eq!(held.value(), live.value());
+    assert_eq!(
+        held.results()[0].identity().observations(),
+        live.results()[0].identity().observations()
+    );
+    assert_eq!(
+        held.results()[0].meta().requests(),
+        live.results()[0].meta().requests()
+    );
+    assert_eq!(
+        held.results()[0].identity().question_sources()[0].origin(),
+        Origin::Cache
+    );
     assert_eq!(listener.count(), 1);
     let db = Connection::open(&database).unwrap();
     let columns: Vec<String> = db
@@ -87,21 +99,27 @@ fn differing_reported_models_never_reuse_online_and_ambiguous_history_refuses_of
     let place = folder();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
     let question = Question::decide("Refund?").unwrap().cut();
-    let first = engine.details(&question, "Refund me.").unwrap();
-    let second = engine.details(&question, "Refund me.").unwrap();
+    let first = engine.decide(&question, "Refund me.").unwrap();
+    let second = engine.decide(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 2);
-    assert_ne!(first.value().observations(), second.value().observations());
-    assert_ne!(first.value().requests(), second.value().requests());
+    assert_ne!(
+        first.results()[0].identity().observations(),
+        second.results()[0].identity().observations()
+    );
+    assert_ne!(
+        first.results()[0].meta().requests(),
+        second.results()[0].meta().requests()
+    );
     assert_eq!(
-        first.value().question_sources()[0].answered_by(),
+        first.results()[0].identity().question_sources()[0].answered_by(),
         "model-one"
     );
     assert_eq!(
-        second.value().question_sources()[0].answered_by(),
+        second.results()[0].identity().question_sources()[0].answered_by(),
         "model-two"
     );
     let replay = build(&listener).replay(&place).unwrap().build().unwrap();
-    let error = replay.details(&question, "Refund me.").unwrap_err();
+    let error = replay.decide(&question, "Refund me.").unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(
         error.to_string(),
@@ -119,7 +137,7 @@ fn conflicting_canonical_url_identities_refuse_without_mutation_or_sends() {
     let place = folder();
     let url = format!("{}/systemone", listener.base());
     let seed = build(&listener).record(&place).unwrap().build().unwrap();
-    seed.details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+    seed.decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
         .unwrap();
     drop(seed);
     let uppercase = url.replacen("http://", "HTTP://", 1);
@@ -145,7 +163,7 @@ fn conflicting_canonical_url_identities_refuse_without_mutation_or_sends() {
     let original = std::fs::read(&database).unwrap();
     let engine = build(&listener).cache_at(&place).unwrap().build().unwrap();
     let error = engine
-        .details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+        .decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(listener.count(), 1);
@@ -201,21 +219,21 @@ fn coalesced_occurrences_share_one_observation_and_equal_refresh_creates_a_new_o
         .refresh_cache(true)
         .build()
         .unwrap();
-    let renewed = refresh.details(&question, "Refund me.").unwrap();
+    let renewed = refresh.decide(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 2);
     assert_ne!(
-        renewed.value().observations(),
+        renewed.results()[0].identity().observations(),
         rows[0].result().identity().observations()
     );
     assert_eq!(
-        renewed.value().requests(),
+        renewed.results()[0].meta().requests(),
         rows[0].result().meta().requests()
     );
-    let retained = engine.details(&question, "Refund me.").unwrap();
+    let retained = engine.decide(&question, "Refund me.").unwrap();
     assert_eq!(listener.count(), 2);
     assert_eq!(
-        retained.value().observations(),
-        renewed.value().observations()
+        retained.results()[0].identity().observations(),
+        renewed.results()[0].identity().observations()
     );
     drop(refresh);
     drop(engine);
@@ -228,7 +246,7 @@ fn an_unrepresentable_reported_count_refuses_storage_without_erasing_the_known_l
     let place = folder();
     let engine = build(&listener).record(&place).unwrap().build().unwrap();
     let error = engine
-        .details(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
+        .decide(&Question::decide("Refund?").unwrap().cut(), "Refund me.")
         .unwrap_err();
     assert_eq!(error.kind(), ErrorKind::Local);
     assert_eq!(listener.count(), 1);

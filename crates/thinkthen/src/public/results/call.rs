@@ -177,26 +177,37 @@ impl Facts {
 
 /// One eager value with its call-scoped facts.
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "CompleteCall"))]
-pub struct Call<T> {
+pub struct Call<T, R = (), P = Option<f64>> {
     value: T,
+    #[cfg_attr(test, schemars(skip))]
+    results: R,
+    #[cfg_attr(test, schemars(skip))]
+    probability: P,
+    #[cfg_attr(test, schemars(skip))]
+    projected: bool,
     #[cfg_attr(test, schemars(with = "super::CompleteFacts<'static>"))]
     facts: Facts,
 }
 
-impl<T: Serialize> Serialize for Call<T> {
+impl<T: Serialize, R: Serialize, P: Serialize> Serialize for Call<T, R, P> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let facts = self
             .facts
             .complete()
             .ok_or_else(|| serde::ser::Error::custom("a completed call has no identity"))?;
-        let mut document = serializer.serialize_struct("Call", 2)?;
+        let mut document =
+            serializer.serialize_struct("Call", if self.projected { 4 } else { 2 })?;
         document.serialize_field("value", &self.value)?;
+        if self.projected {
+            document.serialize_field("probability", &self.probability)?;
+            document.serialize_field("results", &self.results)?;
+        }
         document.serialize_field("facts", &facts)?;
         document.end()
     }
 }
 
-impl<T> fmt::Debug for Call<T> {
+impl<T, R, P> fmt::Debug for Call<T, R, P> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Call")
@@ -207,7 +218,43 @@ impl<T> fmt::Debug for Call<T> {
 
 impl<T> Call<T> {
     pub(crate) const fn new(value: T, facts: Facts) -> Self {
-        Self { value, facts }
+        Self {
+            value,
+            facts,
+            results: (),
+            probability: None,
+            projected: false,
+        }
+    }
+}
+
+impl<T, R, P> Call<T, R, P> {
+    /// Canonical complete records retained by this call.
+    #[must_use]
+    pub const fn results(&self) -> &R {
+        &self.results
+    }
+
+    /// The scalar or aligned item probabilities of the plain answer.
+    #[must_use]
+    pub const fn probability(&self) -> &P {
+        &self.probability
+    }
+
+    pub(crate) fn project<U, S, Q>(
+        self,
+        project: impl FnOnce(T) -> Result<(U, S, Q), Error>,
+    ) -> Result<Call<U, S, Q>, Error> {
+        match project(self.value) {
+            Ok((value, results, probability)) => Ok(Call {
+                value,
+                results,
+                probability,
+                facts: self.facts,
+                projected: true,
+            }),
+            Err(error) => Err(error.with_facts(self.facts)),
+        }
     }
 
     /// Borrow the value without losing its facts.
@@ -228,16 +275,28 @@ impl<T> Call<T> {
         &self.facts
     }
 
-    pub(crate) fn map<U>(self, map: impl FnOnce(T) -> U) -> Call<U> {
-        Call::new(map(self.value), self.facts)
+    pub(crate) fn map<U>(self, map: impl FnOnce(T) -> U) -> Call<U, R, P> {
+        Call {
+            value: map(self.value),
+            facts: self.facts,
+            results: self.results,
+            probability: self.probability,
+            projected: self.projected,
+        }
     }
 
     pub(crate) fn try_map<U>(
         self,
         map: impl FnOnce(T) -> Result<U, Error>,
-    ) -> Result<Call<U>, Error> {
+    ) -> Result<Call<U, R, P>, Error> {
         match map(self.value) {
-            Ok(value) => Ok(Call::new(value, self.facts)),
+            Ok(value) => Ok(Call {
+                value,
+                facts: self.facts,
+                results: self.results,
+                probability: self.probability,
+                projected: self.projected,
+            }),
             Err(error) => Err(error.with_facts(self.facts)),
         }
     }
@@ -284,3 +343,31 @@ impl CallReply {
         })
     }
 }
+
+/// One nullable yes/no answer and its complete record.
+pub type DecisionCall = Call<Option<bool>, Vec<super::CompleteDecision>>;
+/// One typed choice and its complete record.
+pub type ChoiceCall<C> = Call<Option<C>, Vec<super::CompleteChoice>>;
+/// One weighted score and its complete record.
+pub type ScoreCall = Call<f64, Vec<super::CompleteScore>>;
+/// Selected typed labels and the complete tag record.
+pub type TagCall<C> = Call<Vec<C>, Vec<super::CompleteTags>>;
+/// Selected original records with every input's filter judgment.
+pub type FilterCall<T> =
+    Call<Vec<T>, Vec<super::CompleteRecord<T, super::CompleteFilter>>, Vec<Option<f64>>>;
+/// Original indexes in ranked order with complete ranked records.
+pub type RankCall<T> =
+    Call<Vec<usize>, Vec<super::CompleteRecord<T, super::CompleteRank>>, Vec<Option<f64>>>;
+/// Original indexes selected by a question set and their complete records.
+pub type SetRankCall<T> =
+    Call<Vec<usize>, Vec<super::CompleteRecord<T, super::CompleteSetRank>>, Vec<Option<f64>>>;
+/// One optional original unit and its complete candidate set.
+pub type FindCall<T> = Call<Option<T>, super::CompleteFound<T>>;
+/// Named values on every input and the complete annotation records.
+pub type AnnotationCall<T> =
+    Call<Vec<Vec<crate::NamedAnnotation>>, Vec<super::CompleteRecord<T, super::CompleteAnnotated>>>;
+/// Recognized names and the complete staged record.
+pub type RecognitionCall =
+    Call<crate::Recognized, Vec<super::CompleteRecognized>, Vec<Option<f64>>>;
+/// Selected relation edges and the complete aggregate record.
+pub type RelationCall = Call<Vec<crate::Edge>, Vec<super::CompleteRelated>, Vec<Option<f64>>>;

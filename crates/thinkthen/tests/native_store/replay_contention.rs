@@ -8,7 +8,7 @@ fn replay_waiting_for_a_writer_obeys_the_call_deadline_and_cancellation() {
     let place = folder();
     let question = Question::decide("Refund?").unwrap().cut();
     let record = build(&listener).record(&place).unwrap().build().unwrap();
-    record.details(&question, "Refund me.").unwrap();
+    record.decide(&question, "Refund me.").unwrap();
     drop(record);
     let holder = Connection::open(place.join("thinkthen.sqlite")).unwrap();
     holder.execute_batch("BEGIN EXCLUSIVE").unwrap();
@@ -25,7 +25,7 @@ fn replay_waiting_for_a_writer_obeys_the_call_deadline_and_cancellation() {
             CallOptions::new().interrupt(&cancel)
         };
         let error = replay
-            .details_with(&question, "Refund me.", options)
+            .decide_with(&question, "Refund me.", options)
             .unwrap_err();
         kinds.push(error.kind());
         assert!(

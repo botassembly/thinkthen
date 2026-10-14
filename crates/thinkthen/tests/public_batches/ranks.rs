@@ -208,9 +208,13 @@ fn saved_rank_cutoff_reads_yes_probabilities_and_keeps_exact_ties_and_originals(
         )
         .unwrap();
     assert_eq!(
-        call.value()
+        call.results()
             .iter()
-            .map(|row| (row.input(), row.index(), row.probability()))
+            .map(|row| (
+                row.original(),
+                row.ordinal(),
+                row.result().probability().unwrap()
+            ))
             .collect::<Vec<_>>(),
         [(&"first", 0, 0.8), (&"last", 2, 0.8)]
     );

@@ -103,11 +103,16 @@ fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
         .expect("question")
         .cut();
     let details = engine
-        .details(&question, "benign evidence")
+        .decide(&question, "benign evidence")
         .expect("details");
     let posting = format!("{base}/systemone");
-    assert_eq!(details.value().url(), posting);
-    assert!(details.value().to_json().contains(&posting));
+    assert_eq!(details.results()[0].meta().url(), posting);
+    assert!(
+        details.results()[0]
+            .to_json()
+            .expect("JSON")
+            .contains(&posting)
+    );
     let debug = format!("{details:?}");
     assert!(!debug.contains("gateway-marker-0210"), "{debug}");
     assert_eq!(listener.count(), 1);

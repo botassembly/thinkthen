@@ -1,5 +1,6 @@
 //! Explicit facts across completed calls, shared by clones and threads.
 
+//! Stays: Private tally accounting must retain ordering, overflow and missing-usage behavior across independent call receipts.
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
@@ -74,7 +75,10 @@ impl Tally {
     ///
     /// # Errors
     /// Returns the call error or an accounting overflow.
-    pub fn run<T>(&self, call: impl FnOnce() -> Result<Call<T>, Error>) -> Result<Call<T>, Error> {
+    pub fn run<T, R, P>(
+        &self,
+        call: impl FnOnce() -> Result<Call<T, R, P>, Error>,
+    ) -> Result<Call<T, R, P>, Error> {
         let started = self.start();
         let result = call();
         match &result {

@@ -93,9 +93,17 @@ fn a_later_invalid_annotation_keeps_the_valid_record_prefix() {
     )
     .expect("set");
     let records = [r#"{"left":"a","right":"b"}"#, r#"{"left":"c"}"#];
-    let mut rows = engine.annotate(&set, records);
+    let mut rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(records),
+        CallOptions::new(),
+    );
     assert_eq!(
-        rows.next().expect("first").expect("valid prefix").input(),
+        rows.next()
+            .expect("first")
+            .expect("valid prefix")
+            .original(),
         &records[0]
     );
     assert_eq!(
@@ -224,7 +232,7 @@ fn eager_observer_reads_complete_question_then_row_on_caller_thread() {
     let call = engine
         .decide_with(&question(), "alpha", CallOptions::new().observe(&observe))
         .expect("observed decision");
-    assert_eq!(*call.value(), Answer::Yes);
+    assert_eq!(*call.value(), Some(true));
     assert_eq!(*seen.lock().expect("observation"), ["question", "row"]);
     assert_eq!(listener.count(), 1);
 }
@@ -311,7 +319,7 @@ fn find_observer_names_its_actual_question_and_selected_unit() {
             CallOptions::new().observe(&observe),
         )
         .expect("found");
-    assert_eq!(found.value().selected(), Some(&"first"));
+    assert_eq!(found.value().as_ref(), Some(&"first"));
     assert_eq!(backend.count(), 1);
     assert_eq!(*seen.lock().expect("observations"), ["question", "row"]);
 }
@@ -344,7 +352,7 @@ fn eager_observer_panic_returns_its_payload_after_the_call() {
             .decide(&question(), "beta")
             .expect("next call")
             .value(),
-        &Answer::Yes
+        &Some(true)
     );
     assert_eq!(listener.count(), 2);
 }
@@ -391,10 +399,14 @@ fn annotation_observer_keeps_named_success_and_failure_in_set_order() {
             assert!(matches!(values[1].value(), thinkthen::Annotated::Failed(_)));
         }
     };
-    let rows = engine
-        .annotate_with(&set, ["alpha"], CallOptions::new().observe(&observe))
-        .collect::<Result<Vec<_>, _>>()
-        .expect("one partly answered annotation");
+    let rows = crate::api::pull_annotations(
+        &engine,
+        &set,
+        crate::api::plain_records(["alpha"]),
+        CallOptions::new().observe(&observe),
+    )
+    .collect::<Result<Vec<_>, _>>()
+    .expect("one partly answered annotation");
     assert_eq!(rows.len(), 1);
     assert_eq!(listener.count(), 1);
     assert_eq!(

@@ -216,16 +216,16 @@ fn ask(engine: &Engine) -> String {
     let question = Question::decide("asks for a refund")
         .expect("a question")
         .cut();
-    match engine.details(&question, EVIDENCE) {
+    match engine.decide(&question, EVIDENCE) {
         Ok(call) => {
-            let details = call.value();
+            let details = call.results()[0].meta();
             format!(
                 "sent {} cached {} model {} digests {:?} sha {}",
                 details.requests_sent(),
                 details.cached(),
                 details.model(),
                 details.requests(),
-                details.question_sha256()
+                details.question_sha256().expect("digest")
             )
         }
         Err(error) => format!("{:?}: {error}", error.kind()),

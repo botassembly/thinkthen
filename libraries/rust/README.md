@@ -19,9 +19,11 @@ The builder also sets `max_request_bytes`, `timeout`, `max_retries`, `profile`, 
 
 ## Run facts
 
-Each eager engine call returns `Call<T>`. Read its answer with `value()` or take it with `into_value()`. `facts()` reports this call's finished records, sent attempts, cache answers, optional provider tokens and model, and wall seconds. A started eager call that fails exposes its final facts through `Error::facts()`. These are call facts, not a delta of the process totals. No call reports price, server time, or a provider request ID.
+Each of the ten engine functions returns one `Call<T, R, P>`. Read its plain answer with `value()`, its scalar or aligned item probabilities with `probability()`, and its complete canonical records with `results()`. Take the plain answer with `into_value()`. `facts()` reports this call's finished records, sent attempts, cache answers, optional provider tokens and model, and wall seconds. A started eager call that fails exposes its final facts through `Error::facts()`. These are call facts, not a delta of the process totals. No call reports price, server time, or a provider request ID.
 
-`Engine::details` returns `Call<Details>` for one text. Its `Details::to_json()` is the command's `--details` line, schema `thinkthen.result/1`, and its accessors read the same fields: `usage()`, `requests_sent()`, `cached()`, `requests()`, `url()`, `model()`, `probabilities()` and `confidence()`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent.
+Scalar decide returns `Option<bool>`, so an unresolved reading is `None`. Choose returns an optional typed choice. Rank returns original indexes, filter returns selected inputs, and find returns an optional original unit. Filter and annotate collect the existing native stream into one call. Filter and find require `Clone` so the call retains originals in both the answer and complete records. Score, tag and annotate have no scalar probability; every distribution remains in `results()`.
+
+Each complete record keeps the actual question, answer, usage, identity and source fields. Its `meta()` exposes the reported model, send count, cached origin, request keys and effective address. `to_json()` writes the canonical result/2 record. These fields are retained by the original call and require no second request.
 
 `Engine::execute_request_rows` returns the current typed `RequestRows` batches for decide, choose, score, tag, filter and annotate. These rows, rank and annotation calls run on the command's question pipeline, by ADR 0111. Each question keeps its own cache key, so a longer call over the same records asks only the new records' questions. Rows list those keys in `meta.requests` and carry no `meta.batch`. `EngineBuilder::batch` selects the default; `CallOptions::batch` overrides it for one call. `EngineBuilder::from_env` reads `THINKTHEN_BATCH`; a bare builder does not. A parsed question file's batch is the lower tier. `CallOptions::context` borrows shared text; Request admission validates each function's context rules before sending. Lazy `Batch<T>::facts()` becomes available after exhaustion or its terminal error. An observation callback can inspect borrowed question and row events in order, including a rejected filter occurrence; copying a field inside the callback retains it. A callback panic resumes on the caller after workers join.
 
@@ -43,15 +45,15 @@ A bare `cargo test` builds every example, then runs `tests/examples.rs`. `cargo 
 
 `RankSet::from_json` and `RankSet::load` admit ordered decide sets without authored thresholds or member pointers. `Engine::rank_set(&set, records)` and `rank_set_with` judge every member over every input, sort each member stably, then take turns at each depth in saved member order. Duplicates consume visits and each original input position appears once. Rust returns the full order; take its prefix for a top selection.
 
-`SetRanked<T>` owns the original and provides `index()`, `input()`, `into_input()`, `probability()` and `question_name()`. The probability belongs to the selecting member. Originals need no Clone, Send or Serialize implementation. One CallOptions and one facts report cover the whole call; records count inputs, not member answers. Question observations retain every named member answer and receipt. Any member failure fails the whole call. Existing `rank`, `Ranked` and `RankedRow` stay unchanged. SQL sets belong to ticket 0417 for 0.2; C and language sets belong to 0418 later.
+The call value contains original input indexes. Its results retain each original record, every member result, and the selecting member name. The aligned probability belongs to that selecting member. One CallOptions and one facts report cover the whole call; records count inputs, not member answers. Question observations retain every named member answer and receipt. Any member failure fails the whole call.
 
 ```rust
 let set = thinkthen::RankSet::from_json(
     r#"{"version":1,"questions":{"billing":{"decide":"Billing issue?"},"recovery":{"decide":"Recovery steps?"}}}"#,
 )?;
 let ranked = engine.rank_set(&set, ["First passage", "Second passage"])?;
-for row in ranked.value().iter().take(5) {
-    let _ = (row.index(), row.input(), row.question_name(), row.probability());
+for index in ranked.value().iter().take(5) {
+    let _ = index;
 }
 ```
 

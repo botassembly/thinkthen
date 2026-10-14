@@ -25,15 +25,22 @@ fn saved_annotate_batch_tiers() {
     .expect("invalid saved tier is retained until selected");
     let records = ["one", "two", "three"];
     let run = |engine: &Engine, set: &QuestionSet, options| {
-        let mut batch = engine.annotate_with(set, records, options);
+        let mut batch = crate::api::annotation_rows(crate::api::rows(
+            engine,
+            thinkthen::RequestFunction::Annotate,
+            set.clone().into(),
+            crate::api::plain_records(records),
+            options,
+        )?)
+        .expect("annotation rows");
         let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
         assert_eq!(
-            rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+            rows.iter().map(|row| *row.original()).collect::<Vec<_>>(),
             records
         );
         assert_eq!(
             rows.iter()
-                .map(AnnotatedRecord::value_json)
+                .map(|row| row.result().value_json().expect("values"))
                 .collect::<Vec<_>>(),
             [r#"{"ready":true}"#; 3]
         );

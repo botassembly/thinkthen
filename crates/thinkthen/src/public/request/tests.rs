@@ -1,4 +1,5 @@
 //! Canonical decoding and native header behavior at the request boundary.
+//! Stays: The native request decoder and generated schema need direct parser, duplicate-field and structural admission contract checks.
 use super::*;
 use crate::RequestFunction;
 

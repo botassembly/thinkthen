@@ -47,7 +47,7 @@ fn whole_set_find_context_is_separate_and_every_candidate_retains_its_original()
             CallOptions::new().context("legacy context"),
         )
         .unwrap();
-    assert!(legacy.value().selected().is_none());
+    assert!(legacy.value().as_ref().is_none());
     assert_eq!(listener.count(), 2);
 }
 

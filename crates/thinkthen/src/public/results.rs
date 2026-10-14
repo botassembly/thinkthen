@@ -46,16 +46,18 @@ pub use complete_record::CompleteRecord;
 pub use complete_set_rank::{CompleteRankMember, CompleteSetRank};
 mod found;
 pub use crate::core::{AttemptObservation, AttemptOutcome, CompleteAttempt};
-pub use call::{Call, CallReply, Facts};
+pub use call::{
+    AnnotationCall, Call, CallReply, ChoiceCall, DecisionCall, Facts, FilterCall, FindCall,
+    RankCall, RecognitionCall, RelationCall, ScoreCall, SetRankCall, TagCall,
+};
 pub use found::{Candidate, Found, Picked};
+#[cfg(test)]
 mod ranked;
-pub use ranked::{Ranked, RankedRow};
-mod set_ranked;
-pub use set_ranked::SetRanked;
+#[cfg(test)]
+pub(crate) use ranked::RankedRow;
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
-pub(crate) use member::Member;
 pub(crate) use member::batch_warning;
 mod observation;
 mod owned_observation;
@@ -422,7 +424,7 @@ impl<T, V> fmt::Debug for Row<T, V> {
 }
 
 impl<T, V> Row<T, V> {
-    #[cfg(any(test, feature = "polars"))]
+    #[cfg(test)]
     pub(crate) const fn new(input: T, value: V, probability: f64) -> Self {
         Self {
             input,

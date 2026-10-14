@@ -10,7 +10,7 @@ use crate::engine::pipeline::{self, Answered, Asker, Failed};
 use crate::public::engine::evidence;
 use crate::public::error::{Error, ErrorKind};
 use crate::public::question::Question;
-use crate::public::results::{Member, ObservedQuestion};
+use crate::public::results::ObservedQuestion;
 
 /// One caller text and its zero-based place.
 #[derive(Clone)]
@@ -259,14 +259,6 @@ impl Decided {
             .with_receipt(&self.answered)
             .with_declarations(&question.reading_metadata())
             .with_input(self.input.clone()))
-    }
-
-    /// The receipt a detailed row reports.
-    pub(crate) fn member(&self, question: &Question) -> Result<Member, Error> {
-        let judged = self
-            .judgment(question)
-            .ok_or_else(|| Error::defect("a failed question has no member"))?;
-        Ok(Member::new(judged, self.keys.clone()))
     }
 }
 

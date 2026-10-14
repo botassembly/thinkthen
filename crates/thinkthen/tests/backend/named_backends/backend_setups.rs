@@ -213,7 +213,7 @@ fn backend_setup_builder_child() {
     writeln!(out, "setup-debug {builder:?}").unwrap();
     let engine = builder.no_cache().build().unwrap();
     let q = Question::decide("a refund?").unwrap().cut();
-    match engine.details(&q, "alpha") {
+    match engine.decide(&q, "alpha") {
         Ok(call) => writeln!(out, "setup-cost {:?}", call.facts().estimated_cost_usd()).unwrap(),
         Err(error) => writeln!(out, "setup-error {error}").unwrap(),
     }

@@ -121,10 +121,9 @@ pub(super) fn run(engine: &Engine, name: &str, options: CallOptions<'_>) -> Resu
         }
         "annotate" => {
             let set = QuestionSet::builder().question("intact", decide)?.build()?;
-            for row in engine.annotate_with(&set, [TEXT], options) {
-                let row = row?;
+            let call = engine.annotate_with(&set, [TEXT], options)?;
+            for row in call.value() {
                 if row
-                    .values()
                     .iter()
                     .any(|held| matches!(held.value(), Annotated::Failed(_)))
                 {
