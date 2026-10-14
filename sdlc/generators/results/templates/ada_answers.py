@@ -128,41 +128,10 @@ def outputs(definitions):
         retained.append(f'when {function.title()}_Function => Item := Answer (Call, "{function}", "{kinds.get(function, "")}", True);')
     retained += ['end case;', 'declare Copy : Value_List (1 .. Length (Item)); begin', "for I in Copy'Range loop Copy (I) := Element (Item, I); end loop;", 'return Copy;', 'end;', 'end Retained_Values;']
     implementations.append('\n'.join(retained))
-    for function,kind,schema in scalar:
-        target = {'decide':'Decision','choose':'Choice','score':'Long_Float','tag':'Text_List'}[function]
-        declarations.append(f'function {function.title()}_Answer (Call : Completion) return {target};')
-        body = [f'function {function.title()}_Answer (Call : Completion) return {target} is', f'Item : constant Value := Answer (Call, "{function}", "{kind}");', 'begin']
-        if function == 'decide':
-            body += ['if Kind (Item) = Null_Value then return (Known => False); end if;', 'return (Known => True, Value => As_Boolean (Item));']
-        elif function == 'choose':
-            body += ['if Kind (Item) = Null_Value then return (Known => False); end if;', 'return (Known => True, Value => To_Unbounded_String (As_String (Item)));']
-        elif function == 'score':
-            body += ["return Long_Float'Value (As_Number (Item));"]
-        else:
-            body += ['return Texts (Item);']
-        implementations.append('\n'.join(body + ['end '+function.title()+'_Answer;']))
-    for function,_,payload in aggregate_answers(definitions):
-        if function in {function for function,_,_ in scalar}:
-            continue
-        target = {'filter':'Thinkthen.Values.Value_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
-        declarations.append(f'function {function.title()}_Answer (Call : Completion) return {target};')
-        body = [f'function {function.title()}_Answer (Call : Completion) return {target} is', f'Item : constant Value := Answer (Call, "{function}", "");', 'begin']
-        if function in ('filter','rank'):
-            _, member = aggregate_projection(function, payload, definitions)
-            selected = 'Field_Value (Element (Item, I), "' + member + '")'
-            projection = selected if function == 'filter' else "Interfaces.Unsigned_64'Value (As_Number (" + selected + '))'
-            body += ['declare', f'Items : {target} (1 .. Length (Item));', 'begin', 'for I in Items\'Range loop', 'Items (I) := ' + projection + ';', 'end loop;', 'return Items;', 'end;']
-        elif payload.get('type') == 'array':
-            singular = target.removesuffix('_List')
-            body += ['declare', f'Items : {target} (1 .. Length (Item));', 'begin', 'for I in Items\'Range loop Items (I) := (Data => Element (Item, I)); end loop;', 'return Items;', 'end;']
-        else:
-            body += ['return (Data => Item);']
-        implementations.append('\n'.join(body+['end '+function.title()+'_Answer;']))
-    for function,_,_ in functions:
-        target = {'decide':'Decision','choose':'Choice','score':'Long_Float','tag':'Text_List','filter':'Thinkthen.Values.Value_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
-        signature = f'function {function.title()}_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return {target}'
-        declarations.append(signature + ';')
-        implementations.append(signature + ' is\nbegin\nCall := Collect (Owner);\nreturn ' + function.title() + '_Answer (Call);\nend ' + function.title() + '_Answer;')
+    from templates.ada_call_results import outputs as call_outputs, RESOLVERS
+    call_declarations, call_bodies, call_private = call_outputs(definitions)
+    declarations.append(call_declarations)
+    implementations.append('\n'.join(RESOLVERS.values()) + '\n' + call_bodies)
     guard_lines = []
     def path(item,fields):
         for field in fields: item = f'Field_Value ({item}, "{field}")'
@@ -172,11 +141,12 @@ def outputs(definitions):
     scalar_route = path('Packet',route)
     collections = [function for function,_,payload in aggregate_answers(definitions) if payload.get('type') == 'array' and function not in {function for function,_,_ in scalar}]
     body = BODY.replace('-- READERS', readers(definitions)).replace('-- GUARDS', '\n'.join(guard_lines)).replace('-- SCALAR_ROUTE',scalar_route).replace('-- COLLECTIONS',' or else '.join(f'Function_Name = "{function}"' for function in collections)).replace('-- ANSWERS','\n'.join(implementations))
-    return {'thinkthen-answers.ads': SPEC.replace('-- ANSWERS','\n'.join(declarations)), 'thinkthen-answers.adb':body}
+    return {'thinkthen-answers.ads': SPEC.replace('-- ANSWERS','\n'.join(declarations)).replace('-- CALL_PRIVATE', call_private), 'thinkthen-answers.adb':body}
 
 
 SPEC = '''-- Generated owned answers from the canonical native result graph.
 with Ada.Strings.Unbounded;
+with Ada.Containers.Vectors;
 with Interfaces;
 with Thinkthen.Values;
 with Thinkthen.Sessions;
@@ -216,41 +186,12 @@ package Thinkthen.Answers is
    function Records (Item : Facts) return Interfaces.Unsigned_64;
    function Details (Item : Facts) return Thinkthen.Values.Value;
    function Details (Error : Failure) return Thinkthen.Values.Value;
-   type Decision (Known : Boolean := False) is record
-      case Known is
-         when True => Value : Boolean;
-         when False => null;
-      end case;
-   end record;
-   type Choice (Known : Boolean := False) is record
-      case Known is
-         when True => Value : Ada.Strings.Unbounded.Unbounded_String;
-         when False => null;
-      end case;
-   end record;
-   type Text_List is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
-   type Rank_List is array (Positive range <>) of Interfaces.Unsigned_64;
-   type Find_Result is private;
-   type Annotation is private;
-   type Recognition is private;
-   type Relation is private;
-   type Annotation_List is array (Positive range <>) of Annotation;
-   type Recognition_List is array (Positive range <>) of Recognition;
-   function Found_Value (Item : Find_Result) return Thinkthen.Values.Value;
-   function Has_Match (Item : Find_Result) return Boolean;
-   function Match_Index (Item : Find_Result) return Interfaces.Unsigned_64;
-   function Fields (Item : Annotation) return Thinkthen.Values.Value;
-   function Entities (Item : Recognition) return Thinkthen.Values.Value;
-   function Edges (Item : Relation) return Thinkthen.Values.Value;
    function Source_Name (Edge : Thinkthen.Values.Value) return String;
    function Target_Name (Edge : Thinkthen.Values.Value) return String;
    function Relation_Name (Edge : Thinkthen.Values.Value) return String;
-   function Details (Item : Find_Result) return Thinkthen.Values.Value;
-   function Details (Item : Annotation) return Thinkthen.Values.Value;
-   function Details (Item : Recognition) return Thinkthen.Values.Value;
-   function Details (Item : Relation) return Thinkthen.Values.Value;
    -- ANSWERS
 private
+   -- CALL_PRIVATE
    type Completion is record
       Packets : Thinkthen.Values.Value;
       Terminal : Thinkthen.Values.Value;
@@ -259,10 +200,6 @@ private
    end record;
    type Facts is record Data : Thinkthen.Values.Value; end record;
    type Failure is record Data : Thinkthen.Values.Value; end record;
-   type Find_Result is record Data : Thinkthen.Values.Value; end record;
-   type Annotation is record Data : Thinkthen.Values.Value; end record;
-   type Recognition is record Data : Thinkthen.Values.Value; end record;
-   type Relation is record Data : Thinkthen.Values.Value; end record;
 end Thinkthen.Answers;
 '''
 
@@ -394,25 +331,9 @@ package body Thinkthen.Answers is
       if Natural (Items.Length) /= 1 then raise Answer_Cardinality_Error with "expected exactly one matching answer"; end if;
       return Items (1);
    end Answer;
-   function Texts (Item : Value) return Text_List is
-      Result : Text_List (1 .. Length (Item));
-   begin
-      for I in Result'Range loop Result (I) := To_Unbounded_String (As_String (Element (Item, I))); end loop;
-      return Result;
-   end Texts;
-   function Found_Value (Item : Find_Result) return Value is (Field_Value (Item.Data, "value"));
-   function Has_Match (Item : Find_Result) return Boolean is (Kind (Field_Value (Item.Data, "index")) /= Null_Value);
-   function Match_Index (Item : Find_Result) return Interfaces.Unsigned_64 is (Interfaces.Unsigned_64'Value (As_Number (Field_Value (Item.Data, "index"))));
-   function Fields (Item : Annotation) return Value is (Field_Value (Item.Data, "value"));
-   function Entities (Item : Recognition) return Value is (Field_Value (Field_Value (Item.Data, "value"), "entities"));
-   function Edges (Item : Relation) return Value is (Field_Value (Item.Data, "value"));
    function Source_Name (Edge : Value) return String is (As_String (Field_Value (Field_Value (Edge, "source"), "name")));
    function Target_Name (Edge : Value) return String is (As_String (Field_Value (Field_Value (Edge, "target"), "name")));
    function Relation_Name (Edge : Value) return String is (As_String (Field_Value (Edge, "relation")));
-   function Details (Item : Find_Result) return Value is (Item.Data);
-   function Details (Item : Annotation) return Value is (Item.Data);
-   function Details (Item : Recognition) return Value is (Item.Data);
-   function Details (Item : Relation) return Value is (Item.Data);
    -- ANSWERS
 end Thinkthen.Answers;
 '''
