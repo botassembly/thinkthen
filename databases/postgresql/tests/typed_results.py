@@ -1,26 +1,30 @@
 """Decode actual SQL composites back to the canonical fixture contract."""
 import json
+import sys
 from pathlib import Path
 from jsonschema import Draft202012Validator
 
 ROOT = Path(__file__).resolve().parents[3]
 SCHEMA = json.loads((ROOT / 'crates/thinkthen/src/public/results/complete.schema.json').read_text())
 DEFINITIONS = SCHEMA['$defs']
+sys.path.insert(0, str(ROOT / 'sdlc/generators/results/templates'))
+from postgresql import sql_schema
+SQL_DEFINITIONS = sql_schema(SCHEMA)['$defs']
 
 
-def resolve(schema):
+def resolve(schema, definitions=DEFINITIONS):
     if isinstance(schema, dict) and '$ref' in schema:
-        return resolve(DEFINITIONS[schema['$ref'].split('/')[-1]])
+        return resolve(definitions[schema['$ref'].split('/')[-1]], definitions)
     return schema
 
 
-def valid(value, schema):
-    schema = {**schema, '$defs': DEFINITIONS}
+def valid(value, schema, definitions=DEFINITIONS):
+    schema = {**schema, '$defs': definitions}
     return Draft202012Validator(schema).is_valid(value)
 
 
-def decode(value, schema):
-    schema = resolve(schema)
+def decode(value, schema, definitions=DEFINITIONS):
+    schema = resolve(schema, definitions)
     if not isinstance(schema, dict) or not schema:
         return value
     if isinstance(value, dict) and value and all(key.endswith('_value') for key in value):
@@ -33,14 +37,14 @@ def decode(value, schema):
     if choices and not all(set(choice) <= {'required', 'not'} for choice in choices):
         common = schema.get('properties', {})
         for choice in choices:
-            choice = resolve(choice)
+            choice = resolve(choice, definitions)
             if common and isinstance(choice, dict):
                 choice = {**choice, 'properties': {**common, **choice.get('properties', {})}}
             try:
-                decoded = decode(value, choice)
+                decoded = decode(value, choice, definitions)
             except (AssertionError, TypeError, AttributeError, KeyError):
                 continue
-            if valid(decoded, choice):
+            if valid(decoded, choice, definitions):
                 return decoded
         raise AssertionError(('no canonical SQL alternative', value, schema))
     kinds = schema.get('type', [])
@@ -50,7 +54,7 @@ def decode(value, schema):
         for kind in kinds:
             selected = kind + '_value'
             if selected in value and value[selected] is not None:
-                return decode(value[selected], schema)
+                return decode(value[selected], schema, definitions)
     if value is None:
         return None
     if 'properties' in schema:
@@ -67,14 +71,14 @@ def decode(value, schema):
                 continue
             if held is None and member not in required and present is not True:
                 continue
-            out[member] = decode(held, child)
+            out[member] = decode(held, child, definitions)
         return out
     if 'object' in kinds and isinstance(schema.get('additionalProperties'), dict):
         if isinstance(value, list):
-            return {entry['name']: decode(entry['value'], schema['additionalProperties']) for entry in value}
-        return {name: decode(child, schema['additionalProperties']) for name, child in value.items()}
+            return {entry['name']: decode(entry['value'], schema['additionalProperties'], definitions) for entry in value}
+        return {name: decode(child, schema['additionalProperties'], definitions) for name, child in value.items()}
     if 'array' in kinds and isinstance(value, list):
-        return [decode(child, schema.get('items', {})) for child in value]
+        return [decode(child, schema.get('items', {}), definitions) for child in value]
     return value
 
 
@@ -90,7 +94,7 @@ def native(rows, verb):
     facts = next((decode(row['facts'], DEFINITIONS['completeFacts']) for row in rows if row['facts'] is not None), None)
     failure = next((decode(row['failure'], DEFINITIONS['completeError']) for row in rows if row['failure'] is not None), None)
     raw_events = list({json.dumps(event, sort_keys=True): event for row in rows for event in row.get('observations', [])}.values())
-    events = [decode(event, DEFINITIONS['completesessionObservation']) for event in raw_events]
+    events = [decode(event, SQL_DEFINITIONS['completesessionObservation'], SQL_DEFINITIONS) for event in raw_events]
     observations = []
     for raw_event, event in zip(raw_events, events):
         if event['kind'] != 'question':

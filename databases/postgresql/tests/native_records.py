@@ -46,7 +46,7 @@ def main():
                 ('score', '{"score":"How much?","levels":["low","high"]}', record, .1, None, 1),
                 ('filter', 'Fits?', record, 'Alpha.', .9, 1),
                 ('rank', '{"decide":"Fits?"}', record, 1, .9, 1),
-                ('find', '{"find":"Fits?"}', record, 'Alpha.', 1.0, 1),
+                ('find', '{"find":"Fits?"}', record + ",thinkthen_record(text=>'Beta.')", 'Alpha.', .9, 1),
                 ('annotate', '{"version":1,"questions":{"fit":{"decide":"Fits?"}}}',
                  "thinkthen_record(value=>'{\"body\":\"Alpha.\",\"untouched\":false}'::json)", None, None, 1),
                 ('recognize', '{"version":1,"recognize":{"kinds":{"person":"A person."}}}',
