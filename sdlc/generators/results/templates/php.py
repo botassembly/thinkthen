@@ -3,7 +3,7 @@ import json
 import re
 from native import selected_header
 from c import normalized, nullable, variant_member, container_key
-from host_answers import scalar_answers, aggregate_answers, aggregate_projection, judgment_route, named_object_fields
+from host_answers import call_results, named_object_fields
 
 ROOTS = ('completesessionPacket', 'completeImmediateFacts', 'completeplan')
 
@@ -28,7 +28,8 @@ def hint(source, definitions):
     if 'variants' in source:
         return '|'.join(name(child) for child, _ in source['variants'])
     if 'anyOf' in source:
-        return '|'.join(dict.fromkeys(hint(child, definitions) for child in source['anyOf']))
+        types = [hint(child, definitions) for child in source['anyOf']]
+        return 'mixed' if 'mixed' in types else '|'.join(dict.fromkeys(types))
     kind = source.get('type')
     if isinstance(kind, list):
         types = [hint({**source, 'type': value}, definitions) for value in kind]
@@ -53,6 +54,7 @@ def outputs(definitions, header):
         for member in named_object_fields(source, definitions):
             lines += [f'    public function {member}Name(): string {{ return $this->{member}->name; }}']
         lines += ['}']
+    lines += named_calls(definitions)
     lines += native_readers(definitions)
     declarations = re.sub(r'^#.*$', '', selected_header(header, 'php'), flags=re.M)
     constants = ['<?php', '// Generated from the native C header; do not edit.',
@@ -138,12 +140,25 @@ def inputs(definitions):
             lines += ['    public function __construct(' + parameters + (', ' if parameters else '') + 'array $fields = [])',
                       '    {', '        parent::__construct([' + ', '.join(part for part in ('...self::TAGS' if tags else '', values) if part) + ', ...$fields]);' if tags or values else '        parent::__construct($fields);',
                       '    }', '}']
-    lines += ['namespace ThinkThen;', 'trait NamedCalls', '{']
-    for function in definitions['RequestFunction']['oneOf']:
-        value = function['const']
-        lines += [f"    public function {value}(string|array|\\stdClass|\\ThinkThen\\Inputs\\QuestionDefinition|\\ThinkThen\\Inputs\\QuestionSource $question, mixed $input, \\ThinkThen\\Inputs\\Options $options = new \\ThinkThen\\Inputs\\Options(), ?Cancellation $cancel = null): \\ThinkThen\\Results\\Completed {{ return $this->call('{value}', $question, $input, $options, $cancel); }}"]
-    lines += ['}']
     return '\n'.join(lines) + '\n'
+
+
+def named_calls(definitions):
+    lines = ['namespace ThinkThen;', 'trait NamedCalls', '{']
+    for function, shape in call_results(definitions).items():
+        typ = hint(shape['aggregate_value'], definitions)
+        typ = re.sub(r'(?<![\\\w])([A-Z]\w*)', r'\\ThinkThen\\Results\\\1', typ)
+        if shape['call_shape'] == 'input':
+            item = typ.removeprefix('list<').removesuffix('>')
+            typ = 'mixed' if item == 'mixed' else item + '|' + typ
+        probability = ('null' if shape['probability_mode'] == 'null' else
+                       'list<float|null>' if shape['call_shape'] == 'collection' else
+                       'list<float>|list<list<float>>' if shape['probability_mode'] == 'items' and shape['call_shape'] == 'input' else
+                       'list<float>' if shape['probability_mode'] == 'items' else
+                       'float|null' if shape['call_shape'] == 'aggregate' else 'float|null|list<float|null>')
+        lines += [f'    /** @return \\ThinkThen\\Results\\Result<{typ}, {probability}> */',
+                  f"    public function {function}(string|array|\\stdClass|\\ThinkThen\\Inputs\\QuestionDefinition|\\ThinkThen\\Inputs\\QuestionSource $question, mixed $input, \\ThinkThen\\Inputs\\Options $options = new \\ThinkThen\\Inputs\\Options(), ?Cancellation $cancel = null): \\ThinkThen\\Results\\Result {{ return $this->call('{function}', $question, $input, $options, $cancel); }}"]
+    return lines + ['}']
 
 
 def native_readers(definitions):
@@ -271,32 +286,20 @@ NATIVE_SUPPORT = r'''    public static function plan(\FFI\CData $view): \ThinkTh
 
 
 def answer_helpers(definitions):
-    path, guards = judgment_route(definitions)
-    access = '$packet' + ''.join('->' + field for field in path)
-    checks = ' && '.join('$packet' + ''.join('->' + f for f in fields) + ' === ' + repr(value) for fields, value in guards)
-    lines = ['trait AnswerAccessors', '{', '    private function requireSuccess(): void', '    {', "        if (!$this->terminal->has('failure')) return;", '        $failure = $this->terminal->failure;', '        $class = \\ThinkThen\\Internal\\ErrorFactory::classFor($failure->error->kind);', '        throw new $class($failure->error->message, $failure, $this->results, $this->terminal, $this->packets);', '    }']
-    for function, kind, schema in scalar_answers(definitions):
-        typ = hint(schema, definitions)
-        lines += [f'    /** @return {typ} */ public function {function}Answer(): ' + ('array' if typ.startswith('list<') else typ), '    {', '        $this->requireSuccess();', '        $answers = [];', '        foreach ($this->packets as $packet) {', f'            if ({checks} && {access}->kind === {kind!r}) $answers[] = {access}->value;', '        }', r"        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        return $answers[0];', '    }']
-    for function, packet, schema in aggregate_answers(definitions):
-        if function in {f for f, _, _ in scalar_answers(definitions)}: continue
-        projected, member = aggregate_projection(function, schema, definitions)
-        typ = hint(projected, definitions)
-        lines += [f'    /** @return {typ} */ public function {function}Answer(): ' + ('array' if typ.startswith('list<') else typ), '    {', '        $this->requireSuccess();']
-        if schema.get('type') == 'array':
-            lines += ['        $answer = []; $matched = false;', '        foreach ($this->packets as $packet) {', f'            if ($packet instanceof {name(packet)}) {{ $matched = true; array_push($answer, ...$packet->value); }}']
-            for child, _ in definitions['completesessionPacket']['variants']:
-                fields = definitions[child].get('properties', {})
-                if fields.get('kind', {}).get('const') == 'row' and fields.get('function', {}).get('const') == function and fields.get('value') == schema['items']:
-                    lines += [f'            elseif ($packet instanceof {name(child)}) {{ $matched = true; $answer[] = $packet->value; }}']
-            lines += ['        }', r"        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');"]
-        else:
-            lines += [f'        $values = array_values(array_filter($this->packets, fn($p) => $p instanceof {name(packet)}));', r"        if (count($values) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');", '        $answer = $values[0]->value;']
-        if member:
-            lines += [f'        return array_map(fn($row) => $row->{member}, $answer);']
-        else: lines += ['        return $answer;']
-        lines += ['    }']
-    return lines + ['}']
+    metadata = {verb: {key: value for key, value in spec.items()
+                      if key in ('value_projection', 'probability_mode', 'probability_path',
+                                 'pick_path', 'call_shape', 'resolution', 'selection_path')}
+                for verb, spec in call_results(definitions).items()}
+    def literal(value):
+        if isinstance(value, dict):
+            return '[' + ', '.join(repr(key) + ' => ' + literal(child) for key, child in value.items()) + ']'
+        if isinstance(value, (list, tuple)):
+            return '[' + ', '.join(literal(child) for child in value) + ']'
+        return repr(value)
+    return ['namespace ThinkThen\\Internal;', 'final class CallShapes', '{',
+            '    public const VALUES = [',
+            *['        ' + repr(verb) + ' => ' + literal(spec) + ',' for verb, spec in metadata.items()],
+            '    ];', '}', 'namespace ThinkThen\\Results;']
 
 
 def plan_readers(definitions):

@@ -2,114 +2,23 @@
 // Generated from the shared Rust result graph; do not edit.
 declare(strict_types=1);
 namespace ThinkThen\Results;
-trait AnswerAccessors
+namespace ThinkThen\Internal;
+final class CallShapes
 {
-    private function requireSuccess(): void
-    {
-        if (!$this->terminal->has('failure')) return;
-        $failure = $this->terminal->failure;
-        $class = \ThinkThen\Internal\ErrorFactory::classFor($failure->error->kind);
-        throw new $class($failure->error->message, $failure, $this->results, $this->terminal, $this->packets);
-    }
-    /** @return bool|null */ public function decideAnswer(): bool|null
-    {
-        $this->requireSuccess();
-        $answers = [];
-        foreach ($this->packets as $packet) {
-            if ($packet->kind === 'observation' && $packet->value->kind === 'row' && $packet->value->value->kind === 'judgment' && $packet->value->value->value->kind === 'decision') $answers[] = $packet->value->value->value->value;
-        }
-        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        return $answers[0];
-    }
-    /** @return string|null */ public function chooseAnswer(): string|null
-    {
-        $this->requireSuccess();
-        $answers = [];
-        foreach ($this->packets as $packet) {
-            if ($packet->kind === 'observation' && $packet->value->kind === 'row' && $packet->value->value->kind === 'judgment' && $packet->value->value->value->kind === 'choice') $answers[] = $packet->value->value->value->value;
-        }
-        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        return $answers[0];
-    }
-    /** @return int|float */ public function scoreAnswer(): int|float
-    {
-        $this->requireSuccess();
-        $answers = [];
-        foreach ($this->packets as $packet) {
-            if ($packet->kind === 'observation' && $packet->value->kind === 'row' && $packet->value->value->kind === 'judgment' && $packet->value->value->value->kind === 'score') $answers[] = $packet->value->value->value->value;
-        }
-        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        return $answers[0];
-    }
-    /** @return list<string> */ public function tagAnswer(): array
-    {
-        $this->requireSuccess();
-        $answers = [];
-        foreach ($this->packets as $packet) {
-            if ($packet->kind === 'observation' && $packet->value->kind === 'row' && $packet->value->value->kind === 'judgment' && $packet->value->value->value->kind === 'tags') $answers[] = $packet->value->value->value->value;
-        }
-        if (count($answers) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        return $answers[0];
-    }
-    /** @return list<mixed> */ public function filterAnswer(): array
-    {
-        $this->requireSuccess();
-        $answer = []; $matched = false;
-        foreach ($this->packets as $packet) {
-            if ($packet instanceof SessionPacketFilterAggregate) { $matched = true; array_push($answer, ...$packet->value); }
-            elseif ($packet instanceof SessionPacketFilterRow) { $matched = true; $answer[] = $packet->value; }
-        }
-        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');
-        return array_map(fn($row) => $row->input, $answer);
-    }
-    /** @return list<int|string> */ public function rankAnswer(): array
-    {
-        $this->requireSuccess();
-        $answer = []; $matched = false;
-        foreach ($this->packets as $packet) {
-            if ($packet instanceof SessionPacketRankAggregate) { $matched = true; array_push($answer, ...$packet->value); }
-        }
-        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');
-        return array_map(fn($row) => $row->index, $answer);
-    }
-    /** @return Find */ public function findAnswer(): Find
-    {
-        $this->requireSuccess();
-        $values = array_values(array_filter($this->packets, fn($p) => $p instanceof SessionPacketFindAggregate));
-        if (count($values) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        $answer = $values[0]->value;
-        return $answer;
-    }
-    /** @return list<Annotation> */ public function annotateAnswer(): array
-    {
-        $this->requireSuccess();
-        $answer = []; $matched = false;
-        foreach ($this->packets as $packet) {
-            if ($packet instanceof SessionPacketAnnotateAggregate) { $matched = true; array_push($answer, ...$packet->value); }
-            elseif ($packet instanceof SessionPacketAnnotateRow) { $matched = true; $answer[] = $packet->value; }
-        }
-        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');
-        return $answer;
-    }
-    /** @return list<Recognition> */ public function recognizeAnswer(): array
-    {
-        $this->requireSuccess();
-        $answer = []; $matched = false;
-        foreach ($this->packets as $packet) {
-            if ($packet instanceof SessionPacketRecognizeAggregate) { $matched = true; array_push($answer, ...$packet->value); }
-        }
-        if (!$matched) throw new \ThinkThen\UsageFailure('expected an answer for this function');
-        return $answer;
-    }
-    /** @return Relation */ public function relateAnswer(): Relation
-    {
-        $this->requireSuccess();
-        $values = array_values(array_filter($this->packets, fn($p) => $p instanceof SessionPacketRelateAggregate));
-        if (count($values) !== 1) throw new \ThinkThen\UsageFailure('expected one answer');
-        $answer = $values[0]->value;
-        return $answer;
-    }
+    public const VALUES = [
+        'decide' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'yes', 'resolution' => ['path' => ['value', 'value', 'value', 'value'], 'guards' => [[['kind'], 'observation'], [['value', 'kind'], 'row'], [['value', 'value', 'kind'], 'judgment'], [['value', 'value', 'value', 'kind'], 'decision']], 'index_path' => ['value', 'index']], 'probability_path' => ['answer', 'probability']],
+        'choose' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'picked', 'resolution' => ['path' => ['value', 'value', 'value', 'value'], 'guards' => [[['kind'], 'observation'], [['value', 'kind'], 'row'], [['value', 'value', 'kind'], 'judgment'], [['value', 'value', 'value', 'kind'], 'choice']], 'index_path' => ['value', 'index']], 'probability_path' => ['answer', 'probabilities'], 'pick_path' => ['answer', 'pick']],
+        'tag' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'null'],
+        'score' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'null'],
+        'filter' => ['value_projection' => 'input', 'call_shape' => 'collection', 'probability_mode' => 'yes', 'probability_path' => ['answer', 'probability']],
+        'rank' => ['value_projection' => 'index', 'call_shape' => 'collection', 'probability_mode' => 'items'],
+        'find' => ['value_projection' => 'value', 'call_shape' => 'aggregate', 'probability_mode' => 'picked', 'selection_path' => ['index'], 'probability_path' => ['answer', 'probabilities'], 'pick_path' => ['answer', 'pick']],
+        'annotate' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'null'],
+        'recognize' => ['value_projection' => 'value', 'call_shape' => 'input', 'probability_mode' => 'items'],
+        'relate' => ['value_projection' => 'value', 'call_shape' => 'aggregate', 'probability_mode' => 'items'],
+    ];
 }
+namespace ThinkThen\Results;
 final class Annotation extends Node {
     /** @return Presence<string> */ public function answer_id(): Presence { return $this->field('answer_id'); }
     /** @return Presence<\stdClass> */ public function answers(): Presence { return $this->field('answers'); }
@@ -196,7 +105,7 @@ final class DecisionResult extends Node {
     /** @return Presence<string> */ public function schema(): Presence { return $this->field('schema'); }
     /** @return Presence<PhysicalSource> */ public function source(): Presence { return $this->field('source'); }
     /** @return Presence<int|float|string|null> */ public function threshold(): Presence { return $this->field('threshold'); }
-    /** @return Presence<bool|null|mixed> */ public function value(): Presence { return $this->field('value'); }
+    /** @return Presence<mixed> */ public function value(): Presence { return $this->field('value'); }
 }
 final class RankResult extends Node {
     /** @return Presence<AnswerYesNo|AnswerChoice|AnswerTag|AnswerScore> */ public function answer(): Presence { return $this->field('answer'); }
@@ -404,7 +313,7 @@ final class Meta extends Node {
     /** @return Presence<int|string> */ public function failed_questions(): Presence { return $this->field('failed_questions'); }
     /** @return Presence<string> */ public function model(): Presence { return $this->field('model'); }
     /** @return Presence<list<ObservationObservationId|ObservationFailureId>> */ public function observations(): Presence { return $this->field('observations'); }
-    /** @return Presence<mixed|null> */ public function origin(): Presence { return $this->field('origin'); }
+    /** @return Presence<mixed> */ public function origin(): Presence { return $this->field('origin'); }
     /** @return Presence<ProfileWarning> */ public function profile_warning(): Presence { return $this->field('profile_warning'); }
     /** @return Presence<string> */ public function question_sha256(): Presence { return $this->field('question_sha256'); }
     /** @return Presence<list<QuestionSource>> */ public function question_sources(): Presence { return $this->field('question_sources'); }
@@ -1048,6 +957,30 @@ final class TokenBand extends Node {
 final class TokenUsage extends Node {
     /** @return Presence<int|string> */ public function input_tokens(): Presence { return $this->field('input_tokens'); }
     /** @return Presence<int|string> */ public function output_tokens(): Presence { return $this->field('output_tokens'); }
+}
+namespace ThinkThen;
+trait NamedCalls
+{
+    /** @return \ThinkThen\Results\Result<mixed, float|null|list<float|null>> */
+    public function decide(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('decide', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<string|null|list<string|null>, float|null|list<float|null>> */
+    public function choose(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('choose', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<list<string>|list<list<string>>, null> */
+    public function tag(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('tag', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<int|float|list<int|float>, null> */
+    public function score(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('score', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<list<mixed>, list<float|null>> */
+    public function filter(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('filter', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<list<int|string>, list<float|null>> */
+    public function rank(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('rank', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<mixed, float|null> */
+    public function find(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('find', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<\stdClass|list<\stdClass>, null> */
+    public function annotate(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('annotate', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<\ThinkThen\Results\RecognizeEntities|\ThinkThen\Results\RecognizeModeProposals|list<\ThinkThen\Results\RecognizeEntities|\ThinkThen\Results\RecognizeModeProposals>, list<float>|list<list<float>>> */
+    public function recognize(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('recognize', $question, $input, $options, $cancel); }
+    /** @return \ThinkThen\Results\Result<list<\ThinkThen\Results\RelatedEntityEdge>, list<float>> */
+    public function relate(string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): \ThinkThen\Results\Result { return $this->call('relate', $question, $input, $options, $cancel); }
 }
 namespace ThinkThen\Internal;
 final class Decoder

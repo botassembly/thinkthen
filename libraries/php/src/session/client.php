@@ -42,8 +42,9 @@ final class Client
         return $operation;
     }
     private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
-        \ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
+        \ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Result
     {
+        \ThinkThen\Internal\requireBlockingContext();
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
     }

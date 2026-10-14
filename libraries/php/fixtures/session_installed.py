@@ -15,6 +15,9 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / 'conformance/children'))
 from children import child_env
 from backend import Backend
+sys.path.insert(0, str(ROOT / 'conformance'))
+from c_parity import Backend as RecordedBackend, document, compact, prepare, assertions
+from session_projection import project_session
 
 
 def main():
@@ -50,7 +53,7 @@ def main():
                 THINKTHEN_API_KEY='sk-smoke-loopback')
             subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1', '-r',
                 'require $argv[1]; $client = new ThinkThen\\Client(); '
-                'try { $value = $client->decide($argv[2], $argv[3])->results[0]->value()->value; '
+                'try { $value = $client->decide($argv[2], $argv[3])->value; '
                 'if (!is_bool($value)) throw new RuntimeException("expected a boolean"); '
                 'echo "smoke: ", json_encode($value, JSON_THROW_ON_ERROR), "\\n"; '
                 '} finally { $client->close(); }', str(app / 'vendor/autoload.php'),
@@ -105,6 +108,29 @@ def main():
                 (work / 'barrier/release-hold-php-event').touch()
                 if process.poll() is None:
                     process.kill(); process.communicate()
+            canonical = json.loads((ROOT / 'conformance/cases.json').read_text())
+            pair = next(row for row in canonical['parity']['required_cases'] if row['id'] == 'library-call-result')
+            cases = {row['id']: row for row in canonical['cases']}
+            value = document(pair, cases, {})
+            recorded = RecordedBackend(Path(os.environ.get('CARGO_TARGET_DIR', str(ROOT / 'target'))) / 'debug/conformance-backend', env)
+            try:
+                env['THINKTHEN_PHP_PACKAGE'] = str(app / 'vendor/botassembly/thinkthen')
+                for step in value['steps']:
+                    prepare(work / 'home', step)
+                    env['THINKTHEN_BASE_URL'] = f'http://127.0.0.1:{recorded.port}/{step["arm"]}'
+                    env['THINKTHEN_API_KEY'] = 'sk-conformance-loopback'
+                    path = work / 'input.json'; path.write_text(compact(step))
+                    before = int(recorded.read('count'))
+                    settings = {'cache': False, 'max_retries': 0, **step['settings']}
+                    result = subprocess.run(['/usr/bin/php8.3', '-n', '-d', 'extension=ffi', '-d', 'ffi.enable=1',
+                        str(Path(__file__).with_name('session_parity.php')), str(path),
+                        str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'), compact(settings)],
+                        cwd=work / 'home', env=env, capture_output=True, text=True, timeout=5)
+                    assert result.returncode == 0, (result.stdout, result.stderr)
+                    assertions(pair, step, project_session(json.loads(result.stdout), step), int(recorded.read('count')) - before)
+                print('PHP_CALL_RESULT_INSTALLED_PASS library-call-result decide refund and choose billing')
+            finally:
+                recorded.close()
             env = child_env(home=work / 'home', keep=('PATH', 'LANG', 'LC_ALL'),
                 THINKTHEN_PARITY_PACKAGE=str(app / 'vendor/botassembly/thinkthen'),
                 THINKTHEN_COMPLETE_LIBRARY=str(app / 'vendor/botassembly/thinkthen/native/libthinkthen.so'),

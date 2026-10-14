@@ -60,6 +60,8 @@ function consume(stdClass $fixture, Client $client): array
         $records = $input;
         $input = (function () use ($records) { yield from $records; })();
     }
+    $callResult = isset($fixture->expect->call_result);
+    if ($callResult && is_array($input) && count($input) === 1) $input = $input[0];
     $options = ['attempts' => true];
     if ($none) $options['none'] = true;
     if ($injection === 'expired_deadline') $options['deadline_ms'] = 0;
@@ -78,12 +80,17 @@ function consume(stdClass $fixture, Client $client): array
                     $operation->wait();
                 } while ($packet?->kind !== 'terminal');
             } finally { $operation->close(); }
-        } else $packets = $client->$verb($question, $input, new ThinkThen\Inputs\Options(...$options), $cancel)->packets;
+        } else {
+            $call = $client->$verb($question, $input, new ThinkThen\Inputs\Options(...$options), $cancel);
+            $packets = $call->packets;
+        }
     } catch (CallFailure $error) {
         if (!$error->packets) throw $error;
         $packets = $error->packets;
     }
-    return ['packets' => array_map(fn($p) => fixtureValue($p), $packets)];
+    return ['packets' => array_map(fn($p) => fixtureValue($p), $packets),
+        ...($callResult ? ['call_result' => ['value' => fixtureValue($call->value), 'probability' => $call->probability,
+            'results' => fixtureValue($call->results), 'facts' => fixtureValue($call->facts)]] : [])];
 }
 $client = null;
 try {
