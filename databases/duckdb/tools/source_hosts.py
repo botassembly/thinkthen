@@ -99,10 +99,11 @@ def check_hosts(cache, fetch):
             continue
         build = ROOT / 'build/community' / version
         build.mkdir(parents=True, exist_ok=True)
-        for name, target in [('extension-ci-tools', inputs / 'tools'), ('databases', ROOT.parent)]:
+        for name, target in [('extension-ci-tools', inputs / 'tools'), ('databases', ROOT.parent),
+                             ('vcpkg.json', REPO / 'vcpkg.json')]:
             link = build / name
             if not link.exists():
-                link.symlink_to(target, target_is_directory=True)
+                link.symlink_to(target, target_is_directory=target.is_dir())
         command = ['make', '-f', str(REPO / 'Makefile'), 'PROJ_DIR=' + str(build) + '/',
                    'DUCKDB_SRCDIR=' + str(inputs / 'source'), 'EXT_CONFIG=' + str(REPO / 'extension_config.cmake'),
                    'GEN=ninja', 'BUILD_EXTENSION_TEST_DEPS=none', 'DISABLE_SANITIZER=1',
