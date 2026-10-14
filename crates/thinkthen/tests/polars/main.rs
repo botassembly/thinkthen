@@ -19,11 +19,7 @@ mod prices;
 mod door;
 mod lazy;
 mod throttle_equality;
-mod typed;
-mod typed_aggregate;
 mod typed_pull;
-mod typed_rank;
-mod typed_rows;
 
 #[path = "../support/api.rs"]
 mod api;

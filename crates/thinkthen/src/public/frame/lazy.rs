@@ -1,11 +1,12 @@
-//! Owned controls at the Polars expression boundary. Each evaluation morsel
-//! starts a fresh eager call, while its token and tally remain shared.
+//! Owned controls at the Polars expression boundary. Atomic evaluation morsels
+//! start fresh calls; collection expressions materialize one logical set. Tokens
+//! and tallies remain shared across evaluations.
 
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::Duration;
 
-use polars::prelude::{Column, DataType, Expr, Field, IntoSeries, PolarsError};
+use polars::prelude::{Column, DataType, Expr, Field, PolarsError};
 
 use super::{PolarsCallOptions, PolarsEngine, column::kind_word};
 use crate::public::{
@@ -17,7 +18,6 @@ use crate::public::{
 /// tally share their state; a deadline starts anew for every evaluated morsel.
 #[derive(Clone, Default)]
 pub struct PolarsExprOptions {
-    probability: bool,
     threshold: Option<String>,
     yes: Option<Description>,
     no: Option<Description>,
@@ -32,7 +32,6 @@ impl fmt::Debug for PolarsExprOptions {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("PolarsExprOptions")
-            .field("probability", &self.probability)
             .field("threshold", &self.threshold.is_some())
             .field("meanings", &(self.yes.is_some() || self.no.is_some()))
             .field("context", &self.context.is_some())
@@ -49,13 +48,6 @@ impl PolarsExprOptions {
     #[must_use]
     pub fn new() -> Self {
         Self::default()
-    }
-
-    /// Return selected probability with decide or choose as a Struct.
-    #[must_use]
-    pub fn probability(mut self, value: bool) -> Self {
-        self.probability = value;
-        self
     }
 
     /// Apply the shared threshold grammar when the expression is built.
@@ -117,7 +109,32 @@ impl PolarsExprOptions {
         self
     }
 
-    fn question(&self, source: &Question) -> Result<Question, Error> {
+    pub(super) fn aggregate(&self) -> Result<(), Error> {
+        if self.threshold.is_some() || self.yes.is_some() || self.no.is_some() {
+            return Err(Error::usage(
+                "threshold and meanings require an atomic question",
+            ));
+        }
+        self.validate()
+    }
+    pub(super) fn validate(&self) -> Result<(), Error> {
+        if let Some(context) = &self.context {
+            crate::public::engine::evidence(context)?;
+        }
+        self.call()?;
+        Ok(())
+    }
+    pub(super) fn run<T>(
+        &self,
+        call: impl FnOnce() -> Result<crate::Call<T>, Error>,
+    ) -> Result<crate::Call<T>, Error> {
+        match &self.tally {
+            Some(tally) => tally.run(call),
+            None => call(),
+        }
+    }
+
+    pub(super) fn question(&self, source: &Question) -> Result<Question, Error> {
         let mut controls = PolarsCallOptions::new();
         if let Some(value) = &self.threshold {
             controls = controls.threshold(value);
@@ -128,10 +145,10 @@ impl PolarsExprOptions {
         if let Some(value) = &self.no {
             controls = controls.false_meaning(value);
         }
-        controls.apply(source).map(|(question, _, _)| question)
+        controls.apply(source).map(|(question, _)| question)
     }
 
-    fn call(&self) -> Result<CallOptions<'_>, Error> {
+    pub(super) fn call(&self) -> Result<CallOptions<'_>, Error> {
         let mut call = CallOptions::new();
         if let Some(token) = &self.token {
             call = call.cancel(token);
@@ -165,26 +182,18 @@ pub(super) fn expression(
             kind_word(question.kind())
         )));
     }
-    if controls.probability && !matches!(wanted, QuestionKind::Decide | QuestionKind::Choose) {
-        return Err(Error::usage(format!(
-            "probability belongs to decide and choose, not {}",
-            kind_word(wanted)
-        )));
-    }
     let question = controls.question(question)?;
     if let Some(context) = &controls.context {
         crate::public::engine::evidence(context)?;
     }
     controls.call()?;
-    let dtype = match (wanted, controls.probability) {
-        (QuestionKind::Decide, false) => DataType::Boolean,
-        (QuestionKind::Choose, false) => DataType::String,
-        (QuestionKind::Score, false) => DataType::Float64,
-        (QuestionKind::Tag, false) => DataType::List(Box::new(DataType::String)),
-        (QuestionKind::Decide, true) => probability_dtype(DataType::Boolean),
-        (QuestionKind::Choose, true) => probability_dtype(DataType::String),
+    let dtype = probability_dtype(match wanted {
+        QuestionKind::Decide => DataType::Boolean,
+        QuestionKind::Choose => DataType::String,
+        QuestionKind::Score => DataType::Float64,
+        QuestionKind::Tag => DataType::List(Box::new(DataType::String)),
         _ => return Err(Error::defect("an expression kind changed")),
-    };
+    });
     let engine = engine.clone();
     Ok(input.map(
         move |column| caught(|| evaluate(&engine, &question, &controls, column)),
@@ -210,9 +219,7 @@ fn evaluate(
         engine.column_with(
             question,
             series,
-            PolarsCallOptions::new()
-                .call(controls.call()?)
-                .probability(controls.probability),
+            PolarsCallOptions::new().call(controls.call()?),
         )
     };
     let answered = match &controls.tally {
@@ -221,25 +228,29 @@ fn evaluate(
     }
     .map_err(compute_error)?;
     let frame = answered.into_value();
-    if controls.probability {
-        Ok(frame
-            .into_struct(column.name().clone())
-            .into_series()
-            .into())
-    } else {
-        frame
+    let present = series
+        .is_not_null()
+        .iter()
+        .map(|value| value == Some(true))
+        .collect::<Vec<_>>();
+    super::column::struct_with_validity(
+        column.name().as_str(),
+        &frame
             .columns()
-            .first()
-            .cloned()
-            .ok_or_else(|| PolarsError::ComputeError("a frame value was missing".into()))
-    }
+            .iter()
+            .map(|column| column.as_materialized_series().clone())
+            .collect::<Vec<_>>(),
+        &present,
+    )
+    .map(Into::into)
+    .map_err(compute_error)
 }
 
-fn compute_error(error: Error) -> PolarsError {
+pub(super) fn compute_error(error: Error) -> PolarsError {
     PolarsError::ComputeError(error.to_string().into())
 }
 
-fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result<T, PolarsError> {
+pub(super) fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result<T, PolarsError> {
     catch_unwind(AssertUnwindSafe(call)).unwrap_or_else(|_| {
         Err(PolarsError::ComputeError(
             "thinkthen expression panicked".into(),
@@ -249,6 +260,7 @@ fn caught<T>(call: impl FnOnce() -> Result<T, PolarsError>) -> Result<T, PolarsE
 
 #[cfg(test)]
 mod tests {
+    //! Stays because public lazy collection cannot inject a panic inside the private Polars callback that protects provider, chunk, null, and schema evaluation.
     #[test]
     fn a_panic_stays_inside_the_polars_compute_boundary() {
         let stopped = super::caught::<()>(|| panic!("private callback content"))

@@ -2,10 +2,10 @@
 use super::column::text;
 use crate::RequestFunction;
 use crate::{
-    Call, CallOptions, CompleteRecord, Engine, Error, InputEvidence, Question, QuestionInput,
-    RecordInput, Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment,
-    RequestFeed, RequestFraming, RequestInput, RequestOptions, RequestOutcome, RequestQuestion,
-    RequestValue, Surface,
+    Call, CallOptions, CompleteRecord, Engine, Error, Question, QuestionInput, RecordInput,
+    Request, RequestArguments, RequestCall, RequestDefinition, RequestEnvironment, RequestFeed,
+    RequestFraming, RequestInput, RequestOptions, RequestOutcome, RequestQuestion, RequestValue,
+    Surface,
 };
 use polars::prelude::Series;
 
@@ -60,7 +60,7 @@ pub(super) fn execute_records(
         call,
         controls,
         RequestFeed::from_records("column", rows),
-        false,
+        true,
     )
 }
 
@@ -72,6 +72,22 @@ fn execute_feed(
     feed: RequestFeed<'_>,
     complete: bool,
 ) -> Result<Call<RequestValue>, Error> {
+    let none = match &definition {
+        RequestDefinition::Atomic(crate::LoadedQuestion::Question(question)) => {
+            matches!(question.kind, crate::public::question::Kind::FindNone)
+        }
+        RequestDefinition::Find(find) => {
+            matches!(
+                find.question().kind,
+                crate::public::question::Kind::FindNone
+            )
+        }
+        _ => false,
+    };
+    let options = RequestOptions {
+        none,
+        ..RequestOptions::default()
+    };
     let call = RequestCall::new(
         call,
         RequestArguments {
@@ -82,7 +98,7 @@ fn execute_feed(
                 reading: crate::ReaderOptions::default(),
                 images: vec![],
             },
-            options: RequestOptions::default(),
+            options,
         },
     );
     // Typed complete filters retain every observation, including rejected rows.
@@ -138,97 +154,4 @@ pub(super) fn project<R>(
         ));
     }
     Ok(())
-}
-
-/// Retain caller-owned originals while shared Request admits native evidence.
-#[allow(
-    clippy::type_complexity,
-    reason = "the existing complete API retains generic originals and native results"
-)]
-pub(super) fn complete_records<T: InputEvidence, R>(
-    engine: &Engine,
-    definition: RequestDefinition,
-    records: Vec<RecordInput<T>>,
-    controls: CallOptions<'_>,
-    function: crate::RequestFunction,
-    unpack: fn(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
-) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
-    let count = records.len();
-    complete_occurrences(engine, definition, records, controls, function, |value| {
-        let rows = unpack(value)?;
-        if rows.len() != count || rows.iter().enumerate().any(|(at, row)| row.ordinal() != at) {
-            return Err(Error::defect("a typed column changed its occurrence order"));
-        }
-        Ok(rows)
-    })
-}
-
-/// Restore owned originals by native ordinal, including reordered or omitted inputs.
-#[allow(
-    clippy::type_complexity,
-    reason = "ranked native occurrences retain generic originals without cloning"
-)]
-pub(super) fn complete_occurrences<T: InputEvidence, R>(
-    engine: &Engine,
-    definition: RequestDefinition,
-    records: Vec<RecordInput<T>>,
-    controls: CallOptions<'_>,
-    function: crate::RequestFunction,
-    unpack: impl FnOnce(RequestValue) -> Result<Vec<CompleteRecord<QuestionInput, R>>, Error>,
-) -> Result<Call<Vec<CompleteRecord<T, R>>>, Error> {
-    complete_value(
-        engine,
-        definition,
-        records,
-        controls,
-        function,
-        |value, originals| {
-            let rows = unpack(value)?;
-            let mut originals: Vec<_> = originals.into_iter().map(Some).collect();
-            rows.into_iter()
-                .map(|row| {
-                    let ordinal = row.ordinal();
-                    let original = originals
-                        .get_mut(ordinal)
-                        .and_then(Option::take)
-                        .ok_or_else(|| {
-                            Error::defect("a typed column lost its original occurrence")
-                        })?;
-                    Ok(CompleteRecord {
-                        original,
-                        ordinal,
-                        result: row.into_parts().1,
-                    })
-                })
-                .collect()
-        },
-    )
-}
-
-/// Preserve generic originals independently of native complete aggregate results.
-pub(super) fn complete_value<T: InputEvidence, R>(
-    engine: &Engine,
-    definition: RequestDefinition,
-    records: Vec<RecordInput<T>>,
-    controls: CallOptions<'_>,
-    function: crate::RequestFunction,
-    restore: impl FnOnce(RequestValue, Vec<T>) -> Result<R, Error>,
-) -> Result<Call<R>, Error> {
-    let mut originals = Vec::with_capacity(records.len());
-    let rows = records.into_iter().map(|record| {
-        Ok(record.map_original(|original| {
-            let input = original.question_input();
-            originals.push(original);
-            input
-        }))
-    });
-    let call = execute_feed(
-        engine,
-        definition,
-        function,
-        controls,
-        RequestFeed::from_records("column", rows).eager(),
-        true,
-    )?;
-    call.try_map(|value| restore(value, originals))
 }

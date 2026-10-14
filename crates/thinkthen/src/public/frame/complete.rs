@@ -1,6 +1,6 @@
 //! Complete collections retain original row identities across nullable columns.
 use super::column::text;
-use super::request;
+use super::{request, result};
 use crate::public::{
     Call, CallOptions, Edge, Engine, Error, FindSelection, InputEvidence, Question, RawRecord,
     Recognize, Recognized, RecordReading, Relate,
@@ -19,18 +19,21 @@ pub(super) fn filter(
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Call<Series>, Error> {
-    request::execute(
+) -> Result<Call<Series, crate::RequestValue, Series>, Error> {
+    let call = request::execute(
         engine,
         question,
         texts,
         crate::RequestFunction::Filter,
         options,
-    )?
-    .try_map(|value| {
-        let rows = value.filtered("filter returned another result kind")?;
+    )?;
+    result::enrich(call, crate::RequestFunction::Filter, texts, |value| {
+        let crate::RequestValue::Filtered(rows) = value else {
+            return Err(Error::defect("filter returned another result kind"));
+        };
         let originals = rows
             .iter()
+            .filter(|row| row.result().value())
             .map(|row| request::original(row.original()))
             .collect::<Result<Vec<_>, _>>()?;
         Ok(Series::new(texts.name().clone(), originals))
@@ -41,18 +44,20 @@ pub(super) fn rank(
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Call<DataFrame>, Error> {
+) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
     let positions = request::positions(texts)?;
     crate::public::engine::only(question, &[crate::public::question::Kind::Rank], "rank")?;
-    request::execute(
+    let call = request::execute(
         engine,
         question,
         texts,
         crate::RequestFunction::Rank,
         options,
-    )?
-    .try_map(|value| {
-        let rows = value.ranked("rank returned another result kind")?;
+    )?;
+    result::enrich(call, crate::RequestFunction::Rank, texts, |value| {
+        let crate::RequestValue::Ranked(rows) = value else {
+            return Err(Error::defect("rank returned another result kind"));
+        };
         let indices = rows
             .iter()
             .map(|row| {
@@ -69,14 +74,8 @@ pub(super) fn rank(
             .collect::<Result<Vec<_>, _>>()?;
         let probabilities = rows
             .iter()
-            .map(|row| {
-                row.result()
-                    .canonical
-                    .answer()
-                    .yes()
-                    .ok_or_else(|| Error::defect("rank lost its probability"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            .map(|row| row.result().probability())
+            .collect::<Vec<_>>();
         frame(vec![
             Series::new("index".into(), indices),
             Series::new("record".into(), originals),
@@ -89,17 +88,19 @@ pub(super) fn find(
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Call<DataFrame>, Error> {
+) -> Result<Call<DataFrame, crate::RequestValue, Series>, Error> {
     let positions = request::positions(texts)?;
-    request::execute(
+    let call = request::execute(
         engine,
         question,
         texts,
         crate::RequestFunction::Find,
         options,
-    )?
-    .try_map(|value| {
-        let found = value.found("find returned another result kind")?;
+    )?;
+    result::enrich(call, crate::RequestFunction::Find, texts, |value| {
+        let crate::RequestValue::Found(found) = value else {
+            return Err(Error::defect("find returned another result kind"));
+        };
         let rows = found.candidates();
         let indices = rows
             .iter()
@@ -145,18 +146,20 @@ pub(super) fn recognize(
     ask: &Recognize,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Call<Vec<Option<Recognized>>>, Error> {
-    request::execute_definition(
+) -> Result<super::FrameCall<Vec<Option<Recognized>>>, Error> {
+    let call = request::execute_definition(
         engine,
         ask.clone().into(),
         texts,
         crate::RequestFunction::Recognize,
         options,
-    )?
-    .try_map(|value| {
-        let rows = value.recognized("recognition returned another result kind")?;
+    )?;
+    result::enrich(call, crate::RequestFunction::Recognize, texts, |value| {
+        let crate::RequestValue::Recognized(rows) = value else {
+            return Err(Error::defect("recognition returned another result kind"));
+        };
         let mut recognized = Vec::with_capacity(texts.len());
-        request::project(texts, &rows, |row| {
+        request::project(texts, rows, |row| {
             recognized.push(row.map(|row| row.value().clone()));
             Ok(())
         })?;
@@ -171,7 +174,32 @@ pub(super) fn relate(
     name: &str,
     kind: &str,
     options: CallOptions<'_>,
-) -> Result<Call<Vec<Edge>>, Error> {
+) -> Result<Call<Vec<Edge>, crate::RequestValue, Series>, Error> {
+    let column = input
+        .column(name)
+        .map_err(|_| Error::usage("the entity frame has no selected column"))?
+        .as_materialized_series();
+    result::enrich(
+        related_call(engine, ask, input, name, kind, options)?,
+        crate::RequestFunction::Relate,
+        column,
+        |value| {
+            let crate::RequestValue::Related(row) = value else {
+                return Err(Error::defect("relate returned another result kind"));
+            };
+            Ok(row.result().value().to_vec())
+        },
+    )
+}
+
+pub(super) fn related_call(
+    engine: &Engine,
+    ask: &Relate,
+    input: &DataFrame,
+    name: &str,
+    kind: &str,
+    options: CallOptions<'_>,
+) -> Result<Call<crate::RequestValue>, Error> {
     let column = |on| {
         input
             .column(on)
@@ -214,9 +242,5 @@ pub(super) fn relate(
         crate::RequestFunction::Relate,
         options,
         records,
-    )?
-    .try_map(|value| {
-        let row = value.related("relate returned another result kind")?;
-        Ok(row.result().value().to_vec())
-    })
+    )
 }

@@ -61,11 +61,7 @@ fn explicit_image_columns_preserve_order_duplicates_nulls_and_probabilities() {
     let question = question();
     let inputs = [Some(images()), None, Some(images())];
     let values = engine
-        .input_column(
-            &question,
-            &inputs,
-            PolarsCallOptions::new().probability(true),
-        )
+        .input_column(&question, &inputs, PolarsCallOptions::new())
         .expect("image column");
     assert_eq!(
         values
@@ -100,18 +96,6 @@ fn explicit_image_columns_preserve_order_duplicates_nulls_and_probabilities() {
         assert_eq!(images[0], images[2]);
         assert_ne!(images[0], images[1]);
     }
-    let details = engine
-        .input_details_column(&question, &inputs[..1], CallOptions::new())
-        .expect("typed details");
-    assert_eq!(
-        details.value()[0]
-            .as_ref()
-            .expect("details")
-            .probabilities(),
-        &thinkthen::Probabilities::YesNo { yes: 0.9 }
-    );
-    assert_eq!(listener.count(), 2);
-    assert!(!format!("{inputs:?}").contains("Compare originals."));
 }
 
 #[test]
@@ -225,7 +209,7 @@ fn ordered_image_choose_and_score_keep_native_probability_and_rubric_values() {
         .expect("question");
     let inputs = [Some(images()), None];
     let chosen = engine
-        .input_column(&choose, &inputs, PolarsCallOptions::new().probability(true))
+        .input_column(&choose, &inputs, PolarsCallOptions::new())
         .expect("choose column");
     assert_eq!(
         chosen

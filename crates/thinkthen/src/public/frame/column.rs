@@ -243,7 +243,11 @@ pub(super) fn annotated(
     failures.push_complete(record)
 }
 
-fn struct_with_validity(name: &str, fields: &[Series], present: &[bool]) -> Result<Series, Error> {
+pub(super) fn struct_with_validity(
+    name: &str,
+    fields: &[Series],
+    present: &[bool],
+) -> Result<Series, Error> {
     let mask = BooleanChunked::from_slice("valid".into(), present);
     let bitmap = mask
         .downcast_iter()

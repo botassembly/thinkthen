@@ -24,7 +24,7 @@ fn listener() -> Listener {
     .expect("listener")
 }
 
-fn assert_decided(call: &thinkthen::Call<Series>, sends: u64) {
+fn assert_decided(call: &thinkthen::Call<Series, thinkthen::RequestValue, Series>, sends: u64) {
     assert_eq!(
         call.value()
             .bool()
