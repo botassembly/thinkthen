@@ -28,12 +28,7 @@ pub fn releaseFailure(allocator: std.mem.Allocator, failure: Failure) void {
 pub fn Result(comptime T: type) type {
     return union(enum) { ok: T, failed: Failure };
 }
-pub const UsagePersistence = enum(u32) {
-    disabled = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
-    pending = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
-    written = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
-    failed = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
-};
+pub const UsagePersistence = results.UsagePersistence;
 /// Owned advice uses the engine allocator and survives engine destruction.
 pub const UsageStatus = struct {
     state: UsagePersistence,
@@ -73,7 +68,7 @@ pub const Engine = struct {
         var state: c.thinkthen_complete_usage_persistence_v1 = undefined;
         var advice: c.thinkthen_complete_utf8_v1 = undefined;
         try session.checked(operation(@as(*c.thinkthen_engine, @ptrCast(self.handle)), &state, &advice));
-        const kind = std.meta.intToEnum(UsagePersistence, state.kind) catch return error.InvalidNativeDiscriminator;
+        const kind = try values.readUsagePersistence(self.allocator, state);
         if (advice.data == null and advice.len != 0) return error.InvalidNativeExtent;
         const copied = if (advice.data == null) null else try self.allocator.dupe(u8, advice.data[0..advice.len]);
         return .{ .state = kind, .advice = copied };
