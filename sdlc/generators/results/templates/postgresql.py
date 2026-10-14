@@ -16,9 +16,70 @@ NAMES = {'postgresqlObservedInput': 'observed_input', 'completeplan': 'plan', 'c
          'completeError': 'error', 'completeMeta': 'metadata'}
 
 
+SEMANTIC_NAMES = {
+    'answer_probabilities_entry': 'named_probability',
+    'find_answer_probabilities_entry': 'candidate_probability',
+    'meta_batch_setting': 'batch_setting', 'meta_batch_warning': 'batch_warning',
+    'meta_profile_warning': 'profile_warning', 'meta_usage': 'token_usage',
+    'question_document': 'question', 'string_root': 'string_declaration',
+    'input_property_type': 'property_declaration',
+    'rank_member_result': 'ranked_member_result', 'rank_member': 'named_ranked_member',
+    'annotation_member': 'annotation_answer', 'annotation_answers_entry': 'named_answer',
+    'annotated_field_object_value': 'failed_value', 'annotated_field': 'field_value',
+    'annotated_row_entry': 'named_field_value', 'value': 'answer_value',
+    'name_odds_edges_entry': 'named_probability', 'name_odds_kinds_entry': 'named_probability',
+    'piece_odds_tags_entry': 'named_probability', 'name_odds': 'entity_probabilities',
+    'piece_odds': 'token_probabilities', 'pair_odds': 'relation_probabilities',
+    'recognition_odds_proposals_item_selected': 'selected_span',
+    'recognition_odds_proposals_item': 'boundary_reading',
+    'recognition_odds': 'recognition_probabilities',
+    'recognize_question_document': 'recognition_question',
+    'recognize_question_document_kinds_entry': 'kind_description',
+    'recognize': 'recognized_value', 'find_question_document': 'find_question',
+    'relation_member_target': 'relation_endpoint', 'relation_member': 'relation_reading',
+    'answers': 'relation_answers', 'session_input_source': 'indexed_source',
+    'relate_question_document_fields': 'relation_fields',
+    'relate_question_document': 'relation_question',
+    'related_entity_edge_source': 'located_endpoint',
+    'related_entity_edge_target': 'located_endpoint',
+    'related_entity_edge': 'located_edge', 'facts_usage_persistence': 'usage_persistence',
+    'error_estimated_input_denial': 'input_budget_denial',
+    'error_send_budget_denial': 'send_budget_denial',
+    'session_question_detail_failure': 'failure',
+    'session_question_detail_input_source': 'source_location',
+    'physical_source': 'source_location',
+    'session_named_probability': 'observed_probability',
+    'session_question_detail_probabilities_value': 'probability_values',
+    'session_question_detail_probabilities': 'probability_distribution',
+    'session_question_detail_reported_usage': 'reported_usage',
+    'session_question_detail_value': 'answer_value',
+    'entity_document': 'relation_endpoint', 'recognition_edge_document': 'entity_edge',
+    'annotation_value_value_object_value': 'failure',
+    'annotation_value_value': 'judgment_value', 'annotation_value': 'judgment',
+    'session_observed_row_value_array_value_item': 'observed_member',
+    'session_observed_row_value_object_value_value': 'answer_value',
+    'session_observed_row_value_object_value': 'observed_record',
+    'session_observed_row_value': 'observed_value',
+}
+
+
 def name(key):
     key = NAMES.get(key, key.removeprefix('complete'))
-    return 'thinkthen_' + re.sub(r'(?<=[a-z0-9])(?=[A-Z])', '_', key).lower()
+    key = re.sub(r'(?<=[a-z0-9])(?=[A-Z])', '_', key).lower()
+    if key.endswith(('_context_schema_properties_entry', '_item_schema_properties_entry')):
+        key = 'declared_property'
+    elif key.endswith(('_context_schema', '_item_schema')):
+        key = 'input_declaration'
+    elif key.endswith('_question_document_batch') or key == 'question_document_batch':
+        key = 'batch_setting'
+    elif key.endswith('_usage') and key != 'session_question_detail_reported_usage':
+        key = 'token_usage'
+    elif key.endswith('_threshold'):
+        key = 'threshold'
+    elif key in {verb + '_source' for verb in ('decide', 'choose', 'tag', 'score', 'filter',
+                  'rank', 'annotation', 'recognition', 'find_candidate', 'rank_member_result')}:
+        key = 'source_location'
+    return 'thinkthen_' + SEMANTIC_NAMES.get(key, key)
 
 
 class Composite:
@@ -50,6 +111,7 @@ class Composite:
             ref = schema['$ref'].split('/')[-1]
             return self.shape(self.definitions[ref], ref)
         choices = self.alternatives(schema)
+        nullable = any(isinstance(choice, dict) and choice.get('type') == 'null' for choice in choices)
         choices = [choice for choice in choices if not isinstance(choice, dict)
                    or choice.get('type') != 'null']
         if not choices:
@@ -81,7 +143,7 @@ class Composite:
                     return self.shape({'type': 'array', 'items': {'anyOf': items}}, key)
                 return self.shape(max(children, key=lambda child: child.get('maximum', 0)), key)
             fields = {kind + '_value': {'anyOf': children} for kind, children in groups.items()}
-            return self.object(key, fields, union=True)
+            return self.object(key, fields, union=True, nullable=nullable)
         schema = choices[0]
         kinds = schema.get('type', [])
         kinds = [kinds] if isinstance(kinds, str) else kinds
@@ -103,18 +165,21 @@ class Composite:
                 return (sql, kind)
         return ('jsonb', 'json')
 
-    def object(self, key, fields, union=False, mapping=False):
+    def object(self, key, fields, union=False, mapping=False, nullable=False):
         sql = name(key)
-        if sql in self.types:
-            return (sql, ('object', sql))
         if sql in self.active:
             raise ValueError('recursive SQL composite: ' + sql)
         self.active.add(sql)
         shaped = {member: self.shape(child, key + '_' + member)
                   for member, child in sorted(fields.items())}
         self.active.remove(sql)
-        self.types[sql] = (shaped, union, mapping)
-        return (sql, ('object', sql))
+        if sql in self.types:
+            previous, previous_union, _ = self.types[sql]
+            if previous != shaped or previous_union != union:
+                raise ValueError(('semantic composite has conflicting shapes', sql, previous, shaped, previous_union, union))
+        else:
+            self.types[sql] = (shaped, union, mapping)
+        return (sql, ('object', sql, nullable))
 
 
 def render(schema):
@@ -148,7 +213,7 @@ def render(schema):
         '// Generated from the canonical Rust result schema; do not edit.',
         'use pgrx::prelude::*;', 'use serde_json::Value;',
         'pgrx::extension_sql!(r#"', *sql, '"#, name = "native_generated_types");',
-        '#[expect(clippy::too_many_lines, clippy::excessive_nesting, clippy::cognitive_complexity, reason = "generated schema projections")]',
+        '#[expect(clippy::too_many_lines, clippy::cognitive_complexity, reason = "generated schema projections")]',
         'pub(super) fn convert(kind: &str, value: &Value) -> Result<PgHeapTuple<\'static, AllocatedByRust>, thinkthen::Error> {',
         'match kind {', *arms,
         '_ => Err(crate::call::defect("unknown generated result type")),', '}', '}',
@@ -165,9 +230,10 @@ def conversion(descriptor, value, kind):
                         'number': ('as_f64', 'f64'), 'boolean': ('as_bool', 'bool')}[descriptor]
         expr = value + '.and_then(Value::' + method + ')'
         return (expr + ('.map(str::to_owned)' if descriptor == 'string' else ''), rust)
-    mode, child = descriptor
+    mode, child = descriptor[:2]
     if mode == 'object':
-        return (value + '.filter(|value| !value.is_null()).map(|value| convert(' +
+        selected = value if len(descriptor) > 2 and descriptor[2] else value + '.filter(|value| !value.is_null())'
+        return (selected + '.map(|value| convert(' +
                 json.dumps(child) + ', value)).transpose()?', "PgHeapTuple<'static, AllocatedByRust>")
     if mode == 'array':
         expression, rust = conversion(child, 'Some(value)', kind)

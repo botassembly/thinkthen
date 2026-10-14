@@ -81,6 +81,12 @@ def main():
             assert row['result']['answer']['probability'] is None, row
             assert {entry['name']: entry['value'] for entry in row['result']['answer']['probabilities']} == {'billing': 0.9, 'shipping': 0.1}, row
             assert row['result']['question']['options'] == ['billing', 'shipping'], row
+            row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[" + record +
+                             "],thinkthen_reading(threshold=>'0.1:0.95')) r", 1))
+            assert row['value'] is None and row['result']['value_present'] is True, row
+            event_value = row['observations'][0]['detail']['value']
+            assert event_value is not None and all(value is None for value in event_value.values()), row
+
             assert query("SELECT (thinkthen_record(value=>'null'::json)).value IS NULL") == 'f'
             assert query("SELECT (thinkthen_record()).value IS NULL") == 't'
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1))

@@ -3,150 +3,99 @@ use pgrx::prelude::*;
 use serde_json::Value;
 pgrx::extension_sql!(
     r#"
-CREATE TYPE thinkthen_answer_probabilities_entry AS ("name" text, "value" double precision);
-CREATE TYPE thinkthen_answer AS ("confidence" double precision, "kind" text, "level" text, "pick" text, "probabilities" thinkthen_answer_probabilities_entry[], "probability" double precision);
+CREATE TYPE thinkthen_named_probability AS ("name" text, "value" double precision);
+CREATE TYPE thinkthen_answer AS ("confidence" double precision, "kind" text, "level" text, "pick" text, "probabilities" thinkthen_named_probability[], "probability" double precision);
 CREATE TYPE thinkthen_image AS ("base64" text, "height" bigint, "media" text, "width" bigint);
 CREATE TYPE thinkthen_attempt AS ("ordinal" numeric, "outcome" text, "request_id" text, "request_sha256" text, "sdk_request_id" text, "server_ms" numeric, "status" bigint, "wall_ms" numeric);
-CREATE TYPE thinkthen_meta_batch_setting AS ("integer_value" numeric, "string_value" text);
 CREATE TYPE thinkthen_batch_setting AS ("integer_value" numeric, "string_value" text);
-CREATE TYPE thinkthen_meta_batch_warning AS ("running" thinkthen_batch_setting, "tuned_for" thinkthen_batch_setting);
+CREATE TYPE thinkthen_batch_warning AS ("running" thinkthen_batch_setting, "tuned_for" thinkthen_batch_setting);
 CREATE TYPE thinkthen_observation AS ("failure_id" text, "observation_id" text);
-CREATE TYPE thinkthen_meta_profile_warning AS ("running" text, "tuned_for" text);
+CREATE TYPE thinkthen_profile_warning AS ("running" text, "tuned_for" text);
 CREATE TYPE thinkthen_question_source AS ("answered_by" text, "batch_size" bigint, "origin" text);
-CREATE TYPE thinkthen_meta_usage AS ("input_tokens" numeric, "output_tokens" numeric);
-CREATE TYPE thinkthen_metadata AS ("answered_by" text, "attempts" thinkthen_attempt[], "batch_setting" thinkthen_meta_batch_setting, "batch_warning" thinkthen_meta_batch_warning, "cached" boolean, "context_sha256" text, "failed_questions" numeric, "model" text, "observations" thinkthen_observation[], "origin" text, "profile_warning" thinkthen_meta_profile_warning, "question_sha256" text, "question_sources" thinkthen_question_source[], "questions_sha256" text, "requests" text[], "requests_sent" numeric, "tool" text, "url" text, "usage" thinkthen_meta_usage);
+CREATE TYPE thinkthen_token_usage AS ("input_tokens" numeric, "output_tokens" numeric);
+CREATE TYPE thinkthen_metadata AS ("answered_by" text, "attempts" thinkthen_attempt[], "batch_setting" thinkthen_batch_setting, "batch_warning" thinkthen_batch_warning, "cached" boolean, "context_sha256" text, "failed_questions" numeric, "model" text, "observations" thinkthen_observation[], "origin" text, "profile_warning" thinkthen_profile_warning, "question_sha256" text, "question_sources" thinkthen_question_source[], "questions_sha256" text, "requests" text[], "requests_sent" numeric, "tool" text, "url" text, "usage" thinkthen_token_usage);
 CREATE TYPE thinkthen_position AS ("file" text, "first" numeric, "images" text[], "last" numeric);
-CREATE TYPE thinkthen_question_document_batch AS ("integer_value" numeric, "string_value" text);
-CREATE TYPE thinkthen_string_root AS ("type" text);
-CREATE TYPE thinkthen_input_property_type AS ("items" thinkthen_string_root, "type" text);
-CREATE TYPE thinkthen_question_document_context_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_question_document_context_schema AS ("properties" thinkthen_question_document_context_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_question_document_item_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_question_document_item_schema AS ("properties" thinkthen_question_document_item_schema_properties_entry[], "required" text[], "type" text);
+CREATE TYPE thinkthen_string_declaration AS ("type" text);
+CREATE TYPE thinkthen_property_declaration AS ("items" thinkthen_string_declaration, "type" text);
+CREATE TYPE thinkthen_declared_property AS ("name" text, "value" thinkthen_property_declaration);
+CREATE TYPE thinkthen_input_declaration AS ("properties" thinkthen_declared_property[], "required" text[], "type" text);
 CREATE TYPE thinkthen_label AS ("description" jsonb, "description_present" boolean, "name" text);
-CREATE TYPE thinkthen_question_document AS ("batch" thinkthen_question_document_batch, "context_schema" thinkthen_question_document_context_schema, "false" jsonb, "false_present" boolean, "item_schema" thinkthen_question_document_item_schema, "label_details" thinkthen_label[], "labels" text[], "levels" text[], "model" text, "name" text, "on" text[], "options" text[], "profile" text, "text" jsonb, "text_present" boolean, "true" jsonb, "true_present" boolean, "verb" text, "wording_version" bigint);
-CREATE TYPE thinkthen_decide_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_decide_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_decision AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_decide_source, "threshold" thinkthen_decide_threshold, "value" jsonb, "value_present" boolean);
-CREATE TYPE thinkthen_choose_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_choose_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_choice AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_choose_source, "threshold" thinkthen_choose_threshold, "value" text);
-CREATE TYPE thinkthen_tag_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_tag_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_tags AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_tag_source, "threshold" thinkthen_tag_threshold, "value" text[]);
-CREATE TYPE thinkthen_score_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_score AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_score_source, "threshold" jsonb, "threshold_present" boolean, "value" double precision);
-CREATE TYPE thinkthen_filter_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_filter_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_filtered AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_filter_source, "threshold" thinkthen_filter_threshold, "value" boolean);
-CREATE TYPE thinkthen_rank_member_result_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_rank_member_result AS ("answer" thinkthen_answer, "answer_id" text, "images" thinkthen_image[], "meta" thinkthen_metadata, "question" thinkthen_question_document, "schema" text, "source" thinkthen_rank_member_result_source, "threshold" jsonb, "threshold_present" boolean, "value" numeric);
-CREATE TYPE thinkthen_rank_member AS ("name" text, "result" thinkthen_rank_member_result);
-CREATE TYPE thinkthen_rank_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_ranked AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "members" thinkthen_rank_member[], "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question_document, "question_name" text, "schema" text, "source" thinkthen_rank_source, "threshold" jsonb, "threshold_present" boolean, "value" numeric);
+CREATE TYPE thinkthen_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "false" jsonb, "false_present" boolean, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "labels" text[], "levels" text[], "model" text, "name" text, "on" text[], "options" text[], "profile" text, "text" jsonb, "text_present" boolean, "true" jsonb, "true_present" boolean, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_source_location AS ("file" text, "first_line" numeric, "last_line" numeric);
+CREATE TYPE thinkthen_threshold AS ("number_value" double precision, "string_value" text);
+CREATE TYPE thinkthen_decision AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" thinkthen_threshold, "value" jsonb, "value_present" boolean);
+CREATE TYPE thinkthen_choice AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" thinkthen_threshold, "value" text);
+CREATE TYPE thinkthen_tags AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" thinkthen_threshold, "value" text[]);
+CREATE TYPE thinkthen_score AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" jsonb, "threshold_present" boolean, "value" double precision);
+CREATE TYPE thinkthen_filtered AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" thinkthen_threshold, "value" boolean);
+CREATE TYPE thinkthen_ranked_member_result AS ("answer" thinkthen_answer, "answer_id" text, "images" thinkthen_image[], "meta" thinkthen_metadata, "question" thinkthen_question, "schema" text, "source" thinkthen_source_location, "threshold" jsonb, "threshold_present" boolean, "value" numeric);
+CREATE TYPE thinkthen_named_ranked_member AS ("name" text, "result" thinkthen_ranked_member_result);
+CREATE TYPE thinkthen_ranked AS ("answer" thinkthen_answer, "answer_id" text, "file" text, "first_line" numeric, "images" thinkthen_image[], "index" numeric, "input" jsonb, "input_present" boolean, "input_file" text, "last_line" numeric, "members" thinkthen_named_ranked_member[], "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_question, "question_name" text, "schema" text, "source" thinkthen_source_location, "threshold" jsonb, "threshold_present" boolean, "value" numeric);
 CREATE TYPE thinkthen_failure AS ("cause" text, "kind" text);
-CREATE TYPE thinkthen_annotation_member_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_annotation_member_usage AS ("input_tokens" numeric, "output_tokens" numeric);
-CREATE TYPE thinkthen_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_annotation_member AS ("answer" thinkthen_answer, "answer_id" text, "failure" thinkthen_failure, "failure_id" text, "observations" thinkthen_observation[], "question" thinkthen_question_document, "question_sources" thinkthen_question_source[], "request" text, "threshold" thinkthen_annotation_member_threshold, "usage" thinkthen_annotation_member_usage, "value" thinkthen_value);
-CREATE TYPE thinkthen_annotation_answers_entry AS ("name" text, "value" thinkthen_annotation_member);
-CREATE TYPE thinkthen_annotation_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_annotated_field_object_value AS ("failed" thinkthen_failure);
-CREATE TYPE thinkthen_annotated_field AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_annotated_field_object_value, "string_value" text);
-CREATE TYPE thinkthen_annotated_row_entry AS ("name" text, "value" thinkthen_annotated_field);
-CREATE TYPE thinkthen_annotation AS ("answer_id" text, "answers" thinkthen_annotation_answers_entry[], "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "schema" text, "source" thinkthen_annotation_source, "value" thinkthen_annotated_row_entry[]);
-CREATE TYPE thinkthen_name_odds_edges_entry AS ("name" text, "value" double precision);
-CREATE TYPE thinkthen_name_odds_kinds_entry AS ("name" text, "value" double precision);
-CREATE TYPE thinkthen_name_odds AS ("edges" thinkthen_name_odds_edges_entry[], "end" numeric, "kinds" thinkthen_name_odds_kinds_entry[], "start" numeric);
+CREATE TYPE thinkthen_answer_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "string_value" text);
+CREATE TYPE thinkthen_annotation_answer AS ("answer" thinkthen_answer, "answer_id" text, "failure" thinkthen_failure, "failure_id" text, "observations" thinkthen_observation[], "question" thinkthen_question, "question_sources" thinkthen_question_source[], "request" text, "threshold" thinkthen_threshold, "usage" thinkthen_token_usage, "value" thinkthen_answer_value);
+CREATE TYPE thinkthen_named_answer AS ("name" text, "value" thinkthen_annotation_answer);
+CREATE TYPE thinkthen_failed_value AS ("failed" thinkthen_failure);
+CREATE TYPE thinkthen_field_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_failed_value, "string_value" text);
+CREATE TYPE thinkthen_named_field_value AS ("name" text, "value" thinkthen_field_value);
+CREATE TYPE thinkthen_annotation AS ("answer_id" text, "answers" thinkthen_named_answer[], "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "schema" text, "source" thinkthen_source_location, "value" thinkthen_named_field_value[]);
+CREATE TYPE thinkthen_entity_probabilities AS ("edges" thinkthen_named_probability[], "end" numeric, "kinds" thinkthen_named_probability[], "start" numeric);
 CREATE TYPE thinkthen_place AS ("end" numeric, "start" numeric);
-CREATE TYPE thinkthen_pair_odds AS ("probability" double precision, "relation" text, "source" thinkthen_place, "target" thinkthen_place);
-CREATE TYPE thinkthen_piece_odds_tags_entry AS ("name" text, "value" double precision);
-CREATE TYPE thinkthen_piece_odds AS ("end" numeric, "start" numeric, "tags" thinkthen_piece_odds_tags_entry[]);
-CREATE TYPE thinkthen_recognition_odds_proposals_item_selected AS ("end" numeric, "start" numeric);
-CREATE TYPE thinkthen_recognition_odds_proposals_item AS ("end" numeric, "kept" boolean, "kind" text, "length" numeric, "probability" double precision, "selected" thinkthen_recognition_odds_proposals_item_selected, "span_probability" double precision, "start" numeric, "strength" double precision, "text" text);
-CREATE TYPE thinkthen_recognition_odds AS ("names" thinkthen_name_odds[], "pairs" thinkthen_pair_odds[], "pieces" thinkthen_piece_odds[], "proposals" thinkthen_recognition_odds_proposals_item[]);
-CREATE TYPE thinkthen_recognize_question_document_batch AS ("integer_value" numeric, "string_value" text);
-CREATE TYPE thinkthen_recognize_question_document_context_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_recognize_question_document_context_schema AS ("properties" thinkthen_recognize_question_document_context_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_recognize_question_document_item_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_recognize_question_document_item_schema AS ("properties" thinkthen_recognize_question_document_item_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_recognize_question_document_kinds_entry AS ("name" text, "value" jsonb, "value_present" boolean);
-CREATE TYPE thinkthen_recognize_question_document_relation_threshold AS ("number_value" double precision, "string_value" text);
+CREATE TYPE thinkthen_relation_probabilities AS ("probability" double precision, "relation" text, "source" thinkthen_place, "target" thinkthen_place);
+CREATE TYPE thinkthen_token_probabilities AS ("end" numeric, "start" numeric, "tags" thinkthen_named_probability[]);
+CREATE TYPE thinkthen_selected_span AS ("end" numeric, "start" numeric);
+CREATE TYPE thinkthen_boundary_reading AS ("end" numeric, "kept" boolean, "kind" text, "length" numeric, "probability" double precision, "selected" thinkthen_selected_span, "span_probability" double precision, "start" numeric, "strength" double precision, "text" text);
+CREATE TYPE thinkthen_recognition_probabilities AS ("names" thinkthen_entity_probabilities[], "pairs" thinkthen_relation_probabilities[], "pieces" thinkthen_token_probabilities[], "proposals" thinkthen_boundary_reading[]);
+CREATE TYPE thinkthen_kind_description AS ("name" text, "value" jsonb, "value_present" boolean);
 CREATE TYPE thinkthen_relation_rule AS ("either" boolean, "name" text, "reads" text, "single" boolean, "source" text, "target" text);
 CREATE TYPE thinkthen_recognition_stage_context AS ("boundary" text, "kind_edge" text, "relation" text);
-CREATE TYPE thinkthen_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_recognize_question_document AS ("batch" thinkthen_recognize_question_document_batch, "context_schema" thinkthen_recognize_question_document_context_schema, "entity_definition" jsonb, "entity_definition_present" boolean, "instructions" jsonb, "instructions_present" boolean, "item_schema" thinkthen_recognize_question_document_item_schema, "kinds" thinkthen_recognize_question_document_kinds_entry[], "label_details" thinkthen_label[], "mode" text, "model" text, "name" text, "on" text[], "profile" text, "relation_threshold" thinkthen_recognize_question_document_relation_threshold, "relations" thinkthen_relation_rule[], "snippet_pieces" bigint, "stage_context" thinkthen_recognition_stage_context, "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
-CREATE TYPE thinkthen_recognition_source AS ("file" text, "first_line" numeric, "last_line" numeric);
+CREATE TYPE thinkthen_recognition_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "entity_definition" jsonb, "entity_definition_present" boolean, "instructions" jsonb, "instructions_present" boolean, "item_schema" thinkthen_input_declaration, "kinds" thinkthen_kind_description[], "label_details" thinkthen_label[], "mode" text, "model" text, "name" text, "on" text[], "profile" text, "relation_threshold" thinkthen_threshold, "relations" thinkthen_relation_rule[], "snippet_pieces" bigint, "stage_context" thinkthen_recognition_stage_context, "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
 CREATE TYPE thinkthen_entity AS ("end" numeric, "file" text, "first_line" numeric, "kind" text, "last_line" numeric, "length" numeric, "start" numeric, "strength" double precision, "text" text);
 CREATE TYPE thinkthen_boundary_proposal AS ("end" numeric, "length" numeric, "probability" double precision, "start" numeric, "text" text);
 CREATE TYPE thinkthen_entity_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_entity, "target" thinkthen_entity);
-CREATE TYPE thinkthen_recognize AS ("entities" thinkthen_entity[], "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_entity_edge[]);
-CREATE TYPE thinkthen_recognized AS ("answer" thinkthen_recognition_odds, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_recognize_question_document, "schema" text, "source" thinkthen_recognition_source, "value" thinkthen_recognize);
-CREATE TYPE thinkthen_find_answer_probabilities_entry AS ("name" text, "value" double precision);
-CREATE TYPE thinkthen_find_answer AS ("confidence" double precision, "kind" text, "pick" text, "probabilities" thinkthen_find_answer_probabilities_entry[]);
-CREATE TYPE thinkthen_find_candidate_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_find_candidate AS ("index" numeric, "input" jsonb, "input_present" boolean, "probability" double precision, "source" thinkthen_find_candidate_source);
-CREATE TYPE thinkthen_find_question_document_batch AS ("integer_value" numeric, "string_value" text);
-CREATE TYPE thinkthen_find_question_document_context_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_find_question_document_context_schema AS ("properties" thinkthen_find_question_document_context_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_find_question_document_item_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_find_question_document_item_schema AS ("properties" thinkthen_find_question_document_item_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_find_question_document AS ("batch" thinkthen_find_question_document_batch, "context_schema" thinkthen_find_question_document_context_schema, "item_schema" thinkthen_find_question_document_item_schema, "label_details" thinkthen_label[], "model" text, "name" text, "none" boolean, "on" text[], "profile" text, "text" jsonb, "text_present" boolean, "verb" text, "wording_version" bigint);
-CREATE TYPE thinkthen_found AS ("answer" thinkthen_find_answer, "answer_id" text, "candidates" thinkthen_find_candidate[], "file" text, "first_line" numeric, "index" numeric, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_find_question_document, "schema" text, "threshold" jsonb, "threshold_present" boolean, "value" jsonb, "value_present" boolean);
+CREATE TYPE thinkthen_recognized_value AS ("entities" thinkthen_entity[], "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_entity_edge[]);
+CREATE TYPE thinkthen_recognized AS ("answer" thinkthen_recognition_probabilities, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_recognition_question, "schema" text, "source" thinkthen_source_location, "value" thinkthen_recognized_value);
+CREATE TYPE thinkthen_candidate_probability AS ("name" text, "value" double precision);
+CREATE TYPE thinkthen_find_answer AS ("confidence" double precision, "kind" text, "pick" text, "probabilities" thinkthen_candidate_probability[]);
+CREATE TYPE thinkthen_find_candidate AS ("index" numeric, "input" jsonb, "input_present" boolean, "probability" double precision, "source" thinkthen_source_location);
+CREATE TYPE thinkthen_find_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "none" boolean, "on" text[], "profile" text, "text" jsonb, "text_present" boolean, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_found AS ("answer" thinkthen_find_answer, "answer_id" text, "candidates" thinkthen_find_candidate[], "file" text, "first_line" numeric, "index" numeric, "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_find_question, "schema" text, "threshold" jsonb, "threshold_present" boolean, "value" jsonb, "value_present" boolean);
 CREATE TYPE thinkthen_related_entity AS ("kind" text, "name" text);
-CREATE TYPE thinkthen_relation_member_target AS ("kind" text, "name" text);
-CREATE TYPE thinkthen_relation_member_usage AS ("input_tokens" numeric, "output_tokens" numeric);
-CREATE TYPE thinkthen_relation_member AS ("accepted" boolean, "answer" thinkthen_answer, "answer_id" text, "direction" text, "failure" thinkthen_failure, "failure_id" text, "method" text, "observations" thinkthen_observation[], "probability" double precision, "question" thinkthen_question_document, "question_sources" thinkthen_question_source[], "reads" text, "relation" text, "request" text, "source" thinkthen_related_entity, "target" thinkthen_relation_member_target, "threshold" thinkthen_threshold, "usage" thinkthen_relation_member_usage);
-CREATE TYPE thinkthen_answers AS ("questions" thinkthen_relation_member[]);
-CREATE TYPE thinkthen_physical_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_session_input_source AS ("index" numeric, "source" thinkthen_physical_source);
-CREATE TYPE thinkthen_relate_question_document_batch AS ("integer_value" numeric, "string_value" text);
-CREATE TYPE thinkthen_relate_question_document_context_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_relate_question_document_context_schema AS ("properties" thinkthen_relate_question_document_context_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_relate_question_document_fields AS ("kind" text, "name" text);
-CREATE TYPE thinkthen_relate_question_document_item_schema_properties_entry AS ("name" text, "value" thinkthen_input_property_type);
-CREATE TYPE thinkthen_relate_question_document_item_schema AS ("properties" thinkthen_relate_question_document_item_schema_properties_entry[], "required" text[], "type" text);
-CREATE TYPE thinkthen_relate_question_document AS ("batch" thinkthen_relate_question_document_batch, "context_schema" thinkthen_relate_question_document_context_schema, "fields" thinkthen_relate_question_document_fields, "item_schema" thinkthen_relate_question_document_item_schema, "label_details" thinkthen_label[], "model" text, "name" text, "on" text[], "profile" text, "relations" thinkthen_relation_rule[], "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
-CREATE TYPE thinkthen_related_entity_edge_source AS ("file" text, "first_line" numeric, "kind" text, "last_line" numeric, "name" text, "ordinal" numeric, "record" jsonb, "record_present" boolean);
-CREATE TYPE thinkthen_related_entity_edge_target AS ("file" text, "first_line" numeric, "kind" text, "last_line" numeric, "name" text, "ordinal" numeric, "record" jsonb, "record_present" boolean);
-CREATE TYPE thinkthen_related_entity_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_related_entity_edge_source, "target" thinkthen_related_entity_edge_target);
-CREATE TYPE thinkthen_related AS ("answer" thinkthen_answers, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "input_sources" thinkthen_session_input_source[], "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_relate_question_document, "schema" text, "value" thinkthen_related_entity_edge[]);
-CREATE TYPE thinkthen_facts_usage_persistence AS ("advice" text, "observed_at" text, "state" text);
-CREATE TYPE thinkthen_facts AS ("attempts" thinkthen_attempt[], "cache_answers" numeric, "call_id" text, "estimated_cost_usd" text, "held_model_mismatch" boolean, "input_tokens" numeric, "largest_request_bytes" numeric, "largest_request_estimated_input_tokens" numeric, "model" text, "output_tokens" numeric, "records" numeric, "requests_sent" numeric, "seconds" double precision, "token_estimate_method" text, "usage_persistence" thinkthen_facts_usage_persistence);
+CREATE TYPE thinkthen_relation_endpoint AS ("kind" text, "name" text);
+CREATE TYPE thinkthen_relation_reading AS ("accepted" boolean, "answer" thinkthen_answer, "answer_id" text, "direction" text, "failure" thinkthen_failure, "failure_id" text, "method" text, "observations" thinkthen_observation[], "probability" double precision, "question" thinkthen_question, "question_sources" thinkthen_question_source[], "reads" text, "relation" text, "request" text, "source" thinkthen_related_entity, "target" thinkthen_relation_endpoint, "threshold" thinkthen_threshold, "usage" thinkthen_token_usage);
+CREATE TYPE thinkthen_relation_answers AS ("questions" thinkthen_relation_reading[]);
+CREATE TYPE thinkthen_indexed_source AS ("index" numeric, "source" thinkthen_source_location);
+CREATE TYPE thinkthen_relation_fields AS ("kind" text, "name" text);
+CREATE TYPE thinkthen_relation_question AS ("batch" thinkthen_batch_setting, "context_schema" thinkthen_input_declaration, "fields" thinkthen_relation_fields, "item_schema" thinkthen_input_declaration, "label_details" thinkthen_label[], "model" text, "name" text, "on" text[], "profile" text, "relations" thinkthen_relation_rule[], "threshold" thinkthen_threshold, "verb" text, "wording_version" bigint);
+CREATE TYPE thinkthen_located_endpoint AS ("file" text, "first_line" numeric, "kind" text, "last_line" numeric, "name" text, "ordinal" numeric, "record" jsonb, "record_present" boolean);
+CREATE TYPE thinkthen_located_edge AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_located_endpoint, "target" thinkthen_located_endpoint);
+CREATE TYPE thinkthen_related AS ("answer" thinkthen_relation_answers, "answer_id" text, "file" text, "first_line" numeric, "index" numeric, "input" jsonb, "input_present" boolean, "input_sources" thinkthen_indexed_source[], "last_line" numeric, "meta" thinkthen_metadata, "position" thinkthen_position, "question" thinkthen_relation_question, "schema" text, "value" thinkthen_located_edge[]);
+CREATE TYPE thinkthen_usage_persistence AS ("advice" text, "observed_at" text, "state" text);
+CREATE TYPE thinkthen_facts AS ("attempts" thinkthen_attempt[], "cache_answers" numeric, "call_id" text, "estimated_cost_usd" text, "held_model_mismatch" boolean, "input_tokens" numeric, "largest_request_bytes" numeric, "largest_request_estimated_input_tokens" numeric, "model" text, "output_tokens" numeric, "records" numeric, "requests_sent" numeric, "seconds" double precision, "token_estimate_method" text, "usage_persistence" thinkthen_usage_persistence);
 CREATE TYPE thinkthen_token_band AS ("lower" numeric, "upper" numeric);
 CREATE TYPE thinkthen_plan AS ("estimated_bytes" numeric, "estimated_input_tokens" thinkthen_token_band, "first_body_utf8" text, "largest_request_bytes" numeric, "largest_request_estimated_input_tokens" numeric, "records" numeric, "requests" numeric, "token_estimate_method" text, "upper_bound" boolean);
-CREATE TYPE thinkthen_error_estimated_input_denial AS ("kind" text, "last_status" bigint, "limit" numeric);
-CREATE TYPE thinkthen_error_send_budget_denial AS ("kind" text, "last_status" bigint);
+CREATE TYPE thinkthen_input_budget_denial AS ("kind" text, "last_status" bigint, "limit" numeric);
+CREATE TYPE thinkthen_send_budget_denial AS ("kind" text, "last_status" bigint);
 CREATE TYPE thinkthen_stopped AS ("at" numeric, "cause" text, "retryable" boolean, "status" bigint);
-CREATE TYPE thinkthen_error AS ("estimated_input_denial" thinkthen_error_estimated_input_denial, "kind" text, "message" text, "retryable" boolean, "send_budget_denial" thinkthen_error_send_budget_denial, "stopped" thinkthen_stopped);
-CREATE TYPE thinkthen_session_question_detail_failure AS ("cause" text, "kind" text);
-CREATE TYPE thinkthen_session_question_detail_input_source AS ("file" text, "first_line" numeric, "last_line" numeric);
-CREATE TYPE thinkthen_session_named_probability AS ("name" text, "probability" double precision);
-CREATE TYPE thinkthen_session_question_detail_probabilities_value AS ("array_value" thinkthen_session_named_probability[], "number_value" double precision);
-CREATE TYPE thinkthen_session_question_detail_probabilities AS ("kind" text, "value" thinkthen_session_question_detail_probabilities_value);
-CREATE TYPE thinkthen_session_question_detail_reported_usage AS ("input_tokens" numeric, "output_tokens" numeric);
-CREATE TYPE thinkthen_session_question_detail_threshold AS ("number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_session_question_detail_usage AS ("input_tokens" numeric, "output_tokens" numeric);
-CREATE TYPE thinkthen_session_question_detail_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_question_detail AS ("answer_id" text, "cached" boolean, "confidence" double precision, "failed_questions" numeric, "failure" thinkthen_session_question_detail_failure, "failure_id" text, "input" jsonb, "input_present" boolean, "input_source" thinkthen_session_question_detail_input_source, "input_sources" thinkthen_session_input_source[], "inputs" jsonb[], "model" text, "observations" thinkthen_observation[], "probabilities" thinkthen_session_question_detail_probabilities, "question" thinkthen_question_document, "question_sha256" text, "question_sources" thinkthen_question_source[], "raw_pick" text, "reported_usage" thinkthen_session_question_detail_reported_usage, "requests" text[], "requests_sent" numeric, "threshold" thinkthen_session_question_detail_threshold, "url" text, "usage" thinkthen_session_question_detail_usage, "value" thinkthen_session_question_detail_value);
-CREATE TYPE thinkthen_observed_input AS ("images" thinkthen_image[], "input" jsonb, "input_present" boolean, "source" thinkthen_physical_source);
-CREATE TYPE thinkthen_entity_document AS ("kind" text, "name" text);
-CREATE TYPE thinkthen_annotation_value_value_object_value AS ("cause" text, "kind" text);
-CREATE TYPE thinkthen_annotation_value_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_annotation_value_value_object_value, "string_value" text);
-CREATE TYPE thinkthen_annotation_value AS ("kind" text, "value" thinkthen_annotation_value_value);
-CREATE TYPE thinkthen_session_observed_row_value_array_value_item AS ("either" boolean, "name" text, "probability" double precision, "relation" text, "source" thinkthen_entity_document, "target" thinkthen_entity_document, "value" thinkthen_annotation_value);
-CREATE TYPE thinkthen_recognition_edge_document AS ("either" boolean, "probability" double precision, "relation" text, "source" thinkthen_entity, "target" thinkthen_entity);
-CREATE TYPE thinkthen_session_observed_row_value_object_value_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "string_value" text);
-CREATE TYPE thinkthen_session_observed_row_value_object_value AS ("entities" thinkthen_entity[], "kind" text, "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_recognition_edge_document[], "value" thinkthen_session_observed_row_value_object_value_value);
-CREATE TYPE thinkthen_session_observed_row_value AS ("array_value" thinkthen_session_observed_row_value_array_value_item[], "integer_value" numeric, "object_value" thinkthen_session_observed_row_value_object_value);
-CREATE TYPE thinkthen_observed_row AS ("kind" text, "value" thinkthen_session_observed_row_value);
+CREATE TYPE thinkthen_error AS ("estimated_input_denial" thinkthen_input_budget_denial, "kind" text, "message" text, "retryable" boolean, "send_budget_denial" thinkthen_send_budget_denial, "stopped" thinkthen_stopped);
+CREATE TYPE thinkthen_observed_probability AS ("name" text, "probability" double precision);
+CREATE TYPE thinkthen_probability_values AS ("array_value" thinkthen_observed_probability[], "number_value" double precision);
+CREATE TYPE thinkthen_probability_distribution AS ("kind" text, "value" thinkthen_probability_values);
+CREATE TYPE thinkthen_reported_usage AS ("input_tokens" numeric, "output_tokens" numeric);
+CREATE TYPE thinkthen_question_detail AS ("answer_id" text, "cached" boolean, "confidence" double precision, "failed_questions" numeric, "failure" thinkthen_failure, "failure_id" text, "input" jsonb, "input_present" boolean, "input_source" thinkthen_source_location, "input_sources" thinkthen_indexed_source[], "inputs" jsonb[], "model" text, "observations" thinkthen_observation[], "probabilities" thinkthen_probability_distribution, "question" thinkthen_question, "question_sha256" text, "question_sources" thinkthen_question_source[], "raw_pick" text, "reported_usage" thinkthen_reported_usage, "requests" text[], "requests_sent" numeric, "threshold" thinkthen_threshold, "url" text, "usage" thinkthen_token_usage, "value" thinkthen_answer_value);
+CREATE TYPE thinkthen_observed_input AS ("images" thinkthen_image[], "input" jsonb, "input_present" boolean, "source" thinkthen_source_location);
+CREATE TYPE thinkthen_judgment_value AS ("array_value" text[], "boolean_value" boolean, "number_value" double precision, "object_value" thinkthen_failure, "string_value" text);
+CREATE TYPE thinkthen_judgment AS ("kind" text, "value" thinkthen_judgment_value);
+CREATE TYPE thinkthen_observed_member AS ("either" boolean, "name" text, "probability" double precision, "relation" text, "source" thinkthen_relation_endpoint, "target" thinkthen_relation_endpoint, "value" thinkthen_judgment);
+CREATE TYPE thinkthen_observed_record AS ("entities" thinkthen_entity[], "kind" text, "mode" text, "proposals" thinkthen_boundary_proposal[], "relations" thinkthen_entity_edge[], "value" thinkthen_answer_value);
+CREATE TYPE thinkthen_observed_value AS ("array_value" thinkthen_observed_member[], "integer_value" numeric, "object_value" thinkthen_observed_record);
+CREATE TYPE thinkthen_observed_row AS ("kind" text, "value" thinkthen_observed_value);
 CREATE TYPE thinkthen_event AS ("detail" thinkthen_question_detail, "index" numeric, "inputs" thinkthen_observed_input[], "kind" text, "member" text, "position" numeric, "stage" text, "value" thinkthen_observed_row);
 "#,
     name = "native_generated_types"
 );
 #[expect(
     clippy::too_many_lines,
-    clippy::excessive_nesting,
     clippy::cognitive_complexity,
     reason = "generated schema projections"
 )]
@@ -155,7 +104,7 @@ pub(super) fn convert(
     value: &Value,
 ) -> Result<PgHeapTuple<'static, AllocatedByRust>, thinkthen::Error> {
     match kind {
-        "thinkthen_answer_probabilities_entry" => {
+        "thinkthen_named_probability" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -208,12 +157,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_answer_probabilities_entry",
+                        "thinkthen_named_probability",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_answer_probabilities_entry", &entry).map(Some)
+                                convert("thinkthen_named_probability", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -328,25 +277,6 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_meta_batch_setting" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
         "thinkthen_batch_setting" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
@@ -366,7 +296,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_meta_batch_warning" => {
+        "thinkthen_batch_warning" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("running");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
@@ -408,7 +338,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_meta_profile_warning" => {
+        "thinkthen_profile_warning" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("running");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -451,7 +381,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_meta_usage" => {
+        "thinkthen_token_usage" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("input_tokens");
             let converted: Option<pgrx::AnyNumeric> =
@@ -506,7 +436,7 @@ pub(super) fn convert(
             let held = value.get("batch_setting");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_meta_batch_setting", value))
+                .map(|value| convert("thinkthen_batch_setting", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -516,7 +446,7 @@ pub(super) fn convert(
             let held = value.get("batch_warning");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_meta_batch_warning", value))
+                .map(|value| convert("thinkthen_batch_warning", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -585,7 +515,7 @@ pub(super) fn convert(
             let held = value.get("profile_warning");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_meta_profile_warning", value))
+                .map(|value| convert("thinkthen_profile_warning", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -669,7 +599,7 @@ pub(super) fn convert(
             let held = value.get("usage");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_meta_usage", value))
+                .map(|value| convert("thinkthen_token_usage", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -720,26 +650,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_question_document_batch" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_string_root" => {
+        "thinkthen_string_declaration" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("type");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -750,12 +661,12 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_input_property_type" => {
+        "thinkthen_property_declaration" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("items");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_string_root", value))
+                .map(|value| convert("thinkthen_string_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -771,7 +682,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_question_document_context_schema_properties_entry" => {
+        "thinkthen_declared_property" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -783,7 +694,7 @@ pub(super) fn convert(
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
+                .map(|value| convert("thinkthen_property_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -792,95 +703,19 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_question_document_context_schema" => {
+        "thinkthen_input_declaration" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("properties");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_question_document_context_schema_properties_entry",
+                        "thinkthen_declared_property",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert(
-                                    "thinkthen_question_document_context_schema_properties_entry",
-                                    &entry,
-                                )
-                                .map(Some)
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_question_document_item_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_question_document_item_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_object)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_question_document_item_schema_properties_entry",
-                        values
-                            .iter()
-                            .map(|(name, value)| {
-                                let entry = serde_json::json!({"name": name, "value": value});
-                                convert(
-                                    "thinkthen_question_document_item_schema_properties_entry",
-                                    &entry,
-                                )
-                                .map(Some)
+                                convert("thinkthen_declared_property", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -937,12 +772,12 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_question_document" => {
+        "thinkthen_question" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("batch");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document_batch", value))
+                .map(|value| convert("thinkthen_batch_setting", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -952,7 +787,7 @@ pub(super) fn convert(
             let held = value.get("context_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document_context_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -973,7 +808,7 @@ pub(super) fn convert(
             let held = value.get("item_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document_item_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1122,7 +957,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_decide_source" => {
+        "thinkthen_source_location" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("file");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -1149,7 +984,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_decide_threshold" => {
+        "thinkthen_threshold" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<f64> = held.and_then(Value::as_f64);
@@ -1281,7 +1116,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1305,7 +1140,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_decide_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1314,8 +1149,7 @@ pub(super) fn convert(
             }
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_decide_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1331,51 +1165,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_choose_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_choose_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -1494,7 +1283,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1518,7 +1307,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_choose_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1527,8 +1316,7 @@ pub(super) fn convert(
             }
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_choose_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1540,51 +1328,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_tag_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_tag_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -1703,7 +1446,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1727,7 +1470,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_tag_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1736,8 +1479,7 @@ pub(super) fn convert(
             }
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_tag_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1757,33 +1499,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_score_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -1902,7 +1617,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1926,7 +1641,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_score_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -1949,51 +1664,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_filter_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_filter_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -2112,7 +1782,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2136,7 +1806,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_filter_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2145,8 +1815,7 @@ pub(super) fn convert(
             }
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_filter_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2162,34 +1831,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_rank_member_result_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_rank_member_result" => {
+        "thinkthen_ranked_member_result" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("answer");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
@@ -2244,7 +1886,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2261,7 +1903,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_rank_member_result_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2289,7 +1931,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_rank_member" => {
+        "thinkthen_named_ranked_member" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -2301,38 +1943,11 @@ pub(super) fn convert(
             let held = value.get("result");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_rank_member_result", value))
+                .map(|value| convert("thinkthen_ranked_member_result", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("result", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_rank_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -2433,13 +2048,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_rank_member",
+                        "thinkthen_named_ranked_member",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_rank_member", value))
+                                    .map(|value| convert("thinkthen_named_ranked_member", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -2474,7 +2089,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2498,7 +2113,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_rank_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2544,45 +2159,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotation_member_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_annotation_member_usage" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("input_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("input_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("output_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("output_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_value" => {
+        "thinkthen_answer_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<Vec<Option<String>>> = held
@@ -2622,7 +2199,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotation_member" => {
+        "thinkthen_annotation_answer" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("answer");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
@@ -2684,7 +2261,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2723,8 +2300,7 @@ pub(super) fn convert(
             }
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_member_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2734,7 +2310,7 @@ pub(super) fn convert(
             let held = value.get("usage");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_member_usage", value))
+                .map(|value| convert("thinkthen_token_usage", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2743,8 +2319,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_value", value))
+                .map(|value| convert("thinkthen_answer_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2753,7 +2328,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotation_answers_entry" => {
+        "thinkthen_named_answer" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -2765,7 +2340,7 @@ pub(super) fn convert(
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_member", value))
+                .map(|value| convert("thinkthen_annotation_answer", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2774,34 +2349,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotation_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_annotated_field_object_value" => {
+        "thinkthen_failed_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("failed");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
@@ -2815,7 +2363,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotated_field" => {
+        "thinkthen_field_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<Vec<Option<String>>> = held
@@ -2849,7 +2397,7 @@ pub(super) fn convert(
             let held = Some(value);
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotated_field_object_value", value))
+                .map(|value| convert("thinkthen_failed_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2865,7 +2413,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotated_row_entry" => {
+        "thinkthen_named_field_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -2876,8 +2424,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotated_field", value))
+                .map(|value| convert("thinkthen_field_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -2900,12 +2447,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_annotation_answers_entry",
+                        "thinkthen_named_answer",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_annotation_answers_entry", &entry).map(Some)
+                                convert("thinkthen_named_answer", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -2988,7 +2535,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3000,12 +2547,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_annotated_row_entry",
+                        "thinkthen_named_field_value",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_annotated_row_entry", &entry).map(Some)
+                                convert("thinkthen_named_field_value", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -3018,55 +2565,19 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_name_odds_edges_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_name_odds_kinds_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_name_odds" => {
+        "thinkthen_entity_probabilities" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("edges");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_name_odds_edges_entry",
+                        "thinkthen_named_probability",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_name_odds_edges_entry", &entry).map(Some)
+                                convert("thinkthen_named_probability", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -3090,12 +2601,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_name_odds_kinds_entry",
+                        "thinkthen_named_probability",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_name_odds_kinds_entry", &entry).map(Some)
+                                convert("thinkthen_named_probability", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -3136,7 +2647,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_pair_odds" => {
+        "thinkthen_relation_probabilities" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("probability");
             let converted: Option<f64> = held.and_then(Value::as_f64);
@@ -3174,25 +2685,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_piece_odds_tags_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_piece_odds" => {
+        "thinkthen_token_probabilities" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("end");
             let converted: Option<pgrx::AnyNumeric> =
@@ -3215,12 +2708,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_piece_odds_tags_entry",
+                        "thinkthen_named_probability",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_piece_odds_tags_entry", &entry).map(Some)
+                                convert("thinkthen_named_probability", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -3233,7 +2726,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognition_odds_proposals_item_selected" => {
+        "thinkthen_selected_span" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("end");
             let converted: Option<pgrx::AnyNumeric> =
@@ -3253,7 +2746,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognition_odds_proposals_item" => {
+        "thinkthen_boundary_reading" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("end");
             let converted: Option<pgrx::AnyNumeric> =
@@ -3295,7 +2788,7 @@ pub(super) fn convert(
             let held = value.get("selected");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognition_odds_proposals_item_selected", value))
+                .map(|value| convert("thinkthen_selected_span", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3333,20 +2826,20 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognition_odds" => {
+        "thinkthen_recognition_probabilities" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("names");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_name_odds",
+                        "thinkthen_entity_probabilities",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_name_odds", value))
+                                    .map(|value| convert("thinkthen_entity_probabilities", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -3363,13 +2856,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_pair_odds",
+                        "thinkthen_relation_probabilities",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_pair_odds", value))
+                                    .map(|value| convert("thinkthen_relation_probabilities", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -3386,13 +2879,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_piece_odds",
+                        "thinkthen_token_probabilities",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_piece_odds", value))
+                                    .map(|value| convert("thinkthen_token_probabilities", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -3409,15 +2902,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_recognition_odds_proposals_item",
+                        "thinkthen_boundary_reading",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| {
-                                        convert("thinkthen_recognition_odds_proposals_item", value)
-                                    })
+                                    .map(|value| convert("thinkthen_boundary_reading", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -3431,134 +2922,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognize_question_document_batch" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_context_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_context_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held.and_then(Value::as_object).map(|values| crate::ffi::composite_array("thinkthen_recognize_question_document_context_schema_properties_entry", values.iter().map(|(name, value)| { let entry = serde_json::json!({"name": name, "value": value}); convert("thinkthen_recognize_question_document_context_schema_properties_entry", &entry).map(Some) }).collect::<Result<Vec<_>, thinkthen::Error>>()?)).transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_item_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_item_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held.and_then(Value::as_object).map(|values| crate::ffi::composite_array("thinkthen_recognize_question_document_item_schema_properties_entry", values.iter().map(|(name, value)| { let entry = serde_json::json!({"name": name, "value": value}); convert("thinkthen_recognize_question_document_item_schema_properties_entry", &entry).map(Some) }).collect::<Result<Vec<_>, thinkthen::Error>>()?)).transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_kinds_entry" => {
+        "thinkthen_kind_description" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -3576,24 +2940,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document_relation_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -3669,30 +3015,12 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognize_question_document" => {
+        "thinkthen_recognition_question" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("batch");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognize_question_document_batch", value))
+                .map(|value| convert("thinkthen_batch_setting", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3702,12 +3030,7 @@ pub(super) fn convert(
             let held = value.get("context_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| {
-                    convert(
-                        "thinkthen_recognize_question_document_context_schema",
-                        value,
-                    )
-                })
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3739,7 +3062,7 @@ pub(super) fn convert(
             let held = value.get("item_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognize_question_document_item_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3751,13 +3074,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_recognize_question_document_kinds_entry",
+                        "thinkthen_kind_description",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_recognize_question_document_kinds_entry", &entry)
-                                    .map(Some)
+                                convert("thinkthen_kind_description", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -3837,12 +3159,7 @@ pub(super) fn convert(
             let held = value.get("relation_threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| {
-                    convert(
-                        "thinkthen_recognize_question_document_relation_threshold",
-                        value,
-                    )
-                })
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -3911,33 +3228,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("wording_version", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_recognition_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -4101,7 +3391,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognize" => {
+        "thinkthen_recognized_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("entities");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
@@ -4186,7 +3476,7 @@ pub(super) fn convert(
             let held = value.get("answer");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognition_odds", value))
+                .map(|value| convert("thinkthen_recognition_probabilities", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4265,7 +3555,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognize_question_document", value))
+                .map(|value| convert("thinkthen_recognition_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4282,7 +3572,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognition_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4292,7 +3582,7 @@ pub(super) fn convert(
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_recognize", value))
+                .map(|value| convert("thinkthen_recognized_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4301,7 +3591,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_find_answer_probabilities_entry" => {
+        "thinkthen_candidate_probability" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -4347,13 +3637,12 @@ pub(super) fn convert(
                 .and_then(Value::as_object)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_find_answer_probabilities_entry",
+                        "thinkthen_candidate_probability",
                         values
                             .iter()
                             .map(|(name, value)| {
                                 let entry = serde_json::json!({"name": name, "value": value});
-                                convert("thinkthen_find_answer_probabilities_entry", &entry)
-                                    .map(Some)
+                                convert("thinkthen_candidate_probability", &entry).map(Some)
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
                     )
@@ -4362,33 +3651,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("probabilities", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_candidate_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -4424,7 +3686,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_find_candidate_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4433,157 +3695,12 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_find_question_document_batch" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_question_document_context_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_question_document_context_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held.and_then(Value::as_object).map(|values| crate::ffi::composite_array("thinkthen_find_question_document_context_schema_properties_entry", values.iter().map(|(name, value)| { let entry = serde_json::json!({"name": name, "value": value}); convert("thinkthen_find_question_document_context_schema_properties_entry", &entry).map(Some) }).collect::<Result<Vec<_>, thinkthen::Error>>()?)).transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_question_document_item_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_question_document_item_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
-                .and_then(Value::as_object)
-                .map(|values| {
-                    crate::ffi::composite_array(
-                        "thinkthen_find_question_document_item_schema_properties_entry",
-                        values
-                            .iter()
-                            .map(|(name, value)| {
-                                let entry = serde_json::json!({"name": name, "value": value});
-                                convert(
-                                    "thinkthen_find_question_document_item_schema_properties_entry",
-                                    &entry,
-                                )
-                                .map(Some)
-                            })
-                            .collect::<Result<Vec<_>, thinkthen::Error>>()?,
-                    )
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_find_question_document" => {
+        "thinkthen_find_question" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("batch");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_find_question_document_batch", value))
+                .map(|value| convert("thinkthen_batch_setting", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4593,7 +3710,7 @@ pub(super) fn convert(
             let held = value.get("context_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_find_question_document_context_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4603,7 +3720,7 @@ pub(super) fn convert(
             let held = value.get("item_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_find_question_document_item_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4799,7 +3916,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_find_question_document", value))
+                .map(|value| convert("thinkthen_find_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -4855,7 +3972,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_relation_member_target" => {
+        "thinkthen_relation_endpoint" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -4873,27 +3990,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_relation_member_usage" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("input_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("input_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("output_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("output_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relation_member" => {
+        "thinkthen_relation_reading" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("accepted");
             let converted: Option<bool> = held.and_then(Value::as_bool);
@@ -4983,7 +4080,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5047,7 +4144,7 @@ pub(super) fn convert(
             let held = value.get("target");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relation_member_target", value))
+                .map(|value| convert("thinkthen_relation_endpoint", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5067,7 +4164,7 @@ pub(super) fn convert(
             let held = value.get("usage");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relation_member_usage", value))
+                .map(|value| convert("thinkthen_token_usage", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5076,20 +4173,20 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_answers" => {
+        "thinkthen_relation_answers" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("questions");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_relation_member",
+                        "thinkthen_relation_reading",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_relation_member", value))
+                                    .map(|value| convert("thinkthen_relation_reading", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -5103,34 +4200,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_physical_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_input_source" => {
+        "thinkthen_indexed_source" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("index");
             let converted: Option<pgrx::AnyNumeric> =
@@ -5143,7 +4213,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_physical_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5152,80 +4222,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_relate_question_document_batch" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("integer_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relate_question_document_context_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relate_question_document_context_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held.and_then(Value::as_object).map(|values| crate::ffi::composite_array("thinkthen_relate_question_document_context_schema_properties_entry", values.iter().map(|(name, value)| { let entry = serde_json::json!({"name": name, "value": value}); convert("thinkthen_relate_question_document_context_schema_properties_entry", &entry).map(Some) }).collect::<Result<Vec<_>, thinkthen::Error>>()?)).transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relate_question_document_fields" => {
+        "thinkthen_relation_fields" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -5243,66 +4240,12 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_relate_question_document_item_schema_properties_entry" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("value");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_input_property_type", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relate_question_document_item_schema" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("properties");
-            let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held.and_then(Value::as_object).map(|values| crate::ffi::composite_array("thinkthen_relate_question_document_item_schema_properties_entry", values.iter().map(|(name, value)| { let entry = serde_json::json!({"name": name, "value": value}); convert("thinkthen_relate_question_document_item_schema_properties_entry", &entry).map(Some) }).collect::<Result<Vec<_>, thinkthen::Error>>()?)).transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("properties", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("required");
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("required", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("type");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("type", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_relate_question_document" => {
+        "thinkthen_relation_question" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("batch");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relate_question_document_batch", value))
+                .map(|value| convert("thinkthen_batch_setting", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5312,7 +4255,7 @@ pub(super) fn convert(
             let held = value.get("context_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relate_question_document_context_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5322,7 +4265,7 @@ pub(super) fn convert(
             let held = value.get("fields");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relate_question_document_fields", value))
+                .map(|value| convert("thinkthen_relation_fields", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5332,7 +4275,7 @@ pub(super) fn convert(
             let held = value.get("item_schema");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relate_question_document_item_schema", value))
+                .map(|value| convert("thinkthen_input_declaration", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5447,7 +4390,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_related_entity_edge_source" => {
+        "thinkthen_located_endpoint" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("file");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -5507,67 +4450,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_related_entity_edge_target" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("ordinal");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("ordinal", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("record");
-            tuple
-                .set_by_name("record_present", held.is_some())
-                .map_err(|_| crate::call::defect("generated result presence is unavailable"))?;
-            let converted: Option<pgrx::datum::JsonB> =
-                held.map(|value| pgrx::datum::JsonB(value.clone()));
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("record", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_related_entity_edge" => {
+        "thinkthen_located_edge" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("either");
             let converted: Option<bool> = held.and_then(Value::as_bool);
@@ -5593,7 +4476,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_related_entity_edge_source", value))
+                .map(|value| convert("thinkthen_located_endpoint", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5603,7 +4486,7 @@ pub(super) fn convert(
             let held = value.get("target");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_related_entity_edge_target", value))
+                .map(|value| convert("thinkthen_located_endpoint", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5617,7 +4500,7 @@ pub(super) fn convert(
             let held = value.get("answer");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_answers", value))
+                .map(|value| convert("thinkthen_relation_answers", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5670,13 +4553,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_session_input_source",
+                        "thinkthen_indexed_source",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_session_input_source", value))
+                                    .map(|value| convert("thinkthen_indexed_source", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -5719,7 +4602,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_relate_question_document", value))
+                .map(|value| convert("thinkthen_relation_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -5738,13 +4621,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_related_entity_edge",
+                        "thinkthen_located_edge",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_related_entity_edge", value))
+                                    .map(|value| convert("thinkthen_located_edge", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -5758,7 +4641,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_facts_usage_persistence" => {
+        "thinkthen_usage_persistence" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("advice");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -5909,7 +4792,7 @@ pub(super) fn convert(
             let held = value.get("usage_persistence");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_facts_usage_persistence", value))
+                .map(|value| convert("thinkthen_usage_persistence", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6013,7 +4896,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_error_estimated_input_denial" => {
+        "thinkthen_input_budget_denial" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -6039,7 +4922,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_error_send_budget_denial" => {
+        "thinkthen_send_budget_denial" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -6095,7 +4978,7 @@ pub(super) fn convert(
             let held = value.get("estimated_input_denial");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_error_estimated_input_denial", value))
+                .map(|value| convert("thinkthen_input_budget_denial", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6126,7 +5009,7 @@ pub(super) fn convert(
             let held = value.get("send_budget_denial");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_error_send_budget_denial", value))
+                .map(|value| convert("thinkthen_send_budget_denial", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6145,52 +5028,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_question_detail_failure" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("cause");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("cause", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_question_detail_input_source" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("file");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("file", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("first_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("first_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("last_line");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("last_line", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_named_probability" => {
+        "thinkthen_observed_probability" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("name");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -6208,22 +5046,20 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_question_detail_probabilities_value" => {
+        "thinkthen_probability_values" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_session_named_probability",
+                        "thinkthen_observed_probability",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| {
-                                        convert("thinkthen_session_named_probability", value)
-                                    })
+                                    .map(|value| convert("thinkthen_observed_probability", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -6244,7 +5080,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_question_detail_probabilities" => {
+        "thinkthen_probability_distribution" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -6256,12 +5092,7 @@ pub(super) fn convert(
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| {
-                    convert(
-                        "thinkthen_session_question_detail_probabilities_value",
-                        value,
-                    )
-                })
+                .map(|value| convert("thinkthen_probability_values", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6270,7 +5101,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_question_detail_reported_usage" => {
+        "thinkthen_reported_usage" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("input_tokens");
             let converted: Option<pgrx::AnyNumeric> =
@@ -6286,84 +5117,6 @@ pub(super) fn convert(
             if let Some(converted) = converted {
                 tuple
                     .set_by_name("output_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_question_detail_threshold" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_question_detail_usage" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("input_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("input_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("output_tokens");
-            let converted: Option<pgrx::AnyNumeric> =
-                held.and_then(Value::as_u64).map(pgrx::AnyNumeric::from);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("output_tokens", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_question_detail_value" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("array_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<bool> = held.and_then(Value::as_bool);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("boolean_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
                     .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
             }
             Ok(tuple)
@@ -6402,7 +5155,7 @@ pub(super) fn convert(
             let held = value.get("failure");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_failure", value))
+                .map(|value| convert("thinkthen_failure", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6430,7 +5183,7 @@ pub(super) fn convert(
             let held = value.get("input_source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_input_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6442,13 +5195,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_session_input_source",
+                        "thinkthen_indexed_source",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| convert("thinkthen_session_input_source", value))
+                                    .map(|value| convert("thinkthen_indexed_source", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -6508,7 +5261,7 @@ pub(super) fn convert(
             let held = value.get("probabilities");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_probabilities", value))
+                .map(|value| convert("thinkthen_probability_distribution", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6518,7 +5271,7 @@ pub(super) fn convert(
             let held = value.get("question");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_question_document", value))
+                .map(|value| convert("thinkthen_question", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6565,7 +5318,7 @@ pub(super) fn convert(
             let held = value.get("reported_usage");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_reported_usage", value))
+                .map(|value| convert("thinkthen_reported_usage", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6598,7 +5351,7 @@ pub(super) fn convert(
             let held = value.get("threshold");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_threshold", value))
+                .map(|value| convert("thinkthen_threshold", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6615,7 +5368,7 @@ pub(super) fn convert(
             let held = value.get("usage");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_usage", value))
+                .map(|value| convert("thinkthen_token_usage", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6624,8 +5377,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_question_detail_value", value))
+                .map(|value| convert("thinkthen_answer_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6673,7 +5425,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_physical_source", value))
+                .map(|value| convert("thinkthen_source_location", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6682,43 +5434,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_entity_document" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("name");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("name", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_annotation_value_value_object_value" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("cause");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("cause", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("kind");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("kind", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_annotation_value_value" => {
+        "thinkthen_judgment_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<Vec<Option<String>>> = held
@@ -6752,7 +5468,7 @@ pub(super) fn convert(
             let held = Some(value);
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_value_value_object_value", value))
+                .map(|value| convert("thinkthen_failure", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6768,7 +5484,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_annotation_value" => {
+        "thinkthen_judgment" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("kind");
             let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
@@ -6779,8 +5495,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_value_value", value))
+                .map(|value| convert("thinkthen_judgment_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6789,7 +5504,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_observed_row_value_array_value_item" => {
+        "thinkthen_observed_member" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("either");
             let converted: Option<bool> = held.and_then(Value::as_bool);
@@ -6822,7 +5537,7 @@ pub(super) fn convert(
             let held = value.get("source");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_entity_document", value))
+                .map(|value| convert("thinkthen_relation_endpoint", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6832,7 +5547,7 @@ pub(super) fn convert(
             let held = value.get("target");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_entity_document", value))
+                .map(|value| convert("thinkthen_relation_endpoint", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6842,7 +5557,7 @@ pub(super) fn convert(
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_annotation_value", value))
+                .map(|value| convert("thinkthen_judgment", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -6851,92 +5566,7 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_recognition_edge_document" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = value.get("either");
-            let converted: Option<bool> = held.and_then(Value::as_bool);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("either", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("probability");
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("probability", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("relation");
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("relation", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("source");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_entity", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("source", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = value.get("target");
-            let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_entity", value))
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("target", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_observed_row_value_object_value_value" => {
-            let mut tuple = super::output::tuple(kind);
-            let held = Some(value);
-            let converted: Option<Vec<Option<String>>> = held
-                .and_then(Value::as_array)
-                .map(|values| {
-                    values
-                        .iter()
-                        .map(|value| Ok(Some(value).and_then(Value::as_str).map(str::to_owned)))
-                        .collect::<Result<Vec<_>, thinkthen::Error>>()
-                })
-                .transpose()?;
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("array_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<bool> = held.and_then(Value::as_bool);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("boolean_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<f64> = held.and_then(Value::as_f64);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("number_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            let held = Some(value);
-            let converted: Option<String> = held.and_then(Value::as_str).map(str::to_owned);
-            if let Some(converted) = converted {
-                tuple
-                    .set_by_name("string_value", converted)
-                    .map_err(|_| crate::call::defect("generated result field is unavailable"))?;
-            }
-            Ok(tuple)
-        }
-        "thinkthen_session_observed_row_value_object_value" => {
+        "thinkthen_observed_record" => {
             let mut tuple = super::output::tuple(kind);
             let held = value.get("entities");
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
@@ -7003,15 +5633,13 @@ pub(super) fn convert(
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_recognition_edge_document",
+                        "thinkthen_entity_edge",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| {
-                                        convert("thinkthen_recognition_edge_document", value)
-                                    })
+                                    .map(|value| convert("thinkthen_entity_edge", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -7025,13 +5653,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| {
-                    convert(
-                        "thinkthen_session_observed_row_value_object_value_value",
-                        value,
-                    )
-                })
+                .map(|value| convert("thinkthen_answer_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -7040,25 +5662,20 @@ pub(super) fn convert(
             }
             Ok(tuple)
         }
-        "thinkthen_session_observed_row_value" => {
+        "thinkthen_observed_value" => {
             let mut tuple = super::output::tuple(kind);
             let held = Some(value);
             let converted: Option<Array<'static, PgHeapTuple<'static, AllocatedByRust>>> = held
                 .and_then(Value::as_array)
                 .map(|values| {
                     crate::ffi::composite_array(
-                        "thinkthen_session_observed_row_value_array_value_item",
+                        "thinkthen_observed_member",
                         values
                             .iter()
                             .map(|value| {
                                 Some(value)
                                     .filter(|value| !value.is_null())
-                                    .map(|value| {
-                                        convert(
-                                            "thinkthen_session_observed_row_value_array_value_item",
-                                            value,
-                                        )
-                                    })
+                                    .map(|value| convert("thinkthen_observed_member", value))
                                     .transpose()
                             })
                             .collect::<Result<Vec<_>, thinkthen::Error>>()?,
@@ -7081,7 +5698,7 @@ pub(super) fn convert(
             let held = Some(value);
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
                 .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_observed_row_value_object_value", value))
+                .map(|value| convert("thinkthen_observed_record", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
@@ -7101,8 +5718,7 @@ pub(super) fn convert(
             }
             let held = value.get("value");
             let converted: Option<PgHeapTuple<'static, AllocatedByRust>> = held
-                .filter(|value| !value.is_null())
-                .map(|value| convert("thinkthen_session_observed_row_value", value))
+                .map(|value| convert("thinkthen_observed_value", value))
                 .transpose()?;
             if let Some(converted) = converted {
                 tuple
