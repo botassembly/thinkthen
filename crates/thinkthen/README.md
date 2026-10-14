@@ -20,17 +20,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .option(Team::Account, Some(Description::text("Logins and passwords.")?))?.build()?;
     for text in ["Please refund my order. It arrived broken.",
                  "Thanks for the quick help yesterday!", "I want to send this back."] {
-        let refund = engine.decide(&refund_question, text)?.into_value();
-        println!("{refund:?}");
+        let refund = engine.decide(&refund_question, text)?;
+        println!("{:?}", refund.value());
     }
     for text in ["Please refund the extra fee on my invoice.",
                  "My parcel went to the wrong address.", "I cannot reset my password."] {
-        let team = engine.choose(&team_question, text)?.into_value();
-        println!("{team:?}");
+        let team = engine.choose(&team_question, text)?;
+        println!("{:?}", team.value());
     }
     Ok(())
 }
 ```
+
+Each call exposes `value()`, `probability()`, typed `results()` and `facts()`.
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

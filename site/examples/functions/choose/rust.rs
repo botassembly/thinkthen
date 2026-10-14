@@ -20,5 +20,5 @@ let team_question = Question::choose::<Team>(question)?
     .option(Team::Account, Some(account))?
     .build()?;
 let parcel = "My parcel went to the wrong address.";
-let team = tt.choose(&team_question, parcel)?.into_value();
-assert_eq!(team, Some(Team::Shipping));
+let team = tt.choose(&team_question, parcel)?;
+assert_eq!(team.value(), &Some(Team::Shipping));
