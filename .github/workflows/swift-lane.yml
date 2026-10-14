@@ -76,14 +76,14 @@ jobs:
           tar -xzf "$RUNNER_TEMP/native/thinkthen-c-0.2.0-aarch64-apple-darwin.tar.gz" -C "$RUNNER_TEMP/arm64"
           sh libraries/swift/build-xcframework.sh "$RUNNER_TEMP/x64" "$RUNNER_TEMP/arm64" "$RUNNER_TEMP/framework"
           cp -R "$RUNNER_TEMP/framework/CThinkThen.xcframework" libraries/swift/
-          sdlc/scripts/release-pack --apple-wrappers x86_64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
+          sdlc/scripts/release-pack --apple-wrappers aarch64-apple-darwin "$RUNNER_TEMP/native" swift objective-c
       - name: Check Darwin admission and exclusive barriers
         run: python3 sdlc/scripts/build-admission-test.py
       - name: Check admission and the installed Swift package on ARM macOS
         run: |
           cargo build --locked --package conformance-backend --jobs 2
           export THINKTHEN_BACKEND_BIN="$PWD/target/debug/conformance-backend"
-          export THINKTHEN_ARTIFACT="$RUNNER_TEMP/native/thinkthen-swift-0.2.0-x86_64-apple-darwin.tar.gz"
+          export THINKTHEN_ARTIFACT="$RUNNER_TEMP/native/thinkthen-swift-0.2.0-aarch64-apple-darwin.tar.gz"
           python3 libraries/swift/Tests/fixtures/guard.py "$THINKTHEN_ARTIFACT"
           export THINKTHEN_COVERAGE_STAGE="$RUNNER_TEMP/swift-consumer"
           python3 - <<'PYTHON'
