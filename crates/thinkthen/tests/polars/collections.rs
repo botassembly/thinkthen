@@ -148,6 +148,11 @@ fn find_and_lazy_find_see_all_candidates_in_the_complete_collection() {
     assert_eq!(units[0]["evidence"], "strong");
     assert_eq!(units[1]["evidence"], "weak");
     assert_eq!(units[2]["evidence"], "strong");
+    assert!(
+        find_body["questions"]["q1"]["criteria"]
+            .get("none")
+            .is_some()
+    );
 }
 
 #[test]
