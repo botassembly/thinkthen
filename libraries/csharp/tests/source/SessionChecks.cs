@@ -223,7 +223,7 @@ static class SessionChecks
         string deepOriginal = "{\"text\":\"session-owned\",\"nested\":" + deepMeaning + "}";
         using var deepDocument = JsonDocument.Parse(deepOriginal, new JsonDocumentOptions { MaxDepth = int.MaxValue });
         var call = await engine.DecideAsync(deepQuestion!, new RequestInputJson { Value = deepDocument.RootElement }, new RequestOptions { Field = new[] { "/text" } });
-        if (call.Value != true) throw new Exception("normalized decision lost behind authored meaning");
+        if (call.Value.GetRawText() != deepMeaning) throw new Exception("authored decision meaning changed");
         var deepRow = call.Packets.OfType<SessionPacketDecideRow>().Single();
         if (deepRow.Value.Value.GetRawText() != deepMeaning || deepRow.Value.Input.Value.GetRawText() != deepOriginal) throw new Exception("deep meaning or original result changed");
         if (!call.Packets.Any(p => p is SessionPacketDecideRow) || call.Terminal.Facts.State != PresenceState.Value || call.Terminal.Failure.State != PresenceState.Missing) throw new Exception("owned row or terminal");

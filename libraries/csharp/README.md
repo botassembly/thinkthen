@@ -18,7 +18,7 @@ var call = await engine.DecideAsync(
     new RequestQuestionText { Text = "Does this answer the question?" },
     new RequestInputText { Text = "The supplied evidence." },
     cancellation: cancellationToken);
-Console.WriteLine(call.Value);
+Console.WriteLine(call.Value.ValueKind == System.Text.Json.JsonValueKind.Null ? "not sure" : call.Value.GetBoolean().ToString());
 ```
 
 The `examples/` folder contains a small installed sample for each function. Each sample reads its result’s `Value`. The recognize and relate samples build typed questions; the relate sample reads source and target names directly. Routine package checks replay the shipped source and count its sends.
