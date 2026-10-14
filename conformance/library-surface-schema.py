@@ -117,21 +117,26 @@ def references(value):
             yield from references(child)
 
 
-def properties(schema, name):
+def properties(schema, name, path=()):
     definitions = schema['$defs']
-    pending, seen, fields = [definitions[name]], set(), set()
+    pending, seen, fields = [(definitions[name], tuple(path))], set(), set()
     while pending:
-        source = pending.pop()
+        source, remaining = pending.pop()
         if not isinstance(source, dict):
             continue
-        fields.update(source.get('properties', {}))
+        if remaining:
+            child = source.get('properties', {}).get(remaining[0])
+            if child is not None:
+                pending.append((child, remaining[1:]))
+        else:
+            fields.update(source.get('properties', {}))
         for union in ('oneOf', 'anyOf', 'allOf'):
-            pending.extend(source.get(union, []))
+            pending.extend((child, remaining) for child in source.get(union, []))
         if '$ref' in source:
             key = source['$ref'].split('/')[-1]
-            if key not in seen:
-                seen.add(key)
-                pending.append(definitions[key])
+            if (key, remaining) not in seen:
+                seen.add((key, remaining))
+                pending.append((definitions[key], remaining))
     return fields
 
 

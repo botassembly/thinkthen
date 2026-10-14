@@ -339,10 +339,20 @@ def other(source, language):
     result = set()
     if language == 'r':
         result.update(Declaration('', name, 'export') for name in re.findall(r'(?m)^export\((\w+)\)', source))
-        for match in re.finditer(r'(?m)^(\w+)\s*(?:<-|=)\s*function\s*\(([^)]*)\)', source):
+        text = masked(re.sub(r'#[^\n]*', '', source))
+        for match in re.finditer(r'(?m)^([\w.]+)\s*(?:<-|=)\s*function\s*\(', text):
             result.add(Declaration('', match[1], 'call'))
-            for name in re.findall(r'(\w+)\s*(?:=|,|$)', match[2]):
-                result.add(Declaration(match[1], name, 'field'))
+            start, depth = match.end(), 1
+            for pos in range(start, len(text)):
+                char = text[pos]
+                depth += (char in '([{') - (char in ')]}')
+                if depth == 0 or char == ',' and depth == 1:
+                    formal = re.match(r'\s*([\w.]+)\s*(?:=|$)', text[start:pos])
+                    if formal and formal[1] != '...':
+                        result.add(Declaration(match[1], formal[1], 'field'))
+                    start = pos + 1
+                if depth == 0:
+                    break
     elif language == 'ruby':
         scopes = []
         private = set()
