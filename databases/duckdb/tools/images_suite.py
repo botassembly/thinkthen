@@ -37,7 +37,7 @@ def stored_images_keep_order_duplicates_native_answers_and_zero_send_replay():
                      f"SET thinkthen_record = {literal(folder + '/record')}", *[
             f"SELECT thinkthen_{verb}_images({literal(question)}, {LIST}, 'Compare originals.')"
             for verb, question in ASK.items()],
-            f"SELECT d.answers[1].choose, d.results[1].choose.answer.probabilities, typeof(d) FROM (SELECT thinkthen_details_images({literal(ASK['choose'])}, {LIST}, 'Compare originals.') AS d)"], backend.base,
+            f"SELECT d.value, d.result.answer.probabilities, typeof(d) FROM (SELECT thinkthen_choose_details({literal(ASK['choose'])}, [{{'text':'Compare originals.','images':{LIST}}}])[1] AS d)"], backend.base,
             extra={'THINKTHEN_CACHE': folder + '/cache', 'LIQUIDAI_API_KEY':'fake-sql-image-key', 'THINKTHEN_BACKEND':'liquid'})
         expect([rows(result) for result in first[-4:-1]], [[[True]], [['red']], [[0.8]]], 'three image scalar values')
         answer, probabilities, datatype = rows(first[-1])[0]
@@ -148,7 +148,7 @@ def image_null_bad_media_limits_implicit_values_and_file_permissions_never_send(
                    "SELECT thinkthen_decide_images('Is red visible?', [NULL])",
                    f"SELECT thinkthen_decide_images('Is red visible?', [{','.join([value]*9)}])",
                    "SELECT thinkthen_decide_images('Is red visible?', [{media:'image/png',data:'private-image-evidence'::BLOB,file:NULL}])",
-                   f"SELECT thinkthen_details_images('{{\"tag\":\"Which?\",\"labels\":[\"red\"]}}', {good})",
+                   f"SELECT thinkthen_tag_details('{{\"tag\":\"Which?\",\"labels\":[\"red\"]}}', [{{'images':{good}}}])",
                    f"SELECT thinkthen_decide_images('Is red visible?', from_hex('{red}'))"]
         got = run([*statements, *invalid, f"SELECT (thinkthen_image_file({literal(str(FIXTURE/'red.png'))})).file",
                    'SET enable_external_access = false', f"SELECT thinkthen_image_file({literal(str(FIXTURE/'red.png'))})"], backend.base)

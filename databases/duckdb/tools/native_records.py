@@ -1,135 +1,66 @@
-"""Native SQL collection checks shared by matching installed host runners."""
-from pathlib import Path
-import tempfile
-
+"""Details retain typed row values, ordered originals and counted sends."""
 from harness import Backend, expect, rows
+
+
+def table(verb, question, records, reading='NULL', settings='NULL'):
+    return f'(SELECT detail.* FROM (SELECT UNNEST(thinkthen_{verb}_details({question},{records},reading := {reading},settings := {settings})) AS detail))'
 
 
 def check(run):
     with Backend() as backend:
         got = run([
             "SET thinkthen_model='jev-1.13.0'",
-            "SELECT ordinal, value, result.value, facts.records, facts.requests_sent, failure.kind "
-            "FROM thinkthen_decide({'decide':'Refund?','true':{'meaning':'refund'},"
-            "'false':{'meaning':'other'}}, [{'text':'alpha'},{'text':'beta'}], "
-            "reading := {'context':'policy','batch':2,'attempts':true}) ORDER BY ordinal",
-            "SELECT ordinal, value, facts.requests_sent, failure.kind FROM "
-            "thinkthen_choose({'choose':'Which team?','options':['billing','shipping']}, "
-            "[{'text':'alpha'}])",
-            "SELECT failure.kind, facts.requests_sent FROM thinkthen_decide('Refund?', "
-            "[{'text':'alpha'}], reading := {'deadline_ms':0})",
-            "SELECT count(*) FROM thinkthen_decide(NULL, [{'text':'alpha'}], "
-            "reading := {'deadline_ms':'bad'})",
+            "SELECT ordinal,value,probability,result.value,facts.records,facts.requests_sent,failure.kind FROM " +
+            table('decide', "{'decide':'Refund?','true':{'meaning':'refund'},'false':{'meaning':'other'}}",
+                  "[{'text':'alpha'},{'text':'beta'},{'text':'alpha'}]", "{'batch':2,'attempts':true}") + ' ORDER BY ordinal',
+            "SELECT d.value,d.probability,d.result.value,d.facts.requests_sent FROM "
+            "(SELECT thinkthen_choose_details('Which team?','alpha',['billing','shipping']) AS d)",
+            "SELECT thinkthen_decide_details(NULL,'alpha',settings := 'bad') IS NULL",
+            "SELECT thinkthen_decide_details('Refund?',NULL,settings := 'bad') IS NULL",
+            "SELECT thinkthen_decide_details('Refund?','alpha',settings := {'deadline_ms':0})",
         ], backend.base())
-        expect(rows(got[1]), [[0, True, '{"meaning":"refund"}', 2, 1, None],
-                              [1, True, '{"meaning":"refund"}', 2, 1, None]],
-               "plain native answers retain distinct authored complete values")
-        expect(rows(got[2]), [[0, 'billing', 1, None]], "native collection choice")
-        expect(rows(got[3]), [['deadline', 0]], "typed deadline failure retains zero sends")
-        expect(rows(got[4]), [[0]], "required NULL shields invalid reading")
-        expect(backend.count(), 2, "only the two admitted calls send")
-    helpers(run)
-    sources(run)
-    rich_overloads(run)
-    null_members(run)
-    details_columns(run)
+        expect(rows(got[1]), [[0, True, 0.9, '{"meaning":"refund"}',3,1,None],
+                              [1, True, 0.9, '{"meaning":"refund"}',3,1,None],
+                              [2, True, 0.9, '{"meaning":"refund"}',3,1,None]], 'ordered typed decision rows')
+        expect(rows(got[2]), [['billing',0.9,'billing',1]], 'ordinary typed choice')
+        expect(rows(got[3]), [[True]], 'required question NULL shields settings')
+        expect(rows(got[4]), [[True]], 'required input NULL shields settings')
+        expect('error' in got[5], True, 'deadline raises')
+        expect(backend.count(), 2, 'two admitted calls send; deadline and NULLs send nothing')
+    ordinary_forms(run)
+    removed(run)
 
 
-def helpers(run):
+
+def ordinary_forms(run):
+    from native_queries import value
+    question_set = "{'version':1,'questions':{'refund':{'decide':'Refund?'}}}"
+    query = value("SELECT 1 AS id, 'Ada' AS name UNION ALL SELECT 2, 'Bob'")
     with Backend() as backend:
         got = run([
-            "SET thinkthen_model='jev-1.13.0'",
-            "SELECT ordinal,value,result.source.file,result.source.first_line,result.source.last_line "
-            "FROM thinkthen_decide('Refund?', [thinkthen_record(text := 'alpha', "
-            "source := thinkthen_location('example.txt',2,3))], "
-            "reading := thinkthen_reading(batch := 1,stage_context := NULL))",
-            "SELECT failure.kind,facts.requests_sent FROM thinkthen_filter('Refund?', "
-            "[thinkthen_record(text := 'alpha')], reading := thinkthen_reading(files_only := true))",
-            "SELECT value,result.source.file FROM thinkthen_filter('Refund?', "
-            "[thinkthen_record(text := 'alpha',source := thinkthen_location('example.txt',2,3))], "
-            "reading := thinkthen_reading(files_only := true))",
+            "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_score_details('Strength?','alpha',['weak','strong']) AS d)",
+            "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_tag_details('Topics?','alpha',['billing','shipping']) AS d)",
+            "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_filter_details('Refund?','alpha') AS d)",
+            "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_find_details('Find?',['alpha','beta']) AS d)",
+            "SELECT d.ordinal,d.value,d.probability,d.failure.kind FROM (SELECT UNNEST(thinkthen_rank_details('Refund?',{'a':'alpha','b':'beta'})) AS d)",
+            "SELECT d.value[1].value.boolean_value,d.probability,d.failure.kind FROM (SELECT thinkthen_annotate_details("+question_set+",'alpha') AS d)",
+            "SELECT d.value,d.probability,d.failure.kind FROM (SELECT thinkthen_recognize_details('Ada',['person']) AS d)",
+            f"SELECT d.value.source.name,d.value.target.name,d.probability,d.failure.kind FROM (SELECT UNNEST(thinkthen_relate_details({query},['near'])) AS d)",
+            f"SELECT * FROM thinkthen_relate({query},['near'])",
+            "SELECT thinkthen_filter('Refund?','alpha')",
         ], backend.base())
-        expect(rows(got[1]), [[0, True, 'example.txt', 2, 3]], "located native record")
-        expect(rows(got[2]), [['usage', None]], "unlocated refusal has no invented facts")
-        expect(rows(got[3]), [[['"alpha"'], 'example.txt']], "files_only accepts actual located input")
-        expect(backend.count(), 1, "location preserves cache identity; refusal sends nothing")
+        wanted = [[[0.1,None,None]],[[['billing','shipping'],None,None]], [['"alpha"',0.9,None]],
+                  [['"alpha"',0.9,None]],[[0,1,0.9,None],[1,2,0.9,None]],[[True,None,None]],
+                  [[[],[],None]],[['1','2',0.9,None],['2','1',0.9,None]],
+                  [['near','1','2',0.9,False],['near','2','1',0.9,False]],[['alpha']]]
+        expect([rows(item) for item in got], wanted, 'ordinary typed details across the function family')
+        expect(backend.count(), 7, 'ordinary details share actual cache identity with plain calls')
 
-
-def sources(run):
-    with tempfile.TemporaryDirectory(prefix='duckdb-native-source-') as directory, Backend() as backend:
-        path = Path(directory) / 'records.txt'
-        path.write_text('alpha\nbeta\n')
-        quoted = "'" + str(path).replace("'", "''") + "'"
-        got = run([
-            "SET thinkthen_model='jev-1.13.0'",
-            "SELECT ordinal,value,result.source.first_line,result.source.last_line,"
-            "facts.records,facts.requests_sent,failure.kind FROM thinkthen_decide('Refund?',"
-            f"thinkthen_source({quoted}),reading := thinkthen_reading(batch := 2)) ORDER BY ordinal",
-            "SELECT failure.kind,facts.requests_sent FROM thinkthen_decide('Other?',"
-            f"thinkthen_source({quoted}),reading := thinkthen_reading(deadline_ms := 0))",
-        ], backend.base())
-        expect(rows(got[1]), [[0, True, 1, 1, 2, 1, None], [1, True, 2, 2, 2, 1, None]],
-               "native source readings retain physical coordinates and final facts")
-        expect(rows(got[2]), [['deadline', None]], "unstarted source deadline has no invented facts")
-        expect(backend.count(), 1, "spent source deadline sends nothing")
-
-
-def rich_overloads(run):
-    """Only an explicit named reading selects the two rich overloads."""
-    question = "{'version':1,'relate':{'relations':[{'name':'near','source':'person','target':'person'}]}}"
-    inputs = "[thinkthen_record(json := {'name':'Ada','kind':'person'}),thinkthen_record(json := {'name':'Bob','kind':'person'})]"
+def removed(run):
     with Backend() as backend:
-        calls = [("rank", "{'decide':'Refund?'}", "[thinkthen_record(text := 'alpha')]"),
-                 ("relate", question, inputs)]
-        for verb, authored, records in calls:
-            got = run([
-                f"SELECT failure.kind FROM thinkthen_{verb}(question := {authored}, records := {records}, reading := NULL)",
-                f"SELECT failure.kind FROM thinkthen_{verb}(question := {authored}, records := {records}, reading := {{'deadline_ms':'bad'}})",
-                f"SELECT * FROM thinkthen_{verb}(question := {authored}, records := {records})",
-                f"SELECT count(*) FROM thinkthen_{verb}(question := NULL, records := {records}, reading := {{'deadline_ms':'bad'}})",
-            ], backend.base())
-            expect(rows(got[0]), [[None]], "explicit NULL reading executes the rich call")
-            expect(rows(got[1]), [['usage']], "invalid reading refuses")
-            expect('error' in got[2], True, "missing reading does not silently choose a rich call")
-            expect(rows(got[3]), [[0]], "required NULL masks invalid reading")
-        expect(backend.count(), 2, "only explicit NULL reading calls send")
-
-
-def null_members(run):
-    """Authored JSON null remains present in ancillary native record members."""
-    recognize = "{'version':1,'recognize':{'kinds':{'person':'A person name.'}}}"
-    cases = [("decide", "'Refund?'", "context"),
-             ("choose", "{'choose':'Team?','options':['billing','shipping']}", "options"),
-             ("recognize", recognize, "examples"),
-             ("recognize", recognize, "seed_spans")]
-    with Backend() as backend:
-        got = run([
-            f"SELECT failure.kind,facts.requests_sent FROM thinkthen_{verb}({question}, "
-            f"[thinkthen_record(text := 'Ada', {member} := 'null'::JSON)])"
-            for verb, question, member in cases
-        ], backend.base())
-        expect([rows(item) for item in got], [[['usage', None]]] * len(cases),
-               "authored null ancillary members refuse without invented facts")
-        expect(backend.count(), 0, "authored null refuses before sends")
-
-
-def details_columns(run):
-    """Ordinary details reuse native receipts and one packed canonical call."""
-    with Backend() as backend:
-        got = run([
-            "SELECT d.answers[1].decide, d.results[1].decide.input, "
-            "d.results[1].decide.answer.probability,d.facts.records,d.facts.requests_sent, "
-            "d.observations[1].detail.value.boolean_value,d.observations[2].value.kind, "
-            "d.observations[2].value.value.object_value.value.boolean_value "
-            "FROM (SELECT thinkthen_details('Refund?',x,batch := 2) AS d, i "
-            "FROM (VALUES (0,'alpha'),(1,'beta'),(2,'alpha')) v(i,x)) ORDER BY i",
-            "SELECT d.failure.kind,d.facts.requests_sent FROM "
-            "(SELECT thinkthen_details('Refund?','delta',deadline_ms := 0) AS d)",
-            "SELECT thinkthen_details(NULL,'delta',settings := 'not JSON') IS NULL",
-        ], backend.base())
-        expect(rows(got[0]), [[True,'"alpha"',0.9,2,1,True,'judgment',True],
-                              [True,'"beta"',0.9,2,1,True,'judgment',True],
-                              [True,'"alpha"',0.9,2,1,True,'judgment',True]], "typed details map native originals and owning facts")
-        expect(rows(got[1]), [['deadline',0]], "typed details retain started zero-send facts")
-        expect(rows(got[2]), [[True]], "details required NULL shields settings")
-        expect(backend.count(), 1, "packed distinct details originals send once")
+        names = ['thinkthen_details','thinkthen_try_details','thinkthen_details_images']
+        names += [f'thinkthen_{verb}_complete' for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')]
+        names += [f'thinkthen_native_records_{verb}' for verb in ('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')]
+        got = run([f"SELECT {name}('question','input')" for name in names], backend.base())
+        expect(all('does not exist' in item.get('error','') for item in got), True, 'retired names are absent')
+        expect(backend.count(), 0, 'retired functions send nothing')

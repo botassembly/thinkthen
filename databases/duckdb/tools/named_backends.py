@@ -24,10 +24,10 @@ def named_aliases_pair_provider_keys_and_paths():
             env = child_env(backend.base(),Path(folder),{row["key"]:marker})
             configuration(env,{"local-"+row["name"]:alias(row,backend.base("arm/full/capture"))})
             got = execute([f"SET thinkthen_backend = 'local-{row['name']}'", "SET thinkthen_cache = 'off'",
-                           f"SELECT thinkthen_details('{QUESTION}', 'refund')"],env)
+                           f"SELECT thinkthen_decide_details('{QUESTION}', 'refund')"],env)
             receipt = rows(got[-1])[0][0]
             detail = native_reading(receipt)
-            expect(receipt["answers"][0], True, row["name"])
+            expect(receipt["value"], True, row["name"])
             assert marker not in json.dumps(got)
             assert_sent(backend,{**row,"form":"both" if row["form"] == "both" else "authored"},marker)
 
@@ -42,10 +42,10 @@ def canonical_builtin_replay_pins_url_model_path_and_form_without_sends():
                 replay = root / "replay"
                 canonical_replay(replay,row)
                 got = execute([f"SET thinkthen_backend = '{row['name']}'", "SET thinkthen_cache = 'off'",
-                               f"SET thinkthen_replay = '{replay}'", f"SELECT thinkthen_details('{QUESTION}', 'refund')"],env)
+                               f"SET thinkthen_replay = '{replay}'", f"SELECT thinkthen_decide_details('{QUESTION}', 'refund')"],env)
                 receipt = rows(got[-1])[0][0]
                 detail = native_reading(receipt)
-                expect((receipt["answers"][0],detail["meta"]["model"],detail["meta"]["url"]),(True,row["model"],row["url"]),row["name"])
+                expect((receipt["value"],detail["meta"]["model"],detail["meta"]["url"]),(True,row["model"],row["url"]),row["name"])
                 expect(backend.count(),0,"canonical replay sends nothing")
 
 
@@ -56,7 +56,7 @@ def session_backend_isolation_reset_and_database_text_coercion():
         base = backend.base("arm/full/capture")
         configuration(env,{"one":{"url":base,"key_env":"ONE_KEY","model":"one"},
                            "two":{"url":base,"key_env":"TWO_KEY","model":"two","path":"decisions"}})
-        query = "SELECT thinkthen_details('attention?', 'refund')"
+        query = "SELECT thinkthen_decide_details('attention?', 'refund')"
         got = execute(["SET thinkthen_cache = 'off'",query,
                        ["B","SET thinkthen_cache = 'off'"],["B","SET thinkthen_backend = 'two'"],["B",query],
                        query,["B","RESET thinkthen_backend"],["B",query],

@@ -94,9 +94,10 @@ def digest(url: str, request: str) -> str:
 
 
 def single(case: dict, base: str) -> list:
-    """decide, choose, tag, and score: the whole line `thinkthen_details` returns."""
+    """Atomic details expose the native complete result without transport JSON."""
     question = quoted(json.dumps(case["question"]))
-    got = run([f"SELECT thinkthen_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
+    verb = next(name for name in ("decide","choose","tag","score") if name in case["question"])
+    got = run([f"SELECT thinkthen_{verb}_details({question}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=BATCH_ONE)
     receipts = [line for (line,) in rows(got[0])]
     readings = [native_reading(receipt) for receipt in receipts]
     answer_fields = []
@@ -105,7 +106,7 @@ def single(case: dict, base: str) -> list:
         if 'probabilities' in answer:
             answer['probabilities'] = {entry['name']: entry['value'] for entry in answer['probabilities']}
         answer_fields.append(answer)
-    return [{"bare": receipt["answers"][0],
+    return [{"bare": receipt["value"],
              "answer": answer, "url": reading['meta']['url']} |
             {name: reading['meta'].get(name) for name in FIELDS}
             for receipt, reading, answer in zip(receipts, readings, answer_fields)]

@@ -17,21 +17,21 @@ def portable_batch_identity() -> None:
     assert fixture["schema"] == "thinkthen.portable-batch-records/1"
     quote = lambda value: "'" + value.replace("'", "''") + "'"
     values = ",".join(f"({index},{quote(value)})" for index, value in enumerate(fixture["texts"]))
-    query = (f"SELECT thinkthen_try_details({quote(fixture['question'])}, x) "
+    query = (f"SELECT thinkthen_decide_details({quote(fixture['question'])}, x) "
              f"FROM (VALUES {values}) t(i,x) ORDER BY i")
     with Backend() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = 'max'", query],
                   backend.base("arm/full/capture"))
-        answers = [json.loads(value) for value, in rows(got[2])]
-        expect([answer["status"] for answer in answers], ["answered"] * 5, "five ordered SQL answers")
-        expect([answer["details"]["value"] for answer in answers], [True] * 5, "five decide values")
+        answers = [value for value, in rows(got[2])]
+        expect([answer["failure"] for answer in answers], [None] * 5, "five ordered SQL answers")
+        expect([answer["result"]["value"] for answer in answers], [True] * 5, "five decide values")
         # ADR 0111 drops the content cut, so the five texts ride one request.
         expect(backend.count(), 1, "one real Max request")
         captured = backend.capture()
         one_portable_request(captured)
         address = backend.base("arm/full/capture") + "/systemone"
         keys = question_keys(address, captured[0])
-        expect([answer["details"]["meta"]["requests"] for answer in answers],
+        expect([answer["result"]["meta"]["requests"] for answer in answers],
                [[key] for key in keys], "each row's own question key")
         fixed = [hashlib.sha256(f"systemone\n{fixture['url']}\n{body}".encode()).hexdigest() for body in bodies]
         expect(fixed, fixture["digests"], "independent fixed-address identities")

@@ -136,6 +136,9 @@ bool CompleteFileCall(ClientContext &context,const string &verb,const string &qu
         if (!closed) { finish(nullptr,0); }
     } catch (const Exception &error) {
         if (ErrorData(error).Type()==ExceptionType::INTERRUPT || QueryInterrupted(context)) { throw; }
+        const auto message = ErrorData(error).RawMessage();
+        if (message.rfind("thinkthen cancelled: ", 0) == 0 || message.rfind("thinkthen deadline: ", 0) == 0 ||
+            message.rfind("thinkthen defect: ", 0) == 0) { throw; }
         finish(nullptr,1);
     }
     while (!ended) { drain(); if (!ended) { pause(); } }

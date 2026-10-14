@@ -147,6 +147,13 @@ ThinkThenReply thinkthen_cpp_relate_rows(const uint8_t *rule, size_t rule_len,
                                         const ThinkThenText *kinds, size_t count, int64_t deadline_ms,
                                         const uint8_t *call_settings, size_t call_settings_len,
                                         ThinkThenSettings settings, ThinkThenStop stop);
+ThinkThenReply thinkthen_cpp_relate_details_rows(const uint8_t *rule, size_t rule_len,
+                                        const ThinkThenText *members, size_t member_count,
+                                        int32_t list, int32_t from_file,
+                                        const ThinkThenText *ids, const ThinkThenText *names,
+                                        const ThinkThenText *kinds, size_t count, int64_t deadline_ms,
+                                        const uint8_t *call_settings, size_t call_settings_len,
+                                        ThinkThenSettings settings, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_relate_plan(const uint8_t *plan, size_t len, uint64_t holding);
 }
 

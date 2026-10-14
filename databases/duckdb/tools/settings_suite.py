@@ -37,7 +37,7 @@ def session_batch_keeps_digit_grammar_and_exact_refusal():
     with Backend() as backend:
         for value in ('+1', '0', '', '-1', '1.0', ' 1', '999999999999999999999999999999999999999'):
             got = run([f"SET thinkthen_batch = '{value}'", ASK,
-                       "SELECT thinkthen_details('Is it a refund?', 'refund now')"], backend.base())
+                       "SELECT thinkthen_decide_details('Is it a refund?', 'refund now')"], backend.base())
             expect([said(result) for result in got[1:]], [error, error], 'retained session batch refusal')
         expect(backend.count(), 0, 'invalid session batches send nothing')
     for value, count in (('max', 1), ('1', 2), ('01', 2)):
@@ -187,7 +187,7 @@ def saved_calibration_details_keep_the_shared_digest_and_warning():
     profile = json.dumps(shared["runtime_profile"], separators=(",", ":"))
     with Backend() as backend:
         got = run([f"SET thinkthen_profile = {literal(profile)}",
-                   f"SELECT thinkthen_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
+                   f"SELECT thinkthen_decide_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
         details = native_reading(rows(got[1])[0][0])
         expect(details["meta"]["question_sha256"], shared["question_sha256"], "saved digest")
         expect(details["meta"]["profile_warning"], shared["warning"], "profile mismatch")
@@ -467,7 +467,7 @@ def cache_folder_shape():
 @case
 def settings_keep_the_environments_seeding():
     with Backend() as backend, tempfile.TemporaryDirectory() as cache:
-        details = "SELECT (thinkthen_details('Is it a refund?', 'refund now')).results[1].decide.meta.cached"
+        details = "SELECT (thinkthen_decide_details('Is it a refund?', 'refund now')).result.meta.cached"
         first = run([details], backend.base(), extra={"THINKTHEN_CACHE": cache})
         expect(rows(first[0]), [[False]], "the first run asks")
         sent = backend.count()

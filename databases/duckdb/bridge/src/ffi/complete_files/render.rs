@@ -1,109 +1,127 @@
-//! SQL transport retains only completed output, never producer descriptors.
-use crate::complete_native::{defect, observations};
+//! Recovered source rows keep the existing native observer and joined facts.
+use crate::complete_native::{defect, observations, put};
 use serde_json::{Value, json};
-use thinkthen::{Error, RequestSessionResult as Packet, RequestSessionRow as Row};
+use thinkthen::{Error, RequestRecoveringResult as Packet, RequestSessionResult};
 
 pub(super) fn packet(packet: Packet) -> Result<Value, Error> {
-    let mut value: Value = serde_json::from_str(&packet.to_json()?).map_err(|_| defect())?;
-    match &packet {
+    match packet {
         Packet::Row(row) => {
-            let ordinal = match row {
-                Row::Decision(v) => v.ordinal(),
-                Row::Choice(v) => v.ordinal(),
-                Row::Tags(v) => v.ordinal(),
-                Row::Score(v) => v.ordinal(),
-                Row::Filter(v) => v.ordinal(),
-                Row::Annotation(v) => v.ordinal(),
+            let mut value = serde_json::to_value(&row).map_err(|_| defect())?;
+            put(&mut value, "kind", json!("row"))?;
+            if let Ok(result) = row.outcome() {
+                put(
+                    &mut value,
+                    "answers",
+                    super::super::native_records::plain_values(result)?,
+                )?;
+            }
+            Ok(value)
+        }
+        Packet::Observation {
+            function,
+            value: event,
+        } => {
+            let ordinary = RequestSessionResult::Observation {
+                function,
+                value: event,
             };
-            crate::complete_native::put(&mut value, "ordinals", json!([ordinal]))?;
-            let answer = match row {
-                Row::Decision(v) => {
-                    super::super::native_records::decision_value(v.result().value())
-                }
-                Row::Choice(v) => json!(v.result().value()),
-                Row::Tags(v) => json!(v.result().value()),
-                Row::Score(v) => json!(v.result().value()),
-                Row::Filter(v) => super::super::native_records::filter_value(v)?,
-                Row::Annotation(_) => Value::Null,
-            };
-            crate::complete_native::put(&mut value, "answers", json!([answer]))?;
+            let mut value: Value =
+                serde_json::from_str(&ordinary.to_json()?).map_err(|_| defect())?;
+            if let RequestSessionResult::Observation { value: event, .. } = ordinary {
+                super::super::native_records::observations::supplement(
+                    value.get_mut("value").ok_or_else(defect)?,
+                    observations::owned_event(&event)?,
+                )?;
+            }
+            Ok(value)
         }
-        Packet::Aggregate(result) => {
-            super::super::complete::supplement(&mut value, result)?;
-            crate::complete_native::put(
-                &mut value,
-                "answers",
-                super::super::native_records::plain_values(result)?,
-            )?;
+        Packet::Terminal(mut terminal) => {
+            if let Some(error) = terminal.error.as_ref()
+                && matches!(
+                    error.kind(),
+                    thinkthen::ErrorKind::Cancelled
+                        | thinkthen::ErrorKind::Deadline
+                        | thinkthen::ErrorKind::Defect
+                )
+            {
+                return Err(terminal.error.take().ok_or_else(defect)?);
+            }
+            serde_json::from_str(&RequestSessionResult::Terminal(terminal).to_json()?)
+                .map_err(|_| defect())
         }
-        Packet::Observation { value: event, .. } => {
-            super::super::native_records::observations::supplement(
-                value.get_mut("value").ok_or_else(defect)?,
-                observations::owned_event(event)?,
-            )?
-        }
-        Packet::Terminal(_) => {}
     }
-    Ok(value)
+}
+
+fn project_packet(
+    function: thinkthen::RequestFunction,
+    packet: &Value,
+    facts: &Value,
+    observations: &[Value],
+) -> Result<Vec<Value>, Error> {
+    let index = packet.get("index").cloned().ok_or_else(defect)?;
+    let events = observations
+        .iter()
+        .filter(|event| event.get("index").is_none() || event.get("index") == Some(&index))
+        .cloned()
+        .collect::<Vec<_>>();
+    let native = match packet.get("failure") {
+        Some(failure) => json!({"error":failure,"facts":facts}),
+        None => json!({"value":packet.get("results").ok_or_else(defect)?,"facts":facts}),
+    };
+    let carrier = json!({"native":native,"observations":events});
+    let mut completed = thinkthen_host::sql_request::project_carrier(function, &carrier);
+    if function == thinkthen::RequestFunction::Decide
+        && let Some(answers) = packet.get("answers").and_then(Value::as_array)
+    {
+        for (row, answer) in completed.iter_mut().zip(answers) {
+            put(row, "value", answer.clone())?;
+        }
+    }
+    if packet.get("failure").is_some() {
+        for row in &mut completed {
+            put(row, "ordinal", index.clone())?;
+        }
+    }
+    Ok(completed)
 }
 
 pub(super) fn finish(packets: &str, verb: &str) -> Result<Value, Error> {
     let packets: Vec<Value> = serde_json::from_str(packets).map_err(|_| defect())?;
-    let mut rows = Vec::new();
+    let function = verb
+        .parse::<thinkthen::RequestFunction>()
+        .map_err(|_| defect())?;
+    let mut recovered = Vec::new();
     let mut observations = Vec::new();
-    let mut ordinals = Vec::new();
-    let mut answers = Vec::new();
-    let mut aggregate = None;
-    let mut selection = None;
     let mut terminal = None;
     for packet in packets {
         match packet.get("kind").and_then(Value::as_str) {
-            Some("row") => rows.push(packet.get("value").ok_or_else(defect)?.clone()),
-            Some("aggregate") if verb == "recognize" => rows.extend(
-                packet
-                    .get("value")
-                    .and_then(Value::as_array)
-                    .ok_or_else(defect)?
-                    .iter()
-                    .cloned(),
-            ),
-            Some("aggregate") => aggregate = Some(packet.get("value").ok_or_else(defect)?.clone()),
+            Some("row") => recovered.push(packet),
             Some("observation") => {
                 observations.push(packet.get("value").ok_or_else(defect)?.clone())
             }
-            Some("terminal") => terminal = Some(packet.clone()),
+            Some("terminal") => terminal = Some(packet),
             _ => return Err(defect()),
-        }
-        if let Some(values) = packet.get("ordinals").and_then(Value::as_array) {
-            ordinals.extend(values.iter().cloned());
-        }
-        if let Some(values) = packet.get("answers").and_then(Value::as_array) {
-            answers.extend(values.iter().cloned());
-        }
-        if packet.get("selection").is_some() {
-            selection = Some(packet.get("selection").ok_or_else(defect)?.clone());
         }
     }
     let terminal = terminal.ok_or_else(defect)?;
-    let results = aggregate.unwrap_or(Value::Array(rows));
-    let mut native = if let Some(failure) = terminal.get("failure") {
-        let mut failure = failure.clone();
-        if terminal.get("facts").is_some() || results.as_array().is_none_or(|rows| !rows.is_empty())
-        {
-            crate::complete_native::put(&mut failure, "completed", results)?;
-        }
-        failure
-    } else {
-        json!({"value":results,"facts":terminal.get("facts").ok_or_else(defect)?})
-    };
-    if native.get("value").is_some() || native.get("completed").is_some() {
-        if let Some(selection) = selection {
-            crate::complete_native::put(&mut native, "selection", selection)?;
-        } else if !matches!(verb, "find" | "relate") {
-            crate::complete_native::put(&mut native, "ordinals", Value::Array(ordinals))?;
-        }
+    let facts = terminal
+        .get("facts")
+        .or_else(|| terminal.pointer("/failure/facts"))
+        .cloned()
+        .unwrap_or(Value::Null);
+    let mut rows = Vec::new();
+    for packet in recovered {
+        rows.extend(project_packet(function, &packet, &facts, &observations)?);
     }
-    let mut carrier = crate::complete_native::carrier(native, Value::Array(observations));
-    crate::complete_native::put(&mut carrier, "answers", Value::Array(answers))?;
-    Ok(carrier)
+    let native = terminal
+        .get("failure")
+        .cloned()
+        .unwrap_or_else(|| json!({"facts":facts}));
+    if terminal.get("failure").is_some() {
+        let carrier = json!({"native":native,"observations":observations});
+        rows.extend(thinkthen_host::sql_request::project_carrier(
+            function, &carrier,
+        ));
+    }
+    Ok(json!({"native":native,"rows":rows,"observations":observations}))
 }

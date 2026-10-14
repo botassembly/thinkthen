@@ -1,6 +1,5 @@
 #include "descriptions.hpp"
 #include "portable.hpp"
-#include "receipt.hpp"
 #include "json_result.hpp"
 #include "bridge.hpp"
 #include "listed_result.hpp"
@@ -367,18 +366,13 @@ void OriginalSettings(DataChunk &args, ExpressionState &, Vector &result) {
 	}
 }
 
-void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose, bool legacy_text = false) {
+void RegisterMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	auto parser = ThinkThenMacroParser();
 	parser.ParseQuery(sql);
 	auto &statement = parser.statements.at(0)->Cast<CreateStatement>();
 	ThinkThenMacroSchema(*statement.info);
 	statement.info->internal = true;
 	auto &info = statement.info->Cast<CreateMacroInfo>();
-    if (legacy_text) {
-        auto &legacy = *info.macros.at(0);
-        legacy.types.resize(legacy.parameters.size(), LogicalType::UNKNOWN);
-        legacy.types.at(0) = LogicalType::VARCHAR;
-    }
 	FunctionDescription description;
 	description.description = purpose;
 	info.descriptions.push_back(std::move(description));
@@ -398,10 +392,6 @@ string ManyRows(const string &question, int32_t kind) {
 
 void RegisterPortableMacro(ExtensionLoader &loader, const string &sql, const string &purpose) {
 	RegisterMacro(loader, sql, purpose);
-}
-
-void RegisterLegacyTextOverloads(ExtensionLoader &loader, const string &sql, const string &purpose) {
-    RegisterMacro(loader, sql, purpose, true);
 }
 
 string PortableOptionParameters() {
@@ -467,6 +457,9 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 	RegisterMacro(loader, "CREATE MACRO thinkthen_decide(question, input, settings := NULL, threshold := NULL" + PortableOptionParameters() + ") "
 	                      "AS thinkthen_native_decide(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
 	                      "CAST(threshold AS VARCHAR), typeof(settings))", purpose);
+    RegisterMacro(loader, "CREATE MACRO thinkthen_filter(question, input, settings := NULL, threshold := NULL" + PortableOptionParameters() + ") "
+        "AS CASE WHEN thinkthen_native_decide(" + PortableJSONArgument("question") + ", input, " + PortableOptions() + ", "
+        "CAST(threshold AS VARCHAR), typeof(settings)) THEN input ELSE NULL END", "Return the original input when the yes-or-no reading passes.");
 	ScalarFunction many("thinkthen_native_many",
 	                    {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::INTEGER},
 	                    LogicalType::JSON(), Many, ThinkThenBindScalar<Bind>);

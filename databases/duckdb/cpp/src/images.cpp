@@ -4,7 +4,6 @@
 #include "bridge.hpp"
 #include "files_manifest.hpp"
 #include "portable.hpp"
-#include "receipt.hpp"
 #include "native_input.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
@@ -181,7 +180,7 @@ void RegisterImages(ExtensionLoader &loader) {
 		const string name = string("thinkthen_native_") + verb + "_images";
 		const string purpose = string(verb) == "decide" ? "Judge a yes-or-no question using image evidence and optional text." : string(verb) == "choose" ? "Choose an option using image evidence and optional text." : string(verb) == "score" ? "Score image evidence and optional text against ordered levels." : "Return typed native judgment receipts for image evidence and optional text.";
 		Register(loader, name, {LogicalType::VARCHAR, LogicalType::LIST(ImageType()), LogicalType::VARCHAR, LogicalType::VARCHAR},
-		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : string(verb) == "details" ? ReceiptType("details") : LogicalType::VARCHAR, Judge, true, purpose);
+		         string(verb) == "decide" ? LogicalType::BOOLEAN : string(verb) == "score" ? LogicalType::DOUBLE : LogicalType::VARCHAR, Judge, true, purpose);
 		RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb + "_images(question, images, text := NULL, settings := NULL" + PortableOptionParameters() + ") AS " + name + "(question, images, text, " + PortableOptions("settings", "question IS NULL OR images IS NULL", false) + ")", purpose);
 	}
 }

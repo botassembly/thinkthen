@@ -2,6 +2,7 @@
 #include "bridge.hpp"
 #include "json_result.hpp"
 #include "images.hpp"
+#include "relate.hpp"
 #include "complete_files.hpp"
 #include "files_manifest.hpp"
 #include "duckdb/common/file_system.hpp"
@@ -15,14 +16,17 @@
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
 #include "duckdb/planner/expression/bound_function_expression.hpp"
+#include <map>
+#include <tuple>
 
 extern "C" {
 ThinkThenReply thinkthen_cpp_complete_failure_envelope(ThinkThenText);
 ThinkThenReply thinkthen_cpp_complete_question_resolve(ThinkThenText, void **);
 void thinkthen_cpp_complete_question_free(void *);
 ThinkThenReply thinkthen_cpp_native_source_input(ThinkThenText, bool, bool);
+ThinkThenReply thinkthen_cpp_details_keyed_inputs(ThinkThenText);
 ThinkThenReply thinkthen_cpp_native_records(ThinkThenText, ThinkThenText, ThinkThenText, ThinkThenText,
-    ThinkThenText, const void *, bool, bool, int64_t, ThinkThenSettings, ThinkThenStop);
+    ThinkThenText, const void *, bool, bool, bool, int64_t, ThinkThenSettings, ThinkThenStop);
 }
 namespace duckdb {
 namespace {
@@ -52,8 +56,8 @@ unique_ptr<FunctionData> BindCompleteImpl(ClientContext &context, const string &
 #else
     const auto &input = arguments.at(1)->return_type;
 #endif
-    const bool collection = input.id() == LogicalTypeId::LIST &&
-        ListType::GetChildType(input).id() == LogicalTypeId::STRUCT;
+    const bool collection = (input.id() == LogicalTypeId::LIST &&
+        ListType::GetChildType(input).id() == LogicalTypeId::STRUCT) || verb == "rank" || verb == "relate";
     result = collection ? LogicalType::LIST(DetailsType(verb)) : DetailsType(verb);
     return make_uniq<Bind>(context.shared_from_this());
 }
@@ -79,21 +83,61 @@ bool NativeSourceSelector(const Value &value) {
     }
     return false;
 }
+Value AdmissionFailure(const Exception &error, ClientContext &context, const string &verb, bool output_list) {
+    if (ErrorData(error).Type() == ExceptionType::INTERRUPT || QueryInterrupted(context)) { throw; }
+    const auto failure = CompleteAdmissionError(error);
+    auto doc = duckdb_yyjson::yyjson_read(failure.data(), failure.size(), 0);
+    if (!doc) { throw; }
+    auto kind = ReceiptMember(ReceiptMember(duckdb_yyjson::yyjson_doc_get_root(doc), "error"), "kind");
+    const auto hard = kind && duckdb_yyjson::yyjson_is_str(kind) &&
+        (string(duckdb_yyjson::yyjson_get_str(kind)) == "cancelled" ||
+         string(duckdb_yyjson::yyjson_get_str(kind)) == "deadline" ||
+         string(duckdb_yyjson::yyjson_get_str(kind)) == "defect");
+    duckdb_yyjson::yyjson_doc_free(doc);
+    if (hard) { throw; }
+    return DecodeDetails(FailureEnvelope(failure), verb, output_list);
+}
 void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
     auto &expression = state.expr.Cast<BoundFunctionExpression>();
     auto context = ThinkThenBindData(expression).Cast<Bind>().context.lock();
     if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
     const auto name = ThinkThenFunctionName(expression);
     const auto verb = name.substr(string("thinkthen_native_").size(), name.size() - string("thinkthen_native_").size() - string("_details").size());
-    const bool collection = result.GetType().id() == LogicalTypeId::LIST;
+    const bool output_list = result.GetType().id() == LogicalTypeId::LIST;
+    const auto input_type = args.data[1].GetType();
+    const bool collection = input_type.id() == LogicalTypeId::LIST &&
+        ListType::GetChildType(input_type).id() == LogicalTypeId::STRUCT;
     auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
     std::optional<SessionSettings> session;
+    struct Pending {
+        string content, inputs, options, controls;
+        unique_ptr<QuestionSelection> selection;
+        bool source, incremental, cancelled;
+        vector<idx_t> slots;
+        Value rules;
+    };
+    vector<Pending> calls;
+    std::map<std::tuple<string, string, string, bool, bool>, idx_t> groups;
     for (idx_t row = 0; row < args.size(); ++row) {
         auto question = args.data[0].GetValue(row), records = args.data[1].GetValue(row);
         if (question.IsNull() || records.IsNull()) { result.SetValue(row, Value(result.GetType())); continue; }
         try {
             auto settings = args.data[3].GetValue(row);
-            const auto controls = settings.IsNull() ? string("{}") : settings.type().id() == LogicalTypeId::VARCHAR ? settings.GetValue<string>() : NativeInputJSON(settings);
+            auto controls = settings.IsNull() ? string("{}") : settings.type().id() == LogicalTypeId::VARCHAR ? settings.GetValue<string>() : NativeInputJSON(settings);
+            const auto reading = args.data[2].GetValue(row);
+            if (!collection && !reading.IsNull()) {
+                if ((verb == "choose" || verb == "tag" || verb == "score") && reading.type().id() == LogicalTypeId::LIST) {
+                    auto last = controls.find_last_not_of(" \t\r\n");
+                    if (last == string::npos || controls.at(last) != '}') {
+                        throw OrdinaryError("thinkthen usage: settings must be an object");
+                    }
+                    const auto first = controls.find_first_not_of(" \t\r\n", controls.find('{') + 1);
+                    const auto key = verb == "choose" ? "options" : verb == "tag" ? "labels" : "levels";
+                    controls = controls.substr(0, last) + (first == last ? "" : ",") + "\"" + key + "\":" + NativeInputJSON(reading) + "}";
+                } else if (settings.IsNull()) {
+                    controls = reading.type().id() == LogicalTypeId::VARCHAR ? reading.GetValue<string>() : NativeInputJSON(reading);
+                } else { throw OrdinaryError("thinkthen usage: pass one settings object"); }
+            }
             RustReply validated(thinkthen_cpp_portable_settings(View(controls)));
             Checked(validated.value);
             for (idx_t argument : {idx_t(4), idx_t(5)}) {
@@ -102,46 +146,101 @@ void NativeRecords(DataChunk &args, ExpressionState &state, Vector &result) {
                     throw OrdinaryError("thinkthen usage: incremental and cancelled require native booleans");
                 }
             }
-            const auto authored = question.type().id() == LogicalTypeId::VARCHAR ? question.GetValue<string>() : NativeInputJSON(question);
-            QuestionSelection selection;
+            if (!collection && verb == "relate") {
+                auto cancelled = args.data[5].GetValue(row);
+                if (!cancelled.IsNull() && cancelled.GetValue<bool>()) { throw OrdinaryError("thinkthen cancelled: the call was cancelled"); }
+                const auto query = question.GetValue<string>();
+                if (query.find_first_not_of(" \t\r\n") == string::npos) { throw OrdinaryError("thinkthen usage: the relate query is NULL or blank"); }
+                calls.push_back({query, "", "", controls, make_uniq<QuestionSelection>(), false, false, false, {row}, records});
+                continue;
+            }
+            auto authored = question.type().id() == LogicalTypeId::VARCHAR ? question.GetValue<string>() : NativeInputJSON(question);
+            if (!collection && verb == "recognize") {
+                authored = records.type().id() == LogicalTypeId::VARCHAR ? records.GetValue<string>() : NativeInputJSON(records);
+            }
+            auto selection = make_uniq<QuestionSelection>();
             string content = authored;
             if (!authored.empty() && authored[0] == '@') {
-                RustReply resolved(thinkthen_cpp_complete_question_resolve(View(authored), &selection.value));
-                if (resolved.value.status != 0) { result.SetValue(row, DecodeDetails(FailureEnvelope(ReplyText(resolved.value)), verb, collection)); continue; }
+                RustReply resolved(thinkthen_cpp_complete_question_resolve(View(authored), &selection->value));
+                if (resolved.value.status != 0) { result.SetValue(row, DecodeDetails(FailureEnvelope(ReplyText(resolved.value)), verb, output_list)); continue; }
                 const auto path = ReplyText(resolved.value);
                 AuthorizeLocalSource(FileSystem::GetFileSystem(*context), path);
                 content = ReadQuestion(*context, path, "question", true);
             }
-            auto reading = args.data[2].GetValue(row);
-            const auto options = reading.IsNull() ? string("{}") : NativeInputJSON(reading);
+            const auto options = !collection || reading.IsNull() ? string("{}") : NativeInputJSON(reading);
             const Value *source = nullptr;
             if (records.type().id() == LogicalTypeId::LIST) {
                 auto &members = ListValue::GetChildren(records);
                 if (members.size() == 1 && NativeSourceSelector(members[0])) { source = &members[0]; }
             }
-            const auto input = collection ? records : Value::LIST(LogicalType::STRUCT({{"text", LogicalType::VARCHAR}}), {Value::STRUCT({{"text", records}})});
-            const auto inputs = NativeInputJSON(source ? *source : input, !source);
-            const auto incremental = args.data[4].GetValue(row), cancelled = args.data[5].GetValue(row);
-            if (!session) { session.emplace(Settings(*context)); }
-            if (source) {
-                RustReply descriptor(thinkthen_cpp_native_source_input(View(inputs), !incremental.IsNull() && incremental.GetValue<bool>(), !cancelled.IsNull() && cancelled.GetValue<bool>()));
-                if (descriptor.value.status != 0) {
-                    result.SetValue(row, DecodeDetails(FailureEnvelope(ReplyText(descriptor.value)), verb, collection)); continue;
-                }
-                string source_result;
-                CompleteFileCall(*context, verb, content, ReplyText(descriptor.value), controls, selection.value,
-                    owner->Remaining(*context), session->Bridge(), source_result, options);
-                result.SetValue(row, DecodeDetails(source_result, verb, collection)); continue;
+            vector<Value> native_records;
+            const auto text_type = LogicalType::STRUCT({{"text", LogicalType::VARCHAR}});
+            if (!collection && verb == "find" && records.type().id() == LogicalTypeId::LIST) {
+                for (const auto &unit : ListValue::GetChildren(records)) { native_records.push_back(Value::STRUCT({{"text", unit}})); }
+            } else if (!collection && verb != "rank") { native_records.push_back(Value::STRUCT({{"text", verb == "recognize" ? question : records}})); }
+            const auto input = collection ? records : Value::LIST(text_type, std::move(native_records));
+            auto inputs = NativeInputJSON(source ? *source : input, !source);
+            if (!collection && verb == "rank") {
+                const auto raw = records.type().id() == LogicalTypeId::VARCHAR ? records.GetValue<string>() : NativeInputJSON(records);
+                RustReply normalized(thinkthen_cpp_details_keyed_inputs(View(raw))); Checked(normalized.value);
+                inputs = ReplyText(normalized.value);
             }
-            RustReply reply(thinkthen_cpp_native_records(View(verb), View(content), View(inputs), View(options), View(controls),
-                selection.value, !incremental.IsNull() && incremental.GetValue<bool>(), !cancelled.IsNull() && cancelled.GetValue<bool>(), owner->Remaining(*context), session->Bridge(), StopFor(*context)));
-            Checked(reply.value);
-            result.SetValue(row, DecodeDetails(ReplyText(reply.value), verb, collection));
+            const auto incremental = args.data[4].GetValue(row), cancelled = args.data[5].GetValue(row);
+            const auto eager = !incremental.IsNull() && incremental.GetValue<bool>();
+            const auto stopped = !cancelled.IsNull() && cancelled.GetValue<bool>();
+            const auto key = std::make_tuple(authored, options, controls, eager, stopped);
+            auto place = collection || verb == "rank" || verb == "find" || verb == "relate" ? groups.end() : groups.find(key);
+            if (place != groups.end()) {
+                auto &call = calls.at(place->second);
+                call.inputs.pop_back();
+                call.inputs += "," + inputs.substr(1);
+                call.slots.push_back(row);
+            } else {
+                if (!collection && verb != "rank" && verb != "find" && verb != "relate") { groups.emplace(key, calls.size()); }
+                calls.push_back({content, inputs, options, controls, std::move(selection), source != nullptr,
+                    eager, stopped, {row}, Value()});
+            }
         } catch (const Exception &error) {
-            if (ErrorData(error).Type() == ExceptionType::INTERRUPT || QueryInterrupted(*context)) { throw; }
-            result.SetValue(row, DecodeDetails(FailureEnvelope(CompleteAdmissionError(error)), verb, collection));
+            result.SetValue(row, AdmissionFailure(error, *context, verb, output_list));
         }
     }
+    if (!calls.empty()) { session.emplace(Settings(*context)); }
+    for (auto &call : calls) {
+        try {
+        string answer;
+        if (!collection && verb == "relate") {
+            answer = RelateDetailsCall(*context, call.content, call.rules, call.controls,
+                owner->Remaining(*context), session->Bridge());
+        } else if (call.source) {
+            RustReply descriptor(thinkthen_cpp_native_source_input(View(call.inputs), call.incremental, call.cancelled));
+            Checked(descriptor.value);
+            CompleteFileCall(*context, verb, call.content, ReplyText(descriptor.value), call.controls,
+                call.selection->value, owner->Remaining(*context), session->Bridge(), answer, call.options);
+        } else {
+            RustReply reply(thinkthen_cpp_native_records(View(verb), View(call.content), View(call.inputs), View(call.options),
+                View(call.controls), call.selection->value, call.incremental, call.cancelled, !collection,
+                owner->Remaining(*context), session->Bridge(), StopFor(*context)));
+            Checked(reply.value);
+            answer = ReplyText(reply.value);
+        }
+        auto decoded = DecodeDetails(answer, verb, true);
+        if (output_list) { result.SetValue(call.slots.at(0), decoded); continue; }
+        const auto &rows = ListValue::GetChildren(decoded);
+        for (idx_t ordinal = 0; ordinal < call.slots.size(); ++ordinal) {
+            const Value *found = nullptr;
+            for (auto &row : rows) {
+                const auto &fields = StructValue::GetChildren(row);
+                if (!fields.at(0).IsNull() && fields.at(0).GetValue<uint64_t>() == ordinal) { found = &row; break; }
+            }
+            if (!found && rows.size() == 1) { found = &rows.at(0); }
+            result.SetValue(call.slots.at(ordinal), found ? *found : Value(DetailsType(verb)));
+        }
+        } catch (const Exception &error) {
+            auto failed = AdmissionFailure(error, *context, verb, output_list);
+            for (const auto slot : call.slots) { result.SetValue(slot, failed); }
+        }
+    }
+
 }
 }
 void RegisterComplete(ExtensionLoader &loader) {
@@ -155,9 +254,14 @@ void RegisterComplete(ExtensionLoader &loader) {
         ThinkThenSpecialNulls(function);
         function.SetStability(FunctionStability::VOLATILE);
         RegisterDescribedScalar(loader, function, purpose);
+        const string records = "(starts_with(typeof(input), 'STRUCT(') AND ends_with(typeof(input), '[]'))";
+        const string listed = string(verb) == "choose" || string(verb) == "tag" || string(verb) == "score" ? "true" : "false";
+        const auto members = "(" + listed + " AND ends_with(typeof(reading), '[]'))";
+        const auto settings = "CASE WHEN " + records + " OR " + members + " THEN settings ELSE coalesce(settings, reading) END";
+        const auto reading = "CASE WHEN members IS NOT NULL THEN members WHEN " + records + " OR " + members + " THEN reading ELSE NULL END";
         RegisterPortableMacro(loader, string("CREATE MACRO thinkthen_") + verb +
-            "_details(question, input, reading := NULL, settings := NULL, incremental := false, cancelled := false) AS " +
-            name + "(question, input, reading, settings, incremental, cancelled)", purpose);
+            "_details(question, input, reading := NULL, settings := NULL, incremental := false, cancelled := false, members := NULL" + PortableOptionParameters() + ") AS " +
+            name + "(question, input, " + reading + ", " + PortableOptions(settings, "question IS NULL OR input IS NULL", false, true) + ", incremental, cancelled)", purpose);
     }
 }
 }

@@ -173,9 +173,9 @@ for statement in statements:
 
 def native_reading(receipt: dict) -> dict:
     """Read the single actual result from an ordinary typed details column."""
-    if not isinstance(receipt, dict) or len(receipt['results']) != 1:
+    if not isinstance(receipt, dict) or receipt.get('result') is None:
         raise AssertionError('ordinary details must return one typed native reading')
-    return receipt['results'][0]
+    return receipt['result']
 
 
 def run(
