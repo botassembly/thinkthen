@@ -84,7 +84,6 @@ def input_declarations(definitions):
             continue
         lines += [f'export interface {input_name(key)} {{']
         for member, field in source['properties'].items():
-            if key == 'RequestOptions' and member == 'details': continue
             optional = '' if member in source.get('required', []) else '?'
             lines += [f' readonly {json.dumps(member)}{optional}: {typ(field, True)};']
         lines += [f' readonly {json.dumps(member)}?: never;' for member in excluded.get(key, [])]
