@@ -14,6 +14,9 @@ TOOL_GENERATED = {'libraries/r/thinkthen/R/extendr-wrappers.R',
                   'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.cc',
                   'libraries/dart/flutter/example/windows/flutter/generated_plugin_registrant.h'}
 
+# Artifact qualification scripts exercise installed packages rather than ship with them.
+TEST_FILES = {'libraries/python/check-windows.py'}
+
 
 def source_owners(manifest):
     return {**manifest['libraries'], **manifest.get('databases', {})}
@@ -38,7 +41,7 @@ def classification(path, name, manifest, generated):
     config = source_owners(manifest)[name]
     parts = Path(path).parts
     relative = str(Path(path).relative_to(config['root']))
-    if (relative in config.get('test_files', []) or Path(path).name == 'tests.rs'
+    if (path in TEST_FILES or relative in config.get('test_files', []) or Path(path).name == 'tests.rs'
             or any(folder in parts for folder in config['test_folders'])):
         return 'test'
     return 'handwritten'

@@ -1,4 +1,10 @@
 specification/*.json text eol=lf
+databases/duckdb/cpp/src/receipt_types_generated.hpp linguist-generated
+databases/duckdb/cpp/src/receipt_types_generated_1.hpp linguist-generated
+databases/duckdb/cpp/src/receipt_types_generated_2.hpp linguist-generated
+databases/duckdb/cpp/src/receipt_types_generated_3.hpp linguist-generated
+databases/duckdb/cpp/src/receipt_types_generated_4.hpp linguist-generated
+databases/duckdb/cpp/src/request_helpers_generated.hpp linguist-generated
 databases/postgresql/src/native/functions_generated.rs linguist-generated
 databases/postgresql/src/native/results_generated.rs linguist-generated
 databases/sqlite/src/receipt_generated.rs linguist-generated
