@@ -12,22 +12,21 @@ pub fn main() !void {
     defer engine.deinit();
     const question = std.posix.getenv("THINKTHEN_TEST_SMOKE_QUESTION") orelse return error.NoQuestion;
     const text = std.posix.getenv("THINKTHEN_TEST_SMOKE_TEXT") orelse return error.NoText;
-    var call = try tt.session.decide(&engine, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
+    var call = try tt.calls.decide(&engine, .{ .question = .{ .text = .{ .text = question } }, .input = .{ .text = .{ .text = text } } });
     defer call.deinit();
-    while (true) switch (try call.read()) {
-        .pending => {
-            var ready: u32 = undefined;
-            try tt.session.checked(tt.c.thinkthen_session_wait(call.raw, tt.c.THINKTHEN_SESSION_WAIT_SETTLEMENT_V1, 50, &ready));
-        },
+    while (true) switch (try call.next()) {
+        .pending => return error.BlockingPending,
         .end => break,
         .packet => |value| {
             var packet = value;
             defer packet.deinit();
             if (packet.failure()) |_| return error.DecisionFailed;
-            if (packet.view.kind == tt.c.THINKTHEN_COMPLETE_SESSION_PACKET_DECIDE_ROW_V1) {
-                const result = packet.view.data.decide_row[0].value[0].value;
-                const node = (tt.session.optional(result) orelse return error.MissingAnswer)[0].value[0];
-                const answer = if (node.kind == tt.c.THINKTHEN_COMPLETE_JSON_NULL_V1) "null" else if (node.kind == tt.c.THINKTHEN_COMPLETE_JSON_BOOLEAN_V1) (if (node.data.boolean == 1) "true" else "false") else return error.WrongAnswer;
+            if (packet.value().* == .observation) {
+                const value_answer = packet.answers().decide() catch |err| {
+                    if (err == error.WrongAnswer) continue;
+                    return err;
+                };
+                const answer = if (value_answer) |value_bool| (if (value_bool) "true" else "false") else "null";
                 var out = std.fs.File.stdout().writerStreaming(&.{});
                 try out.interface.print("smoke: {s}\n", .{answer});
             }

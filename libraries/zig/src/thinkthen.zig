@@ -5,9 +5,10 @@ pub const Question = authored.Question;
 pub const Request = authored.Request;
 pub const Plan = authored.Plan;
 pub const session = @import("session.zig");
-pub const c = @cImport({
-    @cInclude("thinkthen.h");
-});
+pub const calls = @import("calls_generated.zig");
+const c = @import("native.zig").c;
+const values = @import("results_generated.zig");
+pub const results = values.Types;
 
 /// Free message with the allocator passed to Engine.init, even when construction failed.
 pub const FailureKind = enum(c_int) { usage = 1, backend, deadline, local, cancelled, defect };
@@ -16,21 +17,18 @@ pub const Failure = struct {
     kind: FailureKind,
     retryable: bool,
     message: []u8,
-    facts_json: ?[]u8,
+    facts: ?results.ImmediateFacts,
+    arena: std.heap.ArenaAllocator,
 };
 pub fn releaseFailure(allocator: std.mem.Allocator, failure: Failure) void {
     allocator.free(failure.message);
-    if (failure.facts_json) |facts| allocator.free(facts);
+    var arena = failure.arena;
+    arena.deinit();
 }
 pub fn Result(comptime T: type) type {
     return union(enum) { ok: T, failed: Failure };
 }
-pub const UsagePersistence = enum(u32) {
-    disabled = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_DISABLED_V1,
-    pending = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_PENDING_V1,
-    written = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_WRITTEN_V1,
-    failed = c.THINKTHEN_COMPLETE_USAGE_PERSISTENCE_FAILED_V1,
-};
+pub const UsagePersistence = results.UsagePersistence;
 /// Owned advice uses the engine allocator and survives engine destruction.
 pub const UsageStatus = struct {
     state: UsagePersistence,
@@ -41,21 +39,22 @@ pub const UsageStatus = struct {
 };
 
 pub const Engine = struct {
-    raw: *c.thinkthen_engine,
+    handle: *anyopaque,
     closed: bool = false,
     allocator: std.mem.Allocator,
-    pub fn init(allocator: std.mem.Allocator) error{OutOfMemory}!Result(Engine) {
-        const raw = c.thinkthen_engine_new() orelse return .{ .failed = try capture(allocator, null, c.thinkthen_error_code(null)) };
-        return .{ .ok = .{ .raw = raw, .allocator = allocator } };
+    pub fn init(allocator: std.mem.Allocator) !Result(Engine) {
+        return initWithSettings(allocator, .{});
     }
-    pub fn initWithSettings(allocator: std.mem.Allocator, settings: [:0]const u8) error{ OutOfMemory, EmbeddedNul }!Result(Engine) {
-        try checkCString(settings);
-        const raw = c.thinkthen_engine_new_with(settings.ptr) orelse
-            return .{ .failed = try capture(allocator, null, c.thinkthen_error_code(null)) };
-        return .{ .ok = .{ .raw = raw, .allocator = allocator } };
+    pub fn initWithSettings(allocator: std.mem.Allocator, settings: inputs.EngineSettings) !Result(Engine) {
+        const encoded = try std.json.Stringify.valueAlloc(allocator, settings, .{ .emit_null_optional_fields = false });
+        defer allocator.free(encoded);
+        const terminated = try allocator.dupeZ(u8, encoded);
+        defer allocator.free(terminated);
+        const raw = c.thinkthen_engine_new_with(terminated.ptr) orelse return .{ .failed = try capture(allocator, null, c.thinkthen_error_code(null)) };
+        return .{ .ok = .{ .handle = raw, .allocator = allocator } };
     }
     pub fn deinit(self: *Engine) void {
-        if (!self.closed) c.thinkthen_engine_free(self.raw);
+        if (!self.closed) c.thinkthen_engine_free(@as(*c.thinkthen_engine, @ptrCast(self.handle)));
         self.closed = true;
     }
     pub fn usagePersistence(self: *Engine) !UsageStatus {
@@ -68,25 +67,21 @@ pub const Engine = struct {
         if (self.closed) return error.ClosedEngine;
         var state: c.thinkthen_complete_usage_persistence_v1 = undefined;
         var advice: c.thinkthen_complete_utf8_v1 = undefined;
-        try session.checked(operation(self.raw, &state, &advice));
-        const kind = std.meta.intToEnum(UsagePersistence, state.kind) catch return error.InvalidNativeDiscriminator;
+        try session.checked(operation(@as(*c.thinkthen_engine, @ptrCast(self.handle)), &state, &advice));
+        const kind = try values.readUsagePersistence(self.allocator, state);
         if (advice.data == null and advice.len != 0) return error.InvalidNativeExtent;
         const copied = if (advice.data == null) null else try self.allocator.dupe(u8, advice.data[0..advice.len]);
         return .{ .state = kind, .advice = copied };
     }
 };
 
-pub fn capture(allocator: std.mem.Allocator, engine: ?*c.thinkthen_engine, code: c_int) error{OutOfMemory}!Failure {
-    // Copy both borrowed fields on the calling native thread before another C call.
-    const retryable = c.thinkthen_error_retryable(engine) != 0;
-    const message = c.thinkthen_error_message(engine);
-    const facts = c.thinkthen_error_facts_json(engine);
-    const copied_message = try allocator.dupe(u8, std.mem.span(message));
-    errdefer allocator.free(copied_message);
-    const copied_facts = if (facts) |value| try allocator.dupe(u8, std.mem.span(value)) else null;
-    const kind: FailureKind = std.meta.intToEnum(FailureKind, code) catch .defect;
-    return .{ .code = code, .kind = kind, .retryable = retryable, .message = copied_message, .facts_json = copied_facts };
-}
-fn checkCString(text: [:0]const u8) error{EmbeddedNul}!void {
-    if (std.mem.indexOfScalar(u8, text, 0) != null) return error.EmbeddedNul;
+pub fn capture(allocator: std.mem.Allocator, engine: ?*Engine, code: c_int) !Failure {
+    const raw = c.thinkthen_error_view(if (engine) |value| @ptrCast(value.handle) else null);
+    if (raw == null) return error.Defect;
+    const view = raw[0];
+    var arena = std.heap.ArenaAllocator.init(allocator);
+    errdefer arena.deinit();
+    const facts = if (view.facts != null) try values.readImmediateFacts(arena.allocator(), view.facts[0]) else null;
+    const message = try allocator.dupe(u8, if (view.message.len == 0) &.{} else view.message.data[0..view.message.len]);
+    return .{ .code = code, .kind = std.meta.intToEnum(FailureKind, code) catch .defect, .retryable = view.retryable != 0, .message = message, .facts = facts, .arena = arena };
 }
