@@ -115,7 +115,11 @@ fn eager_recovery_counts_completed_rows_when_the_observer_cancels() {
         assert_eq!(error.kind(), ErrorKind::Cancelled);
         assert_eq!(observed.load(Ordering::SeqCst), completed);
         assert_eq!(error.facts().unwrap().records(), completed as u64);
-        assert_eq!(error.facts().unwrap().requests_sent(), sends);
+        assert_eq!(
+            error.facts().unwrap().requests_sent(),
+            sends,
+            "{function:?}"
+        );
         assert_eq!(listener.count(), sends as usize);
         assert!(!format!("{error:?}").contains("sk-prefix-recovery"));
     }
