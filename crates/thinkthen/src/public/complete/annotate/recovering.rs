@@ -38,13 +38,18 @@ impl Engine {
             admitted,
             rejected,
             |ordinal, held, row| {
-                let result =
-                    complete_row(&engine, &questions.0, &stop, &held, (ordinal, false), row)?;
-                Ok(RequestValue::Annotations(vec![CompleteRecord {
-                    original: held.original,
-                    ordinal,
-                    result,
-                }]))
+                let outcome =
+                    complete_row(&engine, &questions.0, &stop, &held, (ordinal, false), row).map(
+                        |result| {
+                            RequestValue::Annotations(vec![CompleteRecord {
+                                original: held.original,
+                                ordinal,
+                                result,
+                            }])
+                        },
+                    );
+                crate::public::request::recovery_row(ordinal, outcome)
+                    .map(|row| row.with_cause(None))
             },
         )
     }
