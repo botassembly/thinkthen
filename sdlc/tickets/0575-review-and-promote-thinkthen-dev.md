@@ -52,3 +52,5 @@ PM amendment, 2026-10-13. Remaining work. `docs/0.2-refresh` is at 126ea45b2, 30
 PM amendment, 2026-10-14. 0581 and 0582 change how every library and database returns values and details. Hold code example rewrites until they land, then rewrite each example against `result.value`, `result.probability` and `thinkthen_<function>_details`. Prose and openings continue now.
 
 PM amendment, 2026-10-14. 0543 gates only landing and deploy; every other change starts now.
+
+PM amendment, 2026-10-14. Work starts per language. A language or database whose 0581 or 0582 lane is merged into the 0543 final branch may have its examples and text rewritten now, on its own lane, without waiting for the other languages. The fresh-reader review still runs once all are done.

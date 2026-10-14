@@ -64,3 +64,5 @@ The DuckDB descriptor and PR stay with 0577. The site and the fresh-reader test 
 ## Progress
 
 PM amendment, 2026-10-14. To break the merge cycle, each 0581 or 0582 binding lane may change the public example code that its existing installed checks replay, and only as far as the move to `result.value` and `result.probability` requires. It changes no prose. This ticket and 0575 still own the example text and its fresh-reader review.
+
+PM amendment, 2026-10-14. Work starts per language. A language or database whose 0581 or 0582 lane is merged into the 0543 final branch may have its examples and text rewritten now, on its own lane, without waiting for the other languages. The fresh-reader review still runs once all are done.
