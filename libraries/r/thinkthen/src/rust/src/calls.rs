@@ -149,7 +149,7 @@ impl Completion {
             .map(|(column, value)| column.view(value).map_err(|e| carry(&e)))
             .transpose()?
             .flatten();
-        crate::request::view(value, view, column)
+        crate::request::view(value, view, column, scalar)
     }
 }
 impl State {

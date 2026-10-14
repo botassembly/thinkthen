@@ -24,7 +24,7 @@ check("zero-send deadline retains its native condition and facts", inherits(late
   late$facts$requests_sent == 0 && inherits(late$complete,"thinkthen_CallError"))
 structured <- list(decide=list(ask="Refund?",hints=list("one",list(a=NULL,b=1))),true=NULL)
 one <- tt_decide(structured,"gamma")
-check("structured wording retains null and nested values", is.null(one$results[[1]]$question$true) &&
+check("structured wording retains null and nested values", is.null(one$value) && identical(one$probability, 0.9) && is.null(one$results[[1]]$question$true) &&
   identical(one$results[[1]]$question$text, structured$decide) &&
   inherits(one$results[[1]]$question$false,"thinkthen_absent"))
 with_sides <- tt_decide(list(decide="Q?",true="Yes means refund",false="No means no refund"), "semantic")

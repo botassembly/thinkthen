@@ -33,7 +33,7 @@ struct NativeRequest {
 
 struct NativeSession {
     session: RequestSession,
-    completion: calls::Completion,
+    completion: Option<calls::Completion>,
     function: thinkthen::RequestFunction,
     column: Option<thinkthen::RequestColumn>,
 }
@@ -114,7 +114,7 @@ fn tt_request_plan(request: Robj) -> Crossed<Robj> {
 }
 
 #[extendr]
-fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
+fn tt_request_batch_start(request: Robj, collect: bool) -> Crossed<Robj> {
     let built = ExternalPtr::<NativeRequest>::try_from(request)
         .map_err(|_| crate::usage("a native request is required"))?;
     let column = built.column.clone();
@@ -125,7 +125,7 @@ fn tt_request_batch_start(request: Robj) -> Crossed<Robj> {
     let mut pointer: Robj = ExternalPtr::new(NativeSession {
         session,
         column,
-        completion: calls::Completion::new(),
+        completion: collect.then(calls::Completion::new),
         function: built.admitted.request().call.function(),
     })
     .into();
@@ -158,9 +158,11 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
     match session.session.try_read() {
         thinkthen::RequestSessionRead::Result(packet) => {
             let text = packet.to_json().map_err(|error| crate::carry(&error))?;
-            let document = serde_json::from_str(&text)
-                .map_err(|_| crate::defect("session packet could not be decoded"))?;
-            session.completion.accept(packet, document)?;
+            if let Some(completion) = &session.completion {
+                let document = serde_json::from_str(&text)
+                    .map_err(|_| crate::defect("session packet could not be decoded"))?;
+                completion.accept(packet, document)?;
+            }
             crate::native_results::request_event(&text)
         }
         thinkthen::RequestSessionRead::Pending => Ok(().into()),
@@ -172,7 +174,11 @@ fn tt_request_batch_poll(batch: Robj) -> Crossed<Robj> {
 fn tt_request_batch_result(batch: Robj) -> Crossed<Robj> {
     let session = ExternalPtr::<NativeSession>::try_from(batch)
         .map_err(|_| crate::usage("a native request session is required"))?;
-    session.completion.result(session.function, None, false)
+    session
+        .completion
+        .as_ref()
+        .ok_or_else(|| crate::usage("this batch does not collect a call result"))?
+        .result(session.function, None, false)
 }
 
 #[extendr]

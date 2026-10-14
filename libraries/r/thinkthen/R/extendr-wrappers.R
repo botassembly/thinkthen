@@ -47,7 +47,7 @@ tt_request_native <- function(request, deadline, completion) .Call(wrap__tt_requ
 
 tt_request_plan <- function(request) .Call(wrap__tt_request_plan, request)
 
-tt_request_batch_start <- function(request) .Call(wrap__tt_request_batch_start, request)
+tt_request_batch_start <- function(request, collect) .Call(wrap__tt_request_batch_start, request, collect)
 
 tt_request_batch_poll <- function(batch) .Call(wrap__tt_request_batch_poll, batch)
 
