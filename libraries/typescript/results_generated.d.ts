@@ -1,5 +1,5 @@
 // Generated from the shared Rust result graph; do not edit.
-import type { Question, Input, Controls, Completed } from "./native.js";
+import type { Question, Input, Controls, Result } from "./native.js";
 export type JsonValue =
   | null
   | boolean
@@ -1371,95 +1371,191 @@ export type NativeFindResult = NativeFind;
 export type NativeAnnotateResult = NativeAnnotation;
 export type NativeRecognizeResult = NativeRecognition;
 export type NativeRelateResult = NativeRelation;
-export interface AnswerReaders {
-  decideAnswer(): boolean | null;
-  chooseAnswer(): string | null;
-  tagAnswer(): readonly string[];
-  scoreAnswer(): number | NativeNumber;
-  filterAnswer(): readonly JsonValue[];
-  rankAnswer(): readonly (number | NativeNumber)[];
-  findAnswer(): NativeFind;
-  annotateAnswer(): readonly NativeAnnotation[];
-  recognizeAnswer(): readonly NativeRecognition[];
-  relateAnswer(): NativeRelation;
-}
 export interface NamedCalls {
+  decide(
+    q: Question,
+    i: readonly (JsonValue | import("./native.js").Item)[],
+    c?: Controls,
+  ): Promise<
+    Result<
+      NativeDecideResult,
+      readonly NativeDecideValue[],
+      readonly (number | null)[]
+    >
+  >;
+  decide(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeDecideResult, NativeDecideValue, number | null>>;
   decide(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeDecideResult>>;
-  decideAnswer(q: Question, i: Input, c?: Controls): Promise<boolean | null>;
+  ): Promise<
+    Result<
+      NativeDecideResult,
+      readonly NativeDecideValue[] | NativeDecideValue,
+      readonly (number | null)[] | number | null
+    >
+  >;
+  choose(
+    q: Question,
+    i: readonly (JsonValue | import("./native.js").Item)[],
+    c?: Controls,
+  ): Promise<
+    Result<
+      NativeChooseResult,
+      readonly (string | null)[],
+      readonly (number | null)[]
+    >
+  >;
+  choose(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeChooseResult, string | null, number | null>>;
   choose(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeChooseResult>>;
-  chooseAnswer(q: Question, i: Input, c?: Controls): Promise<string | null>;
-  tag(q: Question, i: Input, c?: Controls): Promise<Completed<NativeTagResult>>;
-  tagAnswer(q: Question, i: Input, c?: Controls): Promise<readonly string[]>;
+  ): Promise<
+    Result<
+      NativeChooseResult,
+      readonly (string | null)[] | string | null,
+      readonly (number | null)[] | number | null
+    >
+  >;
+  tag(
+    q: Question,
+    i: readonly (JsonValue | import("./native.js").Item)[],
+    c?: Controls,
+  ): Promise<Result<NativeTagResult, readonly (readonly string[])[], null>>;
+  tag(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeTagResult, readonly string[], null>>;
+  tag(
+    q: Question,
+    i: Input,
+    c?: Controls,
+  ): Promise<
+    Result<
+      NativeTagResult,
+      readonly (readonly string[])[] | readonly string[],
+      null
+    >
+  >;
+  score(
+    q: Question,
+    i: readonly (JsonValue | import("./native.js").Item)[],
+    c?: Controls,
+  ): Promise<
+    Result<NativeScoreResult, readonly (number | NativeNumber)[], null>
+  >;
+  score(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeScoreResult, number | NativeNumber, null>>;
   score(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeScoreResult>>;
-  scoreAnswer(
-    q: Question,
-    i: Input,
-    c?: Controls,
-  ): Promise<number | NativeNumber>;
+  ): Promise<
+    Result<
+      NativeScoreResult,
+      readonly (number | NativeNumber)[] | number | NativeNumber,
+      null
+    >
+  >;
   filter(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeFilterResult>>;
-  filterAnswer(
-    q: Question,
-    i: Input,
-    c?: Controls,
-  ): Promise<readonly JsonValue[]>;
+  ): Promise<
+    Result<
+      NativeFilterResult,
+      readonly JsonValue[],
+      readonly (number | null)[] | number | null
+    >
+  >;
   rank(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeRankResult>>;
-  rankAnswer(
-    q: Question,
-    i: Input,
-    c?: Controls,
-  ): Promise<readonly (number | NativeNumber)[]>;
+  ): Promise<
+    Result<
+      NativeRankResult,
+      readonly (number | NativeNumber)[],
+      readonly (number | null)[]
+    >
+  >;
   find(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeFindResult>>;
-  findAnswer(q: Question, i: Input, c?: Controls): Promise<NativeFind>;
+  ): Promise<Result<NativeFindResult, JsonValue | null, number | null>>;
+  annotate(
+    q: Question,
+    i: readonly (JsonValue | import("./native.js").Item)[],
+    c?: Controls,
+  ): Promise<Result<NativeAnnotateResult, readonly NativeAnnotatedRow[], null>>;
+  annotate(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeAnnotateResult, NativeAnnotatedRow, null>>;
   annotate(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeAnnotateResult>>;
-  annotateAnswer(
+  ): Promise<
+    Result<
+      NativeAnnotateResult,
+      readonly NativeAnnotatedRow[] | NativeAnnotatedRow,
+      null
+    >
+  >;
+  recognize(
     q: Question,
-    i: Input,
+    i: readonly (JsonValue | import("./native.js").Item)[],
     c?: Controls,
-  ): Promise<readonly NativeAnnotation[]>;
+  ): Promise<
+    Result<
+      NativeRecognizeResult,
+      readonly NativeRecognize[],
+      readonly (readonly number[])[]
+    >
+  >;
+  recognize(
+    q: Question,
+    i: Exclude<JsonValue, readonly JsonValue[]> | import("./native.js").Item,
+    c?: Controls,
+  ): Promise<Result<NativeRecognizeResult, NativeRecognize, readonly number[]>>;
   recognize(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeRecognizeResult>>;
-  recognizeAnswer(
-    q: Question,
-    i: Input,
-    c?: Controls,
-  ): Promise<readonly NativeRecognition[]>;
+  ): Promise<
+    Result<
+      NativeRecognizeResult,
+      readonly NativeRecognize[] | NativeRecognize,
+      readonly (readonly number[])[] | readonly number[]
+    >
+  >;
   relate(
     q: Question,
     i: Input,
     c?: Controls,
-  ): Promise<Completed<NativeRelateResult>>;
-  relateAnswer(q: Question, i: Input, c?: Controls): Promise<NativeRelation>;
+  ): Promise<
+    Result<
+      NativeRelateResult,
+      readonly NativeRelatedEntityEdge[],
+      readonly number[]
+    >
+  >;
 }
 export const REQUEST_VERSION: string;
 export interface AnnotateDefinition {
@@ -1902,7 +1998,6 @@ export interface RequestOptions {
   readonly context?: string;
   readonly context_field?: string;
   readonly deadline_ms?: number;
-  readonly details?: boolean;
   readonly examples?: readonly RecognitionExample[];
   readonly examples_field?: string;
   readonly field?: readonly string[];

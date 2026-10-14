@@ -1,6 +1,6 @@
 'use strict';
 const addon=require('./loader.js');
-const {answer:readAnswer,plan:readPlan,parse:readJson,packet:readPacket,...Results}=require('./results_generated.js');
+const {callResult:readResult,plan:readPlan,parse:readJson,packet:readPacket,...Results}=require('./results_generated.js');
 class ClientError extends Error {
   constructor(kind,message,retryable=false) {super(message);this.name='ClientError';this.kind=kind;this.retryable=retryable;}
 }
@@ -34,9 +34,8 @@ const iterable=input=>!input?.[sourceTag] && !Array.isArray(input) && typeof inp
 function requestValues(question,input,feed=false) {
   return {question:dump(question?.[questionTag] || question),selector:!!question?.[questionTag],literal:typeof question==='string',source:input?.[sourceTag]?dump(input[sourceTag]):undefined,items:feed || input?.[sourceTag]?[]:(Array.isArray(input)?input:[input]).map(v=>dump(descriptor(v))),feed};
 }
-const completedPackets=new WeakMap();
-class Completed {
-  constructor(results,terminal,packets=[],verb) {completedPackets.set(this,{packets,verb});this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
+class Result {
+  constructor(results,terminal,verb,scalar) {Object.assign(this,readResult(results,verb,scalar));this.results=Object.freeze(results);this.terminal=terminal;Object.freeze(this);}
   get facts(){return this.terminal.facts;}
 }
 class Client {
@@ -74,11 +73,11 @@ class Client {
   close(){this.#closed=true;for(const op of this.#operations) op.close();this.#engine=null;}
 }
 class Operation {
-  #native; #waiting; #iterator; #pending; #rows=[]; #packets=[]; #verb; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
+  #native; #waiting; #iterator; #pending; #rows=[]; #verb; #scalar; #remove; #signal; #abort; #closed=false; #busy=false; #done=false;
   terminal;
   #producerError;
   constructor(engine,verb,question,input,controls,remove) {
-    this.#remove=remove;this.#verb=verb;
+    this.#remove=remove;this.#verb=verb;this.#scalar=!Array.isArray(input) && !input?.[sourceTag] && !iterable(input);
     const {signal,...options}=controls;this.#signal=signal;
     if(signal && !(signal instanceof AbortSignal)) throw new ClientError('usage','signal is an AbortSignal');
     if(signal?.aborted) throw new ClientError('cancelled','the call was cancelled');
@@ -111,7 +110,7 @@ class Operation {
         const text=crossing(()=>this.#native.poll());
         if(text==='end'){this.#done=true;this.close();return {done:true,value:undefined};}
         if(text) {
-          const packet=readPacket(readJson(text));this.#packets.push(packet);
+          const packet=readPacket(readJson(text));
           if(packet.kind==='terminal') {
             this.terminal=packet;this.#done=true;this.close();
             if(packet.has('failure')) {
@@ -137,7 +136,7 @@ class Operation {
       }
     } finally {this.#busy=false;}
   }
-  async result(){try {while(!(await this.next()).done){}return new Completed(this.#rows,this.terminal,this.#packets,this.#verb);} finally {this.close();}}
+  async result(){try {while(!(await this.next()).done){}return new Result(this.#rows,this.terminal,this.#verb,this.#scalar);} finally {this.close();}}
   cancel(){this.#native?.cancel();this.close();}
   #releaseProducer(){
     const iterator=this.#iterator;this.#iterator=undefined;
@@ -154,10 +153,6 @@ class Operation {
 }
 for(const verb of FUNCTIONS) {
   Object.defineProperty(Client.prototype,verb,{value:function(q,i,c){return this.start(verb,q,i,c).result();}});
-  Object.defineProperty(Completed.prototype,verb+'Answer',{value:function(){
-    try{const call=completedPackets.get(this);if(call.verb!==verb)throw new RangeError('Answer reader does not match the call');return readAnswer(call.packets,verb);}
-    catch(cause){const error=new ClientError('usage',cause.message);error.cause=cause;error.facts=this.facts;error.terminal=this.terminal;error.results=this.results;throw error;}
-  }});
-  Object.defineProperty(Client.prototype,verb+'Answer',{value:async function(q,i,c){return (await this[verb](q,i,c))[verb+'Answer']();}});
+
 }
-module.exports={Client,ClientError,Operation,Completed,Results};
+module.exports={Client,ClientError,Operation,Result,Results};

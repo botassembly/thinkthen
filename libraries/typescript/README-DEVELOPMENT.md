@@ -11,17 +11,17 @@ import {Client} from 'thinkthen';
 const client = new Client({cache: false});
 try {
   const call = await client.decide('Does the writer request a refund?', 'Please refund my order.');
-  console.log(call.results[0].value);
+  console.log(call.value, call.probability);
 } finally { client.close(); }
 ```
 
-CommonJS uses `const {Client} = require('thinkthen')`. Both module forms expose the same ten named Client functions: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Results and declarations are generated from Rust. `results` retains completed answers and `facts` retains final native observations. Missing properties remain distinct from present null; `.has(name)` reports presence. Unknown result members remain available. `ClientError` carries native kind, retryability, failure facts and completed results.
+CommonJS uses `const {Client} = require('thinkthen')`. Both module forms expose the same ten named Client functions: decide, choose, tag, score, filter, rank, find, annotate, recognize and relate. Results and declarations are generated from Rust. `value` is the plain answer and `probability` is its selected probability; `results` retains completed answers and `facts` retains final native observations. A scalar input retains a scalar answer; list and source inputs retain ordered lists. Rank returns original indexes, filter returns selected inputs, and find returns its unit or null. Score, tag and annotate keep probability maps in `results` and expose null as the call probability. Missing properties remain distinct from present null; `.has(name)` reports presence. Unknown result members remain available. `ClientError` carries native kind, retryability, failure facts and completed results.
 
 Use `Client.item(value, fields)` for per-record context, options and image descriptors, `Client.files(paths, reading, media, framing)` for explicit native sources, and `Client.questionFile`, `Client.questionName` or `Client.questionReference` for saved questions. Rust owns admission and settings. Settings and call options use the native snake_case names in the [Request contract](../../specification/request.schema.json).
 
 Named calls return Promises. `client.start(function, question, input, controls)` returns an async packet iterator with `result()`, `cancel()` and `close()`. Iterable and async iterable inputs are bounded by the native session. `controls.signal` accepts an AbortSignal. `client.plan(function, question, completeInput, controls)` returns the native typed preview without sending requests. It accepts complete records and explicit sources, and refuses iterators without advancing them. Closing or cancelling releases intake and returns while a provider reply is held; final facts remain pending until native settlement.
 
-The old `Engine`, default functions, `complete`, `*_many`, `details`, copied CompleteTypes and answer helpers are retired. Replace `engine.complete.decide(...)` or `engine.decide(...)` with `client.decide(...)`; read `call.results[0].value` instead of `call.value`. Replace batch methods with `client.start(...)`. Use generated `Results` types instead of CompleteTypes.
+The old `Engine`, default functions, `complete`, `*_many`, `details`, copied CompleteTypes and answer helpers are retired. Replace `engine.complete.decide(...)` or `engine.decide(...)` with `client.decide(...)`; read `call.value` and `call.probability`. Replace batch methods with `client.start(...)`. Use generated `Results` types instead of CompleteTypes.
 
 The package loads its bundled addon automatically. The generated [platform inventory](native-platforms.json) includes Windows x64. Windows execution, registry installs and full parity run at the candidate.
 

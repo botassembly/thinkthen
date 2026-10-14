@@ -3752,138 +3752,88 @@ function packet(value) {
   return convert(graph.completesessionPacket, value, "completesessionPacket");
 }
 
-const answerRules = {
+const callRules = {
   decide: {
-    path: ["value", "value", "value"],
-    guards: [
-      [["kind"], "observation"],
-      [["value", "kind"], "row"],
-      [["value", "value", "kind"], "judgment"],
-    ],
-    kind: "decision",
-    member: null,
-    collection: false,
+    value_projection: "value",
+    probability_mode: "yes",
+    probability_path: ["answer", "probability"],
   },
   choose: {
-    path: ["value", "value", "value"],
-    guards: [
-      [["kind"], "observation"],
-      [["value", "kind"], "row"],
-      [["value", "value", "kind"], "judgment"],
-    ],
-    kind: "choice",
-    member: null,
-    collection: false,
+    value_projection: "value",
+    probability_mode: "picked",
+    probability_path: ["answer", "probabilities"],
+    pick_path: ["answer", "pick"],
   },
-  tag: {
-    path: ["value", "value", "value"],
-    guards: [
-      [["kind"], "observation"],
-      [["value", "kind"], "row"],
-      [["value", "value", "kind"], "judgment"],
-    ],
-    kind: "tags",
-    member: null,
-    collection: false,
-  },
-  score: {
-    path: ["value", "value", "value"],
-    guards: [
-      [["kind"], "observation"],
-      [["value", "kind"], "row"],
-      [["value", "value", "kind"], "judgment"],
-    ],
-    kind: "score",
-    member: null,
-    collection: false,
-  },
+  tag: { value_projection: "value", probability_mode: "null" },
+  score: { value_projection: "value", probability_mode: "null" },
   filter: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: "input",
-    collection: true,
+    value_projection: "input",
+    probability_mode: "yes",
+    probability_path: ["answer", "probability"],
   },
-  rank: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: "index",
-    collection: true,
-  },
+  rank: { value_projection: "index", probability_mode: "items" },
   find: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: null,
-    collection: false,
+    value_projection: "value",
+    probability_mode: "picked",
+    probability_path: ["answer", "probabilities"],
+    pick_path: ["answer", "pick"],
   },
-  annotate: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: null,
-    collection: true,
-  },
-  recognize: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: null,
-    collection: true,
-  },
-  relate: {
-    path: ["value"],
-    guards: [],
-    kind: null,
-    member: null,
-    collection: false,
-  },
+  annotate: { value_projection: "value", probability_mode: "null" },
+  recognize: { value_projection: "value", probability_mode: "items" },
+  relate: { value_projection: "value", probability_mode: "items" },
 };
-function answer(packets, functionName) {
-  const rule = answerRules[functionName],
-    values = [];
-  for (const packet of packets) {
-    if (packet.function !== functionName) continue;
-    let value;
-    if (rule.kind) {
-      if (
-        !rule.guards.every(
-          ([path, expected]) =>
-            path.reduce((v, key) => v?.[key], packet) === expected,
-        )
-      )
-        continue;
-      const carrier = rule.path.reduce((v, key) => v?.[key], packet);
-      if (carrier?.kind !== rule.kind) continue;
-      value = carrier.value;
-    } else {
-      if (packet.kind === "aggregate") value = packet.value;
-      else if (rule.collection && packet.kind === "row") value = [packet.value];
-      else continue;
+function callResult(rows, functionName, scalar) {
+  const rule = callRules[functionName],
+    project = rule.value_projection;
+  const values = rows.map((row) => row[project]);
+  const single = functionName === "find" || functionName === "relate";
+  const value =
+    project !== "value"
+      ? values
+      : single
+        ? (values[0] ?? (functionName === "find" ? null : []))
+        : scalar && values.length
+          ? values[0]
+          : values;
+  if (rule.probability_mode === "null")
+    return frozen({ value, probability: null });
+  const at = (row, path) => path.reduce((value, key) => value?.[key], row);
+  const chances = rows.map((row) => {
+    if (rule.probability_mode === "picked")
+      return at(row, rule.probability_path)[at(row, rule.pick_path)] ?? null;
+    if (functionName === "recognize") {
+      if (!Object.hasOwn(row.value, "entities"))
+        return row.value.proposals.map((p) => p.probability);
+      const kept = new Map(
+        row.answer.proposals
+          .filter((p) => p.kept)
+          .map((p) => [
+            JSON.stringify([p.selected.start, p.selected.end, p.kind]),
+            p.span_probability,
+          ]),
+      );
+      return row.value.entities.map(
+        (e) => kept.get(JSON.stringify([e.start, e.end, e.kind])) ?? null,
+      );
     }
-    if (rule.collection) values.push(...value);
-    else values.push(value);
-  }
-  if (rule.collection)
-    return Object.freeze(
-      rule.member
-        ? values.map((value) => {
-            if (!Object.hasOwn(value, rule.member))
-              throw new TypeError(
-                "Native answer is missing its projected member",
-              );
-            return value[rule.member];
-          })
-        : values,
-    );
-  if (values.length !== 1)
-    throw new RangeError("Expected exactly one successful answer");
-  return values[0];
+    if (functionName === "relate")
+      return row.value.map((edge) => edge.probability);
+    return rule.probability_path
+      ? (at(row, rule.probability_path) ?? null)
+      : (row.answer?.probability ?? null);
+  });
+  const probability = single
+    ? (chances[0] ?? (functionName === "find" ? null : []))
+    : functionName === "rank"
+      ? chances
+      : scalar && chances.length
+        ? chances[0]
+        : chances;
+  return frozen({ value, probability });
 }
 
 module.exports = {
-  answer,
+  callResult,
   plan,
   packet,
   parse,

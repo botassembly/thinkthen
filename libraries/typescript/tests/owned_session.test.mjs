@@ -107,19 +107,32 @@ test('the ten Client functions retain generated values after close',async t=>{
     if(!(held[1][1].results[0].answer instanceof tt.Results.NativeAnswerChoice) || !Object.values(held[1][1].results[0].answer.probabilities).every(v=>typeof v==='number'))throw Error('lost choice probabilities');
     if(typeof held[0][1].facts.largest_request_bytes!=='number' || !(held[0][1].facts.input_tokens>0) || !held[0][1].facts.token_estimate_method || !(held[0][1].facts.usage_persistence instanceof tt.Results.NativePersistenceObservation))throw Error('lost observed cost facts');
     for(const [verb,done] of held) {
-      const answer=done[verb+'Answer']();
+      if(!(done instanceof tt.Result) || !Object.isFrozen(done))throw Error('unowned result');
+      if(verb+'Answer' in done || verb+'Answer' in client)throw Error('obsolete reader');
+      const answer=done.value;
+      if(['score','tag','annotate'].includes(verb) && done.probability!==null)throw Error('map became a scalar probability');
+      if(verb==='rank' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('rank probability order changed');
+      if(verb==='filter' && JSON.stringify(done.probability)!==JSON.stringify(done.results.map(row=>row.answer.probability)))throw Error('filter probability order changed');
+      if(verb==='find' && done.probability!==(done.results[0].answer.probabilities[done.results[0].answer.pick]??null))throw Error('find probability changed');
+      if(verb==='relate' && JSON.stringify(done.probability)!==JSON.stringify(done.results[0].value.map(edge=>edge.probability)))throw Error('relation probability order changed');
+      if(verb==='recognize') {
+        const row=done.results[0],proposals=row.answer.proposals.filter(proposal=>proposal.kept);
+        const expected=row.value.entities.map(entity=>proposals.find(proposal=>proposal.kind===entity.kind && proposal.selected.start===entity.start && proposal.selected.end===entity.end).span_probability);
+        if(JSON.stringify(done.probability)!==JSON.stringify(expected))throw Error('recognition used entity strength');
+      }
       if(verb==='rank' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.index)))throw Error('rank returned receipts');
       if(verb==='filter' && JSON.stringify(answer)!==JSON.stringify(done.results.map(row=>row.input)))throw Error('filter returned receipts');
       if(['decide','choose','tag','score'].includes(verb) && JSON.stringify(answer)!==JSON.stringify(done.results[0].value))throw Error('scalar answer changed');
-      if(['find','relate'].includes(verb) && answer!==done.results[0])throw Error('aggregate answer changed');
-      if(verb==='recognize' && JSON.stringify(answer)!==JSON.stringify(done.results))throw Error('recognition answer changed');
+      if(['find','relate'].includes(verb) && answer!==done.results[0].value)throw Error('aggregate answer changed');
+      if(verb==='recognize' && JSON.stringify(answer)!==JSON.stringify(done.results[0].value))throw Error('recognition answer changed');
     }
     const direct=new tt.Client({cache:false});
-    if(typeof await direct.decideAnswer('Question?','text')!=='boolean')throw Error('direct answer changed');
-    try{(await direct.decide('Question?',['first','second'])).decideAnswer();throw Error('accepted multiple answers');}
-    catch(error){if(!(error instanceof tt.ClientError) || !error.facts || error.results.length!==2)throw error;}
-    try{held[0][1].filterAnswer();throw Error('accepted wrong reader');}
-    catch(error){if(!(error instanceof tt.ClientError) || error.facts!==held[0][1].facts)throw error;}
+    const scalar=await direct.decide('Question?','text');
+    const list=await direct.decide('Question?',['first','second']);
+    const singleton=await direct.decide('Question?',['first']);
+    if(typeof scalar.value!=='boolean' || typeof scalar.probability!=='number')throw Error('scalar result changed');
+    if(JSON.stringify(list.value)!==JSON.stringify(list.results.map(r=>r.value)) || list.probability.length!==2)throw Error('list order changed');
+    if(!Array.isArray(singleton.value) || singleton.value.length!==1)throw Error('singleton lost cardinality');
     direct.close();
     return held.map(([verb,done])=>[verb,done.results.length,done.facts.requests_sent]);
   `,{arm:'arm/full/capture'});
@@ -141,7 +154,7 @@ test('Client retains false, null, missing, exact numbers and physical positions'
     const located=await client.decide('Question?',tt.Client.files([path]));
     const exactPath=process.env.HOME+'/exact.jsonl';writeFileSync(exactPath,'9007199254740993\\n');
     const exactDone=await client.decide('Question?',tt.Client.files([exactPath],{unit:'line'},'text','jsonl'));client.close();
-    return {values:[no.results[0].value,nil.results[0].value,uncertain.results[0].value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),nativeExact:[exactDone.results[0].input.raw,JSON.stringify(exactDone.results[0].input)],typed:no.terminal instanceof tt.Results.NativeSessionPacketTerminal};
+    return {values:[no.value,nil.value,uncertain.value],presence:[no.results[0].question.has('true'),nil.results[0].question.has('true'),nil.results[0].question.true],positions:located.results.map(r=>[r.index,r.source.first_line,r.source.last_line,r.input]),nativeExact:[exactDone.results[0].input.raw,JSON.stringify(exactDone.results[0].input)],typed:no.terminal instanceof tt.Results.NativeSessionPacketTerminal};
   `);
   assert.deepEqual(value.values,[false,null,null]);assert.deepEqual(value.presence,[false,true,null]);
   assert.deepEqual(value.positions,[[0,1,1,'first'],[1,3,3,'third']]);
@@ -262,6 +275,8 @@ test('Client recognize retains every aggregate chunk and its completed failure p
     const question={version:1,recognize:{kinds:{person:null}}};
     const done=await client.recognize(question,tt.Client.files(paths.slice(0,2),{unit:'file'}));
     const empty=await client.recognize(question,[]);
+    const boundary=await client.recognize(tt.Client.recognizeQuestion({person:null},{mode:'boundary_only'}),'Ana Lima');
+    if(JSON.stringify(boundary.probability)!==JSON.stringify(boundary.value.proposals.map(proposal=>proposal.probability)))throw Error('boundary proposal probability changed');
     let failed;
     try {await client.recognize(question,tt.Client.files(paths,{unit:'file'}));throw Error('failure became answer');}
     catch(error){if(!(error instanceof tt.ClientError))throw error;failed={kind:error.kind,rows:error.results.map(row=>row.index),sends:error.facts.requests_sent};}
