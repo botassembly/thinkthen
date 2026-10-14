@@ -17,6 +17,7 @@ def stage_generated_source(source, root, target):
         *(generator + name + '.py' for name in
           ('generate', 'registry', 'native', 'layouts', 'formatting')),
         generator + 'templates/' + target + '.py',
+        *((generator + 'templates/host_answers.py',) if target == 'typescript' else ()),
         'conformance/children/children.py',
         'crates/thinkthen/src/public/results/complete.schema.json',
         'specification/request.schema.json',
