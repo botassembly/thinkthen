@@ -12,6 +12,17 @@ pub struct FindQuestionFile {
     selected: bool,
 }
 impl FindQuestionFile {
+    pub(crate) fn from_parts(question: Question, reading: RecordReading) -> Self {
+        let selected = reading
+            .fields()
+            .iter()
+            .any(|field| !field.as_str().is_empty());
+        Self {
+            question,
+            reading,
+            selected,
+        }
+    }
     /// Admit saved find text/model/profile and evidence pointers through the shared grammar.
     /// # Errors
     /// Refuses authored candidates, cuts, batch and invalid question/field values.

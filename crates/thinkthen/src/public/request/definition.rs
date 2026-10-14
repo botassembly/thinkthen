@@ -96,6 +96,16 @@ impl From<FindQuestionFile> for RequestDefinition {
         Self::Find(q)
     }
 }
+impl From<(Question, crate::RecordReading)> for RequestDefinition {
+    fn from((question, reading): (Question, crate::RecordReading)) -> Self {
+        Self::Find(FindQuestionFile::from_parts(question, reading))
+    }
+}
+impl From<(Recognize, crate::RecordReading)> for RequestDefinition {
+    fn from((question, reading): (Recognize, crate::RecordReading)) -> Self {
+        Self::Recognize(RecognizeQuestionFile::from_parts(question, reading))
+    }
+}
 impl From<RecognizeQuestionFile> for RequestDefinition {
     fn from(q: RecognizeQuestionFile) -> Self {
         Self::Recognize(q)

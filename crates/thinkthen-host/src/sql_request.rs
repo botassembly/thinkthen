@@ -86,11 +86,12 @@ pub fn definition(prepared: &Prepared) -> RequestDefinition {
     match prepared {
         Prepared::Atomic(q) => RequestDefinition::Atomic(q.clone()),
         Prepared::Dynamic(q) => RequestDefinition::DynamicChoose(q.clone()),
-        Prepared::Filter(q) | Prepared::Find(q, _) => q.clone().into(),
+        Prepared::Filter(q) => q.clone().into(),
+        Prepared::Find(q, reading) => (q.clone(), reading.clone()).into(),
         Prepared::Rank(q) => RequestDefinition::Rank(q.clone()),
         Prepared::RankSet(q) => q.clone().into(),
         Prepared::Annotate(q) => q.clone().into(),
-        Prepared::Recognize(q, _) => q.clone().into(),
+        Prepared::Recognize(q, reading) => (q.clone(), reading.clone()).into(),
         Prepared::Relate(q) => q.clone().into(),
     }
 }
