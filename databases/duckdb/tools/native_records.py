@@ -31,6 +31,7 @@ def check(run):
     helpers(run)
     sources(run)
     rich_overloads(run)
+    null_members(run)
 
 
 def helpers(run):
@@ -91,3 +92,21 @@ def rich_overloads(run):
             expect('error' in got[2], True, "missing reading does not silently choose a rich call")
             expect(rows(got[3]), [[0]], "required NULL masks invalid reading")
         expect(backend.count(), 2, "only explicit NULL reading calls send")
+
+
+def null_members(run):
+    """Authored JSON null remains present in ancillary native record members."""
+    recognize = "{'version':1,'recognize':{'kinds':{'person':'A person name.'}}}"
+    cases = [("decide", "'Refund?'", "context"),
+             ("choose", "{'choose':'Team?','options':['billing','shipping']}", "options"),
+             ("recognize", recognize, "examples"),
+             ("recognize", recognize, "seed_spans")]
+    with Backend() as backend:
+        got = run([
+            f"SELECT failure.kind,facts.requests_sent FROM thinkthen_{verb}({question}, "
+            f"[thinkthen_record(text := 'Ada', {member} := 'null'::JSON)])"
+            for verb, question, member in cases
+        ], backend.base())
+        expect([rows(item) for item in got], [[['usage', None]]] * len(cases),
+               "authored null ancillary members refuse without invented facts")
+        expect(backend.count(), 0, "authored null refuses before sends")
