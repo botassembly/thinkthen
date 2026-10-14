@@ -16,6 +16,74 @@ from conformance.children.children import child_env
 
 
 class PublicSurface(unittest.TestCase):
+    def test_python_typed_keyword_sources_and_private_exports(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-python-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/python/thinkthen', root / 'libraries/python/thinkthen',
+                            ignore=shutil.ignore_patterns('__pycache__', '*.so'))
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'python', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return json.loads(run.stdout)['libraries']['python']
+            self.assertEqual(invoke(), [])
+            generated = root / 'libraries/python/thinkthen/_named_generated.py'
+            original = generated.read_text()
+            for before, after, missing in [('attempts: bool', 'extra_keyword: bool', '.attempts'),
+                                            ('backend: str | None', 'backend: int | None', '.backend.str | None')]:
+                with self.subTest(before=before):
+                    self.assertIn(before, original)
+                    generated.write_text(original.replace(before, after, 1))
+                    self.assertTrue(any(error.startswith('missing generated declaration: _named_generated.py:')
+                                        and missing in error for error in invoke()))
+            generated.write_text(original)
+            stub = root / 'libraries/python/thinkthen/__init__.pyi'
+            source = stub.read_text()
+            stub.write_text(source.replace('Unpack[EngineSettings]', 'Unpack[UnknownSettings]'))
+            self.assertTrue(any(error.startswith('missing setting: backend') for error in invoke()))
+            stub.write_text(source.replace("__all__ = [", "__all__ = ['_private_codec', "))
+            self.assertIn('unlisted public call/export: ._private_codec', invoke())
+
+    def test_rbs_keyword_types_and_ruby_private_class_visibility(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-ruby-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/ruby/lib', root / 'libraries/ruby/lib')
+            shutil.copytree(ROOT / 'libraries/ruby/sig', root / 'libraries/ruby/sig')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ruby', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return set(json.loads(run.stdout)['libraries']['ruby'])
+            baseline = invoke()
+            generated = root / 'libraries/ruby/sig/thinkthen/results_generated.rbs'
+            original = generated.read_text()
+            for before, after in [('?attempts: bool', '?extra_keyword: bool'),
+                                  ('?backend: String', '?backend: Integer')]:
+                with self.subTest(before=before):
+                    self.assertIn(before, original)
+                    generated.write_text(original.replace(before, after, 1))
+                    self.assertTrue(any(error.startswith('missing generated declaration: results_generated.rbs:')
+                                        for error in invoke() - baseline))
+            generated.write_text(original)
+            runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
+            source = runtime.read_text()
+            hidden = source.replace('    def self.original(value)',
+                                    '    private_class_method :dump\n    def self.original(value)', 1)
+            runtime.write_text(hidden)
+            self.assertNotIn('unlisted public call/export: Client.dump', invoke())
+            runtime.write_text(hidden.replace('private_class_method :dump', ''))
+            self.assertIn('unlisted public call/export: Client.dump', invoke())
+
     def test_cobol_outer_guard_preserves_real_public_macros(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
             root = Path(folder)
@@ -210,7 +278,8 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
                 import generate
             finally:
                 sys.path[:] = original_path
-            generated = template.declarations(generate.prepare(generate.graph(result, template.ROOTS)))
+            generated = template.declarations(generate.prepare(generate.graph(result, template.ROOTS)),
+                                              generate.prepare(generate.graph(request, template.INPUT_ROOTS)))
             write('libraries/typescript/results_generated.d.ts', generated)
             declarations = ('export interface Controls { readonly context?: string; readonly [key:string]: unknown; }\n'
                             'export interface Settings { readonly backend?: string; }\n'
@@ -255,6 +324,11 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             self.assertIn('missing helper: plan', errors)
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ''))
             self.assertTrue(any('missing generated declaration:' in error and '.payload' in error for error in errors))
+            code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: number;'))
+            self.assertTrue(any('missing generated declaration:' in error and '.payload.' in error for error in errors), errors)
+            inherited = declarations.replace('decide(): void;', '') + '\nexport interface Client extends R.TypedCalls {}\nexport interface TypedCalls { decide(): void; }\n'
+            self.assertNotIn('missing function: decide', invoke(inherited)[1])
+            self.assertIn('missing function: decide', invoke(inherited.replace(' extends R.TypedCalls', ''))[1])
             code, errors = invoke(graph=generated.replace(' readonly "payload"?: string;', ' readonly "payload"?: string;\n surprise: string;'))
             self.assertTrue(any('unlisted generated declaration:' in error and '.surprise' in error for error in errors))
 
@@ -340,6 +414,9 @@ extraPublicExport <- function(context = NULL, enabled = FALSE,
             for owner, field in [('Other', 'FactsJson'), ('Other', 'Failure'),
                                  ('RequestOptions', 'SurpriseOption'), ('EngineSettings', 'SurpriseSetting')]:
                 self.assertIn('unlisted public field: ' + owner + '.' + field, unexpected)
+            extra.write_text('public class TransportBase { public string TransportJson {get;} }\n'
+                             'public class Engine : TransportBase {}\n')
+            self.assertIn('unlisted public field: TransportBase.TransportJson', invoke(original))
             extra.unlink()
             inputs = root / 'libraries/csharp/src/RequestInputs.g.cs'
             input_source = inputs.read_text()

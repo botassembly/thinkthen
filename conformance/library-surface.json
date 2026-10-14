@@ -171,7 +171,8 @@
         "libraries/python/thinkthen/_calls.pyi",
         "libraries/python/thinkthen/_inputs.py",
         "libraries/python/thinkthen/_native_results.pyi",
-        "libraries/python/thinkthen/files.py"
+        "libraries/python/thinkthen/files.py",
+        "libraries/python/thinkthen/_named_generated.py"
       ],
       "option_containers": [
         "Engine.*"
@@ -360,18 +361,11 @@
       "language": "ruby",
       "naming": "snake",
       "declarations": [
-        "libraries/ruby/lib/**/*.rb"
+        "libraries/ruby/lib/**/*.rb",
+        "libraries/ruby/sig/thinkthen/results_generated.rbs"
       ],
-      "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
-      ],
-      "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
-      ],
+      "option_containers": ["Client.*"],
+      "setting_containers": ["Client.initialize", "Client.open"],
       "function_prefix": "",
       "test_folders": [
         "tests",

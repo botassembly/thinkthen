@@ -45,10 +45,16 @@ def generated_sources(root, target, request, result):
         outputs['thinkthen.h'] = header_generator.generate(root).decode()
     elif target == 'python':
         outputs['_native_results.pyi'] = template.types(results, stubs=True)
+        if hasattr(template, 'named_calls'):
+            outputs['_named_generated.py'] = template.named_calls(request)
     elif target == 'typescript':
-        outputs['results_generated.d.ts'] = template.declarations(results)
+        outputs['results_generated.d.ts'] = (template.declarations(results, inputs) if getattr(template, 'INPUT_ROOTS', ())
+                                             else template.declarations(results))
     elif target == 'ruby':
-        outputs['results_generated.rb'] = template.render(results)
+        outputs['results_generated.rb'] = (template.render(results) + "module ThinkThen\n  class Client\n    REQUEST_VERSION = "
+                                           + repr(version) + ".freeze\n  end\nend\n")
+        if hasattr(template, 'rbs'):
+            outputs['results_generated.rbs'] = template.rbs(results)
     elif target == 'cpp':
         outputs['results_generated.hpp'] = template.render(results, version) + template.usage(header)
         outputs['inputs_generated.hpp'] = template.input_render(inputs)
