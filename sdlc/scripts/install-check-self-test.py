@@ -199,7 +199,10 @@ class RefusalTable(unittest.TestCase):
                     self.assertIn(f'{host}/{platform}/thinkthen.duckdb_extension', sql)
                     self.assertIn("AND loaded", sql)
                     self.assertIn('thinkthen_replay', sql)
-                    return '0.2.0\n{"value":true,"meta":{"requests_sent":0}}'
+                    self.assertIn("SELECT to_json({'value':d.answers[1].decide,'requests_sent':d.facts.requests_sent})", sql)
+                    self.assertIn('FROM (SELECT thinkthen_details(', sql)
+                    self.assertIn(') AS d);', sql)
+                    return '0.2.0\n{"value":true,"requests_sent":0}'
                 check.run = run
                 if failure:
                     with patch.object(check, 'unpack', wraps=check.unpack) as unpack, self.assertRaises(Failure) as error:
