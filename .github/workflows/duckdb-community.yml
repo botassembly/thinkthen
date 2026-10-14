@@ -1,0 +1,81 @@
+name: DuckDB community build
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  release:
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@3fd6109fc01555673b7c7123eba8d0d143fe8ce4
+    with:
+      extension_name: thinkthen
+      duckdb_version: v1.5.6
+      ci_tools_version: 3fd6109fc01555673b7c7123eba8d0d143fe8ce4
+      override_repository: ${{ github.repository }}
+      override_ref: ${{ github.sha }}
+      exclude_archs: windows_amd64;windows_amd64_mingw;windows_arm64;wasm_mvp;wasm_eh;wasm_threads
+      extra_toolchains: rust
+      reduced_ci_mode: disabled
+      save_cache: false
+  preview:
+    uses: duckdb/extension-ci-tools/.github/workflows/_extension_distribution.yml@a68570fde10384547868301a12327d5c67909527
+    with:
+      extension_name: thinkthen
+      duckdb_version: d4355d01c59362d57036ad377735dd5340276a5b
+      ci_tools_version: a68570fde10384547868301a12327d5c67909527
+      override_repository: ${{ github.repository }}
+      override_ref: ${{ github.sha }}
+      exclude_archs: windows_amd64;windows_amd64_mingw;windows_arm64;wasm_mvp;wasm_eh;wasm_threads
+      extra_toolchains: rust
+      reduced_ci_mode: disabled
+      save_cache: false
+  doc_test:
+    needs: release
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          path: source
+          persist-credentials: false
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with:
+          repository: duckdb/community-extensions
+          ref: 14b1f68c427b51cd00edbc3f25ee55ad8c7eaaac
+          path: community
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093
+        with:
+          name: thinkthen-v1.5.6-extension-linux_amd64
+          path: community/build/downloaded
+      - name: Run the community documentation generator
+        working-directory: community
+        env:
+          GH_TOKEN: ${{ github.token }}
+          THINKTHEN_CANDIDATE: ${{ github.sha }}
+        run: |
+          set -eu
+          sudo apt-get update
+          sudo apt-get install -y jq
+          python3 -m pip install --break-system-packages 'yq==3.4.3' 'PyYAML==6.0.3'
+          curl --fail --location https://github.com/duckdb/duckdb/releases/download/v1.5.6/duckdb_cli-linux-amd64.zip -o duckdb.zip
+          unzip duckdb.zip
+          mkdir -p extensions/thinkthen
+          sed "s/<reviewed-0.2-candidate-commit>/$THINKTHEN_CANDIDATE/g" ../source/sdlc/records/0577-description-draft.yml > extensions/thinkthen/description.yml
+          ./duckdb -unsigned -c "SET extension_directory = 'build/extension_dir'; FORCE INSTALL 'build/downloaded/thinkthen.duckdb_extension';"
+          ./scripts/generate_md.sh ./duckdb
+          ./scripts/generate_extensions_json.py
+          test -s build/docs/thinkthen.md
+          python3 - <<'PYCODE'
+          import os, subprocess, yaml
+          with open('extensions/thinkthen/description.yml') as source:
+              sql = yaml.safe_load(source)['docs']['hello_world']
+          done = subprocess.run(['./duckdb', '-unsigned', '-init', '/dev/null', '-csv', '-c',
+                                 "LOAD 'build/downloaded/thinkthen.duckdb_extension'; " + sql],
+                                env={key: value for key, value in os.environ.items()
+                                     if not key.startswith('THINKTHEN_')},
+                                check=True, capture_output=True, text=True)
+          assert done.stdout.splitlines()[-1] == '1', done.stdout
+          PYCODE
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: thinkthen-community-docs
+          path: community/build/docs
