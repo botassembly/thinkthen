@@ -112,15 +112,16 @@ bad = [run(db, sql, args) for sql, args in [
  ('SELECT thinkthen_images(?,?,?,?,?,?,?,?,?)', tuple(images[0] for _ in range(9))),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', b'private-image-evidence')),
  ('SELECT thinkthen_decide_images(?, ?)', ('Is red visible?', packed + b'x')),
- ('SELECT value FROM thinkthen_decide_details(?, ?)', ('{"tag":"Which?","labels":["red"]}', packed)),
  ('SELECT thinkthen_decide_images(?, ?, NULL, ?)', ('Is red visible?', packed, '{"model":"unadmitted"}')),
  ('SELECT thinkthen_tag(?, ?)', ('{"tag":"Which?","labels":["red"]}', images[0])),
  ('SELECT thinkthen_decide(?, ?)', ('Is red visible?', images[0]))]]
 file = db.execute('SELECT thinkthen_image_file(?)', (''' + repr(str(FIXTURE / 'red.png')) + ''',)).fetchone()[0]
-say(nulls=nulls,bad=bad,file=run(db,'SELECT thinkthen_image_file_name(?)',(file,)))
+say(nulls=nulls,bad=bad,file=run(db,'SELECT thinkthen_image_file_name(?)',(file,)),
+ details=run(db,'SELECT ordinal,error_kind,error_message,error_retryable,facts FROM thinkthen_decide_details(?,?)',('{"tag":"Which?","labels":["red"]}',packed)))
 ''', env)
         expect(got['nulls'], [[[None]]] * 5, 'NULL operands do not inspect invalid partners')
         assert all(isinstance(error, str) and 'thinkthen usage:' in error for error in got['bad']), got['bad']
+        expect(got['details'], [[None,'usage','the question uses another function',0,None]], 'details admission preserves exact failure without invented position or facts')
         assert 'private-image-evidence' not in json.dumps(got)
         expect(got['file'], [[str(FIXTURE / 'red.png')]], 'native image source retains file without text positions')
         expect(backend.count(), 0, 'local invalid values and NULLs send nothing')

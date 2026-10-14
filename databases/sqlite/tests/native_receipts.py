@@ -135,6 +135,12 @@ def call(db, verb, question, inputs, settings=None):
     errors = reader.rows('error')
     root = ROOT_KIND[verb]
     values = [reader.object(root, row[root + '_receipt_index']) for row in reader.rows(root)]
+    if verb == 'relate' and values:
+        aggregate={**values[0],'value':[]}
+        for value in values:
+            assert {k:v for k,v in value.items() if k!='value'} == {k:v for k,v in aggregate.items() if k!='value'},value
+            aggregate['value'].extend(value['value'])
+        values=[aggregate]
     native = {}
     if facts:
         native['facts'] = reader.object('facts', facts[0]['facts_receipt_index'])
@@ -153,11 +159,6 @@ def call(db, verb, question, inputs, settings=None):
         selection = reader.rows('find_selection')
         if selection:
             result['selection'] = reader.object('find_selection', selection[0]['find_selection_receipt_index'])['selected']
-    if not facts and not errors and not values:
-        sql='SELECT ordinal FROM thinkthen_'+reader.verb+' WHERE '+ ' AND '.join(name+'=?' for name in reader.fields)
-        actual=reader.db.execute(sql,list(reader.fields.values())).fetchall()
-        assert actual == [],actual
-        return {'empty_sql_rows': [], 'details_rows': []}
     return result
 
 

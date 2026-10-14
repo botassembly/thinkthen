@@ -394,7 +394,7 @@ shapes['details'] = ordinary(db, "Is it red?", "red door", settings)
 say(shapes=shapes, plain=plain,
     null=run(db, "SELECT value FROM thinkthen_decide_details(NULL, 'bad', ?)", ('{{"context":"  "}}',)),
     slot=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1)"),
-    bad=run(db, "SELECT value FROM thinkthen_decide_details('Is it red?', 'red door', ?)", ('{{"context":"  "}}',)),
+    bad=run(db, "SELECT ordinal,error_kind,error_message,error_retryable,facts FROM thinkthen_decide_details('Is it red?', 'red door', ?)", ('{{"context":"  "}}',)),
     bad_ordinary=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', ?)", ('{{"context":"  "}}',)))
 """, environment(backend))
     shapes = held["shapes"]
@@ -410,7 +410,7 @@ say(shapes=shapes, plain=plain,
     expect(details["meta"]["requests"] != plain["meta"]["requests"], True, "context changes request")
     expect(held["null"], [], "NULL short-circuit")
     expect(held["slot"], "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'", "old slot refusal")
-    expect(held["bad"], "thinkthen usage: `context` is text that is not blank (retryable: no)", "details admission refuses before sending")
+    expect(held["bad"], [[None,"usage","`context` is text that is not blank",0,None]], "details admission retains exact failure without invented position or facts")
     expect(held["bad_ordinary"], "thinkthen usage: `context` is text that is not blank (retryable: no)", "bad context")
     expect(backend.close(), 5, "four typed questions and contextual/plain decide")
 

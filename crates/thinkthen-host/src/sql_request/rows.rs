@@ -29,9 +29,11 @@ pub(super) fn complete(
                 .into_iter()
                 .flatten()
             {
+                let mut edge_result = result.clone();
+                edge_result["value"] = json!([edge]);
                 rows.push(
                     json!({"ordinal":rows.len(),"value":edge,"probability":edge.get("probability"),
-                    "result":result,"failure":null,"facts":facts,"observations":observations}),
+                    "result":edge_result,"failure":null,"facts":facts,"observations":observations}),
                 );
             }
         } else {
@@ -67,6 +69,13 @@ pub(super) fn failed(
 ) -> Value {
     json!({"ordinal":ordinal,"value":null,"probability":null,"result":null,
         "failure":failure,"facts":facts,"observations":observations})
+}
+
+fn failed_call(failure: Value, facts: &Value, observations: &[Value]) -> Value {
+    let ordinal = failure.pointer("/stopped/at").cloned().unwrap_or(Value::Null);
+    let mut row = failed(0, failure, facts, observations);
+    row["ordinal"] = ordinal;
+    row
 }
 
 /// Restore decisions and aligned probabilities from authoritative native results.
@@ -183,7 +192,7 @@ pub fn project_outcome(
         if matches!(function, F::Rank | F::Find | F::Relate) {
             rows.clear();
         }
-        rows.push(failed(rows.len(), failure, &facts, &observations));
+        rows.push(failed_call(failure, &facts, &observations));
     }
     Ok(rows)
 }
@@ -242,7 +251,7 @@ pub fn project_carrier(function: F, carrier: &Value) -> Vec<Value> {
         if matches!(function, F::Rank | F::Find | F::Relate) {
             rows.clear();
         }
-        rows.push(failed(rows.len(), failure.clone(), &facts, &observations));
+        rows.push(failed_call(failure.clone(), &facts, &observations));
     }
     rows
 }

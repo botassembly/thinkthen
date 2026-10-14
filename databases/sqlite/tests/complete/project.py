@@ -77,6 +77,7 @@ def project(doc,verb):
     for key in ('records','input_tokens','output_tokens'):
         if key in facts:out[key]=facts[key]
     out['rows']=[projected(row,verb,(doc.get('ordinals') or list(range(len(values))))[at],events) for at,row in enumerate(values)]
+    if verb=='rank':out['rows'].sort(key=lambda row:row['value'])
     if verb=='find':out['rows'][0]['index']=doc['selection']
     return out
 
