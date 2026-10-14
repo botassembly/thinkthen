@@ -12,7 +12,6 @@ case $profile in routine|full|stress|smoke) ;; *) echo "duckdb: unknown THINKTHE
 LIMIT=$HERE/../../sdlc/scripts/time-limit
 INPUTS_HERE=$HERE/tools
 . "$INPUTS_HERE/inputs.sh"
-. "$INPUTS_HERE/prepare_inputs.sh"
 DUCKDB_VERSIONS=$(input_versions)
 DEFAULT_VERSION=${DUCKDB_VERSIONS%% *}
 host_target=$(input_target)
