@@ -2,10 +2,10 @@
 
 Ask `thinkthen` questions of a Polars `Series` or `DataFrame` from Rust. The interface is the `polars` feature of the `thinkthen` crate. It is off by default, so a build that does not ask for it compiles no Polars.
 
-The calls below describe the reviewed development 0.2 API. The public release remains 0.1.2; use an unpacked candidate crate until 0.2 is published. In the candidate project, enable the feature:
+The calls below describe the reviewed development 0.2 API. The public release remains 0.1.2; use an unpacked candidate crate until 0.2 is published. Unpack the candidate crate beside your project as `thinkthen-0.2.0`, then enable the feature from that local path:
 
 ```toml
-thinkthen = { version = "=0.2.0", features = ["polars"] }
+thinkthen = { path = "../thinkthen-0.2.0", version = "=0.2.0", features = ["polars"] }
 ```
 
 The feature adds `thinkthen::PolarsEngine` to your own `thinkthen::Engine`. Eager methods read one column in one call. Row-wise lazy expressions judge the collected column on the default engine. Rank, find and relate judge one complete logical collection. Row-wise judgments use the native batch path and throttle and preserve input order. The trait's rustdoc holds a full eager example.
@@ -44,7 +44,7 @@ Each eager asking method returns a `Call` containing the typed value in the tabl
 | `source_column` | explicit paths and native `InputReaderOptions` | value columns plus physical file and nullable text line coordinates |
 | `plan_series` | a question and text `Series` | a no-send `PlanEstimate` using the engine's request planner |
 
-Eager asking methods take `CallOptions`. The scalar dtypes in this table describe the eager method's `call.value()`, not the lazy expression Struct. `column_with` also accepts `PolarsCallOptions` for a call-level threshold, decide true/false meanings overrides. Value and probability come from the same invocation. Score, tag and annotate return null probability. A null probability means that the native result supplies no probability; it never means zero. An unsure decide value may still have a yes probability, while an omitted null input has no probability. One deadline, cancel token, and interrupt check cover the whole column. The call runs on your thread and starts no worker of its own.
+Eager asking methods take `CallOptions`. The scalar dtypes in this table describe the eager method's `call.value()`, not the lazy expression Struct. `column_with` also accepts `PolarsCallOptions` for a call-level threshold, decide true/false meanings overrides. Value and probability come from the same invocation. Score, tag and annotate return null probability. A null probability means that the native result supplies no probability; it never means zero. An unresolved decide or choose judgment has null probability, as does an omitted null input. A resolved judgment whose authored output is null can retain a numeric probability; read the native records to distinguish that output from an unresolved judgment. One deadline, cancel token, and interrupt check cover the whole column. The call runs on your thread and starts no worker of its own.
 
 The named judgments, recognition and relation calls use typed native Requests. Probability columns project value and probability from the same complete answer. Recognition preserves native spans and relations. Relation columns form one complete entity set; paired null fields omit an entity, and an unmatched null refuses before sending. Read the full native observations through `call.results()`.
 
