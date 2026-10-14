@@ -414,6 +414,18 @@ impl Schema {
         Ok(())
     }
     fn aggregate_question(&mut self, authored: &Value) -> Result<(), Error> {
+        if authored.get("relate").is_some() {
+            // Relation members use the production string template, independent
+            // of any returned answer or entity values.
+            let Shape::Object(mut question) = self.named_shape("completequestionDocument")? else {
+                return Err(invalid());
+            };
+            question.insert("text".to_owned(), Shape::Raw(DataType::String));
+            self.overrides.insert(
+                "completequestionDocument".to_owned(),
+                Shape::Object(question),
+            );
+        }
         if let Some(text) = authored.get("find") {
             let Shape::Object(mut question) = self.named_shape("completefindQuestionDocument")?
             else {
