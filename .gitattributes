@@ -1,4 +1,6 @@
 specification/*.json text eol=lf
+databases/postgresql/src/native/functions_generated.rs linguist-generated
+databases/postgresql/src/native/results_generated.rs linguist-generated
 libraries/ada/src/thinkthen-answers.adb linguist-generated
 libraries/ada/src/thinkthen-answers.ads linguist-generated
 libraries/ada/src/thinkthen-inputs-calls.adb linguist-generated

@@ -1428,5 +1428,71 @@
       ],
       "representation_owners": []
     }
+  },
+  "databases": {
+    "postgresql": {
+      "root": "databases/postgresql",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ],
+      "test_files": [
+        "src/files_complete_tests.rs"
+      ]
+    },
+    "duckdb": {
+      "root": "databases/duckdb",
+      "test_folders": [
+        "test",
+        "tests",
+        "proof",
+        "examples"
+      ],
+      "test_files": [
+        "tools/backend_setups.py",
+        "tools/build_version_cases.py",
+        "tools/conformance.py",
+        "tools/databases_suite.py",
+        "tools/files_suite.py",
+        "tools/find_suite.py",
+        "tools/harness.py",
+        "tools/images_suite.py",
+        "tools/input_version_cases.py",
+        "tools/named_backends.py",
+        "tools/plan_suite.py",
+        "tools/portable_suite.py",
+        "tools/rank_sets_suite.py",
+        "tools/rank_suite.py",
+        "tools/relate_suite.py",
+        "tools/release_pack_cases.py",
+        "tools/settings_cases.py",
+        "tools/settings_suite.py",
+        "tools/signal_suite.py",
+        "tools/site_examples.py",
+        "tools/source_checks.py",
+        "tools/source_pin_cases.py",
+        "tools/verbs_budget.py",
+        "tools/verbs_complete.py",
+        "tools/verbs_portable.py",
+        "tools/verbs_suite.py",
+        "cpp/verify_complete_tables.py",
+        "cpp/verify_decide.py",
+        "cpp/verify_footer.py",
+        "cpp/verify_interrupt.py",
+        "cpp/verify_nested.py",
+        "cpp/verify_package.py",
+        "cpp/verify_repository.py",
+        "cpp/verify_tables.py"
+      ]
+    },
+    "sqlite": {
+      "root": "databases/sqlite",
+      "test_folders": [
+        "tests",
+        "fixtures",
+        "examples"
+      ]
+    }
   }
 }
