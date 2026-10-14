@@ -211,6 +211,17 @@ end program BLOCK_PLAN.
             code, plan, status = invoke(function, preview=True)
             assert code == 1 and backend.attempts == before, (function, code)
             if status.owner: bridge.TT_ANSWER_FREE(status.owner)
+        before = backend.attempts
+        code, answer, status = invoke('rank', ['second', 'first', 'third', 'first'])
+        try:
+            assert code == 0 and answer.owner and answer.count == 4
+            indexes = list((ct.c_uint64 * answer.count).from_address(answer.rows))
+            assert indexes == [1, 3, 2, 0], indexes
+            assert status.facts_present and status.facts.records == 4
+            assert backend.attempts - before == status.facts.requests_sent > 0
+        finally:
+            if answer.owner: bridge.TT_ANSWER_FREE(answer.owner)
+            if status.owner and status.owner != answer.owner: bridge.TT_ANSWER_FREE(status.owner)
         for function in questions:
             code, answer, status = invoke(function, options={'attempts': True})
             assert code == 0, (function, code, bytes(status.message.text[:status.message.length]))
@@ -229,7 +240,7 @@ end program BLOCK_PLAN.
                 assert Text.from_address(tags.rows).text[:1] == b'a'
                 assert Text.from_address(tags.rows + ct.sizeof(Text)).text[:1] == b'b'
             if function == 'score': assert abs(ct.c_double.from_address(answer.rows).value - .1) < 1e-12
-            if function == 'rank': assert ct.c_uint64.from_address(answer.rows).value == 1
+            if function == 'rank': assert ct.c_uint64.from_address(answer.rows).value == 0
             if function == 'find': assert Find.from_address(answer.rows).present == 1
             if function == 'annotate': assert Annotation.from_address(answer.rows).boolean == 1
             if function == 'recognize': assert Recognition.from_address(answer.rows).text.text[:10] == b'John Smith'

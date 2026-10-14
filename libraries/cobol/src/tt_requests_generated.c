@@ -5383,7 +5383,10 @@ thinkthen_cobol_AnswerTable *out) {
             if(!rows) return a->code;
             for(size_t i=0;
             i<list.len;
-            i++) rows[i].value=list.data[i]->value;
+            i++) {
+                if(list.data[i]->index.presence!=THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) return THINKTHEN_COBOL_REPRESENTATION;
+                rows[i].value=list.data[i]->index.value;
+            }
             break;
         }
         case THINKTHEN_COMPLETE_REQUEST_FUNCTION_ANNOTATE_V1: {
