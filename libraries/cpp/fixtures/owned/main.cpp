@@ -148,15 +148,15 @@ int main(int argc,char** argv) {
         }
         if(std::string(argv[1])=="values") {
             using namespace tt::results;
-            Facts absent(Data::Object{});
-            Facts null(Data{{"model",nullptr},{"held_model_mismatch",false},{"input_tokens",uint64_t(-1)},{"future",Data{{"n",uint64_t(-1)}}}});
+            auto absent=::tt::results::detail::Loader::input<Facts>(Data::Object{});
+            auto null=::tt::results::detail::Loader::input<Facts>(Data{{"model",nullptr},{"held_model_mismatch",false},{"input_tokens",uint64_t(-1)},{"future",Data{{"n",uint64_t(-1)}}}});
             if(absent.model().state!=PresenceState::absent || null.model().state!=PresenceState::null) return 10;
             if(null.held_model_mismatch().state!=PresenceState::value || *null.held_model_mismatch().value) return 11;
             if(*null.input_tokens().value!=UINT64_MAX || ::tt::detail::serialize(::tt::results::detail::document(null).at("future").at("n"))!=std::to_string(UINT64_MAX)) return 12;
             if(::tt::detail::serialize(::tt::detail::parse_original(::tt::detail::serialize(::tt::results::detail::document(null))).at("input_tokens"))!=std::to_string(UINT64_MAX)) return 13;
             if(Data(5)!=::tt::detail::parse_original("5") || Data(UINT64_MAX)==Data(static_cast<double>(UINT64_MAX))) return 21;
             if(::tt::detail::serialize(::tt::detail::parse_original("-9223372036854775808"))!="-9223372036854775808") return 22;
-            SessionPacket escaped(::tt::detail::parse_original(R"({"kind":"termin\u0061l","facts":{},"future":false})"));
+            auto escaped=::tt::results::detail::Loader::input<SessionPacket>(::tt::detail::parse_original(R"({"kind":"termin\u0061l","facts":{},"future":false})"));
             if(!escaped.as_SessionPacketTerminal() || ::tt::results::detail::document(escaped).at("future").get<bool>()) return 14;
             std::cout<<"values-pass\n"; return 0;
         }
