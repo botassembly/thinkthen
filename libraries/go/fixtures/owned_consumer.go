@@ -508,7 +508,7 @@ func main() {
 		}
 		retained = append(retained, call)
 	}
-	originals, err := client.Filter(context.Background(), tt.TextQuestion("Is it?"), tt.RecordsInput(tt.JSONItem(false), tt.JSONItem(nil), tt.JSONItem(map[string]any{"id": json.Number("9007199254740993")})), nil)
+	originals, err := client.Filter(context.Background(), tt.TextQuestion("Does this qualify?"), tt.RecordsInput(tt.JSONItem(false), tt.JSONItem(nil), tt.JSONItem(map[string]any{"id": json.Number("9007199254740993")})), nil)
 	require(err == nil, "filter original-value call failed")
 	originalJSON, err := json.Marshal(originals.Value)
 	require(err == nil && string(originalJSON) == `[false,null,{"id":9007199254740993}]`, "filter originals changed false, null or wide number")
@@ -516,7 +516,7 @@ func main() {
 	require(err == nil, "filter original facts missing")
 	expectedRequests += originalSends
 	retained = append(retained, originals)
-	jsonScalar, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Is it?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionArray{[]any{false, nil, json.Number("9007199254740993")}})}), tt.RequestInputJson{Value: []any{false, nil, "original"}}, nil)
+	jsonScalar, err := client.Decide(context.Background(), tt.DefinedQuestion(tt.RequestDefinitionAuthoredDecide{Decide: tt.AuthoredQuestionTextString("Does this qualify?"), True: tt.Ptr[tt.AuthoredCriterion](tt.AuthoredCriterionArray{[]any{false, nil, json.Number("9007199254740993")}})}), tt.RequestInputJson{Value: []any{false, nil, "original"}}, nil)
 	require(err == nil && len(jsonScalar.Results) == 1, "JSON array input did not remain one item")
 	jsonScalarValue, err := json.Marshal(jsonScalar.Value)
 	require(err == nil && string(jsonScalarValue) == `[[false,null,9007199254740993]]`, "JSON scalar authored array gained or lost a dimension")
