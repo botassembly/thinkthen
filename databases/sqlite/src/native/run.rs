@@ -189,22 +189,7 @@ pub(super) fn prepare(
     } else {
         None
     };
-    let request = match selector {
-        Some(selector) => {
-            let mut arguments = selector.request().call.arguments().clone();
-            arguments.options = options;
-            if let Some(source) = native_source {
-                arguments.input = thinkthen::RequestInput::Source { source };
-            }
-            thinkthen::Request::for_function(selector.request().call.function(), arguments)
-                .admit()?
-                .with_resolved_definition(sql_request::definition(&prepared))?
-        }
-        None => match native_source {
-            Some(source) => sql_request::request_source(&prepared, source, options)?.admit()?,
-            None => sql_request::request(&prepared, options)?.admit()?,
-        },
-    };
+    let request = admit(&prepared, selector, native_source, options)?;
     let mut identity = input::identity(verb, args)?;
     let mut ids = std::collections::HashMap::new();
     if let Some(query) = query {
@@ -285,4 +270,28 @@ fn function(verb: &'static str, source: &str) -> Result<&'static str, Error> {
         thinkthen::QuestionKind::Score => Ok("score"),
         _ => Err(Failure::usage("details takes a supported judgment question").into()),
     }
+}
+
+fn admit(
+    prepared: &complete_native::Prepared,
+    selector: Option<thinkthen::AdmittedRequest>,
+    native_source: Option<thinkthen::RequestSource>,
+    options: thinkthen::RequestOptions,
+) -> Result<thinkthen::AdmittedRequest, Error> {
+    Ok(match selector {
+        Some(selector) => {
+            let mut arguments = selector.request().call.arguments().clone();
+            arguments.options = options;
+            if let Some(source) = native_source {
+                arguments.input = thinkthen::RequestInput::Source { source };
+            }
+            thinkthen::Request::for_function(selector.request().call.function(), arguments)
+                .admit()?
+                .with_resolved_definition(sql_request::definition(prepared))?
+        }
+        None => match native_source {
+            Some(source) => sql_request::request_source(prepared, source, options)?.admit()?,
+            None => sql_request::request(prepared, options)?.admit()?,
+        },
+    })
 }

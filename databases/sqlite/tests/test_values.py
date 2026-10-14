@@ -406,7 +406,12 @@ say(shapes=shapes, plain=plain,
     details = shapes["details"]
     expect(details["input"], "red door", "typed receipt retains original input")
     scalar_details = {key:value for key,value in details.items() if key not in ("input", "index")}
-    expect(json.loads(shapes["try"][0][0]), {"status": "answered", "details": scalar_details}, "try details")
+    recovered = json.loads(shapes["try"][0][0])
+    expected_recovery = dict(scalar_details, schema="thinkthen.result/1")
+    expected_recovery.pop("answer_id")
+    expected_recovery["meta"] = {key:value for key,value in expected_recovery["meta"].items()
+                                 if key not in ("answered_by","origin","question_sources","observations")}
+    expect(recovered, {"status": "answered", "details": expected_recovery}, "unchanged recovery envelope and typed receipt share answer metadata")
     expect("input" in scalar_details, False, "recovery envelope preserves scalar metadata")
     expect(details["meta"]["question_sha256"], plain["meta"]["question_sha256"], "question identity")
     expect(details["meta"]["context_sha256"], hashlib.sha256(b"shared context").hexdigest(), "context identity")
@@ -440,6 +445,7 @@ calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_dec
          "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_warm") for deadline in ("", ", 0")]
+calls += ["SELECT value FROM thinkthen_details('Is it red?','a red door'"+deadline+")" for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_score('{\\"score\\":\\"How?\\",\\"levels\\":[\\"l\\",\\"h\\"]}', 'x')",
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",

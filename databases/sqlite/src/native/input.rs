@@ -218,10 +218,11 @@ pub(super) fn options(args: &Arguments) -> Result<thinkthen::RequestOptions, Fai
             }
         }
     }
-    fields.push(format!(
-        "\"files_only\":{}",
-        args.flag("request_files_only")? || args.flag("files_only")?
-    ));
+    let files_only = args.flag("request_files_only")? || args.flag("files_only")?;
+    fields.push(format!("\"files_only\":{files_only}"));
+    if args.text("paths")?.is_some() || files_only {
+        source_reading(args, &mut fields)?;
+    }
     if let Some(fields_data) = args.text("fields")? {
         fields.push(format!("\"field\":{fields_data}"));
     }
@@ -278,4 +279,26 @@ fn path_stamp(
             path_stamp(&child, parts, seen);
         }
     }
+}
+
+fn source_reading(args: &Arguments, fields: &mut Vec<String>) -> Result<(), Failure> {
+    for (name, field) in [
+        ("record_fields", "field"),
+        ("record_context_schema", "context_schema"),
+    ] {
+        if let Some(value) = args.text(name)? {
+            fields.push(format!("\"{field}\":{value}"));
+        } else if args.supplied(name) {
+            fields.push(format!("\"{field}\":null"));
+        }
+    }
+    for (name, field) in [
+        ("record_context_field", "context_field"),
+        ("record_options_field", "options_field"),
+        ("record_seed_spans_field", "seed_spans_field"),
+        ("record_examples_field", "examples_field"),
+    ] {
+        text_field(args, name, field, fields)?;
+    }
+    Ok(())
 }

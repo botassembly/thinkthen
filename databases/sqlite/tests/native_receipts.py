@@ -110,6 +110,8 @@ class Read:
                         value = json.loads(value)
                     elif data_type == 'boolean':
                         value = bool(value)
+                    elif data_type == 'number' and isinstance(value,str):
+                        value = json.loads(value)
                 elif value is not None and descriptor in ('integer', 'unsigned'):
                     value = int(value)
                 elif value is not None and descriptor == 'boolean':

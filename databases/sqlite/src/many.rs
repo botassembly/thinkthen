@@ -49,7 +49,7 @@ impl Store {
         settings: &[u8],
         file_stamp: Option<Stamp>,
     ) -> Option<HeldRows> {
-        if kind != RANK && question.starts_with(b"@") && file_stamp.is_none() {
+        if question.starts_with(b"@") && file_stamp.is_none() {
             return None;
         }
         let at = self

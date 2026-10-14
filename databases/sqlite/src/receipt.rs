@@ -108,7 +108,7 @@ impl Receipt {
         let mut row = vec![Value::Integer(count(index)?)];
         for field in shape.fields {
             let held = if shape.union {
-                Some(value)
+                accepts(field.shape, value).then_some(value)
             } else {
                 value.get(field.name)
             };
@@ -217,11 +217,15 @@ fn scalar(kind: Scalar, held: Option<&Json>) -> Result<Value, Failure> {
         Scalar::Data => match value {
             Json::String(text) => Value::Text(text.clone()),
             Json::Bool(value) => Value::Integer(i64::from(*value)),
-            Json::Number(number) => number
-                .as_i64()
-                .map(Value::Integer)
-                .or_else(|| number.as_f64().map(Value::Real))
-                .unwrap_or(Value::Null),
+            Json::Number(number) => match number.as_u64() {
+                Some(unsigned) => i64::try_from(unsigned)
+                    .map_or_else(|_| Value::Text(unsigned.to_string()), Value::Integer),
+                None => number
+                    .as_i64()
+                    .map(Value::Integer)
+                    .or_else(|| number.as_f64().map(Value::Real))
+                    .unwrap_or(Value::Null),
+            },
             Json::Array(_) | Json::Object(_) => Value::Text(value.to_string()),
             Json::Null => Value::Null,
         },
@@ -245,4 +249,17 @@ fn data_type(value: &Json) -> Value {
         }
         .to_owned(),
     )
+}
+
+fn accepts(shape: Shape, value: &Json) -> bool {
+    match shape {
+        Shape::Scalar(Scalar::Text) => value.is_string(),
+        Shape::Scalar(Scalar::Integer) => value.is_i64(),
+        Shape::Scalar(Scalar::Unsigned) => value.is_u64(),
+        Shape::Scalar(Scalar::Real) => value.is_number(),
+        Shape::Scalar(Scalar::Boolean) => value.is_boolean(),
+        Shape::Scalar(Scalar::Data) => true,
+        Shape::Object(_) | Shape::Mapping(_) => value.is_object(),
+        Shape::Array(_) => value.is_array(),
+    }
 }

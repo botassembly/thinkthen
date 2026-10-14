@@ -49,11 +49,14 @@ pub(super) fn rows(verb: &str, receipt: &Receipt, rows: &mut Vec<Cells>) -> Resu
         let cell_value = match answer {
             Json::Bool(value) => Value::Integer(i64::from(*value)),
             Json::String(value) => Value::Text(value.clone()),
-            Json::Number(value) => {
-                if verb == "score" {
-                    value.as_f64().map_or(Value::Null, Value::Real)
+            Json::Number(number) => {
+                if verb == "score"
+                    || (matches!(verb, "details" | "details_images")
+                        && detail_root(value) == "score")
+                {
+                    number.as_f64().map_or(Value::Null, Value::Real)
                 } else {
-                    value.as_i64().map_or(Value::Null, Value::Integer)
+                    number.as_i64().map_or(Value::Null, Value::Integer)
                 }
             }
             Json::Null => Value::Null,

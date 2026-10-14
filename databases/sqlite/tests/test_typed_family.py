@@ -64,6 +64,34 @@ say(answers=answers,facts=facts,other=other)
         expect(backend.close(), 2 if cached else 3, 'only default invocations send')
 
 
+def test_ordinary_details_keep_all_judgment_values_and_reported_metadata():
+    backend=Backend()
+    got=child('''
+from native_receipts import Read
+db=connect();db.execute('SELECT thinkthen_configure(?)',('{"cache":false}',))
+questions={"decide":'{"decide":"Is it red?","true":{"what":"red","examples":["red door"]}}',
+ "choose":'{"choose":"Which team?","options":["billing","shipping","other"]}',
+ "tag":'{"tag":"Which labels?","labels":["billing","urgent","security"]}',
+ "score":'{"score":"How severe?","levels":["low","medium","high"]}'}
+answers={};receipts={}
+for verb,question in questions.items():
+    answers[verb]=run(db,'SELECT value,answer_id,answer_model,requests_sent FROM thinkthen_details(?,?)',(question,'red door'))
+    reader=Read(db,'details',question,{},None);reader.fields={'question':question,'text':'red door'}
+    detail=reader.rows('question_detail')[0]
+    receipts[verb]=reader.object('question_detail',detail['question_detail_receipt_index'])
+    assert receipts[verb]['question']['verb']==verb,receipts[verb]
+    assert receipts[verb]['inputs']==['red door'],receipts[verb]
+    assert receipts[verb]['usage']['input_tokens']==1 and receipts[verb]['usage']['output_tokens']==1,receipts[verb]
+    assert receipts[verb]['requests_sent']==1,receipts[verb]
+    if verb=='decide': assert receipts[verb]['threshold']==.5,receipts[verb]
+say(answers=answers,receipts=receipts)
+''',environment(backend,'arm/full'))
+    expect({name:rows[0][0] for name,rows in got['answers'].items()},
+           {'decide':1,'choose':'billing','tag':'["billing","urgent","security"]','score':.15},'ordinary values retain native SQL types')
+    expect(all(len(rows[0][1])==64 and rows[0][2]=='jev-1.13.0' and rows[0][3]==1 for rows in got['answers'].values()),True,'native identities model and request counts')
+    expect(backend.close(),4,'one evaluation for each default details call and no projection sends')
+
+
 def test_output_predicates_do_not_change_call_identity_or_admit_extra_options():
     backend = Backend()
     got = child('''
@@ -85,6 +113,18 @@ say(first=first,filtered=filtered,kept=kept,identity=identity,again=again,positi
     expect((got['filtered'],got['kept'],got['position']), ([],[[1]],[]), 'SQLite filters receipt outputs')
     expect(got['identity'],got['again'],'output predicates reuse original call')
     expect(backend.close(),1,'projection and positional output filters send nothing extra')
+
+
+def test_open_number_data_preserves_unsigned_original_exactly():
+    backend=Backend()
+    got=child('''
+db=connect()
+receipt=complete(db,'decide','Fits?',{'records':[{'json':18446744073709551615}]})
+row=receipt['native']['value'][0]
+say(original=row['input'],value=row['value'])
+''',environment(backend))
+    expect(got,{'original':18446744073709551615,'value':True},'wide original numbers retain exact native DATA')
+    expect(backend.close(),1,'one wide-number judgment')
 
 
 def test_changed_source_files_and_eight_entry_eviction_recompute_only_answers():

@@ -101,8 +101,8 @@ for path in {paths!r}:
 say(errors=errors)
 """,environment(backend),5)
         expected = [['usage',message,False,[]] for _ in paths for message in (
-            'file format is jsonl, csv or tsv', 'the request_format is a number; pass text',
-            'file format is jsonl, csv or tsv', 'the request_format is a number; pass text',
+            'file format is jsonl, csv or tsv', 'request_format is a number; pass text',
+            'file format is jsonl, csv or tsv', 'request_format is a number; pass text',
             'file format is jsonl, csv or tsv', 'file format is jsonl, csv or tsv')]
         expect(held['errors'],expected,'invalid typed formats refuse before I/O')
         expect(backend.close(),0,'unknown complete formats send nothing')
