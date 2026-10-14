@@ -1,6 +1,6 @@
 # DuckDB community build
 
-The repository root uses DuckDB's extension template build. It compiles the SQL adapter and Rust bridge from source against the selected DuckDB checkout. DuckDB supplies the static library, loader and metadata footer. The separate [standalone build](../cpp/README.md) retains its pinned 1.5.4/1.5.5 archives and installation route.
+The repository root uses DuckDB's extension template build. It compiles the SQL adapter and Rust bridge from source against the selected DuckDB checkout. DuckDB supplies the static library, loader and metadata footer. The installed checks and release packages stage artifacts from the same approved source hosts.
 
 Prepare public source and Rust inputs with network access:
 
@@ -20,11 +20,11 @@ make test
 
 The root `vcpkg.json` follows DuckDB’s extension template. Community CI enables `VCPKG_BUILD` and supplies its pinned vcpkg toolchain; the manifest retains the template’s OpenSSL dependency and CI tool overlays. A build without that toolchain does not reproduce community CI.
 
-The older build also includes DuckDB's bundled JSON extension, which the retained SQL macros require. DuckDB 2.0 includes JSON in its default configuration. The test target requires ThinkThen to load and adapts required-extension flags to DuckDB's selected test runner; the newer runner fails on requirement-based skips and uses two workers.
+The 1.5.6 build also includes DuckDB's bundled JSON extension, which the retained SQL macros require. DuckDB 2.0 includes JSON in its default configuration. The test target requires ThinkThen to load and adapts required-extension flags to DuckDB's selected test runner; the newer runner fails on requirement-based skips and uses two workers.
 
 The bridge builds offline with its release profile, bundled SQLite and position-independent objects. Cargo checks source changes on each build. Rust's reported native libraries follow the archive in the link command. Linux hides archive symbols; macOS hides the Rust archive and retains DuckDB's initialization export. DuckDB appends the footer after linking.
 
-Community source starts at DuckDB 1.5.6. Community CI can select later DuckDB releases and rebuild against them. A C++ extension requires a matching DuckDB host version and platform. A signed artifact for one DuckDB version does not establish compatibility with a different version embedded in dbt.
+The source authority selects DuckDB 1.5.6 and the pinned 2.0 preview. Prepare their source and Python hosts with `sh databases/duckdb/tools/setup.sh --fetch`. The preview Python client compiles against the same approved core source as the extension and statically includes `core_functions` and `json`. Compiler commands use the shared build admission and two jobs. A C++ extension requires a matching DuckDB host version and platform. A signed artifact for one DuckDB version does not establish compatibility with a different version embedded in dbt.
 
 The native target paths cover Linux x86-64/ARM64 and macOS ARM64/Intel. The Apple build forwards DuckDB's deployment target and SDK to Rust and its native dependencies. It refuses a Rust standard library with a higher deployment requirement. Windows and WebAssembly need a bridge port because the bridge uses POSIX signals and pipes. Optional musl targets disable Rust's default static C runtime when linking into the shared extension.
 

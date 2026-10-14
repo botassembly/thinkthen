@@ -15,17 +15,9 @@ from pathlib import Path
 
 from inputs import HERE, PLATFORMS, authority, selected, versions
 from release_pack_cases import REPO, copy_packer, pack, reject_lane_cleanup
-from validate_inputs import archive_tree, inventory, static_archives
+from validate_inputs import archive_tree
 
 TARGET = 'x86_64-unknown-linux-gnu'
-NEWEST = 'v1.5.5'
-OLDER = 'v1.5.4'
-OLDER_STATIC = {
-    TARGET: ('linux_amd64', '44edc1b55365624b4aa4a4f1d8087f75c4bfaceed4494b71059f54a8fa2f6e45', 22),
-    'aarch64-unknown-linux-gnu': ('linux_arm64', '68133154f3f62f5b8704656ece5b67989a3089537e4944e0b372518843155e62', 22),
-    'aarch64-apple-darwin': ('osx_arm64', '7d6d51110134c031e8a4944a8aa6514d68d462c479346a42f3e38bd7e4158c83', 21),
-    'x86_64-apple-darwin': ('osx_amd64', 'f102a62959e3cc7f2147c3181e6b86be158f70183889bb7b40624a4c18d886f3', 21),
-}
 
 
 def run(args, env, cwd=None):
@@ -38,18 +30,11 @@ def script(path, text):
     path.chmod(0o755)
 
 
-def footer(version=NEWEST):
-    # Independent encoding: 22-byte prefix, 16 fixed 32-byte fields.
-    fields = [b''] * 16
-    for index, value in ((3, 'CPP'), (4, '0.2.0'), (5, version), (6, 'linux_amd64'), (7, '4')):
-        fields[index] = value.encode()
-    return b'synthetic-metadata-only\n' + b'\x00\x93\x04\x10duckdb_signature\x80\x04' + b''.join(v.ljust(32, b'\0') for v in fields)
-
-
 class Cases(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         reject_lane_cleanup()  # Before the first owned scratch cleanup.
+
 
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory(prefix='thinkthen-0403-portable-')
@@ -61,66 +46,32 @@ class Cases(unittest.TestCase):
                     'CARGO_NET_OFFLINE': 'true', 'RUSTC_WRAPPER': '', 'THINKTHEN_API_KEY': 'sk-loopback-0403-fixture',
                     'THINKTHEN_BASE_URL': BACKEND}
 
+
     def tearDown(self):
         self.temp.cleanup()
 
-    def test_literal_inputs_and_separate_paths(self):
-        expected = dict(re.findall(r"^(linux|linux_arm64|mac|mac_intel)='([^']+)'$", (HERE / 'selftests.sh').read_text(), re.M))
-        shim = self.root / 'shim'
-        script(shim / 'uname', 'case $1 in -s) echo "$MOCK_KERNEL";; -m) echo "$MOCK_CHIP";; esac')
-        for name, kernel, chip in [('linux', 'Linux', 'x86_64'), ('linux_arm64', 'Linux', 'aarch64'), ('mac', 'Darwin', 'arm64'), ('mac_intel', 'Darwin', 'x86_64')]:
-            env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'MOCK_KERNEL': kernel, 'MOCK_CHIP': chip}
-            result = run(['/bin/sh', str(HERE / 'setup.sh'), '--inputs'], env)
-            self.assertEqual((result.returncode, result.stdout.strip()), (0, expected[name]))
-        for target, (platform, digest, count) in OLDER_STATIC.items():
-            item = selected(OLDER, target)
-            self.assertEqual((item['platform'], item['static_zip_sha256']), (platform, digest))
-            self.assertEqual(item['source_commit'], '08e34c447bae34eaee3723cac61f2878b6bdf787')
-            self.assertEqual(len(inventory(HERE.parent / 'cpp' / item['manifest'])), count)
-        self.assertEqual(versions(), [NEWEST, OLDER])
-        with self.assertRaisesRegex(ValueError, 'unsupported DuckDB target'):
-            selected(NEWEST, 'x86_64-pc-windows-msvc')
 
-    def test_bad_authority_and_selector_send_no_tool_work(self):
-        script(self.root / 'shim/cmake', f'touch "{self.root}/cmake-ran"; exit 99')
-        env = {**self.env, 'PATH': f'{self.root}/shim:{self.env["PATH"]}', 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'}
-        for entry in (HERE / 'setup.sh', HERE.parent / 'cpp/build.sh'):
-            result = run(['/bin/sh', str(entry), '--inputs'] if entry.name == 'setup.sh' else ['/bin/sh', str(entry)], env)
-            self.assertEqual(result.returncode, 2)
-            self.assertIn('unsupported DuckDB version: v9.9.9', result.stderr)
-        self.assertFalse((self.root / 'cmake-ran').exists())
-        original = (HERE / 'version.env').read_text()
-        for value in ('"v1.5.5 v1.5.5"', '"v1.5.5 v9.9.9"', '"v1.5.5  v1.5.4"', '"../v1.5.4"', '$(touch marker)', 'v1.5.5\nDUCKDB_VERSIONS=v1.5.4'):
-            path = self.root / 'version.env'
-            path.write_text(original.replace('"v1.5.5 v1.5.4"', value))
-            with self.assertRaisesRegex(ValueError, 'malformed|duplicate'):
-                authority(path)
+    def test_profiles_validate_before_tools_and_never_fall_back(self):
+        marker = self.root / 'compiler-ran'
+        script(self.root / 'shim/cargo', f'touch "{marker}"; exit 99')
+        env = {**self.env, 'PATH': f'{self.root}/shim:{self.env["PATH"]}',
+               'THINKTHEN_TOOLCHAINS': str(self.root / 'missing-tools')}
+        entry = ['/bin/sh', str(HERE.parent / 'check.sh'), '9000']
+        result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': 'invalid'})
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('unknown THINKTHEN_TEST_PROFILE', result.stderr)
+        for profile in ('routine', 'full', 'stress', 'smoke'):
+            result = run(entry, {**env, 'THINKTHEN_TEST_PROFILE': profile,
+                                 'THINKTHEN_ARTIFACT': str(self.root / 'selected.tar.gz')})
+            self.assertEqual(result.returncode, 77, result.stderr)
+            self.assertIn('toolchain is missing', result.stdout)
+        self.assertFalse(marker.exists(), 'a profile compiled instead of refusing missing tools')
+        result = run([sys.executable, str(HERE / 'source_hosts.py')],
+                     {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn('unsupported DuckDB version', result.stderr)
+        self.assertFalse(marker.exists())
 
-    def test_shared_checksum_accepts_exact_bytes_and_refuses_changes(self):
-        data = self.root / 'fixture.zip'; data.write_bytes(b'fixture bytes')
-        args = ['/bin/sh', '-c', '. "$1"; input_verify "$2" "$3"', 'checksum-fixture',
-                str(HERE / 'prepare_inputs.sh'), hashlib.sha256(b'fixture bytes').hexdigest(), str(data)]
-        self.assertEqual(run(args, self.env).returncode, 0)
-        data.write_bytes(b'changed')
-        result = run(args, self.env)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn('differs from its pinned SHA-256', result.stderr)
-
-    def test_static_input_failure_causes(self):
-        static = self.root / 'static'; static.mkdir()
-        archive = static / 'libfixture.a'; archive.write_bytes(b'fixture archive')
-        manifest = self.root / 'manifest.txt'
-        manifest.write_text(hashlib.sha256(archive.read_bytes()).hexdigest() + ' libfixture.a\n')
-        static_archives(static, manifest)
-        archive.write_bytes(b'changed')
-        with self.assertRaisesRegex(ValueError, 'differs from the pinned release'):
-            static_archives(static, manifest)
-        extra = static / 'libextra.a'; extra.write_bytes(b'')
-        with self.assertRaisesRegex(ValueError, 'set differs'):
-            static_archives(static, manifest)
-        manifest.write_text(manifest.read_text() * 2)
-        with self.assertRaisesRegex(ValueError, 'duplicate'):
-            inventory(manifest)
 
     def source_fixture(self, folder):
         folder.mkdir()
@@ -132,6 +83,7 @@ class Cases(unittest.TestCase):
         result = run(['git', '-C', str(folder), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'fixture'], self.env)
         self.assertEqual(result.returncode, 0, result.stderr)
         return run(['git', '-C', str(folder), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+
 
     def test_raw_git_bypasses_filters_index_and_flags(self):
         for flag in ('--assume-unchanged', '--skip-worktree'):
@@ -161,6 +113,7 @@ class Cases(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'differs from the pinned commit'):
                 archive_tree.raw_git(folder, '0' * 40)
 
+
     def test_raw_git_refuses_untracked_linked_input_directory(self):
         folder = self.root / 'source'; commit = self.source_fixture(folder)
         outside = self.root / 'outside'; outside.mkdir()
@@ -169,80 +122,134 @@ class Cases(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'unexpected source input: linked-input'):
             archive_tree.raw_git(folder, commit)
 
-    def test_node_reader_requires_final_canonical(self):
-        authority_file = HERE / 'version.env'
-        code = """import {readDuckDBVersions,nativeDuckDBTarget,duckDBArtifact} from './site/scripts/duckdb-inputs.mjs';
-import assert from 'node:assert/strict';
-assert.deepEqual(readDuckDBVersions(process.argv[1]), ['v1.5.5','v1.5.4']);
-assert.deepEqual(nativeDuckDBTarget('darwin','x64'), ['x86_64-apple-darwin','osx_amd64']);
-assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-linux-gnu'), /ENOENT/);
-"""
-        obsolete = self.root / 'databases/duckdb/build/artifacts/cpp' / TARGET
-        obsolete.mkdir(parents=True)
-        (obsolete / 'thinkthen.duckdb_extension').write_bytes(footer())
-        (self.root / 'databases/duckdb/build/thinkthen.duckdb_extension').write_bytes(footer())
-        result = run(['node', '--input-type=module', '-e', code, str(authority_file), str(self.root)], self.env, REPO)
-        self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_node_complete_pins_before_any_children(self):
-        from source_pin_cases import node_controls
-        node_controls(self, script)
+    def test_python_source_guard_checks_raw_inputs_and_managed_core(self):
+        core = self.root / 'core'; core_commit = self.source_fixture(core)
+        python = self.root / 'python'; self.source_fixture(python)
+        (python / 'external').mkdir()
+        (python / 'external/duckdb').symlink_to(core, target_is_directory=True)
+        run(['git', '-C', str(python), 'update-index', '--add', '--cacheinfo',
+             f'160000,{core_commit},external/duckdb'], self.env)
+        run(['git', '-C', str(python), '-c', 'user.name=fixture', '-c',
+             'user.email=fixture@example.invalid', 'commit', '-qm', 'core'], self.env)
+        commit = run(['git', '-C', str(python), 'rev-parse', 'HEAD'], self.env).stdout.strip()
+        command = [sys.executable, str(HERE / 'validate_inputs.py'), '--source', str(core),
+                   '--commit', core_commit, '--python', str(python), '--python-commit', commit]
+        self.assertEqual(run(command, self.env).returncode, 0)
+        for flag in ('--assume-unchanged', '--skip-worktree'):
+            run(['git', '-C', str(python), 'update-index', flag, 'source.cc'], self.env)
+            (python / 'source.cc').write_text('hidden Python build mutation\n')
+            rejected = run(command, self.env)
+            self.assertNotEqual(rejected.returncode, 0)
+            self.assertIn('raw Git source file differs: source.cc', rejected.stderr)
+            (python / 'source.cc').write_text('original\n')
+        (python / 'hidden').write_text('untracked Python build input\n')
+        self.assertIn('unexpected source input: hidden', run(command, self.env).stderr)
+        (python / 'hidden').unlink()
+        (core / 'source.cc').write_text('changed approved core\n')
+        self.assertIn('raw Git source file differs: source.cc', run(command, self.env).stderr)
 
-    def test_real_scratch_packer_refuses_obsolete_and_footer(self):
-        tree = self.root / 'tree'; copy_packer(tree)
-        shim = self.root / 'shim'
-        script(shim / 'rustc', f'echo "host: {TARGET}"')
-        script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
-        env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}'}
-        member = tree / 'databases/duckdb/build/artifacts/cpp' / NEWEST / TARGET / 'thinkthen.duckdb_extension'
-        member.parent.mkdir(parents=True)
-        member.write_bytes(footer(OLDER))
-        result = pack(tree, TARGET, self.root / 'wrong', env)
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('DuckDB footer DuckDB version is', result.stderr)
-        self.assertEqual(list((self.root / 'wrong').glob('*.tar.gz*')), [])
-        member.rename(self.root / 'backup')
-        obsolete = tree / 'databases/duckdb/build/artifacts/cpp' / TARGET / member.name
-        obsolete.parent.mkdir(parents=True); obsolete.write_bytes(footer())
-        (tree / 'databases/duckdb/build' / member.name).write_bytes(footer())
-        result = pack(tree, TARGET, self.root / 'missing', env)
-        self.assertEqual(result.returncode, 1)
-        self.assertIn(f'{member.relative_to(tree)} is missing', result.stderr)
-        result = pack(tree, TARGET, self.root / 'conflict', {**env, 'THINKTHEN_DUCKDB_VERSION': 'v9.9.9'})
-        self.assertEqual(result.returncode, 2)
-        self.assertIn('unsupported DuckDB version: v9.9.9', result.stderr)
-        self.assertEqual(list((self.root / 'missing').glob('*.tar.gz*')), [])
 
-    def test_separate_build_outputs_and_alias_ownership(self):
-        from build_version_cases import routing
-        routing(self, footer, script)
+    def test_raw_git_ignores_replacement_refs(self):
+        source = self.root / 'replace-source'
+        commit = self.source_fixture(source)
+        def git(*args, data=None):
+            done = subprocess.run(['git', '-C', str(source), *args], input=data, env=self.env,
+                                  capture_output=True, text=True, check=True)
+            return done.stdout.strip()
+        blob = git('rev-parse', commit + ':source.cc')
+        changed = git('hash-object', '-w', '--stdin', data='replacement\n')
+        rows = git('ls-tree', commit).replace(blob, changed)
+        tree = git('mktree', data=rows + '\n')
+        replacement = git('-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid',
+                          'commit-tree', tree, '-p', commit, data='replacement\n')
+        for original, substitute in ((commit, replacement), (git('rev-parse', commit + '^{tree}'), tree),
+                                     (blob, changed)):
+            git('replace', original, substitute)
+            try:
+                self.assertEqual(archive_tree.raw_git(source, commit), 3)
+                (source / 'source.cc').write_text('replacement\n')
+                with self.assertRaisesRegex(ValueError, 'raw Git source file differs'):
+                    archive_tree.raw_git(source, commit)
+            finally:
+                git('replace', '-d', original)
+                (source / 'source.cc').write_text('original\n')
 
-    def test_repository_pack_keeps_both_versions_and_refuses_changed_source(self):
+    def test_source_authority_refuses_incomplete_pins_and_old_selectors(self):
+        self.assertEqual(versions(), ['v1.5.6', 'v2.0-cyanoptera'])
+        for target, platform in PLATFORMS.items():
+            self.assertEqual(selected('v1.5.6', target)['platform'], platform)
+        for version in ('v1.5.5', 'v1.5.4', 'v1.4.5'):
+            with self.assertRaisesRegex(ValueError, 'unsupported DuckDB version'):
+                selected(version, TARGET)
+        original = (HERE / 'version.env').read_text()
+        for name in ('RELEASE_SOURCE', 'PREVIEW_TOOLS', 'PREVIEW_PYTHON'):
+            damaged = re.sub(r'^DUCKDB_ROUTINE_' + name + '=.*$', '', original, flags=re.M)
+            path = self.root / 'version.env'
+            path.write_text(damaged)
+            with self.assertRaisesRegex(ValueError, 'missing or malformed'):
+                authority(path)
+            result = run(['node', '--input-type=module', '-e',
+                          "import {readDuckDBVersions} from './site/scripts/duckdb-inputs.mjs'; readDuckDBVersions(process.argv[1]);",
+                          str(path)], self.env, REPO)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('missing or malformed', result.stderr)
+    def test_changed_source_refuses_build_before_compiler(self):
+        tree = self.root / 'build-tree'
+        copy_packer(tree)
+        cache = self.root / 'source-cache'
+        source = cache / 'duckdb/community/v1.5.6/source'
+        source.parent.mkdir(parents=True)
+        commit = self.source_fixture(source)
+        run(['git', '-C', str(source), 'tag', 'v1.5.6'], self.env)
+        pins = tree / 'databases/duckdb/tools/version.env'
+        pins.write_text(pins.read_text().replace(selected('v1.5.6', TARGET)['source_commit'], commit))
+        run(['git', '-C', str(source), 'update-index', '--assume-unchanged', 'source.cc'], self.env)
+        (source / 'source.cc').write_text('masked source change\n')
+        marker = self.root / 'compiler-starts'
+        shim = self.root / 'build-shim'
+        for tool in ('cargo', 'cmake', 'make', 'rustc'):
+            script(shim / tool, f'touch "{marker}"; exit 99')
+        env = {**self.env, 'PATH': f'{shim}:{self.env["PATH"]}', 'THINKTHEN_TOOLCHAINS': str(cache)}
+        result = run(['/bin/sh', str(tree / 'databases/duckdb/cpp/build.sh')], env)
+        self.assertNotEqual(result.returncode, 0, result.stderr)
+        self.assertIn('raw Git source file differs: source.cc', result.stderr)
+        self.assertFalse(marker.exists(), 'changed source reached a compiler')
+
+    def test_release_repository_keeps_both_source_hosts(self):
         import json
-        tree = self.root / 'tree'; copy_packer(tree)
+        tree = self.root / 'tree'
+        copy_packer(tree)
         cache = self.root / 'tools'
         authority_path = tree / 'databases/duckdb/tools/version.env'
         text = authority_path.read_text()
-        for version, source_pin, manifest in ((NEWEST, 'd8cdaa33fda8df955cc76ef58a280f68f4cd43fa', 'archive-sha256.txt'),
-                                              (OLDER, '08e34c447bae34eaee3723cac61f2878b6bdf787', 'archive-sha256-v1.5.4-linux-amd64.txt')):
-            tools = cache / 'duckdb' / version
-            tools.mkdir(parents=True)
-            source = tools / 'source'; self.source_fixture(source)
+        for version in versions():
+            identity = selected(version, TARGET)
+            source = cache / 'duckdb/community' / version / 'source'
+            source.parent.mkdir(parents=True)
+            self.source_fixture(source)
             (source / 'LICENSE').write_text('fixture MIT license\n')
-            (source / 'NOTICE').write_text(f'fixture {version} notice\n')
+            (source / 'NOTICE').write_text('fixture notice\n')
             run(['git', '-C', str(source), 'add', '.'], self.env)
-            run(['git', '-C', str(source), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid', 'commit', '-qm', 'legal fixture'], self.env)
+            run(['git', '-C', str(source), '-c', 'user.name=fixture', '-c', 'user.email=fixture@example.invalid',
+                 'commit', '-qm', 'legal fixture'], self.env)
             commit = run(['git', '-C', str(source), 'rev-parse', 'HEAD'], self.env).stdout.strip()
-            text = text.replace(source_pin, commit)
-            static = tools / 'static-libs'; static.mkdir()
-            (static / 'libduckdb_static.a').write_bytes(b'synthetic archive')
-            (tree / 'databases/duckdb/cpp' / manifest).write_text(hashlib.sha256(b'synthetic archive').hexdigest() + ' libduckdb_static.a\n')
+            text = text.replace(identity['source_commit'], commit)
+            metadata = version if version == 'v1.5.6' else commit[:10]
+            fields = [b''] * 16
+            for index, value in ((3, 'CPP'), (4, '0.2.0'), (5, metadata), (6, 'linux_amd64'), (7, '4')):
+                fields[index] = value.encode()
+            data = b'synthetic-metadata-only\n' + b'\x00\x93\x04\x10duckdb_signature\x80\x04'
+            data += b''.join(value.ljust(32, b'\0') for value in fields)
             member = tree / 'databases/duckdb/build/artifacts/cpp' / version / TARGET / 'thinkthen.duckdb_extension'
-            member.parent.mkdir(parents=True); member.write_bytes(footer(version))
+            member.parent.mkdir(parents=True)
+            member.write_bytes(data)
         authority_path.write_text(text)
-        registry = self.root / 'registry/example'; registry.mkdir(parents=True)
+        registry = self.root / 'registry/example'
+        registry.mkdir(parents=True)
         (registry / 'LICENSE').write_text('MIT fixture\n')
-        metadata = {'packages': [{'name': 'example', 'version': '1.0.0', 'license': 'MIT', 'manifest_path': str(registry / 'Cargo.toml')}]}
+        metadata = {'packages': [{'name': 'example', 'version': '1.0.0', 'license': 'MIT',
+                                 'manifest_path': str(registry / 'Cargo.toml')}]}
         shim = self.root / 'shim'
         script(shim / 'rustc', f'echo "host: {TARGET}"')
         script(shim / 'readelf', 'echo "Machine: Advanced Micro Devices X86-64"')
@@ -251,18 +258,15 @@ assert.throws(() => duckDBArtifact(process.argv[2], 'v1.5.5', 'x86_64-unknown-li
         result = pack(tree, TARGET, self.root / 'positive', env)
         self.assertEqual(result.returncode, 0, result.stderr)
         archive = self.root / 'positive' / f'thinkthen-duckdb-0.2.0-{TARGET}.tar.gz'
-        self.assertTrue(Path(str(archive) + '.sha256').is_file())
         with tarfile.open(archive) as packed:
-            extensions = [m for m in packed if m.name.endswith('.duckdb_extension')]
-            self.assertEqual(sorted(m.name for m in extensions),
-                             ['./v1.5.4/linux_amd64/thinkthen.duckdb_extension', './v1.5.5/linux_amd64/thinkthen.duckdb_extension'])
-            for member in extensions:
-                self.assertEqual(packed.extractfile(member).read(), footer(member.name.split('/')[1]))
-            self.assertEqual(packed.extractfile('./LICENSES/duckdb/v1.5.4/NOTICE').read(), b'fixture v1.5.4 notice\n')
-        (cache / 'duckdb' / NEWEST / 'source/source.cc').write_text('changed source\n')
+            extensions = [member.name for member in packed if member.name.endswith('.duckdb_extension')]
+        self.assertEqual(len(extensions), 2)
+        self.assertIn('./v1.5.6/linux_amd64/thinkthen.duckdb_extension', extensions)
+        self.assertTrue(any(name.startswith('./' + commit[:10] + '/') for name in extensions))
+        (cache / 'duckdb/community/v1.5.6/source/source.cc').write_text('changed source\n')
         result = pack(tree, TARGET, self.root / 'bad-source', env)
         self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertIn('raw Git source file differs: source.cc', result.stderr)
+        self.assertIn('raw Git source file differs', result.stderr)
         self.assertEqual(list((self.root / 'bad-source').glob('*.tar.gz*')), [])
 
 

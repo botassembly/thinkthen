@@ -16,7 +16,7 @@ from jsonschema.exceptions import ValidationError
 sys.path.insert(0,str(ROOT/'databases/duckdb/tools'))
 import inputs as duckdb_inputs
 DUCKDB_VERSION=duckdb_inputs.selected()['version']
-DUCKDB_PYTHON=str(Path(os.environ.get('THINKTHEN_TOOLCHAINS',Path.home()/'.cache/thinkthen-toolchains'))/'duckdb'/DUCKDB_VERSION/'venv/bin/python')
+DUCKDB_PYTHON=str(Path(os.environ.get('THINKTHEN_TOOLCHAINS',Path.home()/'.cache/thinkthen-toolchains')) /'duckdb/community'/DUCKDB_VERSION/'venv/bin/python')
 
 FUNCTIONS=('decide','choose','tag','score','filter','rank','find','annotate','recognize','relate')
 

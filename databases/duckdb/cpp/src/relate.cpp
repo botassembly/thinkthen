@@ -1,4 +1,5 @@
 #include "descriptions.hpp"
+#include "portable.hpp"
 #include "relate.hpp"
 #include "relate_query.hpp"
 #include "bridge.hpp"
@@ -270,13 +271,20 @@ void RegisterRelate(ExtensionLoader &loader) {
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_relate_seconds", "Relate query time limit in seconds", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_relate_holding_rows", "Relate plan holding-row limit", LogicalType::BIGINT);
-	TableFunction function("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY}, ScanRelate, BindRelate, InitRelate);
-	TableFunctionSet overloads("thinkthen_relate");
+	TableFunction function("thinkthen_native_query_relate", {LogicalType::VARCHAR, LogicalType::ANY}, ScanRelate, BindRelate, InitRelate);
+	TableFunctionSet overloads("thinkthen_native_query_relate");
 	overloads.AddFunction(function);
-	TableFunction with_settings("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY,
+	TableFunction with_settings("thinkthen_native_query_relate", {LogicalType::VARCHAR, LogicalType::ANY,
 	                                               LogicalType::VARCHAR}, ScanRelate, BindRelate, InitRelate);
 	overloads.AddFunction(with_settings);
 	RegisterDescribedTable(loader, overloads, "Judge relations between ids in committed query rows using caller-supplied rules.");
+    RegisterLegacyTextOverloads(loader,
+        "CREATE MACRO thinkthen_relate(query, rules, settings := NULL) AS TABLE "
+        "(SELECT * FROM thinkthen_native_query_relate(query, rules, settings)), "
+        "(question, records, reading, settings := NULL, incremental := false, cancelled := false) AS TABLE (" +
+        NativeRecordTableSQL("relate") + ")",
+        "Judge relations from a committed query or native records with typed readings and final facts.");
+
 }
 
 } // namespace duckdb

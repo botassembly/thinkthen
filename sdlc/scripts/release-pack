@@ -508,10 +508,10 @@ part_duckdb() {
 	input_select "$version" "$TARGET"
 	THINKTHEN_DUCKDB_VERSION=$version
 	THINKTHEN_DUCKDB_CPP_SOURCE=$TOOLS/source
-	THINKTHEN_DUCKDB_CPP_STATIC_DIR=$TOOLS/static-libs
+	THINKTHEN_DUCKDB_CPP_STATIC_DIR=
 	if [ "$version" = "$override_version" ]; then
 		THINKTHEN_DUCKDB_CPP_SOURCE=${override_source:-$TOOLS/source}
-		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-$TOOLS/static-libs}
+		THINKTHEN_DUCKDB_CPP_STATIC_DIR=${override_static:-}
 	fi
 	export THINKTHEN_DUCKDB_VERSION THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
 	if [ -z "$reuse" ]; then
@@ -536,11 +536,11 @@ part_duckdb() {
 			exit 1
 		}
 	fi
-	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
-	mkdir -p "$folder/$version/$platform"
-	cp "$extension" "$folder/$version/$platform/"
-	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit" --static "$THINKTHEN_DUCKDB_CPP_STATIC_DIR" --manifest "$INPUTS_HERE/../cpp/$manifest"
-	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE" "$INPUTS_HERE/../cpp/$manifest"
+	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$duckdb_metadata_version" "$V"
+	mkdir -p "$folder/$duckdb_metadata_version/$platform"
+	cp "$extension" "$folder/$duckdb_metadata_version/$platform/"
+	python3 "$INPUTS_HERE/validate_inputs.py" --source "$THINKTHEN_DUCKDB_CPP_SOURCE" --commit "$duckdb_source_commit"
+	set -- "$@" "$version" "$THINKTHEN_DUCKDB_CPP_SOURCE"
 	done
 	python3 databases/duckdb/cpp/package_notices.py "$folder" "$V" "$@"
 	python3 databases/duckdb/cpp/verify_repository.py "$folder" "$TARGET" "$V"

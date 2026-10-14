@@ -12,29 +12,27 @@ sys.path.insert(0, str(HERE.parents[2] / 'conformance/children'))
 sys.path.insert(0, str(HERE.parent / 'tools'))
 from children import CARGO, child_env  # noqa: E402
 from inputs import versions  # noqa: E402
-from validate_inputs import inventory as archive_inventory  # noqa: E402
 
 BRIDGE = HERE.parent / 'bridge/Cargo.toml'
 LEGAL = ('license', 'notice', 'copying', 'authors', 'copyright', 'patents')
 
 
 def main() -> None:
-    if len(sys.argv) < 6 or (len(sys.argv) - 3) % 3:
-        raise SystemExit('usage: package_notices.py PACKAGE VERSION [DUCKDB_VERSION SOURCE MANIFEST]...')
+    if len(sys.argv) < 5 or (len(sys.argv) - 3) % 2:
+        raise SystemExit('usage: package_notices.py PACKAGE VERSION [DUCKDB_VERSION SOURCE]...')
     destination = Path(sys.argv[1]).resolve(strict=True)
-    rows = list(zip(sys.argv[3::3], sys.argv[4::3], sys.argv[5::3]))
+    rows = list(zip(sys.argv[3::2], sys.argv[4::2]))
     if [row[0] for row in rows] != versions():
         raise SystemExit('notices require every supported DuckDB version in order')
     notice = [f'ThinkThen {sys.argv[2]}: MIT (LICENSE.thinkthen)']
     inventory = []
     identical: dict[tuple[str, bytes], Path] = {}
-    for version, source_name, manifest in rows:
+    for version, source_name in rows:
         source = Path(source_name).resolve(strict=True)
         files = sorted(p for p in source.rglob('*') if p.is_file() and p.name.lower().startswith(LEGAL))
         if source / 'LICENSE' not in files or len(files) < 2:
             raise SystemExit('the pinned DuckDB source lacks license or third-party notices')
-        inventory.extend((f'Pinned DuckDB {version} static archives:', *archive_inventory(Path(manifest)),
-                          '', f'Pinned DuckDB {version} source license and notice files:'))
+        inventory.append(f'Pinned DuckDB {version} source license and notice files:')
         for path in files:
             rel = path.relative_to(source)
             key = (str(rel), path.read_bytes())
@@ -47,7 +45,7 @@ def main() -> None:
                 identical[key] = target
             inventory.append(f'{rel} -> {target.relative_to(destination)}')
             if rel == Path('LICENSE'):
-                notice.append(f'DuckDB {version} source and static archives: MIT ({target.relative_to(destination)})')
+                notice.append(f'DuckDB {version} source: MIT ({target.relative_to(destination)})')
         inventory.append('')
     metadata = json.loads(subprocess.check_output([
         'cargo', 'metadata', '--format-version', '1', '--locked', '--offline', '--manifest-path', str(BRIDGE),

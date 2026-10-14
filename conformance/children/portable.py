@@ -45,6 +45,12 @@ def question_keys(url, body):
     return [canonical_question_key(url, model, model, state, question) for question in questions]
 
 
+def cache_question_keys(url, state, requested_model, answered_model, questions):
+    """Return canonical cache/2 keys for authored questions in their input order."""
+    return [canonical_question_key(url, requested_model, answered_model, state, question)
+            for question in questions]
+
+
 def canonical_question_key(url, requested_model, answered_model, state, question):
     """Reuse the canonical cache/2 framing for one authored text question."""
     # Match the endpoint resolver: lowercase scheme and literal host letters,

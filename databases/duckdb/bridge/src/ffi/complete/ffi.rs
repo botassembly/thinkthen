@@ -182,6 +182,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
     reference: *const thinkthen::QuestionFileReference,
     deadline: i64,
     session: BridgeSettings,
+    native_reading: BridgeText,
     out: *mut *mut thinkthen::RequestSession,
 ) -> Reply {
     reply_boundary(|| {
@@ -212,50 +213,50 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
             let input = complete_native::Inputs::parse_request(
                 text(inputs.bytes, inputs.len).map_err(|_| complete_native::defect())?,
             )?;
-            let reading = input.record_reading(prepared.reading())?;
-            Ok::<_, thinkthen::Error>((call, prepared, input, reading))
+            let native_reading = text(native_reading.bytes, native_reading.len)
+                .map_err(|_| complete_native::defect())?;
+            let native = if native_reading.is_empty() {
+                None
+            } else {
+                Some(super::native_records::header(
+                    verb,
+                    &prepared,
+                    native_reading,
+                )?)
+            };
+            let reading = match &native {
+                Some((_, reading)) => reading.clone(),
+                None => input.record_reading(prepared.reading())?,
+            };
+            Ok::<_, thinkthen::Error>((call, prepared, input, reading, native))
         })();
-        let (call, prepared, input, reading) = match parsed {
+        let (call, prepared, input, reading, native) = match parsed {
             Ok(v) => v,
             Err(e) => return Ok(complete_native::admission(&e).to_string().into_bytes()),
         };
         let held = asked(&session)?;
         let engine = engines::engine_for(&held, |path| probe(&session, path))?;
-        let batch = if call.batch_max() {
-            Some(thinkthen::RequestBatch::Named("max".to_owned()))
-        } else if let Some(n) = call.batch_records() {
-            Some(thinkthen::RequestBatch::Count(n))
-        } else {
-            batch(&session)?.map(request_batch)
-        };
-        let due = match call.deadline_ms() {
-            None | Some(-1) => deadline,
-            Some(value) if deadline < 0 => value,
-            Some(value) => value.min(deadline),
-        };
+        let batch = source_batch(&call, &session)?;
+        let due = super::portable::due(deadline, call.deadline_ms());
         let options = thinkthen::RequestOptions {
             batch,
             context: call.context().map(str::to_owned),
             deadline_ms: Some(due),
             attempts: input.attempts,
-            max_requests_total: held
-                .max_requests_total
-                .map(u64::try_from)
-                .transpose()
-                .map_err(|_| {
-                    "thinkthen usage: a request total is a whole number of 0 or more".to_owned()
-                })?,
+            max_requests_total: source_total(held.max_requests_total)?,
             ..Default::default()
         };
         let started = (|| {
-            let request = request::request(&prepared, options)?;
+            let request = source_request(native.map(|(request, _)| request), &prepared, options)?;
+            let all_filter_results = matches!(prepared, complete_native::Prepared::Filter(_))
+                && !request.call.arguments().options.files_only;
             engine.request_session_with_feed_options(
                 request,
                 thinkthen::Surface::Duckdb,
                 thinkthen::RequestSessionFeedOptions {
                     eager: !input.incremental,
                     image_inputs: input.image_inputs()?,
-                    all_filter_results: matches!(prepared, complete_native::Prepared::Filter(_)),
+                    all_filter_results,
                     record_reading: Some(reading),
                 },
             )
@@ -274,6 +275,54 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_complete_feed_new(
             }
         }
     })
+}
+
+fn source_total(total: Option<i64>) -> Result<Option<u64>, String> {
+    total
+        .map(u64::try_from)
+        .transpose()
+        .map_err(|_| "thinkthen usage: a request total is a whole number of 0 or more".to_owned())
+}
+
+fn source_batch(
+    call: &thinkthen::Settings,
+    session: &BridgeSettings,
+) -> Result<Option<thinkthen::RequestBatch>, String> {
+    Ok(if call.batch_max() {
+        Some(thinkthen::RequestBatch::Named("max".to_owned()))
+    } else if let Some(n) = call.batch_records() {
+        Some(thinkthen::RequestBatch::Count(n))
+    } else {
+        batch(session)?.map(request_batch)
+    })
+}
+
+fn source_request(
+    native: Option<thinkthen::AdmittedRequest>,
+    prepared: &complete_native::Prepared,
+    options: thinkthen::RequestOptions,
+) -> Result<thinkthen::Request, thinkthen::Error> {
+    if let Some(native) = native {
+        let mut args = native.request().call.arguments().clone();
+        args.options.batch = args.options.batch.or(options.batch);
+        args.options.context = args.options.context.or(options.context);
+        args.options.deadline_ms = Some(super::portable::due(
+            options.deadline_ms.unwrap_or(-1),
+            args.options.deadline_ms,
+        ));
+        args.options.attempts |= options.attempts;
+        args.options.max_requests_total =
+            match (args.options.max_requests_total, options.max_requests_total) {
+                (Some(a), Some(b)) => Some(a.min(b)),
+                (a, b) => a.or(b),
+            };
+        Ok(thinkthen::Request::for_function(
+            native.request().call.function(),
+            args,
+        ))
+    } else {
+        request::request(prepared, options)
+    }
 }
 
 pub(super) fn supplement(

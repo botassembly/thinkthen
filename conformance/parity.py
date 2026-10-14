@@ -434,7 +434,8 @@ def support_table(parity, matrix):
             remaining += '; written ruling: ' + '; '.join(rulings)
         for case_id, ruling in row.get('case_rulings', {}).items():
             boundary = ruling['boundary']
-            coverage = ('outside CLI' if boundary == 'sdk-only'
+            coverage = (('outside PostgreSQL' if row['consumer'] == 'postgresql' else 'outside CLI')
+                        if boundary == 'sdk-only'
                         else 'boundary coverage ' + row['cells'].get(case_id, 'missing'))
             reason = ruling['reason'].replace('|', '/').replace('\n', ' ')
             remaining += f'; {case_id}: {boundary}, {coverage}, {reason}'
