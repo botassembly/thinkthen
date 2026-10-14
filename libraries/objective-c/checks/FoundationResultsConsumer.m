@@ -1,4 +1,5 @@
 #import "TTResults.g.h"
+#import "TTResultPrivate.h"
 static void require(BOOL condition) { if (!condition) abort(); }
 int main(int argc, const char *argv[]) {
     @autoreleasepool {

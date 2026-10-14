@@ -1,4 +1,5 @@
 #import "ThinkThenFoundation.h"
+#import "TTResultPrivate.h"
 #import <dispatch/dispatch.h>
 #include <stdio.h>
 static void require(BOOL condition) { if (!condition) abort(); }
@@ -21,8 +22,8 @@ static void typed(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *
             require(values.count == [packet.rawFields[@"value"] count]);
             for (TTRecognition *value in values) {
                 require(value.value.state == TTPresenceValue);
-                if ([value.value.value isKindOfClass:TTRecognizeFieldsEntities.class]) {
-                    TTRecognizeFieldsEntities *recognized = (id)value.value.value;
+                if ([value.value.value isKindOfClass:TTRecognizeEntities.class]) {
+                    TTRecognizeEntities *recognized = (id)value.value.value;
                     require(recognized.entities.state == TTPresenceValue);
                     require(recognized.entities.value.count == [recognized.rawFields[@"entities"] count]);
                 }
@@ -36,7 +37,7 @@ int main(int argc, const char *argv[]) {
         NSDictionary *fixture = read([NSData dataWithContentsOfFile:[NSString stringWithUTF8String:argv[1]]]);
         NSDictionary *settings = read([[NSString stringWithUTF8String:argv[2]] dataUsingEncoding:NSUTF8StringEncoding]);
         NSError *error = nil;
-        TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:settings error:&error];
+        TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:[[TTSettings alloc] initWithFields:settings] error:&error];
         __block TTCall *retained = nil;
         __block NSError *failure = nil;
         dispatch_semaphore_t completed = dispatch_semaphore_create(0);
@@ -53,7 +54,7 @@ int main(int argc, const char *argv[]) {
             NSDictionary *request = @{@"schema":TTRequestVersion, @"call":@{
                 @"function":verb, @"question":fixture[@"question"],
                 @"input":fixture[@"input"], @"options":fixture[@"options"]}};
-            TTSession *session = [client startRequest:request error:&error];
+            TTSession *session = [client startRequest:[[TTRequest alloc] initWithFields:request] error:&error];
             if (session) {
                 if ([fixture[@"cancel"] boolValue]) [session cancel];
                 require([session finish:nil error:&error]);
@@ -80,13 +81,13 @@ int main(int argc, const char *argv[]) {
             NSArray *items = fixture[@"feed_items"];
             if (items) {
                 __block NSUInteger index = 0;
-                feed = ^NSDictionary *(NSDictionary **readerFailure) {
+                feed = ^TTRequestSessionDescriptor *(TTRequestObject **readerFailure) {
                     *readerFailure = nil;
                     if (index == items.count) return nil;
-                    return @{@"item":items[index++]};
+                    return [[TTRequestSessionDescriptor alloc] initWithFields:@{@"item":items[index++]}];
                 };
             }
-#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:fixture[@"question"] input:fixture[@"input"] options:fixture[@"options"] feed:feed completion:completion error:&error];
+#define NAMED(name) if ([verb isEqual:@#name]) task = [client name:[[TTQuestion alloc] initWithFields:fixture[@"question"]] input:[[TTInput alloc] initWithFields:fixture[@"input"]] options:[[TTControls alloc] initWithFields:fixture[@"options"]] feed:feed completion:completion error:&error];
         NAMED(decide) NAMED(choose) NAMED(tag) NAMED(score) NAMED(filter)
         NAMED(rank) NAMED(find) NAMED(annotate) NAMED(recognize) NAMED(relate)
 #undef NAMED

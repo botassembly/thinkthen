@@ -65,7 +65,19 @@ def condition(tag):
                        [f'object[{literal(k)}] == nil' for k in value['excluded']])
 
 
-def outputs(definitions, version, input_definitions, abi):
+def outputs(definitions, version, input_definitions=None, abi=None):
+    if input_definitions is None or abi is None:
+        import importlib.util
+        from generate import ROOT, graph, prepare
+        request = json.loads((ROOT / 'specification/request.schema.json').read_text())
+        request['$defs']['Request'] = {key:value for key,value in request.items() if key != '$defs'}
+        input_definitions = prepare(graph(request, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
+        spec = importlib.util.spec_from_file_location('objc_abi', ROOT / 'sdlc/scripts/check-c-exports.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        abi = module.header_abi(ROOT / 'libraries/c/include/thinkthen.h')
+    from generate import SCHEMA, graph, immediate_schema, prepare
+    definitions = {**definitions, **prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())), ('completeImmediateFacts',)))}
     header = ['// Generated from the shared Rust result graph; do not edit.',
               '#import "TTResult.h"', 'NS_ASSUME_NONNULL_BEGIN',
               'FOUNDATION_EXPORT NSString * const TTRequestVersion;', 'FOUNDATION_EXPORT NSInteger TTNativeErrorCode(NSString *kind);']
@@ -112,7 +124,7 @@ def outputs(definitions, version, input_definitions, abi):
                 _, decode = conversion(source.get('primitive_schemas', {}).get(kind, {'type': kind}), definitions)
                 implementation += [f'if ({test}) return [[self alloc] initWithFields:@{{@"value":{decode}, @"kind":{literal(kind)}}}];']
             implementation += ['TTInvalidResult(); return nil;', '}', '- (id)value { return self.rawFields[@"value"]; }', '- (NSString *)kind { return self.rawFields[@"kind"]; }']
-        header += ['+ (instancetype)read:(id)value;', '@end']
+        header += ['@end']
         implementation += ['@end']
     implementation += ['NSInteger TTNativeErrorCode(NSString *kind) {']
     for item in definitions['completefailureKind']['oneOf']:
@@ -136,10 +148,26 @@ def outputs(definitions, version, input_definitions, abi):
     input_header, input_implementation = inputs(input_definitions)
     header += input_header
     implementation += input_implementation
-    header += named_calls(input_definitions)
+    calls = named_calls(input_definitions)
     answer_header, answer_implementation = answer_helpers(definitions)
-    header += answer_header
     implementation += answer_implementation
+    declarations = lambda macro, lines: next(line.split(' ', 2)[2] for line in lines if line.startswith('#define ' + macro + ' '))
+    header += ['@class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;',
+               'typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);',
+               'typedef TTRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
+               '@interface TTCall : NSObject',
+               '@property(nonatomic, copy, readonly) NSArray<TTSessionPacket *> *packets;',
+               '@property(nonatomic, strong, readonly) TTSessionPacketTerminal *terminal;',
+               '@end', '@interface TTCall (Answers)', declarations('TT_GENERATED_ANSWER_DECLARATIONS', answer_header), '@end',
+               '@interface TTFoundationClient : NSObject',
+               '- (nullable instancetype)initWithSettings:(nullable TTInputEngineSettings *)settings error:(NSError **)error NS_DESIGNATED_INITIALIZER;',
+               '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
+               '- (nullable TTPlan *)plan:(TTInputRequest *)request error:(NSError **)error;',
+               '- (nullable TTSession *)startRequest:(TTInputRequest *)request error:(NSError **)error;',
+               '- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;',
+               '- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;',
+               '@end', '@interface TTFoundationClient (NamedCalls)', declarations('TT_GENERATED_NAMED_DECLARATIONS', calls), '@end']
+    header += [line for line in calls + answer_header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
     header += ['typedef NS_ENUM(uint32_t, TTUsagePersistenceState) {']
     header += ['TTUsagePersistence' + word.removeprefix('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_').removesuffix('_V1').title() + ' = ' + str(value) + ','
                for word, value in abi['constants'].items() if word.startswith('THINKTHEN_COMPLETE_USAGE_PERSISTENCE_') and word.endswith('_V1')]
@@ -151,10 +179,14 @@ def outputs(definitions, version, input_definitions, abi):
         signature = f'- (nullable TTUsagePersistenceStatus *){method}:(NSError **)error'
         declarations += [signature + ';']
         bodies += [signature + f' {{ return [self usageStatus:{finish} error:error]; }}']
-    header += ['#define TT_GENERATED_USAGE_DECLARATIONS \\'] + [line + (' \\' if i + 1 < len(declarations) else '') for i, line in enumerate(declarations)]
-    header += ['#define TT_GENERATED_USAGE_IMPLEMENTATIONS \\'] + [line + (' \\' if i + 1 < len(bodies) else '') for i, line in enumerate(bodies)]
+    header += ['#define TT_GENERATED_USAGE_DECLARATIONS ' + ' '.join(declarations)]
+    header += ['#define TT_GENERATED_USAGE_IMPLEMENTATIONS ' + ' '.join(bodies)]
+    private_macros = [line for line in header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
+    header = [line for line in header if line not in private_macros]
+    implementation[3:3] = ['#import \"ThinkThenFoundation.h\"'] + private_macros
+    implementation += ['@implementation TTCall (Answers)', 'TT_GENERATED_ANSWER_IMPLEMENTATIONS', '@end', '@implementation TTFoundationClient (NamedCalls)', 'TT_GENERATED_NAMED_IMPLEMENTATIONS', '@end']
     header += ['NS_ASSUME_NONNULL_END']
-    return {'TTResults.g.h': '\n'.join(header) + '\n', 'TTResults.g.m': '\n'.join(implementation) + '\n'}
+    return rename_inputs({'TTResults.g.h': '\n'.join(header) + '\n', 'TTResults.g.m': '\n'.join(implementation) + '\n#if __has_include(<thinkthen.h>)\n' + native_values() + '#endif\n'})
 
 
 def ordered_maps():
@@ -167,7 +199,7 @@ def ordered_maps():
         '@interface TTOrderedMap : NSObject',
         '@property(nonatomic, copy, readonly) NSArray<TTOrderedEntry *> *entries;',
         '- (instancetype)initWithEntries:(NSArray<TTOrderedEntry *> *)entries;', '@end',
-        'FOUNDATION_EXPORT NSData * _Nullable TTRequestJSONData(id value, NSError **error);']
+        '']
     implementation = [r'''@implementation TTOrderedEntry
 - (instancetype)initWithKey:(NSString *)key value:(id)value {
     if ((self = [super init])) { _key = [key copy]; _value = value; } return self;
@@ -232,9 +264,9 @@ def inputs(definitions):
         if kind == 'object': return 'NSDictionary *'
         return 'id'
     header = ['@interface TTRequestObject : NSObject',
-              '@property(nonatomic, readonly) NSMutableDictionary<NSString *, id> *requestFields;', '@end']
-    implementation = ['@implementation TTRequestObject',
-                      '- (instancetype)init { if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary]; return self; }', '@end']
+              '@end', '@interface TTQuestion : TTRequestObject', '@end', '@interface TTInput : TTRequestObject', '@end']
+    implementation = ['@implementation TTQuestion', '@end', '@implementation TTInput', '@end', '@interface TTRequestObject ()', '@property(nonatomic, strong) NSMutableDictionary<NSString *, id> *requestFields;', '@end', '@implementation TTRequestObject',
+                      '- (instancetype)init { if ((self = [super init])) _requestFields = [NSMutableDictionary dictionary]; return self; }', '- (instancetype)initWithFields:(NSDictionary *)fields { if ((self = [self init])) [_requestFields addEntriesFromDictionary:fields]; return self; }', '@end']
     for key, values in enums.items():
         cls = 'TTInput' + name(key)[2:]
         header += [f'typedef NSString *{cls} NS_TYPED_ENUM;']
@@ -245,7 +277,8 @@ def inputs(definitions):
     if objects: header += ['@class ' + ', '.join('TTInput' + name(key)[2:] for key in objects) + ';']
     for key, source in objects.items():
         cls = 'TTInput' + name(key)[2:]
-        header += [f'@interface {cls} : TTRequestObject']
+        parent = 'TTQuestion' if key.startswith('RequestQuestion') else 'TTInput' if key.startswith('RequestInput') else 'TTRequestObject'
+        header += [f'@interface {cls} : {parent}']
         implementation += [f'@implementation {cls}']
         constants = {}
         for prop, field in source['properties'].items():
@@ -271,11 +304,10 @@ def named_calls(definitions):
     declarations, implementations = [], []
     for item in definitions['RequestFunction']['oneOf']:
         function = item['const']
-        signature = f'- (nullable TTTask *){function}:(NSDictionary<NSString *, id> *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error'
+        signature = f'- (nullable TTTask *){function}:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error'
         declarations += [signature + ';']
         implementations += [signature + ' { return [self start:' + literal(function) + ' question:question input:input options:options feed:feed completion:completion error:error]; }']
-    return ['#define TT_GENERATED_NAMED_DECLARATIONS \\'] + [line + (' \\' if i + 1 < len(declarations) else '') for i, line in enumerate(declarations)] + [
-        '#define TT_GENERATED_NAMED_IMPLEMENTATIONS \\'] + [line + (' \\' if i + 1 < len(implementations) else '') for i, line in enumerate(implementations)]
+    return ['#define TT_GENERATED_NAMED_DECLARATIONS ' + ' '.join(declarations), '#define TT_GENERATED_NAMED_IMPLEMENTATIONS ' + ' '.join(implementations)]
 
 
 def answer_helpers(definitions):
@@ -285,8 +317,8 @@ def answer_helpers(definitions):
         return root + ''.join('[' + literal(field) + ']' for field in path)
     checks = ' && '.join('[' + at(path) + ' isEqual:' + literal(value) + ']' for path, value in guards)
     header = ['FOUNDATION_EXPORT NSErrorDomain const TTAnswerErrorDomain;',
-              'FOUNDATION_EXPORT id _Nullable TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal, NSString *function, NSString *judgment, id call, NSError **error);',
-              'FOUNDATION_EXPORT TTPresence *TTAnswerPresence(id payload, id (^convert)(id));']
+              '' ,
+              '']
     implementation = ['NSErrorDomain const TTAnswerErrorDomain = @"io.github.botassembly.thinkthen.answer";',
                       'extern NSErrorDomain const TTErrorDomain;', 'extern NSString * const TTFailureDetailsKey;',
                       'TTPresence *TTAnswerPresence(id payload, id (^convert)(id)) { TTResultNode *node = [[TTResultNode alloc] initWithFields:@{@"value":payload}]; return [node presence:@"value" required:YES convert:convert]; }',
@@ -304,6 +336,8 @@ def answer_helpers(definitions):
     declarations, bodies, client_declarations, client_bodies = [], [], [], []
     for function, (payload, kind) in answers.items():
         target, decode = conversion(payload, definitions)
+        if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"value"]); })'
+        if function == 'filter': target, decode = 'NSArray *', 'TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; })'
         method = function + 'Answer'
         signature = f'- (nullable TTPresence<{target}> *){method}:(NSError **)error'
         declarations += [signature + ';']
@@ -311,6 +345,127 @@ def answer_helpers(definitions):
         signature = f'- (nullable TTPresence<{target}> *){method}:(NSDictionary *)question input:(NSDictionary *)input options:(nullable NSDictionary *)options error:(NSError **)error'
         client_declarations += [signature + ';']
         client_bodies += [signature + ' { __block TTCall *result; __block NSError *failure = nil; dispatch_semaphore_t settled = dispatch_semaphore_create(0); TTTask *task = [self ' + function + ':question input:input options:options feed:nil completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; dispatch_semaphore_signal(settled); } error:&failure]; if (!task) { if (error) *error = failure; return nil; } dispatch_semaphore_wait(settled, DISPATCH_TIME_FOREVER); if (failure) { if (error) *error = failure; return nil; } return [result ' + method + ':error]; }']
-    for macro, lines in [('TT_GENERATED_ANSWER_DECLARATIONS', declarations), ('TT_GENERATED_ANSWER_IMPLEMENTATIONS', bodies), ('TT_GENERATED_BLOCKING_ANSWER_DECLARATIONS', client_declarations), ('TT_GENERATED_BLOCKING_ANSWER_IMPLEMENTATIONS', client_bodies)]:
-        header += ['#define ' + macro + ' \\'] + [line + (' \\' if i + 1 < len(lines) else '') for i, line in enumerate(lines)]
+    for macro, lines in [('TT_GENERATED_ANSWER_DECLARATIONS', declarations), ('TT_GENERATED_ANSWER_IMPLEMENTATIONS', bodies)]:
+        header += ['#define ' + macro + ' ' + ' '.join(lines)]
     return header, implementation
+
+def native_values():
+    """Copy native typed graphs; Foundation never reparses result JSON."""
+    import c
+    from generate import SCHEMA, graph, immediate_schema, prepare
+    definitions = prepare(graph(immediate_schema(json.loads(SCHEMA.read_text())),
+                                ('completesessionPacket', 'completeImmediateFacts')))
+    class Layout(c.Target):
+        def __init__(self):
+            super().__init__(definitions)
+            self.members, self.arms = {}, {}
+        def structure(self, key, members):
+            self.members[key] = members
+            super().structure(key, members)
+        def union(self, key, arms):
+            self.arms[c.ident(key)] = arms
+            super().union(key, arms)
+    target = Layout()
+    for key, schema in definitions.items(): target.definition(key, schema)
+    def decode(typ, expression, boolean=False):
+        if boolean: return '@((BOOL)' + expression + ')'
+        if typ in ('u32', 'u64', 'usize', 'f64', 'i64'): return '@(' + expression + ')'
+        if typ == 'thinkthen_complete_utf8_v1': return 'TTNativeString(' + expression + ')'
+        pointer = typ.startswith('*const ')
+        typ = typ.removeprefix('*const ')
+        return 'TTNative_' + typ + '(' + (expression if pointer else '&(' + expression + ')') + ')'
+    lines = ['// Generated from the shared Rust result graph; do not edit.',
+             '#import "TTResultPrivate.h"', '#import <thinkthen.h>']
+    lines += ['id TTNative_' + key + '(const struct ' + key + ' *value);' for key in target.members]
+    lines += [r'''static NSString *TTNativeString(struct thinkthen_complete_utf8_v1 value) {
+    NSString *text = [[NSString alloc] initWithBytes:value.data ?: "" length:value.len encoding:NSUTF8StringEncoding];
+    if (!text) TTInvalidResult(); return text;
+}
+id TTNative_thinkthen_complete_json_v1(const struct thinkthen_complete_json_v1 *value) {
+    if (!value) TTInvalidResult();
+    switch (value->kind) {
+    case THINKTHEN_COMPLETE_JSON_NULL_V1: return NSNull.null;
+    case THINKTHEN_COMPLETE_JSON_BOOLEAN_V1: return @((BOOL)value->data.boolean);
+    case THINKTHEN_COMPLETE_JSON_STRING_V1: return TTNativeString(value->data.string);
+    case THINKTHEN_COMPLETE_JSON_NUMBER_V1: {
+        NSDecimalNumber *number = [NSDecimalNumber decimalNumberWithString:TTNativeString(value->data.number) locale:@{NSLocaleDecimalSeparator:@"."}];
+        if ([number isEqual:NSDecimalNumber.notANumber]) TTInvalidResult(); return number;
+    }
+    case THINKTHEN_COMPLETE_JSON_ARRAY_V1: {
+        NSMutableArray *items = [NSMutableArray array];
+        for (size_t i = 0; i < value->data.array.len; i++) [items addObject:TTNative_thinkthen_complete_json_v1(value->data.array.data[i])];
+        return [items copy];
+    }
+    case THINKTHEN_COMPLETE_JSON_OBJECT_V1: {
+        NSMutableDictionary *items = [NSMutableDictionary dictionary];
+        for (size_t i = 0; i < value->data.object.len; i++) {
+            const struct thinkthen_complete_json_entry_v1 *item = &value->data.object.data[i];
+            items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);
+        }
+        return [items copy];
+    }
+    default: TTInvalidResult();
+    }
+}''']
+    for key, members in target.members.items():
+        schema = target.schemas.get(key, {})
+        body = ['if (!value) TTInvalidResult();']
+        if key in target.arms:
+            body += ['switch(value->kind) {']
+            for arm, _, arm_type, _ in target.arms[key]:
+                symbol = key.removesuffix('_v1').upper() + '_' + arm.upper() + '_V1'
+                field = arm + '_' if arm in ('true', 'false') else arm
+                expression = 'NSNull.null' if arm == 'null' else decode(arm_type, 'value->data.' + field, arm == 'boolean')
+                body += [f'case {symbol}: return {expression};']
+            body += ['default: TTInvalidResult(); }']
+        elif 'enum' in schema:
+            body += ['switch(value->kind) {']
+            for value in schema['enum']:
+                symbol = key.removesuffix('_v1').upper() + '_' + re.sub(r'[^A-Za-z0-9]+', '_', value).strip('_').upper() + '_V1'
+                body += [f'case {symbol}: return {literal(value)};']
+            body += ['default: TTInvalidResult(); }']
+        elif 'properties' in schema:
+            body += ['NSMutableDictionary *items = [NSMutableDictionary dictionary];']
+            for field, field_type in members:
+                if field == 'extensions': continue
+                expression = 'value->' + (field + '_' if field in ('true', 'false') else field)
+                boolean = c.normalized(schema['properties'][field]).get('type') == 'boolean'
+                if field_type.endswith('_presence_v1'):
+                    contained = dict(target.members[field_type])['value']
+                    decoded = decode(contained, expression + '.value', boolean)
+                    body += [f'if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_NULL_V1) items[{literal(field)}] = NSNull.null;',
+                             f'else if ({expression}.presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1) items[{literal(field)}] = {decoded};']
+                else: body += [f'items[{literal(field)}] = {decode(field_type, expression, boolean)};']
+            body += ['for (size_t i = 0; i < value->extensions.len; i++) {',
+                     'const struct thinkthen_complete_extension_v1 *item = &value->extensions.data[i];',
+                     'items[TTNativeString(item->name)] = TTNative_thinkthen_complete_json_v1(item->value);', '}', 'return [items copy];']
+        elif members[0][0] == 'presence':
+            body += ['return value->presence == THINKTHEN_COMPLETE_PRESENCE_VALUE_V1 ? ' + decode(dict(members)['value'], 'value->value') + ' : NSNull.null;']
+        elif members[0][0] == 'data':
+            mapping = key.endswith('_map_v1')
+            body += ['NSMutableDictionary *items = [NSMutableDictionary dictionary];' if mapping else 'NSMutableArray *items = [NSMutableArray array];', 'for (size_t i = 0; i < value->len; i++) {']
+            element = dict(members)['data'].removeprefix('*const ')
+            if mapping:
+                body += ['items[TTNativeString(value->data[i].name)] = ' + decode(dict(target.members[element])['value'], 'value->data[i].value') + ';']
+            else: body += ['[items addObject:' + decode(element, 'value->data[i]') + '];']
+            body += ['}', 'return [items copy];']
+        else:
+            body += ['return ' + decode(dict(members)['value'], 'value->value', schema.get('type') == 'boolean') + ';']
+        lines += ['id TTNative_' + key + '(const struct ' + key + ' *value) {'] + body + ['}']
+    return '\n'.join(lines) + '\n'
+
+
+def rename_inputs(outputs):
+    replacements = {'TTInputEngineSettings':'TTSettings', 'TTInputRequestOptions':'TTControls',
+                    'TTInputRequestQuestionText':'TTTextQuestion', 'TTInputRequestQuestionFile':'TTQuestionFile',
+                    'TTInputRequestQuestionName':'TTQuestionName', 'TTInputRequestQuestionReference':'TTQuestionReference',
+                    'TTInputRequestQuestionDefinition':'TTQuestionDefinition',
+                    'TTInputRequestInputText':'TTTextInput', 'TTInputRequestInputJson':'TTJSONInput',
+                    'TTInputRequestInputRecords':'TTRecordsInput', 'TTInputRequestInputFeed':'TTFeedInput',
+                    'TTInputRequestInputSource':'TTSourceInput', 'TTInputRequestInputEntities':'TTEntitiesInput',
+                    'TTInputRequestInputUnits':'TTUnitsInput', 'TTInputRequestItem':'TTItem',
+                    'TTInputRequestSource':'TTFiles', 'TTInputRequestCall':'TTRequestCall', 'TTInputRequest':'TTRequest'}
+    def rename(text):
+        for old in sorted(replacements, key=len, reverse=True): text = text.replace(old, replacements[old])
+        return re.sub(r'\bTTInput([A-Z]\w*)', r'TT\1Builder', text)
+    return {key:rename(value) for key,value in outputs.items()}

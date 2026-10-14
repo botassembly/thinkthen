@@ -8,10 +8,11 @@ int main(int argc, const char *argv[]) {
         NSError *error = nil;
         TTFoundationClient *client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         require(client != nil && error == nil);
-        NSDictionary *question = @{@"kind":@"text", @"text":@"Is it?"};
+        TTTextQuestion *question = [TTTextQuestion new]; question.text = @"Is it?";
+        TTTextInput *input = [TTTextInput new]; input.text = @"consumer-objc";
         __block TTCall *retained = nil;
         dispatch_semaphore_t completed = dispatch_semaphore_create(0);
-        TTTask *task = [client decide:question input:@{@"kind":@"text", @"text":@"consumer-objc"} options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+        TTTask *task = [client decide:question input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
             require(call != nil && failure == nil);
             retained = call;
             dispatch_semaphore_signal(completed);
@@ -24,11 +25,13 @@ int main(int argc, const char *argv[]) {
         task = nil; client = nil;
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.terminal != nil && retained.packets.count > 0);
+        require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
         require(retained.terminal.facts.state == TTPresenceValue);
         // A new client and unrelated host work progress while a provider is held.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
         dispatch_semaphore_t cancelled = dispatch_semaphore_create(0);
-        TTTask *held = [client decide:question input:@{@"kind":@"text", @"text":@"hold-foundation"} options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
+        input = [TTTextInput new]; input.text = @"hold-foundation";
+        TTTask *held = [client decide:question input:input options:nil feed:nil completion:^(TTCall *call, NSError *failure) {
             require(call == nil && failure.code == TTNativeErrorCode(@"cancelled"));
             dispatch_semaphore_signal(cancelled);
         } error:&error];

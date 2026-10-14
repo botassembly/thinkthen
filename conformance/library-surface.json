@@ -1433,14 +1433,10 @@
         "libraries/objective-c/Sources/Foundation/TTResults.g.h"
       ],
       "option_containers": [
-        "RequestOptions",
-        "InputRequestOptions",
-        "Controls"
+        "TTControls"
       ],
       "setting_containers": [
-        "EngineSettings",
-        "InputEngineSettings",
-        "Settings"
+        "TTSettings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -1454,10 +1450,77 @@
         "TTFoundationClient",
         "TTSession",
         "TTTask",
-        "TTUsagePersistenceStatus"
+        "TTUsagePersistenceStatus",
+        "TTCall",
+        "TTFailureError"
       ],
       "representation_owners": [
         "TTPresence",
+        "TTUsagePersistenceStatus",
+        "TTFailureError"
+      ],
+      "helper_names": {
+        "plan": "plan",
+        "question_file": "TTQuestionFile",
+        "question_name": "TTQuestionName",
+        "question_reference": "TTQuestionReference",
+        "item": "TTItem",
+        "files": "TTFiles",
+        "usage_persistence": "usagePersistence",
+        "finish_usage_status": "finishUsageStatus"
+      },
+      "wrapper_members": {
+        "TTCall": [
+          "packets",
+          "terminal",
+          "decideAnswer",
+          "chooseAnswer",
+          "tagAnswer",
+          "scoreAnswer",
+          "filterAnswer",
+          "rankAnswer",
+          "findAnswer",
+          "annotateAnswer",
+          "recognizeAnswer",
+          "relateAnswer"
+        ],
+        "TTSession": [
+          "tryPush",
+          "finish",
+          "tryReadEnded",
+          "waitInput",
+          "cancel",
+          "close"
+        ],
+        "TTTask": [
+          "cancel"
+        ],
+        "TTFailureError": [
+          "retryable",
+          "facts"
+        ],
+        "TTOrderedEntry": [
+          "key",
+          "value",
+          "initWithKey"
+        ],
+        "TTOrderedMap": [
+          "entries",
+          "initWithEntries"
+        ],
+        "TTFoundationClient": [
+          "initWithSettings",
+          "init",
+          "new",
+          "startRequest"
+        ]
+      },
+      "representation_types": [
+        "TTFailureError",
+        "TTPresence",
+        "TTResultNode",
+        "TTSession",
+        "TTTask",
         "TTUsagePersistenceStatus"
       ]
     },

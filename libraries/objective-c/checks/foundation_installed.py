@@ -12,7 +12,6 @@ import tarfile
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT.parents[1]
 sys.path.insert(0, str(REPO / "conformance/children"))
-sys.path.insert(0, str(REPO / "conformance/children"))
 from children import child_env
 from backend import Backend
 from session_cases import native_cases
@@ -20,16 +19,6 @@ from session_cases import native_cases
 if sys.platform != "darwin":
     print("Foundation installed consumer requires macOS", file=sys.stderr)
     sys.exit(77)
-# The shared carrier fixture checks host conversion only; it is not execution parity.
-with tempfile.TemporaryDirectory(prefix="thinkthen-foundation-results-") as temporary:
-    work = Path(temporary)
-    source = ROOT / "Sources/Foundation"
-    subprocess.run(["xcrun", "clang", "-fobjc-arc", "-fblocks", "-Wall", "-Wextra", "-Werror",
-                    "-I" + str(source), str(source / "TTResult.m"), str(source / "TTResults.g.m"),
-                    str(ROOT / "checks/FoundationResultsConsumer.m"), "-framework", "Foundation",
-                    "-o", str(work / "results")], env=child_env(home=work), check=True, capture_output=True, timeout=30)
-    subprocess.run([str(work / "results"), str(REPO / "conformance/fixtures/complete.json")],
-                   env=child_env(home=work), check=True, timeout=3)
 with contextlib.ExitStack() as installed:
     package = Path(os.environ.get("THINKTHEN_APPLE_PACKAGE", ROOT))
     if os.environ.get("THINKTHEN_ARTIFACT"):
@@ -48,6 +37,8 @@ with contextlib.ExitStack() as installed:
         shutil.copytree(package, work / "package", ignore=shutil.ignore_patterns("target", ".build", "checks", "Examples"))
         (work / "Sources/Consumer").mkdir(parents=True)
         (work / "Sources/Cases").mkdir(parents=True)
+        (work / "Sources/Results").mkdir(parents=True)
+        shutil.copy2(ROOT / "checks/FoundationResultsConsumer.m", work / "Sources/Results/main.m")
         shutil.copy2(ROOT / "checks/FoundationCases.m", work / "Sources/Cases/main.m")
         shutil.copy2(ROOT / "checks/FoundationConsumer.m", work / "Sources/Consumer/main.m")
         (work / "Package.swift").write_text('''// swift-tools-version: 6.0
@@ -61,6 +52,10 @@ with contextlib.ExitStack() as installed:
      .executableTarget(name: "Cases", dependencies: [
      .product(name: "ThinkThenFoundation", package: "package")],
      cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
+     linkerSettings: [.linkedFramework("Foundation")]),
+     .executableTarget(name: "Results", dependencies: [
+     .product(name: "ThinkThenFoundation", package: "package")],
+     cSettings: [.unsafeFlags(["-fobjc-arc", "-fblocks"])],
      linkerSettings: [.linkedFramework("Foundation")])])
     ''')
         env = child_env(keep=("LLVM_PROFILE_FILE", "CARGO_TARGET_DIR"), home=work)
@@ -70,6 +65,8 @@ with contextlib.ExitStack() as installed:
                             "-Xlinker", "-u", "-Xlinker", "___llvm_profile_runtime"]
         subprocess.run(["swift", "build", "--disable-sandbox", "-j", "1"] + profile_link, cwd=work, env=env,
                        check=True, capture_output=True, timeout=60)
+        subprocess.run([str(work / ".build/debug/Results"), str(REPO / "conformance/fixtures/complete.json")],
+                       env=env, check=True, timeout=3)
         barrier = work / "barrier"
         barrier.mkdir()
         server = Backend(barrier, key='tt-canary-295', packed_questions={'Is it?'}, canonical_packed=True, hold_first=True)
