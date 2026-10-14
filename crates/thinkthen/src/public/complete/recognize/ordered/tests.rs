@@ -1,6 +1,7 @@
 //! Deadline and cancellation proofs for the ordered runner, moved with it
 //! from the engine's old record scheduler.
 
+//! Stays: The private ordered worker scheduler must preserve completion order, cancellation and joins under controlled concurrent events.
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, channel};
 use std::sync::{Arc, Barrier};

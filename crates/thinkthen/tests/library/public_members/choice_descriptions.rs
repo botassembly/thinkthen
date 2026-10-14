@@ -57,7 +57,10 @@ fn old_bare_identity(engine: &Engine, listener: &Listener) {
         r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"An invoice dispute.\". Which team?","criteria":{"billing":null,"outage":null}}}}"#
     );
     assert_eq!(
-        details.results()[0]
+        details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest"),
@@ -85,11 +88,17 @@ fn described_choose_identity(engine: &Engine, listener: &Listener) {
     assert_eq!(typed_body, map_body);
     assert!(String::from_utf8_lossy(&typed_body).contains(r#""criteria":{"billing":"Money owed.","outage":{"what":"Service unavailable.","examples":["Cannot sign in."]},"other":null}"#));
     assert_eq!(
-        typed_details.results()[0]
+        typed_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest"),
-        loaded_details.results()[0]
+        loaded_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest")
@@ -122,11 +131,17 @@ fn described_choose_identity(engine: &Engine, listener: &Listener) {
     let (typed_body, map_body) = captured_pair(listener);
     assert_eq!(typed_body, map_body);
     assert_eq!(
-        override_details.results()[0]
+        override_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest"),
-        map_details.results()[0]
+        map_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest")
@@ -152,11 +167,17 @@ fn described_tag_and_null_identity(engine: &Engine, listener: &Listener) {
     let (typed_body, map_body) = captured_pair(listener);
     assert_eq!(typed_body, map_body);
     assert_eq!(
-        tag_details.results()[0]
+        tag_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest"),
-        map_tag_details.results()[0]
+        map_tag_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest")
@@ -190,11 +211,17 @@ fn described_tag_and_null_identity(engine: &Engine, listener: &Listener) {
             .contains(r#""criteria":{"billing":null,"outage":null,"other":null}"#)
     );
     assert_eq!(
-        null_details.results()[0]
+        null_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest"),
-        list_details.results()[0]
+        list_details
+            .results()
+            .first()
+            .expect("one result")
             .meta()
             .question_sha256()
             .expect("digest")

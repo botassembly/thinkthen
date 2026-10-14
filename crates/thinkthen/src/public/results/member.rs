@@ -1,5 +1,6 @@
 //! One bounded answered batch member, retained only until its ordered row leaves.
 
+//! Stays: The retained private scalar projection must preserve original serialization, probabilities and batch metadata without changing canonical result identity.
 use std::fmt;
 
 use crate::core::{self, BatchWarning};

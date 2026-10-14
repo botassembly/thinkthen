@@ -1,10 +1,8 @@
 //! One record's named `annotate` values, and why a failed member failed.
 
-use std::fmt;
-
 use crate::core::{AnnotatedValue, BackendFailureCause, Value};
 use crate::public::error::ErrorKind;
-use crate::public::results::{Answer, Written, answer, withheld_debug};
+use crate::public::results::{Answer, answer};
 
 /// One named value of an annotated record.
 #[derive(Clone, Debug, PartialEq)]
@@ -52,42 +50,6 @@ impl NamedAnnotation {
     #[must_use]
     pub fn value(&self) -> &Annotated {
         &self.value
-    }
-}
-
-/// One record and every value the set gave it, in set order.
-#[derive(Clone, PartialEq)]
-pub struct AnnotatedRecord<T> {
-    input: T,
-    values: Vec<NamedAnnotation>,
-    json: Written,
-}
-
-withheld_debug!(AnnotatedRecord<T> { values });
-
-impl<T> AnnotatedRecord<T> {
-    /// The record as given.
-    #[must_use]
-    pub fn input(&self) -> &T {
-        &self.input
-    }
-
-    /// Each member's value, in set order.
-    #[must_use]
-    pub fn values(&self) -> &[NamedAnnotation] {
-        &self.values
-    }
-
-    /// The record.
-    #[must_use]
-    pub fn into_input(self) -> T {
-        self.input
-    }
-
-    /// The bare `annotate` value the command prints for this one text.
-    #[must_use]
-    pub fn value_json(&self) -> String {
-        self.json.text()
     }
 }
 

@@ -1,5 +1,6 @@
 //! Explicit facts across completed calls, shared by clones and threads.
 
+//! Stays: Private tally accounting must retain ordering, overflow and missing-usage behavior across independent call receipts.
 use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;

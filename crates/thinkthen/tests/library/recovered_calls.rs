@@ -9,7 +9,7 @@ use thinkthen::{
 fn admitted(
     function: RequestFunction,
     definition: RequestDefinition,
-) -> thinkthen::AdmittedRequest {
+) -> Result<thinkthen::AdmittedRequest, thinkthen::Error> {
     Request::for_function(
         function,
         RequestArguments {
@@ -24,7 +24,6 @@ fn admitted(
         },
     )
     .admit()
-    .unwrap()
 }
 fn records(
     values: &[&str],
@@ -75,7 +74,8 @@ fn recovering_rows_keep_good_members_after_a_bad_answer_in_one_packed_request() 
     let request = admitted(
         RequestFunction::Decide,
         Question::decide("Refund?").unwrap().cut().into(),
-    );
+    )
+    .unwrap();
     let call = engine
         .execute_request_recovering(
             &request,
@@ -111,7 +111,8 @@ fn eager_recovering_admission_refuses_a_late_reader_error_before_any_send() {
     let request = admitted(
         RequestFunction::Decide,
         Question::decide("Refund?").unwrap().cut().into(),
-    );
+    )
+    .unwrap();
     let mut input = records(&["good"]);
     input.push(Err(thinkthen::Error::new(
         ErrorKind::Usage,
