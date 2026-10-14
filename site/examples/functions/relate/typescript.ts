@@ -10,12 +10,12 @@ try {
     ["Kindle", "product"],
   ] as const;
   const whoMakes = (await tt.relate(
-    {version: 1, relate: {relations: [
+    Client.relateQuestion([
       {name: "makes", source: "company", target: "product",
        either: false}
-    ]}},
+    ]),
     names.map(([name, kind]) => ({name, kind})),
-  )).relateAnswer().value;
+  )).value;
   const makes = whoMakes.map((edge) => [
     edge.source.name,
     edge.target.name,
