@@ -464,6 +464,36 @@ class PublicAssertions(unittest.TestCase):
                 self.assertTrue(all(row['adopted_case_count'] == 0 and 'preparation' in row['baseline_error'] for row in matrix))
                 self.assertTrue(all(row['duration_seconds'] == clock[0] for row in matrix))
 
+    def test_sql_case_selectors_refuse_before_host_and_backend_work(self):
+        with tempfile.TemporaryDirectory(prefix='sql-selector-refusal-') as scratch:
+            root = Path(scratch)
+            marker = root / 'executed'
+            backend = root / 'backend'
+            backend.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\nexit 99\n')
+            backend.chmod(0o755)
+            empty = root / 'empty'
+            empty.write_text('# no selected cases\n')
+            env = parity.consumer_environment(root / 'home', '12345')
+            env.update(THINKTHEN_BACKEND_BIN=str(backend), THINKTHEN_TEST_PROFILE='routine')
+            cases = (
+                ('unknown', 'not-a-canonical-case', [], 'unknown SQL case selector'),
+                ('malformed', '01-decide-yes-captured,', [], 'malformed or empty'),
+                ('empty', str(empty), [], 'malformed or empty'),
+                ('nonmatching', '25-defect-fault', [], 'matches no required'),
+                ('conflict', '01-decide-yes-captured', ['01-decide-yes-captured'], 'conflicting SQL'),
+                ('full', '01-decide-yes-captured', [], 'full SQL parity refuses'),
+            )
+            for name, selector, arguments, cause in cases:
+                with self.subTest(name=name):
+                    selected = {**env, 'THINKTHEN_CONFORMANCE_IDS': selector}
+                    if name == 'full': selected['THINKTHEN_TEST_PROFILE'] = 'full'
+                    result = subprocess.run([sys.executable,
+                        str(parity.ROOT / 'databases/sqlite/tests/complete/parity.py'),
+                        'postgresql', *arguments], env=selected, capture_output=True, text=True, timeout=5)
+                    self.assertEqual(result.returncode, 2, result.stdout + result.stderr)
+                    self.assertIn(cause, result.stderr)
+                    self.assertFalse(marker.exists(), 'invalid selection started a backend')
+
     def test_prepared_python_shell_uses_shared_installed_venv_and_private_fixture_copy(self):
         import venv
         with tempfile.TemporaryDirectory() as scratch:
