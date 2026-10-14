@@ -13,18 +13,22 @@ import {Client} from 'thinkthen';
 const refunds = ['Please refund my order. It arrived broken.', 'Thanks for the quick help yesterday!', 'I want to send this back.'];
 const messages = ['Please refund the extra fee on my invoice.', 'My parcel went to the wrong address.', 'I cannot reset my password.'];
 const teams = {billing: 'Invoices, fees, and refunds.', shipping: 'Parcels and delivery.', account: 'Logins and passwords.'};
+const refundQuestion = 'Does the customer ask for a refund?';
+const teamQuestion = 'Which team owns this?';
 const client = new Client();
 try {
   for (const text of refunds) {
-    const refund = await client.decideAnswer('Does the customer ask for a refund?', text);
-    console.log(refund);
+    const refund = await client.decide(refundQuestion, text);
+    console.log(refund.value);
   }
   for (const text of messages) {
-    const team = await client.chooseAnswer({choose: 'Which team owns this?', options: teams}, text);
-    console.log(team);
+    const team = await client.choose({choose: teamQuestion, options: teams}, text);
+    console.log(team.value);
   }
 } finally { client.close(); }
 ```
+
+Read the answer from `value`, its probability from `probability`, the per-record details from `results`, and the call observations from `facts`.
 
 The library is free and MIT licensed. Hosted models charge per token. Local models are free to use; you supply the computer that runs them.
 

@@ -9,6 +9,6 @@ try {
     "Our checkout page is down and customers cannot pay.\n";
   const urgency = (await tt.score(
     {score: question, levels}, outage,
-  )).scoreAnswer();
+  )).value;
   assert.equal(urgency, 2);
 } finally { tt.close(); }

@@ -9,8 +9,8 @@ try {
     "Sam Patel says his Kindle arrived broken " +
     "in Denver.";
   const facts = (await tt.recognize(
-    {version: 1, recognize: {kinds}}, text,
-  )).recognizeAnswer()[0].value;
+    Client.recognizeQuestion(kinds), text,
+  )).value;
   const names = facts.entities.map((one) => [
     one.text,
     one.kind,

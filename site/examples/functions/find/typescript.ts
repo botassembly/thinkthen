@@ -12,6 +12,6 @@ try {
   ];
   const refundDeadline = (await tt.find(
     question, policy,
-  )).findAnswer().value;
+  )).value;
   assert.equal(refundDeadline, policy[1]);
 } finally { tt.close(); }
