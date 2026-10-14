@@ -52,7 +52,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 relation <- tt_relate_question(relations = list(list(name = "knows",
                                                      source = "person", target = "person")))
 edges <- tt_relate(relation, list(list(name = "Ada", kind = "person"),
-                                  list(name = "Bo", kind = "person")))$answer
+                                  list(name = "Bo", kind = "person")))$value
 edges[[1]]$source$name
 }
 }

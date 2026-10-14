@@ -27,9 +27,9 @@ one <- tt_decide(structured,"gamma")
 check("structured wording retains null and nested values", is.null(one$value) && identical(one$probability, 0.9) && is.null(one$results[[1]]$question$true) &&
   identical(one$results[[1]]$question$text, structured$decide) &&
   inherits(one$results[[1]]$question$false,"thinkthen_absent"))
-for (meaning in list(FALSE, list(id = 7), list("first", "second"))) {
+for (meaning in list(list(active = FALSE), list(id = 7), list("first", "second"))) {
   authored <- tt_decide(list(decide = "Authored value?", true = meaning), "authored evidence")
-  check("authored false, object and list values keep selected probability",
+  check("authored object and list values keep nulls, booleans and selected probability",
         identical(authored$value, meaning) && identical(authored$probability, 0.9) &&
         identical(authored$results[[1]]$value, meaning))
 }

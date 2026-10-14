@@ -63,7 +63,7 @@ pub(crate) fn view(
             .find(|(name, _)| *name == "probability")
             .map(|(_, value)| value)
             .ok_or_else(|| crate::defect("native result has no probability"))?;
-        let probabilities = if probability.is_list() {
+        let probabilities = if probability.rtype() == Rtype::List {
             List::try_from(probability)
                 .map_err(|_| crate::defect("native probability is not a list"))?
         } else {
@@ -116,7 +116,7 @@ fn column_value(
     } else {
         List::try_from(value).map_err(|_| crate::defect("native column values are not a list"))?
     };
-    let probabilities = if probability.is_list() {
+    let probabilities = if probability.rtype() == Rtype::List {
         List::try_from(probability)
             .map_err(|_| crate::defect("native probabilities are not a list"))?
     } else {

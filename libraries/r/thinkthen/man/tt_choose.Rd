@@ -57,7 +57,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \dontrun{
 choice <- tt_choose(list(choose = "Which category?", options = c("refund", "other")),
                     "Please refund my order.")
-choice$results[[1]]$value
+choice$value
 }
 }
 \seealso{

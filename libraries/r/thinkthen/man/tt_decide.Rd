@@ -71,7 +71,7 @@ rows and identities print summaries that withhold content.
 \examples{
 \dontrun{
 call <- tt_decide("Does this ask for a refund?", "Please refund my order.")
-call$results[[1]]$value
+call$value
 }
 }
 \seealso{

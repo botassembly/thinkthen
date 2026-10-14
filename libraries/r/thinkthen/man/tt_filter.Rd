@@ -52,7 +52,7 @@ are \code{thinkthen_absent} when missing and \code{NULL} when explicitly null.
 \examples{
 \dontrun{
 kept <- tt_filter("Is this a complaint?", c("first", "second"))
-kept$answer[[1]]
+kept$value[[1]]
 }
 }
 \seealso{
