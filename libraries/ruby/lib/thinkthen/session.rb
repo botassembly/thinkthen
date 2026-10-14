@@ -19,9 +19,9 @@ module ThinkThen
       end
       def facts = terminal.facts
       def value
-        return results.map(&:input).freeze if @verb == "filter"
+        return results.map { |row| @verb == "filter" ? row.input : row.index }.freeze if %w[filter rank].include?(@verb)
         values = results.map { |row| row.key?("value") ? row.value : row }
-        @verb != "rank" && @scalar && values.size == 1 ? values.first : values.freeze
+        @scalar && values.size == 1 ? values.first : values.freeze
       end
       def inspect = "<ThinkThen::Results::Completed: content withheld>"
     end
