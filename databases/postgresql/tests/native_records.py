@@ -92,14 +92,22 @@ def main():
             row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_decide('Fits?',ARRAY[thinkthen_record(value=>'null'::json)]) r", 1))
             assert row['result']['input'] is None and row['result']['input_present'] is True, row
             assert query("SELECT record_count FROM thinkthen_plan('Fits?',ARRAY[" + record + "]) ") == '1'
-            for function in ('decide', 'filter', 'rank'):
-                row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_plan('Fits?',ARRAY[" + record + "],function=>" + quoted(function) + ") r"))
+            members = "ARRAY[ROW('first',NULL)::thinkthen_option,ROW('second',NULL)::thinkthen_option]"
+            plans = [('decide', '', 1), ('filter', '', 1), ('rank', '', 1),
+                     ('choose', ',reading=>thinkthen_reading(options=>' + members + ')', 1),
+                     ('score', ',reading=>thinkthen_reading(levels=>' + members + ')', 1),
+                     ('tag', ',reading=>thinkthen_reading(labels=>' + members + ')', 2)]
+            for function, reading, requests in plans:
+                row = json.loads(query("SELECT to_jsonb(r) FROM thinkthen_plan('Fits?',ARRAY[" + record + "]" + reading + ",function=>" + quoted(function) + ") r"))
                 plan = row['result']
                 assert set(plan) == {'records', 'requests', 'estimated_bytes', 'estimated_input_tokens', 'first_body_utf8', 'largest_request_bytes', 'largest_request_estimated_input_tokens', 'token_estimate_method', 'upper_bound'}, plan
-                assert plan['records'] == 1 and plan['requests'] == 1, plan
+                assert plan['records'] == 1 and plan['requests'] == requests, plan
                 assert plan['estimated_bytes'] >= plan['largest_request_bytes'] > 0, plan
                 assert plan['largest_request_estimated_input_tokens'] > 0 and plan['token_estimate_method'], plan
-                assert plan['estimated_input_tokens'] and json.loads(plan['first_body_utf8'])['state'] == 'Alpha.', plan
+                assert set(plan['estimated_input_tokens']) == {'lower', 'upper'}, plan
+                assert plan['estimated_input_tokens']['upper'] >= plan['estimated_input_tokens']['lower'] > 0, plan
+                assert isinstance(plan['upper_bound'], bool), plan
+                assert json.loads(plan['first_body_utf8'])['state'] == 'Alpha.', plan
             unsupported = {
                 'find': 'Fits?',
                 'annotate': json.dumps({'version': 1, 'questions': {'fit': {'decide': 'Fits?'}}}),
