@@ -150,7 +150,7 @@ static class SessionChecks
             MaxRequestsTotal = new EngineSettingsMaxRequestsTotalNull(),
             MaxEstimatedInputTokensTotal = new EngineSettingsMaxEstimatedInputTokensTotalNull()
         });
-        try { _ = engine.DecideAsync(Question, (IAsyncEnumerable<RequestSessionDescriptor>)null!); throw new Exception("null caller feed admitted"); }
+        try { await engine.DecideAsync(Question, (IAsyncEnumerable<RequestSessionDescriptor>)null!); throw new Exception("null caller feed admitted"); }
         catch (ArgumentNullException error) when (error.ParamName == "feed") { }
         var authored = FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"choose\":\"Which?\",\"options\":{\"first\":\"First.\",\"second\":\"Second.\"}}");
         var choices = ((AuthoredOptionsObject)((RequestDefinitionAuthoredChoose)authored.Value).Options.Value).Value;
@@ -222,8 +222,8 @@ static class SessionChecks
         using (var limits = Engine.Open(new EngineSettings { MaxRequests = new EngineSettingsMaxRequestsInteger { Value = ulong.MaxValue }, MaxRequestsTotal = new EngineSettingsMaxRequestsTotalInteger { Value = ulong.MaxValue }, MaxEstimatedInputTokensTotal = new EngineSettingsMaxEstimatedInputTokensTotalInteger { Value = ulong.MaxValue } })) { }
         string deepOriginal = "{\"text\":\"session-owned\",\"nested\":" + deepMeaning + "}";
         using var deepDocument = JsonDocument.Parse(deepOriginal, new JsonDocumentOptions { MaxDepth = int.MaxValue });
-        OwnedCall call = await engine.DecideAsync(deepQuestion!, new RequestInputJson { Value = deepDocument.RootElement }, new RequestOptions { Field = new[] { "/text" } });
-        if (call.Decision() != true) throw new Exception("normalized decision lost behind authored meaning");
+        var call = await engine.DecideAsync(deepQuestion!, new RequestInputJson { Value = deepDocument.RootElement }, new RequestOptions { Field = new[] { "/text" } });
+        if (call.Value != true) throw new Exception("normalized decision lost behind authored meaning");
         var deepRow = call.Packets.OfType<SessionPacketDecideRow>().Single();
         if (deepRow.Value.Value.GetRawText() != deepMeaning || deepRow.Value.Input.Value.GetRawText() != deepOriginal) throw new Exception("deep meaning or original result changed");
         if (!call.Packets.Any(p => p is SessionPacketDecideRow) || call.Terminal.Facts.State != PresenceState.Value || call.Terminal.Failure.State != PresenceState.Missing) throw new Exception("owned row or terminal");
@@ -233,17 +233,17 @@ static class SessionChecks
         {
             spent.Cancel();
             var input = new RequestInputText { Text = "never-send" };
-            foreach (Func<Task<OwnedCall>> named in new Func<Task<OwnedCall>>[] {
-                () => engine.DecideAsync(Question, input, cancellation: spent.Token),
-                () => engine.ChooseAsync(Question, input, cancellation: spent.Token),
-                () => engine.TagAsync(Question, input, cancellation: spent.Token),
-                () => engine.ScoreAsync(Question, input, cancellation: spent.Token),
-                () => engine.FilterAsync(Question, input, cancellation: spent.Token),
-                () => engine.RankAsync(Question, input, cancellation: spent.Token),
-                () => engine.FindAsync(Question, input, cancellation: spent.Token),
-                () => engine.AnnotateAsync(Question, input, cancellation: spent.Token),
-                () => engine.RecognizeAsync(Question, input, cancellation: spent.Token),
-                () => engine.RelateAsync(Question, input, cancellation: spent.Token)
+            foreach (Func<Task> named in new Func<Task>[] {
+                async () => { await engine.DecideAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.ChooseAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.TagAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.ScoreAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.FilterAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.RankAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.FindAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.AnnotateAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.RecognizeAsync(Question, input, cancellation: spent.Token); },
+                async () => { await engine.RelateAsync(Question, input, cancellation: spent.Token); }
             })
             {
                 try { await named(); throw new Exception("spent token admitted"); }
@@ -252,7 +252,7 @@ static class SessionChecks
         }
         using (var cancel = new CancellationTokenSource())
         {
-            Task<OwnedCall> pending = engine.DecideAsync(Question, new RequestInputText { Text = "hold-session-task" }, cancellation: cancel.Token);
+            var pending = engine.DecideAsync(Question, new RequestInputText { Text = "hold-session-task" }, cancellation: cancel.Token);
             await Arrived("hold-session-task");
             int progress = 0;
             Task unrelated = Task.Run(async () => { await Task.Yield(); Interlocked.Increment(ref progress); });

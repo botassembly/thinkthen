@@ -6,5 +6,5 @@ var answer = (await engine.FilterAsync(
     new RequestInputRecords { Items = new RequestItem[] {
         new() { Original = new RequestOriginalText { Text = "first" } },
         new() { Original = new RequestOriginalText { Text = "second" } }
-    } })).Filter();
+    } })).Value;
 Console.WriteLine($"{answer.Count}:{answer[0].GetString()}");

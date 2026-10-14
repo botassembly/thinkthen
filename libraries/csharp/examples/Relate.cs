@@ -11,5 +11,5 @@ var input = new RequestInputEntities { Items = new RequestItem[] {
     new() { Original = new RequestOriginalJson { Value = JsonSerializer.SerializeToElement(new { name = "A", kind = "person" }) } },
     new() { Original = new RequestOriginalJson { Value = JsonSerializer.SerializeToElement(new { name = "B", kind = "person" }) } }
 } };
-var answer = (await engine.RelateAsync(question, input)).Relate();
-Console.WriteLine($"{answer.Value[0].SourceName} -> {answer.Value[0].TargetName}");
+var answer = (await engine.RelateAsync(question, input)).Value;
+Console.WriteLine($"{answer[0].SourceName} -> {answer[0].TargetName}");

@@ -18,7 +18,7 @@ OwnedCall call = await engine.DecideAsync(
     new RequestQuestionText { Text = "Does this answer the question?" },
     new RequestInputText { Text = "The supplied evidence." },
     cancellation: cancellationToken);
-Console.WriteLine(call.Decision());
+Console.WriteLine(call.Value);
 ```
 
 The `examples/` folder contains a small installed sample for each function. Each sample reads its answer through a generated accessor. The recognize and relate samples build typed questions; the relate sample reads source and target names directly. Routine package checks replay the shipped source and count its sends.
@@ -48,7 +48,7 @@ The migration maps earlier callers to these public interfaces:
 
 Question file, saved-name and reference selectors are generated typed objects. `QuestionBuilders.Recognize` and `QuestionBuilders.Relate` accept typed questions. Described options, annotation questions and recognize kinds use lists of key-value pairs, so the engine receives caller order. Generated authored values preserve missing and explicit null. User records and original result inputs retain arbitrary JSON data. A streamed producer owns its descriptors and supplies optional source locations. The native engine owns question admission, selection, framing and judgment semantics.
 
-`Failure.Facts` returns generated typed facts when native admission supplies them. Result transport codecs remain private. `RankValueAsync` returns input indexes, and `FilterValueAsync` returns the retained original inputs. Each named `*ValueAsync` method reads one typed answer directly.
+`Failure.Facts` returns generated typed facts when native admission supplies them. Result transport codecs remain private. `CallResult.Value` holds the plain answer, `Probability` holds its odds, `Results` retains the complete typed records and `Facts` holds the actual terminal facts. Text and JSON inputs return one value; records, sources and feeds return ordered lists, including a one-item list. Rank returns original input indexes and filter returns retained originals. Find returns its found unit or null. Score, tag and annotate have null probability. Recognition probabilities match the selected kept spans and relations retain per-edge probabilities. The packet session methods keep their own delivery and cancellation API.
 
 To pack locally, supply an already-built native asset, portable RID and native filename:
 

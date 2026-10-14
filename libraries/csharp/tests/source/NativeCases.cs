@@ -56,6 +56,7 @@ static class AsyncFixtureCases
     }
     static ThinkThen.Inputs.RequestInput Source(JsonElement data)
     {
+        if (Text(data,"arm") == "case/library-call-result/v1") return new ThinkThen.Inputs.RequestInputText { Text = Get(data,"items")[0].GetString()! };
         var paths = Get(data,"paths");
         if (paths.ValueKind == JsonValueKind.Array && paths.GetArrayLength() > 0) {
             int unit = Get(data,"source_unit").GetInt32();
@@ -120,22 +121,27 @@ static class AsyncFixtureCases
                 DeadlineMs = injection == "expired_deadline" ? 0L : default(ThinkThen.Inputs.AuthoredPresence<long>)
             };
             try {
-                OwnedCall call = await (Yes(data,"incremental") ? Text(data,"verb") switch {
-                    "decide" => engine.DecideAsync(question,Feed(data,input),options,cancel.Token), "choose" => engine.ChooseAsync(question,Feed(data,input),options,cancel.Token),
-                    "tag" => engine.TagAsync(question,Feed(data,input),options,cancel.Token), "score" => engine.ScoreAsync(question,Feed(data,input),options,cancel.Token),
-                    "filter" => engine.FilterAsync(question,Feed(data,input),options,cancel.Token), "rank" => engine.RankAsync(question,Feed(data,input),options,cancel.Token),
-                    "find" => engine.FindAsync(question,Feed(data,input),options,cancel.Token), "annotate" => engine.AnnotateAsync(question,Feed(data,input),options,cancel.Token),
-                    "recognize" => engine.RecognizeAsync(question,Feed(data,input),options,cancel.Token), "relate" => engine.RelateAsync(question,Feed(data,input),options,cancel.Token),
+                OwnedCall call = (Yes(data,"incremental") ? Text(data,"verb") switch {
+                    "decide" => await engine.DecideAsync(question,Feed(data,input),options,cancel.Token), "choose" => await engine.ChooseAsync(question,Feed(data,input),options,cancel.Token),
+                    "tag" => await engine.TagAsync(question,Feed(data,input),options,cancel.Token), "score" => await engine.ScoreAsync(question,Feed(data,input),options,cancel.Token),
+                    "filter" => await engine.FilterAsync(question,Feed(data,input),options,cancel.Token), "rank" => await engine.RankAsync(question,Feed(data,input),options,cancel.Token),
+                    "find" => await engine.FindAsync(question,Feed(data,input),options,cancel.Token), "annotate" => await engine.AnnotateAsync(question,Feed(data,input),options,cancel.Token),
+                    "recognize" => await engine.RecognizeAsync(question,Feed(data,input),options,cancel.Token), "relate" => await engine.RelateAsync(question,Feed(data,input),options,cancel.Token),
                     _ => throw new InvalidOperationException("unknown fixture function")
                 } : Text(data,"verb") switch {
-                    "decide" => engine.DecideAsync(question,input!,options,cancel.Token), "choose" => engine.ChooseAsync(question,input!,options,cancel.Token),
-                    "tag" => engine.TagAsync(question,input!,options,cancel.Token), "score" => engine.ScoreAsync(question,input!,options,cancel.Token),
-                    "filter" => engine.FilterAsync(question,input!,options,cancel.Token), "rank" => engine.RankAsync(question,input!,options,cancel.Token),
-                    "find" => engine.FindAsync(question,input!,options,cancel.Token), "annotate" => engine.AnnotateAsync(question,input!,options,cancel.Token),
-                    "recognize" => engine.RecognizeAsync(question,input!,options,cancel.Token), "relate" => engine.RelateAsync(question,input!,options,cancel.Token),
+                    "decide" => await engine.DecideAsync(question,(dynamic)input!,options,cancel.Token), "choose" => await engine.ChooseAsync(question,(dynamic)input!,options,cancel.Token),
+                    "tag" => await engine.TagAsync(question,(dynamic)input!,options,cancel.Token), "score" => await engine.ScoreAsync(question,(dynamic)input!,options,cancel.Token),
+                    "filter" => await engine.FilterAsync(question,(dynamic)input!,options,cancel.Token), "rank" => await engine.RankAsync(question,(dynamic)input!,options,cancel.Token),
+                    "find" => await engine.FindAsync(question,(dynamic)input!,options,cancel.Token), "annotate" => await engine.AnnotateAsync(question,(dynamic)input!,options,cancel.Token),
+                    "recognize" => await engine.RecognizeAsync(question,(dynamic)input!,options,cancel.Token), "relate" => await engine.RelateAsync(question,(dynamic)input!,options,cancel.Token),
                     _ => throw new InvalidOperationException("unknown fixture function")
                 });
-                return JsonSerializer.Serialize(Normalize(call, Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4));
+                var output = Normalize(call, Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4);
+                if (Text(data,"arm") == "case/library-call-result/v1") {
+                    dynamic result = call;
+                    output["call_result"] = new { value = result.Value, probability = result.Probability, results_count = result.Results.Count, requests_sent = result.Facts.RequestsSent };
+                }
+                return JsonSerializer.Serialize(output);
             } catch(SessionFailure failure) { return JsonSerializer.Serialize(Normalize(failure.Call,Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4)); }
         } catch(Failure failure) { return JsonSerializer.Serialize(new { code = failure.Code, message = failure.Message }); }
         catch(JsonException failure) { return JsonSerializer.Serialize(new { code = 1, message = failure.Message }); }

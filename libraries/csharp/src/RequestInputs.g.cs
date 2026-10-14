@@ -3871,10 +3871,6 @@ public sealed class RequestOptions : AuthoredDocument {
         get;
         init;
     }
-    public AuthoredPresence<bool> Details {
-        get;
-        init;
-    }
     public AuthoredPresence<IReadOnlyList<RecognitionExample>> Examples {
         get;
         init;
@@ -3961,9 +3957,6 @@ public sealed class RequestOptions : AuthoredDocument {
         } if (DeadlineMs.IsPresent) {
             writer.WritePropertyName("deadline_ms");
             writer.WriteNumberValue(DeadlineMs.Value);
-        } if (Details.IsPresent) {
-            writer.WritePropertyName("details");
-            writer.WriteBooleanValue(Details.Value);
         } if (Examples.IsPresent) {
             writer.WritePropertyName("examples");
             writer.WriteStartArray();

@@ -6,5 +6,5 @@ var answer = (await engine.FindAsync(
     new RequestInputRecords { Items = new RequestItem[] {
         new() { Original = new RequestOriginalText { Text = "first" } },
         new() { Original = new RequestOriginalText { Text = "second" } }
-    } })).Find();
-Console.WriteLine(answer.Index.Value);
+    } })).Value;
+Console.WriteLine(answer?.GetString() == "first" ? 0 : 1);

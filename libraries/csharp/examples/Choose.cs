@@ -5,4 +5,4 @@ var question = new RequestQuestionDefinition { Value = new RequestDefinitionAuth
     Choose = new AuthoredQuestionTextString { Value = "Which?" },
     Options = new AuthoredOptionsList { Value = new AuthoredName[] { new() { Value = "first" }, new() { Value = "second" } } }
 } };
-Console.WriteLine(await engine.ChooseValueAsync(question, new RequestInputText { Text = "example" }));
+Console.WriteLine((await engine.ChooseAsync(question, new RequestInputText { Text = "example" })).Value);

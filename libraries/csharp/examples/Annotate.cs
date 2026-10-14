@@ -7,5 +7,5 @@ var question = new RequestQuestionDefinition { Value = new RequestDefinitionAnno
         Decide = new AuthoredQuestionTextString { Value = "Is it?" }
     }) }
 } };
-var answer = (await engine.AnnotateAsync(question, new RequestInputText { Text = "example" })).Annotate();
-Console.WriteLine(((AnnotatedFieldBoolean)answer[0].Value["relevant"]).Value);
+var answer = (await engine.AnnotateAsync(question, new RequestInputText { Text = "example" })).Value;
+Console.WriteLine(((AnnotatedFieldBoolean)answer["relevant"]).Value);

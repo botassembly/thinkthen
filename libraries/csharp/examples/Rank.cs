@@ -6,5 +6,5 @@ var answer = (await engine.RankAsync(
     new RequestInputRecords { Items = new RequestItem[] {
         new() { Original = new RequestOriginalText { Text = "first" } },
         new() { Original = new RequestOriginalText { Text = "second" } }
-    } })).Rank();
+    } })).Value;
 Console.WriteLine($"{answer[0]},{answer[1]}");

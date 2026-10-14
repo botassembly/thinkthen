@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using ThinkThen.Results;
 namespace ThinkThen;
 /// <summary>Owned packets and the actual native terminal, in delivery order.</summary>
-public sealed record OwnedCall(IReadOnlyList<SessionPacket> Packets, SessionPacketTerminal Terminal);
+public record OwnedCall(IReadOnlyList<SessionPacket> Packets, SessionPacketTerminal Terminal);
 public sealed class SessionFailure : Exception
 {
     public CallError Failure { get; }

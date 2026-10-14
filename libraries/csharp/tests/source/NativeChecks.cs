@@ -36,43 +36,43 @@ static class NativeChecks
             Cache = new CacheDocumentDisabledCache { Value = new DisabledCache() },
             Batch = new RequestBatchString { Value = "max" }, Throttle = 1, MaxRetries = 0
         });
-        var controls = new RequestOptions { Attempts = true, Details = true };
+        var controls = new RequestOptions { Attempts = true };
         var completeControls = new RequestOptions { Attempts = true };
         foreach (bool files in new[] { false, true })
         {
             RequestInput source = files ? new RequestInputSource { Source = new RequestSource {
                 Paths = new[] { Environment.GetEnvironmentVariable("TT_NATIVE_FILE")! }, Reading = new RequestReader { Unit = new SourceUnitLine() }
             } } : Records;
-            var decide = ReadDecide(await engine.DecideAsync(Decide, source, controls));
+            var decide = ReadDecide((OwnedCall)await engine.DecideAsync(Decide, (dynamic)source, controls));
             Check(decide.Count == 2 && decide[0].Value.GetBoolean() && decide[0].Answer is R.AnswerYesNo { Probability: .9 }, "decision");
             Check(decide[0].Schema.Value == "thinkthen.result/2" && decide[0].AnswerId.Length == 64, "row schema and identity");
             if (files) Check(decide[0].Source.Value.FirstLine.Value == 1 && decide[1].Source.Value.LastLine.Value == 2, "physical lines");
-            var choose = ReadChoose(await engine.ChooseAsync(Choose, source, controls));
+            var choose = ReadChoose((OwnedCall)await engine.ChooseAsync(Choose, (dynamic)source, controls));
             Check(choose.Count == 2 && choose[0].Value.Value == "first" && choose[0].Answer is R.AnswerChoice answer && answer.Probabilities.Count == 2, "choice distribution");
             var tagQuestion = Define(new RequestDefinitionAuthoredTag { Tag = Text("Which?"), Labels = new AuthoredLabelsList { Value = Names } } );
-            var tag = ReadTag(await engine.TagAsync(tagQuestion, source, controls));
+            var tag = ReadTag((OwnedCall)await engine.TagAsync(tagQuestion, (dynamic)source, controls));
             Check(tag.Count == 2 && tag[0].Value.Count == 2, "tag labels");
             var scoreQuestion = Define(new RequestDefinitionAuthoredScore { Score = Text("How much?"), Levels = new AuthoredLevelsList { Value = Names } } );
-            var score = ReadScore(await engine.ScoreAsync(scoreQuestion, source, controls));
+            var score = ReadScore((OwnedCall)await engine.ScoreAsync(scoreQuestion, (dynamic)source, controls));
             Check(score.Count == 2 && score[0].Value == .1, "score");
-            var filter = await engine.FilterAsync(new RequestQuestionText { Text = "Need attention?" }, source, new RequestOptions { Attempts = true, Threshold = new RequestThresholdNumber { Value = .95 } });
+            OwnedCall filter = await engine.FilterAsync(new RequestQuestionText { Text = "Need attention?" }, (dynamic)source, new RequestOptions { Attempts = true, Threshold = new RequestThresholdNumber { Value = .95 } });
             Call(filter);
             Check(!filter.Packets.OfType<R.SessionPacketFilterRow>().Any(), "rejected filter selection");
             var filterEvents = filter.Packets.OfType<R.SessionPacketObservation>().Select(p => p.Value).OfType<R.SessionObservationRow>().ToArray();
             Check(filterEvents.Length == 2 && filterEvents[0].Value is R.SessionObservedRowJudgment { Value: R.SessionJudgmentDecision judgment } && judgment.Value.State == R.PresenceState.Value && !judgment.Value.Value, "rejected filter observation");
-            var rank = Aggregate<R.SessionPacketRankAggregate>(await engine.RankAsync(Decide, source, completeControls)).Value;
+            var rank = Aggregate<R.SessionPacketRankAggregate>((OwnedCall)await engine.RankAsync(Decide, (dynamic)source, completeControls)).Value;
             Check(rank.Count == 2 && rank[0].Value == 1, "rank ordinal");
             var findQuestion = Define(new RequestDefinitionAuthoredFind { Find = Text("Which?") } );
-            var find = Aggregate<R.SessionPacketFindAggregate>(await engine.FindAsync(findQuestion, source, completeControls)).Value;
+            var find = Aggregate<R.SessionPacketFindAggregate>((OwnedCall)await engine.FindAsync(findQuestion, (dynamic)source, completeControls)).Value;
             Check(find.Candidates.State == R.PresenceState.Value && find.Candidates.Value.Count == 2, "find candidates");
             var annotateQuestion = Define(new RequestDefinitionAnnotateDefinition { Questions = new KeyValuePair<string, AnnotateQuestion>[] {
                 new("check", new AnnotateQuestionDecide { Decide = Text("Need attention?") }),
                 new("team", new AnnotateQuestionChoose { Choose = Text("Which?"), Options = new AuthoredOptionsList { Value = Names } })
             } });
-            var annotate = ReadAnnotate(await engine.AnnotateAsync(annotateQuestion, source, completeControls));
+            var annotate = ReadAnnotate((OwnedCall)await engine.AnnotateAsync(annotateQuestion, (dynamic)source, completeControls));
             Check(annotate.Count == 2 && annotate[0].Answers.Count == 2 && annotate[0].Answers["check"] is R.AnnotationMemberAnswerId { Answer: R.AnswerYesNo { Probability: .9 } }, "annotation members");
             var recognizeQuestion = Define(new RequestDefinitionRecognizeDefinition { Recognize = new RecognizeQuestion() });
-            var recognized = await engine.RecognizeAsync(recognizeQuestion, source, completeControls);
+            OwnedCall recognized = await engine.RecognizeAsync(recognizeQuestion, (dynamic)source, completeControls);
             Call(recognized);
             var recognize = recognized.Packets.OfType<R.SessionPacketRecognizeAggregate>().SelectMany(p => p.Value).ToArray();
             Check(recognize.Length == 2 && recognize.Select(r => r.Index.Value).SequenceEqual(new ulong[] { 0, 1 }), "recognized ordered occurrences");
@@ -93,7 +93,7 @@ static class NativeChecks
             var relateQuestion = Define(new RequestDefinitionAuthoredRelate { Relate = new RelateQuestion {
                 Relations = new[] { new AuthoredRelation { Name = new AuthoredName { Value = "supports" } } }
             } } );
-            var relate = Aggregate<R.SessionPacketRelateAggregate>(await engine.RelateAsync(relateQuestion, relationInput, completeControls)).Value;
+            var relate = Aggregate<R.SessionPacketRelateAggregate>((OwnedCall)await engine.RelateAsync(relateQuestion, (dynamic)relationInput, completeControls)).Value;
             Check(relate.Value.Count == 2 && relate.Answer.Questions.Count == 2, "relation endpoints");
         }
     }

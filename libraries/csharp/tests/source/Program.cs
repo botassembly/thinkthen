@@ -7,7 +7,7 @@ static class Program
  static void Check(bool condition,string label){if(!condition)throw new Exception(label);}
  static RequestInputRecords Records(params string[] texts)=>new(){Items=texts.Select(t=>new RequestItem{Original=new RequestOriginalText{Text=t}}).ToArray()};
  static RequestQuestionText Question=>new(){Text="Is it?"};
- static Task<OwnedCall> Decide(Engine e,string text,RequestOptions? options=null,CancellationToken cancellation=default)=>e.DecideAsync(Question,Records(text),options,cancellation);
+ static async Task<OwnedCall> Decide(Engine e,string text,RequestOptions? options=null,CancellationToken cancellation=default)=>await e.DecideAsync(Question,Records(text),options,cancellation);
  static R.SessionPacketDecideRow[] Rows(OwnedCall c)=>c.Packets.OfType<R.SessionPacketDecideRow>().ToArray();
  static R.Facts Facts(OwnedCall c)=>c.Terminal.Facts.Value;
  static void Answer(OwnedCall c,bool? expected,double p){var row=Rows(c).Single().Value;Check(row.Value.ValueKind==(expected is null?JsonValueKind.Null:expected.Value?JsonValueKind.True:JsonValueKind.False)&&row.Answer is R.AnswerYesNo {Probability:var actual}&&actual==p,"decision/probability");}
@@ -27,13 +27,15 @@ static class Program
   using var e=Engine.Open(new EngineSettings());
   foreach(var sample in new[]{("yes",(bool?)true,.9),("no",(bool?)false,.1),("unsure",(bool?)null,.5),("café",(bool?)true,.9),("a\0b",(bool?)true,.9)}) {
    var q=sample.Item1=="unsure"?(RequestQuestion)FixtureQuestions.Parse(AuthoredQuestionKind.Atomic,"{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}"):Question;
-   Answer(await e.DecideAsync(q,Records(sample.Item1)),sample.Item2,sample.Item3);
+   var result=await e.DecideAsync(q,Records(sample.Item1));
+   Answer(result,sample.Item2,sample.Item3);
+   Check(result.Value.Count==1&&result.Value[0]==sample.Item2&&result.Probability.Count==1&&result.Probability[0]==sample.Item3&&result.Results.Count==1,"one-item list result");
   }
   var noUsage=await Decide(e,"no-usage");Answer(noUsage,true,.9);Check(Facts(noUsage).Records==1&&Facts(noUsage).RequestsSent==1&&Facts(noUsage).Model.Value=="jev-1.13.0"&&Facts(noUsage).InputTokens.State==R.PresenceState.Missing&&Facts(noUsage).OutputTokens.State==R.PresenceState.Missing,"no usage native facts");
-  var first=await e.DecideAsync(Question,Records("first","second","third"));Check(Rows(first).Select(r=>((R.AnswerYesNo)r.Value.Answer).Probability).SequenceEqual(new[]{.9,.1,.6})&&Facts(first).Records==3&&Facts(first).Model.Value=="jev-1.13.0","packed answers/facts");
+  var first=await e.DecideAsync(Question,Records("first","second","third"));Check(Rows(first).Select(r=>((R.AnswerYesNo)r.Value.Answer).Probability).SequenceEqual(new[]{.9,.1,.6})&&Facts(first).Records==3&&Facts(first).Model.Value=="jev-1.13.0","packed answers/facts");Check(first.Value.SequenceEqual(new bool?[]{true,false,true})&&first.Probability.SequenceEqual(new double?[]{.9,.1,.6})&&first.Results.Count==3&&first.Facts.Records==3,"plain ordered result");
   var cached=await e.DecideAsync(Question,Records("first","second","third"));Check(Facts(cached).CacheAnswers==3&&Facts(cached).RequestsSent==0&&Rows(cached).Select(r=>((R.AnswerYesNo)r.Value.Answer).Probability).SequenceEqual(new[]{.9,.1,.6}),"cache facts/order");
   Check(Rows(await e.DecideAsync(Question,Records("first","second","first","second"))).Select(r=>((R.AnswerYesNo)r.Value.Answer).Probability).SequenceEqual(new[]{.9,.1,.9,.1}),"duplicate order");
-  var empty=await e.DecideAsync(Question,Records());Check(Rows(empty).Length==0&&Facts(empty).Records==0&&Facts(empty).RequestsSent==0&&Facts(empty).Model.State==R.PresenceState.Missing,"empty facts");
+  var empty=await e.DecideAsync(Question,Records());Check(Rows(empty).Length==0&&Facts(empty).Records==0&&Facts(empty).RequestsSent==0&&Facts(empty).Model.State==R.PresenceState.Missing,"empty facts");Check(empty.Value.Count==0&&empty.Probability.Count==0&&empty.Results.Count==0&&empty.Facts.Records==0,"empty result lists");
   try{await Decide(e,"\ud800");throw new Exception("invalid UTF8 accepted");}catch(System.Text.EncoderFallbackException){}
   var detailed=await Decide(e,"json-decide");Answer(detailed,true,.9);Check(Rows(detailed)[0].Value.Schema.Value=="thinkthen.result/2","typed complete result schema");
   RequestQuestion Auth(AuthoredQuestionKind k,string value)=>FixtureQuestions.Parse(k,value);
