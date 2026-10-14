@@ -11,15 +11,15 @@ int main(void) { @autoreleasepool {
     form.path = @"form.json";
     TTTextInput *report = [TTTextInput new];
     report.text = @"Steps: click Log in. Nobody gets in.";
-    NSDictionary<NSString *, TTAnnotatedField *> *triage;
-    TTPresence<NSArray<TTAnnotation *> *> *judgment =
-        [client annotateAnswer:form
+    NSDictionary *triage;
+    TTCall *judgment =
+        [client annotate:form
         input:report
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    triage = judgment.value[0].value.value;
-    assert([triage[@"steps"].value isEqual:@YES]);
-    assert([triage[@"area"].value isEqual:@"login"]);
-    assert([triage[@"impact"].value isEqual:@1.98]);
+    triage = judgment.value.scalar;
+    assert([triage[@"steps"] isEqual:@YES]);
+    assert([triage[@"area"] isEqual:@"login"]);
+    assert([triage[@"impact"] isEqual:@1.98]);
     return 0;
 } }

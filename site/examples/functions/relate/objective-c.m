@@ -27,12 +27,12 @@ int main(void) { @autoreleasepool {
     TTEntitiesInput *input = [TTEntitiesInput new];
     input.items = entities;
     NSMutableArray *whoMakes = [NSMutableArray array];
-    TTPresence<TTRelation *> *judgment =
-        [client relateAnswer:relations
+    TTCall *judgment =
+        [client relate:relations
         input:input
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    NSArray *edges = judgment.value.value.value;
+    NSArray *edges = judgment.value.items;
     for (TTRelatedEntityEdge *edge in edges) {
         TTRelationEndpointRelatedEntity *company =
             (id)edge.source.value;

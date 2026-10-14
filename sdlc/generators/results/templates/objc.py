@@ -143,15 +143,21 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     header += input_header
     implementation += input_implementation
     calls = named_calls(input_definitions, definitions)
-    answer_header, answer_implementation = answer_helpers(definitions)
+    from objc_calls import call_helpers
+    answer_header, answer_implementation = call_helpers(definitions, input_definitions)
     implementation += answer_implementation
     declarations = lambda macro, lines: next(line.split(' ', 2)[2] for line in lines if line.startswith('#define ' + macro + ' '))
+    header += answer_header
     header += ['@class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;',
                'typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);',
                'typedef TTInputRequestSessionDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);',
                '@interface TTCall : NSObject', '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
-               '@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;',
-               '@end', '@interface TTCall (Answers)', declarations('TT_GENERATED_ANSWER_DECLARATIONS', answer_header), '@end',
+               '@property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;', '@end',
+               '@interface TTCall (Values)',
+               '@property(nonatomic, strong, readonly) TTCallValue *value;',
+               '@property(nonatomic, strong, readonly, nullable) TTCallProbability *probability;',
+               '@property(nonatomic, copy, readonly) NSArray<TTResultNode *> *results;',
+               '@end',
                '@interface TTFoundationClient : NSObject',
                '- (nullable instancetype)initWithSettings:(nullable TTInputEngineSettings *)settings error:(NSError **)error NS_DESIGNATED_INITIALIZER;',
                '- (instancetype)init NS_UNAVAILABLE;', '+ (instancetype)new NS_UNAVAILABLE;',
@@ -160,7 +166,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
                '- (nullable TTUsagePersistenceStatus *)usagePersistence:(NSError **)error;',
                '- (nullable TTUsagePersistenceStatus *)finishUsageStatus:(NSError **)error;',
                '@end', '@interface TTFoundationClient (NamedCalls)', declarations('TT_GENERATED_NAMED_DECLARATIONS', calls), '@end']
-    header += [line for line in calls + answer_header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
+    header += [line for line in calls if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
     header += ['FOUNDATION_EXPORT NSErrorDomain const TTErrorDomain;', 'typedef NS_ERROR_ENUM(TTErrorDomain, TTErrorCode) {']
     for entry in definitions['completefailureKind']['oneOf']:
         kind = entry['const']
@@ -173,7 +179,7 @@ def outputs(definitions, version, input_definitions=None, abi=None):
     private_macros = [line for line in header if line.startswith('#define') and 'IMPLEMENTATIONS' in line.split()[1]]
     header = [line for line in header if line not in private_macros]
     implementation[3:3] = ['#import \"ThinkThenFoundation.h\"'] + private_macros
-    implementation += ['@implementation TTCall (Answers)', 'TT_GENERATED_ANSWER_IMPLEMENTATIONS', '@end', '@implementation TTFoundationClient (NamedCalls)', 'TT_GENERATED_NAMED_IMPLEMENTATIONS', '@end']
+    implementation += ['@implementation TTFoundationClient (NamedCalls)', 'TT_GENERATED_NAMED_IMPLEMENTATIONS', '@end']
     header += ['NS_ASSUME_NONNULL_END']
     return rename_inputs({'TTResults.g.h': '\n'.join(header) + '\n', 'TTResults.g.m': '\n'.join(implementation) + '\n#if __has_include(<thinkthen.h>)\n' + native_values() + '#endif\n'})
 
@@ -300,60 +306,11 @@ def named_calls(definitions, result_definitions):
         signature = f'- (nullable TTTask *){function}:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error'
         declarations += [signature + ';']
         implementations += [signature + ' { return [self start:' + literal(function) + ' question:question input:input options:options feed:feed completion:completion error:error]; }']
-        from host_answers import scalar_answers
-        answers = {verb: payload for verb, _, payload in aggregate_answers(result_definitions)}
-        answers.update({verb: payload for verb, _, payload in scalar_answers(result_definitions)})
-        target, _ = conversion(answers[function], result_definitions)
-        if function == 'rank': target = 'NSArray<NSNumber *> *'
-        if function == 'filter': target = 'NSArray *'
-        result = target if function in ('rank', 'filter') else f'TTPresence<{target}> *'
-        blocking = f'- (nullable {result}){function}Answer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError **)error'
+        blocking = f'- (nullable TTCall *){function}:(TTQuestion *)question input:(TTInput *)input options:(nullable TTInputRequestOptions *)options feed:(nullable TTFeed)feed error:(NSError **)error'
         declarations += [blocking + ';']
-        implementations += [blocking + ' { TTCall *completed = [self complete:' + literal(function) + ' question:question input:input options:options feed:feed error:error]; if (call) *call = completed; return completed ? [completed ' + function + 'Answer:error] : nil; }']
+        implementations += [blocking + ' { return [self complete:' + literal(function) + ' question:question input:input options:options feed:feed error:error]; }']
     return ['#define TT_GENERATED_NAMED_DECLARATIONS ' + ' '.join(declarations), '#define TT_GENERATED_NAMED_IMPLEMENTATIONS ' + ' '.join(implementations)]
 
-
-def answer_helpers(definitions):
-    from host_answers import scalar_answers, judgment_route
-    route, guards = judgment_route(definitions)
-    def at(path, root='fields'):
-        return root + ''.join('[' + literal(field) + ']' for field in path)
-    checks = ' && '.join('[' + at(path) + ' isEqual:' + literal(value) + ']' for path, value in guards)
-    header = ['FOUNDATION_EXPORT NSErrorDomain const TTAnswerErrorDomain;',
-              '' ,
-              '']
-    implementation = ['NSErrorDomain const TTAnswerErrorDomain = @"io.github.botassembly.thinkthen.answer";',
-                      'extern NSErrorDomain const TTErrorDomain;', 'extern NSString * const TTFailureDetailsKey;',
-                      'TTPresence *TTAnswerPresence(id payload, id (^convert)(id)) { TTResultNode *node = [[TTResultNode alloc] initWithFields:@{@"value":payload}]; return [node presence:@"value" required:YES convert:convert]; }',
-                      'id TTAnswerPayload(NSArray<TTSessionPacket *> *packets, TTSessionPacketTerminal *terminal, NSString *function, NSString *judgment, id call, NSError **error) {',
-                      'if (terminal.failure.state == TTPresenceValue) { if (error) *error = TTFailureForCall(terminal.failure.value, call); return nil; }',
-                      'NSMutableArray *values = [NSMutableArray array];',
-                      'if (terminal) for (TTSessionPacket *packet in packets) { NSDictionary *fields = packet.rawFields; if (![fields[@"function"] isEqual:function]) continue; id value;',
-                      'BOOL rowAnswer = [function isEqual:@"filter"] || [function isEqual:@"annotate"];',
-                      'if (rowAnswer) { if ([fields[@"kind"] isEqual:@"row"]) [values addObject:fields[@"value"]]; continue; }',
-                      'if (!judgment.length) { if (![fields[@"kind"] isEqual:@"aggregate"]) continue; value = fields[@"value"]; } else {',
-                      'if (!(' + checks + ')) continue; NSDictionary *carrier = ' + at(route) + '; if (![carrier[@"kind"] isEqual:judgment]) continue; value = carrier[@"value"];',
-                      '} if (value) [values addObject:value]; }',
-                      'if (([function isEqual:@"filter"] || [function isEqual:@"annotate"]) && [((TTCall *)call).function isEqual:function]) return [values copy];',
-                      'if (values.count != 1) { if (error) *error = [NSError errorWithDomain:TTAnswerErrorDomain code:1 userInfo:@{NSLocalizedDescriptionKey:@"Expected exactly one successful answer", @"ThinkThenFunction":function, @"ThinkThenAnswerCount":@(values.count), @"ThinkThenCall":call}]; return nil; }',
-                      'return values[0];', '}']
-    answers = {function: (payload, '') for function, _, payload in aggregate_answers(definitions)}
-    answers.update({function: (payload, kind) for function, kind, payload in scalar_answers(definitions)})
-    declarations, bodies = [], []
-    for function, (payload, kind) in answers.items():
-        target, decode = conversion(payload, definitions)
-        if function == 'rank': target, decode = 'NSArray<NSNumber *> *', 'TTArray(value, ^id(id item) { return TTInteger(TTObject(item)[@"index"]); })'
-        if function == 'filter': target, decode = 'NSArray *', 'TTArray(value, ^id(id item) { id original = TTObject(item)[@"input"]; if (!original) TTInvalidResult(); return original; })'
-        method = function + 'Answer'
-        collection = function in ('rank', 'filter')
-        result_type = target if collection else f'TTPresence<{target}> *'
-        signature = f'- (nullable {result_type}){method}:(NSError **)error'
-        declarations += [signature + ';']
-        returned = decode.replace('TTArray(value,', 'TTArray(payload,') if collection else 'TTAnswerPresence(payload, ^id(id value) { return ' + decode + '; })'
-        bodies += [signature + ' { id payload = TTAnswerPayload(self.packets, self.terminal, ' + literal(function) + ', ' + literal(kind) + ', self, error); if (!payload) return nil; return ' + returned + '; }']
-    for macro, lines in [('TT_GENERATED_ANSWER_DECLARATIONS', declarations), ('TT_GENERATED_ANSWER_IMPLEMENTATIONS', bodies)]:
-        header += ['#define ' + macro + ' ' + ' '.join(lines)]
-    return header, implementation
 
 def native_values():
     """Copy native typed graphs; Foundation never reparses result JSON."""

@@ -28,7 +28,7 @@ int main(int argc, const char *argv[]) {
         require(refused == nil && [error isKindOfClass:TTFailureError.class] && !((TTFailureError *)error).retryable);
         error = nil;
         TTCall *refusedCall = nil;
-        require([client decideAnswer:[TTTextQuestion new] input:input options:nil feed:nil call:&refusedCall error:&error] == nil);
+        require((refusedCall = [client decide:[TTTextQuestion new] input:input options:nil feed:nil error:&error]) == nil);
         require(refusedCall == nil && [error isKindOfClass:TTFailureError.class] && ((TTFailureError *)error).kind == TTErrorUsage);
         TTFailureError *savedRefusal = (id)error;
         error = nil;
@@ -50,13 +50,10 @@ int main(int argc, const char *argv[]) {
         require(usage.state == TTUsagePersistenceWritten && usage.advice == nil);
         require(retained.facts.state == TTPresenceValue);
         require(savedRefusal.kind == TTErrorUsage && !savedRefusal.retryable);
-        require([retained decideAnswer:&error].state == TTPresenceValue && error == nil);
-        require([retained filterAnswer:&error] == nil);
-        require([error.domain isEqual:@"io.github.botassembly.thinkthen.answer"] && error.code == 1);
-        require([error.localizedDescription isEqual:@"Expected exactly one successful answer"]);
-        require([error.userInfo[@"ThinkThenFunction"] isEqual:@"filter"]);
-        require([error.userInfo[@"ThinkThenAnswerCount"] unsignedIntegerValue] == 0);
-        require(error.userInfo[@"ThinkThenCall"] == retained);
+        require([retained.value.scalar isEqual:@YES]);
+        require(retained.value.items == nil && retained.results.count == 1);
+        require(retained.probability.scalar.doubleValue > 0 && retained.probability.scalar.doubleValue <= 1);
+        require(retained.facts.value.requestsSent.value.unsignedIntegerValue == 1);
         error = nil;
         // Authored finite numbers survive native copying beyond decimal's exponent range.
         client = [[TTFoundationClient alloc] initWithSettings:nil error:&error];
@@ -67,7 +64,8 @@ int main(int argc, const char *argv[]) {
             require(numericPlan != nil && error == nil && numericPlan.records.value.unsignedIntegerValue == 1);
             require(numericPlan.requests.value.unsignedIntegerValue == 1 && numericPlan.firstBodyUtf8.state == TTPresenceValue);
             TTCall *numericCall = nil;
-            NSArray *answer = [client filterAnswer:question input:numericInput options:nil feed:nil call:&numericCall error:&error];
+            numericCall = [client filter:question input:numericInput options:nil feed:nil error:&error];
+            NSArray *answer = numericCall.value.items;
             require(error == nil && answer.count == 1);
             if ([answer[0] doubleValue] != number.doubleValue) fprintf(stderr, "Filtered number %.17g became %.17g\n", number.doubleValue, [answer[0] doubleValue]);
             require([answer[0] doubleValue] == number.doubleValue);
@@ -83,7 +81,8 @@ int main(int argc, const char *argv[]) {
         TTTextInput *unselected = [TTTextInput new]; unselected.text = @"no";
         for (TTInput *filterInput in @[unselected, multiple, empty]) {
             TTCall *filterCall = nil;
-            NSArray *answer = [client filterAnswer:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil call:&filterCall error:&error];
+            filterCall = [client filter:filterQuestion input:filterInput options:filterInput == multiple ? filterOptions : nil feed:nil error:&error];
+            NSArray *answer = filterCall.value.items;
             require(answer != nil && error == nil);
             require([answer isEqual:filterInput == multiple ? originals : @[]]);
             require(filterCall.facts.value.requestsSent.value.unsignedIntegerValue == (filterInput == multiple ? 4 : filterInput == empty ? 0 : 1));

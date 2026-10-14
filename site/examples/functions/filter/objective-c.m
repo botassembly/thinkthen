@@ -26,11 +26,11 @@ int main(void) { @autoreleasepool {
     TTRecordsInput *input = [TTRecordsInput new];
     input.items = records;
     NSMutableArray *complaints = [NSMutableArray array];
-    NSArray *judgment = [client filterAnswer:question
+    TTCall *judgment = [client filter:question
         input:input
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    [complaints addObjectsFromArray:judgment];
+    [complaints addObjectsFromArray:judgment.value.items];
     NSArray *expected = @[reviews[1], reviews[3]];
     assert([complaints isEqualToArray:expected]);
     return 0;

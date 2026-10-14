@@ -24,12 +24,12 @@ int main(void) { @autoreleasepool {
     outage.text = @"Our checkout page is down and "
             @"customers cannot pay.\n";
     double urgency = -1;
-    TTPresence<NSNumber *> *judgment =
-        [client scoreAnswer:howUrgent
+    TTCall *judgment =
+        [client score:howUrgent
         input:outage
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    urgency = judgment.value.doubleValue;
+    urgency = judgment.value.scalar.doubleValue;
     assert(urgency == 2.0);
     return 0;
 } }

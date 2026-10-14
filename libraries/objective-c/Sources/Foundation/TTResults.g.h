@@ -1428,6 +1428,18 @@ TTDescriptor, TTFiles, TTSessionSourceLocationBuilder;
 @property(nonatomic, strong, nullable) NSNumber * firstLine;
 @property(nonatomic, strong, nullable) NSNumber * lastLine;
 @end
+@interface TTCallValue : NSObject
+@property(nonatomic, strong, readonly, nullable) id scalar;
+@property(nonatomic, copy, readonly, nullable) NSArray *items;
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@end
+@interface TTCallProbability : NSObject
+@property(nonatomic, strong, readonly, nullable) NSNumber *scalar;
+@property(nonatomic, copy, readonly, nullable) NSArray<TTCallProbability *> *items;
+- (instancetype)init NS_UNAVAILABLE;
++ (instancetype)new NS_UNAVAILABLE;
+@end
 @class TTCall, TTSession, TTTask, TTUsagePersistenceStatus;
 typedef void (^TTCompletion)(TTCall * _Nullable call, NSError * _Nullable error);
 typedef TTDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnull readerFailure);
@@ -1436,17 +1448,10 @@ typedef TTDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnul
 + (instancetype)new NS_UNAVAILABLE;
 @property(nonatomic, strong, readonly) TTPresence<TTFacts *> *facts;
 @end
-@interface TTCall (Answers)
-- (nullable TTPresence<NSNumber *> *)decideAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSString *> *)chooseAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSNumber *> *)scoreAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable NSArray *)filterAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable NSArray<NSNumber *> *)rankAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<TTFind *> *)findAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<TTRelation *> *)relateAnswer:(NSError * _Nullable * _Nullable)error;
+@interface TTCall (Values)
+@property(nonatomic, strong, readonly) TTCallValue *value;
+@property(nonatomic, strong, readonly, nullable) TTCallProbability *probability;
+@property(nonatomic, copy, readonly) NSArray<TTResultNode *> *results;
 @end
 @interface TTFoundationClient : NSObject
 - (nullable instancetype)initWithSettings:(nullable TTSettings *)settings error:(NSError * _Nullable * _Nullable)error NS_DESIGNATED_INITIALIZER;
@@ -1459,25 +1464,25 @@ typedef TTDescriptor * _Nullable (^TTFeed)(TTRequestObject * _Nullable * _Nonnul
 @end
 @interface TTFoundationClient (NamedCalls)
 - (nullable TTTask *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSNumber *> *)decideAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)decide:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSString *> *)chooseAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)choose:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<NSString *> *> *)tagAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)tag:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSNumber *> *)scoreAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)score:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable NSArray *)filterAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)filter:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable NSArray<NSNumber *> *)rankAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)rank:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<TTFind *> *)findAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)find:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<TTAnnotation *> *> *)annotateAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)annotate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<NSArray<TTRecognition *> *> *)recognizeAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)recognize:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 - (nullable TTTask *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed completion:(TTCompletion)completion error:(NSError * _Nullable * _Nullable)error;
-- (nullable TTPresence<TTRelation *> *)relateAnswer:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed call:(TTCall * _Nullable * _Nullable)call error:(NSError * _Nullable * _Nullable)error;
+- (nullable TTCall *)relate:(TTQuestion *)question input:(TTInput *)input options:(nullable TTControls *)options feed:(nullable TTFeed)feed error:(NSError * _Nullable * _Nullable)error;
 @end
 FOUNDATION_EXPORT NSErrorDomain const TTErrorDomain;
 typedef NS_ERROR_ENUM(TTErrorDomain, TTErrorCode) {

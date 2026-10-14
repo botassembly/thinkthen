@@ -124,18 +124,20 @@ static NSData *TTEncode(id object, NSError **error) {
 @property(nonatomic, copy) NSArray<TTSessionPacket *> *packets;
 @property(nonatomic, strong) TTSessionPacketTerminal *terminal;
 @property(nonatomic, copy) NSString *function;
-- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function;
+@property(nonatomic) BOOL singleInput;
+- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function singleInput:(BOOL)singleInput;
 @end
 @implementation TTCall
 - (TTPresence<TTFacts *> *)facts { return self.terminal.facts; }
-- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function {
-    if ((self = [super init])) { _packets = [packets copy]; _terminal = terminal; _function = [function copy]; }
+- (instancetype)initWithPackets:(NSArray *)packets terminal:(TTSessionPacketTerminal *)terminal function:(NSString *)function singleInput:(BOOL)singleInput {
+    if ((self = [super init])) { _packets = [packets copy]; _terminal = terminal; _function = [function copy]; _singleInput = singleInput; }
     return self;
 }
 @end
 @interface TTTask () {
     TTSession *_session;
     NSString *_function;
+    BOOL _singleInput;
     TTFeed _feed;
     TTCompletion _completion;
     dispatch_queue_t _queue;
@@ -144,15 +146,15 @@ static NSData *TTEncode(id object, NSError **error) {
     TTSessionPacketTerminal *_terminal;
     BOOL _finished;
 }
-- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(nullable TTFeed)feed completion:(TTCompletion)completion asynchronous:(BOOL)asynchronous;
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(nullable TTFeed)feed completion:(TTCompletion)completion singleInput:(BOOL)singleInput asynchronous:(BOOL)asynchronous;
 - (void)run;
 @property(atomic) BOOL cancelled;
 - (void)tick;
 @end
 @implementation TTTask
-- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(TTFeed)feed completion:(TTCompletion)completion asynchronous:(BOOL)asynchronous {
+- (instancetype)initWithSession:(TTSession *)session function:(NSString *)function feed:(TTFeed)feed completion:(TTCompletion)completion singleInput:(BOOL)singleInput asynchronous:(BOOL)asynchronous {
     if ((self = [super init])) {
-        _session = session; _function = [function copy]; _feed = [feed copy]; _completion = [completion copy];
+        _session = session; _function = [function copy]; _singleInput = singleInput; _feed = [feed copy]; _completion = [completion copy];
         _packets = [NSMutableArray array]; _queue = dispatch_queue_create("thinkthen.foundation.callback", DISPATCH_QUEUE_SERIAL);
         if (asynchronous) dispatch_async(_queue, ^{ [self run]; });
     }
@@ -200,7 +202,7 @@ static NSData *TTEncode(id object, NSError **error) {
         if (packet) { [_packets addObject:packet]; if ([packet isKindOfClass:TTSessionPacketTerminal.class]) _terminal = (id)packet; }
         if (ended) {
             if (!_terminal) { [self settle:TTNativeFailure(NULL, TTErrorDefect, @"Native session ended without terminal") call:nil]; return; }
-            TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal function:_function];
+            TTCall *call = [[TTCall alloc] initWithPackets:_packets terminal:_terminal function:_function singleInput:_singleInput];
             if (_terminal.failure.state == TTPresenceValue) {
                 TTCallError *failure = _terminal.failure.value;
                 error = TTFailureForCall(failure, call);
@@ -271,7 +273,7 @@ static NSData *TTEncode(id object, NSError **error) {
 }
 - (TTTask *)start:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed completion:(TTCompletion)completion error:(NSError **)error {
     TTSession *session = [self namedSession:verb question:question input:input options:options feed:feed error:error];
-    return session ? [[TTTask alloc] initWithSession:session function:verb feed:feed completion:completion asynchronous:YES] : nil;
+    return session ? [[TTTask alloc] initWithSession:session function:verb feed:feed completion:completion singleInput:TTCallSingleInput(input) asynchronous:YES] : nil;
 }
 - (TTSession *)namedSession:(NSString *)verb question:(TTQuestion *)question input:(TTInput *)input options:(TTControls *)options feed:(TTFeed)feed error:(NSError **)error {
     NSData *questionBytes = TTEncode(question, error); if (!questionBytes) return nil;
@@ -292,7 +294,7 @@ static NSData *TTEncode(id object, NSError **error) {
     if (!session) return nil;
     __block TTCall *result = nil;
     __block NSError *failure = nil;
-    TTTask *task = [[TTTask alloc] initWithSession:session function:verb feed:feed completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; } asynchronous:NO];
+    TTTask *task = [[TTTask alloc] initWithSession:session function:verb feed:feed completion:^(TTCall *call, NSError *problem) { result = call; failure = problem; } singleInput:TTCallSingleInput(input) asynchronous:NO];
     [task run];
     if (failure && error) *error = failure;
     return result;

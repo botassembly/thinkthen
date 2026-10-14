@@ -13,20 +13,17 @@ int main(void) { @autoreleasepool {
     text.text = @"Sam Patel says his Kindle "
             @"arrived broken in Denver.";
     NSMutableArray *names = [NSMutableArray array];
-    TTPresence<NSArray<TTRecognition *> *> *judgment =
-        [client recognizeAnswer:kinds
+    TTCall *judgment =
+        [client recognize:kinds
         input:text
-        options:nil feed:nil call:NULL error:&error];
+        options:nil feed:nil error:&error];
     assert(judgment && !error);
-    for (TTRecognition *row in judgment.value) {
-        TTRecognizeEntities *facts =
-        (id)row.value.value;
+    TTRecognizeEntities *facts = (id)judgment.value.scalar;
         for (TTEntity *one in facts.entities.value) {
             [names addObject:[NSString stringWithFormat:
                 @"%@ (%@)", one.text.value,
                 one.kind.value]];
         }
-    }
     NSArray *expected = @[
         @"Sam Patel (person)",
         @"Kindle (product)",
