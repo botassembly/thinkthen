@@ -17,6 +17,10 @@ use thinkthen::{
 #[path = "support/api.rs"]
 mod api;
 
+#[expect(
+    clippy::unwrap_used,
+    reason = "the isolated fixture question must admit before the behavior runs"
+)]
 fn request() -> Request {
     Request::for_function(
         RequestFunction::Decide,
@@ -34,12 +38,21 @@ fn request() -> Request {
         },
     )
 }
+#[expect(
+    clippy::unwrap_used,
+    reason = "the closed fixture descriptor must decode before ownership is exercised"
+)]
 fn descriptor(text: &str) -> RequestSessionDescriptor {
     RequestSessionDescriptor::from_json(
         &json!({"item":{"original":{"kind":"text","text":text}}}).to_string(),
     )
     .unwrap()
 }
+#[expect(
+    clippy::unwrap_used,
+    clippy::indexing_slicing,
+    reason = "the loopback fixture answers the actual typed native request"
+)]
 fn response(body: &[u8]) -> Canned {
     let body: Value = serde_json::from_slice(body).unwrap();
     let answers = body["questions"]
@@ -74,6 +87,11 @@ fn drain(session: &RequestRecoveringSession) -> Vec<RequestRecoveringResult> {
         }
     }
 }
+#[expect(
+    clippy::unwrap_used,
+    clippy::panic,
+    reason = "the bounded fixture must admit its descriptor or fail the caller behavior"
+)]
 fn push(session: &RequestRecoveringSession, text: &str) {
     let end = Instant::now() + Duration::from_secs(5);
     let encoded = json!({"item":{"original":{"kind":"text","text":text}}}).to_string();
@@ -372,5 +390,75 @@ fn cancelled_session_publishes_final_facts_only_after_held_attempt_settles() {
     assert_eq!(
         terminal.facts.as_ref().unwrap().records(),
         rows.len() as u64
+    );
+}
+
+#[test]
+fn lazy_dynamic_choices_recover_in_one_pack_with_each_records_actual_candidates() {
+    let listener = Listener::answering(|_| Canned::ok(r#"{"model":"fixed","answers":{"q1":{"type":"wrong"},"q2":{"type":"choice","probabilities":{"d":0.8,"c":0.2}}}}"#)).unwrap();
+    let engine = api::loopback(listener.base(), "sk-dynamic-recovery");
+    let request = Request::for_function(
+        RequestFunction::Choose,
+        RequestArguments {
+            question: RequestQuestion::Definition {
+                value: Question::choose_records("Which?").unwrap().into(),
+            },
+            input: RequestInput::Feed {
+                name: "records".into(),
+                framing: RequestFraming::Document,
+                reading: ReaderOptions::default(),
+                images: vec![],
+            },
+            options: RequestOptions::default(),
+        },
+    )
+    .admit()
+    .unwrap();
+    let records = [(["b", "a"], "first"), (["d", "c"], "second")]
+        .into_iter()
+        .map(|(options, original)| {
+            let mut record = api::record(QuestionInput::Text(original.into()));
+            record.options = Some(api::dynamic_candidates(&json!(options).to_string()));
+            Ok(record)
+        });
+    let rows = RefCell::new(Vec::new());
+    let sink = |row| rows.borrow_mut().push(row);
+    let call = engine
+        .execute_request_recovering_sink(
+            &request,
+            RequestEnvironment {
+                controls: thinkthen::CallOptions::new().batch(BatchSetting::Records(
+                    std::num::NonZeroUsize::new(2).unwrap(),
+                )),
+                feed: Some(RequestFeed::from_records("records", records)),
+            },
+            &sink,
+        )
+        .unwrap();
+    let rows = rows.into_inner();
+    assert_eq!(
+        rows.iter()
+            .map(RequestRecoveredRow::ordinal)
+            .collect::<Vec<_>>(),
+        [0, 1]
+    );
+    assert_eq!(rows[0].outcome().unwrap_err().kind(), ErrorKind::Backend);
+    assert!(rows[0].cause().is_some());
+    let RequestValue::Choices(good) = rows[1].outcome().unwrap() else {
+        panic!("dynamic choice");
+    };
+    assert_eq!(good[0].result().value(), Some("d"));
+    assert_eq!(good[0].result().probability(), Some(0.8));
+    assert_eq!(call.facts().records(), 2);
+    assert_eq!(call.facts().requests_sent(), 1);
+    assert_eq!(listener.count(), 1);
+    let body: Value = serde_json::from_slice(&listener.requests()[0].body).unwrap();
+    assert_eq!(
+        body["questions"]["q1"]["criteria"],
+        json!({"b":null,"a":null})
+    );
+    assert_eq!(
+        body["questions"]["q2"]["criteria"],
+        json!({"d":null,"c":null})
     );
 }
