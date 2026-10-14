@@ -25,8 +25,8 @@
    "expected": "[\"good morning\", \"I demand a refund today\"]"
   },
   "rank": {
-   "ruby": "ThinkThen::Client.open { |client| p client.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).results.map { |one| [one.input, one.answer.probability] } }",
-   "expected": "[[\"good morning\", 0.9], [\"I demand a refund today\", 0.9]]"
+   "ruby": "ThinkThen::Client.open { |client| p client.rank(\"Is this a complaint?\", [\"good morning\", \"I demand a refund today\"]).value }",
+   "expected": "[0,1]"
   },
   "find": {
    "ruby": "ThinkThen::Client.open { |client| p client.find(\"Which line asks for money back?\", [\"good morning\", \"I want a refund\"]).value }",
