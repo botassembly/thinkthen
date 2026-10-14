@@ -99,6 +99,16 @@ def validate_consumer_contracts(parity):
     for consumer in all_consumers(parity):
         fields = {'required_checks', 'case_rulings'} & set(consumer)
         if consumer['id'] != 'cli':
+            if consumer['id'] == 'postgresql' and fields == {'case_rulings'}:
+                rulings = consumer['case_rulings']
+                identity = 'proxy-reservation-refusal'
+                ruling = rulings.get(identity) if isinstance(rulings, dict) else None
+                if (identity not in cases or not isinstance(rulings, dict) or set(rulings) != {identity}
+                        or not isinstance(ruling, dict) or set(ruling) != {'boundary', 'reason'}
+                        or ruling.get('boundary') != 'sdk-only'
+                        or not isinstance(ruling.get('reason'), str) or not ruling['reason'].strip()):
+                    raise ValueError('postgresql: invalid closed proxy reservation boundary ruling')
+                continue
             if fields:
                 raise ValueError(f"{consumer['id']}: CLI applicability fields at another public door")
             continue

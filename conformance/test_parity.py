@@ -45,6 +45,8 @@ class BindingCaseTiers(unittest.TestCase):
                           if identity in row.get('consumers', [identity])}
             if identity == 'cli':
                 applicable -= parity.SDK_ONLY_CLI_CASES
+            elif identity == 'postgresql':
+                applicable.discard('proxy-reservation-refusal')
             expected = applicable if identity in ('cli', 'rust', 'c') else {
                 key for key in applicable if rows[key]['tier'] == 'binding' or key in sample}
             self.assertEqual(set(selected), expected)
@@ -626,6 +628,30 @@ class CliApplicability(unittest.TestCase):
                     cli['case_rulings']['declaration-null']['expect'] = {'error': 'Usage'}
                 with self.assertRaises(ValueError):
                     parity.validate_consumer_contracts(changed)
+
+    def test_postgresql_reservation_ruling_keeps_all_other_contracts(self):
+        parity.validate_consumer_contracts(self.contract)
+        selected = parity.required_cases(self.contract, 'postgresql')
+        self.assertNotIn('proxy-reservation-refusal', selected)
+        self.assertIn('proxy-reservation-refusal', parity.required_cases(self.contract, 'rust'))
+        self.assertIn('typed-decide', selected)
+        for defect in ('binding', 'case', 'boundary', 'native-case', 'checks'):
+            changed = copy.deepcopy(self.contract)
+            pg = next(row for row in changed['consumers'] if row['id'] == 'postgresql')
+            if defect == 'binding':
+                other = next(row for row in changed['consumers'] if row['id'] == 'duckdb')
+                other['case_rulings'] = pg.pop('case_rulings')
+            elif defect == 'case':
+                pg['case_rulings']['typed-decide'] = pg['case_rulings']['proxy-reservation-refusal']
+            elif defect == 'boundary':
+                pg['case_rulings']['proxy-reservation-refusal']['boundary'] = 'unsupported'
+            elif defect == 'native-case':
+                changed['required_cases'] = [row for row in changed['required_cases']
+                                             if row['id'] != 'proxy-reservation-refusal']
+            else:
+                pg['required_checks'] = ['runtime']
+            with self.subTest(defect=defect), self.assertRaises(ValueError):
+                parity.validate_consumer_contracts(changed)
 
     def test_cells_require_actual_cli_checks_and_refuse_sdk_only_passes(self):
         cases = {case['id']: case for case in self.contract['required_cases']}
