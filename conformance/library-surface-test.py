@@ -22,7 +22,11 @@ class PublicSurface(unittest.TestCase):
                   ('include/thinkthen.h', '} thinkthen_request_item_v1;', '} missing_item_v1;', 'missing helper: item')],
             'ruby': [('lib/thinkthen/session.rb', 'define_singleton_method("question_#{kind}")', 'define_singleton_method("absent_#{kind}")', 'missing helper: question_file')] + [
                      ('lib/thinkthen/session.rb', 'private_constant :Carrier', literal, 'unlisted public type/export: .Carrier')
-                     for literal in ('# visible Carrier', '# private_constant :Carrier',
+                     for literal in ('Object.const_set(:Carrier, Class.new)\n    Object.private_constant :Carrier',
+                                     'module Other\n      class Carrier; end\n      private_constant :Carrier\n    end\n    private_constant :Other',
+                                     'Object.const_set(:Other, Module.new)\n    Object::Other.const_set(:Carrier, Class.new)\n    Object::Other.private_constant :Carrier',
+                                     'Object.const_set(:Other, Module.new)\n    Other.const_set(:Carrier, Class.new)\n    Other.private_constant :Carrier',
+                                     '# visible Carrier', '# private_constant :Carrier',
                                      '"private_constant :Carrier"', '%q{private_constant :Carrier}',
                                      '%Q(private_constant :Carrier)', '%[private_constant :Carrier]',
                                      '%q<private_constant :Carrier>', '%q|private_constant :Carrier|',
@@ -189,6 +193,14 @@ class PublicSurface(unittest.TestCase):
             baseline = invoke()
             runtime = root / 'libraries/ruby/lib/thinkthen/session.rb'
             original_runtime = runtime.read_text()
+            for directive in ('self.private_constant :Carrier',
+                              'ThinkThen::Client.private_constant :Carrier',
+                              '::ThinkThen::Client.private_constant :Carrier',
+                              'Client.private_constant :Carrier'):
+                with self.subTest(directive=directive):
+                    runtime.write_text(original_runtime.replace('private_constant :Carrier', directive, 1))
+                    self.assertEqual(invoke(), baseline)
+            runtime.write_text(original_runtime)
             marker = root / 'source-was-executed'
             runtime.write_text(original_runtime + f'\nFile.write({str(marker)!r}, "loaded")\n')
             ruby = shutil.which('ruby')

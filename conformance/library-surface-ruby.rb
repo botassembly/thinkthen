@@ -1,5 +1,6 @@
 # Lex source only. Literal and interpolation tokens cannot declare privacy.
 require 'ripper'
+require 'json'
 
 source = STDIN.read
 source.force_encoding(Encoding::UTF_8)
@@ -32,4 +33,38 @@ Ripper.lex(source, raise_errors: true).each do |position, event, token, _state|
   interpolation -= 1 if event == :on_embexpr_end
   variable = event == :on_embvar
 end
-STDOUT.write(output.join)
+# Ripper supplies lexical nesting independently of indentation or repeated names.
+def constant_path(node)
+  return nil unless node.is_a?(Array)
+  case node[0]
+  when :@const then node[1]
+  when :const_ref, :var_ref, :var_field then constant_path(node[1])
+  when :top_const_ref then '::' + constant_path(node[1]).to_s
+  when :const_path_ref, :const_path_field
+    [constant_path(node[1]), constant_path(node[2])].join('::')
+  end
+end
+
+def lexical_owners(node, owner, owners)
+  return unless node.is_a?(Array)
+  return if %i[string_literal xstring_literal regexp_literal dyna_symbol].include?(node[0])
+  if node[0].to_s.start_with?('@')
+    owners[node[2][0]] = owner
+  elsif node[0] == :assign && node[2].is_a?(Array) && node[2][0] == :method_add_block && constant_path(node[1])
+    lexical_owners(node[1], owner, owners)
+    lexical_owners(node[2][1], owner, owners)
+    nested = [owner, constant_path(node[1])].reject(&:empty?).join('::')
+    lexical_owners(node[2][2], nested, owners)
+  elsif %i[class module].include?(node[0])
+    lexical_owners(node[1], owner, owners)
+    name = constant_path(node[1])
+    nested = name.start_with?('::') ? name.delete_prefix('::') : [owner, name].reject(&:empty?).join('::')
+    lexical_owners(node[2], owner, owners) if node[0] == :class
+    lexical_owners(node[-1], nested, owners)
+  else
+    node.each { |child| lexical_owners(child, owner, owners) if child.is_a?(Array) }
+  end
+end
+owners = {}
+lexical_owners(Ripper.sexp(source), '', owners)
+STDOUT.write(JSON.generate(masked: output.join, owners: owners))

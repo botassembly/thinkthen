@@ -1,5 +1,6 @@
 """Read public declarations, excluding comments, strings and method bodies."""
 import ast
+import json
 from dataclasses import dataclass
 import re
 import os
@@ -89,9 +90,11 @@ def ruby_masked(source):
                              env=child_env(home=home, LANG='C.UTF-8', LC_ALL='C.UTF-8'))
     if run.returncode:
         raise ValueError('Ruby source lexer failed: ' + run.stderr.strip())
-    if len(run.stdout) != len(source) or run.stdout.count('\n') != source.count('\n'):
+    parsed = json.loads(run.stdout)
+    text = parsed['masked']
+    if len(text) != len(source) or text.count('\n') != source.count('\n'):
         raise ValueError('Ruby source lexer failed: invalid masked source')
-    return run.stdout
+    return text, {int(line): owner for line, owner in parsed['owners'].items()}
 
 
 def normalized_annotation(source):
@@ -467,58 +470,76 @@ def other(source, language):
                 if depth == 0:
                     break
     elif language == 'ruby':
-        scopes = []
         private = set()
         constants = {}
-        text = ruby_masked(source)
-        for raw, line in zip(source.splitlines(), text.splitlines()):
-            indent = len(line) - len(line.lstrip())
-            if line.strip() and not line.lstrip().startswith('#'):
-                scopes = [s for s in scopes if s[0] < indent]
+        text, owners = ruby_masked(source)
+        # Keep full origins when the inventory combines declarations with short owner names.
+        origins, hidden_types = {}, set()
+        for number, (raw, line) in enumerate(zip(source.splitlines(), text.splitlines()), 1):
+            declarations = result
+            result = set()
+            lexical = owners.get(number, '')
             match = re.match(r'\s*(?:class|module)\s+(\w+)|\s*(\w+)\s*=\s*Struct\.new', line)
             if match:
-                scopes = [s for s in scopes if s[0] < indent]
                 name = match[1] or match[2]
-                scopes.append((indent, name))
                 result.add(Declaration('', name, 'type'))
-            container = scopes[-1][1] if scopes else ''
+            container = lexical.split('::')[-1]
             if line.strip() == 'private':
-                private.add(container)
+                private.add(lexical)
             elif line.strip() == 'public':
-                private.discard(container)
+                private.discard(lexical)
             match = re.match(r'\s*(\w+)\s*=\s*%w\[([^]]*)\]', raw) if re.match(r'\s*\w+\s*=', line) else None
             if match:
-                constants[(container, match[1])] = match[2].split()
+                constants[(lexical, match[1])] = match[2].split()
             loop = re.match(r'\s*(\w+)\.each\s+do\s+\|(\w+)\|', line)
             literal_loop = re.match(r'\s*%w\[([^]]*)\]\.each\s+do\s+\|(\w+)\|', raw) if re.match(r'\s*\.each\s+do\b', line) else None
             if literal_loop:
-                singleton_loop = (container, literal_loop[2], literal_loop[1].split())
+                singleton_loop = (lexical, literal_loop[2], literal_loop[1].split())
             singleton = re.match(r'\s*define_singleton_method\("(\w+)#\{(\w+)\}"\)', raw) if re.match(r'\s*define_singleton_method\(', line) else None
-            if singleton and 'singleton_loop' in locals() and singleton_loop[:2] == (container, singleton[2]):
+            if singleton and 'singleton_loop' in locals() and singleton_loop[:2] == (lexical, singleton[2]):
                 result.update(Declaration(container, singleton[1] + name, 'call') for name in singleton_loop[2])
             if loop:
                 variable = loop[2]
-                method_loop = (container, variable, constants.get((container, loop[1]), ()))
+                method_loop = (lexical, variable, constants.get((lexical, loop[1]), ()))
             elif re.match(r'\s*define_method\((\w+)\)', line):
                 dynamic = re.match(r'\s*define_method\((\w+)\)', line)[1]
-                if 'method_loop' in locals() and method_loop[:2] == (container, dynamic):
+                if 'method_loop' in locals() and method_loop[:2] == (lexical, dynamic):
                     result.update(Declaration(container, name, 'call') for name in method_loop[2])
             match = re.match(r'\s*def\s+(?:self\.)?(\w+)\s*(?:\(([^)]*)\))?', line)
-            if match and container not in private and not match[1].startswith('_'):
+            if match and lexical not in private and not match[1].startswith('_'):
                 result.add(Declaration(container, match[1], 'call'))
                 for name in re.findall(r'\b(\w+)\s*:', match[2] or ''):
                     result.add(Declaration(container + '.' + match[1], name, 'field'))
-            if container not in private and re.match(r'\s*attr_reader\b', line):
+            if lexical not in private and re.match(r'\s*attr_reader\b', line):
                 for name in re.findall(r':(\w+)', line):
                     result.add(Declaration(container, name, 'field'))
             for name in re.findall(r':(\w+)', line) if re.match(r'\s*private_class_method\b', line) else ():
-                result.discard(Declaration(container, name, 'call'))
+                declaration = Declaration(container, name, 'call')
+                origins.get(declaration, set()).discard(lexical)
+                if not origins.get(declaration):
+                    declarations.discard(declaration)
             match = re.match(r'\s*define_method\([\'\"](\w+)[\'\"]\)', raw) if re.match(r'\s*define_method\(', line) else None
             if match:
                 result.add(Declaration(container, match[1], 'field'))
-        hidden_types = set(re.findall(r'\bprivate_constant\s+:(\w+)', text))
-        result = {d for d in result if d.owner.split('.')[0] not in hidden_types
-                  and not (d.kind == 'type' and d.name in hidden_types)}
+            directive = re.match(r'\s*(?:(self|(?:::)?[A-Z]\w*(?:::[A-Z]\w*)*)\.)?private_constant\s+:(\w+)', line)
+            if directive:
+                receiver, name = directive.groups()
+                if receiver in (None, 'self'):
+                    target = lexical
+                elif receiver.startswith('::') or receiver.split('::')[0] == 'Object':
+                    target = receiver.removeprefix('::').removeprefix('Object::')
+                    target = '' if target == 'Object' else target
+                else:
+                    parts = lexical.split('::')
+                    candidates = ['::'.join(parts[:end] + [receiver]) for end in range(len(parts), 0, -1)] + [receiver]
+                    target = next((candidate for candidate in candidates if candidate in owners.values()), receiver)
+                hidden_types.add('::'.join(filter(None, (target, name))))
+            for declaration in result:
+                path = '::'.join(filter(None, (lexical, declaration.name))) if declaration.kind == 'type' else lexical
+                origins.setdefault(declaration, set()).add(path)
+            result.update(declarations)
+        result = {d for d in result if any(not any(path == hidden or path.startswith(hidden + '::')
+                                                  for hidden in hidden_types) for path in origins[d])}
     elif language == 'ada':
         text = re.sub(r'--[^\n]*', '', source)
         if re.search(r'(?im)^\s*private\s+package\b', text):
