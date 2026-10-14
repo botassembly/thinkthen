@@ -165,3 +165,4 @@ Stage 2 starts when G1 and G2 land. One lane per language owns `libraries/<lang>
 
 PM amendment, 2026-10-14. Ordinary `thinkthen_details` returns the existing typed receipt projection, not JSON. This supersedes the 0538 retention of ordinary details JSON. The approved packed try-details recovery envelope stays as it is.
 - 2026-10-14 next: Merged the accepted PHP typed-library slice at 4d4cab9ae after installed parity, answer ownership and shipped example checks passed; continue remaining library migrations before the candidate.
+- 2026-10-14 next: Merged the accepted B+ PostgreSQL typed family at d6145fa84 with obsolete exports removed, unchanged accepted source, 225 retained parity passes and focused rebuilt native checks passing; continue remaining libraries and the candidate ceiling reconciliation.
