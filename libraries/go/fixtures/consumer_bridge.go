@@ -96,7 +96,7 @@ func fixtureValue(value any) any {
 		if reader.Type().NumOut() != 1 || !strings.HasPrefix(reader.Type().Out(0).Name(), "Presence[") {
 			continue
 		}
-		if strings.HasSuffix(method.Name, "Answer") {
+		if method.Name != "Answer" && strings.HasSuffix(method.Name, "Answer") {
 			continue
 		}
 		field := reader.Call(nil)[0]
