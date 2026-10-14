@@ -10,6 +10,7 @@ The PM made these rulings so the coordinator decides alone in the common cases. 
 - A required new export, call or helper in a library under a fixed limit is offset by a cut in the same library. If no safe cut exists, raise the limit to the measured total and say why.
 - A size target is a goal, not a gate. Stop at safe cuts and report the gap. Never cut an assertion, a test or formatting to meet a number.
 - Generated lines never count against a handwritten limit.
+- The combined Rust total is a gate on the final candidate, not on a lane merge. A reviewed lane that adds required Rust lines merges into `ticket/0543-final` when its other checks pass. The Rust test lane and G2 then cut the combined total to main or below before freeze.
 
 ## Measurements
 
