@@ -2,6 +2,7 @@
 declare(strict_types=1);
 require getenv('TT_AUTOLOAD');
 use ThinkThen\Client;
+use ThinkThen\Inputs\{Settings, Options, ChooseQuestion, RecognitionSpec, RecognitionStageContext, RecognizeQuestion, RelationRule, RelationSpec, RelateQuestion};
 
 /** Test adapter serialization is not a public library operation. */
 function fixtureValue(mixed $value): mixed
@@ -18,18 +19,18 @@ function fixtureValue(mixed $value): mixed
 }
 
 function check(bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); }
-$client = new Client(['cache' => false, 'batch' => 1, 'max_retries' => 0]);
+$client = new Client(new Settings(cache: false, batch: 1, max_retries: 0));
 $asks = [
     'decide' => ['Is it urgent?', 'text'],
-    'choose' => [['choose' => 'Which?', 'options' => ['first', 'second']], 'text'],
+    'choose' => [new ChooseQuestion(choose: 'Which?', options: ['first', 'second']), 'text'],
     'tag' => [['tag' => 'Which?', 'labels' => ['first', 'second']], 'text'],
     'score' => [['score' => 'Which?', 'levels' => ['low', 'high']], 'text'],
     'filter' => ['Is it urgent?', ['filter-yes', 'no']],
     'rank' => ['Is it urgent?', ['rank-yes', 'no']],
     'find' => ['Which line?', ['find-first', 'find-second']],
     'annotate' => [['version' => 1, 'questions' => ['ok' => ['decide' => 'Is it urgent?']]], ['text']],
-    'recognize' => [['version' => 1, 'recognize' => ['kinds' => ['person' => null]]], 'Maria Chen'],
-    'relate' => [['version' => 1, 'relate' => ['relations' => [['name' => 'knows', 'source' => 'person', 'target' => 'person', 'either' => false]]]],
+    'recognize' => [new RecognizeQuestion(new RecognitionSpec(kinds: ['person' => null], stage_context: new RecognitionStageContext(boundary: '', kind_edge: '', relation: ''))), 'Maria Chen'],
+    'relate' => [new RelateQuestion(new RelationSpec([new RelationRule(name: 'knows', source: 'person', target: 'person', either: false)])),
         [['name' => 'Ana', 'kind' => 'person'], ['name' => 'Bob', 'kind' => 'person']]],
 ];
 $mode = $argv[1];
@@ -125,7 +126,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     check($row->answers->ok instanceof ThinkThen\Results\AnnotationMemberAnswerId, 'typed map answer member');
     check($row->value->ok === true, 'map decision value');
     check(is_array($row->value->tags) && in_array('first', $row->value->tags, true), 'nested tags must remain an array');
-    $false = $client->decide(['decide' => 'Is it?', 'threshold' => 0.95], 'text');
+    $false = $client->decide('Is it?', 'text', new Options(threshold: 0.95, context: ''));
     $null = $client->decide(['decide' => 'Is it?', 'true' => null], 'text');
     check($false->results[0]->value()->present && $false->results[0]->value === false, 'false confused with absence');
     check(!$false->results[0]->question->field('true')->present, 'absent author field');
@@ -165,6 +166,26 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
 } elseif ($mode === 'zero') {
     $preview = $client->plan('decide', 'Is it?', 'secret-preview');
     check($preview instanceof ThinkThen\Results\Plan && $preview->records === 1 && $preview->requests === 1 && !$preview->upper_bound, 'typed native plan counts');
+    check($preview->estimated_bytes === strlen($preview->first_body_utf8) && $preview->largest_request_bytes === $preview->estimated_bytes, 'plan byte totals differ from the native body');
+    check(is_string($preview->token_estimate_method) && $preview->token_estimate_method !== '' && $preview->largest_request_estimated_input_tokens > 0, 'plan token method or largest request missing');
+    check($preview->estimated_input_tokens->lower > 0 && $preview->estimated_input_tokens->upper >= $preview->estimated_input_tokens->lower, 'plan token band lost its bounds');
+    foreach (array_slice($asks, 0, 6, true) as $verb => [$question, $input]) {
+        $plan = $client->plan($verb, $question, $input, new Options(batch: 1));
+        check($plan->records === (is_array($input) ? count($input) : 1) && $plan->requests > 0, 'supported native preview '.$verb);
+    }
+    foreach (array_slice($asks, 6, null, true) as $verb => [$question, $input]) {
+        try { $client->plan($verb, $question, $input); throw new RuntimeException('specialized preview admitted '.$verb); }
+        catch (ThinkThen\UsageFailure $error) { check($error->getMessage() === 'invalid session arguments or input', 'specialized preview refusal changed'); }
+    }
+    $questionFolder = getenv('XDG_CONFIG_HOME').'/thinkthen/questions';
+    mkdir($questionFolder, recursive: true);
+    $saved = $questionFolder.'/saved.json';
+    file_put_contents($saved, '{"decide":"Is it?","name":"saved"}');
+    foreach ([Client::questionFile($saved), Client::questionNamed('saved'), Client::questionReference('@saved')] as $selector) {
+        check($client->plan('decide', $selector, Client::item('selector-preview', ['context' => '']))->requests === 1, 'native question selector or item context');
+    }
+    check(!method_exists(ChooseQuestion::class, 'jsonSerialize') && !method_exists(RecognizeQuestion::class, 'toObject'), 'public question transport remains');
+    check((new ReflectionMethod(ThinkThen\Operation::class, '__construct'))->isPrivate(), 'public operation exposes native handles');
     $emptyPreview = $client->plan('decide', 'Is it?', []);
     check($emptyPreview->first_body_utf8()->present && $emptyPreview->first_body_utf8 === null, 'required null plan body became absent');
     check(!method_exists(ThinkThen\Results\Node::class, 'toObject'), 'public packet transport dump remains');
@@ -173,7 +194,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     try { $client->plan('decide', 'Is it?', (function() use (&$produced) { $produced = true; yield 'unreachable'; })()); throw new RuntimeException('feed plan admitted'); }
     catch (ThinkThen\UsageFailure) {}
     check(!$produced, 'plan consumed producer');
-    try { new Client([], getenv('TT_ERROR_LIBRARY')); throw new RuntimeException('synthetic constructor answered'); }
+    try { new Client(new Settings(), getenv('TT_ERROR_LIBRARY')); throw new RuntimeException('synthetic constructor answered'); }
     catch (ThinkThen\BackendFailure $error) {
         check($error->retryable && $error->kind === ThinkThen\ErrorKind::Backend && $error->facts() instanceof ThinkThen\Results\FailureFacts, 'constructor error view not copied');
         check($error->facts()->records === 7 && $error->facts()->requests_sent === 3 && !$error->facts()->has('call_id'), 'constructor facts changed');
@@ -196,7 +217,7 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
         check(!$error->retryable && $error->facts() === null, 'immediate admission facts lost');
     }
 
-    try { new Client([], getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
+    try { new Client(new Settings(), getenv('HOME').'/missing-library.so'); throw new RuntimeException('missing library loaded'); }
     catch (ThinkThen\LocalFailure) {}
     try { $client->decide('', 'invalid'); throw new RuntimeException('empty admitted'); }
     catch (ThinkThen\UsageFailure) {}
@@ -243,10 +264,10 @@ if ($mode === 'usage-written' || $mode === 'usage-failed') {
     $operation->poll();
     $operation->close();
     check($weak->get() === null, 'closed operation retained client');
-    $temporary = (new Client(['cache' => false]))->start('decide', 'Is it?', 'temporary-client');
+    $temporary = (new Client(new Settings(cache: false)))->start('decide', 'Is it?', 'temporary-client');
     check($temporary->result()->results[0]->value === true, 'temporary client closed operation');
     check(!file_exists(getenv('TT_BARRIER').'/release-hold-php'), 'cleanup needed provider release');
-    $other = new Client(['cache' => false]);
+    $other = new Client(new Settings(cache: false));
     check($other->decide('Is it?', 'independent')->results[0]->value === true, 'cleanup stalled unrelated engine');
 } else { throw new RuntimeException('unknown fixture mode'); }
 echo "PHP_SESSION_PASS ".$mode."\n";

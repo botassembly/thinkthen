@@ -145,8 +145,8 @@ fn tag(
 }
 
 crate::descriptions::describe! {
-["Return detailed judgment JSON as jsonb. ", &crate::descriptions::scalar_text()].concat();
-[name = "thinkthen_details", parallel_restricted];
+["Return a typed thinkthen_question_detail receipt with answer, identity, probabilities and metadata. ", &crate::descriptions::scalar_text()].concat();
+[name = "thinkthen_details", parallel_restricted, requires = ["native_generated_types"]];
 #[allow(
     clippy::too_many_arguments,
     reason = "PostgreSQL exposes these defaulted named parameters in its public SQL signature"
@@ -160,19 +160,18 @@ fn details_sql(
     model: default!(Option<&str>, "NULL"),
     batch: default!(Option<&str>, "NULL"),
     deadline_ms: default!(Option<i64>, "NULL"),
-) -> Option<pgrx::datum::JsonB> {
+) -> Option<pgrx::composite_type!('static, "thinkthen_question_detail")> {
     call::guarded(|| {
         let (question, input) = (question?, input?);
         let named = Named::new(threshold, context, model, batch, deadline_ms);
         let (settings, call) = forms::controls(settings.as_ref(), named);
-            let verb = forms::plan_verb(question, &settings);
+        let verb = forms::plan_verb(question, &settings);
         let asked = forms::question(Some(question), None, verb, &settings);
         let input = input.to_owned();
         let held = call::run(call, move |engine, options| {
-            details(engine, &asked, &input, options)
-        })
-        .unwrap_or_else(|| call::raise(call::defect("details returned no record")));
-        Some(crate::jsonb(&held.json))
+            crate::request::receipt(engine, &asked, input, options)
+        });
+        Some(crate::native::receipt(&held))
     })
 }
 }

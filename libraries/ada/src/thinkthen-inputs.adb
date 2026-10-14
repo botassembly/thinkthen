@@ -49,14 +49,14 @@ return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Annotate_Definition) return Boolean is (Item.Data.T_threshold.Present);
 function Kind (Item : Thinkthen.Inputs.Annotate_Question) return Annotate_Question_Kind is (Annotate_Question_Kind'Val (Requests.T_AnnotateQuestion_Kind'Pos (Item.Data.Kind)));
-function Annotate_Question_From_Annotate_Question_decide (Item : Thinkthen.Inputs.Annotate_Question_decide) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_decide, V_0 => Native.Unwrap (Item))));
-function As_Annotate_Question_decide (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_decide is (Native.Wrap (Item.Data.V_0));
-function Annotate_Question_From_Annotate_Question_choose (Item : Thinkthen.Inputs.Annotate_Question_choose) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_choose, V_1 => Native.Unwrap (Item))));
-function As_Annotate_Question_choose (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_choose is (Native.Wrap (Item.Data.V_1));
-function Annotate_Question_From_Annotate_Question_tag (Item : Thinkthen.Inputs.Annotate_Question_tag) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_tag, V_2 => Native.Unwrap (Item))));
-function As_Annotate_Question_tag (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_tag is (Native.Wrap (Item.Data.V_2));
-function Annotate_Question_From_Annotate_Question_score (Item : Thinkthen.Inputs.Annotate_Question_score) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_score, V_3 => Native.Unwrap (Item))));
-function As_Annotate_Question_score (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_score is (Native.Wrap (Item.Data.V_3));
+function Annotate_Question_From_decide (Item : Thinkthen.Inputs.Annotate_Question_decide) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_decide, V_0 => Native.Unwrap (Item))));
+function As_decide (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_decide is (Native.Wrap (Item.Data.V_0));
+function Annotate_Question_From_choose (Item : Thinkthen.Inputs.Annotate_Question_choose) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_choose, V_1 => Native.Unwrap (Item))));
+function As_choose (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_choose is (Native.Wrap (Item.Data.V_1));
+function Annotate_Question_From_tag (Item : Thinkthen.Inputs.Annotate_Question_tag) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_tag, V_2 => Native.Unwrap (Item))));
+function As_tag (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_tag is (Native.Wrap (Item.Data.V_2));
+function Annotate_Question_From_score (Item : Thinkthen.Inputs.Annotate_Question_score) return Thinkthen.Inputs.Annotate_Question is ((Data => (Kind => Requests.T_AnnotateQuestion_arm_score, V_3 => Native.Unwrap (Item))));
+function As_score (Item : Thinkthen.Inputs.Annotate_Question) return Thinkthen.Inputs.Annotate_Question_score is (Native.Wrap (Item.Data.V_3));
 function Make_Annotate_Question_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Annotate_Question_choose is ((Data => (T_choose => Native.Unwrap (Choose), others => <>)));
 function With_Choose (Item : Thinkthen.Inputs.Annotate_Question_choose; Field : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Annotate_Question_choose is
 Result : Thinkthen.Inputs.Annotate_Question_choose := Item;
@@ -438,13 +438,13 @@ return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Annotate_Question_tag) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.choose is ((Data => (T_choose => Native.Unwrap (Choose), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.choose_batch) return Thinkthen.Inputs.choose is
+function With_Batch (Item : Thinkthen.Inputs.choose; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.choose is
 Result : Thinkthen.Inputs.choose := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.choose_batch is
+function Get_Batch (Item : Thinkthen.Inputs.choose) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -568,10 +568,6 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.choose) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.choose_batch) return choose_batch_Kind is (choose_batch_Kind'Val (Requests.T_Authored_choose_field_batch_Kind'Pos (Item.Data.Kind)));
-function choose_batch_From_Max return Thinkthen.Inputs.choose_batch is ((Data => (Kind => Requests.T_Authored_choose_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function choose_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.choose_batch is ((Data => (Kind => Requests.T_Authored_choose_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.choose_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Kind (Item : Thinkthen.Inputs.criterion) return criterion_Kind is (criterion_Kind'Val (Requests.T_Authored_criterion_Kind'Pos (Item.Data.Kind)));
 function criterion_From_String (Item : String) return Thinkthen.Inputs.criterion is ((Data => (Kind => Requests.T_Authored_criterion_arm_0, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.criterion) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -586,13 +582,13 @@ function As_Number (Item : Thinkthen.Inputs.cut) return Thinkthen.Inputs.Number 
 function cut_From_String (Item : String) return Thinkthen.Inputs.cut is ((Data => (Kind => Requests.T_Authored_cut_arm_1, V_1 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.cut) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_1));
 function Make_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.decide is ((Data => (T_decide => Native.Unwrap (Decide), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.decide_batch) return Thinkthen.Inputs.decide is
+function With_Batch (Item : Thinkthen.Inputs.decide; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.decide is
 Result : Thinkthen.Inputs.decide := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.decide_batch is
+function Get_Batch (Item : Thinkthen.Inputs.decide) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -728,10 +724,6 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.decide) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.decide_batch) return decide_batch_Kind is (decide_batch_Kind'Val (Requests.T_Authored_decide_field_batch_Kind'Pos (Item.Data.Kind)));
-function decide_batch_From_Max return Thinkthen.Inputs.decide_batch is ((Data => (Kind => Requests.T_Authored_decide_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function decide_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.decide_batch is ((Data => (Kind => Requests.T_Authored_decide_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.decide_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Kind (Item : Thinkthen.Inputs.description) return description_Kind is (description_Kind'Val (Requests.T_Authored_description_Kind'Pos (Item.Data.Kind)));
 function description_From_String (Item : String) return Thinkthen.Inputs.description is ((Data => (Kind => Requests.T_Authored_description_arm_0, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.description) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -836,10 +828,10 @@ return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.find) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.input_Declaration) return input_Declaration_Kind is (input_Declaration_Kind'Val (Requests.T_Authored_inputDeclaration_Kind'Pos (Item.Data.Kind)));
-function input_Declaration_From_input_Declaration_string (Item : Thinkthen.Inputs.input_Declaration_string) return Thinkthen.Inputs.input_Declaration is ((Data => (Kind => Requests.T_Authored_inputDeclaration_arm_string, V_0 => Native.Unwrap (Item))));
-function As_input_Declaration_string (Item : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.input_Declaration_string is (Native.Wrap (Item.Data.V_0));
-function input_Declaration_From_input_Declaration_object (Item : Thinkthen.Inputs.input_Declaration_object) return Thinkthen.Inputs.input_Declaration is ((Data => (Kind => Requests.T_Authored_inputDeclaration_arm_object, V_1 => Native.Unwrap (Item))));
-function As_input_Declaration_object (Item : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.input_Declaration_object is (Native.Wrap (Item.Data.V_1));
+function input_Declaration_From_string (Item : Thinkthen.Inputs.input_Declaration_string) return Thinkthen.Inputs.input_Declaration is ((Data => (Kind => Requests.T_Authored_inputDeclaration_arm_string, V_0 => Native.Unwrap (Item))));
+function As_string (Item : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.input_Declaration_string is (Native.Wrap (Item.Data.V_0));
+function input_Declaration_From_object (Item : Thinkthen.Inputs.input_Declaration_object) return Thinkthen.Inputs.input_Declaration is ((Data => (Kind => Requests.T_Authored_inputDeclaration_arm_object, V_1 => Native.Unwrap (Item))));
+function As_object (Item : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.input_Declaration_object is (Native.Wrap (Item.Data.V_1));
 function Make_input_Declaration_object (Properties : Thinkthen.Inputs.input_Property_Map) return Thinkthen.Inputs.input_Declaration_object is ((Data => (T_properties => Native.Unwrap (Properties), others => <>)));
 function With_Properties (Item : Thinkthen.Inputs.input_Declaration_object; Field : Thinkthen.Inputs.input_Property_Map) return Thinkthen.Inputs.input_Declaration_object is
 Result : Thinkthen.Inputs.input_Declaration_object := Item;
@@ -865,14 +857,14 @@ end Get_Required;
 function Has_Required (Item : Thinkthen.Inputs.input_Declaration_object) return Boolean is (Item.Data.T_required.Present);
 function Make_input_Declaration_string return Thinkthen.Inputs.input_Declaration_string is ((Data => (others => <>)));
 function Kind (Item : Thinkthen.Inputs.input_Property) return input_Property_Kind is (input_Property_Kind'Val (Requests.T_Authored_inputProperty_Kind'Pos (Item.Data.Kind)));
-function input_Property_From_input_Property_string (Item : Thinkthen.Inputs.input_Property_string) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_string, V_0 => Native.Unwrap (Item))));
-function As_input_Property_string (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_string is (Native.Wrap (Item.Data.V_0));
-function input_Property_From_input_Property_number (Item : Thinkthen.Inputs.input_Property_number) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_number, V_1 => Native.Unwrap (Item))));
-function As_input_Property_number (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_number is (Native.Wrap (Item.Data.V_1));
-function input_Property_From_input_Property_boolean (Item : Thinkthen.Inputs.input_Property_boolean) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_boolean, V_2 => Native.Unwrap (Item))));
-function As_input_Property_boolean (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_boolean is (Native.Wrap (Item.Data.V_2));
-function input_Property_From_input_Property_array (Item : Thinkthen.Inputs.input_Property_array) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_array, V_3 => Native.Unwrap (Item))));
-function As_input_Property_array (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_array is (Native.Wrap (Item.Data.V_3));
+function input_Property_From_string (Item : Thinkthen.Inputs.input_Property_string) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_string, V_0 => Native.Unwrap (Item))));
+function As_string (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_string is (Native.Wrap (Item.Data.V_0));
+function input_Property_From_number (Item : Thinkthen.Inputs.input_Property_number) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_number, V_1 => Native.Unwrap (Item))));
+function As_number (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_number is (Native.Wrap (Item.Data.V_1));
+function input_Property_From_boolean (Item : Thinkthen.Inputs.input_Property_boolean) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_boolean, V_2 => Native.Unwrap (Item))));
+function As_boolean (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_boolean is (Native.Wrap (Item.Data.V_2));
+function input_Property_From_array (Item : Thinkthen.Inputs.input_Property_array) return Thinkthen.Inputs.input_Property is ((Data => (Kind => Requests.T_Authored_inputProperty_arm_array, V_3 => Native.Unwrap (Item))));
+function As_array (Item : Thinkthen.Inputs.input_Property) return Thinkthen.Inputs.input_Property_array is (Native.Wrap (Item.Data.V_3));
 function Make_input_Property_array (Items : Thinkthen.Inputs.Array_Item_Type) return Thinkthen.Inputs.input_Property_array is ((Data => (T_items => Native.Unwrap (Items), others => <>)));
 function With_Items (Item : Thinkthen.Inputs.input_Property_array; Field : Thinkthen.Inputs.Array_Item_Type) return Thinkthen.Inputs.input_Property_array is
 Result : Thinkthen.Inputs.input_Property_array := Item;
@@ -908,6 +900,10 @@ function pointers_From_String (Item : String) return Thinkthen.Inputs.pointers i
 function As_String (Item : Thinkthen.Inputs.pointers) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
 function pointers_From_Array (Item : Thinkthen.Inputs.Text_List) return Thinkthen.Inputs.pointers is ((Data => (Kind => Requests.T_Authored_pointers_arm_1, V_1 => Native.Unwrap (Item))));
 function As_Array (Item : Thinkthen.Inputs.pointers) return Thinkthen.Inputs.Text_List is (Native.Wrap (Item.Data.V_1));
+function Kind (Item : Thinkthen.Inputs.Question_Batch) return Question_Batch_Kind is (Question_Batch_Kind'Val (Requests.T_Authored_questionBatch_Kind'Pos (Item.Data.Kind)));
+function Question_Batch_From_Max return Thinkthen.Inputs.Question_Batch is ((Data => (Kind => Requests.T_Authored_questionBatch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
+function Question_Batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Question_Batch is ((Data => (Kind => Requests.T_Authored_questionBatch_arm_1, V_1 => Native.Unwrap (Item))));
+function As_Integer_Value (Item : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Kind (Item : Thinkthen.Inputs.Question_Wording) return Question_Wording_Kind is (Question_Wording_Kind'Val (Requests.T_Authored_questionText_Kind'Pos (Item.Data.Kind)));
 function Question_Wording_From_String (Item : String) return Thinkthen.Inputs.Question_Wording is ((Data => (Kind => Requests.T_Authored_questionText_arm_0, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
@@ -1082,13 +1078,13 @@ return Native.Wrap (Item.Data.T_target.Value);
 end Get_Target;
 function Has_Target (Item : Thinkthen.Inputs.relation) return Boolean is (Item.Data.T_target.Present);
 function Make_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.score is ((Data => (T_score => Native.Unwrap (Score), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.score_batch) return Thinkthen.Inputs.score is
+function With_Batch (Item : Thinkthen.Inputs.score; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.score is
 Result : Thinkthen.Inputs.score := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.score_batch is
+function Get_Batch (Item : Thinkthen.Inputs.score) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -1200,18 +1196,14 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.score) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.score_batch) return score_batch_Kind is (score_batch_Kind'Val (Requests.T_Authored_score_field_batch_Kind'Pos (Item.Data.Kind)));
-function score_batch_From_Max return Thinkthen.Inputs.score_batch is ((Data => (Kind => Requests.T_Authored_score_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function score_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.score_batch is ((Data => (Kind => Requests.T_Authored_score_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.score_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Make_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.tag is ((Data => (T_tag => Native.Unwrap (Tag), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.tag_batch) return Thinkthen.Inputs.tag is
+function With_Batch (Item : Thinkthen.Inputs.tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.tag is
 Result : Thinkthen.Inputs.tag := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.tag_batch is
+function Get_Batch (Item : Thinkthen.Inputs.tag) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -1335,20 +1327,261 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.tag) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.tag_batch) return tag_batch_Kind is (tag_batch_Kind'Val (Requests.T_Authored_tag_field_batch_Kind'Pos (Item.Data.Kind)));
-function tag_batch_From_Max return Thinkthen.Inputs.tag_batch is ((Data => (Kind => Requests.T_Authored_tag_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function tag_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.tag_batch is ((Data => (Kind => Requests.T_Authored_tag_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.tag_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Kind (Item : Thinkthen.Inputs.Probability_Band) return Probability_Band_Kind is (Probability_Band_Kind'Val (Requests.T_Authored_threshold_Kind'Pos (Item.Data.Kind)));
 function Probability_Band_From_Number (Item : Thinkthen.Inputs.Number) return Thinkthen.Inputs.Probability_Band is ((Data => (Kind => Requests.T_Authored_threshold_arm_0, V_0 => Native.Unwrap (Item))));
 function As_Number (Item : Thinkthen.Inputs.Probability_Band) return Thinkthen.Inputs.Number is (Native.Wrap (Item.Data.V_0));
 function Probability_Band_From_String (Item : String) return Thinkthen.Inputs.Probability_Band is ((Data => (Kind => Requests.T_Authored_threshold_arm_1, V_1 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.Probability_Band) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_1));
+function Kind (Item : Thinkthen.Inputs.Cache_Document) return Cache_Document_Kind is (Cache_Document_Kind'Val (Requests.T_CacheDocument_Kind'Pos (Item.Data.Kind)));
+function Cache_Document_From_String (Item : String) return Thinkthen.Inputs.Cache_Document is ((Data => (Kind => Requests.T_CacheDocument_arm_0, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
+function As_String (Item : Thinkthen.Inputs.Cache_Document) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
+function Cache_Document_From_False return Thinkthen.Inputs.Cache_Document is ((Data => (Kind => Requests.T_CacheDocument_arm_1, V_1 => Requests.T_DisabledCache'(null record))));
 function Kind (Item : Thinkthen.Inputs.Context_Schema) return Context_Schema_Kind is (Context_Schema_Kind'Val (Requests.T_ContextSchema_Kind'Pos (Item.Data.Kind)));
 function Context_Schema_From_String (Item : String) return Thinkthen.Inputs.Context_Schema is ((Data => (Kind => Requests.T_ContextSchema_arm_0, V_0 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.Context_Schema) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_0));
 function Context_Schema_From_Object (Item : Thinkthen.Inputs.JSON_Map) return Thinkthen.Inputs.Context_Schema is ((Data => (Kind => Requests.T_ContextSchema_arm_1, V_1 => Native.Unwrap (Item))));
 function As_Object (Item : Thinkthen.Inputs.Context_Schema) return Thinkthen.Inputs.JSON_Map is (Native.Wrap (Item.Data.V_1));
+function Make_Engine_Settings return Thinkthen.Inputs.Engine_Settings is ((Data => (others => <>)));
+function With_Backend (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_backend := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Backend;
+function Get_Backend (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_backend.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_backend.Value);
+end Get_Backend;
+function Has_Backend (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_backend.Present);
+function With_Base_Url (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_base_url := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Base_Url;
+function Get_Base_Url (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_base_url.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_base_url.Value);
+end Get_Base_Url;
+function Has_Base_Url (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_base_url.Present);
+function With_Batch (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Batch) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Batch;
+function Get_Batch (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Batch is
+begin
+if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_batch.Value);
+end Get_Batch;
+function Has_Batch (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_batch.Present);
+function With_Cache (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Cache_Document) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_cache := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Cache;
+function Get_Cache (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Cache_Document is
+begin
+if not Item.Data.T_cache.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_cache.Value);
+end Get_Cache;
+function Has_Cache (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_cache.Present);
+function With_Max_Estimated_Input_Tokens_Total (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Input_Token_Limit) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_max_estimated_input_tokens_total := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Estimated_Input_Tokens_Total;
+function Get_Max_Estimated_Input_Tokens_Total (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Input_Token_Limit is
+begin
+if not Item.Data.T_max_estimated_input_tokens_total.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_estimated_input_tokens_total.Value);
+end Get_Max_Estimated_Input_Tokens_Total;
+function Has_Max_Estimated_Input_Tokens_Total (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_max_estimated_input_tokens_total.Present);
+function With_Max_Request_Bytes (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_max_request_bytes := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Request_Bytes;
+function Get_Max_Request_Bytes (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Unsigned is
+begin
+if not Item.Data.T_max_request_bytes.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_request_bytes.Value);
+end Get_Max_Request_Bytes;
+function Has_Max_Request_Bytes (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_max_request_bytes.Present);
+function With_Max_Requests (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Request_Limit) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_max_requests := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Requests;
+function Get_Max_Requests (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Request_Limit is
+begin
+if not Item.Data.T_max_requests.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_requests.Value);
+end Get_Max_Requests;
+function Has_Max_Requests (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_max_requests.Present);
+function With_Max_Requests_Total (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Total_Request_Limit) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_max_requests_total := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Requests_Total;
+function Get_Max_Requests_Total (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Total_Request_Limit is
+begin
+if not Item.Data.T_max_requests_total.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_requests_total.Value);
+end Get_Max_Requests_Total;
+function Has_Max_Requests_Total (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_max_requests_total.Present);
+function With_Max_Retries (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_max_retries := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Max_Retries;
+function Get_Max_Retries (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Unsigned is
+begin
+if not Item.Data.T_max_retries.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_max_retries.Value);
+end Get_Max_Retries;
+function Has_Max_Retries (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_max_retries.Present);
+function With_Model (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_model := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Model;
+function Get_Model (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_model.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_model.Value);
+end Get_Model;
+function Has_Model (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_model.Present);
+function With_Profile (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_profile := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Profile;
+function Get_Profile (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_profile.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_profile.Value);
+end Get_Profile;
+function Has_Profile (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_profile.Present);
+function With_Proxy (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_proxy := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Proxy;
+function Get_Proxy (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Value is
+begin
+if not Item.Data.T_proxy.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_proxy.Value);
+end Get_Proxy;
+function Has_Proxy (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_proxy.Present);
+function With_Record (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_record := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Record;
+function Get_Record (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_record.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_record.Value);
+end Get_Record;
+function Has_Record (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_record.Present);
+function With_Refresh_Cache (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Boolean_Value) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_refresh_cache := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Refresh_Cache;
+function Get_Refresh_Cache (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Boolean_Value is
+begin
+if not Item.Data.T_refresh_cache.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_refresh_cache.Value);
+end Get_Refresh_Cache;
+function Has_Refresh_Cache (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_refresh_cache.Present);
+function With_Replay (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_replay := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Replay;
+function Get_Replay (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_replay.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_replay.Value);
+end Get_Replay;
+function Has_Replay (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_replay.Present);
+function With_Throttle (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_throttle := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Throttle;
+function Get_Throttle (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Unsigned is
+begin
+if not Item.Data.T_throttle.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_throttle.Value);
+end Get_Throttle;
+function Has_Throttle (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_throttle.Present);
+function With_Timeout (Item : Thinkthen.Inputs.Engine_Settings; Field : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_timeout := (Present => True, Value => Native.Unwrap (Field));
+return Result;
+end With_Timeout;
+function Get_Timeout (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Unsigned is
+begin
+if not Item.Data.T_timeout.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_timeout.Value);
+end Get_Timeout;
+function Has_Timeout (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_timeout.Present);
+function With_Usd_Per_Million_Input (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_usd_per_million_input := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Usd_Per_Million_Input;
+function Get_Usd_Per_Million_Input (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_usd_per_million_input.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_usd_per_million_input.Value);
+end Get_Usd_Per_Million_Input;
+function Has_Usd_Per_Million_Input (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_usd_per_million_input.Present);
+function With_Usd_Per_Million_Output (Item : Thinkthen.Inputs.Engine_Settings; Field : String) return Thinkthen.Inputs.Engine_Settings is
+Result : Thinkthen.Inputs.Engine_Settings := Item;
+begin
+Result.Data.T_usd_per_million_output := (Present => True, Value => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Field)));
+return Result;
+end With_Usd_Per_Million_Output;
+function Get_Usd_Per_Million_Output (Item : Thinkthen.Inputs.Engine_Settings) return Thinkthen.Inputs.Text is
+begin
+if not Item.Data.T_usd_per_million_output.Present then raise Constraint_Error with "missing input field"; end if;
+return Native.Wrap (Item.Data.T_usd_per_million_output.Value);
+end Get_Usd_Per_Million_Output;
+function Has_Usd_Per_Million_Output (Item : Thinkthen.Inputs.Engine_Settings) return Boolean is (Item.Data.T_usd_per_million_output.Present);
+function Kind (Item : Thinkthen.Inputs.Input_Token_Limit) return Input_Token_Limit_Kind is (Input_Token_Limit_Kind'Val (Requests.T_EngineSettings_field_max_estimated_input_tokens_total_Kind'Pos (Item.Data.Kind)));
+function Input_Token_Limit_From_Integer_Value (Item : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Input_Token_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_estimated_input_tokens_total_arm_0, V_0 => Native.Unwrap (Item))));
+function As_Integer_Value (Item : Thinkthen.Inputs.Input_Token_Limit) return Thinkthen.Inputs.Unsigned is (Native.Wrap (Item.Data.V_0));
+function Input_Token_Limit_From_Null_Item return Thinkthen.Inputs.Input_Token_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_estimated_input_tokens_total_arm_1, V_1 => Requests.T_Null'(null record))));
+function Kind (Item : Thinkthen.Inputs.Request_Limit) return Request_Limit_Kind is (Request_Limit_Kind'Val (Requests.T_EngineSettings_field_max_requests_Kind'Pos (Item.Data.Kind)));
+function Request_Limit_From_Integer_Value (Item : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Request_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_requests_arm_0, V_0 => Native.Unwrap (Item))));
+function As_Integer_Value (Item : Thinkthen.Inputs.Request_Limit) return Thinkthen.Inputs.Unsigned is (Native.Wrap (Item.Data.V_0));
+function Request_Limit_From_Null_Item return Thinkthen.Inputs.Request_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_requests_arm_1, V_1 => Requests.T_Null'(null record))));
+function Kind (Item : Thinkthen.Inputs.Total_Request_Limit) return Total_Request_Limit_Kind is (Total_Request_Limit_Kind'Val (Requests.T_EngineSettings_field_max_requests_total_Kind'Pos (Item.Data.Kind)));
+function Total_Request_Limit_From_Integer_Value (Item : Thinkthen.Inputs.Unsigned) return Thinkthen.Inputs.Total_Request_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_requests_total_arm_0, V_0 => Native.Unwrap (Item))));
+function As_Integer_Value (Item : Thinkthen.Inputs.Total_Request_Limit) return Thinkthen.Inputs.Unsigned is (Native.Wrap (Item.Data.V_0));
+function Total_Request_Limit_From_Null_Item return Thinkthen.Inputs.Total_Request_Limit is ((Data => (Kind => Requests.T_EngineSettings_field_max_requests_total_arm_1, V_1 => Requests.T_Null'(null record))));
 function Make_Option_Schema (Name : String) return Thinkthen.Inputs.Option_Schema is ((Data => (T_name => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Name)), others => <>)));
 function With_Description (Item : Thinkthen.Inputs.Option_Schema; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Option_Schema is
 Result : Thinkthen.Inputs.Option_Schema := Item;
@@ -1765,22 +1998,22 @@ function As_Integer_Value (Item : Thinkthen.Inputs.Batch) return Thinkthen.Input
 function Batch_From_String (Item : String) return Thinkthen.Inputs.Batch is ((Data => (Kind => Requests.T_RequestBatch_arm_1, V_1 => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)))));
 function As_String (Item : Thinkthen.Inputs.Batch) return Thinkthen.Inputs.Text is (Native.Wrap (Item.Data.V_1));
 function Kind (Item : Thinkthen.Inputs.Definition) return Definition_Kind is (Definition_Kind'Val (Requests.T_RequestDefinition_Kind'Pos (Item.Data.Kind)));
-function Definition_From_Definition_decide (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_decide, V_0 => Native.Unwrap (Item))));
-function As_Definition_decide (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_decide is (Native.Wrap (Item.Data.V_0));
-function Definition_From_Definition_choose (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_choose, V_1 => Native.Unwrap (Item))));
-function As_Definition_choose (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_choose is (Native.Wrap (Item.Data.V_1));
-function Definition_From_Definition_tag (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_tag, V_2 => Native.Unwrap (Item))));
-function As_Definition_tag (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_tag is (Native.Wrap (Item.Data.V_2));
-function Definition_From_Definition_score (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_score, V_3 => Native.Unwrap (Item))));
-function As_Definition_score (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_score is (Native.Wrap (Item.Data.V_3));
-function Definition_From_Definition_relate (Item : Thinkthen.Inputs.Definition_relate) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_relate, V_4 => Native.Unwrap (Item))));
-function As_Definition_relate (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_relate is (Native.Wrap (Item.Data.V_4));
-function Definition_From_Definition_find (Item : Thinkthen.Inputs.Definition_find) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_find, V_5 => Native.Unwrap (Item))));
-function As_Definition_find (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_find is (Native.Wrap (Item.Data.V_5));
-function Definition_From_Definition_Recognize_Definition (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_RecognizeDefinition, V_6 => Native.Unwrap (Item))));
-function As_Definition_Recognize_Definition (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_Recognize_Definition is (Native.Wrap (Item.Data.V_6));
-function Definition_From_Definition_Annotate_Definition (Item : Thinkthen.Inputs.Definition_Annotate_Definition) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_AnnotateDefinition, V_7 => Native.Unwrap (Item))));
-function As_Definition_Annotate_Definition (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_Annotate_Definition is (Native.Wrap (Item.Data.V_7));
+function Definition_From_decide (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_decide, V_0 => Native.Unwrap (Item))));
+function As_decide (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_decide is (Native.Wrap (Item.Data.V_0));
+function Definition_From_choose (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_choose, V_1 => Native.Unwrap (Item))));
+function As_choose (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_choose is (Native.Wrap (Item.Data.V_1));
+function Definition_From_tag (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_tag, V_2 => Native.Unwrap (Item))));
+function As_tag (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_tag is (Native.Wrap (Item.Data.V_2));
+function Definition_From_score (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_score, V_3 => Native.Unwrap (Item))));
+function As_score (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_score is (Native.Wrap (Item.Data.V_3));
+function Definition_From_relate (Item : Thinkthen.Inputs.Definition_relate) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_relate, V_4 => Native.Unwrap (Item))));
+function As_relate (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_relate is (Native.Wrap (Item.Data.V_4));
+function Definition_From_find (Item : Thinkthen.Inputs.Definition_find) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_Authored_find, V_5 => Native.Unwrap (Item))));
+function As_find (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_find is (Native.Wrap (Item.Data.V_5));
+function Definition_From_Recognize_Definition (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_RecognizeDefinition, V_6 => Native.Unwrap (Item))));
+function As_Recognize_Definition (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_Recognize_Definition is (Native.Wrap (Item.Data.V_6));
+function Definition_From_Annotate_Definition (Item : Thinkthen.Inputs.Definition_Annotate_Definition) return Thinkthen.Inputs.Definition is ((Data => (Kind => Requests.T_RequestDefinition_arm_AnnotateDefinition, V_7 => Native.Unwrap (Item))));
+function As_Annotate_Definition (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Definition_Annotate_Definition is (Native.Wrap (Item.Data.V_7));
 function Make_Definition_Annotate_Definition (Questions : Thinkthen.Inputs.Annotate_Question_Map) return Thinkthen.Inputs.Definition_Annotate_Definition is ((Data => (T_questions => Native.Unwrap (Questions), others => <>)));
 function With_Batch (Item : Thinkthen.Inputs.Definition_Annotate_Definition; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Definition_Annotate_Definition is
 Result : Thinkthen.Inputs.Definition_Annotate_Definition := Item;
@@ -1829,13 +2062,13 @@ return Native.Wrap (Item.Data.T_threshold.Value);
 end Get_Threshold;
 function Has_Threshold (Item : Thinkthen.Inputs.Definition_Annotate_Definition) return Boolean is (Item.Data.T_threshold.Present);
 function Make_Definition_choose (Choose : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_choose is ((Data => (T_choose => Native.Unwrap (Choose), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Definition_choose_batch) return Thinkthen.Inputs.Definition_choose is
+function With_Batch (Item : Thinkthen.Inputs.Definition_choose; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_choose is
 Result : Thinkthen.Inputs.Definition_choose := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Definition_choose_batch is
+function Get_Batch (Item : Thinkthen.Inputs.Definition_choose) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -1959,18 +2192,14 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_choose) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.Definition_choose_batch) return Definition_choose_batch_Kind is (Definition_choose_batch_Kind'Val (Requests.T_RequestDefinition_Authored_choose_field_batch_Kind'Pos (Item.Data.Kind)));
-function Definition_choose_batch_From_Max return Thinkthen.Inputs.Definition_choose_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_choose_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function Definition_choose_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_choose_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_choose_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_choose_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Make_Definition_decide (Decide : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_decide is ((Data => (T_decide => Native.Unwrap (Decide), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Definition_decide_batch) return Thinkthen.Inputs.Definition_decide is
+function With_Batch (Item : Thinkthen.Inputs.Definition_decide; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_decide is
 Result : Thinkthen.Inputs.Definition_decide := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Definition_decide_batch is
+function Get_Batch (Item : Thinkthen.Inputs.Definition_decide) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -2106,10 +2335,6 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_decide) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.Definition_decide_batch) return Definition_decide_batch_Kind is (Definition_decide_batch_Kind'Val (Requests.T_RequestDefinition_Authored_decide_field_batch_Kind'Pos (Item.Data.Kind)));
-function Definition_decide_batch_From_Max return Thinkthen.Inputs.Definition_decide_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_decide_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function Definition_decide_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_decide_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_decide_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_decide_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Make_Definition_find (Find : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_find is ((Data => (T_find => Native.Unwrap (Find), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_find; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_find is
 Result : Thinkthen.Inputs.Definition_find := Item;
@@ -2301,13 +2526,13 @@ return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_relate) return Boolean is (Item.Data.T_wording_version.Present);
 function Make_Definition_score (Score : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_score is ((Data => (T_score => Native.Unwrap (Score), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Definition_score_batch) return Thinkthen.Inputs.Definition_score is
+function With_Batch (Item : Thinkthen.Inputs.Definition_score; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_score is
 Result : Thinkthen.Inputs.Definition_score := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Definition_score_batch is
+function Get_Batch (Item : Thinkthen.Inputs.Definition_score) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -2419,18 +2644,14 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_score) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.Definition_score_batch) return Definition_score_batch_Kind is (Definition_score_batch_Kind'Val (Requests.T_RequestDefinition_Authored_score_field_batch_Kind'Pos (Item.Data.Kind)));
-function Definition_score_batch_From_Max return Thinkthen.Inputs.Definition_score_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_score_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function Definition_score_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_score_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_score_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_score_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Make_Definition_tag (Tag : Thinkthen.Inputs.Question_Wording) return Thinkthen.Inputs.Definition_tag is ((Data => (T_tag => Native.Unwrap (Tag), others => <>)));
-function With_Batch (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Definition_tag_batch) return Thinkthen.Inputs.Definition_tag is
+function With_Batch (Item : Thinkthen.Inputs.Definition_tag; Field : Thinkthen.Inputs.Question_Batch) return Thinkthen.Inputs.Definition_tag is
 Result : Thinkthen.Inputs.Definition_tag := Item;
 begin
 Result.Data.T_batch := (Present => True, Value => Native.Unwrap (Field));
 return Result;
 end With_Batch;
-function Get_Batch (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Definition_tag_batch is
+function Get_Batch (Item : Thinkthen.Inputs.Definition_tag) return Thinkthen.Inputs.Question_Batch is
 begin
 if not Item.Data.T_batch.Present then raise Constraint_Error with "missing input field"; end if;
 return Native.Wrap (Item.Data.T_batch.Value);
@@ -2554,10 +2775,6 @@ if not Item.Data.T_wording_version.Present then raise Constraint_Error with "mis
 return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_tag) return Boolean is (Item.Data.T_wording_version.Present);
-function Kind (Item : Thinkthen.Inputs.Definition_tag_batch) return Definition_tag_batch_Kind is (Definition_tag_batch_Kind'Val (Requests.T_RequestDefinition_Authored_tag_field_batch_Kind'Pos (Item.Data.Kind)));
-function Definition_tag_batch_From_Max return Thinkthen.Inputs.Definition_tag_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_tag_field_batch_arm_0, V_0 => Requests.T_Literal_max'(null record))));
-function Definition_tag_batch_From_Integer_Value (Item : Thinkthen.Inputs.Integer_Value) return Thinkthen.Inputs.Definition_tag_batch is ((Data => (Kind => Requests.T_RequestDefinition_Authored_tag_field_batch_arm_1, V_1 => Native.Unwrap (Item))));
-function As_Integer_Value (Item : Thinkthen.Inputs.Definition_tag_batch) return Thinkthen.Inputs.Integer_Value is (Native.Wrap (Item.Data.V_1));
 function Make_Definition_Recognize_Definition (Recognize : Thinkthen.Inputs.Recognition_Rules) return Thinkthen.Inputs.Definition_Recognize_Definition is ((Data => (T_recognize => Native.Unwrap (Recognize), others => <>)));
 function With_Context_Schema (Item : Thinkthen.Inputs.Definition_Recognize_Definition; Field : Thinkthen.Inputs.input_Declaration) return Thinkthen.Inputs.Definition_Recognize_Definition is
 Result : Thinkthen.Inputs.Definition_Recognize_Definition := Item;
@@ -2678,10 +2895,10 @@ return Native.Wrap (Item.Data.T_wording_version.Value);
 end Get_Wording_Version;
 function Has_Wording_Version (Item : Thinkthen.Inputs.Definition_Recognize_Definition) return Boolean is (Item.Data.T_wording_version.Present);
 function Kind (Item : Thinkthen.Inputs.Image) return Image_Kind is (Image_Kind'Val (Requests.T_RequestImage_Kind'Pos (Item.Data.Kind)));
-function Image_From_Image_file (Item : Thinkthen.Inputs.Image_file) return Thinkthen.Inputs.Image is ((Data => (Kind => Requests.T_RequestImage_arm_file, V_0 => Native.Unwrap (Item))));
-function As_Image_file (Item : Thinkthen.Inputs.Image) return Thinkthen.Inputs.Image_file is (Native.Wrap (Item.Data.V_0));
-function Image_From_Image_bytes (Item : Thinkthen.Inputs.Image_bytes) return Thinkthen.Inputs.Image is ((Data => (Kind => Requests.T_RequestImage_arm_bytes, V_1 => Native.Unwrap (Item))));
-function As_Image_bytes (Item : Thinkthen.Inputs.Image) return Thinkthen.Inputs.Image_bytes is (Native.Wrap (Item.Data.V_1));
+function Image_From_file (Item : Thinkthen.Inputs.Image_file) return Thinkthen.Inputs.Image is ((Data => (Kind => Requests.T_RequestImage_arm_file, V_0 => Native.Unwrap (Item))));
+function As_file (Item : Thinkthen.Inputs.Image) return Thinkthen.Inputs.Image_file is (Native.Wrap (Item.Data.V_0));
+function Image_From_bytes (Item : Thinkthen.Inputs.Image_bytes) return Thinkthen.Inputs.Image is ((Data => (Kind => Requests.T_RequestImage_arm_bytes, V_1 => Native.Unwrap (Item))));
+function As_bytes (Item : Thinkthen.Inputs.Image) return Thinkthen.Inputs.Image_bytes is (Native.Wrap (Item.Data.V_1));
 function Make_Image_bytes (Bytes : String; Media : Thinkthen.Inputs.Image_Media) return Thinkthen.Inputs.Image_bytes is ((Data => (T_bytes => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Bytes)), T_media => Native.Unwrap (Media), others => <>)));
 function With_Bytes (Item : Thinkthen.Inputs.Image_bytes; Field : String) return Thinkthen.Inputs.Image_bytes is
 Result : Thinkthen.Inputs.Image_bytes := Item;
@@ -2727,27 +2944,27 @@ begin
 return Native.Wrap (Item.Data.T_path);
 end Get_Path;
 function Kind (Item : Thinkthen.Inputs.Input) return Input_Kind is (Input_Kind'Val (Requests.T_RequestInput_Kind'Pos (Item.Data.Kind)));
-function Input_From_Input_text (Item : Thinkthen.Inputs.Input_text) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_text, V_0 => Native.Unwrap (Item))));
+function Input_From_text (Item : Thinkthen.Inputs.Input_text) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_text, V_0 => Native.Unwrap (Item))));
 function Text_Input (Item : String) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_text, V_0 => (T_text => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Input_text (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_text is (Native.Wrap (Item.Data.V_0));
-function Input_From_Input_json (Item : Thinkthen.Inputs.Input_json) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_json, V_1 => Native.Unwrap (Item))));
+function As_text (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_text is (Native.Wrap (Item.Data.V_0));
+function Input_From_json (Item : Thinkthen.Inputs.Input_json) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_json, V_1 => Native.Unwrap (Item))));
 function Json_Input (Item : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_json, V_1 => (T_value => Native.Unwrap (Item), others => <>))));
-function As_Input_json (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_json is (Native.Wrap (Item.Data.V_1));
-function Input_From_Input_records (Item : Thinkthen.Inputs.Input_records) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_records, V_2 => Native.Unwrap (Item))));
+function As_json (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_json is (Native.Wrap (Item.Data.V_1));
+function Input_From_records (Item : Thinkthen.Inputs.Input_records) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_records, V_2 => Native.Unwrap (Item))));
 function Records_Input (Item : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_records, V_2 => (T_items => Native.Unwrap (Item), others => <>))));
-function As_Input_records (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_records is (Native.Wrap (Item.Data.V_2));
-function Input_From_Input_units (Item : Thinkthen.Inputs.Input_units) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_units, V_3 => Native.Unwrap (Item))));
+function As_records (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_records is (Native.Wrap (Item.Data.V_2));
+function Input_From_units (Item : Thinkthen.Inputs.Input_units) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_units, V_3 => Native.Unwrap (Item))));
 function Units_Input (Item : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_units, V_3 => (T_items => Native.Unwrap (Item), others => <>))));
-function As_Input_units (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_units is (Native.Wrap (Item.Data.V_3));
-function Input_From_Input_entities (Item : Thinkthen.Inputs.Input_entities) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_entities, V_4 => Native.Unwrap (Item))));
+function As_units (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_units is (Native.Wrap (Item.Data.V_3));
+function Input_From_entities (Item : Thinkthen.Inputs.Input_entities) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_entities, V_4 => Native.Unwrap (Item))));
 function Entities_Input (Item : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_entities, V_4 => (T_items => Native.Unwrap (Item), others => <>))));
-function As_Input_entities (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_entities is (Native.Wrap (Item.Data.V_4));
-function Input_From_Input_source (Item : Thinkthen.Inputs.Input_source) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_source, V_5 => Native.Unwrap (Item))));
+function As_entities (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_entities is (Native.Wrap (Item.Data.V_4));
+function Input_From_source (Item : Thinkthen.Inputs.Input_source) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_source, V_5 => Native.Unwrap (Item))));
 function Source_Input (Item : Thinkthen.Inputs.Source) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_source, V_5 => (T_source => Native.Unwrap (Item), others => <>))));
-function As_Input_source (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_source is (Native.Wrap (Item.Data.V_5));
-function Input_From_Input_feed (Item : Thinkthen.Inputs.Input_feed) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_feed, V_6 => Native.Unwrap (Item))));
+function As_source (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_source is (Native.Wrap (Item.Data.V_5));
+function Input_From_feed (Item : Thinkthen.Inputs.Input_feed) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_feed, V_6 => Native.Unwrap (Item))));
 function Feed_Input (Item : String) return Thinkthen.Inputs.Input is ((Data => (Kind => Requests.T_RequestInput_arm_feed, V_6 => (T_name => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Input_feed (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_feed is (Native.Wrap (Item.Data.V_6));
+function As_feed (Item : Thinkthen.Inputs.Input) return Thinkthen.Inputs.Input_feed is (Native.Wrap (Item.Data.V_6));
 function Make_Input_entities (Items : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input_entities is ((Data => (T_items => Native.Unwrap (Items), others => <>)));
 function With_Items (Item : Thinkthen.Inputs.Input_entities; Field : Thinkthen.Inputs.Item_List) return Thinkthen.Inputs.Input_entities is
 Result : Thinkthen.Inputs.Input_entities := Item;
@@ -3224,12 +3441,12 @@ return Native.Wrap (Item.Data.T_top.Value);
 end Get_Top;
 function Has_Top (Item : Thinkthen.Inputs.Options) return Boolean is (Item.Data.T_top.Present);
 function Kind (Item : Thinkthen.Inputs.Original) return Original_Kind is (Original_Kind'Val (Requests.T_RequestOriginal_Kind'Pos (Item.Data.Kind)));
-function Original_From_Original_text (Item : Thinkthen.Inputs.Original_text) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_text, V_0 => Native.Unwrap (Item))));
+function Original_From_text (Item : Thinkthen.Inputs.Original_text) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_text, V_0 => Native.Unwrap (Item))));
 function Text_Original (Item : String) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_text, V_0 => (T_text => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Original_text (Item : Thinkthen.Inputs.Original) return Thinkthen.Inputs.Original_text is (Native.Wrap (Item.Data.V_0));
-function Original_From_Original_json (Item : Thinkthen.Inputs.Original_json) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_json, V_1 => Native.Unwrap (Item))));
+function As_text (Item : Thinkthen.Inputs.Original) return Thinkthen.Inputs.Original_text is (Native.Wrap (Item.Data.V_0));
+function Original_From_json (Item : Thinkthen.Inputs.Original_json) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_json, V_1 => Native.Unwrap (Item))));
 function Json_Original (Item : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Original is ((Data => (Kind => Requests.T_RequestOriginal_arm_json, V_1 => (T_value => Native.Unwrap (Item), others => <>))));
-function As_Original_json (Item : Thinkthen.Inputs.Original) return Thinkthen.Inputs.Original_json is (Native.Wrap (Item.Data.V_1));
+function As_json (Item : Thinkthen.Inputs.Original) return Thinkthen.Inputs.Original_json is (Native.Wrap (Item.Data.V_1));
 function Make_Original_json (Value : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Original_json is ((Data => (T_value => Native.Unwrap (Value), others => <>)));
 function With_Value (Item : Thinkthen.Inputs.Original_json; Field : Thinkthen.Inputs.Value) return Thinkthen.Inputs.Original_json is
 Result : Thinkthen.Inputs.Original_json := Item;
@@ -3253,21 +3470,21 @@ begin
 return Native.Wrap (Item.Data.T_text);
 end Get_Text;
 function Kind (Item : Thinkthen.Inputs.Question) return Question_Kind is (Question_Kind'Val (Requests.T_RequestQuestion_Kind'Pos (Item.Data.Kind)));
-function Question_From_Question_text (Item : Thinkthen.Inputs.Question_text) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_text, V_0 => Native.Unwrap (Item))));
+function Question_From_text (Item : Thinkthen.Inputs.Question_text) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_text, V_0 => Native.Unwrap (Item))));
 function Text_Question (Item : String) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_text, V_0 => (T_text => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Question_text (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_text is (Native.Wrap (Item.Data.V_0));
-function Question_From_Question_definition (Item : Thinkthen.Inputs.Question_definition) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_definition, V_1 => Native.Unwrap (Item))));
+function As_text (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_text is (Native.Wrap (Item.Data.V_0));
+function Question_From_definition (Item : Thinkthen.Inputs.Question_definition) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_definition, V_1 => Native.Unwrap (Item))));
 function Definition_Question (Item : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_definition, V_1 => (T_value => Native.Unwrap (Item), others => <>))));
-function As_Question_definition (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_definition is (Native.Wrap (Item.Data.V_1));
-function Question_From_Question_file (Item : Thinkthen.Inputs.Question_file) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_file, V_2 => Native.Unwrap (Item))));
+function As_definition (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_definition is (Native.Wrap (Item.Data.V_1));
+function Question_From_file (Item : Thinkthen.Inputs.Question_file) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_file, V_2 => Native.Unwrap (Item))));
 function File_Question (Item : String) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_file, V_2 => (T_path => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Question_file (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_file is (Native.Wrap (Item.Data.V_2));
-function Question_From_Question_name (Item : Thinkthen.Inputs.Question_name) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_name, V_3 => Native.Unwrap (Item))));
+function As_file (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_file is (Native.Wrap (Item.Data.V_2));
+function Question_From_name (Item : Thinkthen.Inputs.Question_name) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_name, V_3 => Native.Unwrap (Item))));
 function Name_Question (Item : String) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_name, V_3 => (T_name => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Question_name (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_name is (Native.Wrap (Item.Data.V_3));
-function Question_From_Question_reference (Item : Thinkthen.Inputs.Question_reference) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_reference, V_4 => Native.Unwrap (Item))));
+function As_name (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_name is (Native.Wrap (Item.Data.V_3));
+function Question_From_reference (Item : Thinkthen.Inputs.Question_reference) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_reference, V_4 => Native.Unwrap (Item))));
 function Reference_Question (Item : String) return Thinkthen.Inputs.Question is ((Data => (Kind => Requests.T_RequestQuestion_arm_reference, V_4 => (T_reference => Requests.T_Text (Ada.Strings.Unbounded.To_Unbounded_String (Item)), others => <>))));
-function As_Question_reference (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_reference is (Native.Wrap (Item.Data.V_4));
+function As_reference (Item : Thinkthen.Inputs.Question) return Thinkthen.Inputs.Question_reference is (Native.Wrap (Item.Data.V_4));
 function Make_Question_definition (Value : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Question_definition is ((Data => (T_value => Native.Unwrap (Value), others => <>)));
 function With_Value (Item : Thinkthen.Inputs.Question_definition; Field : Thinkthen.Inputs.Definition) return Thinkthen.Inputs.Question_definition is
 Result : Thinkthen.Inputs.Question_definition := Item;

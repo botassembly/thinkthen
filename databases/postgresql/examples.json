@@ -24,7 +24,7 @@
       "expected": "0.9"
     },
     "choose": {
-      "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now', NULL);",
+      "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now', members => NULL);",
       "expected": "the refund desk"
     },
     "choose_native_plain": {
@@ -32,11 +32,11 @@
       "expected": "the refund desk"
     },
     "score": {
-      "sql": "SELECT thinkthen_score('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later', NULL);",
+      "sql": "SELECT thinkthen_score('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', 'maybe later', members => NULL);",
       "expected": "0.15"
     },
     "tag": {
-      "sql": "SELECT array_to_string(thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping', NULL), ',');",
+      "sql": "SELECT array_to_string(thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping', members => NULL), ',');",
       "expected": "refund,shipping"
     },
     "find_empty": {
@@ -48,7 +48,7 @@
       "expected": "{\"band\": true, \"spam\": true}"
     },
     "details": {
-      "sql": "SELECT jsonb_array_length(thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')->'meta'->'requests');",
+      "sql": "SELECT cardinality((thinkthen_details('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now')).requests);",
       "expected": "1"
     },
     "usage": {

@@ -9,7 +9,7 @@ final class Client
     private \FFI $ffi;
     private ?\FFI\CData $engine = null;
     private \WeakMap $operations;
-    public function __construct(array|\ThinkThen\Inputs\Settings $settings = [], ?string $library = null)
+    public function __construct(\ThinkThen\Inputs\Settings $settings = new \ThinkThen\Inputs\Settings(), ?string $library = null)
     {
         $this->operations = new \WeakMap();
         $library ??= dirname(__DIR__, 2).'/native/libthinkthen.so';
@@ -18,7 +18,7 @@ final class Client
             if ($declarations === false) throw new \RuntimeException('native declarations are missing');
             $this->ffi = \FFI::cdef($declarations, $library);
         } catch (\Throwable $error) { throw new LocalFailure('native library could not be loaded', previous: $error); }
-        $engine = $this->ffi->thinkthen_engine_new_with(\ThinkThen\Internal\Encoder::encode(is_array($settings) ? (object)$settings : $settings));
+        $engine = $this->ffi->thinkthen_engine_new_with(\ThinkThen\Internal\Encoder::encode($settings));
         if ($engine === null || \FFI::isNull($engine)) {
             $code = $this->ffi->thinkthen_error_code(null);
             \ThinkThen\Internal\ErrorFactory::raise($this->ffi, $code, false);
@@ -31,23 +31,24 @@ final class Client
     public static function questionReference(string $reference): \ThinkThen\Inputs\QuestionSource { return new \ThinkThen\Inputs\QuestionReference($reference); }
     public static function images(array $images): Item { return new Item(null, ['images' => $images], false); }
     public static function item(mixed $value, array $fields = []): Item { return new Item($value, $fields); }
-    public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
-        array|\ThinkThen\Inputs\Options $options = [], ?Cancellation $cancel = null): Operation
+    public function start(string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options(), ?Cancellation $cancel = null): Operation
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
         if ($cancel?->cancelled) throw new CancelledFailure('the call was cancelled');
-        $operation = new Operation($this, $this->ffi, $this->engine, $function, $question, $input, $options, $cancel);
+        $create = \Closure::bind(static fn(...$arguments) => new Operation(...$arguments), null, Operation::class);
+        $operation = $create($this, $this->ffi, $this->engine, $function, $question, $input, $options, $cancel);
         $this->operations[$operation] = true;
         return $operation;
     }
-    private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\Document|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
-        array|\ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
+    private function call(string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input,
+        \ThinkThen\Inputs\Options $options, ?Cancellation $cancel): \ThinkThen\Results\Completed
     {
         $operation = $this->start($function, $question, $input, $options, $cancel);
         try { return $operation->result(); } finally { $operation->close(); }
     }
     /** Preview through native admission without sending a request. */
-    public function plan(string $function, mixed $question, mixed $input, array|\ThinkThen\Inputs\Options $options = []): \ThinkThen\Results\Plan
+    public function plan(string $function, string|array|\stdClass|\ThinkThen\Inputs\QuestionDefinition|\ThinkThen\Inputs\QuestionSource $question, mixed $input, \ThinkThen\Inputs\Options $options = new \ThinkThen\Inputs\Options()): \ThinkThen\Results\Plan
     {
         if ($this->engine === null) throw new UsageFailure('client is closed');
         $request = new \ThinkThen\Internal\Request($this->ffi, $function, $question, $input, $options);

@@ -3,6 +3,7 @@ import hashlib
 import json
 import pathlib
 import sys
+from portable import canonical_question_key
 
 ROWS = json.loads((pathlib.Path(__file__).resolve().parents[1] / "binding-backends.json").read_text())["backends"]
 SLOTS = ("generic_systemone", "generic_decisions", "generic_custom", "capture_systemone", "capture_decisions", "capture_custom", "other", "non_post")
@@ -26,7 +27,7 @@ def alias(row, base):
 
 
 def canonical_replay(folder, row):
-    """Handwritten ADR 0111 answer, independent of the host's plan output."""
+    """Author one canonical cache/2 fixture, independent of host plan output."""
     folder.mkdir(parents=True, exist_ok=True)
     state = json.dumps("Each question quotes the text it asks about.", separators=(",", ":"))
     question = {"type":"noul", "instructions":'The text is "refund". attention?'}
@@ -34,13 +35,14 @@ def canonical_replay(folder, row):
     if row["form"] == "both":
         question["criteria"]["false"] = {}
     question = json.dumps(question, separators=(",", ":"))
-    model = json.dumps(row["model"])
-    key = hashlib.sha256("\n".join(("systemone", row["url"], model, state, question)).encode()).hexdigest()
+    key = canonical_question_key(row["url"], row["model"], row["model"],
+                                 json.loads(state), json.loads(question))
     sha = hashlib.sha256(state.encode()).hexdigest()
-    answer = {"key":key, "url":row["url"], "model":row["model"], "state":sha,
+    answer = {"key_version":2, "adapter":"systemone", "observation_id":key, "batch_size":1,
+              "key":key, "url":row["url"], "model":row["model"], "state":sha,
               "question":question, "answer":'{"type":"noul","noul":0.9}',
               "answered_by":row["model"], "input_tokens":1, "output_tokens":1,
-              "taken_at":0, "origin":"live"}
+              "taken_at":0, "origin":"fixture"}
     (folder / "thinkthen.jsonl").write_text(json.dumps({"sha256":sha,"state":state}) + "\n" + json.dumps(answer) + "\n")
 
 

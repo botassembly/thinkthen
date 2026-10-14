@@ -94,7 +94,7 @@ def readers(definitions):
 
 
 def outputs(definitions):
-    from templates.host_answers import aggregate_answers, scalar_answers, judgment_route
+    from templates.host_answers import aggregate_answers, aggregate_projection, scalar_answers, judgment_route
     scalar = scalar_answers(definitions)
     route, guards = judgment_route(definitions)
     declarations, implementations = [], []
@@ -144,11 +144,14 @@ def outputs(definitions):
     for function,_,payload in aggregate_answers(definitions):
         if function in {function for function,_,_ in scalar}:
             continue
-        target = {'filter':'Boolean_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
+        target = {'filter':'Thinkthen.Values.Value_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
         declarations.append(f'function {function.title()}_Answer (Call : Completion) return {target};')
         body = [f'function {function.title()}_Answer (Call : Completion) return {target} is', f'Item : constant Value := Answer (Call, "{function}", "");', 'begin']
         if function in ('filter','rank'):
-            body += ['declare', f'Items : {target} (1 .. Length (Item));', 'begin', 'for I in Items\'Range loop', 'Items (I) := '+('As_Boolean' if function == 'filter' else "Interfaces.Unsigned_64'Value")+' ('+('Field_Value (Element (Item, I), "value")' if function == 'filter' else 'As_Number (Field_Value (Element (Item, I), "value"))')+');', 'end loop;', 'return Items;', 'end;']
+            _, member = aggregate_projection(function, payload, definitions)
+            selected = 'Field_Value (Element (Item, I), "' + member + '")'
+            projection = selected if function == 'filter' else "Interfaces.Unsigned_64'Value (As_Number (" + selected + '))'
+            body += ['declare', f'Items : {target} (1 .. Length (Item));', 'begin', 'for I in Items\'Range loop', 'Items (I) := ' + projection + ';', 'end loop;', 'return Items;', 'end;']
         elif payload.get('type') == 'array':
             singular = target.removesuffix('_List')
             body += ['declare', f'Items : {target} (1 .. Length (Item));', 'begin', 'for I in Items\'Range loop Items (I) := (Data => Element (Item, I)); end loop;', 'return Items;', 'end;']
@@ -156,7 +159,7 @@ def outputs(definitions):
             body += ['return (Data => Item);']
         implementations.append('\n'.join(body+['end '+function.title()+'_Answer;']))
     for function,_,_ in functions:
-        target = {'decide':'Decision','choose':'Choice','score':'Long_Float','tag':'Text_List','filter':'Boolean_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
+        target = {'decide':'Decision','choose':'Choice','score':'Long_Float','tag':'Text_List','filter':'Thinkthen.Values.Value_List','rank':'Rank_List','find':'Find_Result','annotate':'Annotation_List','recognize':'Recognition_List','relate':'Relation'}[function]
         signature = f'function {function.title()}_Answer (Owner : in out Thinkthen.Sessions.Session; Call : in out Completion) return {target}'
         declarations.append(signature + ';')
         implementations.append(signature + ' is\nbegin\nCall := Collect (Owner);\nreturn ' + function.title() + '_Answer (Call);\nend ' + function.title() + '_Answer;')
@@ -226,7 +229,6 @@ package Thinkthen.Answers is
       end case;
    end record;
    type Text_List is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
-   type Boolean_List is array (Positive range <>) of Boolean;
    type Rank_List is array (Positive range <>) of Interfaces.Unsigned_64;
    type Find_Result is private;
    type Annotation is private;
@@ -271,12 +273,13 @@ with Ada.Unchecked_Conversion;
 with Ada.Strings.Fixed;
 with System;
 with Interfaces.C;
-with Thinkthen_Session_C;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
+with Thinkthen.Session_C;
 package body Thinkthen.Answers is
    use Ada.Strings.Unbounded;
    use Thinkthen.Values;
    use Thinkthen.Sessions;
-   use Thinkthen_Session_C;
+   use Thinkthen.Session_C;
    use Interfaces.C;
    use type Interfaces.Unsigned_32;
    package Packet_Lists is new Ada.Containers.Vectors (Positive, Value);
@@ -288,7 +291,7 @@ package body Thinkthen.Answers is
       Result : Completion;
    begin
       loop
-         Next_Packet (Owner, Packet, Read);
+         Thinkthen.Sessions.Next_Packet (Owner, Packet, Read);
          exit when Read = Finished;
          if Read /= Thinkthen.Sessions.Result then
             Result.Valid := False;

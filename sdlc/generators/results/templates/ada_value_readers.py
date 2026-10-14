@@ -4,19 +4,20 @@
 def outputs():
     spec = """-- Generated canonical value copy adapter. Do not edit.
 with Thinkthen.Values;
-with Thinkthen_Session_C;
+with Thinkthen.Session_C;
 private package Thinkthen.Native_Values is
-   function Read (P : access constant Thinkthen_Session_C.thinkthen_complete_json_v1) return Thinkthen.Values.Value;
+   function Read (P : access constant Thinkthen.Session_C.thinkthen_complete_json_v1) return Thinkthen.Values.Value;
 end Thinkthen.Native_Values;
 """
     body = """-- Generated canonical value copy adapter. Do not edit.
 with Ada.Unchecked_Conversion;
 with Interfaces;
+with Thinkthen.Native_Sessions; use Thinkthen.Native_Sessions;
 with Thinkthen.Sessions; use Thinkthen.Sessions;
 with System;
 package body Thinkthen.Native_Values is
    use Thinkthen.Values;
-   use Thinkthen_Session_C;
+   use Thinkthen.Session_C;
    use type Interfaces.Unsigned_32;
 """ + JSON_READER.replace('Read_Json', 'Read').split('\n', 1)[1] + '\nend Thinkthen.Native_Values;\n'
     return {'thinkthen-native_values.ads': spec, 'thinkthen-native_values.adb': body}

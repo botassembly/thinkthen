@@ -431,7 +431,7 @@ public sealed class AnnotateQuestionTag : AnnotateQuestion {
     }
 }
 public sealed class AuthoredChoose : AuthoredDocument {
-    public AuthoredPresence<AuthoredChooseBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -523,32 +523,6 @@ public sealed class AuthoredChoose : AuthoredDocument {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
-    }
-}
-public abstract class AuthoredChooseBatch : AuthoredDocument {
-    private protected AuthoredChooseBatch() {
-    }
-}
-public sealed class AuthoredChooseBatchInteger : AuthoredChooseBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class AuthoredChooseBatchMax : AuthoredChooseBatch {
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
     }
 }
 public abstract class AuthoredCriterion : AuthoredDocument {
@@ -665,7 +639,7 @@ public sealed class AuthoredCutString : AuthoredCut {
     }
 }
 public sealed class AuthoredDecide : AuthoredDocument {
-    public AuthoredPresence<AuthoredDecideBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -765,32 +739,6 @@ public sealed class AuthoredDecide : AuthoredDocument {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
-    }
-}
-public abstract class AuthoredDecideBatch : AuthoredDocument {
-    private protected AuthoredDecideBatch() {
-    }
-}
-public sealed class AuthoredDecideBatchInteger : AuthoredDecideBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class AuthoredDecideBatchMax : AuthoredDecideBatch {
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
     }
 }
 public sealed class AuthoredDescription : AuthoredDocument {
@@ -1338,6 +1286,42 @@ public sealed class AuthoredProfile : AuthoredDocument {
         } WriteText(writer, Value);
     }
 }
+public abstract class AuthoredQuestionBatch : AuthoredDocument {
+    private protected AuthoredQuestionBatch() {
+    } internal static AuthoredQuestionBatch Read(JsonElement value) {
+        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return AuthoredQuestionBatchMax.Read(value);
+        if ((value.ValueKind == JsonValueKind.Number)) return AuthoredQuestionBatchInteger.Read(value);
+        throw new JsonException("Authored data does not match the native Request schema.");
+    }
+}
+public sealed class AuthoredQuestionBatchInteger : AuthoredQuestionBatch {
+    public required long Value {
+        get;
+        init;
+    }
+    internal new static AuthoredQuestionBatchInteger Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone(), Value = value.GetInt64()
+    };
+    internal override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } writer.WriteNumberValue(Value);
+    }
+}
+public sealed class AuthoredQuestionBatchMax : AuthoredQuestionBatch {
+    internal new static AuthoredQuestionBatchMax Read(JsonElement value) => new() {
+        ParsedDocument = value.Clone()
+    };
+    internal override void Write(Utf8JsonWriter writer) {
+        if (ParsedDocument is {
+        } parsed) {
+            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
+            return;
+        } WriteText(writer, "max");
+    }
+}
 public abstract class AuthoredQuestionText : AuthoredDocument {
     private protected AuthoredQuestionText() {
     } internal static AuthoredQuestionText Read(JsonElement value) {
@@ -1535,7 +1519,7 @@ public sealed class AuthoredRelation : AuthoredDocument {
     }
 }
 public sealed class AuthoredScore : AuthoredDocument {
-    public AuthoredPresence<AuthoredScoreBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -1621,34 +1605,8 @@ public sealed class AuthoredScore : AuthoredDocument {
         } writer.WriteEndObject();
     }
 }
-public abstract class AuthoredScoreBatch : AuthoredDocument {
-    private protected AuthoredScoreBatch() {
-    }
-}
-public sealed class AuthoredScoreBatchInteger : AuthoredScoreBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class AuthoredScoreBatchMax : AuthoredScoreBatch {
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
 public sealed class AuthoredTag : AuthoredDocument {
-    public AuthoredPresence<AuthoredTagBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -1740,32 +1698,6 @@ public sealed class AuthoredTag : AuthoredDocument {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
-    }
-}
-public abstract class AuthoredTagBatch : AuthoredDocument {
-    private protected AuthoredTagBatch() {
-    }
-}
-public sealed class AuthoredTagBatchInteger : AuthoredTagBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class AuthoredTagBatchMax : AuthoredTagBatch {
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
     }
 }
 public abstract class AuthoredThreshold : AuthoredDocument {
@@ -2762,7 +2694,7 @@ public sealed class RequestDefinitionAnnotateDefinition : RequestDefinition {
     }
 }
 public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
-    public AuthoredPresence<RequestDefinitionAuthoredChooseBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -2807,7 +2739,7 @@ public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
         init;
     }
     internal new static RequestDefinitionAuthoredChoose Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredChooseBatch>)(RequestDefinitionAuthoredChooseBatch.Read(value.GetProperty("batch"))) : default,
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         Choose = AuthoredQuestionText.Read(value.GetProperty("choose")), ContextSchema = value.TryGetProperty("context_schema",
         out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
@@ -2869,44 +2801,8 @@ public sealed class RequestDefinitionAuthoredChoose : RequestDefinition {
         } writer.WriteEndObject();
     }
 }
-public abstract class RequestDefinitionAuthoredChooseBatch : AuthoredDocument {
-    private protected RequestDefinitionAuthoredChooseBatch() {
-    } internal static RequestDefinitionAuthoredChooseBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredChooseBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredChooseBatchInteger.Read(value);
-        throw new JsonException("Authored data does not match the native Request schema.");
-    }
-}
-public sealed class RequestDefinitionAuthoredChooseBatchInteger : RequestDefinitionAuthoredChooseBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal new static RequestDefinitionAuthoredChooseBatchInteger Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetInt64()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class RequestDefinitionAuthoredChooseBatchMax : RequestDefinitionAuthoredChooseBatch {
-    internal new static RequestDefinitionAuthoredChooseBatchMax Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
 public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
-    public AuthoredPresence<RequestDefinitionAuthoredDecideBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -2955,7 +2851,7 @@ public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
         init;
     }
     internal new static RequestDefinitionAuthoredDecide Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredDecideBatch>)(RequestDefinitionAuthoredDecideBatch.Read(value.GetProperty("batch"))) : default,
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         Decide = AuthoredQuestionText.Read(value.GetProperty("decide")), False = value.TryGetProperty("false",
         out _) ? (AuthoredPresence<AuthoredCriterion>)(AuthoredCriterion.Read(value.GetProperty("false"))) : default,
@@ -3020,42 +2916,6 @@ public sealed class RequestDefinitionAuthoredDecide : RequestDefinition {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
-    }
-}
-public abstract class RequestDefinitionAuthoredDecideBatch : AuthoredDocument {
-    private protected RequestDefinitionAuthoredDecideBatch() {
-    } internal static RequestDefinitionAuthoredDecideBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredDecideBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredDecideBatchInteger.Read(value);
-        throw new JsonException("Authored data does not match the native Request schema.");
-    }
-}
-public sealed class RequestDefinitionAuthoredDecideBatchInteger : RequestDefinitionAuthoredDecideBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal new static RequestDefinitionAuthoredDecideBatchInteger Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetInt64()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class RequestDefinitionAuthoredDecideBatchMax : RequestDefinitionAuthoredDecideBatch {
-    internal new static RequestDefinitionAuthoredDecideBatchMax Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
     }
 }
 public sealed class RequestDefinitionAuthoredFind : RequestDefinition {
@@ -3223,7 +3083,7 @@ public sealed class RequestDefinitionAuthoredRelate : RequestDefinition {
     }
 }
 public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
-    public AuthoredPresence<RequestDefinitionAuthoredScoreBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -3264,7 +3124,7 @@ public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
         init;
     }
     internal new static RequestDefinitionAuthoredScore Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredScoreBatch>)(RequestDefinitionAuthoredScoreBatch.Read(value.GetProperty("batch"))) : default,
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
         Levels = value.TryGetProperty("levels", out _) ? (AuthoredPresence<AuthoredLevels>)(AuthoredLevels.Read(value.GetProperty("levels"))) : default,
@@ -3321,44 +3181,8 @@ public sealed class RequestDefinitionAuthoredScore : RequestDefinition {
         } writer.WriteEndObject();
     }
 }
-public abstract class RequestDefinitionAuthoredScoreBatch : AuthoredDocument {
-    private protected RequestDefinitionAuthoredScoreBatch() {
-    } internal static RequestDefinitionAuthoredScoreBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredScoreBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredScoreBatchInteger.Read(value);
-        throw new JsonException("Authored data does not match the native Request schema.");
-    }
-}
-public sealed class RequestDefinitionAuthoredScoreBatchInteger : RequestDefinitionAuthoredScoreBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal new static RequestDefinitionAuthoredScoreBatchInteger Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetInt64()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class RequestDefinitionAuthoredScoreBatchMax : RequestDefinitionAuthoredScoreBatch {
-    internal new static RequestDefinitionAuthoredScoreBatchMax Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
-    }
-}
 public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
-    public AuthoredPresence<RequestDefinitionAuthoredTagBatch> Batch {
+    public AuthoredPresence<AuthoredQuestionBatch> Batch {
         get;
         init;
     }
@@ -3403,7 +3227,7 @@ public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
         init;
     }
     internal new static RequestDefinitionAuthoredTag Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<RequestDefinitionAuthoredTagBatch>)(RequestDefinitionAuthoredTagBatch.Read(value.GetProperty("batch"))) : default,
+        ParsedDocument = value.Clone(), Batch = value.TryGetProperty("batch", out _) ? (AuthoredPresence<AuthoredQuestionBatch>)(AuthoredQuestionBatch.Read(value.GetProperty("batch"))) : default,
         ContextSchema = value.TryGetProperty("context_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("context_schema"))) : default,
         ItemSchema = value.TryGetProperty("item_schema", out _) ? (AuthoredPresence<AuthoredInputDeclaration>)(AuthoredInputDeclaration.Read(value.GetProperty("item_schema"))) : default,
         Labels = value.TryGetProperty("labels", out _) ? (AuthoredPresence<AuthoredLabels>)(AuthoredLabels.Read(value.GetProperty("labels"))) : default,
@@ -3463,42 +3287,6 @@ public sealed class RequestDefinitionAuthoredTag : RequestDefinition {
             writer.WritePropertyName("wording_version");
             writer.WriteNumberValue(WordingVersion.Value);
         } writer.WriteEndObject();
-    }
-}
-public abstract class RequestDefinitionAuthoredTagBatch : AuthoredDocument {
-    private protected RequestDefinitionAuthoredTagBatch() {
-    } internal static RequestDefinitionAuthoredTagBatch Read(JsonElement value) {
-        if ((value.ValueKind == JsonValueKind.String && value.GetString() == "max")) return RequestDefinitionAuthoredTagBatchMax.Read(value);
-        if ((value.ValueKind == JsonValueKind.Number)) return RequestDefinitionAuthoredTagBatchInteger.Read(value);
-        throw new JsonException("Authored data does not match the native Request schema.");
-    }
-}
-public sealed class RequestDefinitionAuthoredTagBatchInteger : RequestDefinitionAuthoredTagBatch {
-    public required long Value {
-        get;
-        init;
-    }
-    internal new static RequestDefinitionAuthoredTagBatchInteger Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone(), Value = value.GetInt64()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } writer.WriteNumberValue(Value);
-    }
-}
-public sealed class RequestDefinitionAuthoredTagBatchMax : RequestDefinitionAuthoredTagBatch {
-    internal new static RequestDefinitionAuthoredTagBatchMax Read(JsonElement value) => new() {
-        ParsedDocument = value.Clone()
-    };
-    internal override void Write(Utf8JsonWriter writer) {
-        if (ParsedDocument is {
-        } parsed) {
-            writer.WriteRawValue(parsed.GetRawText(), skipInputValidation: true);
-            return;
-        } WriteText(writer, "max");
     }
 }
 public sealed class RequestDefinitionRecognizeDefinition : RequestDefinition {

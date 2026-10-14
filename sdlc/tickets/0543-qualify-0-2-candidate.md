@@ -38,6 +38,8 @@ Reviews: revision ca927f9, accept
 
 Reviews: revision f8005a6, accept
 
+Reviews: revision 2c83b76, accept
+
 ## Outcome
 
 One reviewed commit, tagged `rc/0.2.0-rc.N`, passes the local release suite and the hosted rehearsal on Linux, macOS and Windows. It publishes nothing. This closes the build side of 0.2. Release QA and publication stay with 0425.
@@ -144,3 +146,4 @@ PM amendment, 2026-10-13. Follow `sdlc/decisions/2026-10-13-standing-build-rulin
 
 PM amendment, 2026-10-13. Drive this ticket and every ticket it depends on by `sdlc/decisions/2026-10-13-drive-0-2-with-maximum-parallelism.md`. Ian ruled that all the library quality work ships in 0.2.
 - 2026-10-14 next: Merged the accepted hosted-runner admission correction at a6bbf9b0b with sixteen admission checks; hosted builds retain four permits without the Beelink load cap, and Swift ARM installed proof passed on GitHub.
+- 2026-10-14 next: Merged JVM, Ada, C++ and generated caller repairs into the combined branch; the verified aged cleanup removed 864 SQLite scratch folders and obsolete coverage output freeing 1416732905 bytes, and landers removed their merged lane outputs while language proof continues.

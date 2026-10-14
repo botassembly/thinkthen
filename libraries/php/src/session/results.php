@@ -30,6 +30,6 @@ final readonly class Completed
 {
     use AnswerAccessors;
     /** @param list<Node> $results */
-    public function __construct(public array $results, public Node $terminal, public array $packets = []) {}
-    public function facts(): ?Node { return $this->terminal->facts; }
+    public function __construct(public array $results, public SessionPacketTerminal $terminal, public array $packets = []) {}
+    public function facts(): ?Facts { return $this->terminal->facts; }
 }

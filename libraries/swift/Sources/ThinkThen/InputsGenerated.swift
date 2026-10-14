@@ -372,7 +372,7 @@ public struct AnnotateQuestionTag: ValueRepresentable {
 public struct AuthoredChoose: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
-  public let `batch`: Presence<AuthoredChooseBatch>
+  public let `batch`: Presence<AuthoredQuestionBatch>
   public let `choose`: AuthoredQuestionText
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
@@ -384,7 +384,7 @@ public struct AuthoredChoose: ValueRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredChooseBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `choose`: AuthoredQuestionText, `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `model`: Presence<AuthoredName> = .absent, `name`: Presence<String> = .absent,
@@ -413,7 +413,7 @@ public struct AuthoredChoose: ValueRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", AuthoredChooseBatch.self),
+      batch: try readPresence(object, "batch", AuthoredQuestionBatch.self),
       choose: try AuthoredQuestionText.read(jsonRequired(object, "choose")),
       contextSchema: try readPresence(object, "context_schema", AuthoredInputDeclaration.self),
       itemSchema: try readPresence(object, "item_schema", AuthoredInputDeclaration.self),
@@ -446,21 +446,6 @@ public struct AuthoredChoose: ValueRepresentable {
     writePresence(`threshold`, "threshold", &object)
     writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
-  }
-}
-public indirect enum AuthoredChooseBatch: ValueRepresentable {
-  case `max`(String)
-  case `integer`(Int64)
-  static func read(_ json: DataValue) throws -> AuthoredChooseBatch {
-    if let value = try? String.read(json) { return .`max`(value) }
-    if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw ValueConversionError("Unknown AuthoredChooseBatch value")
-  }
-  var json: DataValue {
-    switch self {
-    case .`max`(let value): return value.json
-    case .`integer`(let value): return value.json
-    }
   }
 }
 public indirect enum AuthoredCriterion: ValueRepresentable {
@@ -502,7 +487,7 @@ public indirect enum AuthoredCut: ValueRepresentable {
 public struct AuthoredDecide: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
-  public let `batch`: Presence<AuthoredDecideBatch>
+  public let `batch`: Presence<AuthoredQuestionBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `decide`: AuthoredQuestionText
   public let `false`: Presence<AuthoredCriterion>
@@ -515,7 +500,7 @@ public struct AuthoredDecide: ValueRepresentable {
   public let `true`: Presence<AuthoredCriterion>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredDecideBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent, `decide`: AuthoredQuestionText,
     `false`: Presence<AuthoredCriterion> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
@@ -546,7 +531,7 @@ public struct AuthoredDecide: ValueRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", AuthoredDecideBatch.self),
+      batch: try readPresence(object, "batch", AuthoredQuestionBatch.self),
       contextSchema: try readPresence(object, "context_schema", AuthoredInputDeclaration.self),
       decide: try AuthoredQuestionText.read(jsonRequired(object, "decide")),
       false: try readPresence(object, "false", AuthoredCriterion.self),
@@ -581,21 +566,6 @@ public struct AuthoredDecide: ValueRepresentable {
     writePresence(`true`, "true", &object)
     writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
-  }
-}
-public indirect enum AuthoredDecideBatch: ValueRepresentable {
-  case `max`(String)
-  case `integer`(Int64)
-  static func read(_ json: DataValue) throws -> AuthoredDecideBatch {
-    if let value = try? String.read(json) { return .`max`(value) }
-    if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw ValueConversionError("Unknown AuthoredDecideBatch value")
-  }
-  var json: DataValue {
-    switch self {
-    case .`max`(let value): return value.json
-    case .`integer`(let value): return value.json
-    }
   }
 }
 public indirect enum AuthoredDescription: ValueRepresentable {
@@ -988,6 +958,21 @@ public indirect enum AuthoredPointers: ValueRepresentable {
   }
 }
 public typealias AuthoredProfile = String
+public indirect enum AuthoredQuestionBatch: ValueRepresentable {
+  case `max`(String)
+  case `integer`(Int64)
+  static func read(_ json: DataValue) throws -> AuthoredQuestionBatch {
+    if let value = try? String.read(json) { return .`max`(value) }
+    if let value = try? Int64.read(json) { return .`integer`(value) }
+    throw ValueConversionError("Unknown AuthoredQuestionBatch value")
+  }
+  var json: DataValue {
+    switch self {
+    case .`max`(let value): return value.json
+    case .`integer`(let value): return value.json
+    }
+  }
+}
 public indirect enum AuthoredQuestionText: ValueRepresentable {
   case `string`(String)
   case `object`([String: DataValue])
@@ -1129,7 +1114,7 @@ public struct AuthoredRelation: ValueRepresentable {
 public struct AuthoredScore: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
-  public let `batch`: Presence<AuthoredScoreBatch>
+  public let `batch`: Presence<AuthoredQuestionBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `levels`: Presence<AuthoredLevels>
@@ -1140,7 +1125,7 @@ public struct AuthoredScore: ValueRepresentable {
   public let `score`: AuthoredQuestionText
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredScoreBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `levels`: Presence<AuthoredLevels> = .absent, `model`: Presence<AuthoredName> = .absent,
@@ -1168,7 +1153,7 @@ public struct AuthoredScore: ValueRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", AuthoredScoreBatch.self),
+      batch: try readPresence(object, "batch", AuthoredQuestionBatch.self),
       contextSchema: try readPresence(object, "context_schema", AuthoredInputDeclaration.self),
       itemSchema: try readPresence(object, "item_schema", AuthoredInputDeclaration.self),
       levels: try readPresence(object, "levels", AuthoredLevels.self),
@@ -1201,25 +1186,10 @@ public struct AuthoredScore: ValueRepresentable {
     return .object(object)
   }
 }
-public indirect enum AuthoredScoreBatch: ValueRepresentable {
-  case `max`(String)
-  case `integer`(Int64)
-  static func read(_ json: DataValue) throws -> AuthoredScoreBatch {
-    if let value = try? String.read(json) { return .`max`(value) }
-    if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw ValueConversionError("Unknown AuthoredScoreBatch value")
-  }
-  var json: DataValue {
-    switch self {
-    case .`max`(let value): return value.json
-    case .`integer`(let value): return value.json
-    }
-  }
-}
 public struct AuthoredTag: ValueRepresentable {
   public let extensions: [String: DataValue]
   private var _sourceJSON: DataValue? = nil
-  public let `batch`: Presence<AuthoredTagBatch>
+  public let `batch`: Presence<AuthoredQuestionBatch>
   public let `contextSchema`: Presence<AuthoredInputDeclaration>
   public let `itemSchema`: Presence<AuthoredInputDeclaration>
   public let `labels`: Presence<AuthoredLabels>
@@ -1231,7 +1201,7 @@ public struct AuthoredTag: ValueRepresentable {
   public let `threshold`: Presence<AuthoredCut>
   public let `wordingVersion`: Presence<Int64>
   public init(
-    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredTagBatch> = .absent,
+    extensions: [String: DataValue] = [:], `batch`: Presence<AuthoredQuestionBatch> = .absent,
     `contextSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `itemSchema`: Presence<AuthoredInputDeclaration> = .absent,
     `labels`: Presence<AuthoredLabels> = .absent, `model`: Presence<AuthoredName> = .absent,
@@ -1260,7 +1230,7 @@ public struct AuthoredTag: ValueRepresentable {
     ]
     var value = Self(
       extensions: object.filter { !known.contains($0.key) },
-      batch: try readPresence(object, "batch", AuthoredTagBatch.self),
+      batch: try readPresence(object, "batch", AuthoredQuestionBatch.self),
       contextSchema: try readPresence(object, "context_schema", AuthoredInputDeclaration.self),
       itemSchema: try readPresence(object, "item_schema", AuthoredInputDeclaration.self),
       labels: try readPresence(object, "labels", AuthoredLabels.self),
@@ -1293,21 +1263,6 @@ public struct AuthoredTag: ValueRepresentable {
     writePresence(`threshold`, "threshold", &object)
     writePresence(`wordingVersion`, "wording_version", &object)
     return .object(object)
-  }
-}
-public indirect enum AuthoredTagBatch: ValueRepresentable {
-  case `max`(String)
-  case `integer`(Int64)
-  static func read(_ json: DataValue) throws -> AuthoredTagBatch {
-    if let value = try? String.read(json) { return .`max`(value) }
-    if let value = try? Int64.read(json) { return .`integer`(value) }
-    throw ValueConversionError("Unknown AuthoredTagBatch value")
-  }
-  var json: DataValue {
-    switch self {
-    case .`max`(let value): return value.json
-    case .`integer`(let value): return value.json
-    }
   }
 }
 public indirect enum AuthoredThreshold: ValueRepresentable {

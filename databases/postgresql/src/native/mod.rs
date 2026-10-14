@@ -17,6 +17,13 @@ mod question_settings;
 mod reading;
 mod results_generated;
 
+/// Project the existing question receipt used by native observations.
+pub(crate) fn receipt(
+    value: &serde_json::Value,
+) -> pgrx::composite_type!('static, "thinkthen_question_detail") {
+    output::reading("thinkthen_question_detail", value)
+}
+
 fn request(
     verb: &str,
     question: &str,

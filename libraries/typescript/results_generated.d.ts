@@ -1527,7 +1527,7 @@ export interface AnnotateQuestionTag {
   readonly score?: never;
 }
 export interface Choose {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly choose: QuestionText;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
@@ -1546,7 +1546,7 @@ export type Criterion =
   | null;
 export type Cut = number | string;
 export interface Decide {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly decide: QuestionText;
   readonly false?: Criterion;
@@ -1607,6 +1607,7 @@ export type Name = string;
 export type Options = readonly Name[] | Readonly<Record<string, Description>>;
 export type Pointers = string | readonly string[];
 export type Profile = string;
+export type QuestionBatch = "max" | number;
 export type QuestionText =
   | string
   | Readonly<Record<string, JsonValue>>
@@ -1631,7 +1632,7 @@ export interface Relation {
   readonly target?: Name;
 }
 export interface Score {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
   readonly levels?: Levels;
@@ -1643,7 +1644,7 @@ export interface Score {
   readonly wording_version?: number;
 }
 export interface Tag {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
   readonly labels?: Labels;
@@ -1756,7 +1757,7 @@ export interface AnnotateRequestDefinition {
   readonly tag?: never;
 }
 export interface ChooseDefinition {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly choose: QuestionText;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
@@ -1777,7 +1778,7 @@ export interface ChooseDefinition {
   readonly version?: never;
 }
 export interface DecideDefinition {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly decide: QuestionText;
   readonly false?: Criterion;
@@ -1835,7 +1836,7 @@ export interface RelateDefinition {
   readonly tag?: never;
 }
 export interface ScoreDefinition {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
   readonly levels?: Levels;
@@ -1855,7 +1856,7 @@ export interface ScoreDefinition {
   readonly version?: never;
 }
 export interface TagDefinition {
-  readonly batch?: "max" | number;
+  readonly batch?: QuestionBatch;
   readonly context_schema?: InputDeclaration;
   readonly item_schema?: InputDeclaration;
   readonly labels?: Labels;

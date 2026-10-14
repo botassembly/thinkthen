@@ -20,7 +20,8 @@ The ordinary judgment signature is `question, input[, members][, settings]`. `se
 | `thinkthen_plan(question, keyed_input[, settings])` | `jsonb` request-count and byte/token-band preview, with no send |
 | `thinkthen_find(question, units text[][, settings])` | selected original index, value, probability and ordered candidates as `jsonb` |
 | `thinkthen_annotate(set, input[, settings])` | each question's value as `jsonb`; settings apply batch, deadline or the engine's default model |
-| `thinkthen_details`, `thinkthen_try_details` | detailed answer or recoverable typed result as `jsonb`; both take the judgment's named settings |
+| `thinkthen_details` | `thinkthen_question_detail` receipt with typed answer, probabilities, identity and metadata; takes the judgment's named settings |
+| `thinkthen_try_details` | recoverable answered/failed envelope as `jsonb`; takes the judgment's named settings |
 | `thinkthen_recognize`, `thinkthen_relations`, `thinkthen_relate` | their typed entity and relation rows; a relation row's last column, `either`, is true for a both-ways rule, whose ends are then in input order |
 | `thinkthen_usage()` | this backend's `(requests_sent, cache_answers, input_tokens, output_tokens)` |
 | `thinkthen_usage_status()` | live jsonb persistence observation across this backend's built engines |
@@ -76,9 +77,9 @@ The domain rejects a different non-`NULL` label. A stored `NULL` can represent a
 
 ## Run facts
 
-`thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. This SQL details view does not supply invocation cost or elapsed seconds.
+`thinkthen_details(question, evidence)` returns the existing `thinkthen_question_detail` composite for decide, choose, score and tag questions. Read the answer through `((receipt).value).boolean_value`, `.string_value`, `.number_value` or `.array_value`. An unresolved answer keeps its receipt and leaves the answer value NULL. The receipt exposes `answer_id`, `question_sha256`, `confidence`, typed `probabilities`, `model`, `usage`, `reported_usage`, `requests_sent`, `cached`, `requests` and `url`. For example, `SELECT (thinkthen_details('Is this a complaint?', 'i want a refund now')).requests_sent;` reads a numeric column directly. Ordinary details omit the original evidence. `thinkthen_try_details` keeps its packed JSON recovery envelope.
 
-The details digest includes a question's saved calibration `profile`. A different runtime `thinkthen.profile` name appears as `meta.profile_warning` with `tuned_for` and `running`. The selected runtime profile checks limits before sending.
+The receipt's `question_sha256` includes a question's saved calibration `profile`. Native record calls expose a runtime profile mismatch in `((result).meta).profile_warning` with `tuned_for` and `running`. The selected runtime profile checks limits before sending.
 
 `thinkthen_try_details(question, evidence)` returns `jsonb` with `status: "answered"` and the full details object, or `status: "failed"` and an error with public `kind`, fixed safe `message`, and typed `retryable`. It returns SQL NULL when either input is SQL NULL, before reading a question file or settings. An unresolved answer is answered with JSON `null` in its details. Usage, local, and backend row failures let later rows complete. Cancellation, deadline, and defect still raise. The failed value includes no question, evidence, key, file path, cache path, or backend address.
 

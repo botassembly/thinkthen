@@ -26,7 +26,9 @@ object SessionScala {
         assert(System.nanoTime() < limit, "provider did not arrive")
         Thread.sleep(5)
       }
-      val independent = Await.result(engine.decide(question, input("session-scala-independent")).result, 10.seconds)
+      val feedRequest = new Inputs.Request().call(new Inputs.RequestCall().function(Inputs.RequestFunction.DECIDE).question(question).input(new Inputs.RequestInputFeed().name("input")))
+      val descriptor = new Inputs.RequestSessionDescriptor().item(new Inputs.RequestItem().original(new Inputs.RequestOriginalText().text("session-scala-independent")))
+      val independent = Await.result(engine.execute(request = feedRequest, feed = List(descriptor)).result, 10.seconds)
       assert(independent.terminal().facts().state() == Presence.State.VALUE)
       val started = System.nanoTime()
       assert(held.cancel())

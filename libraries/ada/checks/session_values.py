@@ -12,7 +12,7 @@ template = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(template)
 schema = json.loads((ROOT / 'specification/request.schema.json').read_text())
 schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
+definitions = generator.prepare(generator.graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
 type_names = {}
 template.render(definitions, type_names)
 def name(key):

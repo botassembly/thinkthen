@@ -1300,7 +1300,6 @@
       "representation_types": [
         "CallFailure",
         "Cancellation",
-        "Document",
         "Node"
       ],
       "wrapper_members": {
@@ -1330,9 +1329,6 @@
         ],
         "Cancellation": [
           "cancelled"
-        ],
-        "Document": [
-          "jsonSerialize"
         ]
       },
       "field_adapters": {
@@ -1387,10 +1383,10 @@
         "libraries/ada/src/*.ads"
       ],
       "option_containers": [
-        "T_RequestOptions"
+        "Options"
       ],
       "setting_containers": [
-        "T_EngineSettings"
+        "Engine_Settings"
       ],
       "function_prefix": "",
       "test_folders": [
@@ -1401,18 +1397,35 @@
         ""
       ],
       "helper_names": {
-        "question_file": "T_RequestQuestion_file",
-        "question_name": "T_RequestQuestion_name",
-        "question_reference": "T_RequestQuestion_reference",
-        "item": "T_RequestItem",
-        "files": "T_RequestSource"
+        "question_file": "Question_file",
+        "question_name": "Question_name",
+        "question_reference": "Question_reference",
+        "item": "Item",
+        "files": "Source"
       },
       "lifecycle_owners": [
         ""
       ],
       "representation_owners": [
         ""
-      ]
+      ],
+      "lifecycle_members": {
+        "": [
+          "Next_Packet"
+        ]
+      },
+      "representation_types": [
+        "Packet",
+        "Packet_Owner",
+        "Push_Status",
+        "Read_Status",
+        "Session_Owner"
+      ],
+      "wrapper_members": {
+        "Failure": [
+          "Text"
+        ]
+      }
     },
     "objc": {
       "root": "libraries/objective-c",

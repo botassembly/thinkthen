@@ -3273,6 +3273,9 @@
 01 tt-n-cobol-Profile based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-cobol-QuestionBatch based.
+ 02 v-kind usage binary-double unsigned.
+ 02 v-value usage pointer.
 01 tt-n-cobol-QuestionText based.
  02 v-kind usage binary-double unsigned.
  02 v-value usage pointer.
@@ -3721,9 +3724,6 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-AnnotateQuestionTagWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-ChooseBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-ChooseName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3746,9 +3746,6 @@
 01 tt-n-cobol-CutArm2 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DecideBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-DecideName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3820,6 +3817,10 @@
 01 tt-n-cobol-PointersArm2 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
+01 tt-n-cobol-QuestionBatchArm1 based.
+ 02 v-reserved usage binary-double unsigned.
+01 tt-n-cobol-QuestionBatchArm2 based.
+ 02 v-value usage binary-double signed.
 01 tt-n-cobol-QuestionTextArm1 based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -3841,17 +3842,11 @@
  02 v-value usage binary-double unsigned.
 01 tt-n-cobol-RelationSingle based.
  02 v-value usage binary-double unsigned.
-01 tt-n-cobol-ScoreBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-ScoreName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-ScoreWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-TagBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-TagName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4007,17 +4002,11 @@
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DefinitionAnnotateDefinitionVersion based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DefinitionChooseBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-DefinitionChooseName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DefinitionChooseWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionDecideBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-DefinitionDecideName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4035,17 +4024,11 @@
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-DefinitionRelateWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionScoreBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-DefinitionScoreName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
 01 tt-n-cobol-DefinitionScoreWordingVersion based.
  02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionTagBatch based.
- 02 v-kind usage binary-double unsigned.
- 02 v-value usage pointer.
 01 tt-n-cobol-DefinitionTagName based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4255,18 +4238,10 @@
  02 v-reserved usage binary-double unsigned.
 01 tt-n-cobol-SourceUnitArm3 based.
  02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-ChooseBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-ChooseBatchArm2 based.
- 02 v-value usage binary-double signed.
 01 tt-n-cobol-CriterionArm2Entry based.
  02 v-value usage pointer.
 01 tt-n-cobol-CriterionArm3Item based.
  02 v-value usage pointer.
-01 tt-n-cobol-DecideBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DecideBatchArm2 based.
- 02 v-value usage binary-double signed.
 01 tt-n-cobol-DescriptionArm2Entry based.
  02 v-value usage pointer.
 01 tt-n-cobol-DescriptionArm3Item based.
@@ -4283,14 +4258,6 @@
  02 v-value usage pointer.
 01 tt-n-cobol-QuestionTextArm3Item based.
  02 v-value usage pointer.
-01 tt-n-cobol-ScoreBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-ScoreBatchArm2 based.
- 02 v-value usage binary-double signed.
-01 tt-n-cobol-TagBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-TagBatchArm2 based.
- 02 v-value usage binary-double signed.
 01 tt-n-cobol-ContextSchemaArm2Entry based.
  02 v-value usage pointer.
 01 tt-n-cobol-SettingsInputTokenBudgetArm1 based.
@@ -4308,22 +4275,6 @@
 01 tt-n-cobol-RecognitionExampleTextKindsItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
-01 tt-n-cobol-DefinitionChooseBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DefinitionChooseBatchArm2 based.
- 02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionDecideBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DefinitionDecideBatchArm2 based.
- 02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionScoreBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DefinitionScoreBatchArm2 based.
- 02 v-value usage binary-double signed.
-01 tt-n-cobol-DefinitionTagBatchArm1 based.
- 02 v-reserved usage binary-double unsigned.
-01 tt-n-cobol-DefinitionTagBatchArm2 based.
- 02 v-value usage binary-double signed.
 01 tt-n-cobol-RequestOptionsFieldItem based.
  02 v-data usage pointer.
  02 v-len usage binary-double unsigned.
@@ -4988,8 +4939,6 @@
 78 tt-n-cobol-annotatequestiontag-kind-k value 3.
 78 tt-n-cobol-cachedocumentarm1-kind-k value 1.
 78 tt-n-cobol-cachedocument-arm-2-kind-k value 2.
-78 tt-n-cobol-choosebatcharm1-kind-k value 1.
-78 tt-n-cobol-choosebatcharm2-kind-k value 2.
 78 tt-n-cobol-contextschemaarm1-kind-k value 1.
 78 tt-n-cobol-contextschemaarm2-kind-k value 2.
 78 tt-n-cobol-criterionarm1-kind-k value 1.
@@ -4998,23 +4947,13 @@
 78 tt-n-cobol-criterionarm4-kind-k value 4.
 78 tt-n-cobol-cutarm1-kind-k value 1.
 78 tt-n-cobol-cutarm2-kind-k value 2.
-78 tt-n-cobol-decidebatcharm1-kind-k value 1.
-78 tt-n-cobol-decidebatcharm2-kind-k value 2.
 78 tt-n-cobol-definitionannotatedefinition-kind-k value 8.
-78 tt-n-cobol-definitionchoosebatcharm1-kind-k value 1.
-78 tt-n-cobol-definitionchoosebatcharm2-kind-k value 2.
 78 tt-n-cobol-definitionchoose-kind-k value 2.
-78 tt-n-cobol-definitiondecidebatcharm1-kind-k value 1.
-78 tt-n-cobol-definitiondecidebatcharm2-kind-k value 2.
 78 tt-n-cobol-definitiondecide-kind-k value 1.
 78 tt-n-cobol-definitionfind-kind-k value 6.
 78 tt-n-cobol-definitionrecognizedefinition-kind-k value 7.
 78 tt-n-cobol-definitionrelate-kind-k value 5.
-78 tt-n-cobol-definitionscorebatcharm1-kind-k value 1.
-78 tt-n-cobol-definitionscorebatcharm2-kind-k value 2.
 78 tt-n-cobol-definitionscore-kind-k value 4.
-78 tt-n-cobol-definitiontagbatcharm1-kind-k value 1.
-78 tt-n-cobol-definitiontagbatcharm2-kind-k value 2.
 78 tt-n-cobol-definitiontag-kind-k value 3.
 78 tt-n-cobol-descriptionarm1-kind-k value 1.
 78 tt-n-cobol-descriptionarm2-kind-k value 2.
@@ -5037,6 +4976,8 @@
 78 tt-n-cobol-overflow-k value 1002.
 78 tt-n-cobol-pointersarm1-kind-k value 1.
 78 tt-n-cobol-pointersarm2-kind-k value 2.
+78 tt-n-cobol-questionbatcharm1-kind-k value 1.
+78 tt-n-cobol-questionbatcharm2-kind-k value 2.
 78 tt-n-cobol-questiontextarm1-kind-k value 1.
 78 tt-n-cobol-questiontextarm2-kind-k value 2.
 78 tt-n-cobol-questiontextarm3-kind-k value 3.
@@ -5086,8 +5027,6 @@
 78 tt-n-cobol-requestreaderfailureutf8-kind-k value 3.
 78 tt-n-cobol-requestthresholdarm1-kind-k value 1.
 78 tt-n-cobol-requestthresholdarm2-kind-k value 2.
-78 tt-n-cobol-scorebatcharm1-kind-k value 1.
-78 tt-n-cobol-scorebatcharm2-kind-k value 2.
 78 tt-n-cobol-settingsinputtokenbudgetarm1-kind-k value 1.
 78 tt-n-cobol-settingsinputtokenbudgetarm2-kind-k value 2.
 78 tt-n-cobol-settingsmaxrequestsarm1-kind-k value 1.
@@ -5097,8 +5036,6 @@
 78 tt-n-cobol-sourceunitarm1-kind-k value 1.
 78 tt-n-cobol-sourceunitarm2-kind-k value 2.
 78 tt-n-cobol-sourceunitarm3-kind-k value 3.
-78 tt-n-cobol-tagbatcharm1-kind-k value 1.
-78 tt-n-cobol-tagbatcharm2-kind-k value 2.
 78 tt-n-cobol-text-capacity-k value 8192.
 78 tt-n-cobol-thresholdarm1-kind-k value 1.
 78 tt-n-cobol-thresholdarm2-kind-k value 2.

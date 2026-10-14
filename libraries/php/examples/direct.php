@@ -2,13 +2,13 @@
 declare(strict_types=1);
 require dirname(__DIR__).'/autoload.php';
 use ThinkThen\Client;
-use ThinkThen\Inputs\{RecognizeQuestion, RecognitionSpec, RelateQuestion, RelationSpec, RelationRule};
+use ThinkThen\Inputs\{ChooseQuestion, RecognizeQuestion, RecognitionSpec, RelateQuestion, RelationSpec, RelationRule};
 
 $client = new Client();
 try {
     $answers = [
         'decide' => $client->decide('Does this ask for a refund?', 'Please refund my order.')->decideAnswer(),
-        'choose' => $client->choose(['choose' => 'Which team?', 'options' => ['billing', 'support']], 'Refund please.')->chooseAnswer(),
+        'choose' => $client->choose(new ChooseQuestion(choose: 'Which team?', options: ['billing', 'support']), 'Refund please.')->chooseAnswer(),
         'tag' => $client->tag(['tag' => 'Which topics?', 'labels' => ['billing', 'support']], 'Refund please.')->tagAnswer(),
         'score' => $client->score(['score' => 'How urgent?', 'levels' => ['low', 'high']], 'Refund today.')->scoreAnswer(),
         'filter' => $client->filter('Does this ask for a refund?', ['Refund please.', 'Thank you.'])->filterAnswer(),

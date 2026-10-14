@@ -91,6 +91,47 @@ class PublicSurface(unittest.TestCase):
             runtime.write_text(hidden.replace('private_class_method :dump', ''))
             self.assertIn('unlisted public call/export: Client.dump', invoke())
 
+    def test_ada_generated_builders_types_and_private_visibility(self):
+        with tempfile.TemporaryDirectory(prefix='library-surface-ada-') as folder:
+            root = Path(folder)
+            for name in ('sdlc', 'specification', 'conformance', 'crates'):
+                (root / name).symlink_to(ROOT / name, target_is_directory=True)
+            shutil.copytree(ROOT / 'libraries/ada/src', root / 'libraries/ada/src')
+            header = root / 'libraries/c/include/thinkthen.h'
+            header.parent.mkdir(parents=True)
+            shutil.copyfile(ROOT / 'libraries/c/include/thinkthen.h', header)
+            def invoke():
+                run = subprocess.run(['python3', str(CHECK), '--root', str(root), '--library', 'ada', '--json'],
+                                     capture_output=True, text=True, env=child_env(home=folder))
+                self.assertIn(run.returncode, (0, 1), run.stderr)
+                return set(json.loads(run.stdout)['libraries']['ada'])
+            baseline = invoke()
+            generated = root / 'libraries/ada/src/thinkthen-inputs.ads'
+            original = generated.read_text()
+            setter = next(line for line in original.splitlines()
+                          if line.startswith('function With_Attempts (Item : Thinkthen.Inputs.Options;'))
+            for changed in (setter.replace('Field : Thinkthen.Inputs.Boolean_Value', 'Field : String'),
+                            setter.replace('Field : Thinkthen.Inputs.Boolean_Value', 'Field : Thinkthen.Requests.T_Boolean'),
+                            ''):
+                with self.subTest(changed=changed):
+                    generated.write_text(original.replace(setter, changed, 1))
+                    self.assertTrue(any(error.startswith('missing generated declaration: thinkthen-inputs.ads:')
+                                        for error in invoke() - baseline))
+            generated.write_text(original)
+            hidden = original.replace('\nprivate\n', '\nprivate\nprocedure Private_Tail_Plant;\n', 1)
+            self.assertNotEqual(hidden, original)
+            generated.write_text(hidden)
+            self.assertEqual(invoke(), baseline)
+            generated.write_text(hidden.replace('\nprivate\n', '\n', 1))
+            self.assertIn('unlisted public call/export: .Private_Tail_Plant', invoke() - baseline)
+            generated.write_text(original)
+            private = root / 'libraries/ada/src/thinkthen-private_plant.ads'
+            private.write_text('private package Thinkthen.Private_Plant is\n'
+                               'type Private_Package_Plant is null record;\nend Thinkthen.Private_Plant;\n')
+            self.assertEqual(invoke(), baseline)
+            private.write_text(private.read_text().replace('private package', 'package', 1))
+            self.assertIn('unlisted public type/export: .Private_Package_Plant', invoke() - baseline)
+
     def test_cobol_outer_guard_preserves_real_public_macros(self):
         with tempfile.TemporaryDirectory(prefix='library-surface-cobol-') as folder:
             root = Path(folder)

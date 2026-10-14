@@ -8,7 +8,7 @@ from templates.ada_native_values import WRITE as VALUE_WRITE
 def render(definitions, names, schemas):
     metadata = {}
     native_render(definitions, metadata)
-    pending = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor'), ('RequestReaderFailure', 'RequestReaderFailure')]
+    pending = [('RequestCall', 'RequestArguments'), ('RequestSessionDescriptor', 'RequestSessionDescriptor'), ('RequestReaderFailure', 'RequestReaderFailure'), ('EngineSettings', 'EngineSettings')]
     done, bodies, pointers = set(), [], {'thinkthen_complete_json_v1', 'thinkthen_complete_json_entry_v1'}
     def call(host, native):
         if (host, native) not in done and (host, native) not in pending:
@@ -105,9 +105,9 @@ def render(definitions, names, schemas):
     for typ in sorted(pointers):
         declarations += [f'type A_{typ} is access all {typ};', f'function P_{typ} is new Ada.Unchecked_Conversion (System.Address, A_{typ});', f'function Store_{typ} is new Store ({typ});']
     entrypoints = []
-    for host, native in [('RequestCall','RequestArguments'), ('RequestSessionDescriptor','RequestSessionDescriptor'), ('RequestReaderFailure','RequestReaderFailure')]:
+    for host, native in [('RequestCall','RequestArguments'), ('RequestSessionDescriptor','RequestSessionDescriptor'), ('RequestReaderFailure','RequestReaderFailure'), ('EngineSettings','EngineSettings')]:
         entrypoints.append(f'function Convert (Value : {names[host]}; Storage : in out Arena) return System.Address is (Convert_{host}_{native} (Value, Storage));')
-    spec = SPEC.replace('-- ENTRIES', '\n'.join(f'function Convert (Value : {names[host]}; Storage : in out Arena) return System.Address;' for host in ('RequestCall','RequestSessionDescriptor','RequestReaderFailure'))) + '\nend Thinkthen.Requests.Native;\n'
+    spec = SPEC.replace('-- ENTRIES', '\n'.join(f'function Convert (Value : {names[host]}; Storage : in out Arena) return System.Address;' for host in ('RequestCall','RequestSessionDescriptor','RequestReaderFailure','EngineSettings'))) + '\nend Thinkthen.Requests.Native;\n'
     contents = '\n'.join([VALUE_WRITE] + [signature + ';' for signature, _ in bodies] + [body for _, body in bodies] + entrypoints)
     declarations = [line for line in declarations if not line.startswith('function ') or line.split()[1] in contents]
     retained = '\n'.join(declarations)
@@ -142,7 +142,7 @@ with Ada.Unchecked_Conversion;
 with Ada.Unchecked_Deallocation;
 with Interfaces.C.Strings;
 with System.Address_To_Access_Conversions;
-with Thinkthen_Session_C; use Thinkthen_Session_C;
+with Thinkthen.Session_C; use Thinkthen.Session_C;
 with Thinkthen.Values;
 package body Thinkthen.Requests.Native is
 use Interfaces.C;
@@ -195,18 +195,16 @@ end UTF8;
 
 def plan(function_schema, header):
     import re
-    function_names = ', '.join('when ' + identifier('RequestFunction_' + function) + ' => "' + function + '"' for function in enum_values(function_schema))
-    return ['function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value is',
-            'use Thinkthen_Session_C; use Interfaces.C; use Interfaces.C.Strings;',
+    return ['function Plan (Client : Engine; Request : Thinkthen.Requests.T_RequestCall; Function_Name : String) return Thinkthen.Values.Value is',
+            'use Thinkthen.Session_C; use Interfaces.C; use Interfaces.C.Strings;',
             'Storage : Thinkthen.Requests.Native.Arena;',
             'type Arguments_Access is access constant thinkthen_request_arguments_v1;',
             'function Pointer is new Ada.Unchecked_Conversion (System.Address, Arguments_Access);',
             'Arguments : constant Arguments_Access := Pointer (Thinkthen.Requests.Native.Convert (Request, Storage));',
-            'Function_Name : constant String := (case Request.T_function is ' + function_names + ');',
             'Function_Bytes : chars_ptr := Null_Ptr; Surface : chars_ptr := Null_Ptr;',
             'type Value_Access is access all thinkthen_value; Output : aliased Value_Access := null; View : aliased access constant thinkthen_complete_json_v1; Code : int;',
             'begin', 'Function_Bytes := New_String (Function_Name); Surface := New_String ("ada");',
-            "Code := thinkthen_request_plan_typed_value (Client.Handle, (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address);",
+            "Code := thinkthen_request_plan_typed_value (Engine_Pointer (Client.Handle), (data => Function_Bytes, len => Function_Name'Length), Arguments, (data => Surface, len => 3), Output'Address);",
             'Free (Function_Bytes); Free (Surface);',
             'Thinkthen_Kinds.Check (Code);',
             'Thinkthen_Kinds.Check (thinkthen_value_view (Output, View\'Address));',

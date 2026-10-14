@@ -68,7 +68,7 @@ function consume(stdClass $fixture, Client $client): array
     if ($injection === 'cancel_token') $cancel->cancel();
     try {
         if ($fixture->held_cancel ?? false) {
-            $operation = $client->start($verb, $question, $input, $options);
+            $operation = $client->start($verb, $question, $input, new ThinkThen\Inputs\Options(...$options));
             $packets = []; $signal = getenv('HOME').'/cancel';
             try {
                 do {
@@ -78,7 +78,7 @@ function consume(stdClass $fixture, Client $client): array
                     $operation->wait();
                 } while ($packet?->kind !== 'terminal');
             } finally { $operation->close(); }
-        } else $packets = $client->$verb($question, $input, $options, $cancel)->packets;
+        } else $packets = $client->$verb($question, $input, new ThinkThen\Inputs\Options(...$options), $cancel)->packets;
     } catch (CallFailure $error) {
         if (!$error->packets) throw $error;
         $packets = $error->packets;
@@ -88,7 +88,7 @@ function consume(stdClass $fixture, Client $client): array
 $client = null;
 try {
     $fixture = json_decode(file_get_contents($argv[1]), flags: JSON_THROW_ON_ERROR);
-    $client = new Client(json_decode($argv[3], true, flags: JSON_THROW_ON_ERROR), $argv[2]);
+    $client = new Client(new ThinkThen\Inputs\Settings(...json_decode($argv[3], true, flags: JSON_THROW_ON_ERROR)), $argv[2]);
     $payload = consume($fixture, $client);
 } catch (CallFailure $error) {
     $kind = match (get_class($error)) {

@@ -147,7 +147,7 @@ with Ada.Containers.Vectors;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Interfaces;
 with Thinkthen.Values;
-package Thinkthen.Requests is
+private package Thinkthen.Requests is
 -- Arbitrary values use owned native trees; Rust owns their admission.
 subtype JSON_Value is Thinkthen.Values.Value;
 use type Thinkthen.Values.Value;
@@ -213,58 +213,53 @@ def header(root, env):
     source = source.replace('stddef_h.size_t', 'Interfaces.C.size_t')
     source = re.sub(r'\w+_stdint_uintn_h\.uint(\d+)_t', r'Interfaces.Unsigned_\1', source)
     source = re.sub(r'\w+_stdint_intn_h\.int(\d+)_t', r'Interfaces.Integer_\1', source)
-    source = source.replace('thinkthen_h', 'Thinkthen_Session_C')
+    source = source.replace('thinkthen_h', 'Thinkthen.Session_C').replace('package Thinkthen.Session_C is', 'private package Thinkthen.Session_C is')
+    source = source.replace('end Thinkthen.Session_C;', """type Engine_Access is access all thinkthen_engine;
+function Engine_Pointer is new Ada.Unchecked_Conversion (System.Address, Engine_Access);
+function Engine_Address is new Ada.Unchecked_Conversion (Engine_Access, System.Address);
+type Session_Access is access all thinkthen_session;
+function Session_Pointer is new Ada.Unchecked_Conversion (System.Address, Session_Access);
+function Session_Address is new Ada.Unchecked_Conversion (Session_Access, System.Address);
+type Packet_Access is access all thinkthen_session_result;
+function Packet_Pointer is new Ada.Unchecked_Conversion (System.Address, Packet_Access);
+function Packet_Address is new Ada.Unchecked_Conversion (Packet_Access, System.Address);
+end Thinkthen.Session_C;""")
     source = source.replace('pragma Ada_2012;', '')
     for constant in re.findall(r'(THINKTHEN_\w+) : constant', source):
         source = re.sub(r'\b' + constant + r'\b', 'K_' + constant, source)
-    return '-- Generated from the canonical C header by GNAT. Do not edit.\nwith Interfaces;\n' + '\n'.join(line.rstrip() for line in source.splitlines() if line.strip()) + '\n'
+    return '-- Generated from the canonical C header by GNAT. Do not edit.\nwith Ada.Unchecked_Conversion;\nwith Interfaces;\n' + '\n'.join(line.rstrip() for line in source.splitlines() if line.strip()) + '\n'
 
 
 def generate(root, graph, prepare, env, check):
     schema = json.loads((root / 'specification/request.schema.json').read_text())
     schema['$defs']['Request'] = {k: v for k, v in schema.items() if k != '$defs'}
-    definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure')))
+    definitions = prepare(graph(schema, ('Request', 'RequestSessionDescriptor', 'RequestReaderFailure', 'EngineSettings')))
     names, schemas = {}, {}
     spec, _ = render(definitions, names, schemas)
     spec = spec.replace('end Thinkthen.Requests;', request_helpers(definitions, names) + '\nend Thinkthen.Requests;')
     from templates.ada_native import render as native_render
     native_spec, native_body = native_render(definitions, names, schemas)
     calls_spec = ['-- Generated named calls from canonical RequestCall variants.',
-                  'with Thinkthen.Requests; use Thinkthen.Requests;', 'with Thinkthen.Inputs;',
+                  'with Thinkthen.Inputs;',
                   'package Thinkthen.Sessions.Calls is']
-    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Thinkthen.Inputs.Calls;', 'with Thinkthen.Native_Values;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
-    version = identifier('RequestVersion_' + enum_values(schema['$defs']['RequestVersion'])[0])
-    for function in enum_values(schema['$defs']['RequestFunction']):
-        declaration = f'procedure {function.title()} (Owner : in out Session; Request : T_RequestCall)'
-        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
-        calls_spec += [declaration + ';', shared + ';']
-        for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
-            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', Request, "' + function + '");\nend ' + function.title() + ';')
-    for function in enum_values(schema['$defs']['RequestFunction']):
-        declaration = f'procedure {function.title()} (Owner : in out Session; Question : Thinkthen.Requests.Question; Input : Thinkthen.Requests.Input; Options : T_RequestOptions_Optional := (Present => False))'
-        shared = declaration.replace('(Owner', '(Client : Engine; Owner')
-        calls_spec += [declaration + ';', shared + ';']
-        for signature, owner in ((declaration, 'Owner'), (shared, 'Client, Owner')):
-            calls_body.append(signature + ' is\nbegin\nStart (' + owner + ', (T_question => Question, T_input => Input, T_options => Options, others => <>), "' + function + '");\nend ' + function.title() + ';')
+    calls_body = ['-- Generated named calls from the canonical request schema; do not edit.', 'with Ada.Unchecked_Conversion;', 'with System;', 'with Thinkthen_Kinds;', 'with Thinkthen.Requests.Native;', 'with Thinkthen.Inputs.Calls;', 'with Thinkthen.Native_Sessions;', 'with Thinkthen.Native_Values;', 'with Thinkthen.Session_C;', 'with Interfaces.C.Strings;', 'package body Thinkthen.Sessions.Calls is']
     for function in enum_values(schema['$defs']['RequestFunction']):
         declaration = f'procedure {function.title()} (Owner : in out Session; Question : Thinkthen.Inputs.Question; Input : Thinkthen.Inputs.Input; Options : Thinkthen.Inputs.Call_Options := Thinkthen.Inputs.No_Options)'
         shared = declaration.replace('(Owner', '(Client : Engine; Owner')
         calls_spec += [declaration+';',shared+';']
         for signature,owner in ((declaration,'Owner'),(shared,'Client, Owner')):
             calls_body.append(signature+' is\nbegin\nThinkthen.Inputs.Calls.'+function.title()+' ('+owner+', Question, Input, Options);\nend '+function.title()+';')
-    calls_spec.insert(1, 'with Thinkthen.Values;')
-    calls_spec.append('function Plan (Client : Engine; Request : T_RequestCall) return Thinkthen.Values.Value;')
-    from templates.ada_native import plan
-    calls_body.extend(plan(schema['$defs']['RequestFunction'], (root / 'libraries/c/include/thinkthen.h').read_text()))
     calls_spec.append('end Thinkthen.Sessions.Calls;')
     calls_body.append('end Thinkthen.Sessions.Calls;')
     outputs = {'thinkthen-sessions-calls.ads': '\n'.join(calls_spec) + '\n',
                'thinkthen-sessions-calls.adb': '\n'.join(calls_body) + '\n',
                'thinkthen-requests.ads': spec,
                'thinkthen-requests-native.ads': native_spec, 'thinkthen-requests-native.adb': native_body,
-               'thinkthen_session_c.ads': header(root, env)}
+               'thinkthen-session_c.ads': header(root, env)}
+    from templates.ada_sessions import outputs as session_outputs
+    outputs.update(session_outputs())
     from templates.ada_inputs import outputs as input_outputs
-    outputs.update(input_outputs(definitions, names, schemas))
+    outputs.update(input_outputs(definitions, names, schemas, plan_definitions=json.loads((root / 'specification/result.schema.json').read_text())['$defs']))
     from templates.ada_value_readers import outputs as value_reader_outputs
     outputs.update(value_reader_outputs())
     from templates.ada_answers import outputs as answer_outputs

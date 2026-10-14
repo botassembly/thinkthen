@@ -33,6 +33,9 @@ usage_home
 . ./runtime.sh
 runtime_ready
 REPO=$(cd ../.. && pwd)
+if [ "$profile" = routine ]; then
+	export THINKTHEN_CONFORMANCE_IDS=${THINKTHEN_CONFORMANCE_IDS:-$REPO/conformance/routine-ids.txt}
+fi
 if [ "$profile" = full ]; then . "$REPO/sdlc/scripts/full-compiler"; fi
 # macOS has no `timeout` (ticket 0128). runtime.sh uses it too.
 LIMIT=$REPO/sdlc/scripts/time-limit
@@ -279,7 +282,7 @@ plain_question_contract() {
 	same "$(q -c "SELECT thinkthen_try_details('Does this need attention?', 'A short note.')->>'status'")" answered
 	same "$(bcount)" 1
 	fresh arm/full/capture
-	digest=$(q -c "SELECT thinkthen_details('Does this need attention?', 'A short note.')->'meta'->'requests'->>0")
+	digest=$(q -c "SELECT (thinkthen_details('Does this need attention?', 'A short note.')).requests[1]")
 	same "$(bcount)" 1
 	# A row names its question keys, not a request digest (ADR 0111 section 2).
 	bcapture | python3 -c '
@@ -398,7 +401,7 @@ named_bindings() {
 	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', misspelled => 'x')")
 	has "$out" 'does not exist'
 	same "$(bcount)" 0
-	out=$(q -c "SELECT thinkthen_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')->'meta'->>'model'")
+	out=$(q -c "SELECT (thinkthen_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')).model")
 	same "$out" judge-b
 	same "$(bcount)" 1
 	fresh generic
@@ -1350,9 +1353,9 @@ context_settings_keep_shapes_and_legacy_refusal() {
         -c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', context => 'shared reference')" \
         -c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', context => 'shared reference')" \
         -c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', context => 'shared reference'), 1)" \
-        -c "SELECT thinkthen_details('$Q', 'one', context => 'shared reference')->>'value'" \
+        -c "SELECT ((thinkthen_details('$Q', 'one', context => 'shared reference')).value).boolean_value" \
         -c "SELECT thinkthen_try_details('$Q', 'one', context => 'shared reference')->>'status'")
-    same "$out" $'first\n0.1\n2\ntrue\nanswered'
+    same "$out" $'first\n0.1\n2\nt\nanswered'
     same "$(bcount)" 5
     fresh generic
     same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', context => 'shared reference') IS NULL")" t
@@ -1588,7 +1591,27 @@ complete_environment() {
 }
 complete_cases() {
     complete_environment
-    sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+    if [ "$profile" = routine ]; then
+        python3 tests/runner.py plan >"$RUN/complete.plan"
+        python3 - "$RUN/complete.plan" >"$RUN/complete.ids" <<'PY'
+import pathlib, sys
+sys.path.insert(0, "../../conformance")
+import parity
+required = parity.required_cases(parity.inventory(), "postgresql")
+for line in pathlib.Path(sys.argv[1]).read_text().splitlines():
+    identity, arm, _ = line.split("\t")
+    if identity in required:
+        print(identity)
+    else:
+        assert arm == "-", f"routine case lacks native parity: {identity}"
+        print(f"native parity: not run {identity}: no outside defect boundary", file=sys.stderr)
+PY
+        while IFS= read -r id; do
+            sh "$LIMIT" 300 python3 ../sqlite/tests/complete/parity.py postgresql "$id"
+        done <"$RUN/complete.ids"
+    else
+        sh "$LIMIT" 1800 python3 ../sqlite/tests/complete/parity.py postgresql
+    fi
     sh "$LIMIT" 300 python3 ../sqlite/tests/complete/facts.py postgresql
 }
 check complete_cases

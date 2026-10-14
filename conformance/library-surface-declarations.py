@@ -467,16 +467,29 @@ def other(source, language):
                 result.add(Declaration(container, match[1], 'field'))
     elif language == 'ada':
         text = re.sub(r'--[^\n]*', '', source)
-        text = re.split(r'(?im)^private\s*$', text)[0]
-        for match in re.finditer(r'(?i)\b(?:type|subtype)\s+(\w+)\b', text):
+        if re.search(r'(?im)^\s*private\s+package\b', text):
+            return result
+        text = re.split(r'(?im)^\s*private\s*$', text)[0]
+        def normalized(value):
+            return re.sub(r'\s+', ' ', value.strip()).lower()
+        for match in re.finditer(r'(?i)\b(?:type|subtype)\s+(\w+)\b([^;]*);', text):
             result.add(Declaration('', match[1], 'type'))
+            # Opaque public types retain their declaration; private completions stay hidden.
+            result.add(Declaration(match[1], normalized(match[2]), 'annotation'))
         for match in re.finditer(r'(?is)\btype\s+(\w+)\b[^;]*?\bis\s+record\b(.*?)end\s+record', text):
-            for field in re.findall(r'\b(\w+)\s*:', match[2]):
-                result.add(Declaration(match[1], field, 'field'))
-        for name in re.findall(r'(?im)^\s*(\w+)\s*:\s*constant\b', text):
-            result.add(Declaration('', name, 'export'))
-        for name in re.findall(r'(?i)\b(?:function|procedure)\s+(\w+)\s*\(', text):
-            result.add(Declaration('', name, 'call'))
+            for field in re.finditer(r'\b(\w+)\s*:\s*([^;]+);', match[2]):
+                result.add(Declaration(match[1], field[1], 'field'))
+                result.add(Declaration(match[1] + '.' + field[1], normalized(field[2]), 'annotation'))
+        for match in re.finditer(r'(?im)^\s*(\w+)\s*:\s*constant\b([^;]*);', text):
+            result.add(Declaration('', match[1], 'export'))
+            result.add(Declaration(match[1], normalized(match[2]), 'annotation'))
+        for match in re.finditer(r'(?is)\b(function|procedure)\s+(\w+)\s*(\([^;]*?(?:;[^;]*?)*?\))?\s*(return\s+[^;]+)?;', text):
+            result.add(Declaration('', match[2], 'call'))
+            result.add(Declaration(match[2], normalized((match[3] or '') + ' ' + (match[4] or '')), 'annotation'))
+            builder = re.match(r'(?i)With_(\w+)$', match[2])
+            item = re.match(r'(?i)\(\s*Item\s*:\s*(?:[\w]+\.)*(\w+)\s*;', match[3] or '')
+            if builder and item:
+                result.add(Declaration(item[1], builder[1], 'field'))
     elif language == 'cobol':
         scopes = []
         for line in source.splitlines():

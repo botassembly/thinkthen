@@ -606,6 +606,18 @@ public final class Inputs {
             return value;
         }
     }
+    public static final class AuthoredQuestionBatch {
+        private final Object value;
+        public AuthoredQuestionBatch(String value) {
+            this.value = Values.freeze(value);
+        }
+        public AuthoredQuestionBatch(Number value) {
+            this.value = Values.freeze(value);
+        }
+        Object json() {
+            return value;
+        }
+    }
     public static final class AuthoredQuestionText {
         private final Object value;
         public AuthoredQuestionText(String value) {
@@ -1497,7 +1509,7 @@ public final class Inputs {
         protected RequestDefinitionAuthoredChoose self() {
             return this;
         }
-        public RequestDefinitionAuthoredChoose batch(RequestDefinitionAuthoredChoosePropertiesBatch value) {
+        public RequestDefinitionAuthoredChoose batch(AuthoredQuestionBatch value) {
             return put("batch", value);
         }
         public RequestDefinitionAuthoredChoose batchNull() {
@@ -1597,18 +1609,6 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredChoosePropertiesBatch {
-        private final Object value;
-        public RequestDefinitionAuthoredChoosePropertiesBatch(String value) {
-            this.value = Values.freeze(value);
-        }
-        public RequestDefinitionAuthoredChoosePropertiesBatch(Number value) {
-            this.value = Values.freeze(value);
-        }
-        Object json() {
-            return value;
-        }
-    }
     public static final class RequestDefinitionAuthoredDecide extends Builder<RequestDefinitionAuthoredDecide> implements RequestDefinition {
         public RequestDefinitionAuthoredDecide() {
         }
@@ -1632,7 +1632,7 @@ public final class Inputs {
         protected RequestDefinitionAuthoredDecide self() {
             return this;
         }
-        public RequestDefinitionAuthoredDecide batch(RequestDefinitionAuthoredDecidePropertiesBatch value) {
+        public RequestDefinitionAuthoredDecide batch(AuthoredQuestionBatch value) {
             return put("batch", value);
         }
         public RequestDefinitionAuthoredDecide batchNull() {
@@ -1739,18 +1739,6 @@ public final class Inputs {
         }
         public RequestDefinitionAuthoredDecide omitWordingVersion() {
             return omit("wording_version");
-        }
-    }
-    public static final class RequestDefinitionAuthoredDecidePropertiesBatch {
-        private final Object value;
-        public RequestDefinitionAuthoredDecidePropertiesBatch(String value) {
-            this.value = Values.freeze(value);
-        }
-        public RequestDefinitionAuthoredDecidePropertiesBatch(Number value) {
-            this.value = Values.freeze(value);
-        }
-        Object json() {
-            return value;
         }
     }
     public static final class RequestDefinitionAuthoredFind extends Builder<RequestDefinitionAuthoredFind> implements RequestDefinition {
@@ -1960,7 +1948,7 @@ public final class Inputs {
         protected RequestDefinitionAuthoredScore self() {
             return this;
         }
-        public RequestDefinitionAuthoredScore batch(RequestDefinitionAuthoredScorePropertiesBatch value) {
+        public RequestDefinitionAuthoredScore batch(AuthoredQuestionBatch value) {
             return put("batch", value);
         }
         public RequestDefinitionAuthoredScore batchNull() {
@@ -2051,18 +2039,6 @@ public final class Inputs {
             return omit("wording_version");
         }
     }
-    public static final class RequestDefinitionAuthoredScorePropertiesBatch {
-        private final Object value;
-        public RequestDefinitionAuthoredScorePropertiesBatch(String value) {
-            this.value = Values.freeze(value);
-        }
-        public RequestDefinitionAuthoredScorePropertiesBatch(Number value) {
-            this.value = Values.freeze(value);
-        }
-        Object json() {
-            return value;
-        }
-    }
     public static final class RequestDefinitionAuthoredTag extends Builder<RequestDefinitionAuthoredTag> implements RequestDefinition {
         public RequestDefinitionAuthoredTag() {
         }
@@ -2085,7 +2061,7 @@ public final class Inputs {
         protected RequestDefinitionAuthoredTag self() {
             return this;
         }
-        public RequestDefinitionAuthoredTag batch(RequestDefinitionAuthoredTagPropertiesBatch value) {
+        public RequestDefinitionAuthoredTag batch(AuthoredQuestionBatch value) {
             return put("batch", value);
         }
         public RequestDefinitionAuthoredTag batchNull() {
@@ -2183,18 +2159,6 @@ public final class Inputs {
         }
         public RequestDefinitionAuthoredTag omitWordingVersion() {
             return omit("wording_version");
-        }
-    }
-    public static final class RequestDefinitionAuthoredTagPropertiesBatch {
-        private final Object value;
-        public RequestDefinitionAuthoredTagPropertiesBatch(String value) {
-            this.value = Values.freeze(value);
-        }
-        public RequestDefinitionAuthoredTagPropertiesBatch(Number value) {
-            this.value = Values.freeze(value);
-        }
-        Object json() {
-            return value;
         }
     }
     public static final class RequestDefinitionRecognizeDefinition extends Builder<RequestDefinitionRecognizeDefinition> implements RequestDefinition {
@@ -3461,6 +3425,7 @@ public final class Inputs {
         if (value instanceof AuthoredLevels item) return item.json();
         if (value instanceof AuthoredOptions item) return item.json();
         if (value instanceof AuthoredPointers item) return item.json();
+        if (value instanceof AuthoredQuestionBatch item) return item.json();
         if (value instanceof AuthoredQuestionText item) return item.json();
         if (value instanceof AuthoredThreshold item) return item.json();
         if (value instanceof CacheDocument item) return item.json();
@@ -3470,10 +3435,6 @@ public final class Inputs {
         if (value instanceof RecognitionExample item) return item.json();
         if (value instanceof RecognitionMode item) return item.json();
         if (value instanceof RequestBatch item) return item.json();
-        if (value instanceof RequestDefinitionAuthoredChoosePropertiesBatch item) return item.json();
-        if (value instanceof RequestDefinitionAuthoredDecidePropertiesBatch item) return item.json();
-        if (value instanceof RequestDefinitionAuthoredScorePropertiesBatch item) return item.json();
-        if (value instanceof RequestDefinitionAuthoredTagPropertiesBatch item) return item.json();
         if (value instanceof RequestFraming item) return item.json();
         if (value instanceof RequestFunction item) return item.json();
         if (value instanceof RequestThreshold item) return item.json();

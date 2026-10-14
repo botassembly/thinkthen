@@ -11,8 +11,8 @@ int main() {
         ranks.emplace_back(Data{{"input","one"},{"value",1}});
         names.emplace_back(Data{{"input","Paris"},{"value",Data{{"entities",Data::Array{Data{{"text","Paris"},{"kind","place"},{"start",0},{"end",5},{"length",5},{"strength",0.9}}}}}}});
     }
-    SessionPacket rank(Data{{"kind","aggregate"},{"function","rank"},{"value",Data(std::move(ranks))}});
-    SessionPacket recognize(Data{{"kind","aggregate"},{"function","recognize"},{"value",Data(std::move(names))}});
+    auto rank=::tt::results::detail::Loader::input<SessionPacket>(Data{{"kind","aggregate"},{"function","rank"},{"value",Data(std::move(ranks))}});
+    auto recognize=::tt::results::detail::Loader::input<SessionPacket>(Data{{"kind","aggregate"},{"function","recognize"},{"value",Data(std::move(names))}});
     auto ranked=rank.as_SessionPacketRankAggregate();
     auto found=recognize.as_SessionPacketRecognizeAggregate();
     std::atomic<unsigned> ready{0};
