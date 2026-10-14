@@ -143,6 +143,7 @@ tt_batch <- function(function_name, question, input, options = list()) {
   close <- function() { cancel(); state$ended <- TRUE; invisible(NULL) }
   structure(list(next_result = pull, poll = poll, push = push, finish = finish,
                  cancel = cancel, close = close, facts = function() state$facts,
+                 result = function() .tt_call(tt_request_batch_result(native)),
                  positions = attr(native, "positions"), length = attr(native, "length")), class = "thinkthen_batch")
 }
 print.thinkthen_question <- function(x, ...) { cat("<question: content withheld>\n"); invisible(x) }

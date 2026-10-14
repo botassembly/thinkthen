@@ -16,6 +16,9 @@ pub(crate) fn attach(column: &thinkthen::RequestColumn, value: Robj) -> Crossed<
             .into(),
     ));
     fields.push(("length", (column.len() as f64).into()));
+    if !fields.iter().any(|(name, _)| *name == "probability") {
+        fields.push(("probability", ().into()));
+    }
     let mut value: Robj = List::from_pairs(fields).into();
     if let Some(class) = class {
         value
@@ -24,7 +27,11 @@ pub(crate) fn attach(column: &thinkthen::RequestColumn, value: Robj) -> Crossed<
     }
     Ok(value)
 }
-pub(crate) fn view(value: Robj, view: Option<thinkthen::RequestColumnView>) -> Crossed<Robj> {
+pub(crate) fn view(
+    value: Robj,
+    view: Option<thinkthen::RequestColumnView>,
+    column: Option<&thinkthen::RequestColumn>,
+) -> Crossed<Robj> {
     use thinkthen::RequestColumnValues;
     let Some(view) = view else {
         return Ok(value);
@@ -34,7 +41,7 @@ pub(crate) fn view(value: Robj, view: Option<thinkthen::RequestColumnView>) -> C
     let class = list.get_attrib("class");
     let mut fields = list
         .iter()
-        .filter(|(name, _)| *name != "answer")
+        .filter(|(name, _)| !["value", "probability"].contains(name))
         .collect::<Vec<_>>();
     let values: Robj = match view.values {
         RequestColumnValues::Decisions(values) => values
@@ -56,17 +63,34 @@ pub(crate) fn view(value: Robj, view: Option<thinkthen::RequestColumnView>) -> C
             List::from_values(values.into_iter().map(Robj::from)).into()
         }
     };
-    fields.push(("answer", values.clone()));
     fields.push(("value", values));
     if let Some(values) = view.probability {
-        fields.push((
-            "probability",
-            values
-                .into_iter()
-                .map(|value| value.map_or(Rfloat::na(), Rfloat::from))
-                .collect::<Vec<_>>()
-                .into(),
-        ));
+        let probability = list
+            .iter()
+            .find(|(name, _)| *name == "probability")
+            .map(|(_, value)| value)
+            .ok_or_else(|| crate::defect("native result has no probability"))?;
+        let probabilities = if probability.is_list() {
+            List::try_from(probability)
+                .map_err(|_| crate::defect("native probability is not a list"))?
+        } else {
+            List::from_values([probability])
+        };
+        let column = column.ok_or_else(|| crate::defect("native presentation has no column"))?;
+        let mut aligned = vec![Rfloat::na(); values.len()];
+        for (row, position) in column.positions().iter().enumerate() {
+            if let Some(slot) = aligned.get_mut(*position) {
+                *slot = probabilities
+                    .elt(row)
+                    .ok()
+                    .and_then(|value| value.as_real())
+                    .map_or(Rfloat::na(), Rfloat::from);
+            }
+        }
+        fields.push(("probability", aligned.into()));
+    }
+    if !fields.iter().any(|(name, _)| *name == "probability") {
+        fields.push(("probability", ().into()));
     }
     let mut value: Robj = List::from_pairs(fields).into();
     if let Some(class) = class {

@@ -8,7 +8,7 @@ reviews <- c(
   "The strap snapped on day two."
 )
 complaints <- unlist(
-  tt_filter(question, reviews)$answer,
+  tt_filter(question, reviews)$value,
   use.names = FALSE
 )
 stopifnot(identical(complaints, reviews[c(2, 4)]))

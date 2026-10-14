@@ -59,4 +59,6 @@ tt_request_batch_push <- function(batch, descriptor) .Call(wrap__tt_request_batc
 
 tt_request_batch_finish <- function(batch, failure) .Call(wrap__tt_request_batch_finish, batch, failure)
 
+tt_request_batch_result <- function(batch) .Call(wrap__tt_request_batch_result, batch)
+
 # nolint end

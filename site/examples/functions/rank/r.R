@@ -11,7 +11,7 @@ inbox <- c(
   "Please send the signed quote by 5 pm today"
 )
 order <- unlist(
-  tt_rank(question, inbox)$answer,
+  tt_rank(question, inbox)$value,
   use.names = FALSE
 )
 by_urgency <- inbox[order + 1]

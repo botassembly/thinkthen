@@ -74,6 +74,11 @@ tryCatch({
     }
   }
   packet <- list(native=TRUE, results = lapply(done$results,plain), facts=plain(done$facts))
+  if (isTRUE(document$call_result_contract)) {
+    stopifnot(all(c("value", "probability", "results", "facts") %in% names(done)), !"answer" %in% names(done))
+    packet$call_result <- list(value=plain(done$value), probability=plain(done$probability),
+                              results=lapply(done$results,plain), facts=plain(done$facts))
+  }
   cat(jsonlite::toJSON(packet,auto_unbox=TRUE,null="null",digits=NA))
 }, error=function(e) {
   if (is.null(e$kind)) stop(e)
