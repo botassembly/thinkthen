@@ -83,6 +83,8 @@ def decode(value, schema, definitions=DEFINITIONS):
 
 
 def native(rows, verb):
+    if not rows:
+        return {'empty_sql_rows': [], 'details_rows': []}
     roots = {'decide': 'completeDecide', 'choose': 'completeChoose', 'tag': 'completeTag',
              'score': 'completeScore', 'filter': 'completeFilter', 'rank': 'completeRank',
              'annotate': 'completeAnnotation', 'recognize': 'completeRecognition',
