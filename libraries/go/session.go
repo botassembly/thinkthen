@@ -64,7 +64,7 @@ func sessionFailure(code C.int) error {
 	if code == 0 {
 		return nil
 	}
-	var facts Facts
+	facts := Facts{ownedJSON{raw: json.RawMessage("{}")}}
 	if borrowed := C.thinkthen_session_error_facts_json(); borrowed != nil {
 		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
 	}

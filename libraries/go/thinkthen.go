@@ -51,7 +51,7 @@ func failure(raw *C.thinkthen_engine, code C.int) error {
 		kind = ErrorKind(code)
 	}
 	borrowed := C.thinkthen_error_facts_json(raw)
-	var facts Facts
+	facts := Facts{ownedJSON{raw: json.RawMessage("{}")}}
 	if borrowed != nil {
 		facts = Facts{ownedJSON{raw: json.RawMessage(C.GoString(borrowed))}}
 	}

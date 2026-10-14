@@ -27,6 +27,7 @@ if os.environ.get('THINKTHEN_TEST_PROFILE', 'routine') == 'full':
         home = Path(folder)
         (home / 'go.mod').write_text('module example.org/full-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => ' + str(module) + '\n')
         shutil.copy2(Path(__file__).with_name('full_consumer.go'), home / 'main.go')
+        shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), home / 'bridge.go')
         env = child_env(home=home, GOPROXY='off', GOSUMDB='off', GOTOOLCHAIN='local', GOCACHE=os.environ.get('GOCACHE', str(ROOT / 'target/go/cache')), GOMODCACHE=str(home / 'modcache'), CGO_ENABLED='1')
         binary = home / 'consumer-bin'
         subprocess.run(admitted(['go', 'build', '-p', '1', '-buildvcs=false', '-o', str(binary), '.']), cwd=home, env=env, check=True)
@@ -68,6 +69,7 @@ with tempfile.TemporaryDirectory(prefix='thinkthen-go-shared-') as folder:
     home=Path(folder); consumer=home/'consumer'; consumer.mkdir()
     (consumer/'go.mod').write_text('module example.org/shared-consumer\n\ngo 1.22\n\nrequire github.com/botassembly/thinkthen/libraries/go v0.0.0\nreplace github.com/botassembly/thinkthen/libraries/go => '+str(module)+'\n')
     shutil.copy2(Path(__file__).with_name('shared_consumer.go'), consumer/'main.go')
+    shutil.copy2(Path(__file__).with_name('consumer_bridge.go'), consumer/'bridge.go')
     env=child_env(home=str(home),GOPROXY='off',GOSUMDB='off',GOTOOLCHAIN='local',GOCACHE=os.environ.get('GOCACHE', str(ROOT/'target/go/cache')),GOMODCACHE=str(home/'modcache'),CGO_ENABLED='1')
     subprocess.run(admitted(['go','build','-p','1','-buildvcs=false','-o',str(home/'consumer-bin'),'.']),cwd=consumer,env=env,check=True)
     if os.environ.get('THINKTHEN_COVERAGE_STAGE'):
