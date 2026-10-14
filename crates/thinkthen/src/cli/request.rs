@@ -72,7 +72,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 atomic_definition(asked::filter(a, None)?, &mut atomic)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
             options.files_only = a.files_only;
             (
                 RequestFunction::Filter,
@@ -94,7 +93,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 Ok(definition)
             })?;
             let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
             options.top = a
                 .top
                 .as_ref()
@@ -117,7 +115,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 }
             };
             let mut options = options(&common, None, None);
-            options.details = false;
             options.none = a.none;
             (
                 RequestFunction::Find,
@@ -137,8 +134,7 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
             let question = RequestQuestion::File {
                 path: a.questions.clone(),
             };
-            let mut options = options(&common, Some(&a.batching), a.threshold.as_ref());
-            options.details = false;
+            let options = options(&common, Some(&a.batching), a.threshold.as_ref());
             (
                 RequestFunction::Annotate,
                 arguments(&mut common, question, options)?,
@@ -156,7 +152,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                     }
                 };
             let mut options = options(&a.common, None, None);
-            options.details = false;
             options.mode = a
                 .mode
                 .as_deref()
@@ -211,7 +206,6 @@ pub(super) fn admit(command: &Command) -> Result<Option<crate::AdmittedRequest>,
                 }
             };
             let mut options = options(&a.common, None, None);
-            options.details = false;
             options.field = None;
             (
                 RequestFunction::Relate,
@@ -279,7 +273,6 @@ fn options(
                 .map_or_else(|_| RequestBatch::Named(value), RequestBatch::Count)
         }),
         max_requests_total: common.max_requests_total,
-        details: common.details,
         ..RequestOptions::default()
     }
 }

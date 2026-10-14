@@ -196,9 +196,6 @@ pub struct RequestOptions {
     /// Collect observed attempts.
     #[serde(default)]
     pub attempts: bool,
-    /// Compatibility details output for scalar calls.
-    #[serde(default)]
-    pub details: bool,
     /// Offer a none candidate in find.
     #[serde(default)]
     pub none: bool,

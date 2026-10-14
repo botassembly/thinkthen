@@ -1,5 +1,8 @@
 //! Filter caller originals through the admitted Request scheduler.
-use super::{Batch, CallOptions, Engine, Error, InputEvidence, InputFunction, Question};
+use super::{
+    Call, CallOptions, CompleteFilter, CompleteRecord, Engine, Error, InputEvidence, InputFunction,
+    Question,
+};
 
 impl Engine {
     /// Keep the original records that reach the question's threshold, in input order.
@@ -8,10 +11,14 @@ impl Engine {
     /// # Errors
     /// Refuses an unsupported question before sending. The batch stops at its
     /// first failed record and retains the call's joined facts.
-    pub fn filter<'a, I, T>(&self, question: &Question, records: I) -> Result<Batch<'a, T>, Error>
+    pub fn filter<'a, I, T>(
+        &self,
+        question: &Question,
+        records: I,
+    ) -> Result<Call<Vec<T>, Vec<CompleteRecord<T, CompleteFilter>>, Vec<Option<f64>>>, Error>
     where
         I: IntoIterator<Item = T> + 'a,
-        T: InputEvidence + 'a,
+        T: InputEvidence + Clone + 'a,
     {
         self.filter_with(question, records, CallOptions::new())
     }
@@ -25,10 +32,10 @@ impl Engine {
         question: &Question,
         records: I,
         controls: CallOptions<'a>,
-    ) -> Result<Batch<'a, T>, Error>
+    ) -> Result<Call<Vec<T>, Vec<CompleteRecord<T, CompleteFilter>>, Vec<Option<f64>>>, Error>
     where
         I: IntoIterator<Item = T> + 'a,
-        T: InputEvidence + 'a,
+        T: InputEvidence + Clone + 'a,
     {
         super::request::pull::project(
             self,
@@ -38,11 +45,25 @@ impl Engine {
                 .into_iter()
                 .map(|record| Ok(super::record_input::plain(record))),
             controls,
-            |original, _, result| {
-                Ok(super::complete::records::filter(result)?
-                    .value()
-                    .then_some(original))
+            |original, ordinal, result| {
+                Ok(Some(CompleteRecord {
+                    original,
+                    ordinal,
+                    result: super::complete::records::filter(result)?,
+                }))
             },
-        )
+        )?
+        .into_call()?
+        .project(|rows| {
+            let mut values = Vec::new();
+            let mut probabilities = Vec::new();
+            for row in &rows {
+                if row.result.value() {
+                    values.push(row.original.clone());
+                    probabilities.push(row.result.probability());
+                }
+            }
+            Ok((values, rows, probabilities))
+        })
     }
 }

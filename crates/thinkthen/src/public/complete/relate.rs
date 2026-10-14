@@ -15,14 +15,18 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<Edge>>, Error> {
+    ) -> Result<Call<Vec<Edge>, Vec<CompleteRelated>, Vec<Option<f64>>>, Error> {
         self.relate_entities_request(ask, entities, options, |engine, ask, entities, options| {
-            if entities.is_empty() {
-                return empty_relations(engine, options);
-            }
-            Ok(engine
+            engine
                 .relate_admitted_complete(ask, entities, options, (false, true), &[])?
-                .map(|result| result.value))
+                .project(|result| {
+                    let probability = result
+                        .value
+                        .iter()
+                        .map(|edge| Some(edge.probability()))
+                        .collect();
+                    Ok((result.value.clone(), vec![result], probability))
+                })
         })
     }
 
@@ -168,15 +172,3 @@ fn admitted(
 mod preview;
 pub(crate) use preview::Preview as RelationPreview;
 pub(in crate::public) use preview::prepare as preview_relations;
-
-fn empty_relations(engine: &Engine, options: CallOptions<'_>) -> Result<Call<Vec<Edge>>, Error> {
-    let stop = Stop::begin(options)?.with_prices(engine.prices);
-    stop.run_call(0, |_| {
-        let edges = Vec::new();
-        stop.observe(crate::RecordObservation::Row {
-            index: 0,
-            value: crate::ObservedRow::Relations(&edges),
-        });
-        Ok(edges)
-    })
-}

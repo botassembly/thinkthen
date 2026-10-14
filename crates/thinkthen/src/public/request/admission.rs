@@ -439,9 +439,6 @@ fn admit_options(
     {
         return Err(Error::usage("files_only requires filter source input"));
     }
-    if options.details && !function.allows_option("details") {
-        return Err(Error::usage("details applies only to primitive judgments"));
-    }
     if let Some(batch) = &options.batch {
         batch.native()?;
     }

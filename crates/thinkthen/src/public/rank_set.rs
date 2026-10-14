@@ -8,9 +8,7 @@ use crate::public::engine::{Engine, Evidence};
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
-use crate::public::results::{
-    self, Call, ObservedRow, QuestionDetail, RecordObservation, SetRanked,
-};
+use crate::public::results::{self, Call, ObservedRow, QuestionDetail, RecordObservation};
 
 /// An ordered saved set of decide questions for rank. Authored thresholds,
 /// pointers and other question kinds are refused before normalization.
@@ -64,7 +62,14 @@ impl Engine {
         &self,
         questions: &RankSet,
         records: I,
-    ) -> Result<Call<Vec<SetRanked<I::Item>>>, Error>
+    ) -> Result<
+        Call<
+            Vec<usize>,
+            Vec<crate::CompleteRecord<I::Item, crate::CompleteSetRank>>,
+            Vec<Option<f64>>,
+        >,
+        Error,
+    >
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -86,30 +91,26 @@ impl Engine {
         questions: &RankSet,
         records: I,
         options: CallOptions<'_>,
-    ) -> Result<Call<Vec<SetRanked<I::Item>>>, Error>
+    ) -> Result<
+        Call<
+            Vec<usize>,
+            Vec<crate::CompleteRecord<I::Item, crate::CompleteSetRank>>,
+            Vec<Option<f64>>,
+        >,
+        Error,
+    >
     where
         I: IntoIterator,
         I::Item: Evidence,
     {
         self.rank_set_complete_with(questions, records, options)?
-            .try_map(|rows| {
-                rows.into_iter()
-                    .map(|row| {
-                        let probability = row
-                            .result
-                            .result
-                            .canonical
-                            .answer()
-                            .yes()
-                            .ok_or(Error::defect("a decide answer lost its probability"))?;
-                        Ok(SetRanked::new(
-                            row.ordinal,
-                            row.original,
-                            probability,
-                            row.result.question_name,
-                        ))
-                    })
-                    .collect()
+            .project(|rows| {
+                let values = rows.iter().map(|row| row.ordinal).collect();
+                let probabilities = rows
+                    .iter()
+                    .map(|row| row.result.result.canonical.answer().yes())
+                    .collect();
+                Ok((values, rows, probabilities))
             })
     }
 }

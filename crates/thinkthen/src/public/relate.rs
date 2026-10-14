@@ -303,7 +303,7 @@ impl Engine {
         &self,
         ask: &Relate,
         entities: I,
-    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
+    ) -> Result<crate::public::Call<Vec<Edge>, Vec<crate::CompleteRelated>, Vec<Option<f64>>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
@@ -320,7 +320,7 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
+    ) -> Result<crate::public::Call<Vec<Edge>, Vec<crate::CompleteRelated>, Vec<Option<f64>>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
