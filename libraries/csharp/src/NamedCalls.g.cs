@@ -26,56 +26,56 @@ public sealed record CallResult<TValue, TProbability, TResults> : OwnedCall {
     }
 }
 public sealed partial class Engine {
-    public async Task<CallResult<bool?, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecideScalar(call);
     }
-    public async Task<CallResult<bool?, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecideScalar(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("decide", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    public async Task<CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
+    public async Task<CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>>> DecideAsync(RequestQuestion question,
     IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
@@ -83,25 +83,18 @@ public sealed partial class Engine {
         options), feed, cancellation).ConfigureAwait(false);
         return ProjectDecide(call);
     }
-    private static CallResult<IReadOnlyList<bool?>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>> ProjectDecide(OwnedCall call) {
+    private static CallResult<IReadOnlyList<JsonElement>, IReadOnlyList<double?>, IReadOnlyList<AtomicDecideValue>> ProjectDecide(OwnedCall call) {
         var receipts = new List<AtomicDecideValue>();
         foreach (var packet in call.Packets) {
             if (packet is SessionPacketDecideAggregate aggregate) receipts.AddRange(aggregate.Value);
             else if (packet is SessionPacketDecideRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = new List<bool?>();
-        foreach (var packet in call.Packets) if (packet is SessionPacketObservation {
-            Value: SessionObservationRow {
-                Value: SessionObservedRowJudgment {
-                    Value: SessionJudgmentDecision judgment
-                }
-            }
-        } observation && observation.Function.Value == "decide") values.Add(judgment.Value.State == PresenceState.Value ? judgment.Value.Value : null);
-        return new(call, values.AsReadOnly(), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
+        var values = results.Select(row => row.Value).ToArray();
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }
-    private static CallResult<bool?, double?, IReadOnlyList<AtomicDecideValue>> ProjectDecideScalar(OwnedCall call) {
+    private static CallResult<JsonElement, double?, IReadOnlyList<AtomicDecideValue>> ProjectDecideScalar(OwnedCall call) {
         var result = ProjectDecide(call);
         return new(call, result.Value.Single(), result.Probability.Single(), result.Results);
     }
@@ -169,15 +162,8 @@ public sealed partial class Engine {
             else if (packet is SessionPacketChooseRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = new List<string?>();
-        foreach (var packet in call.Packets) if (packet is SessionPacketObservation {
-            Value: SessionObservationRow {
-                Value: SessionObservedRowJudgment {
-                    Value: SessionJudgmentChoice judgment
-                }
-            }
-        } observation && observation.Function.Value == "choose") values.Add(judgment.Value.State == PresenceState.Value ? judgment.Value.Value : null);
-        return new(call, values.AsReadOnly(), Array.AsReadOnly(results.Select(row => row.Answer is AnswerChoice odds ? (double?)odds.Probabilities[odds.Pick] : null).ToArray()),
+        var values = results.Select(row => row.Value.State == PresenceState.Value ? row.Value.Value : (string?)null).ToArray();
+        return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => row.Answer is AnswerChoice odds ? (double?)odds.Probabilities[odds.Pick] : null).ToArray()),
         results);
     }
     private static CallResult<string?, double?, IReadOnlyList<AtomicNullableString>> ProjectChooseScalar(OwnedCall call) {
@@ -248,15 +234,8 @@ public sealed partial class Engine {
             else if (packet is SessionPacketTagRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = new List<IReadOnlyList<string>>();
-        foreach (var packet in call.Packets) if (packet is SessionPacketObservation {
-            Value: SessionObservationRow {
-                Value: SessionObservedRowJudgment {
-                    Value: SessionJudgmentTags judgment
-                }
-            }
-        } observation && observation.Function.Value == "tag") values.Add(judgment.Value);
-        return new(call, values.AsReadOnly(), (double?)null, results);
+        var values = results.Select(row => row.Value).ToArray();
+        return new(call, Array.AsReadOnly(values), (double?)null, results);
     }
     private static CallResult<IReadOnlyList<string>, double?, IReadOnlyList<AtomicArrayOfString>> ProjectTagScalar(OwnedCall call) {
         var result = ProjectTag(call);
@@ -326,15 +305,8 @@ public sealed partial class Engine {
             else if (packet is SessionPacketScoreRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = new List<double>();
-        foreach (var packet in call.Packets) if (packet is SessionPacketObservation {
-            Value: SessionObservationRow {
-                Value: SessionObservedRowJudgment {
-                    Value: SessionJudgmentScore judgment
-                }
-            }
-        } observation && observation.Function.Value == "score") values.Add(judgment.Value);
-        return new(call, values.AsReadOnly(), (double?)null, results);
+        var values = results.Select(row => row.Value).ToArray();
+        return new(call, Array.AsReadOnly(values), (double?)null, results);
     }
     private static CallResult<double, double?, IReadOnlyList<AtomicDouble>> ProjectScoreScalar(OwnedCall call) {
         var result = ProjectScore(call);
@@ -404,7 +376,7 @@ public sealed partial class Engine {
             else if (packet is SessionPacketFilterRow row) receipts.Add(row.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = results.Select(row => row.Input.State == PresenceState.Value ? row.Input.Value : JsonSerializer.SerializeToElement<object?>(null)).ToArray();
+        var values = results.Select(row => row.Input.State == PresenceState.Value ? row.Input.Value : JsonSerializer.SerializeToElement((string?)null)).ToArray();
         return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }
@@ -475,56 +447,56 @@ public sealed partial class Engine {
         return new(call, Array.AsReadOnly(values), Array.AsReadOnly(results.Select(row => (double?)((AnswerYesNo)row.Answer).Probability).ToArray()),
         results);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputText input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputJson input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputRecords input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputSource input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputUnits input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputEntities input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     RequestInputFeed input,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         var call = await ExecuteSessionAsync(() => StartNamedSession("find", question, input, options),
         null, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    public async Task<CallResult<JsonElement?, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
+    public async Task<CallResult<JsonElement, double?, IReadOnlyList<Find>>> FindAsync(RequestQuestion question,
     IAsyncEnumerable<RequestSessionDescriptor> feed,
     RequestOptions? options = null, CancellationToken cancellation = default) {
         ArgumentNullException.ThrowIfNull(feed);
@@ -532,13 +504,13 @@ public sealed partial class Engine {
         feed, cancellation).ConfigureAwait(false);
         return ProjectFind(call);
     }
-    private static CallResult<JsonElement?, double?, IReadOnlyList<Find>> ProjectFind(OwnedCall call) {
+    private static CallResult<JsonElement, double?, IReadOnlyList<Find>> ProjectFind(OwnedCall call) {
         var receipts = new List<Find>();
         foreach (var packet in call.Packets) {
             if (packet is SessionPacketFindAggregate aggregate) receipts.Add(aggregate.Value);
         }
         var results = receipts.AsReadOnly();
-        var values = results.Select(row => row.Value.State == PresenceState.Value ? row.Value.Value : (JsonElement?)null).ToArray();
+        var values = results.Select(row => row.Value.State == PresenceState.Value ? row.Value.Value : JsonSerializer.SerializeToElement((string?)null)).ToArray();
         if (results.Count != 1) throw new JsonException("Missing aggregate result.");
         return new(call, values.Single(), results.Select(row => row.Answer is FindAnswer odds ? (double?)odds.Probabilities[odds.Pick] : null).Single(),
         results);

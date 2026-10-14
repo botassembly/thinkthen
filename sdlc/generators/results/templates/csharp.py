@@ -568,20 +568,6 @@ def named_calls(functions):
 def answer_helpers(definitions):
     """Project the canonical call metadata into the C# scalar/list idiom."""
     from host_answers import call_results
-    def carriers(key, seen=()):
-        if key == 'completesessionJudgment': return []
-        if key in seen: return None
-        source = definitions[key]
-        for child, _ in source.get('variants', []):
-            result = carriers(child, seen + (key,))
-            if result is not None: return result
-        for field, value in source.get('properties', {}).items():
-            if isinstance(value, dict) and '$ref' in value:
-                result = carriers(value['$ref'].split('/')[-1], seen + (key,))
-                if result is not None: return [(key, field)] + result
-        return None
-    route = carriers('completesessionPacket')
-    if not route: raise ValueError('C# needs a normalized judgment carrier route')
     lines = ['#nullable enable', 'using ThinkThen.Inputs;', 'using ThinkThen.Results;',
              'using System.Text.Json;', 'namespace ThinkThen;',
              'public sealed record CallResult<TValue, TProbability, TResults> : OwnedCall {',
@@ -598,12 +584,11 @@ def answer_helpers(definitions):
         results_type = 'IReadOnlyList<' + receipt_type + '>'
         carrier = name(spec['carrier'])
         projection = name(spec['value_projection'])
-        scalar = spec['scalar_value']
         aggregate_value = spec['aggregate_value']
         item_schema = aggregate_value['items'] if array else aggregate_value
-        item_type, _ = conversion(scalar if scalar is not None else item_schema, definitions)
-        original_json = spec['value_projection'] == 'input' and item_type == 'JsonElement'
-        if not original_json and nullable(scalar if scalar is not None else item_schema, definitions): item_type += '?'
+        item_type, _ = conversion(item_schema, definitions)
+        original_json = item_type == 'JsonElement'
+        if not original_json and nullable(item_schema, definitions): item_type += '?'
         mode = spec['probability_mode']
         probability_type = 'IReadOnlyList<double>' if mode == 'items' and function != 'rank' else 'double?'
         per_input = spec['call_shape'] == 'input'
@@ -626,22 +611,13 @@ def answer_helpers(definitions):
         values_expr = 'row.' + projection
         receipt_schema = definitions[(payload['items'] if array else payload)['$ref'].split('/')[-1]]
         optional_projection = spec['value_projection'] not in receipt_schema.get('required', [])
-        if original_json:
-            values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : JsonSerializer.SerializeToElement<object?>(null)'
+        if original_json and (optional_projection or nullable(item_schema, definitions)):
+            values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : JsonSerializer.SerializeToElement((string?)null)'
         elif nullable(item_schema, definitions):
             values_expr = 'row.' + projection + '.State == PresenceState.Value ? row.' + projection + '.Value : (' + item_type + ')null'
         elif optional_projection:
             values_expr += '.Value'
-        if scalar:
-            variant = next(child for child, _ in definitions['completesessionJudgment']['variants'] if definitions[child].get('x-request-function') == function)
-            pattern = name(variant) + ' judgment'
-            for key, field in reversed(route):
-                pattern = name(key) + ' { ' + name(field) + ': ' + pattern + ' }'
-            judgment_value = 'judgment.Value'
-            if nullable(scalar, definitions): judgment_value = 'judgment.Value.State == PresenceState.Value ? judgment.Value.Value : null'
-            values_decl = 'var values = new List<' + item_type + '>(); foreach (var packet in call.Packets) if (packet is ' + pattern + ' observation && observation.Function.Value == ' + quote(function) + ') values.Add(' + judgment_value + ');'
-        else:
-            values_decl = 'var values = results.Select(row => ' + values_expr + ').ToArray();'
+        values_decl = 'var values = results.Select(row => ' + values_expr + ').ToArray();'
         if mode == 'null': probability_expr = '(double?)null'
         elif mode == 'yes': probability_expr = '(double?)((AnswerYesNo)row.Answer).Probability'
         elif mode == 'picked': probability_expr = 'row.Answer is ' + ('FindAnswer' if function == 'find' else 'AnswerChoice') + ' odds ? (double?)odds.Probabilities[odds.Pick] : null'
@@ -662,7 +638,7 @@ def answer_helpers(definitions):
         lines += ['}', 'var results = receipts.AsReadOnly();', values_decl]
         if single_aggregate: lines += ['if (results.Count != 1) throw new JsonException("Missing aggregate result.");']
         odds = '(double?)null' if mode == 'null' else ('results.Select(row => ' + probability_expr + ').Single()' if single_aggregate else 'Array.AsReadOnly(results.Select(row => ' + probability_expr + ').ToArray())')
-        value = 'values.Single()' if single_aggregate else ('values.AsReadOnly()' if scalar else 'Array.AsReadOnly(values)')
+        value = 'values.Single()' if single_aggregate else 'Array.AsReadOnly(values)'
         lines += ['return new(call, ' + value + ', ' + odds + ', results);', '}']
         if per_input:
             scalar_type = 'CallResult<' + ', '.join((item_type, probability_type, results_type)) + '>'

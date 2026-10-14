@@ -7,4 +7,4 @@ var answer = (await engine.FindAsync(
         new() { Original = new RequestOriginalText { Text = "first" } },
         new() { Original = new RequestOriginalText { Text = "second" } }
     } })).Value;
-Console.WriteLine(answer?.GetString());
+Console.WriteLine(answer.GetString());

@@ -138,8 +138,9 @@ static class AsyncFixtureCases
                 });
                 var output = Normalize(call, Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4);
                 if (Text(data,"arm") == "case/library-call-result/v1") {
-                    dynamic result = call;
-                    output["call_result"] = new { value = result.Value, probability = result.Probability, results_count = result.Results.Count, requests_sent = result.Facts.RequestsSent };
+                    output["call_result"] = Text(data,"verb") == "decide"
+                        ? ResultShape((CallResult<JsonElement,double?,IReadOnlyList<ThinkThen.Results.AtomicDecideValue>>)call)
+                        : ResultShape((CallResult<string?,double?,IReadOnlyList<ThinkThen.Results.AtomicNullableString>>)call);
                 }
                 return JsonSerializer.Serialize(output);
             } catch(SessionFailure failure) { return JsonSerializer.Serialize(Normalize(failure.Call,Text(data,"verb"),Yes(data,"incremental"),Get(data,"image_paths").ValueKind==JsonValueKind.Array && Get(data,"image_paths").GetArrayLength()>0 || Get(data,"source_unit").ValueKind==JsonValueKind.Number && Get(data,"source_unit").GetInt32()==4)); }
@@ -148,6 +149,11 @@ static class AsyncFixtureCases
         catch(OperationCanceledException) { return JsonSerializer.Serialize(new { code = 5, message = "Operation cancelled." }); }
         finally { signal?.Join(); }
     }
+    static object ResultShape<T,P,R>(CallResult<T,P,IReadOnlyList<R>> result) where R : ThinkThen.Results.ResultObject => new {
+        value = result.Value, probability = result.Probability,
+        results = result.Results.Select(record => new { answer_id = Property(record,"AnswerId") }).ToArray(),
+        facts = new { requests_sent = result.Facts.RequestsSent, records = result.Facts.Records }
+    };
     static object? Optional(object? value)
     {
         if (value is null) return null;
